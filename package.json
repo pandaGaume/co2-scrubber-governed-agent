@@ -1,0 +1,33 @@
+{
+    "name": "co2-scrubber-governed-agent",
+    "version": "0.1.0",
+    "private": true,
+    "description": "A CO2 scrubber, a crew, an agent, and an MCP broker between them: a governed agent-to-hardware demo on the SpikyPanda substrate.",
+    "license": "Apache-2.0",
+    "type": "module",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/pandaGaume/co2-scrubber-governed-agent.git"
+    },
+    "scripts": {
+        "job": "spikypanda-job",
+        "chain": "spikypanda-job specs/rs385-drive.json && spikypanda-job specs/scrubber-health-twin.json && spikypanda-job specs/scrubber-health-eval.json",
+        "image": "docker build -f docker/Dockerfile -t ghcr.io/pandagaume/co2-scrubber-factory:0.1.0 ."
+    },
+    "dependencies": {
+        "@cyanmycelium/mcp-broker": "*",
+        "@spiky-panda/core": "*",
+        "@spiky-panda/factory": "*",
+        "@spiky-panda/onnx": "*",
+        "@spiky-panda/plugin-control": "*",
+        "@spiky-panda/plugin-dsp": "*",
+        "@spiky-panda/plugin-geometry": "*",
+        "@spiky-panda/plugin-logic": "*",
+        "@spiky-panda/plugin-ml": "*",
+        "@spiky-panda/plugin-onnx": "*",
+        "@spiky-panda/plugin-physics": "*",
+        "@spiky-panda/applications-motorwatch": "*",
+        "reflect-metadata": "^0.2.2",
+        "tslib": "^2.8.1"
+    }
+}

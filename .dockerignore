@@ -1,0 +1,5 @@
+# Only the runner, the graphs and the specs enter the image.
+*
+!node_modules/@spiky-panda/factory/bundle/spikypanda-job.js
+!graphs/
+!specs/

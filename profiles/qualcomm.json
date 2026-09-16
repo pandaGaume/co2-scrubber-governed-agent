@@ -1,0 +1,22 @@
+{
+    "name": "qualcomm",
+    "tier3": {
+        "wire": "openai-compatible",
+        "baseUrl": "http://<snapdragon host>:8000/v1/",
+        "model": "<llama model served on device via Qualcomm AI Hub>",
+        "apiKey": {
+            "env": "LOCAL_API_KEY"
+        },
+        "capabilities": [
+            "tools"
+        ]
+    },
+    "gateway": {
+        "host": "laptop",
+        "note": "Dragonwing / RB3 when available"
+    },
+    "factory": {
+        "runner": "qualcomm-ai-hub",
+        "note": "compile and profile the same ONNX on a hosted Snapdragon; sweeps run locally"
+    }
+}

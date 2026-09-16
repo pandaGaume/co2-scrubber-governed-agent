@@ -1,0 +1,60 @@
+{
+    "_comment": "Who / what / where, in the vocabulary of mcp-broker's hierarchical authorization. To align with the broker's schema before use.",
+    "resourcePaths": {
+        "scrubber": "/habitat/cabin-1/eclss/scrubber-1",
+        "twin": "/habitat/cabin-1/twin",
+        "station": "/habitat/cabin-1/station",
+        "factory": "/habitat/factory"
+    },
+    "roles": {
+        "operator": {
+            "capabilities": [
+                "mcp.tools.read",
+                "mcp.tools.actuate",
+                "mcp.tools.power",
+                "mcp.tools.register",
+                "mcp.tools.factory"
+            ],
+            "paths": [
+                "/habitat/**"
+            ]
+        },
+        "regulator": {
+            "capabilities": [
+                "mcp.tools.read",
+                "mcp.tools.actuate"
+            ],
+            "paths": [
+                "/habitat/cabin-1/eclss/**"
+            ]
+        },
+        "tier3": {
+            "capabilities": [
+                "mcp.tools.read",
+                "mcp.tools.actuate",
+                "mcp.tools.factory"
+            ],
+            "paths": [
+                "/habitat/**"
+            ],
+            "deny": [
+                "mcp.tools.power",
+                "mcp.tools.register"
+            ],
+            "budget": {
+                "twinPoints": 20,
+                "twinSecondsPerPoint": 5
+            }
+        }
+    },
+    "tools": {
+        "scrubber.motor.state": "mcp.tools.read",
+        "scrubber.motor.set_speed": "mcp.tools.actuate",
+        "scrubber.scrubber.power": "mcp.tools.power",
+        "station.register_artifact": "mcp.tools.register",
+        "station.diagnostic_load_model": "mcp.tools.register",
+        "factory.run_sweep": "mcp.tools.factory",
+        "factory.run_fit": "mcp.tools.factory",
+        "factory.run_evaluate": "mcp.tools.factory"
+    }
+}

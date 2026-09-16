@@ -1,0 +1,27 @@
+{
+    "name": "nvidia-nebius",
+    "tier3": {
+        "wire": "openai-compatible",
+        "baseUrl": "https://api.tokenfactory.nebius.com/v1/",
+        "model": "<nemotron model id on Token Factory>",
+        "apiKey": {
+            "env": "NEBIUS_API_KEY"
+        },
+        "capabilities": [
+            "tools",
+            "json"
+        ]
+    },
+    "gateway": {
+        "host": "jetson-tx1",
+        "runtime": "docker node:22 (arm64) on JetPack 4.6",
+        "note": "the broker, the station, the regulator and the dashboard; no CUDA in use; an Orin would run the same image"
+    },
+    "factory": {
+        "runner": "nebius-serverless-jobs",
+        "image": "ghcr.io/pandagaume/co2-scrubber-factory:0.1.0",
+        "platform": "cpu-e1",
+        "preset": "2vcpu-8gb",
+        "timeout": "1h"
+    }
+}
