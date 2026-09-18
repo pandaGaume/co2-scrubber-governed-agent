@@ -1,0 +1,9 @@
+{
+    "mcpServers": {
+        "broker":   { "type": "http", "url": "http://localhost:3000/_broker/mcp" },
+        "scrubber": { "type": "http", "url": "http://localhost:3000/scrubber/mcp" },
+        "twin":     { "type": "http", "url": "http://localhost:3000/twin/mcp" },
+        "station":  { "type": "http", "url": "http://localhost:3000/station/mcp" },
+        "factory":  { "type": "http", "url": "http://localhost:3000/factory/mcp" }
+    }
+}

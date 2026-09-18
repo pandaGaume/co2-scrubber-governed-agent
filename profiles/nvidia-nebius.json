@@ -13,9 +13,8 @@
         ]
     },
     "gateway": {
-        "host": "jetson-tx1",
-        "runtime": "docker node:22 (arm64) on JetPack 4.6",
-        "note": "the broker, the station, the regulator and the dashboard; no CUDA in use; an Orin would run the same image"
+        "host": "laptop",
+        "note": "the broker, the station, the regulator and the dashboard; an NVIDIA edge computer would run the same image, out of the MVP"
     },
     "factory": {
         "runner": "nebius-serverless-jobs",

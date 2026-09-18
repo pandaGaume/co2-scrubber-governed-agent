@@ -1,0 +1,5 @@
+{
+    "profile": "nvidia-nebius",
+    "tier3": { "model": "nvidia/<nemotron>", "host": "api.tokenfactory.nebius.com" },
+    "gateway": "laptop"
+}

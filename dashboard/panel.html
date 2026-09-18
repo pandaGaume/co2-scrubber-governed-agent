@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Control room: CO2 scrubber, governed agent</title>
+<link rel="stylesheet" href="./style.css">
+</head>
+<body class="room">
+<div class="stage-box">
+<div class="stage" id="stage">
+
+    <header class="top">
+        <a class="brand" href="./index.html" title="Back to the story">CO2 SCRUBBER</a>
+        <span class="mission">control room, night 9 of 14, crew 4</span>
+        <span class="spacer"></span>
+        <span class="badge agent" id="badge-tier3">tier3: ...</span>
+        <span class="badge" id="badge-gateway">gateway: ...</span>
+        <span class="badge" id="badge-broker">broker: connecting...</span>
+    </header>
+
+    <main class="regions">
+
+        <section class="panel" id="story">
+            <h2 class="panel-title">STORY</h2>
+            <div class="panel-body">
+                <ol id="story-list" class="story-list"></ol>
+            </div>
+            <div class="panel-foot">
+                <span id="story-note" title="Until the broker's authorization is on, every call is signed operator; the name in the trace is the role the step plays.">Each button plays its step through the broker; the trace shows what happened.</span>
+                <a href="#" id="story-reset">reset to nominal</a>
+            </div>
+        </section>
+
+        <section class="panel" id="cabin">
+            <h2 class="panel-title">CABIN</h2>
+            <div class="cabin-body">
+                <div class="haze" id="haze"></div>
+                <div class="readout">
+                    <div class="big" id="co2-ppm">----</div>
+                    <div class="unit">ppm CO2</div>
+                    <div class="state" id="co2-state">...</div>
+                </div>
+                <div class="turbine-box">
+                    <div class="turbine well"><div id="turbine"></div></div>
+                </div>
+                <div class="gauges">
+                    <div class="gauge">
+                        <div class="gauge-head"><span>speed</span><span id="speed">--</span></div>
+                        <div class="gauge-bar well"><div class="gauge-fill" id="speed-fill"></div><div class="gauge-ticks"></div><div class="gauge-mark" style="left: 40%" title="MIN-FLOW: 40 %"></div></div>
+                    </div>
+                    <div class="gauge">
+                        <div class="gauge-head"><span>current</span><span id="current">--</span></div>
+                        <div class="gauge-bar well"><div class="gauge-fill" id="current-fill"></div><div class="gauge-ticks"></div></div>
+                    </div>
+                    <div class="gauge">
+                        <div class="gauge-head"><span>health residual</span><span id="residual">--</span></div>
+                        <div class="gauge-bar well"><div class="gauge-fill" id="residual-fill"></div><div class="gauge-ticks"></div><div class="gauge-mark" style="left: 40%" title="alarm threshold: 0.04"></div></div>
+                    </div>
+                </div>
+                <div class="power-row"><span>power</span><span><span class="led" id="power-led"></span> <span id="power">--</span></span></div>
+            </div>
+            <div class="panel-foot">Tier 1, the board, read from <code>scrubber.motor.state</code> every 2 s. Marks: MIN-FLOW at 40 % of speed, alarm at 0.04 of residual.</div>
+        </section>
+
+        <section class="panel" id="slots">
+            <h2 class="panel-title">SLOTS</h2>
+            <div class="panel-body">
+                <div id="slot-list" class="slot-list"></div>
+            </div>
+            <div class="panel-foot">The providers behind the broker (<code>_broker.providers_list</code>), their tools from <code>tools/list</code>. A button calls the tool as this page, through the broker like any other caller.</div>
+        </section>
+
+        <section class="panel" id="trace">
+            <h2 class="panel-title">MCP TRACE</h2>
+            <div class="legend">
+                <span class="outcome ok" title="The policy allowed it and the device did it">completed</span>
+                <span class="outcome refused" title="The policy allowed it; the device refused it on safety (envelope, MIN-FLOW)">device refused</span>
+                <span class="outcome deny" title="The broker's policy refused it: this subject may not call this tool on this path">policy deny</span>
+                <span class="outcome error" title="No answer: the slot is down or the arguments are wrong">error</span>
+                <span>newest first</span>
+            </div>
+            <div class="panel-body">
+                <ol id="trace-list" class="trace-list"></ol>
+            </div>
+        </section>
+
+    </main>
+</div>
+</div>
+
+<dialog id="call-dialog">
+    <form method="dialog" id="call-form">
+        <h3 id="call-title">tool</h3>
+        <p class="hint" id="call-description"></p>
+        <label>arguments (JSON)
+            <textarea id="call-args" rows="6">{}</textarea>
+        </label>
+        <div class="actions">
+            <button class="btn" value="cancel" type="button" id="call-cancel">cancel</button>
+            <button class="btn btn-primary" value="call" type="submit">call as operator</button>
+        </div>
+    </form>
+</dialog>
+
+<script type="module" src="./app.js"></script>
+</body>
+</html>

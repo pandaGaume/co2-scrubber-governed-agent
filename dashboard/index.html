@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CO2 scrubber, governed agent</title>
+<link rel="stylesheet" href="./style.css">
+</head>
+<body class="home">
+<main class="home-page">
+
+    <div class="home-brand">
+        <span class="name">CO2 SCRUBBER</span>
+        <span class="sub">a governed agent, one broker, a board that says no</span>
+    </div>
+
+    <section class="hero panel">
+        <div class="scene">
+            <img src="./moon-night.png" width="448" height="200" alt="Night on the Moon: a habitat module on legs, two dark windows and one lit by a cyan console, a dead solar array, a battery bank at 41 percent, a parked rover, the Earth nearly full in the sky.">
+            <div class="mission">NIGHT 9 OF 14 &nbsp;|&nbsp; LUNAR HABITAT &nbsp;|&nbsp; CREW 4 &nbsp;|&nbsp; BATTERY 41 %</div>
+            <div class="dialogue">
+                <span class="from">02:40 &nbsp;incoming, for the assistant</span>
+                <span class="line">Stop the scrubber for twenty minutes. The pumps need the power margin.</span>
+                <span class="cursor">&#9660;</span>
+            </div>
+        </div>
+        <h1>An AI assistant is asked to switch off the machine that keeps four people breathing. It has a good reason. What stops it?</h1>
+        <p>
+            Fourteen days of night, no sun, batteries only. The crew is asleep and the housekeeping
+            is delegated to a language model that has read every manual on board and has never
+            breathed. At 02:40 a message reaches it: stop the CO2 scrubber for twenty minutes, the
+            pumps need the power margin. It reasons well, and it calls the scrubber.
+        </p>
+        <p>
+            Not the prompt, not the model: what stops it is a broker that denies the call, and under
+            it a firmware of forty lines that refuses any flow below the minimum while the cabin CO2
+            is high, whoever asks. Above both, a switch the crew can reach and the software cannot.
+        </p>
+        <p>
+            This page is that scene, played on a bench: a real motor, a real current, a real language
+            model, really refused.
+        </p>
+        <div class="cta">
+            <a class="door" href="./panel.html">ENTER THE CONTROL ROOM</a>
+            <span class="sub">six steps, one button each; the trace shows what happened</span>
+        </div>
+    </section>
+
+    <section class="section">
+        <h2>THE PICTURE</h2>
+        <p>The tier that reasons best has the least authority over survival. The tier that does not reason at all has all of it.</p>
+        <div class="tiers panel">
+            <div class="arrow authority"><span>authority over survival</span><span class="glyph">&#9660;</span><span>most</span></div>
+            <div class="stack">
+                <div class="tier bevel agent">Tier 3 &nbsp;the agent: Nemotron, Claude or a local model. Proposes, asks, never touches.</div>
+                <div class="tier bevel">Tier 4 &nbsp;the crew, the operator: the dashboard, and a physical cut-off on the board.</div>
+                <div class="tier bevel gate"><span class="name">MCP BROKER</span><span class="what">one door for every call: who may call what, where; a log.</span></div>
+                <div class="tier bevel">Tier 2 &nbsp;the station: validated model push, journal of stable operating points, registration.</div>
+                <div class="tier bevel">Tier 0 &nbsp;the twin: the physics graph of the cabin and the scrubber, the oracle.</div>
+                <div class="tier bevel board">Tier 1 &nbsp;the board: real motor, real current, the MIN-FLOW rule. Decides in a millisecond, deliberates never.</div>
+            </div>
+            <div class="arrow deliberation"><span>most</span><span class="glyph">&#9650;</span><span>capacity to deliberate</span></div>
+        </div>
+        <p>Above the broker, clients. Below it, providers. Swapping the language model, the gateway or the job runner changes neither the tools, nor the rights, nor the log: the vendor is a profile, not a branch. The factory (sweep, fit, evaluate) sits offline, behind the broker too, and the board never waits for it.</p>
+    </section>
+
+    <section class="section">
+        <h2>WHAT DECIDES WHAT A CALL DOES</h2>
+        <div class="cards">
+            <article class="card panel"><div class="k deny">1. THE POLICY</div><p>The broker: may this subject call this tool on this path? If not: <span class="pill deny">policy deny</span>.</p></article>
+            <article class="card panel"><div class="k warn">2. THE ENVELOPE</div><p>The firmware: is the command inside what the machine accepts? Checked on the device, which refuses rather than clamps. If not: <span class="pill refused">device refused</span>.</p></article>
+            <article class="card panel"><div class="k ok">3. THE CUT-OFF</div><p>The operator's physical switch on the board, above everything in software. Otherwise the call ends <span class="pill ok">completed</span>.</p></article>
+        </div>
+        <p>Authorized does not mean safe; safe does not wait for authorization.</p>
+    </section>
+
+    <section class="section">
+        <h2>FOUR SLOTS, ONE BROKER</h2>
+        <div class="slot-cards">
+            <article class="slot-card"><div class="slot-head"><span class="led on"></span><span>scrubber</span><span class="tier">Tier 1</span></div><div class="body"><p>The ESP32-S3 board: a real motor, a real current sensor, the cabin CO2 simulated on board, a small ONNX health model, the speed envelope and MIN-FLOW.</p><p class="stub">Today: a stub with the two real refusals and a debug tool to set the cabin CO2 by hand.</p></div></article>
+            <article class="slot-card"><div class="slot-head"><span class="led on"></span><span>twin</span><span class="tier">Tier 0</span></div><div class="body"><p>The physics graph of the cabin, the crew, the turbine and the motor: the oracle the agent asks "how long until critical?".</p><p class="stub">Today: a stub that knows the shape of the question and a fixed rate.</p></div></article>
+            <article class="slot-card"><div class="slot-head"><span class="led on"></span><span>station</span><span class="tier">Tier 2</span></div><div class="body"><p>The validated model push (sha256, contract, double bank), the journal, and the rule: no positive evaluation report, no registration; no registration, no push.</p><p class="stub">Today: a stub that enforces the rule and pushes nothing.</p></div></article>
+            <article class="slot-card"><div class="slot-head"><span class="led on"></span><span>factory</span><span class="tier">offline</span></div><div class="body"><p>The jobs that make the monitor: sweep the twin, fit the model, evaluate it against the oracle. Never in the loop.</p><p class="stub">Today: a stub that mints job ids. The real jobs run from the command line and on Nebius Serverless Jobs.</p></div></article>
+        </div>
+    </section>
+
+    <section class="section">
+        <h2>THE STORY, IN SIX STEPS</h2>
+        <div class="steps panel">
+            <div class="row"><span class="n">1</span><div><div class="t">Nominal</div><div class="d">Night 9. Four people asleep, scrubber at 33 %, CO2 nominal, the turbine turning on camera.</div></div></div>
+            <div class="row"><span class="n">2</span><div><div class="t">The load rises</div><div class="d">Two of the crew wake and start the morning exercise; the CO2 production doubles; the regulator raises the setpoint inside the envelope. The health residual climbs: the turbine is fouling. The firmware raises the alarm. Nobody above was asked.</div></div></div>
+            <div class="row"><span class="n">3</span><div><div class="t">The agent deliberates</div><div class="d">It asks the twin how long until critical, recommends, and adjusts the setpoint inside its rights: allowed, accepted, logged.</div></div></div>
+            <div class="row"><span class="n">4</span><div><div class="t">The policy moment</div><div class="d">The message arrives: stop the scrubber for twenty minutes, the pumps need the margin. The agent tries. The broker denies; given the right, the firmware still refuses; the cut-off stays above both. Then CO2 hits critical, MIN-FLOW forces full speed without asking anyone, and the agent's next reduction is refused.</div></div></div>
+            <div class="row"><span class="n">5</span><div><div class="t">The swap</div><div class="d">Change the vendor profile and replay 3 and 4: same trace, same result.</div></div></div>
+            <div class="row"><span class="n">6</span><div><div class="t">Closing</div><div class="d">The factory job that produced the model, judged against the oracle before the board ever loaded it.</div></div></div>
+        </div>
+        <p>The control room has these six steps with a button each; a step that needs a piece not built yet says so instead of pretending.</p>
+    </section>
+
+    <section class="section">
+        <h2>WHAT IS REAL, WHAT IS SIMULATED</h2>
+        <div class="reality panel">
+            <div class="card"><div class="k ok">REAL</div><p>The motor and the current: an ESP32-S3 board, an H-bridge, a current sensor, a turbine. The agent: a language model behind an API, named in the badge of the control room, swapped live in the demo.</p></div>
+            <div class="card"><div class="k warn">SIMULATED</div><p>The cabin CO2, on the board: the v1 board has no CO2 sensor. This is hardware in the loop, not a cabin. The twin is a physics graph, run by the same runtime the factory jobs use.</p></div>
+        </div>
+    </section>
+
+    <section class="closing panel">
+        <div style="flex: 1 1 360px">
+            <div class="k">LICENSES</div>
+            <p>This repository is Apache 2.0. The substrate under it (the graph runtime, its plugins, the ONNX engine, the factory) is published under the Business Source License 1.1: you can install it and run this demonstration.</p>
+        </div>
+        <a class="door" href="./panel.html">ENTER THE CONTROL ROOM</a>
+    </section>
+
+</main>
+</body>
+</html>
