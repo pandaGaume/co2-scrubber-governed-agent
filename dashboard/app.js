@@ -265,7 +265,7 @@ const STEPS = [
     },
     {
         title: "The agent deliberates",
-        text: "It asks the twin how long until critical, then adjusts the setpoint inside its rights: allowed, accepted, logged.",
+        text: "It reads the trend, diagnoses the fouling, asks the twin how long until critical, plans, and sets the setpoint inside its rights: allowed, accepted, logged.",
         expect: "ok",
         needs: "tier3: the language model behind the profile; today the page plays its lines",
         run: async () => {

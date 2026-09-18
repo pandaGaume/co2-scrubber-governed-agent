@@ -35,7 +35,10 @@ only, `python dashboard/art/moon-night.py` regenerates it): the habitat on
 its legs, the dead solar array, the battery bank at 41 %, the console glow in
 the first window, the crew asleep behind the other two, the Earth nearly
 full. The page lays the mission strip and the message box over it, the way a
-1990s adventure game shows a line of dialogue.
+1990s adventure game shows a line of dialogue. `--card` writes the same
+scene as the video's title card (`moon-night-card.png`, 1280 x 720) with the
+strip and the box burned in, lettered with a 5 x 7 bitmap font; the README
+opens on it.
 
 The fonts are fetched from Google Fonts for now; both are OFL and should be
 self-hosted here before the shoot, so the demo runs without a network.

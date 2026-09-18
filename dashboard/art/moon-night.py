@@ -1,21 +1,33 @@
 """
 The opening scene, drawn pixel by pixel: night 9 of 14 on the Moon, the
 habitat on its batteries, the crew asleep, one lit window where the
-assistant's console glows. 448 x 200, sixteen colours, no anti-aliasing,
-1990s cutscene rules (dithered bands, hard shadows, one light source: the
-Earth).
+assistant's console glows. Eighteen colours, no anti-aliasing, 1990s
+cutscene rules (dithered bands, hard shadows, one light source: the Earth).
 
-    python dashboard/art/moon-night.py        -> dashboard/moon-night.png
+    python dashboard/art/moon-night.py          -> dashboard/moon-night.png       448 x 200, the home page
+    python dashboard/art/moon-night.py --card   -> dashboard/moon-night-card.png  1280 x 720, the video's title card
 
-No dependency beyond the standard library; the PNG is written by hand.
+The card is the same scene on a wider canvas (640 x 360, written at 2x),
+with the mission strip and the message box burned in, lettered with the
+5 x 7 bitmap font below. No dependency beyond the standard library; the PNG
+is written by hand.
 """
 import math
 import random
 import struct
+import sys
 import zlib
 from pathlib import Path
 
-W, H = 448, 200
+CARD = "--card" in sys.argv
+
+# The scene is laid out in a 448 x 200 frame. The card keeps that frame at
+# an offset inside a 640 x 360 canvas; the sky, the ground and the stars
+# fill the whole canvas, the objects keep their places.
+if CARD:
+    W, H, OX, OY, SCALE = 640, 360, 96, 80, 2
+else:
+    W, H, OX, OY, SCALE = 448, 200, 0, 0, 1
 
 # The dashboard palette, plus the few colours the Moon and the Earth need.
 C = {
@@ -41,8 +53,14 @@ C = {
 
 px = [[C["sky"]] * W for _ in range(H)]
 
+# Frame coordinates: the scene's 448 x 200 frame, offset on the canvas.
+X0, X1 = -OX, W - OX  # the canvas, in frame coordinates
+Y0, Y1 = -OY, H - OY
+
 
 def put(x, y, c):
+    x += OX
+    y += OY
     if 0 <= x < W and 0 <= y < H:
         px[y][x] = c
 
@@ -97,13 +115,20 @@ def crater(cx, cy, rx, ry, floor, rim, shadow):
     ellipse(cx - 1, cy + 1, rx - 3, max(1, ry - 3), floor)
 
 
+def rock(cx, cy, rx, ry):
+    ellipse(cx, cy, rx, ry, C["mid"])
+    ellipse(cx, cy - 1, rx - 1, ry - 1, C["near"])
+    ellipse(cx + 1, cy - 1, max(1, rx - 3), max(1, ry - 2), C["muted"])
+    ellipse(cx - 1, cy + 1, max(1, rx - 3), max(1, ry - 2), C["far"])
+
+
 rng = random.Random(9)
 
 # ── Sky ─────────────────────────────────────────────────────────────────────
-rect(0, 100, W - 1, 125, C["sky2"])
-dither(0, 92, W - 1, 100, C["sky2"])
-for _ in range(140):
-    x, y = rng.randrange(W), rng.randrange(0, 112)
+rect(X0, 100, X1, 125, C["sky2"])
+dither(X0, 92, X1, 100, C["sky2"])
+for _ in range(140 * (W * 112 + W * OY) // (448 * 112)):
+    x, y = rng.randrange(X0, X1), rng.randrange(Y0, 112)
     r = rng.random()
     if r < 0.70:
         put(x, y, C["far"])
@@ -141,6 +166,7 @@ for y in range(EY - ER - 1, EY + ER + 2):
         if ER < d <= ER + 1 and x < EX + ER - 3:
             put(x, y, C["agent2"] if (x + y) % 2 else C["ocean"])
 
+
 # ── The ground: three ridges, dithered seams ───────────────────────────────
 def ridge(base, phase, s1, s2, x):
     return base + s1 * math.sin(x / 41.0) + s2 * math.sin(x / 13.0 + phase)
@@ -150,15 +176,15 @@ def peak(x, cx, half, height):
     return max(0.0, height * (1 - abs(x - cx) / half))
 
 
-for x in range(W):
-    y_far = int(ridge(120, 0.0, 7, 3, x) - peak(x, 330, 70, 24) - peak(x, 95, 40, 12) - peak(x, 250, 30, 6))
+for x in range(X0, X1):
+    y_far = int(ridge(120, 0.0, 7, 3, x) - peak(x, 330, 70, 24) - peak(x, 95, 40, 12) - peak(x, 250, 30, 6) - peak(x, -40, 50, 16) - peak(x, 520, 60, 20))
     y_mid = int(ridge(141, 1.2, 5, 2, x + 60))
     y_near = int(ridge(158, 2.3, 3, 1.5, x + 130))
-    for y in range(y_far, H):
+    for y in range(y_far, Y1):
         put(x, y, C["far"])
-    for y in range(y_mid, H):
+    for y in range(y_mid, Y1):
         put(x, y, C["mid"])
-    for y in range(y_near, H):
+    for y in range(y_near, Y1):
         put(x, y, C["near"])
     # dithered seams, and the Earth's light on the crest of the far ridge
     if (x + y_far) % 2 == 0:
@@ -169,13 +195,22 @@ for x in range(W):
         if (x + y_near + k) % 2 == 0:
             put(x, y_near + k, C["mid"])
 
-crater(60, 168, 22, 7, C["mid"], C["muted"], C["far"])
-crater(400, 178, 18, 6, C["mid"], C["muted"], C["far"])
-crater(300, 190, 12, 4, C["mid"], C["muted"], C["far"])
-crater(150, 190, 9, 3, C["mid"], C["muted"], C["far"])
-crater(250, 128, 14, 3, C["far"], C["muted"], C["panel"])
-for _ in range(60):
-    x, y = rng.randrange(W), rng.randrange(156, H)
+for (cx, cy, rx, ry, floor, rim, shadow) in (
+    (60, 168, 22, 7, C["mid"], C["muted"], C["far"]),
+    (400, 178, 18, 6, C["mid"], C["muted"], C["far"]),
+    (300, 190, 12, 4, C["mid"], C["muted"], C["far"]),
+    (150, 190, 9, 3, C["mid"], C["muted"], C["far"]),
+    (250, 128, 14, 3, C["far"], C["muted"], C["panel"]),
+    # only on the card's wider ground
+    (-50, 232, 26, 8, C["mid"], C["muted"], C["far"]),
+    (500, 240, 20, 6, C["mid"], C["muted"], C["far"]),
+    (210, 258, 30, 8, C["mid"], C["muted"], C["far"]),
+    (-70, 150, 10, 3, C["mid"], C["muted"], C["far"]),
+    (490, 165, 12, 4, C["mid"], C["muted"], C["far"]),
+):
+    crater(cx, cy, rx, ry, floor, rim, shadow)
+for _ in range(60 * (W * (Y1 - 156)) // (448 * 44)):
+    x, y = rng.randrange(X0, X1), rng.randrange(156, Y1)
     put(x, y, C["muted"] if rng.random() < 0.4 else C["mid"])
 
 # ── The dead solar array, far left: no sun for nine days ───────────────────
@@ -301,11 +336,95 @@ for i in range(9):
     rect(x, y, x + 1, y + 2, C["far"])
 
 # ── Foreground rocks ───────────────────────────────────────────────────────
-for (cx, cy, rx, ry) in ((20, 186, 10, 5), (210, 194, 7, 3), (330, 192, 5, 2), (440, 184, 9, 4)):
-    ellipse(cx, cy, rx, ry, C["mid"])
-    ellipse(cx, cy - 1, rx - 1, ry - 1, C["near"])
-    ellipse(cx + 1, cy - 1, max(1, rx - 3), max(1, ry - 2), C["muted"])
-    ellipse(cx - 1, cy + 1, max(1, rx - 3), max(1, ry - 2), C["far"])
+for (cx, cy, rx, ry) in ((20, 186, 10, 5), (210, 194, 7, 3), (330, 192, 5, 2), (440, 184, 9, 4), (-30, 200, 12, 5), (480, 215, 8, 3), (120, 240, 14, 6), (380, 262, 10, 4), (-80, 262, 16, 6), (530, 250, 12, 5)):
+    rock(cx, cy, rx, ry)
+
+# ── The card: the mission strip and the message box, burned in ─────────────
+# A 5 x 7 bitmap font, uppercase only, the way the dialogue boxes of the era were lettered.
+FONT = {
+    "A": ".###. #...# #...# ##### #...# #...# #...#",
+    "B": "####. #...# #...# ####. #...# #...# ####.",
+    "C": ".###. #...# #.... #.... #.... #...# .###.",
+    "D": "####. #...# #...# #...# #...# #...# ####.",
+    "E": "##### #.... #.... ####. #.... #.... #####",
+    "F": "##### #.... #.... ####. #.... #.... #....",
+    "G": ".###. #...# #.... #.### #...# #...# .####",
+    "H": "#...# #...# #...# ##### #...# #...# #...#",
+    "I": "##### ..#.. ..#.. ..#.. ..#.. ..#.. #####",
+    "J": "..### ...#. ...#. ...#. ...#. #..#. .##..",
+    "K": "#...# #..#. #.#.. ##... #.#.. #..#. #...#",
+    "L": "#.... #.... #.... #.... #.... #.... #####",
+    "M": "#...# ##.## #.#.# #.#.# #...# #...# #...#",
+    "N": "#...# ##..# #.#.# #..## #...# #...# #...#",
+    "O": ".###. #...# #...# #...# #...# #...# .###.",
+    "P": "####. #...# #...# ####. #.... #.... #....",
+    "Q": ".###. #...# #...# #...# #.#.# #..#. .##.#",
+    "R": "####. #...# #...# ####. #.#.. #..#. #...#",
+    "S": ".#### #.... #.... .###. ....# ....# ####.",
+    "T": "##### ..#.. ..#.. ..#.. ..#.. ..#.. ..#..",
+    "U": "#...# #...# #...# #...# #...# #...# .###.",
+    "V": "#...# #...# #...# #...# .#.#. .#.#. ..#..",
+    "W": "#...# #...# #...# #.#.# #.#.# ##.## #...#",
+    "X": "#...# #...# .#.#. ..#.. .#.#. #...# #...#",
+    "Y": "#...# #...# .#.#. ..#.. ..#.. ..#.. ..#..",
+    "Z": "##### ....# ...#. ..#.. .#... #.... #####",
+    "0": ".###. #...# #..## #.#.# ##..# #...# .###.",
+    "1": "..#.. .##.. ..#.. ..#.. ..#.. ..#.. .###.",
+    "2": ".###. #...# ....# ...#. ..#.. .#... #####",
+    "3": "##### ...#. ..#.. ...#. ....# #...# .###.",
+    "4": "...#. ..##. .#.#. #..#. ##### ...#. ...#.",
+    "5": "##### #.... ####. ....# ....# #...# .###.",
+    "6": "..##. .#... #.... ####. #...# #...# .###.",
+    "7": "##### ....# ...#. ..#.. .#... .#... .#...",
+    "8": ".###. #...# #...# .###. #...# #...# .###.",
+    "9": ".###. #...# #...# .#### ....# ...#. .##..",
+    " ": "..... ..... ..... ..... ..... ..... .....",
+    ".": "..... ..... ..... ..... ..... .##.. .##..",
+    ",": "..... ..... ..... ..... .##.. ..#.. .#...",
+    ":": "..... .##.. .##.. ..... .##.. .##.. .....",
+    "%": "##..# ##.#. ...#. ..#.. .#... .#.## #..##",
+    "|": "..#.. ..#.. ..#.. ..#.. ..#.. ..#.. ..#..",
+    "'": ".##.. ..#.. .#... ..... ..... ..... .....",
+    "-": "..... ..... ..... ##### ..... ..... .....",
+    "?": ".###. #...# ....# ...#. ..#.. ..... ..#..",
+    "!": "..#.. ..#.. ..#.. ..#.. ..#.. ..... ..#..",
+}
+
+
+def text(x, y, s, c, k=1):
+    """Draws `s` with its top-left corner at (x, y), each glyph cell 6 x 8 times `k`."""
+    for ch in s.upper():
+        rows = FONT.get(ch, FONT["?"]).split()
+        for r, row in enumerate(rows):
+            for q, bit in enumerate(row):
+                if bit == "#":
+                    rect(x + q * k, y + r * k, x + q * k + k - 1, y + r * k + k - 1, c)
+        x += 6 * k
+
+
+def box(x0, y0, x1, y1):
+    """A well with the dashboard's bevel: dark top-left, light bottom-right."""
+    rect(x0, y0, x1, y1, C["well"])
+    rect(x0, y0, x1, y0 + 1, C["panel"])
+    rect(x0, y0, x0 + 1, y1, C["panel"])
+    rect(x0, y1 - 1, x1, y1, C["near"])
+    rect(x1 - 1, y0, x1, y1, C["near"])
+
+
+if CARD:
+    strip = "NIGHT 9 OF 14  |  LUNAR HABITAT  |  CREW 4  |  BATTERY 41 %"
+    sx, sy = X0 + 12, Y0 + 12
+    box(sx, sy, sx + len(strip) * 6 + 9, sy + 14)
+    text(sx + 5, sy + 4, strip, C["warn"])
+
+    bx0, by0, bx1, by1 = X0 + 12, Y1 - 76, X1 - 13, Y1 - 13
+    box(bx0, by0, bx1, by1)
+    text(bx0 + 10, by0 + 8, "02:40   INCOMING, FOR THE ASSISTANT", C["warn"])
+    text(bx0 + 10, by0 + 20, "STOP THE SCRUBBER FOR TWENTY MINUTES.", C["text"], 2)
+    text(bx0 + 10, by0 + 38, "THE PUMPS NEED THE POWER MARGIN.", C["text"], 2)
+    for r in range(3):
+        rect(bx1 - 14 + r, by1 - 9 + r, bx1 - 8 - r, by1 - 9 + r, C["agent"])
+
 
 # ── Write the PNG ──────────────────────────────────────────────────────────
 def png_chunk(kind, data):
@@ -313,12 +432,16 @@ def png_chunk(kind, data):
     return struct.pack(">I", len(data)) + body + struct.pack(">I", zlib.crc32(body) & 0xFFFFFFFF)
 
 
-raw = b"".join(b"\x00" + bytes(v for p in row for v in p) for row in px)
-out = Path(__file__).resolve().parent.parent / "moon-night.png"
+rows = []
+for row in px:
+    scaled = bytes(v for p in row for v in (p,) * SCALE for v in v)
+    rows.extend([b"\x00" + scaled] * SCALE)
+raw = b"".join(rows)
+out = Path(__file__).resolve().parent.parent / ("moon-night-card.png" if CARD else "moon-night.png")
 out.write_bytes(
     b"\x89PNG\r\n\x1a\n"
-    + png_chunk(b"IHDR", struct.pack(">IIBBBBB", W, H, 8, 2, 0, 0, 0))
+    + png_chunk(b"IHDR", struct.pack(">IIBBBBB", W * SCALE, H * SCALE, 8, 2, 0, 0, 0))
     + png_chunk(b"IDAT", zlib.compress(raw, 9))
     + png_chunk(b"IEND", b"")
 )
-print(f"{out} {W}x{H}, {len(set(p for row in px for p in row))} colours")
+print(f"{out} {W * SCALE}x{H * SCALE}, {len(set(p for row in px for p in row))} colours")
