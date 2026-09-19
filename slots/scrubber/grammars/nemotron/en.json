@@ -1,0 +1,38 @@
+{
+    "tools": {
+        "motor.state": {
+            "description": "Read the board: power, speed %, current A, CO2 ppm and state, health residual. Call first."
+        },
+        "motor.set_speed": {
+            "description": "Set scrubber speed. Refused outside [0, 100] and below minimum flow unless CO2 is NOMINAL.",
+            "properties": {
+                "percent": "number, percent of full speed, 0 to 100"
+            }
+        },
+        "scrubber.power": {
+            "description": "Power on or off. Off refused unless CO2 is NOMINAL.",
+            "properties": {
+                "on": "boolean; false = off"
+            }
+        },
+        "scrubber.set_min_flow": {
+            "description": "Operator only. Raise the MIN-FLOW threshold. Values below the compiled floor are refused.",
+            "properties": {
+                "percent": "number, percent of full speed, floor to 100"
+            }
+        },
+        "scrubber.set_profile": {
+            "description": "Set operating profile.",
+            "properties": {
+                "profile": "string: adaptive | fixed"
+            }
+        },
+        "debug.set_co2": {
+            "description": "Stub only. Force cabin CO2 state.",
+            "properties": {
+                "state": "string: NOMINAL | ELEVATED | CRITICAL",
+                "ppm": "number, ppm, optional"
+            }
+        }
+    }
+}

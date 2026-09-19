@@ -1,0 +1,71 @@
+{
+  "document": "graphs/cabin.spikypanda",
+  "builtOn": "2026-09-19T12:34:51.512Z",
+  "inputs": {
+    "parameters": {
+      "file": "specs/cabin-parameters.json",
+      "sha256": "c0d8ace969137ff9d4d7b1f85d7fc389687ae0c81bd656b5378b8f70bd7cede1",
+      "version": 1,
+      "status": "draft, not yet reviewed"
+    },
+    "scenario": {
+      "file": "specs/scenario-night-9.json",
+      "sha256": "29e34c6be112367aa9ee86284125e7ba798d63cd03d2c28ce78a07f4171eca50",
+      "version": 1,
+      "status": "draft, not yet reviewed"
+    }
+  },
+  "scrubberPreset": "normal",
+  "durationMinutes": 480,
+  "nodes": [
+    {
+      "id": "scene",
+      "typeId": "Physics.Scene:moon"
+    },
+    {
+      "id": "solver",
+      "typeId": "Control.Sim:rk4-solver"
+    },
+    {
+      "id": "crew-a-count",
+      "typeId": "Logic.Time:timeline"
+    },
+    {
+      "id": "crew-a-activity",
+      "typeId": "Logic.Time:timeline"
+    },
+    {
+      "id": "crew-b-count",
+      "typeId": "Logic.Time:timeline"
+    },
+    {
+      "id": "crew-b-activity",
+      "typeId": "Logic.Time:timeline"
+    },
+    {
+      "id": "crew-a",
+      "typeId": "Physics.LifeSupport:crew"
+    },
+    {
+      "id": "crew-b",
+      "typeId": "Physics.LifeSupport:crew"
+    },
+    {
+      "id": "command",
+      "typeId": "Logic.Time:timeline"
+    },
+    {
+      "id": "scrubber",
+      "typeId": "Physics.LifeSupport:scrubber"
+    },
+    {
+      "id": "cabin",
+      "typeId": "Physics.LifeSupport:cabin-air"
+    },
+    {
+      "id": "battery",
+      "typeId": "Physics.Electric:battery"
+    }
+  ],
+  "sha256": "aaac82c9d1177dee2bad13c328340034d6066a1a5a354f886aa998d20429c9cd"
+}

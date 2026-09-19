@@ -43,12 +43,15 @@ h1, h2, h3 { font-family: var(--font-title); font-weight: 400; margin: 0; }
 .hint { font-size: 18px; color: var(--muted); line-height: 1.1; text-wrap: pretty; margin: 0; }
 
 .btn { font-family: var(--font-body); font-size: 18px; line-height: 1; padding: 4px 8px; cursor: pointer; color: var(--text); background: var(--btn); border-top: 2px solid var(--bevel); border-left: 2px solid var(--bevel); border-right: 2px solid var(--well); border-bottom: 2px solid var(--well); white-space: normal; text-align: left; }
+.btn-dim { opacity: 0.7; font-size: 15px; }
 .btn:hover:not(:disabled) { background: var(--btn-hover); color: var(--agent); }
 .btn:disabled { color: #5b6382; background: var(--entry); cursor: not-allowed; }
 .btn-primary { color: var(--bg); background: var(--agent); border-top-color: var(--agent-light); border-left-color: var(--agent-light); }
 .btn-primary:hover:not(:disabled) { background: var(--agent-light); color: var(--bg); }
 .door { display: inline-block; font-family: var(--font-title); font-size: 16px; line-height: 1; padding: 14px 18px; color: var(--bg); background: var(--agent); border-top: 2px solid var(--agent-light); border-left: 2px solid var(--agent-light); border-right: 2px solid var(--well); border-bottom: 2px solid var(--well); }
 .door:hover { background: var(--agent-light); color: var(--bg); }
+.agent-door { text-decoration: none; cursor: pointer; }
+.agent-door:hover { background: var(--agent-light); color: var(--bg); }
 
 .pill { font-family: var(--font-body); font-size: 18px; line-height: 1; padding: 3px 6px; color: var(--bg); background: var(--muted); white-space: nowrap; }
 .pill.ok, .outcome.ok { background: var(--ok); }

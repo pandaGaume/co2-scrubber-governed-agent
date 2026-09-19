@@ -1,0 +1,35 @@
+{
+    "tools": {
+        "run_sweep": {
+            "description": "Start a sweep job from a spec. Long study; operator approval required. Returns jobId.",
+            "properties": {
+                "spec": "object, job spec with job = \"sweep\""
+            }
+        },
+        "run_fit": {
+            "description": "Start a fit job from a spec. Long study; operator approval required. Returns jobId.",
+            "properties": {
+                "spec": "object, job spec with job = \"fit\""
+            }
+        },
+        "run_evaluate": {
+            "description": "Start a evaluate job from a spec. Long study; operator approval required. Returns jobId.",
+            "properties": {
+                "spec": "object, job spec with job = \"evaluate\""
+            }
+        },
+        "job_status": {
+            "description": "Job state: queued | running | completed | failed | refused.",
+            "properties": {
+                "jobId": "string, from run_*"
+            }
+        },
+        "get_artifact": {
+            "description": "A job's output file: inline with sha256 if small, else location and sha256.",
+            "properties": {
+                "jobId": "string, from run_*",
+                "path": "string, file path in the job outputs"
+            }
+        }
+    }
+}

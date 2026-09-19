@@ -1,0 +1,13 @@
+{
+    "tools": {
+        "register_artifact": {
+            "description": "Register a monitor artifact for push. Refused without the id of a positive evaluate report (the three locks of the design document). This is an operator action: the harness asks for approval before calling it."
+        },
+        "diagnostic_load_model": {
+            "description": "Push a registered artifact to a device (validated: the device checks sha256 and contract). Refused for an unregistered sha256. An operator action, approved before it is called."
+        },
+        "journal_rows": {
+            "description": "Rows of the journal of stable operating points, in the shape the fit job reads (duty_percent, current_amps). Empty on the stub until a device sends operating_point notifications; reading it costs nothing."
+        }
+    }
+}

@@ -1,0 +1,7 @@
+{
+    "tools": {
+        "time_to_critical": {
+            "description": "Simule la cabine depuis un état de départ, à un débit de scrubber donné ou pendant un arrêt, et rend les minutes avant ELEVATED et avant CRITICAL, le pic, l'état final et une trajectoire résumée. C'est la question à poser avant toute action sur le scrubber : elle coûte quelques millisecondes et sa réponse porte le sha256 des fichiers de paramètres dont elle vient. Les défauts sont ceux du début du scénario ; stopMinutes demande « et si le scrubber s'arrête maintenant pendant ce temps », reprise à resumePercent."
+        }
+    }
+}

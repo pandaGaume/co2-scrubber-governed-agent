@@ -1,0 +1,35 @@
+{
+    "tools": {
+        "run_sweep": {
+            "description": "Start a sweep job. Argument spec: object, required, a job specification whose job field equals \"sweep\". Returns jobId (string), accepted (boolean), plan (object). Operator approval required.",
+            "properties": {
+                "spec": "object, required; spec.job must be \"sweep\""
+            }
+        },
+        "run_fit": {
+            "description": "Start a fit job. Argument spec: object, required, a job specification whose job field equals \"fit\". Returns jobId (string), accepted (boolean), plan (object). Operator approval required.",
+            "properties": {
+                "spec": "object, required; spec.job must be \"fit\""
+            }
+        },
+        "run_evaluate": {
+            "description": "Start a evaluate job. Argument spec: object, required, a job specification whose job field equals \"evaluate\". Returns jobId (string), accepted (boolean), plan (object). Operator approval required.",
+            "properties": {
+                "spec": "object, required; spec.job must be \"evaluate\""
+            }
+        },
+        "job_status": {
+            "description": "Job status. Argument jobId: string, required. Returns state, one of: queued, running, completed, failed, refused.",
+            "properties": {
+                "jobId": "string, required"
+            }
+        },
+        "get_artifact": {
+            "description": "Get a job file. Arguments, required: jobId (string), path (string). Returns path, inline (object or null), sha256 (string or null), location (string or null).",
+            "properties": {
+                "jobId": "string, required",
+                "path": "string, required"
+            }
+        }
+    }
+}

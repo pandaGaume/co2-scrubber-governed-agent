@@ -1,0 +1,20 @@
+{
+    "compilerOptions": {
+        "target": "ES2022",
+        "lib": ["ES2022", "DOM", "DOM.Iterable"],
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        "types": ["node"],
+        "strict": true,
+        "noImplicitOverride": true,
+        "noUncheckedIndexedAccess": false,
+        "esModuleInterop": true,
+        "resolveJsonModule": true,
+        "skipLibCheck": true,
+        "sourceMap": true,
+        "declaration": false,
+        "rootDir": ".",
+        "outDir": "dist"
+    },
+    "include": ["lib/**/*.ts", "slots/**/*.ts", "scripts/**/*.ts", "tier3/**/*.ts", "tests/**/*.ts"]
+}

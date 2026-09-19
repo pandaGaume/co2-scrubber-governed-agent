@@ -1,0 +1,27 @@
+{
+    "tools": {
+        "register_artifact": {
+            "description": "Register an artifact for push. Needs a positive evaluate report. Operator approval required.",
+            "properties": {
+                "sha256": "string, 64 hex chars",
+                "contractSha256": "string, 64 hex chars",
+                "reportId": "string, 64 hex chars",
+                "verdict": "string: pass | fail; only pass registers"
+            }
+        },
+        "diagnostic_load_model": {
+            "description": "Push a registered artifact to a device. Operator approval required.",
+            "properties": {
+                "deviceId": "string",
+                "sha256": "string, 64 hex chars, registered"
+            }
+        },
+        "journal_rows": {
+            "description": "Rows of stable operating points (duty_percent, current_amps).",
+            "properties": {
+                "deviceId": "string, optional filter",
+                "since": "number, optional, time filter"
+            }
+        }
+    }
+}

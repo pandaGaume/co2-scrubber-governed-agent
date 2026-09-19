@@ -1,0 +1,34 @@
+{
+    "tools": {
+        "describe": {
+            "title": "Ce qu'est le jumeau",
+            "description": "Ce qu'est le jumeau : le modèle en un paragraphe, les fichiers dont il est construit avec leur sha256, les seuils, le budget d'une question."
+        },
+        "time_to_critical": {
+            "title": "Temps avant situation critique",
+            "description": "Comment le CO2 de la cabine évolue depuis un état de départ à un débit de scrubber, avec un arrêt optionnel : les minutes avant ELEVATED et avant CRITICAL, le pic, l'état final. Les défauts viennent du début du scénario (quatre personnes endormies, 1500 ppm, 33 %). stopMinutes pose la question « et si le scrubber s'arrête maintenant pendant ce temps » (il reprend à resumePercent).",
+            "properties": {
+                "co2Ppm": "concentration de départ, ppm",
+                "crew": "un ou deux groupes d'équipage, chacun un nombre de personnes et leur activité",
+                "crew.count": "nombre de personnes du groupe",
+                "crew.activity": "sleep, rest, light_work ou heavy_work",
+                "flowPercent": "consigne du scrubber pendant la course (avant un arrêt)",
+                "stopMinutes": "arrêter le scrubber à la minute 0 pendant cette durée",
+                "resumePercent": "consigne après l'arrêt (100 par défaut)",
+                "horizonMinutes": "jusqu'où regarder (240 par défaut)"
+            }
+        },
+        "sweep": {
+            "title": "Carte de fonctionnement",
+            "description": "La carte de fonctionnement : pour chaque débit de scrubber d'une liste, fait tourner le jumeau depuis un état de départ avec un équipage pendant quelques minutes et rapporte le pic, l'état final, les minutes avant ELEVATED et CRITICAL, le régime permanent et l'énergie consommée. Quelques points sous le budget ; une grille complète est un job d'usine.",
+            "properties": {
+                "flowPercents": "les débits de scrubber à essayer, en pour cent de la pleine vitesse",
+                "co2Ppm": "concentration de départ, ppm",
+                "crew": "un ou deux groupes d'équipage, chacun un nombre de personnes et leur activité",
+                "crew.count": "nombre de personnes du groupe",
+                "crew.activity": "sleep, rest, light_work ou heavy_work",
+                "minutes": "minutes d'histoire par point (240 par défaut)"
+            }
+        }
+    }
+}

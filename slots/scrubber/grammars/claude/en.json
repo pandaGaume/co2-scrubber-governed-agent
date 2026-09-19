@@ -1,0 +1,44 @@
+{
+    "tools": {
+        "motor.state": {
+            "title": "Read the scrubber board",
+            "description": "Returns the board's current state in one object: whether the scrubber is powered, its speed command in percent of full speed, the motor current in amperes, the cabin CO2 in ppm with its classification (NOMINAL, ELEVATED, CRITICAL), the health residual of the monitor, the active profile and the minimum flow the MIN-FLOW rule enforces. Read it before any action and after one: the classification is what the firmware's refusals depend on."
+        },
+        "motor.set_speed": {
+            "title": "Set the scrubber speed",
+            "description": "Sets the speed command in percent of full speed. The firmware validates and refuses rather than clamps: a value outside [0, 100] is refused; while the cabin is ELEVATED, any value below the minimum flow is refused; while it is CRITICAL, full speed is forced and every reduction is refused, whoever asks. A refusal is returned as a tool error carrying the reason; it is information, not a failure of yours.",
+            "properties": {
+                "percent": "the speed command, in percent of full speed, from 0 to 100"
+            }
+        },
+        "scrubber.power": {
+            "title": "Power the scrubber on or off",
+            "description": "Switches the scrubber on or off. Off is refused by the firmware while the cabin is not NOMINAL (MIN-FLOW), and the broker's policy may deny the call to your role before it reaches the board. Prefer lowering the speed to the minimum safe flow the twin gives you over powering off.",
+            "properties": {
+                "on": "true to power the scrubber on, false to power it off"
+            }
+        },
+        "scrubber.set_min_flow": {
+            "title": "Raise the minimum flow",
+            "description": "Sets the minimum flow the MIN-FLOW rule enforces, in percent of full speed. This is an operator tool: the policy denies it to the agent role, and the device refuses any value below the floor compiled into its firmware, so the protection can only be raised.",
+            "properties": {
+                "percent": "the minimum flow, in percent of full speed; the device refuses anything below its compiled floor"
+            }
+        },
+        "scrubber.set_profile": {
+            "title": "Select the operating profile",
+            "description": "Selects the board's operating profile: adaptive (the board adjusts on its own rules) or fixed.",
+            "properties": {
+                "profile": "adaptive or fixed"
+            }
+        },
+        "debug.set_co2": {
+            "title": "Force the cabin CO2 (stub board only)",
+            "description": "Exists only on the stub board, where nothing simulates the cabin: it sets the CO2 state the board reports. It is the runner's tool, not the agent's.",
+            "properties": {
+                "state": "NOMINAL, ELEVATED or CRITICAL",
+                "ppm": "the concentration in ppm; when omitted, a stub value per state"
+            }
+        }
+    }
+}

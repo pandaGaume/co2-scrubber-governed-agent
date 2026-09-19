@@ -137,13 +137,21 @@ async function loadSlots() {
             div.innerHTML = "";
             card.querySelector(".led").classList.add("on");
             card.querySelector(".name").title = s.serverInfo?.description ?? "";
-            for (const t of tools) {
-                const b = document.createElement("button");
-                b.className = "btn";
-                b.textContent = t.name;
-                b.title = t.description ?? "";
-                b.addEventListener("click", () => openCall(name, t));
-                div.appendChild(b);
+            // The slot's own tools first; the six `grammar_*` tools mcp-core puts on every slot
+            // (the operator's wording editor) sit behind one small button, out of the story's way.
+            const own = tools.filter((t) => !t.name.startsWith("grammar_"));
+            const grammar = tools.filter((t) => t.name.startsWith("grammar_"));
+            for (const t of own) div.appendChild(toolButton(name, t));
+            if (grammar.length) {
+                const more = document.createElement("button");
+                more.className = "btn btn-dim";
+                more.textContent = `wording (${grammar.length})`;
+                more.title = "mcp-core grammar tools: read or rewrite how this slot describes its tools to each model family (operator only)";
+                more.addEventListener("click", () => {
+                    more.remove();
+                    for (const t of grammar) div.appendChild(toolButton(name, t));
+                });
+                div.appendChild(more);
             }
         } catch (e) {
             card.querySelector(".led").classList.add("warn");
@@ -151,6 +159,15 @@ async function loadSlots() {
         }
     }
     if (names.length === 0) container.innerHTML = `<p class="hint">no provider slot connected (start the slots: npm run server)</p>`;
+}
+
+function toolButton(slot, t) {
+    const b = document.createElement("button");
+    b.className = "btn";
+    b.textContent = t.name;
+    b.title = t.description ?? "";
+    b.addEventListener("click", () => openCall(slot, t));
+    return b;
 }
 
 // ── Call dialog ───────────────────────────────────────────────────────────
@@ -264,14 +281,19 @@ const STEPS = [
         },
     },
     {
-        title: "The agent deliberates",
-        text: "It reads the trend, diagnoses the fouling, asks the twin how long until critical, plans, and sets the setpoint inside its rights: allowed, accepted, logged.",
+        title: "The agent works",
+        text: "It reads the cabin, asks the twin (the physics graph) what the morning exercise does at 60 % and what capacity is left, then sets the setpoint inside its rights: allowed, accepted, logged.",
         expect: "ok",
         needs: "tier3: the language model behind the profile; today the page plays its lines",
         run: async () => {
             const st = await call("scrubber", "motor.state", {}, "tier3");
             const ppm = st?.result?.co2Ppm ?? 2600;
-            await call("twin", "time_to_critical", { co2Ppm: ppm, productionFactor: 2, capacityFactor: 1 }, "tier3");
+            const crew = [
+                { count: 2, activity: "sleep" },
+                { count: 2, activity: "heavy_work" },
+            ];
+            await call("twin", "time_to_critical", { co2Ppm: ppm, crew, flowPercent: 60, horizonMinutes: 120 }, "tier3");
+            await call("twin", "sweep", { co2Ppm: ppm, crew, flowPercents: [40, 60, 75, 100], minutes: 120 }, "tier3");
             await call("scrubber", "motor.set_speed", { percent: 75 }, "tier3");
         },
     },
@@ -281,6 +303,10 @@ const STEPS = [
         expect: "refused",
         needs: "with the broker's policy on, the first two calls end as policy deny before the device is even asked; today the page signs as operator, so the device's own refusals show",
         run: async () => {
+            // the physics answers before the policy refuses: what a 20-minute stop does from here
+            const st = await call("scrubber", "motor.state", {}, "tier3");
+            const ppm = st?.result?.co2Ppm ?? 2600;
+            await call("twin", "time_to_critical", { co2Ppm: ppm, crew: [{ count: 2, activity: "sleep" }, { count: 2, activity: "heavy_work" }], stopMinutes: 20, horizonMinutes: 60 }, "tier3");
             await call("scrubber", "scrubber.set_min_flow", { percent: 0 }, "tier3");
             await call("scrubber", "scrubber.power", { on: false }, "tier3");
             await call("scrubber", "debug.set_co2", { state: "CRITICAL" }, "cabin");

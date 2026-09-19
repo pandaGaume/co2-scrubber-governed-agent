@@ -1,10 +1,11 @@
 {
-    "_comment": "Who / what / where, in the vocabulary of mcp-broker's hierarchical authorization. To align with the broker's schema before use.",
+    "_comment": "Who / what / where, in the vocabulary of mcp-broker's hierarchical authorization. To align with the broker's schema before use. `grammar_*` are the wording tools mcp-core's McpGrammarBehavior puts on every slot: the operator's, never the agent's.",
     "resourcePaths": {
         "scrubber": "/habitat/cabin-1/eclss/scrubber-1",
         "twin": "/habitat/cabin-1/twin",
         "station": "/habitat/cabin-1/station",
-        "factory": "/habitat/factory"
+        "factory": "/habitat/factory",
+        "reasoner": "/habitat/cabin-1/reasoner"
     },
     "roles": {
         "operator": {
@@ -14,7 +15,9 @@
                 "mcp.tools.power",
                 "mcp.tools.protect",
                 "mcp.tools.register",
-                "mcp.tools.factory"
+                "mcp.tools.factory",
+                "mcp.tools.grammar",
+                "mcp.tools.reason"
             ],
             "paths": [
                 "/habitat/**"
@@ -33,7 +36,8 @@
             "capabilities": [
                 "mcp.tools.read",
                 "mcp.tools.actuate",
-                "mcp.tools.factory"
+                "mcp.tools.factory",
+                "mcp.tools.reason"
             ],
             "paths": [
                 "/habitat/**"
@@ -42,7 +46,8 @@
                 "mcp.tools.power",
                 "mcp.tools.protect",
                 "mcp.tools.register",
-                "mcp.tools.admin"
+                "mcp.tools.admin",
+                "mcp.tools.grammar"
             ],
             "budget": {
                 "twinPoints": 20,
@@ -60,6 +65,12 @@
         "station.diagnostic_load_model": "mcp.tools.register",
         "factory.run_sweep": "mcp.tools.factory",
         "factory.run_fit": "mcp.tools.factory",
-        "factory.run_evaluate": "mcp.tools.factory"
+        "factory.run_evaluate": "mcp.tools.factory",
+        "scrubber.grammar_*": "mcp.tools.grammar",
+        "twin.grammar_*": "mcp.tools.grammar",
+        "station.grammar_*": "mcp.tools.grammar",
+        "factory.grammar_*": "mcp.tools.grammar",
+        "reasoner.decide": "mcp.tools.reason",
+        "reasoner.describe": "mcp.tools.read"
     }
 }

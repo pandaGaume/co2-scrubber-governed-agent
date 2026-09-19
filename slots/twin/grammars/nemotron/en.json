@@ -1,0 +1,31 @@
+{
+    "tools": {
+        "describe": {
+            "description": "Model summary, source files with sha256, thresholds, budget. No arguments."
+        },
+        "time_to_critical": {
+            "description": "Simulate cabin CO2 from a start state at one scrubber flow, or during a stop. Returns minutes to ELEVATED, minutes to CRITICAL, peak ppm, final state. Call before changing the scrubber.",
+            "properties": {
+                "co2Ppm": "number, ppm, start concentration (default 1500)",
+                "crew": "array of 1 or 2 groups {count, activity}",
+                "crew.count": "number, people, >= 0",
+                "crew.activity": "string: sleep | rest | light_work | heavy_work",
+                "flowPercent": "number, 0 to 100, scrubber command (default 33)",
+                "stopMinutes": "number, minutes, stop from minute 0 (default 0 = no stop)",
+                "resumePercent": "number, 0 to 100, command after the stop (default 100)",
+                "horizonMinutes": "number, minutes, >= 1 (default 240, max 1440)"
+            }
+        },
+        "sweep": {
+            "description": "Operating map: simulate one run per flow in a list. Returns per flow: peak ppm, final state, minutes to ELEVATED and CRITICAL, steady state ppm, energy Wh. Use to pick the lowest safe flow.",
+            "properties": {
+                "flowPercents": "array of 1 to 20 numbers, 0 to 100, percent",
+                "co2Ppm": "number, ppm, start concentration (default 1500)",
+                "crew": "array of 1 or 2 groups {count, activity}",
+                "crew.count": "number, people, >= 0",
+                "crew.activity": "string: sleep | rest | light_work | heavy_work",
+                "minutes": "number, minutes per point, >= 1 (default 240, max 1440)"
+            }
+        }
+    }
+}

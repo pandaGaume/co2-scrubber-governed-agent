@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1372" height="912" viewBox="0 0 1372 912" font-family="Helvetica, Arial, sans-serif" font-size="12">
+<title>The cabin twin graph, as laid out in the editor</title>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#333"/></marker></defs>
+<rect width="1372" height="912" fill="#ffffff"/>
+<path d="M 202 136 C 296 136, 296 56, 390 56" fill="none" stroke="#333" stroke-width="1.3" marker-end="url(#arrow)" stroke-dasharray="5 4"/>
+<text x="296" y="92" text-anchor="middle" font-size="10" fill="#555">solver_out -&gt; solver_in_0</text>
+<path d="M 362 436 C 386 436, 386 476, 410 476" fill="none" stroke="#333" stroke-width="1.3" marker-end="url(#arrow)"/>
+<text x="386" y="452" text-anchor="middle" font-size="10" fill="#555">value -&gt; count</text>
+<path d="M 362 576 C 386 576, 386 476, 410 476" fill="none" stroke="#333" stroke-width="1.3" marker-end="url(#arrow)"/>
+<text x="386" y="522" text-anchor="middle" font-size="10" fill="#555">value -&gt; activity</text>
+<path d="M 362 716 C 386 716, 386 716, 410 716" fill="none" stroke="#333" stroke-width="1.3" marker-end="url(#arrow)"/>
+<text x="386" y="712" text-anchor="middle" font-size="10" fill="#555">value -&gt; count</text>
+<path d="M 362 856 C 386 856, 386 716, 410 716" fill="none" stroke="#333" stroke-width="1.3" marker-end="url(#arrow)"/>
+<text x="386" y="782" text-anchor="middle" font-size="10" fill="#555">value -&gt; activity</text>
+<path d="M 582 476 C 876 476, 876 536, 1170 536" fill="none" stroke="#333" stroke-width="1.3" marker-end="url(#arrow)"/>
+<text x="876" y="502" text-anchor="middle" font-size="10" fill="#555">co2Emission -&gt; emissionA</text>
+<path d="M 582 716 C 876 716, 876 536, 1170 536" fill="none" stroke="#333" stroke-width="1.3" marker-end="url(#arrow)"/>
+<text x="876" y="622" text-anchor="middle" font-size="10" fill="#555">co2Emission -&gt; emissionB</text>
+<path d="M 842 316 C 856 316, 856 316, 870 316" fill="none" stroke="#333" stroke-width="1.3" marker-end="url(#arrow)"/>
+<text x="856" y="312" text-anchor="middle" font-size="10" fill="#555">value -&gt; command</text>
+<path d="M 1042 316 C 1106 316, 1106 536, 1170 536" fill="none" stroke="#333" stroke-width="1.3" marker-end="url(#arrow)"/>
+<text x="1106" y="422" text-anchor="middle" font-size="10" fill="#555">effectiveRate -&gt; scrubberRate</text>
+<path d="M 1042 316 C 1106 316, 1106 316, 1170 316" fill="none" stroke="#333" stroke-width="1.3" marker-end="url(#arrow)"/>
+<text x="1106" y="312" text-anchor="middle" font-size="10" fill="#555">power -&gt; powerA</text>
+<rect x="390" y="30" width="172" height="52" rx="8" fill="#dfe7f5" stroke="#333" stroke-width="1.3"/>
+<text x="400" y="52" font-size="13" font-weight="bold" fill="#111">Lunar habitat</text>
+<text x="400" y="72" font-size="10" fill="#444">Physics.Scene:moon</text>
+<rect x="30" y="110" width="172" height="52" rx="8" fill="#eeeeee" stroke="#333" stroke-width="1.3"/>
+<text x="40" y="132" font-size="13" font-weight="bold" fill="#111">Solver (one story minute)</text>
+<text x="40" y="152" font-size="10" fill="#444">Control.Sim:rk4-solver</text>
+<rect x="190" y="410" width="172" height="52" rx="8" fill="#fff3d6" stroke="#333" stroke-width="1.3"/>
+<text x="200" y="432" font-size="13" font-weight="bold" fill="#111">Crew A: count</text>
+<text x="200" y="452" font-size="10" fill="#444">Logic.Time:timeline</text>
+<rect x="190" y="550" width="172" height="52" rx="8" fill="#fff3d6" stroke="#333" stroke-width="1.3"/>
+<text x="200" y="572" font-size="13" font-weight="bold" fill="#111">Crew A: activity</text>
+<text x="200" y="592" font-size="10" fill="#444">Logic.Time:timeline</text>
+<rect x="190" y="690" width="172" height="52" rx="8" fill="#fff3d6" stroke="#333" stroke-width="1.3"/>
+<text x="200" y="712" font-size="13" font-weight="bold" fill="#111">Crew B: count</text>
+<text x="200" y="732" font-size="10" fill="#444">Logic.Time:timeline</text>
+<rect x="190" y="830" width="172" height="52" rx="8" fill="#fff3d6" stroke="#333" stroke-width="1.3"/>
+<text x="200" y="852" font-size="13" font-weight="bold" fill="#111">Crew B: activity</text>
+<text x="200" y="872" font-size="10" fill="#444">Logic.Time:timeline</text>
+<rect x="410" y="450" width="172" height="52" rx="8" fill="#dff5e3" stroke="#333" stroke-width="1.3"/>
+<text x="420" y="472" font-size="13" font-weight="bold" fill="#111">Crew A</text>
+<text x="420" y="492" font-size="10" fill="#444">Physics.LifeSupport:crew</text>
+<rect x="410" y="690" width="172" height="52" rx="8" fill="#dff5e3" stroke="#333" stroke-width="1.3"/>
+<text x="420" y="712" font-size="13" font-weight="bold" fill="#111">Crew B</text>
+<text x="420" y="732" font-size="10" fill="#444">Physics.LifeSupport:crew</text>
+<rect x="670" y="290" width="172" height="52" rx="8" fill="#fff3d6" stroke="#333" stroke-width="1.3"/>
+<text x="680" y="312" font-size="13" font-weight="bold" fill="#111">Scrubber command</text>
+<text x="680" y="332" font-size="10" fill="#444">Logic.Time:timeline</text>
+<rect x="870" y="290" width="172" height="52" rx="8" fill="#dff5e3" stroke="#333" stroke-width="1.3"/>
+<text x="880" y="312" font-size="13" font-weight="bold" fill="#111">CO2 scrubber</text>
+<text x="880" y="332" font-size="10" fill="#444">Physics.LifeSupport:scrubber</text>
+<rect x="1170" y="510" width="172" height="52" rx="8" fill="#dff5e3" stroke="#333" stroke-width="1.3"/>
+<text x="1180" y="532" font-size="13" font-weight="bold" fill="#111">Cabin air</text>
+<text x="1180" y="552" font-size="10" fill="#444">Physics.LifeSupport:cabin-air</text>
+<rect x="1170" y="290" width="172" height="52" rx="8" fill="#f5e3df" stroke="#333" stroke-width="1.3"/>
+<text x="1180" y="312" font-size="13" font-weight="bold" fill="#111">Night reserve</text>
+<text x="1180" y="332" font-size="10" fill="#444">Physics.Electric:battery</text>
+</svg>

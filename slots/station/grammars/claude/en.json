@@ -1,0 +1,16 @@
+{
+    "tools": {
+        "register_artifact": {
+            "title": "Register an artifact for push",
+            "description": "Registers a monitor artifact so that it may later be pushed to a device. The station enforces the design's rule even in the stub: registration is refused without the id of an evaluate report whose verdict is pass. This is an operator's action; the harness requests approval before the call reaches the station."
+        },
+        "diagnostic_load_model": {
+            "title": "Push a registered artifact to a device",
+            "description": "Pushes a registered artifact to a device; the device validates the sha256 and the contract on its side. Refused for a sha256 the station has not registered. An operator's action, approved before it is called."
+        },
+        "journal_rows": {
+            "title": "Read the journal of operating points",
+            "description": "Returns rows of the journal of stable operating points, in the shape the fit job reads (duty_percent, current_amps), optionally filtered by device and time. On the stub it stays empty until a device sends operating_point notifications. Reading is free."
+        }
+    }
+}

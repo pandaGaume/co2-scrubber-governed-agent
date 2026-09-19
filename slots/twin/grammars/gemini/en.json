@@ -1,0 +1,31 @@
+{
+    "tools": {
+        "describe": {
+            "description": "Describe the twin: model, source files with sha256, thresholds (elevatedPpm, criticalPpm), budget. No arguments."
+        },
+        "time_to_critical": {
+            "description": "Simulate the cabin CO2 from a starting state. Arguments (all optional): co2Ppm (number, ppm, default 1500), crew (array of 1 or 2 objects {count: number, activity: one of sleep, rest, light_work, heavy_work}; default 4 asleep), flowPercent (number 0-100, default 33), stopMinutes (number, default 0), resumePercent (number 0-100, default 100), horizonMinutes (number, default 240, maximum 1440). Returns minutesToElevated, minutesToCritical, peakPpm, finalState (one of NOMINAL, ELEVATED, CRITICAL), trajectory.",
+            "properties": {
+                "co2Ppm": "number, optional, default 1500",
+                "crew": "array, optional, 1 or 2 groups",
+                "crew.count": "number, required in each group",
+                "crew.activity": "string, required in each group, one of: sleep, rest, light_work, heavy_work",
+                "flowPercent": "number, optional, 0 to 100, default 33",
+                "stopMinutes": "number, optional, default 0",
+                "resumePercent": "number, optional, 0 to 100, default 100",
+                "horizonMinutes": "number, optional, default 240, maximum 1440"
+            }
+        },
+        "sweep": {
+            "description": "Operating map. Argument flowPercents: array of 1 to 20 numbers from 0 to 100, required. Optional: co2Ppm (number, default 1500), crew (array of 1 or 2 groups {count, activity}; activity one of sleep, rest, light_work, heavy_work), minutes (number, default 240, maximum 1440). Returns one point per flow: flowPercent, peakPpm, finalState, minutesToElevated, minutesToCritical, steadyStatePpm, scrubberEnergyWh.",
+            "properties": {
+                "flowPercents": "array of numbers, required, 1 to 20 values, each 0 to 100",
+                "co2Ppm": "number, optional, default 1500",
+                "crew": "array, optional, 1 or 2 groups",
+                "crew.count": "number, required in each group",
+                "crew.activity": "string, required in each group, one of: sleep, rest, light_work, heavy_work",
+                "minutes": "number, optional, default 240, maximum 1440"
+            }
+        }
+    }
+}

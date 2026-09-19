@@ -1,0 +1,38 @@
+{
+    "tools": {
+        "motor.state": {
+            "description": "Motor and cabin state. Returns: power (boolean), speedPercent (0-100), currentAmps, co2Ppm, co2State (one of NOMINAL, ELEVATED, CRITICAL), healthResidual, profile (adaptive or fixed), minFlowPercent. No arguments."
+        },
+        "motor.set_speed": {
+            "description": "Set the speed command in percent of full speed. Argument percent: a number from 0 to 100, required. Refused when outside 0-100; refused below minFlowPercent when co2State is ELEVATED; refused below 100 when co2State is CRITICAL.",
+            "properties": {
+                "percent": "number, required, from 0 to 100, percent of full speed"
+            }
+        },
+        "scrubber.power": {
+            "description": "Power the scrubber on or off. Argument on: boolean, required; true means on, false means off. Off is refused when co2State is ELEVATED or CRITICAL.",
+            "properties": {
+                "on": "boolean, required: true = on, false = off"
+            }
+        },
+        "scrubber.set_min_flow": {
+            "description": "Set the minimum flow of the MIN-FLOW rule. Argument percent: number from the compiled floor to 100. Operator only. Values below the floor are refused.",
+            "properties": {
+                "percent": "number, required, from the compiled floor to 100"
+            }
+        },
+        "scrubber.set_profile": {
+            "description": "Select the operating profile. Argument profile: one of adaptive, fixed. Required.",
+            "properties": {
+                "profile": "string, required, one of: adaptive, fixed"
+            }
+        },
+        "debug.set_co2": {
+            "description": "Stub only. Set the cabin CO2 state. Argument state: one of NOMINAL, ELEVATED, CRITICAL, required. Argument ppm: number, optional (default per state: 1200, 2600, 5000).",
+            "properties": {
+                "state": "string, required, one of: NOMINAL, ELEVATED, CRITICAL",
+                "ppm": "number, optional; defaults 1200 / 2600 / 5000 by state"
+            }
+        }
+    }
+}

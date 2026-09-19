@@ -1,0 +1,19 @@
+{
+    "tools": {
+        "run_sweep": {
+            "description": "Start a sweep job from its specification; returns a job id and the plan. A job is the long form of a study (a grid, a fit, an evaluation), not a quick question: the operator approves it before it starts, and the twin answers what-ifs at once."
+        },
+        "run_fit": {
+            "description": "Start a fit job from its specification; returns a job id and the plan. A job is the long form of a study (a grid, a fit, an evaluation), not a quick question: the operator approves it before it starts, and the twin answers what-ifs at once."
+        },
+        "run_evaluate": {
+            "description": "Start a evaluate job from its specification; returns a job id and the plan. A job is the long form of a study (a grid, a fit, an evaluation), not a quick question: the operator approves it before it starts, and the twin answers what-ifs at once."
+        },
+        "job_status": {
+            "description": "State of a job: queued, running, completed, failed or refused, with its exit code and times. Free to read."
+        },
+        "get_artifact": {
+            "description": "A job's file: small files inline with their sha256, large ones by location and sha256, never the bytes. Free to read."
+        }
+    }
+}

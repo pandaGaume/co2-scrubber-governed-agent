@@ -1,0 +1,607 @@
+{
+  "version": 3,
+  "layout": {
+    "nodes": [
+      {
+        "id": "observe",
+        "x": -280,
+        "y": 0,
+        "typeId": "Harness.Observation:state",
+        "inputs": [],
+        "outputs": [
+          {
+            "name": "state",
+            "type": "harness.state",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "context",
+        "x": -100,
+        "y": 0,
+        "typeId": "Harness.Policy:context",
+        "inputs": [
+          {
+            "name": "state",
+            "type": "harness.state",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "context",
+            "type": "harness.context",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "lookup",
+        "x": 80,
+        "y": 0,
+        "typeId": "Harness.Policy:lookup",
+        "inputs": [
+          {
+            "name": "context",
+            "type": "harness.context",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "candidates",
+            "type": "harness.candidates",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "gate",
+        "x": 300,
+        "y": 0,
+        "typeId": "Harness.Policy:confidence-gate",
+        "inputs": [
+          {
+            "name": "candidates",
+            "type": "harness.candidates",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "policy",
+            "type": "harness.decision",
+            "direction": "output"
+          },
+          {
+            "name": "fallback",
+            "type": "harness.uncertain",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "request",
+        "x": 500,
+        "y": 100,
+        "typeId": "Harness.Reasoning:request",
+        "inputs": [
+          {
+            "name": "fallback",
+            "type": "harness.uncertain",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "request",
+            "type": "harness.request",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "reason",
+        "x": 680,
+        "y": 100,
+        "typeId": "Harness.Reasoning:provider",
+        "inputs": [
+          {
+            "name": "request",
+            "type": "harness.request",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "decision",
+            "type": "harness.decision",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "merge",
+        "x": 900,
+        "y": 0,
+        "typeId": "Harness.Policy:merge",
+        "inputs": [
+          {
+            "name": "policy",
+            "type": "harness.decision",
+            "direction": "input"
+          },
+          {
+            "name": "reasoning",
+            "type": "harness.decision",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "decision",
+            "type": "harness.merged",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "guard",
+        "x": 1100,
+        "y": 0,
+        "typeId": "Harness.Safety:guard",
+        "inputs": [
+          {
+            "name": "decision",
+            "type": "harness.merged",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "authorized",
+            "type": "harness.authorized",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "execute",
+        "x": 1280,
+        "y": 0,
+        "typeId": "Harness.Execution:capability",
+        "inputs": [
+          {
+            "name": "authorized",
+            "type": "harness.authorized",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "result",
+            "type": "harness.result",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "observe-after",
+        "x": 1520,
+        "y": 0,
+        "typeId": "Harness.Observation:outcome",
+        "inputs": [
+          {
+            "name": "result",
+            "type": "harness.result",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "outcome",
+            "type": "harness.outcome",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "evaluate",
+        "x": 1720,
+        "y": 0,
+        "typeId": "Harness.Learning:evaluate",
+        "inputs": [
+          {
+            "name": "outcome",
+            "type": "harness.outcome",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "experience",
+            "type": "harness.experience",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "record",
+        "x": 1900,
+        "y": 0,
+        "typeId": "Harness.Learning:record",
+        "inputs": [
+          {
+            "name": "experience",
+            "type": "harness.experience",
+            "direction": "input"
+          }
+        ],
+        "outputs": []
+      },
+      {
+        "id": "monitor",
+        "x": 0,
+        "y": 460,
+        "typeId": "Harness.Monitor:trace",
+        "inputs": [],
+        "outputs": []
+      }
+    ],
+    "connections": [
+      {
+        "id": "observe:state->context:state",
+        "fromNodeId": "observe",
+        "fromPortIndex": 0,
+        "toNodeId": "context",
+        "toPortIndex": 0
+      },
+      {
+        "id": "context:context->lookup:context",
+        "fromNodeId": "context",
+        "fromPortIndex": 0,
+        "toNodeId": "lookup",
+        "toPortIndex": 0
+      },
+      {
+        "id": "lookup:candidates->gate:candidates",
+        "fromNodeId": "lookup",
+        "fromPortIndex": 0,
+        "toNodeId": "gate",
+        "toPortIndex": 0
+      },
+      {
+        "id": "gate:policy->merge:policy",
+        "fromNodeId": "gate",
+        "fromPortIndex": 0,
+        "toNodeId": "merge",
+        "toPortIndex": 0
+      },
+      {
+        "id": "gate:fallback->request:fallback",
+        "fromNodeId": "gate",
+        "fromPortIndex": 1,
+        "toNodeId": "request",
+        "toPortIndex": 0
+      },
+      {
+        "id": "request:request->reason:request",
+        "fromNodeId": "request",
+        "fromPortIndex": 0,
+        "toNodeId": "reason",
+        "toPortIndex": 0
+      },
+      {
+        "id": "reason:decision->merge:reasoning",
+        "fromNodeId": "reason",
+        "fromPortIndex": 0,
+        "toNodeId": "merge",
+        "toPortIndex": 1
+      },
+      {
+        "id": "merge:decision->guard:decision",
+        "fromNodeId": "merge",
+        "fromPortIndex": 0,
+        "toNodeId": "guard",
+        "toPortIndex": 0
+      },
+      {
+        "id": "guard:authorized->execute:authorized",
+        "fromNodeId": "guard",
+        "fromPortIndex": 0,
+        "toNodeId": "execute",
+        "toPortIndex": 0
+      },
+      {
+        "id": "execute:result->observe-after:result",
+        "fromNodeId": "execute",
+        "fromPortIndex": 0,
+        "toNodeId": "observe-after",
+        "toPortIndex": 0
+      },
+      {
+        "id": "observe-after:outcome->evaluate:outcome",
+        "fromNodeId": "observe-after",
+        "fromPortIndex": 0,
+        "toNodeId": "evaluate",
+        "toPortIndex": 0
+      },
+      {
+        "id": "evaluate:experience->record:experience",
+        "fromNodeId": "evaluate",
+        "fromPortIndex": 0,
+        "toNodeId": "record",
+        "toPortIndex": 0
+      }
+    ]
+  },
+  "model": {
+    "nodes": [
+      {
+        "id": "observe",
+        "label": "1  Observe the cabin",
+        "typeId": "Harness.Observation:state",
+        "data": {
+          "type": "Harness.Observation:state",
+          "enabled": true
+        }
+      },
+      {
+        "id": "context",
+        "label": "2  Context + intention",
+        "typeId": "Harness.Policy:context",
+        "data": {
+          "type": "Harness.Policy:context",
+          "enabled": true
+        }
+      },
+      {
+        "id": "lookup",
+        "label": "3  Look up a learned decision",
+        "typeId": "Harness.Policy:lookup",
+        "data": {
+          "type": "Harness.Policy:lookup",
+          "enabled": true
+        }
+      },
+      {
+        "id": "gate",
+        "label": "4  Confident enough?",
+        "typeId": "Harness.Policy:confidence-gate",
+        "data": {
+          "type": "Harness.Policy:confidence-gate",
+          "enabled": true
+        }
+      },
+      {
+        "id": "request",
+        "label": "5  Build the request",
+        "typeId": "Harness.Reasoning:request",
+        "data": {
+          "type": "Harness.Reasoning:request",
+          "enabled": true
+        }
+      },
+      {
+        "id": "reason",
+        "label": "6  Ask the reasoner",
+        "typeId": "Harness.Reasoning:provider",
+        "data": {
+          "type": "Harness.Reasoning:provider",
+          "enabled": true
+        }
+      },
+      {
+        "id": "merge",
+        "label": "7  Merge the branches",
+        "typeId": "Harness.Policy:merge",
+        "data": {
+          "type": "Harness.Policy:merge",
+          "enabled": true
+        }
+      },
+      {
+        "id": "guard",
+        "label": "8  Guard + authorize",
+        "typeId": "Harness.Safety:guard",
+        "data": {
+          "type": "Harness.Safety:guard",
+          "enabled": true
+        }
+      },
+      {
+        "id": "execute",
+        "label": "9  Execute through the broker",
+        "typeId": "Harness.Execution:capability",
+        "data": {
+          "type": "Harness.Execution:capability",
+          "enabled": true
+        }
+      },
+      {
+        "id": "observe-after",
+        "label": "10  Observe the outcome",
+        "typeId": "Harness.Observation:outcome",
+        "data": {
+          "type": "Harness.Observation:outcome",
+          "enabled": true
+        }
+      },
+      {
+        "id": "evaluate",
+        "label": "11  Evaluate",
+        "typeId": "Harness.Learning:evaluate",
+        "data": {
+          "type": "Harness.Learning:evaluate",
+          "enabled": true
+        }
+      },
+      {
+        "id": "record",
+        "label": "12  Learn",
+        "typeId": "Harness.Learning:record",
+        "data": {
+          "type": "Harness.Learning:record",
+          "enabled": true
+        }
+      },
+      {
+        "id": "monitor",
+        "label": "Run monitor",
+        "typeId": "Harness.Monitor:trace",
+        "data": {}
+      }
+    ],
+    "connections": [
+      {
+        "id": "observe:state->context:state",
+        "from": {
+          "node": "observe",
+          "port": "state"
+        },
+        "to": {
+          "node": "context",
+          "port": "state"
+        }
+      },
+      {
+        "id": "context:context->lookup:context",
+        "from": {
+          "node": "context",
+          "port": "context"
+        },
+        "to": {
+          "node": "lookup",
+          "port": "context"
+        }
+      },
+      {
+        "id": "lookup:candidates->gate:candidates",
+        "from": {
+          "node": "lookup",
+          "port": "candidates"
+        },
+        "to": {
+          "node": "gate",
+          "port": "candidates"
+        }
+      },
+      {
+        "id": "gate:policy->merge:policy",
+        "from": {
+          "node": "gate",
+          "port": "policy"
+        },
+        "to": {
+          "node": "merge",
+          "port": "policy"
+        }
+      },
+      {
+        "id": "gate:fallback->request:fallback",
+        "from": {
+          "node": "gate",
+          "port": "fallback"
+        },
+        "to": {
+          "node": "request",
+          "port": "fallback"
+        }
+      },
+      {
+        "id": "request:request->reason:request",
+        "from": {
+          "node": "request",
+          "port": "request"
+        },
+        "to": {
+          "node": "reason",
+          "port": "request"
+        }
+      },
+      {
+        "id": "reason:decision->merge:reasoning",
+        "from": {
+          "node": "reason",
+          "port": "decision"
+        },
+        "to": {
+          "node": "merge",
+          "port": "reasoning"
+        }
+      },
+      {
+        "id": "merge:decision->guard:decision",
+        "from": {
+          "node": "merge",
+          "port": "decision"
+        },
+        "to": {
+          "node": "guard",
+          "port": "decision"
+        }
+      },
+      {
+        "id": "guard:authorized->execute:authorized",
+        "from": {
+          "node": "guard",
+          "port": "authorized"
+        },
+        "to": {
+          "node": "execute",
+          "port": "authorized"
+        }
+      },
+      {
+        "id": "execute:result->observe-after:result",
+        "from": {
+          "node": "execute",
+          "port": "result"
+        },
+        "to": {
+          "node": "observe-after",
+          "port": "result"
+        }
+      },
+      {
+        "id": "observe-after:outcome->evaluate:outcome",
+        "from": {
+          "node": "observe-after",
+          "port": "outcome"
+        },
+        "to": {
+          "node": "evaluate",
+          "port": "outcome"
+        }
+      },
+      {
+        "id": "evaluate:experience->record:experience",
+        "from": {
+          "node": "evaluate",
+          "port": "experience"
+        },
+        "to": {
+          "node": "record",
+          "port": "experience"
+        }
+      }
+    ]
+  },
+  "dashboards": [
+    {
+      "id": "main",
+      "name": "Main",
+      "tiles": [
+        {
+          "nodeId": "monitor",
+          "renderableType": "Harness.Monitor:trace",
+          "x": 0,
+          "y": 0,
+          "w": 12,
+          "h": 5
+        }
+      ]
+    }
+  ]
+}

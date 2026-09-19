@@ -1,0 +1,40 @@
+{
+    "tools": {
+        "run_sweep": {
+            "title": "Lancer un job sweep",
+            "description": "Démarre un job sweep à partir de sa spécification ; rend un identifiant de job et le plan. Stub : rien ne tourne, le job se termine aussitôt.",
+            "properties": {
+                "spec": "une spécification de job, identique au fichier que lit spikypanda-job"
+            }
+        },
+        "run_fit": {
+            "title": "Lancer un job fit",
+            "description": "Démarre un job fit à partir de sa spécification ; rend un identifiant de job et le plan. Stub : rien ne tourne, le job se termine aussitôt.",
+            "properties": {
+                "spec": "une spécification de job, identique au fichier que lit spikypanda-job"
+            }
+        },
+        "run_evaluate": {
+            "title": "Lancer un job evaluate",
+            "description": "Démarre un job evaluate à partir de sa spécification ; rend un identifiant de job et le plan. Stub : rien ne tourne, le job se termine aussitôt.",
+            "properties": {
+                "spec": "une spécification de job, identique au fichier que lit spikypanda-job"
+            }
+        },
+        "job_status": {
+            "title": "État d'un job",
+            "description": "État d'un job : queued, running, completed, failed ou refused, avec son code de sortie et ses instants.",
+            "properties": {
+                "jobId": "l'identifiant rendu par run_*"
+            }
+        },
+        "get_artifact": {
+            "title": "Un fichier d'un job",
+            "description": "Un fichier d'un job : les petits fichiers en ligne avec leur sha256, les gros par emplacement et sha256, jamais les octets. Stub : un manifeste de substitution.",
+            "properties": {
+                "jobId": "l'identifiant rendu par run_*",
+                "path": "chemin du fichier dans les sorties du job"
+            }
+        }
+    }
+}

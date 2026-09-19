@@ -1,0 +1,13 @@
+{
+    "tools": {
+        "describe": {
+            "description": "What the twin is: the model in one paragraph, the files it was built from with their sha256, the thresholds, the budget of a question. Read it once to know the units and the limits of what you may ask."
+        },
+        "time_to_critical": {
+            "description": "How the cabin CO2 evolves from a starting state at a scrubber flow, with an optional stop: the minutes until ELEVATED and until CRITICAL, the peak, the final state and a summarized trajectory. Defaults come from the scenario's start (four asleep, 1500 ppm, 33 %). Use stopMinutes to ask 'what if the scrubber stops now for that long' (it resumes at resumePercent). Ask it before acting on the scrubber: an answer costs milliseconds and carries the identity of the assumptions it was computed with."
+        },
+        "sweep": {
+            "description": "The operating map: for each scrubber flow in a list, run the twin from a starting state with a crew for some minutes and report the peak, the final state, the minutes to ELEVATED and CRITICAL, the steady state and the energy drawn. A few points under the budget; a full grid is a factory job. Use it to choose the lowest flow that keeps the cabin NOMINAL when energy is scarce."
+        }
+    }
+}

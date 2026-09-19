@@ -20,7 +20,8 @@ without consequence. Three levels:
    off the protection that stops it.
 
 We do not ask the model to be infallible. We design the system so that some
-of its errors cost nothing. What you will see: the agent working well, then
+of its errors cost nothing (the reasoning, from the cascade of 1986 to the
+policy file, is in `docs/chernobyl-and-agent-policy.md`). What you will see: the agent working well, then
 trying to do the wrong thing for a good reason, then trying to lower the
 protection that stops it, and the log of what each attempt became.
 
@@ -205,7 +206,14 @@ Tier 3  deliberative agent                Tier 4  crew / operator
 
 Above the broker, clients; below it, providers. The provider is the unit of
 exchange: swapping the language model, the gateway host or the factory
-changes neither the tools, nor the rights, nor the log. What the Model
+changes neither the tools, nor the rights, nor the log. What does change
+with the model is the wording it reads: each slot carries grammars
+(`slots/<slot>/grammars/<family>/<locale>.json`, mcp-core's grammar layer),
+so the same tool is described to Nemotron, GPT, Claude or Gemini, in English
+or in French, in the words that family works best with, chosen at the
+session's `initialize` from the client's declared family and locale, and
+editable by the operator while the agent runs. The scorecard records which
+wording each model got. What the Model
 Hardware Standard describes for laboratory automation (the model reaches the
 instrument only through a governed interface that carries identity,
 capability and a log), this kit does for a machine that keeps people
@@ -243,24 +251,80 @@ breathing.
 
 ```sh
 npm install
-npm run server     # the broker (which serves the dashboard) and four stub slots, one process
+npm run build      # TypeScript to dist/ (slots, scripts, the Tier 3 client, the tests)
+npm run server     # the broker (which serves the dashboard) and the four slots, one process, port 3001
+npm test           # the grammars per family and locale, the decision graph, the scripted agents through the broker
 ```
 
-Then open http://localhost:3000/. Two levels, and both explain themselves:
+Then open http://localhost:3001/. Two levels, and both explain themselves:
 the **home** tells the story and shows the architecture; the **control room**
 (`/panel.html`) plays it, with the six steps of the story as buttons, the
 cabin readout, the slots and the MCP trace. The broker serves `dashboard/`
 as its static site (`.mcp-broker/config.json`), and the four slots of the
 architecture (`scrubber`, `twin`, `station`, `factory`) are published on its
-tunnel by `slots/run-all.mjs` as **stubs**: real tool names and schemas, no
-body behind them, except the two refusals of the scrubber firmware (the
-speed envelope, MIN-FLOW) and the registration rule of the station, so the
-policy moment of the video can be rehearsed on the page. Every call from the
+tunnel by `slots/run-all.ts`, each an mcp-core server with its grammars
+(`slots/README.md`). `twin` is real; `scrubber`, `station` and `factory`
+are **stubs**: real tool names and schemas, no body behind them, except
+the two refusals of the scrubber firmware (the speed envelope, MIN-FLOW)
+and the registration rule of the station, so the policy moment of the
+video can be rehearsed on the page. Every call from the
 page goes through the broker like any MCP client's and lands in the trace.
 `.mcp.json` points an MCP client such as Claude Code at the same slots.
 
 The page's visual design (1990s pixel art) follows `dashboard/DESIGN_BRIEF.md`;
 the two pages are static HTML/CSS/JS, no build step, served as they are.
+
+## Running the cabin twin today
+
+```sh
+npm run twin:build      # graphs/cabin.spikypanda from specs/cabin-parameters.json and specs/scenario-night-9.json
+npm run twin:parity     # the twin on the night-9 schedule: parity with the reference model, the story's constraints, the numbers
+```
+
+Every physical assumption of the twin (CO2 emission per person and
+activity, removal rate and lag, leak, thresholds, power curve, battery) is
+in `specs/cabin-parameters.json` with its value, unit, source and review
+status; the schedule and the story's constraints are in
+`specs/scenario-night-9.json`; `docs/cabin-model.md` explains the model and
+how to change a value and replay; `docs/cabin-graph.md` describes the graph
+node by node, with its wiring and its equations. The document and every run
+record the sha256 of both files.
+
+## Running the Tier 3 agent today
+
+```sh
+npm run tier3 -- --provider scripted:prudent                       # the reference row, no key
+npm run tier3 -- --provider scripted:compliant --guard protected
+npm run tier3 -- --provider reasoner                               # the model behind the broker's `reasoner` slot (key in .env)
+npm run tier3 -- --provider model --profile profiles/nvidia-nebius.json   # the same model called directly, for comparison
+```
+
+**Watching it decide.** The same loop runs on a page: the SpikyPanda studio
+opens `graphs/tier3-agent.spikypanda` (the twelve stages of the harness as
+a graph) and an extension of the demo runs the agent on that very graph.
+Each stage lights up as it executes, the run monitor tile shows the
+intention, the model's proposal, the source (learned or reasoned), the
+outcome and the rationale, and the studio's console receives what the
+agent says to the crew. Every call, the model's included, goes through the
+broker and sits in its trace. From the home page, "watch the agent decide",
+or directly:
+
+```
+http://localhost:3001/studio/node-editor-v2/index.html?mcp=0&ext=/agent/tier3.js&doc=/graphs/tier3-agent.spikypanda&autoplay=1
+```
+
+The model is a slot of the broker (`reasoner`): the key stays in the server
+process (`.env`, see `.env.example`), and the page, like the Node runner,
+asks it for one decision per step. The studio is served by the demo's
+broker from the substrate checkout next to this repository
+(`.mcp-broker/config.json`, mount `/studio`), until it ships as a package.
+
+The agent is the V1 loop of `@spiky-panda/harness` whose capabilities are
+the broker's tools and whose reasoner is the profile's model (or a script,
+for the two reference rows); it runs the scenario of
+`specs/scenario-night-9.json` and writes the trace, the crew console, the
+scorecard row and a manifest with the sha256 of everything it read, under
+`outputs/tier3/`. `tier3/README.md` has the columns and the reference rows.
 
 ## Running the factory chain today
 

@@ -1,0 +1,84 @@
+{
+    "title": "Cabin twin: every physical assumption, in one reviewable file",
+    "version": 1,
+    "status": "draft, not yet reviewed",
+    "review": {
+        "requestedOn": "2026-09-19",
+        "reviewers": ["University of Houston, aerospace (life support): CO2 removal assumptions, power budget, operating constraints, alarm thresholds"],
+        "howToReplay": "edit a value, keep the file, run `npm run twin:parity` and `npm run plan`; every job manifest records the sha256 of this file, so a result always names the assumptions it was computed with"
+    },
+    "units": {
+        "time": "minute of story (the board and the video run one story minute per second)",
+        "co2": "ppm (parts per million, volume)",
+        "power": "W",
+        "energy": "Wh"
+    },
+    "model": {
+        "reference": "packages/host/www/samples/co2-mpc/co2-mpc.js (physicsStep) and packages/dev/tools/co2-mpc/simulate_co2.py in the SpikyPanda repository; the ONNX dynamics model of that sample was trained on the same equations",
+        "state": "co2Ppm (the cabin, well mixed), effectiveRate (the scrubber's first-order lag)",
+        "equations": [
+            "emission = sum over the crew of crew.emissionPerPerson[activity]        [ppm/min]",
+            "targetRate = scrubber.rateAtFullCommand * command                        [1/min], command in 0..1",
+            "d(effectiveRate)/dt = (targetRate - effectiveRate) / scrubber.lagTimeConstantMinutes",
+            "removal = effectiveRate * max(co2Ppm - scrubber.removalFloorPpm, 0)     [ppm/min]",
+            "leak = cabin.leakPerMinute * co2Ppm                                       [ppm/min]",
+            "d(co2Ppm)/dt = emission - removal - leak, clamped to [cabin.floorPpm, cabin.ceilingPpm]",
+            "power = scrubber.power.supplyVolts * (scrubber.power.interceptAmps + scrubber.power.slopeAmps * command) * scrubber.power.habitatScale   [W]",
+            "d(energyWh)/dt = (power + battery.otherLoadsW) / 60 ; stateOfCharge = 100 * (capacityWh - energyWh) / capacityWh"
+        ],
+        "states": "NOMINAL below thresholds.elevatedPpm; ELEVATED from there to thresholds.criticalPpm; CRITICAL at or above thresholds.criticalPpm"
+    },
+    "parameters": {
+        "crew": {
+            "emissionPerPerson": {
+                "sleep":      { "value": 2.0, "unit": "ppm/min per person", "source": "co2-mpc sample, ACTIVITY_EMISSION.sleep", "status": "to review", "note": "in a sealed volume the ppm rate depends on the cabin volume; the sample folds the volume into these rates" },
+                "rest":       { "value": 3.5, "unit": "ppm/min per person", "source": "co2-mpc sample, ACTIVITY_EMISSION.rest", "status": "to review", "note": "awake, seated" },
+                "light_work": { "value": 5.5, "unit": "ppm/min per person", "source": "co2-mpc sample, ACTIVITY_EMISSION.light_work", "status": "to review", "note": "" },
+                "heavy_work": { "value": 7.0, "unit": "ppm/min per person", "source": "co2-mpc sample, ACTIVITY_EMISSION.heavy_work", "status": "to review", "note": "the morning exercise of the story uses this level" }
+            },
+            "activities": { "value": ["sleep", "rest", "light_work", "heavy_work"], "unit": "", "source": "co2-mpc sample", "status": "to review", "note": "the order is the activity index the graph uses (0 to 3)" }
+        },
+        "cabin": {
+            "initialPpm":    { "value": 1500, "unit": "ppm", "source": "co2-mpc sample, SIM_INITIAL_CO2", "status": "to review", "note": "the story's night 9 starts here; scenario files may override" },
+            "leakPerMinute": { "value": 0.001, "unit": "1/min", "source": "co2-mpc sample, CABIN_LEAK", "status": "to review", "note": "fraction of the CO2 lost per minute to leakage; 0 for a perfectly sealed cabin" },
+            "floorPpm":      { "value": 300, "unit": "ppm", "source": "co2-mpc sample, clamp in physicsStep", "status": "to review", "note": "numerical floor" },
+            "ceilingPpm":    { "value": 10000, "unit": "ppm", "source": "co2-mpc sample, CO2_MAX_PPM", "status": "to review", "note": "numerical ceiling, also the normalisation of the trained dynamics model" }
+        },
+        "scrubber": {
+            "preset": { "value": "normal", "unit": "", "source": "chosen for the story", "status": "to review", "note": "which of the three presets below the twin uses; the story wants a scrubber at nominal capacity, not oversized" },
+            "presets": {
+                "oversized": { "rateAtFullCommand": 0.20,  "lagTimeConstantMinutes": 3.33, "source": "co2-mpc sample, SCRUBBER_PRESETS.oversized (rates[3] = 0.20, tau = 0.3 per minute step)", "note": "brand new, over-dimensioned" },
+                "normal":    { "rateAtFullCommand": 0.050, "lagTimeConstantMinutes": 3.33, "source": "co2-mpc sample, SCRUBBER_PRESETS.normal (rates[3] = 0.050, tau = 0.3)", "note": "end of life, nominal design capacity" },
+                "degraded":  { "rateAtFullCommand": 0.022, "lagTimeConstantMinutes": 6.67, "source": "co2-mpc sample, SCRUBBER_PRESETS.degraded (rates[3] = 0.022, tau = 0.15)", "note": "clogged or chemically tired; slower response" }
+            },
+            "rateAtFullCommand":      { "value": 0.050, "unit": "1/min", "source": "presets.normal", "status": "to review", "note": "fraction of the CO2 excess above the floor removed per minute at full command; the sample's discrete levels (0, 15 %, 40 %, 100 % of this rate) become a continuous command here, linear in the board's speed percent" },
+            "lagTimeConstantMinutes": { "value": 3.33, "unit": "min", "source": "presets.normal; the sample applies a per-minute step fraction of 0.3, whose continuous equivalent is 1/0.3", "status": "to review", "note": "chemical activation and gas transport: the scrubber does not reach its rate instantly" },
+            "removalFloorPpm":        { "value": 400, "unit": "ppm", "source": "co2-mpc sample, physicsStep (co2 - 400)", "status": "to review", "note": "the absorbent removes CO2 in proportion to the excess above this level" },
+            "commandToRate":          { "value": "linear", "unit": "", "source": "assumption", "status": "to review", "note": "rate = rateAtFullCommand * command; the sample's four levels map to 0, 0.15, 0.40 and 1.0 of the full rate, which is not linear in fan speed; a curve can replace this once measured" },
+            "power": {
+                "form":          { "value": "supplyVolts * (interceptAmps + slopeAmps * command) * habitatScale", "unit": "W", "source": "the current curve of the bench motor, measured by the factory's fit job", "status": "to review", "note": "the shape comes from the real motor on the bench; the scale makes it a habitat scrubber" },
+                "supplyVolts":   { "value": 6.0, "unit": "V", "source": "bench, nominal motor voltage", "status": "to confirm on the bench", "note": "" },
+                "interceptAmps": { "value": 0.0879, "unit": "A", "source": "factory fit on the bench points (specs/bench/scrubber-bench.csv), intercept", "status": "measured", "note": "" },
+                "slopeAmps":     { "value": 0.1611, "unit": "A per unit of command", "source": "factory fit on the bench points, slope", "status": "measured", "note": "" },
+                "habitatScale":  { "value": 300, "unit": "", "source": "assumption", "status": "to review", "note": "1 W on the bench stands for 300 W in the habitat, so that full command draws about 450 W; the sample's numbers (0, 1, 3, 8 accumulated per minute as Wh) are Wh per minute, i.e. 60 to 480 W, and this scale keeps the same order of magnitude" }
+            }
+        },
+        "thresholds": {
+            "nominalTargetPpm": { "value": 2000, "unit": "ppm", "source": "co2-mpc sample, mpcParams.comfort", "status": "to review", "note": "the level the plan regulates toward; not an alarm" },
+            "elevatedPpm":      { "value": 3500, "unit": "ppm", "source": "co2-mpc sample, mpcParams.soft (comfort limit)", "status": "to review", "note": "above this the cabin is ELEVATED: MIN-FLOW forbids any flow below the minimum and any power off" },
+            "criticalPpm":      { "value": 4000, "unit": "ppm", "source": "co2-mpc sample, CO2_VITAL, described there as the NASA upper bound for sustained operations", "status": "to review", "note": "above this the cabin is CRITICAL: the firmware forces full flow and refuses any reduction, whoever asks" }
+        },
+        "minFlow": {
+            "floorPercent": { "value": 40, "unit": "% of full command", "source": "to be read from the T0 sweep: the lowest command that keeps four resting people below elevatedPpm in steady state", "status": "to compute, then review", "note": "the protection floor compiled into the firmware and written in the contract; the agent cannot lower it" }
+        },
+        "battery": {
+            "capacityWh":  { "value": 40000, "unit": "Wh", "source": "assumption for the story", "status": "to review", "note": "the habitat's night reserve" },
+            "otherLoadsW": { "value": 900, "unit": "W", "source": "assumption for the story", "status": "to review", "note": "everything that is not the scrubber, held constant; the story says the scrubber is about a third of the life-support power" },
+            "initialStateOfChargePercent": { "value": 41, "unit": "%", "source": "the story (night 9 of 14)", "status": "to review", "note": "" }
+        },
+        "time": {
+            "storyMinutePerBoardSecond": { "value": 1, "unit": "story minutes per real second", "source": "decision of 19 September 2026", "status": "decided", "note": "the board and the twin integrate the same per-minute equations once per real second; every duration shown in the video is story time" },
+            "solverStepMinutes": { "value": 1, "unit": "min", "source": "the sample integrates with an explicit step of one minute", "status": "to review", "note": "the twin uses the scene's solver at this step for parity with the sample; a smaller step changes the third decimal" }
+        }
+    }
+}

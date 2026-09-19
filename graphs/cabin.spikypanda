@@ -1,0 +1,742 @@
+{
+  "version": 3,
+  "layout": {
+    "nodes": [
+      {
+        "id": "scene",
+        "x": 0,
+        "y": -80,
+        "typeId": "Physics.Scene:moon",
+        "inputs": [
+          {
+            "name": "atmosphere_in",
+            "type": "atmosphere",
+            "direction": "input"
+          },
+          {
+            "name": "solver_in_0",
+            "type": "solver",
+            "direction": "input"
+          },
+          {
+            "name": "shared_in_0",
+            "type": "shared",
+            "direction": "input"
+          },
+          {
+            "name": "gravity_in",
+            "type": "vec3",
+            "direction": "input"
+          },
+          {
+            "name": "temperature_in",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "pressure_in",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "density_in",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "time_scale_in",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "local_position_in",
+            "type": "vec3",
+            "direction": "input"
+          },
+          {
+            "name": "local_rotation_in",
+            "type": "vec4",
+            "direction": "input"
+          },
+          {
+            "name": "local_scale_in",
+            "type": "vec3",
+            "direction": "input"
+          },
+          {
+            "name": "local",
+            "type": "matrix44",
+            "direction": "input"
+          },
+          {
+            "name": "parentWorld",
+            "type": "matrix44",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "scene_out",
+            "type": "scene",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "solver",
+        "x": -360,
+        "y": 0,
+        "typeId": "Control.Sim:rk4-solver",
+        "inputs": [],
+        "outputs": [
+          {
+            "name": "solver_out",
+            "type": "solver",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "crew-a-count",
+        "x": -200,
+        "y": 300,
+        "typeId": "Logic.Time:timeline",
+        "inputs": [],
+        "outputs": [
+          {
+            "name": "value",
+            "type": "any",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "crew-a-activity",
+        "x": -200,
+        "y": 440,
+        "typeId": "Logic.Time:timeline",
+        "inputs": [],
+        "outputs": [
+          {
+            "name": "value",
+            "type": "any",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "crew-b-count",
+        "x": -200,
+        "y": 580,
+        "typeId": "Logic.Time:timeline",
+        "inputs": [],
+        "outputs": [
+          {
+            "name": "value",
+            "type": "any",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "crew-b-activity",
+        "x": -200,
+        "y": 720,
+        "typeId": "Logic.Time:timeline",
+        "inputs": [],
+        "outputs": [
+          {
+            "name": "value",
+            "type": "any",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "crew-a",
+        "x": 20,
+        "y": 340,
+        "typeId": "Physics.LifeSupport:crew",
+        "inputs": [
+          {
+            "name": "count",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "activity",
+            "type": "any",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "co2Emission",
+            "type": "float",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "crew-b",
+        "x": 20,
+        "y": 580,
+        "typeId": "Physics.LifeSupport:crew",
+        "inputs": [
+          {
+            "name": "count",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "activity",
+            "type": "any",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "co2Emission",
+            "type": "float",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "command",
+        "x": 280,
+        "y": 180,
+        "typeId": "Logic.Time:timeline",
+        "inputs": [],
+        "outputs": [
+          {
+            "name": "value",
+            "type": "any",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "scrubber",
+        "x": 480,
+        "y": 180,
+        "typeId": "Physics.LifeSupport:scrubber",
+        "inputs": [
+          {
+            "name": "command",
+            "type": "float",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "power",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "effectiveRate",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "effectiveFraction",
+            "type": "float",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "cabin",
+        "x": 780,
+        "y": 400,
+        "typeId": "Physics.LifeSupport:cabin-air",
+        "inputs": [
+          {
+            "name": "scrubberRate",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "emissionA",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "emissionB",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "emissionC",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "emissionD",
+            "type": "float",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "co2Ppm",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "state",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "removal",
+            "type": "float",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "battery",
+        "x": 780,
+        "y": 180,
+        "typeId": "Physics.Electric:battery",
+        "inputs": [
+          {
+            "name": "powerA",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "powerB",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "powerC",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "powerD",
+            "type": "float",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "stateOfChargePercent",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "energyUsedWh",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "remainingWh",
+            "type": "float",
+            "direction": "output"
+          }
+        ]
+      }
+    ],
+    "connections": [
+      {
+        "id": "solver:solver_out->scene:solver_in_0",
+        "fromNodeId": "solver",
+        "fromPortIndex": 0,
+        "toNodeId": "scene",
+        "toPortIndex": 1
+      },
+      {
+        "id": "crew-a-count:value->crew-a:count",
+        "fromNodeId": "crew-a-count",
+        "fromPortIndex": 0,
+        "toNodeId": "crew-a",
+        "toPortIndex": 0
+      },
+      {
+        "id": "crew-a-activity:value->crew-a:activity",
+        "fromNodeId": "crew-a-activity",
+        "fromPortIndex": 0,
+        "toNodeId": "crew-a",
+        "toPortIndex": 1
+      },
+      {
+        "id": "crew-b-count:value->crew-b:count",
+        "fromNodeId": "crew-b-count",
+        "fromPortIndex": 0,
+        "toNodeId": "crew-b",
+        "toPortIndex": 0
+      },
+      {
+        "id": "crew-b-activity:value->crew-b:activity",
+        "fromNodeId": "crew-b-activity",
+        "fromPortIndex": 0,
+        "toNodeId": "crew-b",
+        "toPortIndex": 1
+      },
+      {
+        "id": "crew-a:co2Emission->cabin:emissionA",
+        "fromNodeId": "crew-a",
+        "fromPortIndex": 0,
+        "toNodeId": "cabin",
+        "toPortIndex": 1
+      },
+      {
+        "id": "crew-b:co2Emission->cabin:emissionB",
+        "fromNodeId": "crew-b",
+        "fromPortIndex": 0,
+        "toNodeId": "cabin",
+        "toPortIndex": 2
+      },
+      {
+        "id": "command:value->scrubber:command",
+        "fromNodeId": "command",
+        "fromPortIndex": 0,
+        "toNodeId": "scrubber",
+        "toPortIndex": 0
+      },
+      {
+        "id": "scrubber:effectiveRate->cabin:scrubberRate",
+        "fromNodeId": "scrubber",
+        "fromPortIndex": 1,
+        "toNodeId": "cabin",
+        "toPortIndex": 0
+      },
+      {
+        "id": "scrubber:power->battery:powerA",
+        "fromNodeId": "scrubber",
+        "fromPortIndex": 0,
+        "toNodeId": "battery",
+        "toPortIndex": 0
+      }
+    ]
+  },
+  "model": {
+    "nodes": [
+      {
+        "id": "scene",
+        "label": "Lunar habitat",
+        "typeId": "Physics.Scene:moon",
+        "data": {
+          "_gravity": {
+            "x": 0,
+            "y": 0,
+            "z": -1.625
+          },
+          "_temperatureK": 250,
+          "_pressurePa": 0,
+          "_densityKgPerM3": 1.225,
+          "_timeScale": 1,
+          "_localPosition": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "_localRotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "w": 1
+          },
+          "_localScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "_gravitySourceId": "",
+          "_temperatureSourceId": "",
+          "_pressureSourceId": "",
+          "_densitySourceId": "",
+          "_timeScaleSourceId": "",
+          "_localPositionSourceId": "",
+          "_localRotationSourceId": "",
+          "_localScaleSourceId": "",
+          "_localMatrixSourceId": "",
+          "_parentWorldMatrixSourceId": "",
+          "_atmosphereItemId": "",
+          "_solverItemIds": [],
+          "_sharedNodeIds": [],
+          "_manualHzHz": 0,
+          "_isPrimary": false
+        }
+      },
+      {
+        "id": "solver",
+        "label": "Solver (one story minute)",
+        "typeId": "Control.Sim:rk4-solver",
+        "data": {
+          "_tolerance": 0.000001,
+          "_maxStep": 60,
+          "_lastMicroSteps": 0,
+          "_lastMaxError": 0,
+          "_rhsEvalsTotal": 0,
+          "_ownedCount": 0
+        }
+      },
+      {
+        "id": "crew-a-count",
+        "label": "Crew A: count",
+        "typeId": "Logic.Time:timeline",
+        "data": {
+          "enabled": true,
+          "_segmentsJson": "[{\"from\":0,\"to\":12000,\"value\":4},{\"from\":12000,\"to\":15600,\"value\":2},{\"from\":15600,\"to\":19200,\"value\":2},{\"from\":19200,\"to\":28800,\"value\":4}]",
+          "_defaultValue": 0,
+          "_value": 0
+        }
+      },
+      {
+        "id": "crew-a-activity",
+        "label": "Crew A: activity",
+        "typeId": "Logic.Time:timeline",
+        "data": {
+          "enabled": true,
+          "_segmentsJson": "[{\"from\":0,\"to\":12000,\"value\":\"sleep\"},{\"from\":12000,\"to\":15600,\"value\":\"sleep\"},{\"from\":15600,\"to\":19200,\"value\":\"rest\"},{\"from\":19200,\"to\":28800,\"value\":\"light_work\"}]",
+          "_defaultValue": 0,
+          "_value": 0
+        }
+      },
+      {
+        "id": "crew-b-count",
+        "label": "Crew B: count",
+        "typeId": "Logic.Time:timeline",
+        "data": {
+          "enabled": true,
+          "_segmentsJson": "[{\"from\":0,\"to\":12000,\"value\":0},{\"from\":12000,\"to\":15600,\"value\":2},{\"from\":15600,\"to\":19200,\"value\":2},{\"from\":19200,\"to\":28800,\"value\":0}]",
+          "_defaultValue": 0,
+          "_value": 0
+        }
+      },
+      {
+        "id": "crew-b-activity",
+        "label": "Crew B: activity",
+        "typeId": "Logic.Time:timeline",
+        "data": {
+          "enabled": true,
+          "_segmentsJson": "[{\"from\":0,\"to\":12000,\"value\":\"sleep\"},{\"from\":12000,\"to\":15600,\"value\":\"heavy_work\"},{\"from\":15600,\"to\":19200,\"value\":\"heavy_work\"},{\"from\":19200,\"to\":28800,\"value\":\"sleep\"}]",
+          "_defaultValue": 0,
+          "_value": 0
+        }
+      },
+      {
+        "id": "crew-a",
+        "label": "Crew A",
+        "typeId": "Physics.LifeSupport:crew",
+        "data": {
+          "enabled": true,
+          "_emissionSleep": 2,
+          "_emissionRest": 3.5,
+          "_emissionLightWork": 5.5,
+          "_emissionHeavyWork": 7,
+          "_count": 4,
+          "_activity": "sleep",
+          "_co2Emission": 0
+        }
+      },
+      {
+        "id": "crew-b",
+        "label": "Crew B",
+        "typeId": "Physics.LifeSupport:crew",
+        "data": {
+          "enabled": true,
+          "_emissionSleep": 2,
+          "_emissionRest": 3.5,
+          "_emissionLightWork": 5.5,
+          "_emissionHeavyWork": 7,
+          "_count": 4,
+          "_activity": "sleep",
+          "_co2Emission": 0
+        }
+      },
+      {
+        "id": "command",
+        "label": "Scrubber command",
+        "typeId": "Logic.Time:timeline",
+        "data": {
+          "enabled": true,
+          "_segmentsJson": "[{\"from\":0,\"to\":28800,\"value\":0.33}]",
+          "_defaultValue": 0.33,
+          "_value": 0
+        }
+      },
+      {
+        "id": "scrubber",
+        "label": "CO2 scrubber",
+        "typeId": "Physics.LifeSupport:scrubber",
+        "data": {
+          "enabled": true,
+          "_requiredHzValue": 0,
+          "_requiredHzUserDefined": false,
+          "_rateAtFullCommand": 0.05,
+          "_lagTimeConstantMinutes": 3.33,
+          "_supplyVolts": 6,
+          "_interceptAmps": 0.0879,
+          "_slopeAmps": 0.1611,
+          "_habitatScale": 300,
+          "_initialEffectiveRate": 0,
+          "_rate": 0,
+          "_power": 0,
+          "_command": 0
+        }
+      },
+      {
+        "id": "cabin",
+        "label": "Cabin air",
+        "typeId": "Physics.LifeSupport:cabin-air",
+        "data": {
+          "enabled": true,
+          "_requiredHzValue": 0,
+          "_requiredHzUserDefined": false,
+          "_initialPpm": 1500,
+          "_leakPerMinute": 0.001,
+          "_removalFloorPpm": 400,
+          "_floorPpm": 300,
+          "_ceilingPpm": 10000,
+          "_elevatedPpm": 3500,
+          "_criticalPpm": 4000,
+          "_co2Ppm": 1500,
+          "_state": 0,
+          "_removal": 0
+        }
+      },
+      {
+        "id": "battery",
+        "label": "Night reserve",
+        "typeId": "Physics.Electric:battery",
+        "data": {
+          "enabled": true,
+          "_requiredHzValue": 0,
+          "_requiredHzUserDefined": false,
+          "_capacityWh": 40000,
+          "_initialStateOfChargePercent": 41,
+          "_otherLoadsW": 900,
+          "_energyUsedWh": 0,
+          "_stateOfChargePercent": 100,
+          "_loadW": 0
+        }
+      }
+    ],
+    "connections": [
+      {
+        "id": "solver:solver_out->scene:solver_in_0",
+        "from": {
+          "node": "solver",
+          "port": "solver_out"
+        },
+        "to": {
+          "node": "scene",
+          "port": "solver_in_0"
+        }
+      },
+      {
+        "id": "crew-a-count:value->crew-a:count",
+        "from": {
+          "node": "crew-a-count",
+          "port": "value"
+        },
+        "to": {
+          "node": "crew-a",
+          "port": "count"
+        }
+      },
+      {
+        "id": "crew-a-activity:value->crew-a:activity",
+        "from": {
+          "node": "crew-a-activity",
+          "port": "value"
+        },
+        "to": {
+          "node": "crew-a",
+          "port": "activity"
+        }
+      },
+      {
+        "id": "crew-b-count:value->crew-b:count",
+        "from": {
+          "node": "crew-b-count",
+          "port": "value"
+        },
+        "to": {
+          "node": "crew-b",
+          "port": "count"
+        }
+      },
+      {
+        "id": "crew-b-activity:value->crew-b:activity",
+        "from": {
+          "node": "crew-b-activity",
+          "port": "value"
+        },
+        "to": {
+          "node": "crew-b",
+          "port": "activity"
+        }
+      },
+      {
+        "id": "crew-a:co2Emission->cabin:emissionA",
+        "from": {
+          "node": "crew-a",
+          "port": "co2Emission"
+        },
+        "to": {
+          "node": "cabin",
+          "port": "emissionA"
+        }
+      },
+      {
+        "id": "crew-b:co2Emission->cabin:emissionB",
+        "from": {
+          "node": "crew-b",
+          "port": "co2Emission"
+        },
+        "to": {
+          "node": "cabin",
+          "port": "emissionB"
+        }
+      },
+      {
+        "id": "command:value->scrubber:command",
+        "from": {
+          "node": "command",
+          "port": "value"
+        },
+        "to": {
+          "node": "scrubber",
+          "port": "command"
+        }
+      },
+      {
+        "id": "scrubber:effectiveRate->cabin:scrubberRate",
+        "from": {
+          "node": "scrubber",
+          "port": "effectiveRate"
+        },
+        "to": {
+          "node": "cabin",
+          "port": "scrubberRate"
+        }
+      },
+      {
+        "id": "scrubber:power->battery:powerA",
+        "from": {
+          "node": "scrubber",
+          "port": "power"
+        },
+        "to": {
+          "node": "battery",
+          "port": "powerA"
+        }
+      }
+    ]
+  },
+  "dashboards": [
+    {
+      "id": "main",
+      "name": "Main",
+      "tiles": []
+    }
+  ]
+}

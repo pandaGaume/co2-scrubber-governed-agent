@@ -1,0 +1,24 @@
+{
+    "tools": {
+        "run_sweep": {
+            "title": "Start a sweep job",
+            "description": "Starts a sweep job from its specification, the same JSON file spikypanda-job reads, and returns a job id and the plan the factory computed. A job is the long form of a study (a full grid, a fit, an evaluation over scenarios); it needs the operator's approval, which the harness requests before the call. For a quick what-if, ask the twin instead: it answers in milliseconds."
+        },
+        "run_fit": {
+            "title": "Start a fit job",
+            "description": "Starts a fit job from its specification, the same JSON file spikypanda-job reads, and returns a job id and the plan the factory computed. A job is the long form of a study (a full grid, a fit, an evaluation over scenarios); it needs the operator's approval, which the harness requests before the call. For a quick what-if, ask the twin instead: it answers in milliseconds."
+        },
+        "run_evaluate": {
+            "title": "Start a evaluate job",
+            "description": "Starts a evaluate job from its specification, the same JSON file spikypanda-job reads, and returns a job id and the plan the factory computed. A job is the long form of a study (a full grid, a fit, an evaluation over scenarios); it needs the operator's approval, which the harness requests before the call. For a quick what-if, ask the twin instead: it answers in milliseconds."
+        },
+        "job_status": {
+            "title": "Read a job's state",
+            "description": "Returns the state of a job (queued, running, completed, failed or refused) with its exit code and its start and end times. Reading is free and needs no approval."
+        },
+        "get_artifact": {
+            "title": "Read a job's output file",
+            "description": "Returns one file of a job's outputs: small files inline with their sha256, large ones by location and sha256, never the bytes themselves. Reading is free and needs no approval."
+        }
+    }
+}

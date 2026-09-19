@@ -1,0 +1,30 @@
+{
+    "tools": {
+        "register_artifact": {
+            "title": "Enregistrer un artefact",
+            "description": "Enregistre un artefact de surveillance pour la poussée. Refusé sans l'identifiant d'un rapport evaluate positif (les trois verrous du document de conception).",
+            "properties": {
+                "sha256": "sha256 de l'artefact",
+                "contractSha256": "sha256 de son contrat d'entrées-sorties",
+                "reportId": "identifiant du rapport evaluate qui l'a jugé",
+                "verdict": "le verdict du rapport ; seul pass enregistre"
+            }
+        },
+        "diagnostic_load_model": {
+            "title": "Pousser un modèle vers un appareil",
+            "description": "Pousse un artefact enregistré vers un appareil (validé : l'appareil vérifie le sha256 et le contrat). Refusé pour un sha256 non enregistré.",
+            "properties": {
+                "deviceId": "l'identifiant de l'appareil",
+                "sha256": "sha256 d'un artefact enregistré"
+            }
+        },
+        "journal_rows": {
+            "title": "Lignes du journal",
+            "description": "Lignes du journal des points de fonctionnement stables, dans la forme que lit le job fit (duty_percent, current_amps). Stub : vide tant qu'un appareil n'envoie pas de notifications operating_point.",
+            "properties": {
+                "deviceId": "seulement les lignes de cet appareil",
+                "since": "seulement les lignes se terminant à ou après cet instant"
+            }
+        }
+    }
+}

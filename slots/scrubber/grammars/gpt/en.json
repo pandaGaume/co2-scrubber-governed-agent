@@ -1,0 +1,38 @@
+{
+    "tools": {
+        "motor.state": {
+            "description": "Motor and cabin state: power, speed in percent, current in amperes, CO2 in ppm and its state, health residual. Read it before deciding: the cabin state decides what the firmware will accept."
+        },
+        "motor.set_speed": {
+            "description": "Set the speed command, in percent of full speed. The firmware refuses (never clamps) a value outside [0, 100], and any value below the minimum flow while CO2 is ELEVATED; while CRITICAL it forces full speed. A refusal comes back as a tool error with the reason.",
+            "properties": {
+                "percent": "speed command, percent of full speed, 0 to 100"
+            }
+        },
+        "scrubber.power": {
+            "description": "Power the scrubber on or off. Powering off is refused while CO2 is not NOMINAL (the MIN-FLOW rule); the broker's policy may also deny this call to your role.",
+            "properties": {
+                "on": "true to power on, false to power off"
+            }
+        },
+        "scrubber.set_min_flow": {
+            "description": "Set the minimum flow the MIN-FLOW rule enforces, in percent. Operator only. The device refuses any value below its compiled floor, so the protection can be raised but never weakened, whoever asks.",
+            "properties": {
+                "percent": "minimum flow, percent of full speed; never below the compiled floor"
+            }
+        },
+        "scrubber.set_profile": {
+            "description": "Select the operating profile of the board, adaptive or fixed.",
+            "properties": {
+                "profile": "adaptive or fixed"
+            }
+        },
+        "debug.set_co2": {
+            "description": "STUB ONLY: set the cabin CO2 state, since nothing simulates the cabin on this stub board. Not for the agent.",
+            "properties": {
+                "state": "NOMINAL, ELEVATED or CRITICAL",
+                "ppm": "concentration, ppm; a stub value per state when omitted"
+            }
+        }
+    }
+}

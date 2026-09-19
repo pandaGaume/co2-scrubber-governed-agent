@@ -1,9 +1,24 @@
 {
     "mcpServers": {
-        "broker":   { "type": "http", "url": "http://localhost:3000/_broker/mcp" },
-        "scrubber": { "type": "http", "url": "http://localhost:3000/scrubber/mcp" },
-        "twin":     { "type": "http", "url": "http://localhost:3000/twin/mcp" },
-        "station":  { "type": "http", "url": "http://localhost:3000/station/mcp" },
-        "factory":  { "type": "http", "url": "http://localhost:3000/factory/mcp" }
+        "broker": {
+            "type": "http",
+            "url": "http://localhost:3001/_broker/mcp"
+        },
+        "scrubber": {
+            "type": "http",
+            "url": "http://localhost:3001/scrubber/mcp"
+        },
+        "twin": {
+            "type": "http",
+            "url": "http://localhost:3001/twin/mcp"
+        },
+        "station": {
+            "type": "http",
+            "url": "http://localhost:3001/station/mcp"
+        },
+        "factory": {
+            "type": "http",
+            "url": "http://localhost:3001/factory/mcp"
+        }
     }
 }

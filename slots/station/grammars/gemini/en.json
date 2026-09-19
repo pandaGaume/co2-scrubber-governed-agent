@@ -1,0 +1,27 @@
+{
+    "tools": {
+        "register_artifact": {
+            "description": "Register a monitor artifact. Arguments, all required: sha256 (string, 64 hex), contractSha256 (string, 64 hex), reportId (string, 64 hex), verdict (one of pass, fail). Only verdict pass registers. Operator approval required.",
+            "properties": {
+                "sha256": "string, required, 64 hex characters",
+                "contractSha256": "string, required, 64 hex characters",
+                "reportId": "string, required, 64 hex characters",
+                "verdict": "string, required, one of: pass, fail"
+            }
+        },
+        "diagnostic_load_model": {
+            "description": "Push a registered artifact. Arguments, required: deviceId (string), sha256 (string, 64 hex, must be registered). Operator approval required.",
+            "properties": {
+                "deviceId": "string, required",
+                "sha256": "string, required, 64 hex characters, registered"
+            }
+        },
+        "journal_rows": {
+            "description": "Journal rows. Arguments, optional: deviceId (string), since (number). Returns rows with duty_percent and current_amps.",
+            "properties": {
+                "deviceId": "string, optional",
+                "since": "number, optional"
+            }
+        }
+    }
+}

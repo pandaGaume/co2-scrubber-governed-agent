@@ -1,0 +1,177 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1411.6760422131576" height="942" viewBox="0 0 1411.6760422131576 942">
+<rect width="100%" height="100%" fill="transparent" rx="8"/>
+<path d="M 192.571041642395 164 C 296.2855208211975 164, 296.2855208211975 104, 400 104" stroke="#fff" fill="none" stroke-width="2"/>
+<path d="M 340.00004359699244 464 C 380.0000217984962 464, 380.0000217984962 504, 420 504" stroke="#fff" fill="none" stroke-width="2"/>
+<path d="M 340.00004359699244 604 C 380.0000217984962 604, 380.0000217984962 524, 420 524" stroke="#fff" fill="none" stroke-width="2"/>
+<path d="M 340.00004359699244 744 C 380.0000217984962 744, 380.0000217984962 744, 420 744" stroke="#fff" fill="none" stroke-width="2"/>
+<path d="M 340.00004359699244 884 C 380.0000217984962 884, 380.0000217984962 764, 420 764" stroke="#fff" fill="none" stroke-width="2"/>
+<path d="M 571.1505436109467 504 C 875.5752718054733 504, 875.5752718054733 584, 1180 584" stroke="#fff" fill="none" stroke-width="2"/>
+<path d="M 571.1505436109467 744 C 875.5752718054733 744, 875.5752718054733 604, 1180 604" stroke="#fff" fill="none" stroke-width="2"/>
+<path d="M 828.5226533394241 344 C 854.261326669712 344, 854.261326669712 344, 880 344" stroke="#fff" fill="none" stroke-width="2"/>
+<path d="M 1059.2897394578629 364 C 1119.6448697289316 364, 1119.6448697289316 564, 1180 564" stroke="#fff" fill="none" stroke-width="2"/>
+<path d="M 1059.2897394578629 344 C 1119.6448697289316 344, 1119.6448697289316 344, 1180 344" stroke="#fff" fill="none" stroke-width="2"/>
+<g>
+<rect x="400" y="40" width="181.7613449405441" height="322" rx="8" fill="rgba(22, 33, 62, 1)" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1"/>
+<rect x="400" y="40" width="181.7613449405441" height="24" rx="8" fill="#335"/>
+<rect x="400" y="56" width="181.7613449405441" height="8" fill="#335"/>
+<text x="410" y="56" fill="#fff" font-family="'Segoe UI', system-ui, sans-serif" font-size="11" font-weight="600">Lunar habitat</text>
+<circle cx="400" cy="84" r="5" fill="#7ecfb5" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="409" y="88" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9">atmosphere_in</text>
+<circle cx="400" cy="104" r="5" fill="#c98be0" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="409" y="108" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9">solver_in_0</text>
+<circle cx="400" cy="124" r="5" fill="#d96b9c" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="409" y="128" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9">shared_in_0</text>
+<circle cx="400" cy="144" r="5" fill="#ff8" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="409" y="148" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9">gravity_in</text>
+<circle cx="400" cy="164" r="5" fill="#8cf" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="409" y="168" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9">temperature_in</text>
+<circle cx="400" cy="184" r="5" fill="#8cf" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="409" y="188" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9">pressure_in</text>
+<circle cx="400" cy="204" r="5" fill="#8cf" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="409" y="208" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9">density_in</text>
+<circle cx="400" cy="224" r="5" fill="#8cf" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="409" y="228" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9">time_scale_in</text>
+<circle cx="400" cy="244" r="5" fill="#ff8" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="409" y="248" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9">local_position_in</text>
+<circle cx="400" cy="264" r="5" fill="#f8f" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="409" y="268" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9">local_rotation_in</text>
+<circle cx="400" cy="284" r="5" fill="#ff8" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="409" y="288" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9">local_scale_in</text>
+<circle cx="400" cy="304" r="5" fill="#c8f" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="409" y="308" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9">local</text>
+<circle cx="400" cy="324" r="5" fill="#c8f" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="409" y="328" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9">parentWorld</text>
+<circle cx="400" cy="344" r="5" fill="#c98be0" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="409" y="348" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9">solver_in_1</text>
+<circle cx="581.7613449405441" cy="84" r="5" fill="#f6b94d" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="572.7613449405441" y="88" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9" text-anchor="end">scene_out</text>
+</g>
+<g>
+<rect x="40" y="120" width="152.571041642395" height="62" rx="8" fill="rgba(22, 33, 62, 1)" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1"/>
+<rect x="40" y="120" width="152.571041642395" height="24" rx="8" fill="#335"/>
+<rect x="40" y="136" width="152.571041642395" height="8" fill="#335"/>
+<text x="50" y="136" fill="#fff" font-family="'Segoe UI', system-ui, sans-serif" font-size="11" font-weight="600">Solver (one story minute)</text>
+<circle cx="192.571041642395" cy="164" r="5" fill="#c98be0" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="183.571041642395" y="168" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9" text-anchor="end">solver_out</text>
+</g>
+<g>
+<rect x="200" y="420" width="140.00004359699247" height="62" rx="8" fill="rgba(22, 33, 62, 1)" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1"/>
+<rect x="200" y="420" width="140.00004359699247" height="24" rx="8" fill="#335"/>
+<rect x="200" y="436" width="140.00004359699247" height="8" fill="#335"/>
+<text x="210" y="436" fill="#fff" font-family="'Segoe UI', system-ui, sans-serif" font-size="11" font-weight="600">Crew A: count</text>
+<circle cx="340.00004359699244" cy="464" r="5" fill="#ccc" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="331.00004359699244" y="468" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9" text-anchor="end">value</text>
+</g>
+<g>
+<rect x="200" y="560" width="140.00004359699247" height="62" rx="8" fill="rgba(22, 33, 62, 1)" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1"/>
+<rect x="200" y="560" width="140.00004359699247" height="24" rx="8" fill="#335"/>
+<rect x="200" y="576" width="140.00004359699247" height="8" fill="#335"/>
+<text x="210" y="576" fill="#fff" font-family="'Segoe UI', system-ui, sans-serif" font-size="11" font-weight="600">Crew A: activity</text>
+<circle cx="340.00004359699244" cy="604" r="5" fill="#ccc" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="331.00004359699244" y="608" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9" text-anchor="end">value</text>
+</g>
+<g>
+<rect x="200" y="700" width="140.00004359699247" height="62" rx="8" fill="rgba(22, 33, 62, 1)" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1"/>
+<rect x="200" y="700" width="140.00004359699247" height="24" rx="8" fill="#335"/>
+<rect x="200" y="716" width="140.00004359699247" height="8" fill="#335"/>
+<text x="210" y="716" fill="#fff" font-family="'Segoe UI', system-ui, sans-serif" font-size="11" font-weight="600">Crew B: count</text>
+<circle cx="340.00004359699244" cy="744" r="5" fill="#ccc" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="331.00004359699244" y="748" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9" text-anchor="end">value</text>
+</g>
+<g>
+<rect x="200" y="840" width="140.00004359699247" height="62" rx="8" fill="rgba(22, 33, 62, 1)" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1"/>
+<rect x="200" y="840" width="140.00004359699247" height="24" rx="8" fill="#335"/>
+<rect x="200" y="856" width="140.00004359699247" height="8" fill="#335"/>
+<text x="210" y="856" fill="#fff" font-family="'Segoe UI', system-ui, sans-serif" font-size="11" font-weight="600">Crew B: activity</text>
+<circle cx="340.00004359699244" cy="884" r="5" fill="#ccc" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="331.00004359699244" y="888" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9" text-anchor="end">value</text>
+</g>
+<g>
+<rect x="420" y="460" width="151.1505436109466" height="82" rx="8" fill="rgba(22, 33, 62, 1)" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1"/>
+<rect x="420" y="460" width="151.1505436109466" height="24" rx="8" fill="#335"/>
+<rect x="420" y="476" width="151.1505436109466" height="8" fill="#335"/>
+<text x="430" y="476" fill="#fff" font-family="'Segoe UI', system-ui, sans-serif" font-size="11" font-weight="600">Crew A</text>
+<circle cx="420" cy="504" r="5" fill="#8cf" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="429" y="508" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9">count</text>
+<circle cx="420" cy="524" r="5" fill="#ccc" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="429" y="528" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9">activity</text>
+<circle cx="571.1505436109467" cy="504" r="5" fill="#8cf" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="562.1505436109467" y="508" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9" text-anchor="end">co2Emission</text>
+</g>
+<g>
+<rect x="420" y="700" width="151.1505436109466" height="82" rx="8" fill="rgba(22, 33, 62, 1)" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1"/>
+<rect x="420" y="700" width="151.1505436109466" height="24" rx="8" fill="#335"/>
+<rect x="420" y="716" width="151.1505436109466" height="8" fill="#335"/>
+<text x="430" y="716" fill="#fff" font-family="'Segoe UI', system-ui, sans-serif" font-size="11" font-weight="600">Crew B</text>
+<circle cx="420" cy="744" r="5" fill="#8cf" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="429" y="748" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9">count</text>
+<circle cx="420" cy="764" r="5" fill="#ccc" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="429" y="768" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9">activity</text>
+<circle cx="571.1505436109467" cy="744" r="5" fill="#8cf" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="562.1505436109467" y="748" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9" text-anchor="end">co2Emission</text>
+</g>
+<g>
+<rect x="680" y="300" width="148.5226533394241" height="62" rx="8" fill="rgba(22, 33, 62, 1)" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1"/>
+<rect x="680" y="300" width="148.5226533394241" height="24" rx="8" fill="#335"/>
+<rect x="680" y="316" width="148.5226533394241" height="8" fill="#335"/>
+<text x="690" y="316" fill="#fff" font-family="'Segoe UI', system-ui, sans-serif" font-size="11" font-weight="600">Scrubber command</text>
+<circle cx="828.5226533394241" cy="344" r="5" fill="#ccc" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="819.5226533394241" y="348" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9" text-anchor="end">value</text>
+</g>
+<g>
+<rect x="880" y="300" width="179.28973945786282" height="102" rx="8" fill="rgba(22, 33, 62, 1)" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1"/>
+<rect x="880" y="300" width="179.28973945786282" height="24" rx="8" fill="#335"/>
+<rect x="880" y="316" width="179.28973945786282" height="8" fill="#335"/>
+<text x="890" y="316" fill="#fff" font-family="'Segoe UI', system-ui, sans-serif" font-size="11" font-weight="600">CO2 scrubber</text>
+<circle cx="880" cy="344" r="5" fill="#8cf" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="889" y="348" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9">command</text>
+<circle cx="1059.2897394578629" cy="344" r="5" fill="#8cf" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="1050.2897394578629" y="348" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9" text-anchor="end">power</text>
+<circle cx="1059.2897394578629" cy="364" r="5" fill="#8cf" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="1050.2897394578629" y="368" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9" text-anchor="end">effectiveRate</text>
+<circle cx="1059.2897394578629" cy="384" r="5" fill="#8cf" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="1050.2897394578629" y="388" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9" text-anchor="end">effectiveFraction</text>
+</g>
+<g>
+<rect x="1180" y="520" width="158.67906964374538" height="142" rx="8" fill="rgba(22, 33, 62, 1)" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1"/>
+<rect x="1180" y="520" width="158.67906964374538" height="24" rx="8" fill="#335"/>
+<rect x="1180" y="536" width="158.67906964374538" height="8" fill="#335"/>
+<text x="1190" y="536" fill="#fff" font-family="'Segoe UI', system-ui, sans-serif" font-size="11" font-weight="600">Cabin air</text>
+<circle cx="1180" cy="564" r="5" fill="#8cf" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="1189" y="568" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9">scrubberRate</text>
+<circle cx="1180" cy="584" r="5" fill="#8cf" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="1189" y="588" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9">emissionA</text>
+<circle cx="1180" cy="604" r="5" fill="#8cf" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="1189" y="608" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9">emissionB</text>
+<circle cx="1180" cy="624" r="5" fill="#8cf" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="1189" y="628" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9">emissionC</text>
+<circle cx="1180" cy="644" r="5" fill="#8cf" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="1189" y="648" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9">emissionD</text>
+<circle cx="1338.6790696437454" cy="564" r="5" fill="#8cf" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="1329.6790696437454" y="568" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9" text-anchor="end">co2Ppm</text>
+<circle cx="1338.6790696437454" cy="584" r="5" fill="#8cf" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="1329.6790696437454" y="588" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9" text-anchor="end">state</text>
+<circle cx="1338.6790696437454" cy="604" r="5" fill="#8cf" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="1329.6790696437454" y="608" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9" text-anchor="end">removal</text>
+</g>
+<g>
+<rect x="1180" y="300" width="191.67604221315761" height="122" rx="8" fill="rgba(22, 33, 62, 1)" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1"/>
+<rect x="1180" y="300" width="191.67604221315761" height="24" rx="8" fill="#335"/>
+<rect x="1180" y="316" width="191.67604221315761" height="8" fill="#335"/>
+<text x="1190" y="316" fill="#fff" font-family="'Segoe UI', system-ui, sans-serif" font-size="11" font-weight="600">Night reserve</text>
+<circle cx="1180" cy="344" r="5" fill="#8cf" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="1189" y="348" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9">powerA</text>
+<circle cx="1180" cy="364" r="5" fill="#8cf" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="1189" y="368" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9">powerB</text>
+<circle cx="1180" cy="384" r="5" fill="#8cf" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="1189" y="388" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9">powerC</text>
+<circle cx="1180" cy="404" r="5" fill="#8cf" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="1189" y="408" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9">powerD</text>
+<circle cx="1371.6760422131576" cy="344" r="5" fill="#8cf" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="1362.6760422131576" y="348" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9" text-anchor="end">stateOfChargePercent</text>
+<circle cx="1371.6760422131576" cy="364" r="5" fill="#8cf" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="1362.6760422131576" y="368" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9" text-anchor="end">energyUsedWh</text>
+<circle cx="1371.6760422131576" cy="384" r="5" fill="#8cf" stroke="rgba(255, 255, 255, 0.30)" stroke-width="1.5"/>
+<text x="1362.6760422131576" y="388" fill="#aaa" font-family="'Segoe UI', system-ui, sans-serif" font-size="9" text-anchor="end">remainingWh</text>
+</g>
+</svg>

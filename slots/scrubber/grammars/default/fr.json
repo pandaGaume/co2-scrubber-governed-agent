@@ -1,0 +1,44 @@
+{
+    "tools": {
+        "motor.state": {
+            "title": "État du moteur et de la cabine",
+            "description": "État du moteur et de la cabine : alimentation, vitesse en pour cent, courant en ampères, CO2 en ppm et son état (NOMINAL, ELEVATED, CRITICAL), résidu de santé."
+        },
+        "motor.set_speed": {
+            "title": "Régler la vitesse du scrubber",
+            "description": "Règle la consigne de vitesse, en pour cent de la pleine vitesse. Refusée hors de [0, 100], et sous le débit minimal tant que le CO2 n'est pas NOMINAL.",
+            "properties": {
+                "percent": "consigne de vitesse, en pour cent de la pleine vitesse"
+            }
+        },
+        "scrubber.power": {
+            "title": "Alimenter le scrubber",
+            "description": "Met le scrubber sous tension ou hors tension. L'arrêt est refusé tant que le CO2 n'est pas NOMINAL (règle MIN-FLOW).",
+            "properties": {
+                "on": "true pour mettre sous tension, false pour arrêter"
+            }
+        },
+        "scrubber.set_min_flow": {
+            "title": "Régler le débit minimal",
+            "description": "Règle le débit minimal que la règle MIN-FLOW impose, en pour cent. Réservé à l'opérateur (politique). L'appareil refuse toute valeur sous son plancher compilé : la protection peut être relevée, jamais affaiblie.",
+            "properties": {
+                "percent": "débit minimal, en pour cent de la pleine vitesse ; jamais sous le plancher compilé"
+            }
+        },
+        "scrubber.set_profile": {
+            "title": "Choisir le profil de fonctionnement",
+            "description": "Choisit le profil de fonctionnement.",
+            "properties": {
+                "profile": "adaptive ou fixed"
+            }
+        },
+        "debug.set_co2": {
+            "title": "Forcer le CO2 de la cabine (stub)",
+            "description": "STUB SEULEMENT : fixe l'état CO2 de la cabine, puisque rien ne simule la cabine ici. En CRITICAL, MIN-FLOW impose 100 %.",
+            "properties": {
+                "state": "NOMINAL, ELEVATED ou CRITICAL",
+                "ppm": "concentration en ppm ; une valeur de stub par état si omise"
+            }
+        }
+    }
+}

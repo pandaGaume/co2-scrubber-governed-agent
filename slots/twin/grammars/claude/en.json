@@ -1,0 +1,34 @@
+{
+    "tools": {
+        "describe": {
+            "title": "What the twin is",
+            "description": "Describes the twin: the physical model in one paragraph, the files it was built from (the parameter file, the scenario, the graph document) with their sha256, the CO2 thresholds it classifies against, and the budget of one question (story minutes per run, runs per call). Read it once; the units and the limits of every other tool follow from it."
+        },
+        "time_to_critical": {
+            "title": "Simulate one flow or a stop",
+            "description": "Simulates the cabin from a starting state at a given scrubber flow, or during a stop of the scrubber, and returns the minutes until the cabin becomes ELEVATED and CRITICAL, the peak concentration and when it occurs, the final state, the steady state at that flow, and a summarized trajectory. Defaults are the scenario's start (four people asleep, 1500 ppm, 33 %). This is the question to ask before touching the scrubber: it costs milliseconds, and the answer carries the sha256 of the assumptions it was computed with, so what you report to the crew can be traced.",
+            "properties": {
+                "co2Ppm": "the starting concentration, in ppm",
+                "crew": "one or two crew groups, each a count of people and their activity",
+                "crew.count": "the number of people in the group",
+                "crew.activity": "sleep, rest, light_work or heavy_work",
+                "flowPercent": "the scrubber command during the run, in percent of full speed (before a stop, if any)",
+                "stopMinutes": "to ask what a stop does: the scrubber stops at minute 0 for this many minutes",
+                "resumePercent": "the command after the stop, in percent (100 by default)",
+                "horizonMinutes": "how many story minutes to look ahead (240 by default, 1440 at most)"
+            }
+        },
+        "sweep": {
+            "title": "Operating map over several flows",
+            "description": "Runs the twin once per scrubber flow in a list, from the same starting state and crew, and reports for each flow the peak, the final state, the minutes to ELEVATED and to CRITICAL, the steady-state concentration and the energy the scrubber draws. Use it to find the lowest flow that keeps the cabin NOMINAL over the horizon when energy is scarce. A few points fit the budget; a full grid is a factory job the operator must approve.",
+            "properties": {
+                "flowPercents": "the flows to try, in percent of full speed (one to twenty values)",
+                "co2Ppm": "the starting concentration, in ppm",
+                "crew": "one or two crew groups, each a count of people and their activity",
+                "crew.count": "the number of people in the group",
+                "crew.activity": "sleep, rest, light_work or heavy_work",
+                "minutes": "story minutes simulated per flow (240 by default, 1440 at most)"
+            }
+        }
+    }
+}
