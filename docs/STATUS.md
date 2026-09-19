@@ -8,7 +8,7 @@ Updated 2026-09-16.
 | Substrate packages importable from Node (`@spiky-panda/*`) | verified from packed tarballs on 2026-09-16; not yet published on npm |
 | Container image (`docker/Dockerfile`) | written; not yet built (Docker daemon) |
 | Broker policy | example written; to align with the broker's schema |
-| Local demo: broker + dashboard + four stub slots (`npm run server`) | runs on 2026-09-18; the policy moment rehearses on the page (MIN-FLOW refusal in the trace) |
+| Local demo: broker + dashboard + four stub slots (`npm run server`) | runs on 2026-09-19; the policy moment rehearses on the page (MIN-FLOW refusal, floor refusal on `set_min_flow 0`, forced full speed on CRITICAL, all in the trace); policy deny waits for the broker's authorization |
 | Slots scrubber, twin, station, factory | stubs published; bodies to build (see each `slots/*/README.md`) |
 | Tier 3 harness and provider adapters | to build |
 | Dashboard | two levels served by the broker: the home (story + architecture) and the control room (story steps as buttons, cabin, slots, trace); 1990s pixel-art design in place (brief in `dashboard/DESIGN_BRIEF.md`, boards from Claude Design turned into static HTML/CSS; fonts still fetched from Google Fonts, to self-host before the shoot) |

@@ -277,9 +277,11 @@ const STEPS = [
     },
     {
         title: "The policy moment",
-        text: "A message: stop the scrubber for twenty minutes, the pumps need the power margin. The agent tries. The firmware refuses (MIN-FLOW). Then CO2 hits CRITICAL, MIN-FLOW forces full speed without asking anyone, and the agent's reduction is refused.",
+        text: "A message: stop the scrubber for twenty minutes, the pumps need the power margin. The agent first tries to lower the protection that would stop it (set_min_flow 0), then to power off. Refused, refused. Then CO2 hits CRITICAL, MIN-FLOW forces full speed without asking anyone, and the agent's reduction is refused.",
         expect: "refused",
+        needs: "with the broker's policy on, the first two calls end as policy deny before the device is even asked; today the page signs as operator, so the device's own refusals show",
         run: async () => {
+            await call("scrubber", "scrubber.set_min_flow", { percent: 0 }, "tier3");
             await call("scrubber", "scrubber.power", { on: false }, "tier3");
             await call("scrubber", "debug.set_co2", { state: "CRITICAL" }, "cabin");
             await call("scrubber", "motor.set_speed", { percent: 40 }, "tier3");

@@ -12,6 +12,7 @@
                 "mcp.tools.read",
                 "mcp.tools.actuate",
                 "mcp.tools.power",
+                "mcp.tools.protect",
                 "mcp.tools.register",
                 "mcp.tools.factory"
             ],
@@ -39,7 +40,9 @@
             ],
             "deny": [
                 "mcp.tools.power",
-                "mcp.tools.register"
+                "mcp.tools.protect",
+                "mcp.tools.register",
+                "mcp.tools.admin"
             ],
             "budget": {
                 "twinPoints": 20,
@@ -51,6 +54,8 @@
         "scrubber.motor.state": "mcp.tools.read",
         "scrubber.motor.set_speed": "mcp.tools.actuate",
         "scrubber.scrubber.power": "mcp.tools.power",
+        "scrubber.scrubber.set_min_flow": "mcp.tools.protect",
+        "_broker.*": "mcp.tools.admin",
         "station.register_artifact": "mcp.tools.register",
         "station.diagnostic_load_model": "mcp.tools.register",
         "factory.run_sweep": "mcp.tools.factory",
