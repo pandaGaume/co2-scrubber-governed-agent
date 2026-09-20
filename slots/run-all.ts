@@ -17,6 +17,7 @@ import { twinSlot } from "./twin/provider.js";
 import { stationSlot } from "./station/provider.js";
 import { factorySlot } from "./factory/provider.js";
 import { reasonerSlot } from "./reasoner/provider.js";
+import { speechSlot } from "./speech/provider.js";
 import type { PublishedSlot } from "./lib/slot-server.js";
 
 /** The port `.mcp-broker/config.json` declares; the same default here, so the dashboard's allowed origins match. */
@@ -24,9 +25,9 @@ export const DEFAULT_PORT = 3001;
 
 const log = (line: string) => console.log(`${new Date().toLocaleTimeString()}  ${line}`);
 
-/** Publishes the four slots on a broker; returns them, opened. */
+/** Publishes the slots on a broker; returns them, opened. */
 export async function publishAll(wsBase: string, logger: (line: string) => void = log): Promise<PublishedSlot<object>[]> {
-    const slots: PublishedSlot<object>[] = [scrubberSlot(wsBase, logger), twinSlot(wsBase, logger), stationSlot(wsBase, logger), factorySlot(wsBase, logger), reasonerSlot(wsBase, logger)];
+    const slots: PublishedSlot<object>[] = [scrubberSlot(wsBase, logger), twinSlot(wsBase, logger), stationSlot(wsBase, logger), factorySlot(wsBase, logger), reasonerSlot(wsBase, logger), speechSlot(wsBase, logger)];
     for (const s of slots) await s.open();
     return slots;
 }

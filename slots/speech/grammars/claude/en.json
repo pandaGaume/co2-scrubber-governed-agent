@@ -1,0 +1,20 @@
+{
+    "tools": {
+        "say": {
+            "title": "Speak to the people in the room",
+            "description": "Say a short message aloud to the crew or the operator: one or two sentences in their language, what happened and what you did, with the numbers you were given. Speech is for the moment; written reports go to the crew tool. The audio is played by the outputs in order; you get the utterance identifier back.",
+            "properties": {
+                "text": "What to say aloud, 1500 characters at most",
+                "voice": "Who speaks: a speaker name from the profile (agent, twin, factory, station) or an engine voice identifier",
+                "priority": "high interrupts and goes first, low waits, normal by default"
+            }
+        },
+        "stop": {
+            "title": "Stop speaking",
+            "description": "Stop the audio outputs: one utterance by its identifier, or everything queued so far.",
+            "properties": {
+                "utteranceId": "One utterance to withdraw; everything queued when absent"
+            }
+        }
+    }
+}

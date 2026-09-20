@@ -1,0 +1,17 @@
+{
+    "_comment": "The speech slot's engine and voices (BYOK: the key is read from the environment variable named here, never stored). One engine voice per speaker, so each tier has its own; `say { voice: \"twin\" }` picks it. Both voices below are ElevenLabs identifiers given on 2026-09-20. The station is the on-board AI the demo embodies: it reads the messages from Earth, the model's proposals, the twin's answers, the board's refusals; the agent speaks with the same voice.",
+    "voice": {
+        "provider": "elevenlabs",
+        "apiKey": "${ELEVENLABS_API_KEY}",
+        "voiceId": "eWc2pftlLqhJtXnPQknh",
+        "model": "eleven_flash_v2_5",
+        "outputFormat": "mp3_44100_128",
+        "defaultVoice": "station",
+        "voices": {
+            "agent": "eWc2pftlLqhJtXnPQknh",
+            "twin": "JBFqnCBsd6RMkjVDRZzb",
+            "factory": "JBFqnCBsd6RMkjVDRZzb",
+            "station": "eWc2pftlLqhJtXnPQknh"
+        }
+    }
+}

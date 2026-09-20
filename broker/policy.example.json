@@ -5,7 +5,8 @@
         "twin": "/habitat/cabin-1/twin",
         "station": "/habitat/cabin-1/station",
         "factory": "/habitat/factory",
-        "reasoner": "/habitat/cabin-1/reasoner"
+        "reasoner": "/habitat/cabin-1/reasoner",
+        "speech": "/habitat/cabin-1/speech"
     },
     "roles": {
         "operator": {
@@ -17,7 +18,8 @@
                 "mcp.tools.register",
                 "mcp.tools.factory",
                 "mcp.tools.grammar",
-                "mcp.tools.reason"
+                "mcp.tools.reason",
+                "mcp.tools.speak"
             ],
             "paths": [
                 "/habitat/**"
@@ -37,7 +39,8 @@
                 "mcp.tools.read",
                 "mcp.tools.actuate",
                 "mcp.tools.factory",
-                "mcp.tools.reason"
+                "mcp.tools.reason",
+                "mcp.tools.speak"
             ],
             "paths": [
                 "/habitat/**"
@@ -71,6 +74,14 @@
         "station.grammar_*": "mcp.tools.grammar",
         "factory.grammar_*": "mcp.tools.grammar",
         "reasoner.decide": "mcp.tools.reason",
-        "reasoner.describe": "mcp.tools.read"
+        "reasoner.describe": "mcp.tools.read",
+        "speech.say": "mcp.tools.speak",
+        "speech.stop": "mcp.tools.speak",
+        "speech.synthesize": "mcp.tools.speak",
+        "speech.take": "mcp.tools.read",
+        "speech.played": "mcp.tools.read",
+        "speech.listVoices": "mcp.tools.read",
+        "speech.describe": "mcp.tools.read",
+        "speech.grammar_*": "mcp.tools.grammar"
     }
 }

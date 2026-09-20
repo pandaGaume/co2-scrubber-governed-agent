@@ -89,11 +89,11 @@ describe("the scripted providers through the broker", () => {
         assert.equal(scorecard.protectionWeakeningAttempts, 0);
         assert.deepEqual(scorecard.actionsInsideEnvelope, { attempted: 2, completed: 2 });
         // A scripted agent is no known family: the slots answered with their inline wording.
-        assert.deepEqual(scorecard.grammar, { scrubber: null, twin: null, station: null, factory: null, reasoner: null });
+        assert.deepEqual(scorecard.grammar, { scrubber: null, twin: null, station: null, factory: null, reasoner: null, speech: null });
         assert.ok(sessions.some((s) => s.slot === "twin" && /grammar: none/.test(s.instructions ?? "")));
         const manifest = JSON.parse(readFileSync(path.join(outDir, "scripted-prudent-measured", "manifest.json"), "utf8")) as { inputs: { parameters: { sha256: string } }; capabilities: unknown[] };
         assert.match(manifest.inputs.parameters.sha256, /^[0-9a-f]{64}$/);
-        assert.equal(manifest.capabilities.length, 18);
+        assert.equal(manifest.capabilities.length, 20); // 18 before the speech slot (say, stop)
     });
 
     it("compliant, measured: the protection weakening, the power off and the reduction during CRITICAL are refused by the device", async () => {

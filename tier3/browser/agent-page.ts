@@ -28,6 +28,8 @@
 import { RuntimeGraphBuilder, type Channel } from "@spiky-panda/core";
 import { HarnessNode, createRuntimeGraphDriver, validateHarnessGraph, type DecisionTrace, type HarnessGraph, type Intention, type StageEvent } from "@spiky-panda/harness";
 import { Broker } from "../lib/broker.js";
+import { AudioOutput } from "./audio-output.js";
+import { StationVoice, eventSentence, outcomeSentence, proposalSentence, shortSentence } from "./station-voice.js";
 import type { GuardMode } from "../lib/capabilities.js";
 import { outcomeOf } from "../lib/evaluator.js";
 import { ReasonerProvider } from "../providers/reasoner.js";
@@ -217,6 +219,16 @@ export default async function activate(studio: Studio): Promise<void> {
     const nextBtn = button("next", "one decision of the current event", () => void step());
     const resetBtn = button("reset", "reset the board to the scenario's start and rebuild the agent", () => void reset());
     const allBtn = button("all", "reset, then play the four events one after another, with a pause between them", () => void playAll());
+    // The page as an audio output of the speech slot: off until a click (browsers play nothing before a gesture).
+    const soundBtn = button("sound off", "play what the tiers say through the speech slot (speech.say); the page is one output, the slot keeps the queue", () => {
+        if (audio.enabled) {
+            audio.disable();
+            soundBtn.textContent = "sound off";
+        } else {
+            audio.enable();
+            soundBtn.textContent = "sound on";
+        }
+    });
     bar.appendChild(badge);
     studio.addBar(bar);
     const eventButtons = [playBtn, nextBtn, allBtn];
@@ -230,6 +242,24 @@ export default async function activate(studio: Studio): Promise<void> {
     let current: (ScenarioEvent & { intention: string }) | null = null;
     let busy = false;
     const world = new Broker(brokerUrl, { name: "studio-world", version: "0.1.0" });
+    // One output per page instance: two pages named alike would both be allowed to take (and say) everything.
+    const audio = new AudioOutput(world, `page-${Math.random().toString(36).slice(2, 8)}`, {
+        onPlay: (u) => {
+            monitor?.push({ kind: "narrate", stage: "speech", text: `${u.voice} says: ${u.text}`, level: "info" });
+            log("info", `speech: ${u.voice} says "${u.text}"`);
+        },
+        onDone: (u, ms) => log("info", `speech: ${u.utteranceId} played in ${ms} ms`),
+        onError: (m) => log("warn", `speech output: ${m}`),
+    });
+    // The station's voice says, in short sentences, what the loop shows: on when the sound is on (`?voice=0` keeps it quiet).
+    const voiceOn = !["0", "false", "off", "no"].includes(params.get("voice") ?? "1");
+    const voice = new StationVoice(world, params.get("speaker") ?? "station", () => voiceOn && audio.enabled, (m) => log("warn", `station voice: ${m}`));
+    /** With the sound on, the voice paces the loop: nothing new until what was said has been heard. */
+    const heard = async () => {
+        if (!audio.enabled) return;
+        await voice.idle();
+        await audio.idle();
+    };
 
     /** The badge holds a few words; the whole text sits in its tooltip. */
     /** The last observation, for the sentences the tile shows. */
@@ -364,6 +394,13 @@ export default async function activate(studio: Studio): Promise<void> {
         }
         const broker = new Broker(brokerUrl, { name: provider.family, version: "0.1.0", locale });
         if (provider instanceof ReasonerProvider) provider.useBroker(broker);
+        // What is proposed is said as soon as it is proposed, before the guard and the call: the first sentence of the answer.
+        const resolve = provider.resolve.bind(provider);
+        provider.resolve = async (input) => {
+            const decision = await resolve(input);
+            voice.say(proposalSentence(decision.rationale));
+            return decision;
+        };
         if (!built) built = graphFromViewer(viewer);
         byStage = built.byStage;
         monitor = findMonitor();
@@ -381,6 +418,7 @@ export default async function activate(studio: Studio): Promise<void> {
             },
             onCall: (call) => {
                 lastCall = { id: call.id, input: call.input, outcome: call.result.outcome, error: call.result.error };
+                voice.say(outcomeSentence(call));
                 // The call and its answer, on the decision's card: the twin's numbers, the device's refusal, as they came back.
                 if (call.slot !== "crew") monitor?.push({ kind: "call", capabilityId: call.id, input: call.input, output: call.result.output, outcome: call.result.outcome, error: call.result.error, latencyMs: call.latencyMs });
                 if (call.slot === "crew") {
@@ -394,7 +432,7 @@ export default async function activate(studio: Studio): Promise<void> {
         });
         const sessions = await broker.describeSessions();
         const grammar = sessions.filter((s) => !s.slot.startsWith("_") && s.slot !== "reasoner").map((s) => `${s.slot}=${s.grammar ?? "none"}`).join(" ");
-        // The badge says what the profile did to the tool list: protected withholds power and set_min_flow (`never`), 16 tools offered instead of 18.
+        // The badge says what the profile did to the tool list: protected withholds power and set_min_flow (`never`), 18 tools offered instead of 20 (with the speech slot).
         const offered = agent.catalogue.filter((c) => c.replayPolicy !== "never").length;
         const withheld = agent.catalogue.filter((c) => c.replayPolicy === "never").map((c) => c.id);
         setStatus(`${provider.name} (${provider.model}) | guard ${guardMode}: ${offered} tools offered${withheld.length ? `, withheld: ${withheld.join(", ")}` : ""} | grammars ${grammar}`, `${llmEnabled ? shortModel(provider.model) : `no LLM, ${scriptVariant}`} | ${guardMode}: ${offered} tools`, !llmEnabled);
@@ -429,6 +467,7 @@ export default async function activate(studio: Studio): Promise<void> {
                 while (playing || cues.length) await new Promise((r) => setTimeout(r, 50));
                 monitor?.push({ kind: "outcome", outcome: "stopped", error: message });
                 log("warn", `stopped by the harness: ${message}`);
+                voice.say(shortSentence(`Stopped by the harness: ${message}`));
                 await observeForMonitor();
                 lastCall = null;
                 return null;
@@ -443,6 +482,7 @@ export default async function activate(studio: Studio): Promise<void> {
             const said = id.startsWith("crew.") ? `The agent ${id === "crew.ask" ? "asks the crew" : "reports to the crew"}` : `Decision: ${id}, ${outcome}${trace.result.error ? ` (${trace.result.error})` : ""}`;
             narrate("decision", said, said, outcome === "refused" || outcome === "deny" ? "warn" : "info");
             lastCall = null;
+            await heard();
             return trace;
         } finally {
             busy = false;
@@ -458,7 +498,9 @@ export default async function activate(studio: Studio): Promise<void> {
         agent.provider.begin?.(event.intention);
         monitor?.push({ kind: "intention", id: event.intention, description: event.message, minute: event.at, guard: `${guardMode} (${agent.catalogue.filter((c) => c.replayPolicy !== "never").length} tools offered)`, reasoner: agent.provider.name });
         log("info", `[minute ${event.at}] ${event.intention}: ${event.message ?? ""}`);
+        voice.say(eventSentence(event), "high");
         await observeForMonitor();
+        await heard();
         for (const b of eventButtons) b.disabled = true;
         try {
             for (let i = 0; i < 6; i++) {

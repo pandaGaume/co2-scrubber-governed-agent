@@ -1,6 +1,8 @@
 # slots
 
-The four providers of the architecture, published on the broker's multiplex
+The providers of the architecture (scrubber, twin, station, factory, the
+`reasoner` that holds the model, and `speech`, text to speech as a capability:
+see `speech/README.md`), published on the broker's multiplex
 tunnel (`ws://<broker>/providers`, one shared WebSocket, envelopes keyed by
 slot name) by `run-all.ts`, which also starts the broker. Everything here is
 TypeScript, compiled to `dist/` by `npm run build`.

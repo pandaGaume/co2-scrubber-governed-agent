@@ -1,0 +1,53 @@
+{
+    "tools": {
+        "say": {
+            "title": "Parler aux personnes présentes",
+            "description": "Dire à voix haute un message court à l'équipage ou à l'opérateur : une ou deux phrases dans leur langue, ce qui s'est passé et ce que vous avez fait, avec les chiffres qu'on vous a donnés. La parole est pour l'instant présent ; les rapports écrits vont à l'outil de l'équipage. Renvoie l'identifiant de l'énoncé, jamais l'audio.",
+            "properties": {
+                "text": "Ce qu'il faut dire, 1500 caractères au plus",
+                "voice": "Qui parle : un nom de locuteur du profil (agent, twin, factory, station) ou un identifiant de voix du moteur",
+                "priority": "high interrompt et passe en premier, low attend, normal par défaut"
+            }
+        },
+        "stop": {
+            "title": "Se taire",
+            "description": "Arrêter les sorties audio : un énoncé par son identifiant, ou tout ce qui est en attente.",
+            "properties": {
+                "utteranceId": "Un énoncé à retirer ; tout ce qui est en attente si absent"
+            }
+        },
+        "listVoices": {
+            "title": "Lister les voix",
+            "description": "Les locuteurs nommés par le profil avec leur voix, et les voix que le moteur propose."
+        },
+        "synthesize": {
+            "title": "Synthétiser sans jouer",
+            "description": "Synthétiser un texte et le garder (speech://utterances/{id}) sans le mettre en attente pour les sorties : pour un consommateur qui joue ou enregistre l'audio lui-même.",
+            "properties": {
+                "text": "Le texte à synthétiser, 1500 caractères au plus",
+                "voice": "Qui parle : un locuteur du profil ou un identifiant de voix"
+            }
+        },
+        "played": {
+            "title": "Un énoncé a été joué",
+            "description": "Une sortie audio (la page, un haut-parleur) signale qu'elle a joué un énoncé jusqu'au bout, avec la durée mesurée.",
+            "properties": {
+                "utteranceId": "L'énoncé joué",
+                "output": "Quelle sortie : page, speaker, headset, file",
+                "durationMs": "Durée mesurée en millisecondes"
+            }
+        },
+        "describe": {
+            "title": "Décrire le service",
+            "description": "Le moteur, son modèle, les locuteurs et leurs voix, la présence d'une clé, le fichier de profil et son sha256, la file."
+        },
+        "take": {
+            "title": "Une sortie prend un énoncé",
+            "description": "Une sortie audio réserve un énoncé avant de le jouer. Livré une fois : la première sortie qui le prend le joue, une seconde est refusée et le saute.",
+            "properties": {
+                "utteranceId": "L'énoncé à prendre",
+                "output": "Quelle sortie : page, speaker, headset, file"
+            }
+        }
+    }
+}

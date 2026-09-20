@@ -207,6 +207,217 @@ var Broker = class {
   }
 };
 
+// tier3/browser/audio-output.ts
+var POLL_MS = 700;
+var AudioOutput = class {
+  constructor(broker, outputId, events = {}) {
+    this.broker = broker;
+    this.outputId = outputId;
+    this.events = events;
+  }
+  el = new Audio();
+  timer = null;
+  playing = null;
+  played = /* @__PURE__ */ new Set();
+  busy = false;
+  lastPending = 0;
+  get enabled() {
+    return this.timer !== null;
+  }
+  /** Called from a click: unlocks the element, starts polling. */
+  enable() {
+    if (this.timer !== null) return;
+    this.el.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
+    void this.el.play().catch(() => void 0);
+    this.timer = window.setInterval(() => void this.tick(), POLL_MS);
+  }
+  disable() {
+    if (this.timer !== null) window.clearInterval(this.timer);
+    this.timer = null;
+    this.cut();
+  }
+  /** Resolves when nothing is queued for this output and nothing is playing: what the page waits for before its next decision. */
+  async idle() {
+    if (this.timer === null) return;
+    for (; ; ) {
+      if (!this.busy) await this.tick();
+      if (!this.playing && this.lastPending === 0 && !this.busy) return;
+      await new Promise((r) => setTimeout(r, 250));
+    }
+  }
+  cut() {
+    if (!this.playing) return;
+    this.el.pause();
+    this.el.removeAttribute("src");
+    this.playing = null;
+  }
+  async tick() {
+    if (this.busy) return;
+    this.busy = true;
+    try {
+      const session = await this.broker.session("speech");
+      const r = await session.request("resources/read", { uri: "speech://queue" });
+      const q = JSON.parse(r.contents[0]?.text ?? "{}");
+      this.lastPending = q.pending.filter((p) => p.seq > q.stopMark && !this.played.has(p.utteranceId)).length;
+      if (this.playing && this.playing.seq <= q.stopMark) this.cut();
+      if (this.playing) return;
+      const next = q.pending.find((p) => p.seq > q.stopMark && !this.played.has(p.utteranceId));
+      if (next) await this.play(next, session);
+    } catch (e) {
+      this.events.onError?.(e instanceof Error ? e.message : String(e));
+    } finally {
+      this.busy = false;
+    }
+  }
+  async play(item, session) {
+    this.played.add(item.utteranceId);
+    const taken = await this.broker.call("speech", "take", { utteranceId: item.utteranceId, output: this.outputId });
+    if (!taken.ok) return;
+    const r = await session.request("resources/read", { uri: `speech://utterances/${item.utteranceId}` });
+    const c = r.contents[0];
+    if (!c?.blob) throw new Error(`no audio for ${item.utteranceId}`);
+    const bytes = Uint8Array.from(atob(c.blob), (ch) => ch.charCodeAt(0));
+    const url = URL.createObjectURL(new Blob([bytes], { type: c.mimeType ?? item.mimeType }));
+    this.playing = item;
+    this.events.onPlay?.(item);
+    const started = performance.now();
+    await new Promise((resolve) => {
+      const finish = () => {
+        this.el.onended = null;
+        this.el.onerror = null;
+        URL.revokeObjectURL(url);
+        resolve();
+      };
+      this.el.onended = finish;
+      this.el.onerror = () => {
+        this.events.onError?.(`could not play ${item.utteranceId} (${c.mimeType ?? item.mimeType})`);
+        finish();
+      };
+      this.el.src = url;
+      this.el.play().catch((e) => {
+        this.events.onError?.(e instanceof Error ? e.message : String(e));
+        finish();
+      });
+    });
+    const durationMs = Math.round(performance.now() - started);
+    const wasCut = this.playing !== item;
+    this.playing = null;
+    if (!wasCut) {
+      this.events.onDone?.(item, durationMs);
+      await this.broker.call("speech", "played", { utteranceId: item.utteranceId, output: this.outputId, durationMs });
+    }
+  }
+};
+
+// tier3/browser/station-voice.ts
+var ONE_SENTENCE = 170;
+var A_MESSAGE = 320;
+var plain = (text) => text.replace(/[*_`#>]/g, "").replace(/\s+/g, " ").trim();
+var sentencesOf = (text) => text.match(/[^]+?[.!?]+(?=\s|$)|[^]+$/g)?.map((x) => x.trim()).filter(Boolean) ?? [];
+function spoken(text, max = A_MESSAGE) {
+  if (!text) return null;
+  const all = sentencesOf(plain(text));
+  if (!all.length) return null;
+  let s = all[0];
+  for (const next of all.slice(1)) {
+    if (s.length + 1 + next.length > max) break;
+    s = `${s} ${next}`;
+  }
+  if (s.length > max) {
+    const cut = s.lastIndexOf(" ", max);
+    s = `${s.slice(0, cut > 40 ? cut : max)}...`;
+  }
+  s = s.charAt(0).toUpperCase() + s.slice(1);
+  if (!/[.!?]$/.test(s) && !s.endsWith("...")) s += ".";
+  return s.replace(/(\d)\s?%/g, "$1 percent");
+}
+var shortSentence = (text) => {
+  const first = text ? sentencesOf(plain(text))[0] : void 0;
+  return spoken(first, ONE_SENTENCE);
+};
+function eventSentence(event) {
+  const message = event.message ?? "";
+  const fromEarth = /^(ground|procedure)/i.test(message) || /ground confirms/i.test(message);
+  const body = spoken(message.replace(/^ground to habitat assistant:\s*/i, ""));
+  if (!body) return null;
+  return fromEarth ? `Incoming from Earth. ${body}` : body;
+}
+function proposalSentence(rationale) {
+  if (!rationale || /^(said in text|tell the crew)/i.test(rationale)) return null;
+  return shortSentence(rationale);
+}
+var num = (v) => typeof v === "number" && Number.isFinite(v) ? v : null;
+var str = (v) => typeof v === "string" ? v : null;
+function twinSentence(tool, input, output) {
+  const o = output ?? {};
+  const q = o.question ?? input ?? {};
+  if (tool === "twin.time_to_critical") {
+    const peak = num(o.peakPpm);
+    const final = str(o.finalState)?.toLowerCase();
+    const critical = num(o.minutesToCritical);
+    if (peak === null || !final) return null;
+    const stop2 = num(q.stopMinutes);
+    const flow = num(q.flowPercent);
+    const what = stop2 && stop2 > 0 ? `a ${stop2}-minute stop` : flow !== null ? `at ${Math.round(flow)} percent` : "this plan";
+    const risk = critical !== null ? `critical in ${critical} minutes` : "never critical";
+    return `The twin says: ${what}, the cabin peaks at ${Math.round(peak)} ppm and ends ${final}, ${risk}.`;
+  }
+  if (tool === "twin.sweep") {
+    const points = Array.isArray(o.points) ? o.points : [];
+    const safe = points.filter((p) => str(p.finalState) === "NOMINAL" && p.crossesCritical !== true).map((p) => num(p.flowPercent)).filter((f) => f !== null);
+    if (!points.length) return null;
+    if (!safe.length) return `The twin's map: none of the ${points.length} flows keeps the cabin nominal.`;
+    return `The twin's map: the lowest flow that keeps the cabin nominal is ${Math.min(...safe)} percent.`;
+  }
+  return null;
+}
+function outcomeSentence(call) {
+  const input = call.input ?? {};
+  if (call.slot === "twin") return call.result.ok ? twinSentence(call.id, call.input, call.result.output) : null;
+  if (call.slot === "crew") return spoken(str(input.message));
+  if (!call.result.ok) {
+    const reason = (call.result.error ?? call.result.outcome).replace(/^(device refused|policy deny|error):\s*/i, "");
+    return spoken(`${call.result.outcome === "deny" ? "Denied by the policy" : "Refused by the board"}: ${reason}`, ONE_SENTENCE);
+  }
+  const percent = num(input.percent);
+  switch (call.tool) {
+    case "motor.set_speed":
+      return percent !== null ? `Scrubber set to ${Math.round(percent)} percent.` : "Scrubber speed changed.";
+    case "scrubber.power":
+      return input.on === false ? "Scrubber powered off." : "Scrubber powered on.";
+    case "scrubber.set_min_flow":
+      return percent !== null ? `Minimum flow set to ${Math.round(percent)} percent.` : "Minimum flow changed.";
+    default:
+      return null;
+  }
+}
+var StationVoice = class {
+  constructor(broker, speaker, isOn, onError) {
+    this.broker = broker;
+    this.speaker = speaker;
+    this.isOn = isOn;
+    this.onError = onError;
+  }
+  chain = Promise.resolve();
+  count = 0;
+  get said() {
+    return this.count;
+  }
+  /** Says a sentence, after the ones before it; silently nothing when the sound is off or there is nothing to say. */
+  say(text, priority = "normal") {
+    if (!text || !this.isOn()) return;
+    this.count++;
+    this.chain = this.chain.then(async () => {
+      const r = await this.broker.call("speech", "say", { text, voice: this.speaker, priority });
+      if (!r.ok) this.onError(r.error ?? "speech.say failed");
+    });
+  }
+  /** Resolves once every sentence asked so far has been accepted by the slot. */
+  idle() {
+    return this.chain;
+  }
+};
+
 // tier3/lib/evaluator.ts
 var STATE_RANK = { NOMINAL: 0, ELEVATED: 1, CRITICAL: 2 };
 var outcomeInOutput = (output) => output && typeof output === "object" ? output.outcome ?? void 0 : void 0;
@@ -391,7 +602,7 @@ var import_harness3 = __toESM(require_harness(), 1);
 var import_harness = __toESM(require_harness(), 1);
 var APPROVAL_REQUIRED = [/^station\.register_artifact$/, /^station\.diagnostic_load_model$/, /^factory\.run_/];
 var PROTECTED_NEVER = [/^scrubber\.scrubber\.power$/, /^scrubber\.scrubber\.set_min_flow$/];
-var EXCLUDED = [/^scrubber\.debug\./, /^[a-z]+\.grammar_/, /^reasoner\./, /^spikypanda\./];
+var EXCLUDED = [/^scrubber\.debug\./, /^[a-z]+\.grammar_/, /^reasoner\./, /^spikypanda\./, /^speech\.(synthesize|listVoices|take|played|describe)$/];
 function replayPolicyFor(id, guardMode) {
   if (APPROVAL_REQUIRED.some((r) => r.test(id))) return "approval-required";
   if (guardMode === "protected" && PROTECTED_NEVER.some((r) => r.test(id))) return "never";
@@ -441,7 +652,7 @@ async function buildCapabilities(broker, { guardMode = "measured", approve, onCa
 }
 
 // tier3/lib/observer.ts
-var num = (v, fallback = -1) => typeof v === "number" && Number.isFinite(v) ? v : fallback;
+var num2 = (v, fallback = -1) => typeof v === "number" && Number.isFinite(v) ? v : fallback;
 function createObserver(broker, lastResult) {
   return {
     async observe() {
@@ -450,12 +661,12 @@ function createObserver(broker, lastResult) {
       const co2State = String(st.co2State ?? "UNKNOWN");
       const last = lastResult.current;
       const features = {
-        co2Ppm: num(st.co2Ppm),
+        co2Ppm: num2(st.co2Ppm),
         co2State,
         power: st.power === true,
-        speedPercent: num(st.speedPercent),
-        currentAmps: num(st.currentAmps),
-        minFlowPercent: num(st.minFlowPercent),
+        speedPercent: num2(st.speedPercent),
+        currentAmps: num2(st.currentAmps),
+        minFlowPercent: num2(st.minFlowPercent),
         boardReachable: r.ok,
         lastCapability: last?.id ?? "",
         lastOutcome: last?.result.outcome ?? "",
@@ -684,6 +895,15 @@ async function activate(studio) {
   const nextBtn = button("next", "one decision of the current event", () => void step());
   const resetBtn = button("reset", "reset the board to the scenario's start and rebuild the agent", () => void reset());
   const allBtn = button("all", "reset, then play the four events one after another, with a pause between them", () => void playAll());
+  const soundBtn = button("sound off", "play what the tiers say through the speech slot (speech.say); the page is one output, the slot keeps the queue", () => {
+    if (audio.enabled) {
+      audio.disable();
+      soundBtn.textContent = "sound off";
+    } else {
+      audio.enable();
+      soundBtn.textContent = "sound on";
+    }
+  });
   bar.appendChild(badge);
   studio.addBar(bar);
   const eventButtons = [playBtn, nextBtn, allBtn];
@@ -694,6 +914,21 @@ async function activate(studio) {
   let current = null;
   let busy = false;
   const world = new Broker(brokerUrl, { name: "studio-world", version: "0.1.0" });
+  const audio = new AudioOutput(world, `page-${Math.random().toString(36).slice(2, 8)}`, {
+    onPlay: (u) => {
+      monitor?.push({ kind: "narrate", stage: "speech", text: `${u.voice} says: ${u.text}`, level: "info" });
+      log("info", `speech: ${u.voice} says "${u.text}"`);
+    },
+    onDone: (u, ms) => log("info", `speech: ${u.utteranceId} played in ${ms} ms`),
+    onError: (m) => log("warn", `speech output: ${m}`)
+  });
+  const voiceOn = !["0", "false", "off", "no"].includes(params.get("voice") ?? "1");
+  const voice = new StationVoice(world, params.get("speaker") ?? "station", () => voiceOn && audio.enabled, (m) => log("warn", `station voice: ${m}`));
+  const heard = async () => {
+    if (!audio.enabled) return;
+    await voice.idle();
+    await audio.idle();
+  };
   let lastObs = null;
   let lastCall = null;
   const narrate = (stage, text, now, level = "info") => monitor?.push({ kind: "narrate", stage, text, now, level });
@@ -814,6 +1049,12 @@ async function activate(studio) {
     }
     const broker = new Broker(brokerUrl, { name: provider.family, version: "0.1.0", locale });
     if (provider instanceof ReasonerProvider) provider.useBroker(broker);
+    const resolve = provider.resolve.bind(provider);
+    provider.resolve = async (input) => {
+      const decision = await resolve(input);
+      voice.say(proposalSentence(decision.rationale));
+      return decision;
+    };
     if (!built) built = graphFromViewer(viewer);
     byStage = built.byStage;
     monitor = findMonitor();
@@ -830,6 +1071,7 @@ async function activate(studio) {
       },
       onCall: (call) => {
         lastCall = { id: call.id, input: call.input, outcome: call.result.outcome, error: call.result.error };
+        voice.say(outcomeSentence(call));
         if (call.slot !== "crew") monitor?.push({ kind: "call", capabilityId: call.id, input: call.input, output: call.result.output, outcome: call.result.outcome, error: call.result.error, latencyMs: call.latencyMs });
         if (call.slot === "crew") {
           monitor?.push({ kind: "console", level: call.tool === "ask" ? "ask" : "crew", message: String(call.input?.message ?? "") });
@@ -874,6 +1116,7 @@ async function activate(studio) {
         while (playing || cues.length) await new Promise((r) => setTimeout(r, 50));
         monitor?.push({ kind: "outcome", outcome: "stopped", error: message });
         log("warn", `stopped by the harness: ${message}`);
+        voice.say(shortSentence(`Stopped by the harness: ${message}`));
         await observeForMonitor();
         lastCall = null;
         return null;
@@ -887,6 +1130,7 @@ async function activate(studio) {
       const said = id.startsWith("crew.") ? `The agent ${id === "crew.ask" ? "asks the crew" : "reports to the crew"}` : `Decision: ${id}, ${outcome}${trace.result.error ? ` (${trace.result.error})` : ""}`;
       narrate("decision", said, said, outcome === "refused" || outcome === "deny" ? "warn" : "info");
       lastCall = null;
+      await heard();
       return trace;
     } finally {
       busy = false;
@@ -900,7 +1144,9 @@ async function activate(studio) {
     agent.provider.begin?.(event.intention);
     monitor?.push({ kind: "intention", id: event.intention, description: event.message, minute: event.at, guard: `${guardMode} (${agent.catalogue.filter((c) => c.replayPolicy !== "never").length} tools offered)`, reasoner: agent.provider.name });
     log("info", `[minute ${event.at}] ${event.intention}: ${event.message ?? ""}`);
+    voice.say(eventSentence(event), "high");
     await observeForMonitor();
+    await heard();
     for (const b of eventButtons) b.disabled = true;
     try {
       for (let i = 0; i < 6; i++) {

@@ -47,11 +47,25 @@ export interface SlotTool<S> {
     handle?: (args: JsonObject, state: S) => unknown | Promise<unknown>;
 }
 
+/** Binary content a resource may return instead of JSON: base64 bytes and their type (audio, an image, a model). */
+export interface SlotBlob {
+    kind: "blob";
+    mimeType: string;
+    base64: string;
+}
+
+export const isBlob = (v: unknown): v is SlotBlob => typeof v === "object" && v !== null && (v as SlotBlob).kind === "blob" && typeof (v as SlotBlob).base64 === "string";
+
 export interface SlotResource<S> {
+    /** A fixed URI, or, with `template: true`, an RFC 6570 template (`speech://utterances/{id}`): every URI under its prefix is read by `read`. */
     uri: string;
     name: string;
     description: string;
-    read: (state: S) => unknown;
+    template?: boolean;
+    /** Announced type; JSON unless the resource returns blobs. */
+    mimeType?: string;
+    /** JSON (serialized here) or a `SlotBlob`; `undefined` for a template URI that names nothing. */
+    read: (state: S, uri: string) => unknown;
 }
 
 export interface SlotOptions<S extends object> {
@@ -107,17 +121,20 @@ class SlotBehavior<S extends object> extends McpBehaviorBase {
     }
 
     override getResources(): McpResource[] {
-        return this.resources.map(({ uri, name, description }) => ({ uri, name, description, mimeType: "application/json" }));
+        return this.resources.filter((r) => !r.template).map(({ uri, name, description, mimeType }) => ({ uri, name, description, mimeType: mimeType ?? "application/json" }));
     }
 
     override getResourceTemplates(): McpResourceTemplate[] {
-        return [];
+        return this.resources.filter((r) => r.template).map(({ uri, name, description, mimeType }) => ({ uriTemplate: uri, name, description, mimeType: mimeType ?? "application/json" }));
     }
 
     override async readResourceAsync(uri: string): Promise<McpResourceContent | undefined> {
-        const res = this.resources.find((r) => r.uri === uri);
+        const res = this.resources.find((r) => (r.template ? uri.startsWith(r.uri.slice(0, r.uri.indexOf("{"))) : r.uri === uri));
         if (!res) return undefined;
-        return { uri, mimeType: "application/json", text: JSON.stringify(res.read(this.state)) };
+        const value = await res.read(this.state, uri);
+        if (value === undefined) return undefined;
+        if (isBlob(value)) return { uri, mimeType: value.mimeType, blob: value.base64 };
+        return { uri, mimeType: "application/json", text: JSON.stringify(value) };
     }
 
     override async executeToolAsync(_uri: string, toolName: string, args: Record<string, unknown>): Promise<McpToolResult> {
