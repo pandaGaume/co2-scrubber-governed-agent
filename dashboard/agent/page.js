@@ -391,6 +391,22 @@ function outcomeSentence(call) {
       return null;
   }
 }
+async function speechHeard(broker, pollMs = 300, timeoutMs = 12e4) {
+  const started = Date.now();
+  for (; ; ) {
+    try {
+      const session = await broker.session("speech");
+      const r = await session.request("resources/read", { uri: "speech://queue" });
+      const q = JSON.parse(r.contents[0]?.text ?? "{}");
+      const inFlight = (q.recent ?? []).some((u) => u.queued && u.seq > (q.stopMark ?? 0) && u.takenBy && !u.playedBy?.length);
+      if (!(q.pending ?? []).length && !inFlight) return;
+    } catch {
+      return;
+    }
+    if (Date.now() - started > timeoutMs) return;
+    await new Promise((r) => setTimeout(r, pollMs));
+  }
+}
 var StationVoice = class {
   constructor(broker, speaker, isOn, onError) {
     this.broker = broker;
@@ -829,6 +845,7 @@ async function activate(studio) {
   let viewMode = params.get("view") === "follow" ? "follow" : "fit";
   let followThreshold = Number(params.get("threshold") ?? 120);
   const followZoom = Number(params.get("zoom") ?? 1);
+  const remoteOutput = params.get("output") === "none";
   const style = document.createElement("style");
   style.textContent = STYLE;
   document.head.appendChild(style);
@@ -904,6 +921,7 @@ async function activate(studio) {
       soundBtn.textContent = "sound on";
     }
   });
+  if (remoteOutput) soundBtn.style.display = "none";
   bar.appendChild(badge);
   studio.addBar(bar);
   const eventButtons = [playBtn, nextBtn, allBtn];
@@ -923,11 +941,12 @@ async function activate(studio) {
     onError: (m) => log("warn", `speech output: ${m}`)
   });
   const voiceOn = !["0", "false", "off", "no"].includes(params.get("voice") ?? "1");
-  const voice = new StationVoice(world, params.get("speaker") ?? "station", () => voiceOn && audio.enabled, (m) => log("warn", `station voice: ${m}`));
+  const voice = new StationVoice(world, params.get("speaker") ?? "station", () => voiceOn && (remoteOutput || audio.enabled), (m) => log("warn", `station voice: ${m}`));
   const heard = async () => {
-    if (!audio.enabled) return;
+    if (!voiceOn || !(remoteOutput || audio.enabled)) return;
     await voice.idle();
-    await audio.idle();
+    if (remoteOutput) await speechHeard(world);
+    else await audio.idle();
   };
   let lastObs = null;
   let lastCall = null;
@@ -1143,6 +1162,7 @@ async function activate(studio) {
     if (event.world?.cabin) await world.call("scrubber", "debug.set_co2", { state: event.world.cabin.state, ppm: event.world.cabin.ppm });
     agent.provider.begin?.(event.intention);
     monitor?.push({ kind: "intention", id: event.intention, description: event.message, minute: event.at, guard: `${guardMode} (${agent.catalogue.filter((c) => c.replayPolicy !== "never").length} tools offered)`, reasoner: agent.provider.name });
+    tell({ status: "event", intention: event.intention, at: event.at, message: event.message });
     log("info", `[minute ${event.at}] ${event.intention}: ${event.message ?? ""}`);
     voice.say(eventSentence(event), "high");
     await observeForMonitor();
@@ -1217,9 +1237,26 @@ async function activate(studio) {
   nextBtn.title = "one decision of the current event (play an event first)";
   resetBtn.title = "reset the board to the scenario's start and rebuild the agent";
   playBtn.title = "set the board where the selected event happens and let the agent decide until it hands back";
+  const tell = (payload) => {
+    if (window.parent !== window) window.parent.postMessage({ type: "tier3", ...payload }, location.origin);
+  };
+  window.addEventListener("message", (m) => {
+    if (m.origin !== location.origin || m.data?.type !== "tier3") return;
+    const cmd = m.data.cmd;
+    if (cmd === "play") {
+      const event = events.find((e) => e.intention === m.data.intention);
+      if (event) {
+        eventSel.value = event.intention;
+        void playEvent(event).then(() => tell({ status: "done", intention: event.intention }));
+      }
+    } else if (cmd === "all") void playAll().then(() => tell({ status: "done", intention: "all" }));
+    else if (cmd === "reset") void reset().then(() => tell({ status: "reset" }));
+    else if (cmd === "events") tell({ status: "events", events: events.map((e) => ({ intention: e.intention, at: e.at, message: e.message })) });
+  });
   try {
     await connect();
     await observeForMonitor();
+    tell({ status: "ready", events: events.map((e) => ({ intention: e.intention, at: e.at, message: e.message })) });
   } catch (e) {
     setStatus(`not connected: ${e instanceof Error ? e.message : String(e)}`, "not connected", true);
     log("error", `agent: ${e instanceof Error ? e.message : String(e)}`);

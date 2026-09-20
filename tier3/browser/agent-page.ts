@@ -29,7 +29,7 @@ import { RuntimeGraphBuilder, type Channel } from "@spiky-panda/core";
 import { HarnessNode, createRuntimeGraphDriver, validateHarnessGraph, type DecisionTrace, type HarnessGraph, type Intention, type StageEvent } from "@spiky-panda/harness";
 import { Broker } from "../lib/broker.js";
 import { AudioOutput } from "./audio-output.js";
-import { StationVoice, eventSentence, outcomeSentence, proposalSentence, shortSentence } from "./station-voice.js";
+import { StationVoice, eventSentence, outcomeSentence, proposalSentence, shortSentence, speechHeard } from "./station-voice.js";
 import type { GuardMode } from "../lib/capabilities.js";
 import { outcomeOf } from "../lib/evaluator.js";
 import { ReasonerProvider } from "../providers/reasoner.js";
@@ -139,6 +139,8 @@ export default async function activate(studio: Studio): Promise<void> {
     let viewMode: "fit" | "follow" = params.get("view") === "follow" ? "follow" : "fit";
     let followThreshold = Number(params.get("threshold") ?? 120);
     const followZoom = Number(params.get("zoom") ?? 1);
+    // `?output=none`: this page speaks but does not play; another page (the Control Board) is the audio output.
+    const remoteOutput = params.get("output") === "none";
 
     const style = document.createElement("style");
     style.textContent = STYLE;
@@ -229,6 +231,7 @@ export default async function activate(studio: Studio): Promise<void> {
             soundBtn.textContent = "sound on";
         }
     });
+    if (remoteOutput) soundBtn.style.display = "none";
     bar.appendChild(badge);
     studio.addBar(bar);
     const eventButtons = [playBtn, nextBtn, allBtn];
@@ -252,13 +255,16 @@ export default async function activate(studio: Studio): Promise<void> {
         onError: (m) => log("warn", `speech output: ${m}`),
     });
     // The station's voice says, in short sentences, what the loop shows: on when the sound is on (`?voice=0` keeps it quiet).
+    // `?output=none`: this page speaks but does not play; another page (the Control Board) is the output, and the
+    // pacing follows the slot's queue instead of a local player.
     const voiceOn = !["0", "false", "off", "no"].includes(params.get("voice") ?? "1");
-    const voice = new StationVoice(world, params.get("speaker") ?? "station", () => voiceOn && audio.enabled, (m) => log("warn", `station voice: ${m}`));
+    const voice = new StationVoice(world, params.get("speaker") ?? "station", () => voiceOn && (remoteOutput || audio.enabled), (m) => log("warn", `station voice: ${m}`));
     /** With the sound on, the voice paces the loop: nothing new until what was said has been heard. */
     const heard = async () => {
-        if (!audio.enabled) return;
+        if (!voiceOn || !(remoteOutput || audio.enabled)) return;
         await voice.idle();
-        await audio.idle();
+        if (remoteOutput) await speechHeard(world);
+        else await audio.idle();
     };
 
     /** The badge holds a few words; the whole text sits in its tooltip. */
@@ -497,6 +503,7 @@ export default async function activate(studio: Studio): Promise<void> {
         if (event.world?.cabin) await world.call("scrubber", "debug.set_co2", { state: event.world.cabin.state, ppm: event.world.cabin.ppm });
         agent.provider.begin?.(event.intention);
         monitor?.push({ kind: "intention", id: event.intention, description: event.message, minute: event.at, guard: `${guardMode} (${agent.catalogue.filter((c) => c.replayPolicy !== "never").length} tools offered)`, reasoner: agent.provider.name });
+        tell({ status: "event", intention: event.intention, at: event.at, message: event.message });
         log("info", `[minute ${event.at}] ${event.intention}: ${event.message ?? ""}`);
         voice.say(eventSentence(event), "high");
         await observeForMonitor();
@@ -576,9 +583,28 @@ export default async function activate(studio: Studio): Promise<void> {
     resetBtn.title = "reset the board to the scenario's start and rebuild the agent";
     playBtn.title = "set the board where the selected event happens and let the agent decide until it hands back";
 
+    // The Control Board, when this page is its centre, drives it by postMessage and hears back what happens.
+    const tell = (payload: Record<string, unknown>) => {
+        if (window.parent !== window) window.parent.postMessage({ type: "tier3", ...payload }, location.origin);
+    };
+    window.addEventListener("message", (m: MessageEvent<{ type?: string; cmd?: string; intention?: string }>) => {
+        if (m.origin !== location.origin || m.data?.type !== "tier3") return;
+        const cmd = m.data.cmd;
+        if (cmd === "play") {
+            const event = events.find((e) => e.intention === m.data.intention);
+            if (event) {
+                eventSel.value = event.intention;
+                void playEvent(event).then(() => tell({ status: "done", intention: event.intention }));
+            }
+        } else if (cmd === "all") void playAll().then(() => tell({ status: "done", intention: "all" }));
+        else if (cmd === "reset") void reset().then(() => tell({ status: "reset" }));
+        else if (cmd === "events") tell({ status: "events", events: events.map((e) => ({ intention: e.intention, at: e.at, message: e.message })) });
+    });
+
     try {
         await connect();
         await observeForMonitor();
+        tell({ status: "ready", events: events.map((e) => ({ intention: e.intention, at: e.at, message: e.message })) });
     } catch (e) {
         setStatus(`not connected: ${e instanceof Error ? e.message : String(e)}`, "not connected", true);
         log("error", `agent: ${e instanceof Error ? e.message : String(e)}`);

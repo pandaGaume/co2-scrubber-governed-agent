@@ -299,6 +299,17 @@ npm run tier3 -- --provider reasoner                               # the model b
 npm run tier3 -- --provider model --profile profiles/nvidia-nebius.json   # the same model called directly, for comparison
 ```
 
+**The demo, from the start.** `npm run server` starts the broker and the
+six slots and opens the browser on `/`: a boot console (green phosphor)
+whose every line is a request the page really made (the broker, each slot
+with its version, the studio and the agent's files, the parameters and the
+scenario with their sha256, the model, the voice; a slot that is not there
+waits, then stays red), then, on a key press, the Control Board: the slots
+with a LED each, the agent's loop (the studio page embedded), the station's
+voice (hello, then a welcome the model phrases from the boot report, spoken
+by the speech slot), and the simulation menu, one button per event of the
+scenario and `ALL`. `docs/ui-brief.fr.md`, section 12.
+
 **Watching it decide.** The same loop runs on a page: the SpikyPanda studio
 opens `graphs/tier3-agent.spikypanda` (the twelve stages of the harness as
 a graph) and an extension of the demo runs the agent on that very graph.
@@ -306,8 +317,8 @@ Each stage lights up as it executes, the run monitor tile shows the
 intention, the model's proposal, the source (learned or reasoned), the
 outcome and the rationale, and the studio's console receives what the
 agent says to the crew. Every call, the model's included, goes through the
-broker and sits in its trace. From the home page, "watch the agent decide",
-or directly:
+broker and sits in its trace. From the Control Board (the loop is its
+centre) or, for debugging, directly:
 
 ```
 http://localhost:3001/studio/node-editor-v2/index.html?mcp=0&ext=/agent/tier3.js&autoplay=1

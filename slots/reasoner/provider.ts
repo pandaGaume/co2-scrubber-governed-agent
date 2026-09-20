@@ -20,6 +20,7 @@
  */
 import type { CapabilityDescriptor, Experience, Intention, PolicyCandidate, PolicyFallbackInput, State } from "@spiky-panda/harness";
 import { errorMessage, readJson, sha256File } from "../../lib/files.js";
+import { composeText } from "../../tier3/providers/compose.js";
 import { SYSTEM_PROMPT_FILE, fromRoot, relativeToRoot } from "../../lib/paths.js";
 import { objectSchema as obj, publishSlot, type PublishedSlot } from "../lib/slot-server.js";
 import type { Provider, ProviderProfile } from "../../tier3/providers/provider.js";
@@ -116,6 +117,17 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
                         }
                     }
                     return { ...identity(), ready, reason, profile: { file: relativeToRoot(profileFile), sha256: sha256File(profileFile) }, promptSha256: existsSync(SYSTEM_PROMPT_FILE) ? sha256File(SYSTEM_PROMPT_FILE) : null };
+                },
+            },
+            {
+                name: "compose",
+                title: "One text, no tools",
+                description: "A text from the model with no tool call and no conversation: instructions (what to write, for whom, how long) and a context (the facts to phrase, which the text must not go beyond). Returns the text, the model, latency, tokens. For the station's spoken lines that are not decisions (a welcome from the boot report).",
+                inputSchema: obj({ instructions: { type: "string", description: "what to write, for whom, how long" }, context: { type: "string", description: "the facts to phrase; the text must not add any" }, maxTokens: { type: "number", description: "default 300" } }, ["instructions"]),
+                handle: async (args, s) => {
+                    const composition = await composeText(profile, { instructions: String(args.instructions ?? ""), context: typeof args.context === "string" ? args.context : undefined, maxTokens: typeof args.maxTokens === "number" ? args.maxTokens : undefined });
+                    s.calls++;
+                    return { ...composition, family: identity().family };
                 },
             },
             {

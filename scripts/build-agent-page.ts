@@ -7,6 +7,7 @@
  *   the page;
  * - `SpkPluginHarness.js`, the harness studio plugin, copied from
  *   `@spiky-panda/plugin-harness` (its `bundle/SpkPluginHarness.studio.js`);
+ * - `audio-output.js`, the audio output alone, for the Control Board;
  * - `page.js`, the page itself, from `tier3/browser/agent-page.ts` and the
  *   same Tier 3 modules the Node runner uses. Two packages are not bundled
  *   into it but taken from the page that loads it: `@spiky-panda/core` is
@@ -40,6 +41,16 @@ export async function buildAgentPage(outDir = fromRoot("dashboard", "agent")): P
     for (const suffix of ["", ".map"]) {
         await copyFile(join(pluginPackage, "bundle", PLUGIN_BUNDLE + suffix), join(outDir, "SpkPluginHarness.js" + suffix));
     }
+    // The audio output alone, for the Control Board (plain JS, its own broker client): the same code as the studio page's.
+    await build({
+        entryPoints: [fromRoot("tier3", "browser", "audio-output.ts")],
+        outfile: join(outDir, "audio-output.js"),
+        bundle: true,
+        format: "esm",
+        target: "es2022",
+        sourcemap: true,
+        logLevel: "warning",
+    });
     const outfile = join(outDir, "page.js");
     await build({
         entryPoints: [fromRoot("tier3", "browser", "agent-page.ts")],
@@ -67,7 +78,7 @@ export async function buildAgentPage(outDir = fromRoot("dashboard", "agent")): P
             },
         ],
     });
-    console.log(`${relativeToRoot(outDir)}: tier3.js, SpkPluginHarness.js (from @spiky-panda/plugin-harness), page.js built`);
+    console.log(`${relativeToRoot(outDir)}: tier3.js, SpkPluginHarness.js (from @spiky-panda/plugin-harness), page.js, audio-output.js built`);
 }
 
 if (isMain(import.meta.url)) {

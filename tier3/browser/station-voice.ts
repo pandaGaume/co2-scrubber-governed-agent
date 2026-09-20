@@ -129,6 +129,28 @@ export function outcomeSentence(call: CapabilityCall): string | null {
     }
 }
 
+/**
+ * Resolves when the slot has nothing pending and nothing in flight (taken by
+ * an output, not yet played), whichever page is the output: what a page that
+ * speaks but does not play waits for before its next decision.
+ */
+export async function speechHeard(broker: Broker, pollMs = 300, timeoutMs = 120_000): Promise<void> {
+    const started = Date.now();
+    for (;;) {
+        try {
+            const session = await broker.session("speech");
+            const r = await session.request<{ contents: Array<{ text?: string }> }>("resources/read", { uri: "speech://queue" });
+            const q = JSON.parse(r.contents[0]?.text ?? "{}") as { stopMark?: number; pending?: unknown[]; recent?: Array<{ seq: number; queued: boolean; takenBy?: string; playedBy?: unknown[] }> };
+            const inFlight = (q.recent ?? []).some((u) => u.queued && u.seq > (q.stopMark ?? 0) && u.takenBy && !u.playedBy?.length);
+            if (!(q.pending ?? []).length && !inFlight) return;
+        } catch {
+            return;
+        }
+        if (Date.now() - started > timeoutMs) return;
+        await new Promise((r) => setTimeout(r, pollMs));
+    }
+}
+
 export class StationVoice {
     private chain: Promise<void> = Promise.resolve();
     private count = 0;

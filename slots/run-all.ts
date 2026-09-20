@@ -9,7 +9,9 @@
  *   node dist/slots/run-all.js                 broker + slots, http://localhost:3001/
  *   node dist/slots/run-all.js --no-broker     slots only, against a broker already running
  *   node dist/slots/run-all.js --port 3100     another port (the broker is told through its env)
+ *   node dist/slots/run-all.js --no-open       do not open the browser on the dashboard
  */
+import { exec } from "node:child_process";
 import { isMain } from "../lib/paths.js";
 import { startBroker, type LocalBroker } from "./lib/local-broker.js";
 import { scrubberSlot } from "./scrubber/provider.js";
@@ -54,6 +56,7 @@ async function main(): Promise<void> {
 
     const slots = await publishAll(wsBase);
     log(`dashboard: ${httpBase}/   slots: ${slots.map((s) => s.slot).join(", ")}   introspection: ${httpBase}/_broker/mcp`);
+    if (!flag("--no-open") && !flag("--no-broker")) openBrowser(`${httpBase}/`);
 
     const stop = async () => {
         for (const s of slots) await s.close().catch(() => undefined);
@@ -62,6 +65,14 @@ async function main(): Promise<void> {
     };
     process.on("SIGINT", () => void stop());
     process.on("SIGTERM", () => void stop());
+}
+
+/** Opens the operator's browser on the dashboard: the demo starts by itself. */
+function openBrowser(url: string): void {
+    const command = process.platform === "win32" ? `start "" "${url}"` : process.platform === "darwin" ? `open "${url}"` : `xdg-open "${url}"`;
+    exec(command, (error) => {
+        if (error) log(`could not open the browser (${error.message}); open ${url} yourself`);
+    });
 }
 
 if (isMain(import.meta.url)) {

@@ -74,6 +74,7 @@
         "station.grammar_*": "mcp.tools.grammar",
         "factory.grammar_*": "mcp.tools.grammar",
         "reasoner.decide": "mcp.tools.reason",
+        "reasoner.compose": "mcp.tools.reason",
         "reasoner.describe": "mcp.tools.read",
         "speech.say": "mcp.tools.speak",
         "speech.stop": "mcp.tools.speak",

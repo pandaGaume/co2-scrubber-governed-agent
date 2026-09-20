@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CO2 scrubber, control board</title>
+<link rel="stylesheet" href="./style.css">
+<link rel="stylesheet" href="./board.css">
+</head>
+<body class="board-body">
+
+<!-- The boot console: every line is a request the page really made (docs/ui-brief.fr.md, section 12). -->
+<section id="boot" class="boot" aria-live="polite">
+    <pre id="boot-log" class="boot-log"></pre>
+    <div id="boot-prompt" class="boot-prompt" hidden>PRESS ANY KEY TO ENTER THE CONTROL BOARD <span class="blink">_</span></div>
+</section>
+
+<!-- The Control Board: the slots, the loop, the station's voice, the simulation menu. -->
+<main id="board" class="board" hidden>
+    <header class="board-top">
+        <span class="brand">CO2 SCRUBBER</span>
+        <span class="sep">|</span>
+        <span id="top-clock">NIGHT 9 · MIN 0</span>
+        <span class="sep">|</span>
+        <span id="top-state" class="state">IDLE</span>
+        <span class="grow"></span>
+        <span id="top-reasoner" class="badge" title="the model behind the reasoner slot"></span>
+        <span id="top-voice" class="badge" title="the engine behind the speech slot"></span>
+        <a class="badge" href="./story.html" title="the story and the architecture">STORY</a>
+        <a class="badge" href="./panel.html" title="the control room: the slots and their tools, one button each">TOOLS</a>
+    </header>
+
+    <aside class="board-slots panel">
+        <div class="panel-title">SLOTS</div>
+        <ul id="slot-list" class="slot-leds"></ul>
+        <div id="slot-note" class="hint"></div>
+    </aside>
+
+    <section class="board-centre panel">
+        <div class="panel-title">AGENT LOOP <span id="centre-note" class="dim"></span></div>
+        <iframe id="loop" class="loop" title="the agent's decision loop in the SpikyPanda studio"></iframe>
+    </section>
+
+    <aside class="board-menu panel">
+        <div class="panel-title">SIMULATION</div>
+        <div id="menu" class="menu"><span class="hint">waiting for the loop...</span></div>
+        <div class="menu-foot">
+            <button id="btn-sound" class="btn" title="the Control Board is the audio output of the speech slot">SOUND ON</button>
+            <button id="btn-reset" class="btn btn-dim" title="reset the board to the scenario's start and rebuild the agent">RESET</button>
+        </div>
+    </aside>
+
+    <section class="board-voice panel">
+        <div class="panel-title">STATION <span class="dim">voice</span></div>
+        <div id="voice-log" class="voice-log"></div>
+    </section>
+</main>
+
+<script type="module" src="./board.js"></script>
+</body>
+</html>
