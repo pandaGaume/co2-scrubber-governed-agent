@@ -9,7 +9,7 @@
  *
  *     node dist/scripts/build-agent-graph.js [graphs/tier3-agent.spikypanda]
  *
- * The studio opens it with `?doc=/graphs/tier3-agent.spikypanda`, and the
+ * The agent page's loader opens it in the studio (`tier3/browser/loader.ts`), and the
  * agent extension (`dashboard/agent/tier3.js`) executes the very instances
  * the studio created from it.
  */

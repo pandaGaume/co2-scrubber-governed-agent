@@ -37,6 +37,7 @@
         "@spiky-panda/core": "*",
         "@spiky-panda/factory": "*",
         "@spiky-panda/harness": "*",
+        "@spiky-panda/plugin-harness": "*",
         "@spiky-panda/onnx": "*",
         "@spiky-panda/plugin-control": "*",
         "@spiky-panda/plugin-dsp": "*",

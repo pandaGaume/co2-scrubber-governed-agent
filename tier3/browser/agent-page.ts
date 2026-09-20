@@ -15,7 +15,7 @@
  * (`SpikypandaCore`, `SpkPluginHarness.harness`): the nodes the studio
  * instantiated and the runtime that executes them must share one harness.
  *
- * URL: `?ext=/agent/tier3.js&doc=/graphs/tier3-agent.spikypanda`
+ * URL: `?mcp=0&ext=/agent/tier3.js` (the loader, `loader.ts`, brings the plugin and the document, then this page)
  *      `&scenario=/specs/scenario-night-9.json` (default) `&broker=<origin>` (default: the page's)
  *      `&locale=en` `&guard=measured|protected`
  *      `&autoplay=1` plays the whole scenario as soon as the agent is connected, one event after

@@ -8,3 +8,7 @@ dist/
 
 .codex-artifacts/
 .claude/
+
+# copied at build from @spiky-panda/plugin-harness (npm run build)
+dashboard/agent/SpkPluginHarness.js
+dashboard/agent/SpkPluginHarness.js.map

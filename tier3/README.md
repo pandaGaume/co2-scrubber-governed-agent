@@ -133,9 +133,12 @@ centre, at the given zoom, instead of framing the whole loop.
 
 Verified on 2026-09-19 with Haiku 4.5 behind the `reasoner` slot: the four
 events run from the page, twelve nodes lit per decision, the tile and the
-console follow. The harness plugin for the studio is built in the harness
-repository (`npm run build:studio`) and copied to the studio's
-`bundle/SpkPluginHarness.js`.
+console follow. The harness plugin for the studio comes from
+`@spiky-panda/plugin-harness` (built in the harness repository with
+`npm run build:studio`, installed here as a tarball like the other substrate
+packages): `npm run build` copies its bundle to `dashboard/agent/`, and the
+extension loads it into the studio before opening the document. The studio
+itself carries nothing of the harness.
 
 Runner behaviour learnt from that run: a failure of the reasoner itself
 (endpoint, key, billing) ends the event instead of being retried; every tool

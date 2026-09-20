@@ -310,7 +310,7 @@ broker and sits in its trace. From the home page, "watch the agent decide",
 or directly:
 
 ```
-http://localhost:3001/studio/node-editor-v2/index.html?mcp=0&ext=/agent/tier3.js&doc=/graphs/tier3-agent.spikypanda&autoplay=1
+http://localhost:3001/studio/node-editor-v2/index.html?mcp=0&ext=/agent/tier3.js&autoplay=1
 ```
 
 The model is a slot of the broker (`reasoner`): the key stays in the server

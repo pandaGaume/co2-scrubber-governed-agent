@@ -20,7 +20,7 @@
             {
                 "urlPrefix": "/studio",
                 "dir": "../../../spikypanda/packages/host/www",
-                "_comment": "the SpikyPanda studio (node editor v2) from the substrate checkout next to this repository, until it ships as a package; the agent page is /studio/node-editor-v2/index.html?ext=/agent/tier3.js&doc=/graphs/tier3-agent.spikypanda"
+                "_comment": "the SpikyPanda studio (node editor v2) from the substrate checkout next to this repository, until it ships as a package; the agent page is /studio/node-editor-v2/index.html?ext=/agent/tier3.js"
             }
         ]
     },
