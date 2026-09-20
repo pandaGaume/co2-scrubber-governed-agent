@@ -100,6 +100,9 @@ flow. Nemotron on Token Factory: not yet run (no key).
 
 ## The run on a page
 
+What the page shows, the measured numbers and the conclusions, for a reader
+in a hurry: `docs/harness-on-screen.md`.
+
 `graphs/tier3-agent.spikypanda` (built by `npm run agent:build` from the
 harness catalogue, the same edges as `lib/flow.ts`, English labels, a run
 monitor tile) opens in the SpikyPanda studio; the extension

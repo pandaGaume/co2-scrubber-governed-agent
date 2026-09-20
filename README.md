@@ -315,7 +315,9 @@ http://localhost:3001/studio/node-editor-v2/index.html?mcp=0&ext=/agent/tier3.js
 
 The model is a slot of the broker (`reasoner`): the key stays in the server
 process (`.env`, see `.env.example`), and the page, like the Node runner,
-asks it for one decision per step. The studio is served by the demo's
+asks it for one decision per step. `docs/harness-on-screen.md` tells what
+the page shows, the measured numbers (a decision with Haiku 2.9 s, a day of
+cabin physics 8 ms) and what can be concluded from them. The studio is served by the demo's
 broker from the substrate checkout next to this repository
 (`.mcp-broker/config.json`, mount `/studio`), until it ships as a package.
 

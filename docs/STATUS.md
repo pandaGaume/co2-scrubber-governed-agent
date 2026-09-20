@@ -19,3 +19,4 @@ Updated 2026-09-19 (evening).
 | Cabin + scrubber graph, Babylon scene, parity with the on-board CO2 | to build |
 | Firmware: `libmcpb` wiring, MIN-FLOW, `operating_point` | to build (CyanMycelium repository) |
 | Video | to shoot (13 to 22 October 2026) |
+| Next: the CO2 anomaly as a single-shot branch of a continuous loop, the factory judged by the twin, the board as a slot, propagation to the fleet, the page as the video | specified on 2026-09-20 in `docs/auto-adaptation.fr.md` (scenario, 4W storyboard, trust chain, build order A to I, 16 days) and `docs/ui-brief.fr.md` (the page as a tier of the broker, zones, data sources, acceptance); nothing coded yet |
