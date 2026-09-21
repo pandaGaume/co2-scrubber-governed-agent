@@ -35,6 +35,9 @@ export const PROTOCOL_VERSION = "2025-06-18";
 export async function connectMcp(baseUrl, slot, options = {}) {
     const endpoint = `${baseUrl.replace(/\/$/, "")}/${slot}/mcp`;
     const extra = options.headers ?? {};
+    // The demo's addition to the sample: the page's language (`capabilities.locale`) and name, so the slot picks its wording for this session.
+    const capabilities = options.locale ? { locale: options.locale } : {};
+    const clientInfo = options.clientInfo ?? { name: "mcp-broker-samples", version: "0" };
 
     const post = async (body, sessionId) => {
         const headers = {
@@ -60,8 +63,8 @@ export async function connectMcp(baseUrl, slot, options = {}) {
             method: "initialize",
             params: {
                 protocolVersion: PROTOCOL_VERSION,
-                capabilities: {},
-                clientInfo: { name: "mcp-broker-samples", version: "0" },
+                capabilities,
+                clientInfo,
             },
         },
         null

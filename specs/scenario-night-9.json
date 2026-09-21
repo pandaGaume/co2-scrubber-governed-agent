@@ -136,5 +136,19 @@
             "check": "with command never below minFlow.floorPercent, four resting people stay below thresholds.elevatedPpm in steady state",
             "status": "computed on 2026-09-19: holds (four people resting at 40 % settle at 1048 ppm, ELEVATED at 3500)"
         }
-    ]
+    ],
+    "factory": {
+        "note": "What the control board asks the factory at the end of the night (the FACTORY button), with the telemetry it sampled from the board during the events (scrubber.motor.state, one sample every two seconds): the functional contract of the monitor that is missing, never a solution. These numbers are the request; every number the station says about the task is read from the task's manifest.",
+        "request": {
+            "objective": {
+                "required_outputs": [
+                    { "name": "predicted_co2", "quantity": "Concentration", "unit": "ppm", "horizonMinutes": 20 },
+                    { "name": "scrubber_2_efficiency", "quantity": "Ratio", "unit": "1" }
+                ],
+                "constraints": { "residualPpmMax": 150, "windowMinutes": 20 }
+            },
+            "topics": ["onnx"],
+            "telemetry": { "file": "telemetry.json", "columns": ["t", "co2Ppm", "co2State", "speedPercent", "currentAmps", "power"], "everySeconds": 2, "keep": 1800 }
+        }
+    }
 }

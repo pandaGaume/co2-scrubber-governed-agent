@@ -115,6 +115,8 @@ async function main(): Promise<void> {
     const { slots, failures } = await publishAll(wsBase);
     if (failures.length) log(`DEGRADED: ${failures.length} slot(s) not published (${failures.map((f) => f.slot).join(", ")}); the others run, the board shows the missing ones red`);
     log(`dashboard: ${httpBase}/   slots: ${slots.map((s) => s.slot).join(", ")}   introspection: ${httpBase}/_broker/mcp`);
+    // The board opens the factory's window itself, beside it, on the key press that ends its boot (a second window opened
+    // here would cover the board, and a covered page is a hidden page: its timers slow down and the sound with them).
     if (!flag("--no-open") && !flag("--no-broker")) openBrowser(`${httpBase}/`);
 
     const stop = async () => {

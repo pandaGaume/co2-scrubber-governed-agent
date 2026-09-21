@@ -1,5 +1,15 @@
 // tier3/browser/audio-output.ts
 var POLL_MS = 700;
+function startClock(ms, onTick) {
+  try {
+    const worker = new Worker(URL.createObjectURL(new Blob([`setInterval(() => postMessage(0), ${ms});`], { type: "text/javascript" })));
+    worker.onmessage = onTick;
+    return () => worker.terminate();
+  } catch {
+    const timer = window.setInterval(onTick, ms);
+    return () => window.clearInterval(timer);
+  }
+}
 var AudioOutput = class {
   constructor(broker, outputId, events = {}) {
     this.broker = broker;
@@ -7,29 +17,29 @@ var AudioOutput = class {
     this.events = events;
   }
   el = new Audio();
-  timer = null;
+  stopClock = null;
   playing = null;
   played = /* @__PURE__ */ new Set();
   busy = false;
   lastPending = 0;
   get enabled() {
-    return this.timer !== null;
+    return this.stopClock !== null;
   }
   /** Called from a click: unlocks the element, starts polling. */
   enable() {
-    if (this.timer !== null) return;
+    if (this.stopClock !== null) return;
     this.el.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
     void this.el.play().catch(() => void 0);
-    this.timer = window.setInterval(() => void this.tick(), POLL_MS);
+    this.stopClock = startClock(POLL_MS, () => void this.tick());
   }
   disable() {
-    if (this.timer !== null) window.clearInterval(this.timer);
-    this.timer = null;
+    this.stopClock?.();
+    this.stopClock = null;
     this.cut();
   }
   /** Resolves when nothing is queued for this output and nothing is playing: what the page waits for before its next decision. */
   async idle() {
-    if (this.timer === null) return;
+    if (this.stopClock === null) return;
     for (; ; ) {
       if (!this.busy) await this.tick();
       if (!this.playing && this.lastPending === 0 && !this.busy) return;
@@ -52,6 +62,7 @@ var AudioOutput = class {
       this.lastPending = q.pending.filter((p) => p.seq > q.stopMark && !this.played.has(p.utteranceId)).length;
       if (this.playing && this.playing.seq <= q.stopMark) this.cut();
       if (this.playing) return;
+      if (document.hidden) return;
       const next = q.pending.find((p) => p.seq > q.stopMark && !this.played.has(p.utteranceId));
       if (next) await this.play(next, session);
     } catch (e) {
@@ -63,7 +74,10 @@ var AudioOutput = class {
   async play(item, session) {
     this.played.add(item.utteranceId);
     const taken = await this.broker.call("speech", "take", { utteranceId: item.utteranceId, output: this.outputId });
-    if (!taken.ok) return;
+    if (!taken.ok) {
+      this.events.onTakenElsewhere?.(item);
+      return;
+    }
     const r = await session.request("resources/read", { uri: `speech://utterances/${item.utteranceId}` });
     const c = r.contents[0];
     if (!c?.blob) throw new Error(`no audio for ${item.utteranceId}`);

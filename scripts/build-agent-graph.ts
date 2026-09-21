@@ -1,17 +1,20 @@
 /**
- * Builds the agent's document, `graphs/tier3-agent.spikypanda`: the twelve
- * stages of the harness's V1 decision loop as the studio shows them, with a
- * run monitor tile on the dashboard. Nothing is typed by hand: the nodes
- * come from the harness's catalogue (`HARNESS_NODES`), the edges from the
- * same list the Node runner wires (`lib/flow.ts`), the layout from
- * `DEFAULT_POSITIONS`, and the document from the factory's builder through
- * a registry.
+ * Builds the loop documents: the agent's, `graphs/tier3-agent.spikypanda`,
+ * and the factory's, `graphs/factory-agent.spikypanda`: the twelve stages of
+ * the harness's V1 decision loop as the studio shows them, with a run
+ * monitor tile on the dashboard; the same graph, the labels of each use.
+ * Nothing is typed by hand: the nodes come from the harness's catalogue
+ * (`HARNESS_NODES`), the edges from the same list the Node runner wires
+ * (`harness/lib/flow.ts`), the layout from `DEFAULT_POSITIONS`, and the
+ * document from the factory's builder through a registry.
  *
- *     node dist/scripts/build-agent-graph.js [graphs/tier3-agent.spikypanda]
+ *     node dist/scripts/build-agent-graph.js                       both documents
+ *     node dist/scripts/build-agent-graph.js graphs/x.spikypanda   one (factory labels when the name says factory)
  *
- * The agent page's loader opens it in the studio (`tier3/browser/loader.ts`), and the
- * agent extension (`dashboard/agent/tier3.js`) executes the very instances
- * the studio created from it.
+ * The loaders open them in the studio (`tier3/browser/loader.ts`,
+ * `harness/browser/factory-loader.ts`); the agent's extension executes the
+ * very instances the studio created, the factory's replays the steps its
+ * slot ran.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
@@ -20,7 +23,7 @@ import { HARNESS_NODES, V1_HARNESS_NODES, createHarnessNode } from "@spiky-panda
 import { sha256File } from "../lib/files.js";
 import { loadFactory } from "../lib/factory.js";
 import { fromRoot, isMain, relativeToRoot } from "../lib/paths.js";
-import { DEFAULT_POSITIONS, TIER3_EDGES } from "../tier3/lib/flow.js";
+import { DEFAULT_POSITIONS, V1_EDGES } from "../harness/lib/flow.js";
 
 export const MONITOR_TYPE = "Harness.Monitor:trace";
 export const MONITOR_NODE_ID = "monitor";
@@ -65,7 +68,23 @@ export const STAGE_POSITIONS: Readonly<Record<string, readonly [number, number]>
     record: [1900, 0],
 };
 
-export function buildAgentDocument(outFile: string): void {
+/** The factory's labels: the same loop, the workshop instead of the cabin, the builder instead of the reasoner. */
+export const FACTORY_STAGE_LABELS: Readonly<Record<string, string>> = {
+    observe: "1  Observe the workshop",
+    context: "2  Context + task kind",
+    lookup: "3  Look up a recipe",
+    gate: "4  Recipe trusted?",
+    request: "5  Build the request",
+    reason: "6  Ask the builder",
+    merge: "7  Merge the branches",
+    guard: "8  Builder guard",
+    execute: "9  Execute through the broker",
+    "observe-after": "10  Observe the workshop",
+    evaluate: "11  Evaluate, validate",
+    record: "12  Learn the recipe",
+};
+
+export function buildAgentDocument(outFile: string, labels: Readonly<Record<string, string>> = STAGE_LABELS): void {
     const factory = loadFactory();
     const registry = factory.buildJobRegistry();
     // The harness's nodes, registered as the studio's plugin registers them: same type ids, same ports.
@@ -79,10 +98,10 @@ export function buildAgentDocument(outFile: string): void {
     const nodes: DocumentNodeSpec[] = V1_HARNESS_NODES.map((entry) => {
         const stage = new entry.ctor().stage;
         const [x, y] = STAGE_POSITIONS[stage] ?? DEFAULT_POSITIONS[stage] ?? [0, 0];
-        return { id: stage, typeId: entry.type, x, y, label: STAGE_LABELS[stage] ?? entry.label };
+        return { id: stage, typeId: entry.type, x, y, label: labels[stage] ?? entry.label };
     });
     nodes.push({ id: MONITOR_NODE_ID, typeId: MONITOR_TYPE, x: 0, y: 460, label: "Run monitor" });
-    const connections: DocumentConnectionSpec[] = TIER3_EDGES.map(([from, output, to, input]) => ({ from: [from, output], to: [to, input] }));
+    const connections: DocumentConnectionSpec[] = V1_EDGES.map(([from, output, to, input]) => ({ from: [from, output], to: [to, input] }));
     const tiles: DocumentTileSpec[] = [{ nodeId: MONITOR_NODE_ID, renderableType: MONITOR_TYPE, x: 0, y: 0, w: 12, h: 5 }];
 
     const json = factory.buildDocumentJson(registry, nodes, connections, tiles);
@@ -98,4 +117,11 @@ export function buildAgentDocument(outFile: string): void {
     console.log(`${relativeToRoot(outFile)}: ${nodes.length} nodes, ${connections.length} connections, ${tiles.length} tile, sha256 ${manifest.sha256.slice(0, 12)}`);
 }
 
-if (isMain(import.meta.url)) buildAgentDocument(fromRoot(process.argv[2] ?? "graphs/tier3-agent.spikypanda"));
+if (isMain(import.meta.url)) {
+    const one = process.argv[2];
+    if (one) buildAgentDocument(fromRoot(one), /factory/i.test(one) ? FACTORY_STAGE_LABELS : STAGE_LABELS);
+    else {
+        buildAgentDocument(fromRoot("graphs/tier3-agent.spikypanda"), STAGE_LABELS);
+        buildAgentDocument(fromRoot("graphs/factory-agent.spikypanda"), FACTORY_STAGE_LABELS);
+    }
+}

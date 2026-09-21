@@ -1,10 +1,16 @@
 /**
- * Builds the agent page under `dashboard/agent/`: three files the studio
+ * Builds the loop pages under `dashboard/agent/`: the files the studio
  * fetches from the demo's own mount, none from the substrate checkout.
  *
- * - `tier3.js`, the extension the URL names (`?ext=/agent/tier3.js`), from
+ * - `tier3.js`, the agent's extension (`?ext=/agent/tier3.js`), from
  *   `tier3/browser/loader.ts`: loads the plugin, opens the document, imports
- *   the page;
+ *   the page; `factory.js`, the factory's (`?ext=/agent/factory.js`), from
+ *   `harness/browser/factory-loader.ts`, the same way;
+ * - `factory-page.js`, the factory's page (`harness/browser/factory-page.ts`):
+ *   it runs nothing, it reads the factory's tasks and replays their steps;
+ * - `factory-voice.js`, the words about a factory task for the Control Board
+ *   (`harness/browser/factory-voice.ts`; the sentences themselves are in
+ *   `dashboard/words/factory/<locale>.json`);
  * - `SpkPluginHarness.js`, the harness studio plugin, copied from
  *   `@spiky-panda/plugin-harness` (its `bundle/SpkPluginHarness.studio.js`);
  * - `audio-output.js`, the audio output alone, for the Control Board;
@@ -27,15 +33,22 @@ import { fromRoot, isMain, relativeToRoot } from "../lib/paths.js";
 const PLUGIN_BUNDLE = "SpkPluginHarness.studio.js";
 
 export async function buildAgentPage(outDir = fromRoot("dashboard", "agent")): Promise<void> {
-    await build({
-        entryPoints: [fromRoot("tier3", "browser", "loader.ts")],
-        outfile: join(outDir, "tier3.js"),
-        bundle: true,
-        format: "esm",
-        target: "es2022",
-        sourcemap: true,
-        logLevel: "warning",
-    });
+    for (const [entry, out] of [
+        [fromRoot("tier3", "browser", "loader.ts"), "tier3.js"],
+        [fromRoot("harness", "browser", "factory-loader.ts"), "factory.js"],
+        [fromRoot("harness", "browser", "factory-voice.ts"), "factory-voice.js"],
+        [fromRoot("harness", "browser", "factory-page.ts"), "factory-page.js"],
+    ] as const) {
+        await build({
+            entryPoints: [entry],
+            outfile: join(outDir, out),
+            bundle: true,
+            format: "esm",
+            target: "es2022",
+            sourcemap: true,
+            logLevel: "warning",
+        });
+    }
     // The plugin's package root, wherever npm put it (a tarball today).
     const pluginPackage = dirname(createRequire(import.meta.url).resolve("@spiky-panda/plugin-harness/package.json"));
     for (const suffix of ["", ".map"]) {

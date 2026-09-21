@@ -1,23 +1,19 @@
 /**
- * The Tier 3 agent: a `@spiky-panda/harness` runtime whose capabilities are
- * the broker's tools, whose reasoner is a provider (a language model behind
- * an API, or the scripted one), and whose guard profile says what the
- * harness itself refuses to propose.
+ * The Tier 3 agent: the demo's loop (`harness/core/agent.ts`) with the
+ * habitat's services: the cabin's capability profile (`lib/capabilities.ts`),
+ * its observer (the board's state), its evaluator (did the cabin improve)
+ * and its guard profile, which says what the harness itself refuses to
+ * propose (docs/harness-stages.fr.md, the "station" column).
  *
  *   createAgent({ broker, provider, guardMode }) -> { runtime, catalogue, console, calls, decide }
  *   agent.decide(intention)                     -> one DecisionTrace (one action)
- *
- * The three levels of the note on Chernobyl: the intention is the agent's
- * goal; the guard profile and the system prompt are the envelope it is told
- * about; the broker's policy and the device's firmware are the invariants it
- * cannot reach, and they show up here only as refused results.
  */
-import { AdaptivePolicyRuntime, AllowAllSafetyGuard, PolicyGraph, type CapabilityRegistryOptions, type DecisionContext, type DecisionTrace, type HarnessDriver, type Intention, type PolicyDecision, type SafetyDecision, type SafetyGuard, type StageEvent } from "@spiky-panda/harness";
+import type { CapabilityRegistryOptions, DecisionContext, HarnessDriver, PolicyDecision, SafetyDecision, SafetyGuard, StageEvent } from "@spiky-panda/harness";
 import type { Broker } from "../harness/lib/broker.js";
-import { buildCapabilities, type CapabilityCall, type CatalogueEntry, type CrewConsoleEntry, type GuardMode } from "./lib/capabilities.js";
+import { createAgent as createLoop, type Agent as LoopAgent } from "../harness/core/agent.js";
+import { buildCapabilities, type CapabilityCall, type CrewConsoleEntry, type GuardMode } from "./lib/capabilities.js";
 import { createObserver } from "./lib/observer.js";
 import { createEvaluator } from "./lib/evaluator.js";
-import { createTier3Driver } from "./lib/flow.js";
 import type { Provider } from "../harness/lib/provider.js";
 
 /** Level 2, enforced locally: the envelope the agent is told about, for the protected profile. */
@@ -51,23 +47,17 @@ export interface AgentOptions {
     driver?: HarnessDriver;
 }
 
-export interface Agent {
-    runtime: AdaptivePolicyRuntime;
-    policy: PolicyGraph;
-    catalogue: CatalogueEntry[];
+export interface Agent extends LoopAgent {
     console: CrewConsoleEntry[];
     calls: CapabilityCall[];
     guardMode: GuardMode;
-    provider: Provider;
-    /** One decision: observe, decide (learned or reasoned), guard, execute, observe, evaluate, record. */
-    decide(intention: Intention, signal?: AbortSignal): Promise<DecisionTrace>;
 }
 
 export async function createAgent({ broker, provider, guardMode = "measured", approve, timeoutMs = 60000, onStage, onCall, driver }: AgentOptions): Promise<Agent> {
     const crewConsole: CrewConsoleEntry[] = [];
     const calls: CapabilityCall[] = [];
     const lastResult: { current: CapabilityCall | null } = { current: null };
-    const { registry, catalogue } = await buildCapabilities(broker, {
+    const capabilities = await buildCapabilities(broker, {
         guardMode,
         approve,
         console: crewConsole,
@@ -77,26 +67,16 @@ export async function createAgent({ broker, provider, guardMode = "measured", ap
             onCall?.(call);
         },
     });
-    const policy = new PolicyGraph();
-    const runtime = new AdaptivePolicyRuntime({
-        driver: driver ?? createTier3Driver(),
-        policy,
-        fallback: provider,
-        capabilities: registry,
+    const loop = createLoop({
+        broker,
+        provider,
+        capabilities,
         observer: createObserver(broker, lastResult),
         evaluator: createEvaluator(),
-        safetyGuard: guardMode === "protected" ? protectedGuard() : new AllowAllSafetyGuard(),
+        guard: guardMode === "protected" ? protectedGuard() : undefined,
         timeoutMs,
         onStage,
+        driver,
     });
-    return {
-        runtime,
-        policy,
-        catalogue,
-        console: crewConsole,
-        calls,
-        guardMode,
-        provider,
-        decide: (intention, signal) => runtime.step(intention, signal),
-    };
+    return { ...loop, console: crewConsole, calls, guardMode };
 }

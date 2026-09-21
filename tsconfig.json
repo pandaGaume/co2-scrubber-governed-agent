@@ -16,5 +16,5 @@
         "rootDir": ".",
         "outDir": "dist"
     },
-    "include": ["lib/**/*.ts", "slots/**/*.ts", "scripts/**/*.ts", "tier3/**/*.ts", "tests/**/*.ts"]
+    "include": ["lib/**/*.ts", "slots/**/*.ts", "scripts/**/*.ts", "harness/**/*.ts", "tier3/**/*.ts", "tests/**/*.ts"]
 }

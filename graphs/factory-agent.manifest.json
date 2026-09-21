@@ -1,0 +1,63 @@
+{
+  "document": "graphs/factory-agent.spikypanda",
+  "builtOn": "2026-09-21T11:03:59.927Z",
+  "harness": {
+    "nodes": [
+      {
+        "id": "observe",
+        "typeId": "Harness.Observation:state"
+      },
+      {
+        "id": "context",
+        "typeId": "Harness.Policy:context"
+      },
+      {
+        "id": "lookup",
+        "typeId": "Harness.Policy:lookup"
+      },
+      {
+        "id": "gate",
+        "typeId": "Harness.Policy:confidence-gate"
+      },
+      {
+        "id": "request",
+        "typeId": "Harness.Reasoning:request"
+      },
+      {
+        "id": "reason",
+        "typeId": "Harness.Reasoning:provider"
+      },
+      {
+        "id": "merge",
+        "typeId": "Harness.Policy:merge"
+      },
+      {
+        "id": "guard",
+        "typeId": "Harness.Safety:guard"
+      },
+      {
+        "id": "execute",
+        "typeId": "Harness.Execution:capability"
+      },
+      {
+        "id": "observe-after",
+        "typeId": "Harness.Observation:outcome"
+      },
+      {
+        "id": "evaluate",
+        "typeId": "Harness.Learning:evaluate"
+      },
+      {
+        "id": "record",
+        "typeId": "Harness.Learning:record"
+      },
+      {
+        "id": "monitor",
+        "typeId": "Harness.Monitor:trace"
+      }
+    ],
+    "edges": 12,
+    "tiles": 1
+  },
+  "sha256": "de0a651c3f87a7e9e634940e1babff16be44cba4b768e463ac446668215d8ee4"
+}

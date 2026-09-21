@@ -6,6 +6,14 @@ Two static pages, served by the broker from this folder (`www.mounts` in
 - `index.html`, the home: the thesis, the tier picture, the three layers that
   decide a call, the four slots, the six steps, real versus simulated, the
   licenses. Reading only; the door leads to the control room.
+- `factory.html`, the factory's page: the studio on the factory's document,
+  opened by the server next to the board; it replays the steps of the
+  factory's tasks (`harness/browser/factory-page.ts`).
+- what the station says and the factory's page shows about a task are the
+  `phrases` of the factory slot's grammar files (`slots/factory/grammars/`),
+  read by each page on its MCP session in its language (`grammar://phrases`);
+  no sentence lives in code. `vendor/mcp-http-client.js` sends the page's
+  `capabilities.locale` for that.
 - `panel.html`, the control room: a 1280 x 720 stage scaled to the window,
   four regions. STORY (the six steps, one button each; the pill under a step
   shows the expected outcome, then what actually happened), CABIN (CO2 in ppm

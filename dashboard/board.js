@@ -9,13 +9,20 @@
  * appears: the slots with a LED each, polled every two seconds; the agent's
  * loop, the studio page embedded and driven by postMessage; the station's
  * voice, which says hello with a welcome the model phrases from the boot
- * report; the simulation menu, one button per event of the scenario.
+ * report; the simulation menu, one button per event of the scenario, and
+ * the FACTORY button: the board asks the factory for the monitor that is
+ * missing (the request is in the scenario file, `factory.request`), with the
+ * telemetry it sampled from the board during the night (`motor.state`, one
+ * sample every two seconds), then follows the task (`factory.task` every
+ * second) and the station says one sentence per step, read from the task's
+ * manifest (`factory-voice.js`).
  *
  * The board is the audio output of the speech slot (the loop page speaks and
  * does not play: `&output=none`).
  */
 import { connectMcp, toolText } from "./vendor/mcp-http-client.js";
 import { AudioOutput } from "./agent/audio-output.js";
+import { endSentence, loadWords, NO_WORDS, stepSentence } from "./agent/factory-voice.js";
 
 const $ = (id) => document.getElementById(id);
 const base = `${location.protocol}//${location.host}`;
@@ -32,10 +39,12 @@ const LOOP_URL = "./studio/node-editor-v2/index.html?mcp=0&ext=/agent/tier3.js&o
 
 // ── The broker, as this page sees it ──────────────────────────────────────
 
+/** The page's language: `?locale=`, else en-US (the demo is filmed in English; the scenario's messages and the model's words are English); every slot picks its wording for this page's sessions on it. */
+const LOCALE = new URLSearchParams(location.search).get("locale") ?? "en-US";
 const sessions = new Map();
 async function session(slot) {
     if (!sessions.has(slot)) {
-        const p = connectMcp(base, slot, { headers: {} }).catch((e) => {
+        const p = connectMcp(base, slot, { headers: {}, locale: LOCALE, clientInfo: { name: "control-board", version: "0" } }).catch((e) => {
             sessions.delete(slot);
             throw e;
         });
@@ -114,6 +123,10 @@ async function typed(text) {
 
 /** The facts the boot established, for the board and for the welcome. */
 const report = { slots: {}, versions: {}, reasoner: null, voice: null, scenario: null, parameters: null, missing: [] };
+/** The words about a factory task: the phrases of the factory slot's wording for this page's session (`grammar://phrases`, mcp-core 1.2.0), read at boot. */
+let words = null;
+/** What the station says of itself (hello, the boot report): the phrases of the station slot's wording, read at boot; every key shows as itself until then. */
+let station = NO_WORDS;
 
 async function boot() {
     await typed("SYSTEM STARTING ...");
@@ -196,7 +209,7 @@ async function boot() {
             const text = await r.text();
             const hash = await sha256(text);
             const json = JSON.parse(text);
-            report[key] = { url, sha256: hash, events: Array.isArray(json.events) ? json.events.length : undefined, night: json.night ?? json.name ?? undefined };
+            report[key] = { url, sha256: hash, events: Array.isArray(json.events) ? json.events.length : undefined, night: json.night ?? json.name ?? undefined, factory: json.factory ?? null };
             await set("ok", `${label}: ${url} · sha256 ${hash.slice(0, 12)}${json.events ? ` · ${json.events.length} events` : ""}`);
         } catch (e) {
             await set("fail", `${label}: ${url} (${e.message})`);
@@ -253,8 +266,26 @@ const audio = new AudioOutput(
     {
         onPlay: (u) => voiceLine(u.text, "now"),
         onError: (m) => voiceLine(`audio: ${m}`, "info"),
+        onTakenElsewhere: (u) => voiceLine(`said by another page (a second board is open?): ${u.text.slice(0, 60)}...`, "info"),
     },
 );
+
+/**
+ * The factory's own window (decision of 2026-09-21), opened from the key
+ * press that ends the boot (a browser opens a window on a gesture only), on
+ * the right half of the screen so it does not cover the board: a fully
+ * covered window is treated as hidden by the browser, its timers slow down,
+ * and the board is the audio output. `?factory=0` keeps it closed; the
+ * window is named, so a second boot reuses it.
+ */
+function openFactoryWindow() {
+    if (new URLSearchParams(location.search).get("factory") === "0") return null;
+    const width = Math.floor(screen.availWidth / 2);
+    const features = `popup=yes,width=${width},height=${screen.availHeight},left=${screen.availLeft + width},top=${screen.availTop}`;
+    const w = window.open("./factory.html", "factory", features);
+    voiceLine(w ? "factory: its page opened in its own window (right half of the screen)" : "factory: the browser did not open its window; open ./factory.html yourself", "info");
+    return w;
+}
 
 async function renderSlots() {
     let names = [];
@@ -298,21 +329,22 @@ async function renderSlots() {
 
 /** What the station says first: hello, then a welcome the model phrases from the boot report (or the report itself, one fact per sentence). */
 async function hello() {
+    const w = (key, values = {}) => station.phrase(key, values);
+    const up = EXPECTED.filter((s) => report.slots[s]);
     const facts = [
-        `Night 9 of 14 in the lunar habitat; four crew members depend on one CO2 scrubber.`,
-        `${EXPECTED.filter((s) => report.slots[s]).length} of ${EXPECTED.length} slots answer: ${EXPECTED.filter((s) => report.slots[s]).join(", ")}.`,
-        report.missing.length ? `Not connected: ${report.missing.join(", ")}.` : `Every slot is connected.`,
-        report.versions.scrubber ? `The scrubber slot is ${report.versions.scrubber.includes("stub") ? "a stub, no board behind it" : "the real board"}.` : "",
-        report.reasoner ? `The reasoner is ${report.reasoner.model} (${report.reasoner.family})${report.reasoner.ready ? "" : ", not ready"}.` : "",
-        report.voice ? `The voice is ${report.voice.provider}${report.voice.model && report.voice.model !== "none" ? ` ${report.voice.model}` : ""}.` : "",
-        report.scenario?.events ? `The scenario has ${report.scenario.events} events, in the simulation menu.` : "",
+        w("hello.night"),
+        w("hello.slots", { up: up.length, expected: EXPECTED.length, names: up.join(", ") }),
+        report.missing.length ? w("hello.missing", { names: report.missing.join(", ") }) : w("hello.allConnected"),
+        report.versions.scrubber ? w(report.versions.scrubber.includes("stub") ? "hello.scrubberStub" : "hello.scrubberReal") : "",
+        report.reasoner ? w("hello.reasoner", { model: report.reasoner.model, family: report.reasoner.family, notReady: report.reasoner.ready ? "" : w("hello.reasoner.notReady") }) : "",
+        report.voice ? w("hello.voice", { provider: report.voice.provider, model: report.voice.model && report.voice.model !== "none" ? w("hello.voice.model", { model: report.voice.model }) : "" }) : "",
+        report.scenario?.events ? w("hello.scenario", { events: report.scenario.events }) : "",
     ].filter(Boolean);
     let welcome = null;
     if (report.reasoner?.ready) {
         voiceLine("composing the welcome from the boot report...", "info");
         const r = await call("reasoner", "compose", {
-            instructions:
-                "You are the voice of the station: the on-board AI of a lunar habitat, calm, precise, brief. Write the welcome you say aloud to the crew and the operator when the control board comes up: two or three short sentences, plain words, no list, no markdown, no greeting word (the page says hello before you). Use only the facts given; do not add numbers or names that are not in them. End by inviting them to pick a simulation.",
+            instructions: w("hello.instructions"),
             context: facts.join("\n"),
             maxTokens: 200,
         });
@@ -321,7 +353,7 @@ async function hello() {
             voiceLine(`welcome by ${r.output.model} in ${r.output.latencyMs} ms, ${r.output.tokens?.total ?? "?"} tokens`, "info");
         } else voiceLine(`the model could not compose the welcome (${r.error ?? "no text"}); the station reads the report`, "info");
     }
-    const text = `Hello. ${welcome ?? facts.join(" ")}`;
+    const text = `${w("hello.greeting")} ${welcome ?? facts.join(" ")}`;
     if (!report.slots.speech || !report.voice?.ready) {
         voiceLine(text);
         voiceLine("no voice engine: said in text only", "info");
@@ -329,6 +361,90 @@ async function hello() {
     }
     const r = await call("speech", "say", { text, voice: "station", priority: "high" });
     if (!r.ok) voiceLine(`speech.say refused: ${r.error}`, "info");
+}
+
+/** The station says a sentence: the speech slot when it is ready (the line is written when it plays), the log otherwise. */
+async function say(text, priority = "normal") {
+    if (!report.slots.speech || !report.voice?.ready) {
+        voiceLine(text);
+        return;
+    }
+    const r = await call("speech", "say", { text, voice: "station", priority });
+    if (!r.ok) voiceLine(`speech.say refused: ${r.error}`, "info");
+}
+
+// ── The factory: the night's telemetry, the request, the task followed ─────
+
+const TASK_POLL_MS = 1000;
+const boardStartedAt = Date.now();
+const telemetry = [];
+/** One sample of the board's state every `everySeconds` (the scenario's `factory.request.telemetry`): what the factory will be handed. */
+async function sampleTelemetry() {
+    const spec = report.scenario?.factory?.request?.telemetry ?? { keep: 1800 };
+    const r = await call("scrubber", "motor.state", {});
+    if (!r.ok || !r.output || typeof r.output !== "object") return;
+    const st = r.output;
+    telemetry.push({ t: Math.round((Date.now() - boardStartedAt) / 1000), co2Ppm: st.co2Ppm ?? null, co2State: st.co2State ?? null, speedPercent: st.speedPercent ?? null, currentAmps: st.currentAmps ?? null, power: st.power ?? null });
+    while (telemetry.length > (spec.keep ?? 1800)) telemetry.shift();
+}
+
+let factoryTask = null;
+/** Asks the factory for the monitor that is missing, with the request of the scenario and the telemetry sampled here, then follows the task. */
+async function askFactory() {
+    if (!words) {
+        voiceLine("the factory slot gave this page no phrases (grammar://phrases): nothing to say", "info");
+        return;
+    }
+    const w = (key, values = {}) => words.phrase(key, values);
+    if (factoryTask) {
+        voiceLine(w("board.busy", { taskId: factoryTask }), "info");
+        return;
+    }
+    const req = report.scenario?.factory?.request;
+    if (!req?.objective) {
+        voiceLine(w("board.noRequest"), "info");
+        return;
+    }
+    const last = telemetry.at(-1) ?? {};
+    const spec = req.telemetry ?? { file: "telemetry.json" };
+    await say(w("board.asking", { samples: telemetry.length }));
+    const r = await call("factory", "request", {
+        objective: req.objective,
+        observations: { cabin: last, samples: telemetry.length, sampledEverySeconds: spec.everySeconds ?? null },
+        data: [{ file: spec.file ?? "telemetry.json", columns: spec.columns ?? Object.keys(last), rows: telemetry }],
+        topics: req.topics ?? "auto",
+        requestedBy: "operator, control board",
+    });
+    if (!r.ok) {
+        await say(w("board.refused", { error: r.error }));
+        return;
+    }
+    factoryTask = r.output.taskId;
+    voiceLine(w("board.opened", { taskId: factoryTask, builder: r.output.builder ?? "?", rows: telemetry.length }), "info");
+    for (const b of $("menu").querySelectorAll("button")) b.classList.toggle("playing", b.dataset.intention === "factory");
+    $("top-state").textContent = `FACTORY · ${factoryTask}`;
+    $("top-state").classList.add("busy");
+    let said = 0;
+    const tick = async () => {
+        const t = await call("factory", "task", { taskId: factoryTask });
+        if (!t.ok) {
+            voiceLine(w("board.taskError", { error: t.error }), "info");
+            return false;
+        }
+        const status = t.output;
+        const steps = Array.isArray(status.manifest?.steps) ? status.manifest.steps : [];
+        for (; said < steps.length; said++) await say(stepSentence(words, steps[said]));
+        $("top-state").textContent = `FACTORY · step ${steps.length}${status.run?.lastStage ? ` · ${status.run.lastStage}` : ""}`;
+        if (status.state === "created" || status.state === "running") return true;
+        // Normal priority: a high one would withdraw the step sentences still queued (high interrupts and goes first).
+        await say(endSentence(words, status));
+        return false;
+    };
+    while (await tick()) await sleep(TASK_POLL_MS);
+    factoryTask = null;
+    $("top-state").textContent = "IDLE";
+    $("top-state").classList.remove("busy");
+    for (const b of $("menu").querySelectorAll("button")) b.classList.remove("playing");
 }
 
 function buildMenu(events) {
@@ -349,6 +465,13 @@ function buildMenu(events) {
     all.innerHTML = `ALL<small>the whole night, event after event</small>`;
     all.addEventListener("click", () => send({ cmd: "all" }));
     menu.appendChild(all);
+    const factory = document.createElement("button");
+    factory.className = "btn";
+    factory.dataset.intention = "factory";
+    factory.innerHTML = `FACTORY<small>ask for the scrubber's monitor: the night's telemetry, the contract, the loop</small>`;
+    factory.title = "the request of the scenario file (factory.request), with the telemetry sampled on this board";
+    factory.addEventListener("click", () => void askFactory());
+    menu.appendChild(factory);
 }
 
 const loop = $("loop");
@@ -379,8 +502,9 @@ async function main() {
         $("boot-prompt").hidden = false;
         await new Promise((resolve) => addEventListener("keydown", resolve, { once: true }));
     }
-    // The key press is the gesture: the board plays the station from here on.
+    // The key press is the gesture: the board plays the station from here on, and the factory's window opens.
     audio.enable();
+    openFactoryWindow();
     $("btn-sound").textContent = "SOUND ON";
     $("boot").classList.add("fade");
     $("board").hidden = false;
@@ -391,6 +515,20 @@ async function main() {
 
     await renderSlots();
     setInterval(() => void renderSlots(), POLL_MS);
+    for (const [slot, keep] of [
+        ["factory", (loaded) => (words = loaded.words)],
+        ["station", (loaded) => (station = loaded.words)],
+    ]) {
+        try {
+            const loaded = await loadWords(await session(slot));
+            keep(loaded);
+            voiceLine(`${slot} words: wording ${loaded.grammar ?? "?"}, ${loaded.words.listPhrases().length} phrases`, "info");
+        } catch (e) {
+            voiceLine(`${slot} words: ${e.message}`, "info");
+        }
+    }
+    void sampleTelemetry();
+    setInterval(() => void sampleTelemetry(), (report.scenario?.factory?.request?.telemetry?.everySeconds ?? 2) * 1000);
 
     // The loop: the model when the reasoner is ready, the scripted agent otherwise (said on the board).
     const scripted = !report.reasoner?.ready;

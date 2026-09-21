@@ -84,6 +84,7 @@ describe("the workshop, through the broker", () => {
             observations: { volumes: 2, door: "open" },
             data: [{ file: "telemetry.json", columns: ["duty_percent", "current_amps"] }],
             requestedBy: "test",
+            run: false,
         });
         taskId = r.taskId;
         assert.match(taskId, /^t-\d{4}-\d{2}-\d{2}-\d{4}$/);

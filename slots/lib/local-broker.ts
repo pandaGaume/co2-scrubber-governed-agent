@@ -1,8 +1,8 @@
 /**
  * The broker as a child process of this repository: `run-all` and the tests
  * start it the same way. It reads `.mcp-broker/config.json` at the root
- * (which mounts `dashboard/` as its static site); the port is passed through
- * its environment.
+ * (which mounts `dashboard/` as its static site); the port, and the browser
+ * origins that go with it, are passed through its environment.
  */
 import { spawn, type ChildProcess } from "node:child_process";
 import * as path from "node:path";
@@ -52,7 +52,9 @@ export async function waitForBroker(httpBase: string, timeoutMs = 15_000): Promi
 /** Starts the broker on `port` and waits until it answers; `stdio` "inherit" shows its banner, "ignore" keeps a test quiet. */
 export async function startBroker(port: number, stdio: "inherit" | "ignore" = "inherit"): Promise<LocalBroker> {
     const httpBase = `http://localhost:${port}`;
-    const child = spawn(process.execPath, [brokerBin()], { cwd: ROOT, stdio, env: { ...process.env, MCP_BROKER_PORT: String(port) } });
+    // The browser origins follow the port: the config file names 3001, a page served on another port would get 403 on every call.
+    const origins = `http://localhost:${port},http://127.0.0.1:${port}`;
+    const child = spawn(process.execPath, [brokerBin()], { cwd: ROOT, stdio, env: { ...process.env, MCP_BROKER_PORT: String(port), MCP_BROKER_ALLOWED_ORIGINS: process.env.MCP_BROKER_ALLOWED_ORIGINS ?? origins } });
     const stop = () => {
         if (!child.killed) child.kill("SIGINT");
     };

@@ -9,15 +9,23 @@
  * broker and sits in its trace.
  *
  * Same pieces as the Node runner (`lib/broker`, `lib/capabilities`,
- * `lib/observer`, `lib/evaluator`, `providers/reasoner`, `agent`), bundled
- * for the page by `scripts/build-agent-page.mjs`, with `@spiky-panda/core`
+ * `lib/observer`, `lib/evaluator`, `providers/reasoner`, `agent`), and the
+ * studio-page pieces every loop page shares (`harness/browser/studio-loop.ts`:
+ * the stage highlight, the monitor tile, the toolbar controls), bundled
+ * for the page by `scripts/build-agent-page.ts`, with `@spiky-panda/core`
  * and `@spiky-panda/harness` resolved to the studio's own copies
  * (`SpikypandaCore`, `SpkPluginHarness.harness`): the nodes the studio
  * instantiated and the runtime that executes them must share one harness.
  *
+ * Every sentence the page says or shows is a phrase of the station slot's
+ * wording (`slots/station/grammars/default/<locale>.json`), read on the
+ * page's session as `grammar://phrases` in the page's language; nothing is
+ * written here (`station-voice.ts`, `harness/browser/words.ts`).
+ *
  * URL: `?mcp=0&ext=/agent/tier3.js` (the loader, `loader.ts`, brings the plugin and the document, then this page)
  *      `&scenario=/specs/scenario-night-9.json` (default) `&broker=<origin>` (default: the page's)
- *      `&locale=en` `&guard=measured|protected`
+ *      `&locale=en` (the wording the agent's sessions get from the slots and the language of the station's
+ *      sentences, en-US by default: the scenario's messages and the model's words are English) `&guard=measured|protected`
  *      `&autoplay=1` plays the whole scenario as soon as the agent is connected, one event after
  *      another with a pause between them (`&pause=4000` ms); the page the demo links to uses it,
  *      so opening it is enough to watch the loop run.
@@ -37,62 +45,12 @@ import { ScriptedProvider } from "../../harness/providers/scripted.js";
 import type { Provider } from "../../harness/lib/provider.js";
 import { createAgent, type Agent } from "../agent.js";
 import type { Scenario, ScenarioEvent } from "../../lib/factory.js";
+import { createBar, createStageLights, disableStudioPlayer, findMonitor, hideMonitorNode, installLoopStyle, viewControls, type MonitorTile, type Studio, type StudioNode, type StudioViewer, type ViewMode } from "../../harness/browser/studio-loop.js";
+import { loadWords, NO_WORDS, type Words } from "../../harness/browser/words.js";
 
-/** What the studio hands an extension (`window.Studio`), the part this page uses. */
-interface Studio {
-    getViewer(): StudioViewer;
-    addToolbarGroup(el: HTMLElement): HTMLElement;
-    /** A full-width row under the top bar (the top bar is one line and already full). */
-    addBar(el: HTMLElement): HTMLElement;
-    log(level: "info" | "warn" | "error" | "watch", source: string, message: string): void;
-    /** Frame the whole graph in the viewer. */
-    fitToContent(padding?: number): void;
-    /** Show or hide the studio's panels; the dashboard height in px. */
-    setLayout(layout: { palette?: boolean; properties?: boolean; console?: boolean; dashboardHeight?: number }): void;
-    /** Pan (and zoom) to a node when it is farther than `threshold` px from the centre; true when the view moved. */
-    centerOnNode(node: StudioNode, options?: { threshold?: number; scale?: number; animateMs?: number }): boolean;
-}
-interface StudioNode {
-    id: string;
-    label: string;
-    el: HTMLElement;
-    item: { data: unknown };
-    inputs: Array<{ name: string }>;
-    outputs: Array<{ name: string }>;
-}
-interface StudioConnection {
-    from: { name: string };
-    to: { name: string };
-    path: SVGPathElement;
-    linkKind?: string;
-}
-interface StudioViewer {
-    nodes: StudioNode[];
-    connections: StudioConnection[];
-}
-interface MonitorTile {
-    renderableType: string;
-    push(event: Record<string, unknown>): void;
-}
-
-const MONITOR_TYPE = "Harness.Monitor:trace";
 /** `claude-haiku-4-5-20251001` -> `claude-haiku-4-5`: the date suffix says nothing on a badge. */
 const shortModel = (model: string) => model.replace(/^.*\//, "").replace(/-\d{8}$/, "").slice(0, 22);
 const SOURCE = "tier3";
-const STYLE = `
-.tier3-bar { display: flex; align-items: center; gap: 8px; }
-.tier3-title { font: 11px/1 var(--ne-font-mono, ui-monospace, Consolas, monospace); letter-spacing: 0.14em; color: var(--ne-color-text-muted, #8a8a9a); margin-right: 4px; }
-.tier3-badge { font: 11px/1 var(--ne-font-mono, ui-monospace, Consolas, monospace); letter-spacing: 0.06em; color: #75e2ba; white-space: nowrap; padding: 0 6px; }
-.tier3-badge.warn { color: #f0b06a; }
-.tier3-threshold { width: 58px; padding-left: 4px; padding-right: 0; }
-.ne-node.hx-lit { box-shadow: 0 0 0 3px #75e2ba, 0 0 28px 8px rgba(117, 226, 186, 0.6) !important; transition: box-shadow 120ms; }
-.ne-node.hx-lit .ne-node-header { background: #1f8a62 !important; color: #ffffff !important; }
-.ne-node.hx-done { box-shadow: 0 0 0 2px #3fb08a !important; }
-.ne-node.hx-done .ne-node-header { background: #234a3c !important; }
-.ne-node.hx-failed { box-shadow: 0 0 0 3px #e0574a, 0 0 28px 8px rgba(224, 87, 74, 0.6) !important; }
-.ne-node.hx-failed .ne-node-header { background: #8a2f27 !important; color: #ffffff !important; }
-.hx-link-done { stroke: #75e2ba !important; stroke-width: 3px !important; }
-`;
 
 /** The editor's graph as the harness executes it: the very node instances the studio drew, one static channel per drawn connection. */
 function graphFromViewer(viewer: StudioViewer): { graph: HarnessGraph; byStage: Map<string, StudioNode> } {
@@ -126,7 +84,9 @@ export default async function activate(studio: Studio): Promise<void> {
     const params = new URLSearchParams(location.search);
     const brokerUrl = params.get("broker") ?? location.origin;
     const scenarioUrl = params.get("scenario") ?? "/specs/scenario-night-9.json";
-    const locale = params.get("locale") ?? "en";
+    const locale = params.get("locale") ?? "en-US";
+    // The station's sentences and the agent's sessions share the page's language: one wording, so nothing said is in another language than what is shown.
+    const pageLocale = locale;
     let guardMode: GuardMode = (params.get("guard") as GuardMode | null) ?? "measured";
     const autoplay = ["1", "true", "yes"].includes(params.get("autoplay") ?? "");
     const pauseMs = Number(params.get("pause") ?? 4000);
@@ -136,32 +96,17 @@ export default async function activate(studio: Studio): Promise<void> {
     // procedure included), which is what makes the two guard profiles differ on screen.
     let scriptVariant: "prudent" | "compliant" = params.get("script") === "compliant" ? "compliant" : "prudent";
     // View: `fit` frames the whole loop; `follow` pans to the lit node when it drifts farther than `threshold` px from the centre.
-    let viewMode: "fit" | "follow" = params.get("view") === "follow" ? "follow" : "fit";
-    let followThreshold = Number(params.get("threshold") ?? 120);
-    const followZoom = Number(params.get("zoom") ?? 1);
+    const initialView = { mode: (params.get("view") === "follow" ? "follow" : "fit") as ViewMode, threshold: Number(params.get("threshold") ?? 120), zoom: Number(params.get("zoom") ?? 1) };
     // `?output=none`: this page speaks but does not play; another page (the Control Board) is the audio output.
     const remoteOutput = params.get("output") === "none";
 
-    const style = document.createElement("style");
-    style.textContent = STYLE;
-    document.head.appendChild(style);
-
+    installLoopStyle();
     const viewer = studio.getViewer();
     // The page shows the loop and its story, nothing else: no palette, no
     // property panel, no console (the tile has the crew's); the graph framed
     // whole, and framed again when the window changes.
     studio.setLayout({ palette: false, properties: false, console: false, dashboardHeight: 300 });
-    const frame = () => studio.fitToContent(28);
-    window.addEventListener("resize", () => {
-        if (viewMode === "fit") frame();
-    });
-    // The studio's transport (Run Once, Play, Step) fires nodes synchronously on its own session; a harness
-    // graph is stepped by the harness runtime, one decision at a time, so the transport is switched off
-    // here rather than left to throw "Harness nodes require asynchronous execution with a HarnessSession".
-    for (const player of document.querySelectorAll<HTMLElement>(".nev2-player")) {
-        player.classList.add("is-disabled");
-        player.title = "This graph is the agent's decision loop: it is run by the agent (play event, next), not by the studio's player.";
-    }
+    disableStudioPlayer("This graph is the agent's decision loop: it is run by the agent (play event, next), not by the studio's player.");
     const scenario = (await (await fetch(scenarioUrl)).json()) as Scenario;
     const events = scenario.events.filter((e): e is ScenarioEvent & { intention: string } => Boolean(e.intention));
 
@@ -170,52 +115,15 @@ export default async function activate(studio: Studio): Promise<void> {
     // studio's own text controls (`nev2-tb-btn`, `nev2-tb-select`): the
     // player's buttons are 32 px icons and would overlap. One line; the tile
     // carries the long texts.
-    const bar = document.createElement("div");
-    bar.className = "tier3-bar";
-    const title = document.createElement("span");
-    title.className = "tier3-title";
-    title.textContent = "AGENT";
-    bar.appendChild(title);
-    const badge = document.createElement("span");
-    badge.className = "tier3-badge";
-    const select = (title: string, options: Array<[string, string]>, selected?: string) => {
-        const sel = document.createElement("select");
-        sel.className = "nev2-tb-select";
-        sel.title = title;
-        for (const [value, label] of options) {
-            const o = document.createElement("option");
-            o.value = value;
-            o.textContent = label;
-            if (value === selected) o.selected = true;
-            sel.appendChild(o);
-        }
-        bar.appendChild(sel);
-        return sel;
-    };
-    const button = (label: string, title: string, onClick: () => void) => {
-        const b = document.createElement("button");
-        b.className = "nev2-tb-btn";
-        b.textContent = label;
-        b.title = title;
-        b.addEventListener("click", () => void onClick());
-        bar.appendChild(b);
-        return b;
-    };
+    const toolbar = createBar("AGENT");
+    const { bar, badge, select, button } = toolbar;
     const guardSel = select("Guard profile: measured (every attempt visible, judged outside) or protected (the harness refuses power and set_min_flow itself)", [["measured", "guard measured"], ["protected", "guard protected"]], guardMode);
     const llmSel = select(
         "Reasoner: the model behind the broker's reasoner slot, or a scripted agent (no call to the model): prudent asks the physics and refuses the poisoned procedure; compliant does what it is told and gets refused",
         [["model", "LLM on"], ["prudent", "LLM off: prudent"], ["compliant", "LLM off: compliant"]],
         llmEnabled ? "model" : scriptVariant,
     );
-    const viewSel = select("View: the whole loop framed, or the viewer following the lit node", [["fit", "fit all"], ["follow", "follow"]], viewMode);
-    const thresholdInput = document.createElement("input");
-    thresholdInput.type = "number";
-    thresholdInput.className = "nev2-tb-select tier3-threshold";
-    thresholdInput.min = "0";
-    thresholdInput.step = "20";
-    thresholdInput.value = String(followThreshold);
-    thresholdInput.title = "follow threshold, px: the view moves only when the lit node is farther than this from the centre";
-    bar.appendChild(thresholdInput);
+    const { view, frame } = viewControls(toolbar, initialView, studio, () => lights.lit(), () => byStage.get("observe"));
     const eventSel = select("The scenario's events, in story order", events.map((e) => [e.intention, `${e.at}: ${e.intention}`] as [string, string]), events[0]?.intention);
     const playBtn = button("play", "set the board where the scenario is and let the agent decide until it hands back", () => void playEvent(events.find((e) => e.intention === eventSel.value) ?? events[0]));
     const nextBtn = button("next", "one decision of the current event", () => void step());
@@ -244,7 +152,16 @@ export default async function activate(studio: Studio): Promise<void> {
     let monitor: MonitorTile | null = null;
     let current: (ScenarioEvent & { intention: string }) | null = null;
     let busy = false;
-    const world = new Broker(brokerUrl, { name: "studio-world", version: "0.1.0" });
+    const world = new Broker(brokerUrl, { name: "studio-world", version: "0.1.0", locale: pageLocale });
+    // The station's sentences, in this page's language: read once from the station slot; without them, every key shows as itself.
+    let words: Words = NO_WORDS;
+    try {
+        const loaded = await loadWords(await world.session("station"));
+        words = loaded.words;
+        studio.log("info", SOURCE, `words: station wording ${loaded.grammar ?? "?"}, ${words.listPhrases().length} phrases`);
+    } catch (e) {
+        studio.log("warn", SOURCE, `words: ${e instanceof Error ? e.message : String(e)}`);
+    }
     // One output per page instance: two pages named alike would both be allowed to take (and say) everything.
     const audio = new AudioOutput(world, `page-${Math.random().toString(36).slice(2, 8)}`, {
         onPlay: (u) => {
@@ -263,7 +180,8 @@ export default async function activate(studio: Studio): Promise<void> {
     const heard = async () => {
         if (!voiceOn || !(remoteOutput || audio.enabled)) return;
         await voice.idle();
-        if (remoteOutput) await speechHeard(world);
+        // Its own sentences only: the board says other things on the same slot (a factory task), the agent does not wait for them.
+        if (remoteOutput) await speechHeard(world, voice.takeUnheard());
         else await audio.idle();
     };
 
@@ -273,38 +191,25 @@ export default async function activate(studio: Studio): Promise<void> {
     /** The last capability call of the current step, for the "execute" sentence. */
     let lastCall: { id: string; input: unknown; outcome: string; error?: string } | null = null;
     const narrate = (stage: string, text: string, now?: string, level: "info" | "warn" | "error" = "info") => monitor?.push({ kind: "narrate", stage, text, now, level });
-    const cabinText = () => (lastObs ? `CO2 ${Math.round(lastObs.co2Ppm)} ppm, ${lastObs.co2State}, scrubber ${lastObs.power ? `${Math.round(lastObs.speedPercent)} %` : "off"}` : "reading the board");
-    const modelName = () => agent?.provider.model ?? "the model";
-    /** One sentence per stage, said when the node lights; the next cue tells which branch the loop took. */
+    const cabinText = () => (lastObs ? words.phrase("cabin.text", { ppm: Math.round(lastObs.co2Ppm), state: lastObs.co2State, scrubber: lastObs.power ? words.phrase("cabin.scrubber.on", { percent: Math.round(lastObs.speedPercent) }) : words.phrase("cabin.scrubber.off") }) : words.phrase("cabin.reading"));
+    const modelName = () => agent?.provider.model ?? "?";
+    /** One sentence per stage, said when the node lights (`stage.<stage>` and `.now` of the station's wording); the next cue tells which branch the loop took. */
     const sentenceFor = (stage: string, next: string | undefined): [string, string] => {
-        switch (stage) {
-            case "observe":
-                return [`Reading the cabin: ${cabinText()}`, `Observing the cabin: ${cabinText()}`];
-            case "context":
-                return [`Situation "${current?.intention ?? "?"}" at minute ${current?.at ?? "?"}, cabin ${lastObs?.co2State ?? "?"}`, `This situation: ${current?.intention ?? "?"}, cabin ${lastObs?.co2State ?? "?"}`];
-            case "lookup":
-                return ["Looking for a decision already learned in this situation", "Any decision learned for this situation?"];
-            case "gate":
-                return next === "request" ? ["No trusted decision yet: the reasoner will be asked", "Nothing learned yet: asking the reasoner"] : next === "merge" ? ["A learned decision is trusted: no call to the reasoner", "Learned decision replayed, the reasoner is not asked"] : ["Is a learned decision confident enough?", "Confident enough?"];
-            case "request":
-                return [`Building the request: the state, the intention, ${agent?.catalogue.length ?? "?"} allowed tools`, `Preparing the request for ${modelName()}`];
-            case "reason":
-                return [`Asking ${modelName()} through the broker's reasoner slot`, `Asking ${modelName()}...`];
-            case "merge":
-                return ["The proposal is in: one tool call, with its rationale", "The model proposed one action"];
-            case "guard":
-                return [`Checking the proposal: replay policy, guard profile (${guardMode}), single-use authorization`, "Checking the proposal against the guard"];
-            case "execute":
-                return lastCall ? [`Calling ${lastCall.id} through the broker: ${lastCall.outcome}${lastCall.error ? ` (${lastCall.error})` : ""}`, `${lastCall.id}: ${lastCall.outcome}`] : ["Calling the tool through the broker", "Calling through the broker..."];
-            case "observe-after":
-                return [`Reading the cabin again: ${cabinText()}`, `The cabin now: ${cabinText()}`];
-            case "evaluate":
-                return ["Judging the outcome: did the cabin improve, was the call refused?", "Judging the outcome"];
-            case "record":
-                return ["Remembering this decision and its outcome for the next time this situation comes", "Learned for next time"];
-            default:
-                return [stage, stage];
-        }
+        const values = {
+            cabin: cabinText(),
+            intention: current?.intention ?? "?",
+            minute: current?.at ?? "?",
+            state: lastObs?.co2State ?? "?",
+            tools: agent?.catalogue.length ?? "?",
+            model: modelName(),
+            guard: guardMode,
+            capability: lastCall?.id ?? "?",
+            outcome: lastCall?.outcome ?? "?",
+            error: lastCall?.error ? words.phrase("stage.execute.error", { error: lastCall.error }) : "",
+        };
+        const key = stage === "gate" ? (next === "request" ? "stage.gate.ask" : next === "merge" ? "stage.gate.replayed" : "stage.gate") : stage === "execute" && !lastCall ? "stage.execute.pending" : `stage.${stage}`;
+        if (words.getPhrase(key) === undefined) return [stage, stage];
+        return [words.phrase(key, values), words.phrase(`${key}.now`, values)];
     };
 
     const setStatus = (text: string, short?: string, warn = false) => {
@@ -313,74 +218,16 @@ export default async function activate(studio: Studio): Promise<void> {
         badge.classList.toggle("warn", warn);
     };
     const log = (level: "info" | "warn" | "error", message: string) => studio.log(level, SOURCE, message);
-    const findMonitor = (): MonitorTile | null => {
-        for (const n of viewer.nodes) {
-            const d = n.item.data as Partial<MonitorTile> | undefined;
-            if (d && d.renderableType === MONITOR_TYPE && typeof d.push === "function") return d as MonitorTile;
-        }
-        return null;
-    };
-    const clearHighlight = () => {
-        for (const n of byStage.values()) n.el.classList.remove("hx-lit", "hx-done", "hx-failed");
-        for (const c of viewer.connections) c.path.classList.remove("hx-link-done");
-    };
-    const markDone = (n: StudioNode) => {
-        n.el.classList.remove("hx-lit");
-        n.el.classList.add("hx-done");
-        for (const c of viewer.connections) if (n.inputs.includes(c.to as never)) c.path.classList.add("hx-link-done");
-    };
-
-    // The harness runs most stages in a millisecond; only the reasoner and the
-    // execution take time. Shown as they happen, eleven nodes would light at
-    // once. The highlight therefore plays behind the execution, one stage at a
-    // time, each kept lit at least `DWELL` ms, so the eye can follow the loop.
-    const DWELL = 350;
-    type Cue = { stage: string; status: "start" | "error"; message?: string };
-    const cues: Cue[] = [];
-    let lit: StudioNode | null = null;
-    let playing = false;
-    const playCues = async () => {
-        if (playing) return;
-        playing = true;
-        while (cues.length) {
-            const cue = cues.shift() as Cue;
-            const n = byStage.get(cue.stage);
-            if (!n) continue;
-            if (cue.status === "start") {
-                if (cue.stage === "observe") {
-                    clearHighlight();
-                    lit = null;
-                }
-                if (lit && lit !== n) markDone(lit);
-                n.el.classList.add("hx-lit");
-                lit = n;
-                if (viewMode === "follow") studio.centerOnNode(n, { threshold: followThreshold, scale: followZoom, animateMs: 220 });
-                const [text, now] = sentenceFor(cue.stage, cues[0]?.stage);
-                narrate(cue.stage, text, now);
-                await new Promise((r) => setTimeout(r, DWELL));
-            } else {
-                n.el.classList.remove("hx-lit");
-                n.el.classList.add("hx-failed");
-                lit = null;
-                narrate(cue.stage, `Stopped at ${cue.stage}: ${cue.message ?? "refused"}`, `Stopped by the harness: ${cue.message ?? "refused"}`, "error");
-            }
-        }
-        // The last stage of a step ends lit; when nothing follows, it settles as done.
-        if (lit && lit === byStage.get("record")) {
-            markDone(lit);
-            lit = null;
-        }
-        playing = false;
-    };
+    // The highlight plays behind the execution, one stage at a time (`studio-loop.ts`).
+    const lights = createStageLights({ studio, viewer, byStage: () => byStage, view, sentenceFor, narrate, stopped: (stage, message) => [words.phrase("stage.stopped", { stage, message }), words.phrase("stage.stopped.now", { message })] });
     const onStage = (event: StageEvent) => {
         monitor?.push({ kind: "stage", stage: event.stage, status: event.status, message: event.message });
-        if (event.status === "start") cues.push({ stage: event.stage, status: "start" });
+        if (event.status === "start") lights.cue({ stage: event.stage, status: "start" });
         else if (event.status === "error") {
-            cues.push({ stage: event.stage, status: "error", message: event.message });
+            lights.cue({ stage: event.stage, status: "error", message: event.message });
             log("error", `${event.stage}: ${event.message ?? "failed"}`);
             monitor?.push({ kind: "console", level: "error", message: `${event.stage}: ${event.message ?? "failed"}` });
         }
-        void playCues();
     };
 
     async function connect(): Promise<void> {
@@ -404,14 +251,13 @@ export default async function activate(studio: Studio): Promise<void> {
         const resolve = provider.resolve.bind(provider);
         provider.resolve = async (input) => {
             const decision = await resolve(input);
-            voice.say(proposalSentence(decision.rationale));
+            voice.say(proposalSentence(words, decision.rationale));
             return decision;
         };
         if (!built) built = graphFromViewer(viewer);
         byStage = built.byStage;
-        monitor = findMonitor();
-        // The monitor is a tile of the dashboard; its node on the canvas would only take room from the loop.
-        for (const n of viewer.nodes) if ((n.item.data as Partial<MonitorTile> | undefined)?.renderableType === MONITOR_TYPE) n.el.style.display = "none";
+        monitor = findMonitor(viewer);
+        hideMonitorNode(viewer);
         agent = await createAgent({
             broker,
             provider,
@@ -424,7 +270,7 @@ export default async function activate(studio: Studio): Promise<void> {
             },
             onCall: (call) => {
                 lastCall = { id: call.id, input: call.input, outcome: call.result.outcome, error: call.result.error };
-                voice.say(outcomeSentence(call));
+                voice.say(outcomeSentence(words, call));
                 // The call and its answer, on the decision's card: the twin's numbers, the device's refusal, as they came back.
                 if (call.slot !== "crew") monitor?.push({ kind: "call", capabilityId: call.id, input: call.input, output: call.result.output, outcome: call.result.outcome, error: call.result.error, latencyMs: call.latencyMs });
                 if (call.slot === "crew") {
@@ -443,12 +289,12 @@ export default async function activate(studio: Studio): Promise<void> {
         const withheld = agent.catalogue.filter((c) => c.replayPolicy === "never").map((c) => c.id);
         setStatus(`${provider.name} (${provider.model}) | guard ${guardMode}: ${offered} tools offered${withheld.length ? `, withheld: ${withheld.join(", ")}` : ""} | grammars ${grammar}`, `${llmEnabled ? shortModel(provider.model) : `no LLM, ${scriptVariant}`} | ${guardMode}: ${offered} tools`, !llmEnabled);
         log("info", `agent ready: ${provider.name}, guard ${guardMode}, grammars ${grammar}`);
-        if (viewMode === "fit") {
+        if (view().mode === "fit") {
             frame();
             setTimeout(frame, 300);
         } else {
             const first = byStage.get("observe");
-            if (first) setTimeout(() => studio.centerOnNode(first, { threshold: 0, scale: followZoom, animateMs: 0 }), 300);
+            if (first) setTimeout(() => studio.centerOnNode(first, { threshold: 0, scale: view().zoom, animateMs: 0 }), 300);
         }
     }
 
@@ -470,10 +316,10 @@ export default async function activate(studio: Studio): Promise<void> {
                 trace = await agent.decide(intention);
             } catch (e) {
                 const message = e instanceof Error ? e.message : String(e);
-                while (playing || cues.length) await new Promise((r) => setTimeout(r, 50));
+                await lights.settled();
                 monitor?.push({ kind: "outcome", outcome: "stopped", error: message });
                 log("warn", `stopped by the harness: ${message}`);
-                voice.say(shortSentence(`Stopped by the harness: ${message}`));
+                voice.say(shortSentence(words, words.phrase("decision.stopped", { message })));
                 await observeForMonitor();
                 lastCall = null;
                 return null;
@@ -481,11 +327,11 @@ export default async function activate(studio: Studio): Promise<void> {
             const outcome = outcomeOf(trace);
             await observeForMonitor();
             // Let the highlight catch up, so the summary lands after the last stage lit.
-            while (playing || cues.length) await new Promise((r) => setTimeout(r, 50));
+            await lights.settled();
             monitor?.push({ kind: "decision", capabilityId: trace.decision.invocation.capabilityId, input: trace.decision.invocation.input, source: trace.source, rationale: trace.decision.rationale });
             monitor?.push({ kind: "outcome", outcome, error: trace.result.error, reward: trace.evaluation.reward });
             const id = trace.decision.invocation.capabilityId;
-            const said = id.startsWith("crew.") ? `The agent ${id === "crew.ask" ? "asks the crew" : "reports to the crew"}` : `Decision: ${id}, ${outcome}${trace.result.error ? ` (${trace.result.error})` : ""}`;
+            const said = id.startsWith("crew.") ? words.phrase(id === "crew.ask" ? "decision.asks" : "decision.reports") : words.phrase("decision.made", { capability: id, outcome, error: trace.result.error ? words.phrase("decision.error", { error: trace.result.error }) : "" });
             narrate("decision", said, said, outcome === "refused" || outcome === "deny" ? "warn" : "info");
             lastCall = null;
             await heard();
@@ -505,7 +351,7 @@ export default async function activate(studio: Studio): Promise<void> {
         monitor?.push({ kind: "intention", id: event.intention, description: event.message, minute: event.at, guard: `${guardMode} (${agent.catalogue.filter((c) => c.replayPolicy !== "never").length} tools offered)`, reasoner: agent.provider.name });
         tell({ status: "event", intention: event.intention, at: event.at, message: event.message });
         log("info", `[minute ${event.at}] ${event.intention}: ${event.message ?? ""}`);
-        voice.say(eventSentence(event), "high");
+        voice.say(eventSentence(words, event), "high");
         await observeForMonitor();
         await heard();
         for (const b of eventButtons) b.disabled = true;
@@ -532,11 +378,11 @@ export default async function activate(studio: Studio): Promise<void> {
                 eventSel.value = event.intention;
                 await playEvent(event);
                 if (i < events.length - 1) {
-                    monitor?.push({ kind: "console", level: "info", message: `next event in ${Math.round(pauseMs / 1000)} s: ${events[i + 1].intention} (minute ${events[i + 1].at})` });
+                    monitor?.push({ kind: "console", level: "info", message: words.phrase("page.nextEvent", { seconds: Math.round(pauseMs / 1000), intention: events[i + 1].intention, minute: events[i + 1].at }) });
                     await new Promise((r) => setTimeout(r, pauseMs));
                 }
             }
-            monitor?.push({ kind: "console", level: "info", message: "scenario complete: play all to replay, or pick an event" });
+            monitor?.push({ kind: "console", level: "info", message: words.phrase("page.complete") });
             log("info", "scenario complete");
         } finally {
             playingAll = false;
@@ -549,7 +395,7 @@ export default async function activate(studio: Studio): Promise<void> {
             ["scrubber.power", { on: true }],
             ["motor.set_speed", { percent: scenario.start.scrubberCommandPercent }],
         ] as const) await world.call("scrubber", tool, { ...args });
-        clearHighlight();
+        lights.clear();
         monitor?.push({ kind: "reset" });
         agent = null;
         current = null;
@@ -567,17 +413,6 @@ export default async function activate(studio: Studio): Promise<void> {
         if (!llmEnabled) scriptVariant = llmSel.value === "compliant" ? "compliant" : "prudent";
         agent = null; // rebuilt with the chosen reasoner on the next event
         setStatus(llmEnabled ? "model: the agent is rebuilt on the next event" : "scripted reasoner: no call to the model from the next event", llmEnabled ? "model: next event" : "scripted: next event", !llmEnabled);
-    });
-    viewSel.addEventListener("change", () => {
-        viewMode = viewSel.value as "fit" | "follow";
-        if (viewMode === "fit") frame();
-        else {
-            const target = lit ?? byStage.get("observe");
-            if (target) studio.centerOnNode(target, { threshold: 0, scale: followZoom, animateMs: 250 });
-        }
-    });
-    thresholdInput.addEventListener("change", () => {
-        followThreshold = Math.max(0, Number(thresholdInput.value) || 0);
     });
     nextBtn.title = "one decision of the current event (play an event first)";
     resetBtn.title = "reset the board to the scenario's start and rebuild the agent";
@@ -611,13 +446,13 @@ export default async function activate(studio: Studio): Promise<void> {
         return;
     }
     // `monitor` is assigned inside connect(), which the type narrowing above cannot see.
-    const tile = findMonitor();
+    const tile = findMonitor(viewer);
     if (autoplay) {
-        tile?.push({ kind: "console", level: "info", message: "autoplay: the scenario starts in 2 s" });
+        tile?.push({ kind: "console", level: "info", message: words.phrase("page.autoplay") });
         await new Promise((r) => setTimeout(r, 2000));
         await playAll();
     } else {
-        tile?.push({ kind: "console", level: "info", message: "ready: pick an event and press play event, or play all" });
-        narrate("idle", "Ready. Pick an event and press play event, or play all.", "Ready: pick an event, press play event");
+        tile?.push({ kind: "console", level: "info", message: words.phrase("page.ready.console") });
+        narrate("idle", words.phrase("page.ready"), words.phrase("page.ready.now"));
     }
 }

@@ -8,6 +8,13 @@
  *
  * Browsers only play sound after a gesture on the page: `enable()` is called
  * from the sound button, and the first click is what unlocks the element.
+ *
+ * Two pages on the same machine (the Control Board twice, or one hidden
+ * behind the factory's window): an utterance is delivered once, so a hidden
+ * page does not take any (the visible one does), and a take another output
+ * won the page reports and skips. The poll clock ticks in a worker, because
+ * a browser slows the timers of a hidden page down to one a minute after
+ * five minutes, and the board is often behind another window.
  */
 import type { Broker } from "../../harness/lib/broker.js";
 
@@ -29,13 +36,27 @@ export interface AudioOutputEvents {
     onPlay?: (item: QueueItem) => void;
     onDone?: (item: QueueItem, durationMs: number) => void;
     onError?: (message: string) => void;
+    /** Another output took the utterance first: another page is the speaker. */
+    onTakenElsewhere?: (item: QueueItem) => void;
 }
 
 const POLL_MS = 700;
 
+/** A clock that keeps ticking when the page is hidden: a worker's timer is not slowed down the way a page's is. */
+function startClock(ms: number, onTick: () => void): () => void {
+    try {
+        const worker = new Worker(URL.createObjectURL(new Blob([`setInterval(() => postMessage(0), ${ms});`], { type: "text/javascript" })));
+        worker.onmessage = onTick;
+        return () => worker.terminate();
+    } catch {
+        const timer = window.setInterval(onTick, ms);
+        return () => window.clearInterval(timer);
+    }
+}
+
 export class AudioOutput {
     private readonly el = new Audio();
-    private timer: number | null = null;
+    private stopClock: (() => void) | null = null;
     private playing: QueueItem | null = null;
     private readonly played = new Set<string>();
     private busy = false;
@@ -48,27 +69,27 @@ export class AudioOutput {
     ) {}
 
     get enabled(): boolean {
-        return this.timer !== null;
+        return this.stopClock !== null;
     }
 
     /** Called from a click: unlocks the element, starts polling. */
     enable(): void {
-        if (this.timer !== null) return;
+        if (this.stopClock !== null) return;
         // Playing a silent data URI on the gesture unlocks later, programmatic plays.
         this.el.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
         void this.el.play().catch(() => undefined);
-        this.timer = window.setInterval(() => void this.tick(), POLL_MS);
+        this.stopClock = startClock(POLL_MS, () => void this.tick());
     }
 
     disable(): void {
-        if (this.timer !== null) window.clearInterval(this.timer);
-        this.timer = null;
+        this.stopClock?.();
+        this.stopClock = null;
         this.cut();
     }
 
     /** Resolves when nothing is queued for this output and nothing is playing: what the page waits for before its next decision. */
     async idle(): Promise<void> {
-        if (this.timer === null) return;
+        if (this.stopClock === null) return;
         for (;;) {
             if (!this.busy) await this.tick();
             if (!this.playing && this.lastPending === 0 && !this.busy) return;
@@ -93,6 +114,8 @@ export class AudioOutput {
             this.lastPending = q.pending.filter((p) => p.seq > q.stopMark && !this.played.has(p.utteranceId)).length;
             if (this.playing && this.playing.seq <= q.stopMark) this.cut();
             if (this.playing) return;
+            // A hidden page leaves the utterances to the visible one (the Control Board behind the factory's window, or open twice).
+            if (document.hidden) return;
             const next = q.pending.find((p) => p.seq > q.stopMark && !this.played.has(p.utteranceId));
             if (next) await this.play(next, session);
         } catch (e) {
@@ -106,7 +129,10 @@ export class AudioOutput {
         // Delivered once: another output (a second page on the same machine) may have taken it first.
         this.played.add(item.utteranceId);
         const taken = await this.broker.call("speech", "take", { utteranceId: item.utteranceId, output: this.outputId });
-        if (!taken.ok) return;
+        if (!taken.ok) {
+            this.events.onTakenElsewhere?.(item);
+            return;
+        }
         const r = await session.request<{ contents: Array<{ mimeType?: string; blob?: string }> }>("resources/read", { uri: `speech://utterances/${item.utteranceId}` });
         const c = r.contents[0];
         if (!c?.blob) throw new Error(`no audio for ${item.utteranceId}`);

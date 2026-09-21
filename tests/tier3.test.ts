@@ -17,7 +17,7 @@ import { DEFAULT_SCENARIO_FILE } from "../lib/paths.js";
 import type { LocalBroker } from "../slots/lib/local-broker.js";
 import { startAllOrFail } from "./lib/start.js";
 import type { PublishedSlot } from "../slots/lib/slot-server.js";
-import { buildTier3Graph, toHarnessDefinition } from "../tier3/lib/flow.js";
+import { buildHarnessGraph, toHarnessDefinition } from "../harness/lib/flow.js";
 import { Broker } from "../harness/lib/broker.js";
 import { ReasonerProvider } from "../harness/providers/reasoner.js";
 import { buildAgentDocument } from "../scripts/build-agent-graph.js";
@@ -29,7 +29,7 @@ const quiet = () => undefined;
 
 describe("the decision graph", () => {
     it("is built with the core builder, validated by the harness, and serializes to a loadable definition", () => {
-        const graph = buildTier3Graph();
+        const graph = buildHarnessGraph();
         assert.equal(graph.nodes.length, 12);
         assert.equal(graph.links.length, 12);
         assert.equal(graph.mode, "static");

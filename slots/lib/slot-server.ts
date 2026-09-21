@@ -210,7 +210,8 @@ export function publishSlot<S extends object>(options: SlotOptions<S>): Publishe
     // The words: the grammar files, checked against this slot's tools and resources, composed over the default.
     const surfaceTools: McpTool[] = tools.map(({ name, title, description, inputSchema }) => ({ name, ...(title ? { title } : {}), description: description ?? "", inputSchema }));
     const surfaceResources = [...resources.map((r) => ({ uri: r.uri })), { uri: `${slot}://grammars` }];
-    const loaded = loadGrammarDirectory(grammarsDir, { surface: { tools: surfaceTools, resources: surfaceResources } });
+    // The words, and since mcp-core 1.2.0 the phrases a page or a voice reads (`grammar://phrases`): every locale carries the English keys and holes (a slot with no phrase is not asked for the English file).
+    const loaded = loadGrammarDirectory(grammarsDir, { surface: { tools: surfaceTools, resources: surfaceResources }, referenceLocale: DEFAULT_LOCALE });
     const baseline = loaded.grammars.get(BASELINE_KEY);
     const description = options.description ?? baseline?.getServerDescription();
     if (options.description && baseline?.getServerDescription()) throw new Error(`[${slot}] the slot is described both inline and in grammars/default/en.json: keep one`);

@@ -1,6 +1,8 @@
 /**
- * The agent's decision loop as a harness graph: the V1 flow of
- * `@spiky-panda/harness`, twelve typed nodes on a Core graph.
+ * The decision loop as a harness graph: the V1 flow of `@spiky-panda/harness`,
+ * twelve typed nodes on a Core graph. The one graph of the demo: the habitat
+ * agent (tier3) and the factory (harness/core) both step it; what differs is
+ * the services the runtime is given (docs/harness-stages.fr.md).
  *
  *     observe > context > lookup > gate
  *                                    policy ------------------+
@@ -19,7 +21,7 @@ import { RuntimeGraphBuilder, type Channel } from "@spiky-panda/core";
 import { V1_HARNESS_NODES, createRuntimeGraphDriver, validateHarnessGraph, type HarnessDefinition, type HarnessDriver, type HarnessGraph, type HarnessNode, type Intention, type NodeObserver } from "@spiky-panda/harness";
 
 /** The twelve channels of the V1 loop: [from stage, output slot, to stage, input slot]. */
-export const TIER3_EDGES: ReadonlyArray<readonly [string, string, string, string]> = [
+export const V1_EDGES: ReadonlyArray<readonly [string, string, string, string]> = [
     ["observe", "state", "context", "state"],
     ["context", "context", "lookup", "context"],
     ["lookup", "candidates", "gate", "candidates"],
@@ -35,7 +37,7 @@ export const TIER3_EDGES: ReadonlyArray<readonly [string, string, string, string
 ];
 
 /** Builds the V1 decision graph in code and validates the harness contract. */
-export function buildTier3Graph(): HarnessGraph {
+export function buildHarnessGraph(): HarnessGraph {
     const nodes: HarnessNode[] = V1_HARNESS_NODES.map((entry) => {
         const node: HarnessNode = new entry.ctor();
         node.type = entry.type;
@@ -44,7 +46,7 @@ export function buildTier3Graph(): HarnessGraph {
     });
     const byStage = new Map(nodes.map((n) => [n.stage, n]));
     const builder = new RuntimeGraphBuilder<HarnessNode, Channel>().withMode("static").withNodes(...nodes);
-    for (const [from, output, to, input] of TIER3_EDGES) {
+    for (const [from, output, to, input] of V1_EDGES) {
         const source = byStage.get(from);
         const target = byStage.get(to);
         if (!source || !target) throw new Error(`unknown harness stage in edge ${from} -> ${to}`);
@@ -56,8 +58,8 @@ export function buildTier3Graph(): HarnessGraph {
 }
 
 /** The driver the runtime steps: the built graph, executed by the harness. */
-export function createTier3Driver(onNode?: NodeObserver): HarnessDriver {
-    return createRuntimeGraphDriver(buildTier3Graph(), onNode);
+export function createHarnessDriver(onNode?: NodeObserver): HarnessDriver {
+    return createRuntimeGraphDriver(buildHarnessGraph(), onNode);
 }
 
 /** The editor layout of the twelve stages (x, y), as the harness's own example lays them out. */
