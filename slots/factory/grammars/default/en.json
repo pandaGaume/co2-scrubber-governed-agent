@@ -1,0 +1,36 @@
+{
+    "server": {
+        "description": "The factory's front: hand it what is missing (a functional contract), it opens a task; it builds with the workshop's slots and ends by proposing to the station",
+        "instructions": "Ask with a functional contract (what must be produced, under which constraints, from which observations and data), never with a solution. The factory proposes to the station; it registers nothing and never touches the board."
+    },
+    "tools": {
+        "request": {
+            "title": "Ask the factory for what is missing",
+            "description": "The functional contract of what you lack: the outputs a plan must produce (name, quantity, unit, horizon), the constraints (a residual threshold and its window), what you observed (volumes, door, occupancy, scrubbers), the data available (telemetry files with their columns), the topics and a budget. The factory opens a workspace, writes the task file and returns the task id; it builds nothing at this call, its loop does, and it ends by proposing to the station, which asks the twin's judgment. Ask for the need, never for a solution.",
+            "properties": {
+                "objective": "what must be produced and under which constraints: required_outputs and constraints",
+                "observations": "what you saw: volumes, door, occupancy, scrubbers with their speed and current",
+                "data": "files of telemetry the factory may use, with their columns",
+                "topics": "[\"graph\", \"onnx\"] or \"auto\"",
+                "budget": "iterations, minutes, twinPoints",
+                "requestedBy": "who asks: tier3, operator",
+                "profile": "the profile the loop runs with",
+                "objective.required_outputs": "the outputs a plan must produce: name, quantity, unit, horizonMinutes",
+                "objective.constraints": "e.g. { residualPpmMax: 150, windowMinutes: 20 }"
+            }
+        },
+        "task": {
+            "title": "Where a task stands",
+            "description": "The state of a factory task (created, running, proposed, accepted, rejected, failed), its workspace, the sha256 of its task file, how many files it holds, and its manifest when the loop has written one.",
+            "properties": {
+                "taskId": "the task id returned by request"
+            }
+        }
+    },
+    "resources": {
+        "factory://tasks": {
+            "name": "Tasks",
+            "description": "Every task of the workshop with its state"
+        }
+    }
+}

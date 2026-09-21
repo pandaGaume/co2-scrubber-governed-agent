@@ -345,9 +345,28 @@ scorecard row and a manifest with the sha256 of everything it read, under
 npm run chain        # sweep the twin, fit the health model, judge it against the oracle
 ```
 
-The substrate packages (`@spiky-panda/*`) are optional dependencies until
-they are published on npm: `npm install` and `npm run server` work without
-them; `npm run chain` needs them.
+The substrate packages (`@spiky-panda/*`) are not on npm yet. Until they
+are, the repository carries them as archives in `vendor/` and `package.json`
+points at those files (`"@spiky-panda/core": "file:vendor/spiky-panda-core-1.0.1.tgz"`),
+so `npm install` and `npm ci` install them like any other dependency, from
+a clone, with no registry access. The lockfile records the path of each
+archive and its checksum. When the packages are published, each `file:`
+line becomes a version range and nothing else changes.
+
+To refresh `vendor/` from the substrate checkouts (a developer's step, not
+an install step): build them, then
+
+```sh
+npm run substrate:vendor -- <spikypanda checkout> <spikypanda-harness checkout>
+npm install
+```
+
+The script (`scripts/vendor-substrate.mjs`, its header says the same)
+packs the workspaces the demo lists, replaces the previous archive of each
+package and rewrites the `file:` lines. One version number,
+one content: an archive whose name is already in `vendor/` with a different
+content is refused, bump the version in its repository first (npm serves a
+known name and version from its cache, whatever the file holds).
 
 `specs/rs385-drive.json` sweeps the RS-385 twin over its drive voltage,
 `specs/scrubber-health-twin.json` fits the affine health model on the

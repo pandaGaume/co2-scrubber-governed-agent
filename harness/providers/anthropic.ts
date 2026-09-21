@@ -10,8 +10,8 @@
  * observation's `lastOutput`.
  */
 import type { PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
-import type { Provider, ProviderExchange, ProviderProfile } from "./provider.js";
-import { apiKeyFor, compactRequest, decisionFrom, familyOf, fromApiName, intentionText, observationText, parseJsonArgs, toApiName } from "./llm-common.js";
+import type { Provider, ProviderExchange, ProviderProfile } from "../lib/provider.js";
+import { apiKeyFor, compactRequest, decisionFrom, familyOf, fromApiName, intentionText, observationText, parseJsonArgs, toApiName } from "../lib/llm-common.js";
 
 type ContentBlock = { type: "text"; text: string } | { type: "tool_use"; id: string; name: string; input: unknown } | { type: "tool_result"; tool_use_id: string; content: string };
 interface Message {

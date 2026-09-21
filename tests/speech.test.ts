@@ -10,11 +10,11 @@
  */
 import { after, before, describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { startBroker, type LocalBroker } from "../slots/lib/local-broker.js";
-import { publishAll } from "../slots/run-all.js";
+import type { LocalBroker } from "../slots/lib/local-broker.js";
+import { startAllOrFail } from "./lib/start.js";
 import type { PublishedSlot } from "../slots/lib/slot-server.js";
-import { connectMcp, toolText, type McpSession } from "../tier3/lib/mcp-http.js";
-import { Broker } from "../tier3/lib/broker.js";
+import { connectMcp, toolText, type McpSession } from "../harness/lib/mcp-http.js";
+import { Broker } from "../harness/lib/broker.js";
 import { buildCapabilities } from "../tier3/lib/capabilities.js";
 import { ElevenLabsProvider } from "../slots/speech/providers/elevenlabs.js";
 import { collect } from "../slots/speech/voice-provider.js";
@@ -58,8 +58,7 @@ describe("speech slot on the silent engine", () => {
 
     before(async () => {
         process.env.SPEECH_PROVIDER = "silent";
-        broker = await startBroker(PORT, "ignore");
-        slots = await publishAll(broker.wsBase, quiet);
+        ({ broker, slots } = await startAllOrFail(PORT));
         session = await connectMcp(broker.httpBase, "speech", { name: "test", version: "0", locale: "en" });
     });
     after(async () => {

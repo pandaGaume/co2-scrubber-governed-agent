@@ -12,7 +12,7 @@
  * change on its own between two reads: no counter, no clock).
  */
 import type { JsonValue, State, StateObserver } from "@spiky-panda/harness";
-import type { Broker } from "./broker.js";
+import type { Broker } from "../../harness/lib/broker.js";
 import type { CapabilityCall } from "./capabilities.js";
 
 export interface CabinFeatures extends Record<string, JsonValue> {

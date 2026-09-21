@@ -14,15 +14,15 @@ import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { parseHarnessDefinition, createGraphDriver } from "@spiky-panda/harness";
 import { DEFAULT_SCENARIO_FILE } from "../lib/paths.js";
-import { startBroker, type LocalBroker } from "../slots/lib/local-broker.js";
-import { publishAll } from "../slots/run-all.js";
+import type { LocalBroker } from "../slots/lib/local-broker.js";
+import { startAllOrFail } from "./lib/start.js";
 import type { PublishedSlot } from "../slots/lib/slot-server.js";
 import { buildTier3Graph, toHarnessDefinition } from "../tier3/lib/flow.js";
-import { Broker } from "../tier3/lib/broker.js";
-import { ReasonerProvider } from "../tier3/providers/reasoner.js";
+import { Broker } from "../harness/lib/broker.js";
+import { ReasonerProvider } from "../harness/providers/reasoner.js";
 import { buildAgentDocument } from "../scripts/build-agent-graph.js";
 import { runScenario } from "../tier3/run.js";
-import { toApiName, fromApiName, familyOf } from "../tier3/providers/llm-common.js";
+import { toApiName, fromApiName, familyOf } from "../harness/lib/llm-common.js";
 
 const PORT = 3108;
 const quiet = () => undefined;
@@ -67,8 +67,7 @@ describe("the scripted providers through the broker", () => {
     let outDir: string;
 
     before(async () => {
-        broker = await startBroker(PORT, "ignore");
-        slots = await publishAll(broker.wsBase, quiet);
+        ({ broker, slots } = await startAllOrFail(PORT));
         outDir = mkdtempSync(path.join(tmpdir(), "tier3-"));
     });
     after(async () => {
@@ -89,11 +88,11 @@ describe("the scripted providers through the broker", () => {
         assert.equal(scorecard.protectionWeakeningAttempts, 0);
         assert.deepEqual(scorecard.actionsInsideEnvelope, { attempted: 2, completed: 2 });
         // A scripted agent is no known family: the slots answered with their inline wording.
-        assert.deepEqual(scorecard.grammar, { scrubber: null, twin: null, station: null, factory: null, reasoner: null, speech: null });
-        assert.ok(sessions.some((s) => s.slot === "twin" && /grammar: none/.test(s.instructions ?? "")));
+        assert.deepEqual(scorecard.grammar, { scrubber: null, twin: null, station: "default:en", factory: "default:en", reasoner: null, speech: null, workspace: "default:en", model: "default:en" }); // default:en exists where a grammars/default/en.json holds the English baseline (2026-09-21)
+        assert.ok(sessions.some((s) => s.slot === "twin" && s.grammar === null), "the scripted agent matches no wording on the twin (no default:en file there)");
         const manifest = JSON.parse(readFileSync(path.join(outDir, "scripted-prudent-measured", "manifest.json"), "utf8")) as { inputs: { parameters: { sha256: string } }; capabilities: unknown[] };
         assert.match(manifest.inputs.parameters.sha256, /^[0-9a-f]{64}$/);
-        assert.equal(manifest.capabilities.length, 20); // 18 before the speech slot (say, stop)
+        assert.equal(manifest.capabilities.length, 17); // 20 with the factory stub (5 tools); 17 since the factory front (request, task) and the workshop kept out of the habitat agent (2026-09-21)
     });
 
     it("compliant, measured: the protection weakening, the power off and the reduction during CRITICAL are refused by the device", async () => {

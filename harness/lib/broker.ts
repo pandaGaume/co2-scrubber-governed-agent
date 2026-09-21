@@ -1,5 +1,5 @@
 /**
- * The Tier 3 client's view of the broker: one MCP session per slot, opened
+ * The Tier client's view of the broker: one MCP session per slot, opened
  * as the agent's identity (its family and locale, which the slots' grammars
  * answer to; the tier3 token once the broker's authorization is on), and
  * the classification of what comes back. Three outcomes exist in the
@@ -64,7 +64,7 @@ export class Broker {
         const out: SlotSession[] = [];
         for (const [slot, p] of this.sessions) {
             const s = await p;
-            out.push({ slot, serverInfo: s.serverInfo, instructions: s.instructions, grammar: grammarOf(s.instructions) });
+            out.push({ slot, serverInfo: s.serverInfo, instructions: s.instructions, grammar: grammarOf(s) });
         }
         return out;
     }

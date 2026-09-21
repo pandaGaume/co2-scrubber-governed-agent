@@ -322,16 +322,12 @@ const STEPS = [
     },
     {
         title: "Closing",
-        text: "The factory job that judged the model against the oracle before the board loaded it.",
+        text: "A request to the factory: the functional contract of what is missing, as the agent will send it; the factory opens a task (its loop is not wired yet).",
         expect: "ok",
         run: async () => {
-            const spec = { version: 1, job: "evaluate", name: "scrubber-health-eval", kind: "monitor-vs-oracle", model: "affine-residual" };
-            const started = await call("factory", "run_evaluate", { spec }, "operator");
-            const jobId = started?.result?.jobId;
-            if (jobId) {
-                await call("factory", "job_status", { jobId }, "operator");
-                await call("factory", "get_artifact", { jobId, path: "manifest.json" }, "operator");
-            }
+            const started = await call("factory", "request", { objective: { required_outputs: [{ name: "predicted_co2", quantity: "Concentration", unit: "ppm", horizonMinutes: 20 }], constraints: { residualPpmMax: 150, windowMinutes: 20 } }, observations: { volumes: 2, door: "open" }, requestedBy: "operator" }, "operator");
+            const taskId = started?.result?.taskId;
+            if (taskId) await call("factory", "task", { taskId }, "operator");
         },
     },
 ];

@@ -22,10 +22,23 @@ interface JournalRow {
     duty_percent: number;
     current_amps: number;
 }
+/** What the factory proposes: artifacts with their sha256, the task's manifest, what its sandbox showed. The station asks the twin's judgment next (step D, not built yet). */
+export interface Proposal {
+    proposalId: string;
+    taskId: string;
+    artifacts: Array<{ kind: string; path: string; sha256: string; contractSha256?: string }>;
+    manifestSha256: string;
+    claims: Record<string, unknown>;
+    status: "received" | "judging" | "accepted" | "rejected";
+    reportId?: string;
+    receivedAt: string;
+}
+
 export interface StationState {
     artifacts: Record<string, Registration>;
     pushed: Array<{ deviceId: string; sha256: string; at: string }>;
     journal: JournalRow[];
+    proposals: Proposal[];
 }
 
 const short = (sha: string) => `${sha.slice(0, 12)}...`;
@@ -40,8 +53,29 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
         },
         wsBase,
         log,
-        state: { artifacts: {}, pushed: [], journal: [] },
+        state: { artifacts: {}, pushed: [], journal: [], proposals: [] },
         tools: [
+            {
+                name: "propose",
+                inputSchema: obj(
+                    {
+                        taskId: { type: "string" },
+                        artifacts: { type: "array", items: { type: "object", properties: { kind: { type: "string", enum: ["graph", "model", "twin"] }, path: { type: "string" }, sha256: SHA, contractSha256: SHA }, required: ["kind", "path", "sha256"] } },
+                        manifestSha256: { ...SHA },
+                        claims: { type: "object" },
+                    },
+                    ["taskId", "artifacts", "manifestSha256"],
+                ),
+                handle: ({ taskId, artifacts, manifestSha256, claims }, s) => {
+                    const list = Array.isArray(artifacts) ? (artifacts as Proposal["artifacts"]) : [];
+                    if (!list.length) throw new Error("a proposal names at least one artifact");
+                    for (const a of list) if (!/^[0-9a-f]{64}$/.test(String(a.sha256 ?? ""))) throw new Error(`artifact "${a.path}": sha256 is required`);
+                    const proposalId = `p${(s.proposals.length + 1).toString().padStart(4, "0")}-${String(manifestSha256).slice(0, 8)}`;
+                    const proposal: Proposal = { proposalId, taskId: String(taskId), artifacts: list, manifestSha256: String(manifestSha256), claims: (claims as Record<string, unknown>) ?? {}, status: "received", receivedAt: new Date().toISOString() };
+                    s.proposals.push(proposal);
+                    return { proposalId, status: proposal.status, note: "received; the twin's judgment (twin.evaluate) is not built yet: the proposal waits" };
+                },
+            },
             {
                 name: "register_artifact",
                 title: "Register an artifact",
@@ -82,6 +116,6 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                 handle: ({ deviceId, since }, s) => ({ rows: s.journal.filter((r) => (!deviceId || r.device_id === deviceId) && (since === undefined || r.to >= Number(since))) }),
             },
         ],
-        resources: [{ uri: "station://artifacts", name: "Registered artifacts", description: "sha256 -> registration", read: (s) => s.artifacts }],
+        resources: [{ uri: "station://proposals", read: (s) => s.proposals }, { uri: "station://artifacts", name: "Registered artifacts", description: "sha256 -> registration", read: (s) => s.artifacts }],
     });
 }

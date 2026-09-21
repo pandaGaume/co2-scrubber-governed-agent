@@ -54,8 +54,10 @@ export interface McpSession {
     slot: string;
     sessionId: string | null;
     serverInfo: { name?: string; version?: string; description?: string } | undefined;
-    /** The server's usage note; the slots end it with `grammar: <key>`. */
+    /** The server's usage note, in the session's wording. */
     instructions: string | undefined;
+    /** The wording the server resolved for this session (`_meta.grammar` of the initialize result), null when none. */
+    grammar: string | null;
     request<T = unknown>(method: string, params?: unknown): Promise<T>;
     listTools(): Promise<McpTool[]>;
     callTool(name: string, args?: Record<string, unknown>): Promise<McpToolResult>;
@@ -107,7 +109,7 @@ export async function connectMcp(baseUrl: string, slot: string, identity: Client
     const sessionId = initResponse.headers.get("mcp-session-id");
     const init = await readFrame(initResponse);
     if (init?.error) throw new McpRpcError(`initialize on slot "${slot}" was refused: ${init.error.message} (code ${init.error.code})`, init.error);
-    const initResult = (init?.result ?? {}) as { serverInfo?: McpSession["serverInfo"]; instructions?: string };
+    const initResult = (init?.result ?? {}) as { serverInfo?: McpSession["serverInfo"]; instructions?: string; _meta?: { grammar?: unknown } };
     await post({ jsonrpc: "2.0", method: "notifications/initialized" }, sessionId).catch(() => undefined);
 
     let nextId = 2;
@@ -124,6 +126,7 @@ export async function connectMcp(baseUrl: string, slot: string, identity: Client
         sessionId,
         serverInfo: initResult.serverInfo,
         instructions: initResult.instructions,
+        grammar: typeof initResult._meta?.grammar === "string" ? initResult._meta.grammar : null,
         request,
         listTools: async () => (await request<{ tools?: McpTool[] }>("tools/list", {})).tools ?? [],
         callTool: (name, args = {}) => request<McpToolResult>("tools/call", { name, arguments: args }),
@@ -142,8 +145,8 @@ export function toolText(result: McpToolResult | undefined): string {
         .join("\n");
 }
 
-/** The grammar key a slot announced in its instructions (`grammar: <key>`), or null when it said `none` or nothing. */
-export function grammarOf(instructions: string | undefined): string | null {
-    const m = /(?:^|\n)grammar:\s*(\S+)\s*$/m.exec(instructions ?? "");
-    return m && m[1] !== "none" ? m[1] : null;
+/** The grammar key of a session: what the server put in `_meta.grammar` (mcp-core 1.0.2), null when no wording matched. */
+export function grammarOf(session: { grammar?: string | null } | string | undefined): string | null {
+    if (!session || typeof session === "string") return null;
+    return session.grammar ?? null;
 }

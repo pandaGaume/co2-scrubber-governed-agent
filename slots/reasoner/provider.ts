@@ -20,11 +20,11 @@
  */
 import type { CapabilityDescriptor, Experience, Intention, PolicyCandidate, PolicyFallbackInput, State } from "@spiky-panda/harness";
 import { errorMessage, readJson, sha256File } from "../../lib/files.js";
-import { composeText } from "../../tier3/providers/compose.js";
+import { composeText } from "../../harness/lib/compose.js";
 import { SYSTEM_PROMPT_FILE, fromRoot, relativeToRoot } from "../../lib/paths.js";
 import { objectSchema as obj, publishSlot, type PublishedSlot } from "../lib/slot-server.js";
-import type { Provider, ProviderProfile } from "../../tier3/providers/provider.js";
-import { familyOf } from "../../tier3/providers/llm-common.js";
+import type { Provider, ProviderProfile } from "../../harness/lib/provider.js";
+import { familyOf } from "../../harness/lib/llm-common.js";
 import { existsSync, readFileSync } from "node:fs";
 
 export interface ReasonerState {
@@ -63,10 +63,10 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
         let provider: Provider;
         try {
             if (wire === "anthropic-messages") {
-                const { AnthropicProvider } = await import("../../tier3/providers/anthropic.js");
+                const { AnthropicProvider } = await import("../../harness/providers/anthropic.js");
                 provider = new AnthropicProvider(profile, { systemPrompt });
             } else {
-                const { OpenAiCompatibleProvider } = await import("../../tier3/providers/openai-compatible.js");
+                const { OpenAiCompatibleProvider } = await import("../../harness/providers/openai-compatible.js");
                 provider = new OpenAiCompatibleProvider(profile, { systemPrompt });
             }
         } catch (e) {

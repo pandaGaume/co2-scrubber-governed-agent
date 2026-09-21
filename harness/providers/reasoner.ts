@@ -12,7 +12,7 @@
  */
 import type { JsonValue, PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
 import type { Broker } from "../lib/broker.js";
-import type { Provider, ProviderExchange } from "./provider.js";
+import type { Provider, ProviderExchange } from "../lib/provider.js";
 
 export interface ReasonerDescription {
     model: string;

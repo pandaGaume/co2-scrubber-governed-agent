@@ -1,19 +1,22 @@
 {
     "tools": {
-        "run_sweep": {
-            "description": "Start a sweep job from its specification; returns a job id and the plan. A job is the long form of a study (a grid, a fit, an evaluation), not a quick question: the operator approves it before it starts, and the twin answers what-ifs at once."
+        "request": {
+            "description": "Ask the factory to build what is missing. Describe the need as a functional contract: the outputs a plan must produce (name, quantity, unit, horizon), the constraints, what you observed, the data files available. The factory opens a task and returns its id; it builds with the workshop's tools and ends by proposing to the station. Do not describe a solution, describe the need.",
+            "properties": {
+                "objective": "what must be produced and under which constraints",
+                "observations": "what you observed: volumes, door, occupancy, scrubbers",
+                "data": "telemetry files the factory may use, with their columns",
+                "topics": "[\"graph\", \"onnx\"] or \"auto\"",
+                "budget": "iterations, minutes, twinPoints",
+                "requestedBy": "who asks",
+                "profile": "the profile the loop runs with"
+            }
         },
-        "run_fit": {
-            "description": "Start a fit job from its specification; returns a job id and the plan. A job is the long form of a study (a grid, a fit, an evaluation), not a quick question: the operator approves it before it starts, and the twin answers what-ifs at once."
-        },
-        "run_evaluate": {
-            "description": "Start a evaluate job from its specification; returns a job id and the plan. A job is the long form of a study (a grid, a fit, an evaluation), not a quick question: the operator approves it before it starts, and the twin answers what-ifs at once."
-        },
-        "job_status": {
-            "description": "State of a job: queued, running, completed, failed or refused, with its exit code and times. Free to read."
-        },
-        "get_artifact": {
-            "description": "A job's file: small files inline with their sha256, large ones by location and sha256, never the bytes. Free to read."
+        "task": {
+            "description": "Where a factory task stands: its state, its workspace, the sha256 of its task file, its file count, and its manifest once the loop wrote one.",
+            "properties": {
+                "taskId": "the task id returned by request"
+            }
         }
     }
 }

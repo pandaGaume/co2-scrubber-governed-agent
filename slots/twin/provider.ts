@@ -15,6 +15,8 @@
  * are factory jobs, not twin questions.
  */
 import { objectSchema as obj, publishSlot, type PublishedSlot } from "../lib/slot-server.js";
+import { RuntimeBehavior } from "@spiky-panda/mcp/runtime";
+import { WorkshopDocumentStore } from "../tools/lib/workshop.js";
 import { checkCrew, runCabin, stateName, steadyStatePpm, summarize, twin, type Twin } from "./cabin-twin.js";
 import { param, type CommandSegment, type CrewGroup } from "../../lib/factory.js";
 
@@ -52,8 +54,13 @@ export function twinSlot(wsBase: string, log: (line: string) => void): Published
     const activities = () => param<string[]>(loadOnce().parameters, "crew.activities");
     const num = (v: unknown, fallback: number): number => (typeof v === "number" && Number.isFinite(v) ? v : fallback);
 
+    // The runtime's own surface (catalogue, documents, sessions), on the twin's registry, the workshop as document
+    // store: a factory task builds documents by name here and runs them in this sandbox (`docs/factory-harness.fr.md`, 3.3 and 3.4).
+    const runtime = RuntimeBehavior.on(loadOnce().registry, { documents: new WorkshopDocumentStore(), maxTicks: budget.maxMinutesPerRun * budget.maxRunsPerCall * 60 });
+
     return publishSlot<TwinState>({
         slot: "twin",
+        behaviors: [runtime],
         description: "The digital twin of the cabin and the scrubber: what-if questions on the physics graph built from the reviewable parameter file",
         instructions: {
             en: "The cabin's digital twin. Ask it before acting on the scrubber: time_to_critical for one flow or a stop, sweep for the operating map over several flows. Story time is in minutes; answers carry the sha256 of the files they were computed from.",

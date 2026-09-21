@@ -25,6 +25,22 @@
                 "deviceId": "seulement les lignes de cet appareil",
                 "since": "seulement les lignes se terminant à ou après cet instant"
             }
+        },
+        "propose": {
+            "title": "Proposer un artefact (la dernière action de l'usine)",
+            "description": "L'usine propose ce qu'elle a construit : les artefacts (genre, chemin dans l'atelier de la tâche, sha256, sha256 du contrat pour un modèle), le sha256 du manifeste de la tâche, et ce que son bac à sable a montré. La station reçoit, donne un identifiant et demande le jugement du jumeau ; l'usine n'enregistre jamais et ne pousse jamais. Refusé sans artefact, sans sha256 ou sans manifeste.",
+            "properties": {
+                "taskId": "la tâche de l'usine",
+                "artifacts": "ce qui est proposé",
+                "manifestSha256": "sha256 du manifest.json de la tâche",
+                "claims": "ce que l'usine affirme : les sorties requises couvertes, le résidu et le temps du bac à sable"
+            }
+        }
+    },
+    "resources": {
+        "station://proposals": {
+            "name": "Propositions",
+            "description": "Ce que l'usine a proposé, avec l'état de chaque proposition"
         }
     }
 }

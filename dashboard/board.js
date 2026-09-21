@@ -73,7 +73,7 @@ async function listSlots() {
     }
     return (Array.isArray(providers) ? providers : providers.providers ?? []).map((p) => (typeof p === "string" ? p : p.name)).filter((n) => n && !n.startsWith("_"));
 }
-const grammarOf = (instructions) => /grammar:\s*(\S+)/.exec(instructions ?? "")?.[1] ?? null;
+const grammarOf = (session) => (typeof session?.grammar === "string" ? session.grammar : null);
 const sha256 = async (text) => Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)))).map((b) => b.toString(16).padStart(2, "0")).join("");
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -145,7 +145,7 @@ async function boot() {
                 const version = s.serverInfo?.version ?? "?";
                 report.slots[slot] = true;
                 report.versions[slot] = version;
-                await setters[slot]("ok", `slot ${slot}: ${version}${version.includes("stub") ? " (a stub: no body behind it)" : ""} · grammar ${grammarOf(s.instructions) ?? "none"} · ${Date.now() - t0} ms`);
+                await setters[slot]("ok", `slot ${slot}: ${version}${version.includes("stub") ? " (a stub: no body behind it)" : ""} · grammar ${grammarOf(s) ?? "none"} · ${Date.now() - t0} ms`);
                 pending.delete(slot);
                 await sleep(LINE_MS);
             } catch (e) {

@@ -1,0 +1,41 @@
+{
+    "server": {
+        "description": "A factory task's own files: list, read, write, inside the task's directory and nowhere above",
+        "instructions": "Every path is relative to the task's directory; nothing above it is reachable. Write what you build here, with its name; the runtime reads documents from here by name."
+    },
+    "tools": {
+        "list": {
+            "title": "List a task's files",
+            "description": "The files of a task's directory (or one of its folders): path, bytes, sha256, last modification. Empty for a task with no file yet.",
+            "properties": {
+                "taskId": "the task whose directory this is (from factory.request)",
+                "path": "a folder of the task; the whole task when absent"
+            }
+        },
+        "read": {
+            "title": "Read one file of a task",
+            "description": "The content of one file of the task, as text (or base64 for a binary), with its size and sha256. 256 KB at most per read; a bigger file is refused with its size.",
+            "properties": {
+                "taskId": "the task",
+                "path": "a path relative to the task's directory",
+                "maxBytes": "refuse above this many bytes (256 KB at most)"
+            }
+        },
+        "write": {
+            "title": "Write one file of a task",
+            "description": "Write a file in the task's directory (folders are created); text or base64. A file that existed is replaced and the sha256 of the previous content is recorded. Returns the new size and sha256.",
+            "properties": {
+                "taskId": "the task",
+                "path": "a path relative to the task's directory",
+                "text": "the content, as text",
+                "base64": "the content, base64, for a binary"
+            }
+        }
+    },
+    "resources": {
+        "workspace://writes": {
+            "name": "Writes",
+            "description": "Every write this slot made: task, path, bytes, sha256, and the sha256 of the previous content when a file was replaced"
+        }
+    }
+}

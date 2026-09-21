@@ -33,14 +33,14 @@ import type { DecisionTrace, Intention, JsonValue } from "@spiky-panda/harness";
 import { errorMessage, parseArgs, readJson, sha256File } from "../lib/files.js";
 import type { Scenario } from "../lib/factory.js";
 import { PARAMETERS_FILE, SYSTEM_PROMPT_FILE, fromRoot, isMain, relativeToRoot } from "../lib/paths.js";
-import { Broker, type SlotSession } from "./lib/broker.js";
+import { Broker, type SlotSession } from "../harness/lib/broker.js";
 import { createAgent, type Agent } from "./agent.js";
 import { outcomeOf, type TraceOutcome } from "./lib/evaluator.js";
 import type { CatalogueEntry } from "./lib/capabilities.js";
 import type { GuardMode } from "./lib/capabilities.js";
-import { ScriptedProvider } from "./providers/scripted.js";
-import { ReasonerProvider } from "./providers/reasoner.js";
-import type { Provider, ProviderExchange, ProviderProfile } from "./providers/provider.js";
+import { ScriptedProvider } from "../harness/providers/scripted.js";
+import { ReasonerProvider } from "../harness/providers/reasoner.js";
+import type { Provider, ProviderExchange, ProviderProfile } from "../harness/lib/provider.js";
 
 export interface RunOptions {
     providerName?: string;
@@ -109,11 +109,11 @@ async function makeProvider(name: string, profile: ProviderProfile | null, broke
     // `--provider model` takes the wire from the profile itself.
     if (name === "model") name = profile?.tier3?.wire === "anthropic-messages" ? "anthropic" : "openai";
     if (name === "openai") {
-        const { OpenAiCompatibleProvider } = await import("./providers/openai-compatible.js");
+        const { OpenAiCompatibleProvider } = await import("../harness/providers/openai-compatible.js");
         return new OpenAiCompatibleProvider(profile, { systemPrompt });
     }
     if (name === "anthropic") {
-        const { AnthropicProvider } = await import("./providers/anthropic.js");
+        const { AnthropicProvider } = await import("../harness/providers/anthropic.js");
         return new AnthropicProvider(profile, { systemPrompt });
     }
     throw new Error(`unknown provider "${name}"`);

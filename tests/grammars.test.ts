@@ -13,10 +13,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import * as path from "node:path";
 import { fromRoot } from "../lib/paths.js";
-import { startBroker, type LocalBroker } from "../slots/lib/local-broker.js";
-import { publishAll } from "../slots/run-all.js";
+import type { LocalBroker } from "../slots/lib/local-broker.js";
+import { startAllOrFail } from "./lib/start.js";
 import type { PublishedSlot } from "../slots/lib/slot-server.js";
-import { connectMcp, grammarOf, toolText, type McpSession } from "../tier3/lib/mcp-http.js";
+import { connectMcp, grammarOf, toolText, type McpSession } from "../harness/lib/mcp-http.js";
 
 const PORT = 3107;
 const quiet = () => undefined;
@@ -50,8 +50,7 @@ describe("slot grammars through the broker", () => {
     };
 
     before(async () => {
-        broker = await startBroker(PORT, "ignore");
-        slots = await publishAll(broker.wsBase, quiet);
+        ({ broker, slots } = await startAllOrFail(PORT));
     });
     after(async () => {
         for (const s of open) await s.close();
@@ -59,9 +58,13 @@ describe("slot grammars through the broker", () => {
         broker.stop();
     });
 
-    it("every habitat slot loaded the same five families in English and the French default", () => {
-        for (const s of slots.filter((s) => s.slot !== "reasoner")) {
+    it("every habitat slot loaded the same five families in English and the French default; the workshop tools carry the English and French defaults", () => {
+        const workshop = ["workspace", "model"];
+        for (const s of slots.filter((s) => s.slot !== "reasoner" && !workshop.includes(s.slot))) {
             for (const key of ["nemotron:en", "gpt:en", "claude:en", "gemini:en", "default:fr"]) assert.ok(s.grammarKeys.includes(key), `${s.slot} lacks ${key}`);
+        }
+        for (const s of slots.filter((s) => workshop.includes(s.slot))) {
+            for (const key of ["default:en", "default:fr"]) assert.ok(s.grammarKeys.includes(key), `${s.slot} lacks ${key}`);
         }
     });
 
@@ -75,7 +78,7 @@ describe("slot grammars through the broker", () => {
         it(`${name} (${locale ?? "no locale"}) gets ${agent}:${fileLocale} on every slot, with the file's wording`, async () => {
             for (const slot of ["scrubber", "twin", "station", "factory"]) {
                 const s = await session(slot, name, locale);
-                assert.equal(grammarOf(s.instructions), `${agent}:${fileLocale}`, `${slot}: ${s.instructions}`);
+                assert.equal(grammarOf(s), `${agent}:${fileLocale}`, `${slot}: ${s.instructions}`);
                 const tools = await s.listTools();
                 const file = grammarFile(slot, agent, fileLocale);
                 for (const [toolName, entry] of Object.entries(file.tools ?? {})) {
@@ -91,7 +94,7 @@ describe("slot grammars through the broker", () => {
 
     it("an agent file sits on the French default: claude in fr-CA gets claude:fr with the default's untouched entries", async () => {
         const s = await session("twin", "claude-opus", "fr-CA");
-        assert.equal(grammarOf(s.instructions), "claude:fr");
+        assert.equal(grammarOf(s), "claude:fr");
         const tools = await s.listTools();
         const claudeFr = grammarFile("twin", "claude", "fr");
         const defaultFr = grammarFile("twin", "default", "fr");
@@ -102,7 +105,7 @@ describe("slot grammars through the broker", () => {
 
     it("an unknown client in English gets the inline descriptions and no grammar", async () => {
         const s = await session("scrubber", "curl", undefined);
-        assert.equal(grammarOf(s.instructions), null);
+        assert.equal(grammarOf(s), null);
         const tools = await s.listTools();
         assert.equal(tools.find((t) => t.name === "motor.set_speed")?.description, "Set the speed command, in percent of full speed. Refused outside [0, 100], and below the minimum flow while CO2 is not NOMINAL.");
     });
@@ -111,7 +114,7 @@ describe("slot grammars through the broker", () => {
         // The operator's session opens first: mcp-core keeps one session grammar per server, resolved at the last initialize.
         const operator = await session("twin", "operator-console", "en");
         const agent = await session("twin", "nemotron-nano-3", "en");
-        assert.equal(grammarOf(agent.instructions), "nemotron:en");
+        assert.equal(grammarOf(agent), "nemotron:en");
         const before = (await agent.listTools()).find((t) => t.name === "sweep")?.description;
         const set = await operator.callTool("grammar_set", { uri: "habitat://twin-grammar", profileId: "nemotron:en", data: { sweep: { description: "Operating map, rewritten live for Nemotron." } } });
         assert.ok(!set.isError, `grammar_set refused: ${toolText(set)}`);

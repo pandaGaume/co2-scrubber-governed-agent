@@ -1,0 +1,24 @@
+{
+    "tools": {
+        "propose": {
+            "title": "Propose an artifact (the factory's last action)",
+            "description": "The factory proposes what it built: the artifacts (kind, path in the task's workspace, sha256, the contract's sha256 for a model), the sha256 of the task's manifest, and what its sandbox showed. The station receives it, gives it an id and asks the twin's judgment; the factory never registers and never pushes. Refused without an artifact, a sha256 or a manifest.",
+            "properties": {
+                "taskId": "the factory task",
+                "artifacts": "what is proposed",
+                "manifestSha256": "sha256 of the task's manifest.json",
+                "claims": "what the factory claims: the required outputs it covers, the sandbox residual and wall time",
+                "artifacts.kind": "graph, model or twin",
+                "artifacts.path": "in the task's workspace",
+                "artifacts.sha256": "sha256 of the artifact",
+                "artifacts.contractSha256": "sha256 of its contract, for a model"
+            }
+        }
+    },
+    "resources": {
+        "station://proposals": {
+            "name": "Proposals",
+            "description": "What the factory proposed, with each proposal's status"
+        }
+    }
+}

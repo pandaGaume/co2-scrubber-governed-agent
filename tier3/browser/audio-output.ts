@@ -9,7 +9,7 @@
  * Browsers only play sound after a gesture on the page: `enable()` is called
  * from the sound button, and the first click is what unlocks the element.
  */
-import type { Broker } from "../lib/broker.js";
+import type { Broker } from "../../harness/lib/broker.js";
 
 interface QueueItem {
     utteranceId: string;

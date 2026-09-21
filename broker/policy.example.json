@@ -6,7 +6,9 @@
         "station": "/habitat/cabin-1/station",
         "factory": "/habitat/factory",
         "reasoner": "/habitat/cabin-1/reasoner",
-        "speech": "/habitat/cabin-1/speech"
+        "speech": "/habitat/cabin-1/speech",
+        "workspace": "/workshop/workspace",
+        "model": "/workshop/model"
     },
     "roles": {
         "operator": {
@@ -19,10 +21,14 @@
                 "mcp.tools.factory",
                 "mcp.tools.grammar",
                 "mcp.tools.reason",
-                "mcp.tools.speak"
+                "mcp.tools.speak",
+                "mcp.tools.workshop",
+                "mcp.tools.build",
+                "mcp.tools.propose"
             ],
             "paths": [
-                "/habitat/**"
+                "/habitat/**",
+                "/workshop/**"
             ]
         },
         "regulator": {
@@ -50,11 +56,43 @@
                 "mcp.tools.protect",
                 "mcp.tools.register",
                 "mcp.tools.admin",
-                "mcp.tools.grammar"
+                "mcp.tools.grammar",
+                "mcp.tools.workshop",
+                "mcp.tools.build",
+                "mcp.tools.propose"
             ],
             "budget": {
                 "twinPoints": 20,
                 "twinSecondsPerPoint": 5
+            }
+        },
+        "factory": {
+            "_comment": "The constructor: the workshop, the runtime's build tools, one proposal; nothing of the board, nothing registered, no voice, no reasoner of its own (docs/factory-harness.fr.md, section 2).",
+            "capabilities": [
+                "mcp.tools.read",
+                "mcp.tools.workshop",
+                "mcp.tools.build",
+                "mcp.tools.propose"
+            ],
+            "paths": [
+                "/workshop/**",
+                "/habitat/cabin-1/twin",
+                "/habitat/cabin-1/station"
+            ],
+            "deny": [
+                "mcp.tools.actuate",
+                "mcp.tools.power",
+                "mcp.tools.protect",
+                "mcp.tools.register",
+                "mcp.tools.admin",
+                "mcp.tools.grammar",
+                "mcp.tools.speak",
+                "mcp.tools.reason"
+            ],
+            "budget": {
+                "twinPoints": 40,
+                "iterations": 20,
+                "minutes": 30
             }
         }
     },
@@ -66,9 +104,6 @@
         "_broker.*": "mcp.tools.admin",
         "station.register_artifact": "mcp.tools.register",
         "station.diagnostic_load_model": "mcp.tools.register",
-        "factory.run_sweep": "mcp.tools.factory",
-        "factory.run_fit": "mcp.tools.factory",
-        "factory.run_evaluate": "mcp.tools.factory",
         "scrubber.grammar_*": "mcp.tools.grammar",
         "twin.grammar_*": "mcp.tools.grammar",
         "station.grammar_*": "mcp.tools.grammar",
@@ -83,6 +118,24 @@
         "speech.played": "mcp.tools.read",
         "speech.listVoices": "mcp.tools.read",
         "speech.describe": "mcp.tools.read",
-        "speech.grammar_*": "mcp.tools.grammar"
+        "speech.grammar_*": "mcp.tools.grammar",
+        "factory.request": "mcp.tools.factory",
+        "factory.task": "mcp.tools.read",
+        "workspace.list": "mcp.tools.workshop",
+        "workspace.read": "mcp.tools.workshop",
+        "workspace.write": "mcp.tools.workshop",
+        "twin.registry_list_nodes": "mcp.tools.workshop",
+        "twin.registry_search": "mcp.tools.workshop",
+        "twin.registry_describe_node": "mcp.tools.workshop",
+        "twin.document_validate": "mcp.tools.workshop",
+        "twin.document_build": "mcp.tools.build",
+        "twin.document_instantiate": "mcp.tools.build",
+        "twin.session_run": "mcp.tools.build",
+        "model.fit": "mcp.tools.build",
+        "model.inspect": "mcp.tools.build",
+        "model.contract": "mcp.tools.build",
+        "station.propose": "mcp.tools.propose",
+        "workspace.grammar_*": "mcp.tools.grammar",
+        "model.grammar_*": "mcp.tools.grammar"
     }
 }

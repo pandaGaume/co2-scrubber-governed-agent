@@ -15,7 +15,7 @@
  * hands back, not an action on the machine.
  */
 import type { DecisionTrace, OutcomeEvaluation, OutcomeEvaluationInput, OutcomeEvaluator } from "@spiky-panda/harness";
-import type { Outcome } from "./broker.js";
+import type { Outcome } from "../../harness/lib/broker.js";
 
 const STATE_RANK: Record<string, number> = { NOMINAL: 0, ELEVATED: 1, CRITICAL: 2 };
 

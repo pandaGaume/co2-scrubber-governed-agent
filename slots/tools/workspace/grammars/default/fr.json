@@ -1,0 +1,41 @@
+{
+    "server": {
+        "description": "Les fichiers d'une tâche de l'usine : lister, lire, écrire, dans le répertoire de la tâche et nulle part au-dessus",
+        "instructions": "Tout chemin est relatif au répertoire de la tâche ; rien au-dessus n'est accessible. Écrivez ici ce que vous construisez, avec son nom ; le runtime lit les documents ici, par leur nom."
+    },
+    "tools": {
+        "list": {
+            "title": "Lister les fichiers d'une tâche",
+            "description": "Les fichiers du répertoire d'une tâche (ou d'un de ses dossiers) : chemin, taille, sha256, dernière modification. Vide pour une tâche sans fichier.",
+            "properties": {
+                "taskId": "la tâche dont c'est le répertoire (donnée par factory.request)",
+                "path": "un dossier de la tâche ; toute la tâche si absent"
+            }
+        },
+        "read": {
+            "title": "Lire un fichier d'une tâche",
+            "description": "Le contenu d'un fichier de la tâche, en texte (ou base64 pour un binaire), avec sa taille et son sha256. 256 Ko au plus par lecture ; un fichier plus gros est refusé avec sa taille.",
+            "properties": {
+                "taskId": "la tâche",
+                "path": "un chemin relatif au répertoire de la tâche",
+                "maxBytes": "refuser au-delà de ce nombre d'octets (256 Ko au plus)"
+            }
+        },
+        "write": {
+            "title": "Écrire un fichier d'une tâche",
+            "description": "Écrit un fichier dans le répertoire de la tâche (les dossiers sont créés) ; texte ou base64. Un fichier existant est remplacé et le sha256 de ce qu'il remplace est noté. Rend la taille et le sha256.",
+            "properties": {
+                "taskId": "la tâche",
+                "path": "un chemin relatif au répertoire de la tâche",
+                "text": "le contenu, en texte",
+                "base64": "le contenu, en base64, pour un binaire"
+            }
+        }
+    },
+    "resources": {
+        "workspace://writes": {
+            "name": "Écritures",
+            "description": "Chaque écriture faite par ce slot : tâche, chemin, taille, sha256, et le sha256 de l'ancien contenu quand un fichier a été remplacé"
+        }
+    }
+}

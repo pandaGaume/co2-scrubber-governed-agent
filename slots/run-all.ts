@@ -20,6 +20,8 @@ import { stationSlot } from "./station/provider.js";
 import { factorySlot } from "./factory/provider.js";
 import { reasonerSlot } from "./reasoner/provider.js";
 import { speechSlot } from "./speech/provider.js";
+import { workspaceSlot } from "./tools/workspace/provider.js";
+import { modelSlot } from "./tools/model/provider.js";
 import type { PublishedSlot } from "./lib/slot-server.js";
 
 /** The port `.mcp-broker/config.json` declares; the same default here, so the dashboard's allowed origins match. */
@@ -27,11 +29,67 @@ export const DEFAULT_PORT = 3001;
 
 const log = (line: string) => console.log(`${new Date().toLocaleTimeString()}  ${line}`);
 
-/** Publishes the slots on a broker; returns them, opened. */
-export async function publishAll(wsBase: string, logger: (line: string) => void = log): Promise<PublishedSlot<object>[]> {
-    const slots: PublishedSlot<object>[] = [scrubberSlot(wsBase, logger), twinSlot(wsBase, logger), stationSlot(wsBase, logger), factorySlot(wsBase, logger), reasonerSlot(wsBase, logger), speechSlot(wsBase, logger)];
-    for (const s of slots) await s.open();
-    return slots;
+const SLOTS: Array<[string, (wsBase: string, logger: (line: string) => void) => PublishedSlot<object>]> = [
+    ["scrubber", scrubberSlot],
+    ["twin", twinSlot],
+    ["station", stationSlot],
+    ["factory", factorySlot],
+    ["reasoner", reasonerSlot],
+    ["speech", speechSlot],
+    ["workspace", workspaceSlot],
+    ["model", modelSlot],
+];
+
+/** A slot that could not be published: its name and the reason, said once at start and kept for whoever asks. */
+export interface SlotFailure {
+    slot: string;
+    reason: string;
+}
+
+export interface Published {
+    slots: PublishedSlot<object>[];
+    failures: SlotFailure[];
+}
+
+/**
+ * Publishes every slot it can on a broker. A slot that cannot be built or
+ * opened is a degraded mode, not a failure: it is reported with its name and
+ * reason (the log line starts with `DEGRADED`), it stays absent from the
+ * broker (red on the board), and the other slots run. The caller decides
+ * what an absence means to it: the server keeps going, a test that needs the
+ * slot fails on `failures`.
+ */
+export async function publishAll(wsBase: string, logger: (line: string) => void = log): Promise<Published> {
+    const slots: PublishedSlot<object>[] = [];
+    const failures: SlotFailure[] = [];
+    for (const [name, make] of SLOTS) {
+        try {
+            const slot = make(wsBase, logger);
+            await slot.open();
+            slots.push(slot);
+        } catch (e) {
+            const raw = e instanceof Error ? e.message : String(e);
+            const reason = raw.replace(new RegExp(`^slot "${name}" cannot be published: `), "");
+            failures.push({ slot: name, reason });
+            logger(`DEGRADED: slot "${name}" is not published: ${reason}`);
+        }
+    }
+    return { slots, failures };
+}
+
+/** A broker and every slot it could publish; the failures listed, the broker running regardless. */
+export async function startAll(port: number, logger: (line: string) => void = log, stdio: "inherit" | "ignore" = "inherit"): Promise<{ broker: LocalBroker; slots: PublishedSlot<object>[]; failures: SlotFailure[]; stop(): Promise<void> }> {
+    const broker = await startBroker(port, stdio);
+    const { slots, failures } = await publishAll(broker.wsBase, logger);
+    return {
+        broker,
+        slots,
+        failures,
+        async stop() {
+            for (const s of slots) await s.close().catch(() => undefined);
+            broker.stop();
+        },
+    };
 }
 
 async function main(): Promise<void> {
@@ -54,7 +112,8 @@ async function main(): Promise<void> {
         });
     }
 
-    const slots = await publishAll(wsBase);
+    const { slots, failures } = await publishAll(wsBase);
+    if (failures.length) log(`DEGRADED: ${failures.length} slot(s) not published (${failures.map((f) => f.slot).join(", ")}); the others run, the board shows the missing ones red`);
     log(`dashboard: ${httpBase}/   slots: ${slots.map((s) => s.slot).join(", ")}   introspection: ${httpBase}/_broker/mcp`);
     if (!flag("--no-open") && !flag("--no-broker")) openBrowser(`${httpBase}/`);
 

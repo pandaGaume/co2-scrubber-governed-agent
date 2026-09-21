@@ -12,7 +12,7 @@
  * waits for the audio output before the next decision, so the voice is what
  * paces the demo when the sound is on.
  */
-import type { Broker } from "../lib/broker.js";
+import type { Broker } from "../../harness/lib/broker.js";
 import type { CapabilityCall } from "../lib/capabilities.js";
 
 export interface SpokenEvent {

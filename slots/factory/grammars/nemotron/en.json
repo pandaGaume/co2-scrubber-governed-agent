@@ -1,34 +1,21 @@
 {
     "tools": {
-        "run_sweep": {
-            "description": "Start a sweep job from a spec. Long study; operator approval required. Returns jobId.",
+        "request": {
+            "description": "Ask the factory for a missing capability. Give the functional contract: required outputs (name, quantity, unit), constraints, observations, data files. Returns taskId. Never give a solution.",
             "properties": {
-                "spec": "object, job spec with job = \"sweep\""
+                "objective": "object: required_outputs [{name, quantity, unit?, horizonMinutes?}], constraints {}",
+                "observations": "object: what was observed",
+                "data": "array of {file, columns?, sha256?}",
+                "topics": "[\"graph\", \"onnx\"] or \"auto\"",
+                "budget": "object: iterations, minutes, twinPoints",
+                "requestedBy": "string: tier3 | operator",
+                "profile": "string: profile file"
             }
         },
-        "run_fit": {
-            "description": "Start a fit job from a spec. Long study; operator approval required. Returns jobId.",
+        "task": {
+            "description": "State of a task by taskId: created | running | proposed | accepted | rejected | failed, workspace, taskSha256, files, manifest.",
             "properties": {
-                "spec": "object, job spec with job = \"fit\""
-            }
-        },
-        "run_evaluate": {
-            "description": "Start a evaluate job from a spec. Long study; operator approval required. Returns jobId.",
-            "properties": {
-                "spec": "object, job spec with job = \"evaluate\""
-            }
-        },
-        "job_status": {
-            "description": "Job state: queued | running | completed | failed | refused.",
-            "properties": {
-                "jobId": "string, from run_*"
-            }
-        },
-        "get_artifact": {
-            "description": "A job's output file: inline with sha256 if small, else location and sha256.",
-            "properties": {
-                "jobId": "string, from run_*",
-                "path": "string, file path in the job outputs"
+                "taskId": "string, from request"
             }
         }
     }

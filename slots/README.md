@@ -1,8 +1,9 @@
 # slots
 
 The providers of the architecture (scrubber, twin, station, factory, the
-`reasoner` that holds the model, and `speech`, text to speech as a capability:
-see `speech/README.md`), published on the broker's multiplex
+`reasoner` that holds the model, `speech`, text to speech as a capability, see
+`speech/README.md`, and under `tools/` the workshop's slots the factory builds
+with, `workspace` and `model`, see `docs/factory-harness.fr.md`), published on the broker's multiplex
 tunnel (`ws://<broker>/providers`, one shared WebSocket, envelopes keyed by
 slot name) by `run-all.ts`, which also starts the broker. Everything here is
 TypeScript, compiled to `dist/` by `npm run build`.
@@ -74,3 +75,19 @@ need mcp-core 1.0.1.
 `tests/grammars.test.ts` starts a broker and the four slots on a port of
 their own and checks every family and locale against the files, then the
 live rewrite.
+
+## Where a slot's words live (since 2026-09-21)
+
+A slot's code declares its structure: the tool names and their input
+schemas, the resource URIs and how to read them, the state. Its words (the
+slot's one-line description, the usage note a session receives, each tool's
+title, description and property wording, each resource's name and
+description) live in `grammars/default/en.json` (the `server`, `tools` and
+`resources` sections of an mcp-core grammar), and their translations in
+`grammars/default/<locale>.json`; the model families overlay theirs. The
+mechanism is mcp-core's (1.0.2: `loadGrammarDirectory`, `withWordingRule`,
+the `server` section, `_meta.grammar`); the server refuses a text written
+both inline and in the file, and a tool or a resource with no text anywhere,
+and a slot that fails to start says which one and why. The older slots (scrubber, twin, station,
+reasoner, speech) still carry their English inline; the workshop's slots and
+the factory's front carry none.

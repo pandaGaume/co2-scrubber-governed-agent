@@ -13,12 +13,12 @@
  * cannot reach, and they show up here only as refused results.
  */
 import { AdaptivePolicyRuntime, AllowAllSafetyGuard, PolicyGraph, type CapabilityRegistryOptions, type DecisionContext, type DecisionTrace, type HarnessDriver, type Intention, type PolicyDecision, type SafetyDecision, type SafetyGuard, type StageEvent } from "@spiky-panda/harness";
-import type { Broker } from "./lib/broker.js";
+import type { Broker } from "../harness/lib/broker.js";
 import { buildCapabilities, type CapabilityCall, type CatalogueEntry, type CrewConsoleEntry, type GuardMode } from "./lib/capabilities.js";
 import { createObserver } from "./lib/observer.js";
 import { createEvaluator } from "./lib/evaluator.js";
 import { createTier3Driver } from "./lib/flow.js";
-import type { Provider } from "./providers/provider.js";
+import type { Provider } from "../harness/lib/provider.js";
 
 /** Level 2, enforced locally: the envelope the agent is told about, for the protected profile. */
 export function protectedGuard(): SafetyGuard {

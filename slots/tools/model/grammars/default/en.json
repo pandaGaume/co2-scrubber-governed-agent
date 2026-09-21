@@ -1,0 +1,40 @@
+{
+    "server": {
+        "description": "The workshop's learned side: fit a model on a task's telemetry (the fit job), look at an ONNX file, check it against its contract with the board's rules",
+        "instructions": "Fit writes the model and its contract under models/<name>/ of the task; check the contract before proposing. Nothing here judges: the twin does, on the station's request."
+    },
+    "tools": {
+        "fit": {
+            "title": "Fit a model on a task's telemetry",
+            "description": "Run the fit job on a telemetry file of the task: a fit spec (version 1, job fit, model affine-residual, dataset.file relative to the task, fullScale, domain, monitor, outputs.file) as specs/*.json hold them. Writes the ONNX file, its contract (the board's vocabulary) and the fit report under models/<name>/ in the task; returns the coefficients, the quality (rows, kept, rmse, worst error), the parity check and the sha256 of the model. A dataset that is missing or empty is refused with the reason.",
+            "properties": {
+                "taskId": "the task whose directory holds the files",
+                "spec": "the fit spec; dataset.file is relative to the task's directory"
+            }
+        },
+        "inspect": {
+            "title": "Look at an ONNX file",
+            "description": "Load an ONNX file of the task the way the board does, with no expectation: its sha256, size, and the names of its inputs and outputs; the loader's error when it cannot be loaded.",
+            "properties": {
+                "taskId": "the task",
+                "path": "the ONNX file, relative to the task"
+            }
+        },
+        "contract": {
+            "title": "Check an ONNX file against its contract",
+            "description": "Check an ONNX file of the task against a contract with exactly the board's rules (loadModelValidated): sha256 when given, the first input's shape, the output count, the first output's shape (a dimension <= 0 matches anything). Returns ok or the reason, as the board would.",
+            "properties": {
+                "taskId": "the task",
+                "path": "the ONNX file, relative to the task",
+                "contract": "{ sha256?, expectInputShape?, expectOutputCount?, expectOutputShape? }",
+                "contractPath": "a contract.json of the task, instead of contract"
+            }
+        }
+    },
+    "resources": {
+        "model://fits": {
+            "name": "Fits",
+            "description": "Every fit this slot ran: task, name, sha256, rmse, worst error, wall time"
+        }
+    }
+}

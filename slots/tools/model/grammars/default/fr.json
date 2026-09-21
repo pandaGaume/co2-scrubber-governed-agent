@@ -1,0 +1,40 @@
+{
+    "server": {
+        "description": "Le côté appris de l'atelier : ajuster un modèle sur la télémétrie d'une tâche (le job fit), regarder un fichier ONNX, le vérifier contre son contrat avec les règles de la carte",
+        "instructions": "Fit écrit le modèle et son contrat sous models/<nom>/ de la tâche ; vérifiez le contrat avant de proposer. Rien ici ne juge : le jumeau le fait, à la demande de la station."
+    },
+    "tools": {
+        "fit": {
+            "title": "Ajuster un modèle sur la télémétrie d'une tâche",
+            "description": "Lance le job fit sur un fichier de télémétrie de la tâche : une spécification de fit (version 1, job fit, modèle affine-residual, dataset.file relatif à la tâche, fullScale, domain, monitor, outputs.file) comme dans specs/*.json. Écrit le fichier ONNX, son contrat (le vocabulaire de la carte) et le rapport sous models/<nom>/ de la tâche ; rend les coefficients, la qualité (lignes, gardées, rmse, pire erreur), la vérification de parité et le sha256 du modèle. Un jeu de données absent ou vide est refusé avec la raison.",
+            "properties": {
+                "taskId": "la tâche dont le répertoire tient les fichiers",
+                "spec": "la spécification de fit ; dataset.file est relatif au répertoire de la tâche"
+            }
+        },
+        "inspect": {
+            "title": "Regarder un fichier ONNX",
+            "description": "Charge un fichier ONNX de la tâche comme la carte le fait, sans attente : son sha256, sa taille, les noms de ses entrées et sorties ; l'erreur du chargeur s'il ne peut pas être chargé.",
+            "properties": {
+                "taskId": "la tâche",
+                "path": "le fichier ONNX, relatif à la tâche"
+            }
+        },
+        "contract": {
+            "title": "Vérifier un fichier ONNX contre son contrat",
+            "description": "Vérifie un fichier ONNX de la tâche contre un contrat avec exactement les règles de la carte (loadModelValidated) : sha256 s'il est donné, la forme de la première entrée, le nombre de sorties, la forme de la première sortie (une dimension <= 0 accepte tout). Rend ok ou la raison, comme la carte le dirait.",
+            "properties": {
+                "taskId": "la tâche",
+                "path": "le fichier ONNX, relatif à la tâche",
+                "contract": "{ sha256?, expectInputShape?, expectOutputCount?, expectOutputShape? }",
+                "contractPath": "un contract.json de la tâche, à la place de contract"
+            }
+        }
+    },
+    "resources": {
+        "model://fits": {
+            "name": "Ajustements",
+            "description": "Chaque ajustement fait par ce slot : tâche, nom, sha256, rmse, pire erreur, temps"
+        }
+    }
+}

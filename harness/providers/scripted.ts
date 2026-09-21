@@ -17,7 +17,7 @@
  * twin's answer) when a line needs a number.
  */
 import type { JsonValue, PolicyDecision, PolicyFallbackInput, State } from "@spiky-panda/harness";
-import type { Provider, ProviderExchange } from "./provider.js";
+import type { Provider, ProviderExchange } from "../lib/provider.js";
 
 type Line = (state: State) => PolicyDecision;
 type Script = Record<string, Line[]>;

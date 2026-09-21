@@ -115,9 +115,16 @@ proposes a push that the operator approves); **T2**, periodically, for slow
 drift (a new fit on recent real data, an evaluate against the model in
 place, a push if better).
 
-Over MCP, the jobs are the tools of the `factory` slot: `run_sweep`,
-`run_fit`, `run_evaluate` take the job spec itself and return a job id and
-a plan; `job_status`; `get_artifact` returns small files inline and large
+Over MCP (since 2026-09-21, `docs/factory-harness.fr.md`), the factory is a
+front (`factory.request` takes a functional contract and opens a task,
+`factory.task` says where it stands) and a workshop of slots the factory's
+loop uses: `workspace` (the task's files), `model` (the fit job, ONNX
+inspection, the contract check), the runtime's surface on `twin`
+(the catalogue, `document_validate`, `document_build`, `session_run`), and
+`station.propose`. The command-line jobs remain for T0. The previous text
+follows, for the jobs themselves:
+`run_sweep`, `run_fit`, `run_evaluate` took the job spec itself and returned a job id and
+a plan; `job_status`; `get_artifact` returned small files inline and large
 ones by location plus sha256, never the bytes over JSON-RPC; a plain MCP
 notification ends the job.
 

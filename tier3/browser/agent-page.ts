@@ -27,14 +27,14 @@
  */
 import { RuntimeGraphBuilder, type Channel } from "@spiky-panda/core";
 import { HarnessNode, createRuntimeGraphDriver, validateHarnessGraph, type DecisionTrace, type HarnessGraph, type Intention, type StageEvent } from "@spiky-panda/harness";
-import { Broker } from "../lib/broker.js";
+import { Broker } from "../../harness/lib/broker.js";
 import { AudioOutput } from "./audio-output.js";
 import { StationVoice, eventSentence, outcomeSentence, proposalSentence, shortSentence, speechHeard } from "./station-voice.js";
 import type { GuardMode } from "../lib/capabilities.js";
 import { outcomeOf } from "../lib/evaluator.js";
-import { ReasonerProvider } from "../providers/reasoner.js";
-import { ScriptedProvider } from "../providers/scripted.js";
-import type { Provider } from "../providers/provider.js";
+import { ReasonerProvider } from "../../harness/providers/reasoner.js";
+import { ScriptedProvider } from "../../harness/providers/scripted.js";
+import type { Provider } from "../../harness/lib/provider.js";
 import { createAgent, type Agent } from "../agent.js";
 import type { Scenario, ScenarioEvent } from "../../lib/factory.js";
 
@@ -438,7 +438,7 @@ export default async function activate(studio: Studio): Promise<void> {
         });
         const sessions = await broker.describeSessions();
         const grammar = sessions.filter((s) => !s.slot.startsWith("_") && s.slot !== "reasoner").map((s) => `${s.slot}=${s.grammar ?? "none"}`).join(" ");
-        // The badge says what the profile did to the tool list: protected withholds power and set_min_flow (`never`), 18 tools offered instead of 20 (with the speech slot).
+        // The badge says what the profile did to the tool list: protected withholds power and set_min_flow (`never`), 15 tools offered instead of 17 (the speech slot added say and stop; the factory front replaced the five stub jobs by request and task).
         const offered = agent.catalogue.filter((c) => c.replayPolicy !== "never").length;
         const withheld = agent.catalogue.filter((c) => c.replayPolicy === "never").map((c) => c.id);
         setStatus(`${provider.name} (${provider.model}) | guard ${guardMode}: ${offered} tools offered${withheld.length ? `, withheld: ${withheld.join(", ")}` : ""} | grammars ${grammar}`, `${llmEnabled ? shortModel(provider.model) : `no LLM, ${scriptVariant}`} | ${guardMode}: ${offered} tools`, !llmEnabled);

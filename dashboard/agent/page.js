@@ -44,7 +44,7 @@ var require_harness = __commonJS({
 var import_core2 = __toESM(require_core(), 1);
 var import_harness4 = __toESM(require_harness(), 1);
 
-// tier3/lib/mcp-http.ts
+// harness/lib/mcp-http.ts
 var PROTOCOL_VERSION = "2025-06-18";
 var McpRpcError = class extends Error {
   constructor(message, rpc) {
@@ -108,6 +108,7 @@ async function connectMcp(baseUrl, slot, identity, extraHeaders = {}) {
     sessionId,
     serverInfo: initResult.serverInfo,
     instructions: initResult.instructions,
+    grammar: typeof initResult._meta?.grammar === "string" ? initResult._meta.grammar : null,
     request,
     listTools: async () => (await request("tools/list", {})).tools ?? [],
     callTool: (name, args = {}) => request("tools/call", { name, arguments: args }),
@@ -120,12 +121,12 @@ async function connectMcp(baseUrl, slot, identity, extraHeaders = {}) {
 function toolText(result) {
   return (result?.content ?? []).filter((part) => part.type === "text").map((part) => part.text).join("\n");
 }
-function grammarOf(instructions) {
-  const m = /(?:^|\n)grammar:\s*(\S+)\s*$/m.exec(instructions ?? "");
-  return m && m[1] !== "none" ? m[1] : null;
+function grammarOf(session) {
+  if (!session || typeof session === "string") return null;
+  return session.grammar ?? null;
 }
 
-// tier3/lib/broker.ts
+// harness/lib/broker.ts
 var Broker = class {
   /**
    * @param base      http://host:port of the broker
@@ -151,7 +152,7 @@ var Broker = class {
     const out = [];
     for (const [slot, p] of this.sessions) {
       const s = await p;
-      out.push({ slot, serverInfo: s.serverInfo, instructions: s.instructions, grammar: grammarOf(s.instructions) });
+      out.push({ slot, serverInfo: s.serverInfo, instructions: s.instructions, grammar: grammarOf(s) });
     }
     return out;
   }
@@ -458,7 +459,7 @@ function outcomeOf(trace) {
   return outcomeInOutput(trace.result.output) ?? (trace.result.ok ? "completed" : "error");
 }
 
-// tier3/providers/reasoner.ts
+// harness/providers/reasoner.ts
 var ReasonerProvider = class _ReasonerProvider {
   constructor(broker, model, family, description) {
     this.broker = broker;
@@ -515,7 +516,7 @@ var ReasonerProvider = class _ReasonerProvider {
   }
 };
 
-// tier3/providers/scripted.ts
+// harness/providers/scripted.ts
 var ppmOf = (s) => {
   const v = s.features.co2Ppm;
   return typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : 1500;
@@ -618,7 +619,7 @@ var import_harness3 = __toESM(require_harness(), 1);
 var import_harness = __toESM(require_harness(), 1);
 var APPROVAL_REQUIRED = [/^station\.register_artifact$/, /^station\.diagnostic_load_model$/, /^factory\.run_/];
 var PROTECTED_NEVER = [/^scrubber\.scrubber\.power$/, /^scrubber\.scrubber\.set_min_flow$/];
-var EXCLUDED = [/^scrubber\.debug\./, /^[a-z]+\.grammar_/, /^reasoner\./, /^spikypanda\./, /^speech\.(synthesize|listVoices|take|played|describe)$/];
+var EXCLUDED = [/^scrubber\.debug\./, /^[a-z]+\.grammar_/, /^reasoner\./, /^spikypanda\./, /^speech\.(synthesize|listVoices|take|played|describe)$/, /^workspace\./, /^model\./, /^twin\.(registry_|document_|session_run)/, /^station\.propose$/];
 function replayPolicyFor(id, guardMode) {
   if (APPROVAL_REQUIRED.some((r) => r.test(id))) return "approval-required";
   if (guardMode === "protected" && PROTECTED_NEVER.some((r) => r.test(id))) return "never";

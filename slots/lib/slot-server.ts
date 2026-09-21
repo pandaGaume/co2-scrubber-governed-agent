@@ -3,15 +3,17 @@
  * `McpBehaviorBase`, served by `McpServerBuilder` over the broker's shared
  * tunnel (`MultiplexTransport` on `ws://<broker>/providers`, see
  * mcp-broker's docs/endpoints.md: never `/provider/<name>` with this
- * transport). The broker relays every client's `initialize` to this server
- * as is, so the server resolves a grammar per session: the same tools,
- * described for the client's family (`clientInfo.name`) and locale
- * (`capabilities.locale`), from the files in `slots/<slot>/grammars/`.
+ * transport).
  *
- * What a session gets on `initialize`, in `instructions`: the slot's usage
- * note in the resolved language, then `grammar: <key>` (the key the server
- * resolved, computed here with the same resolver over the keys this slot
- * holds), so a client can record which wording it was given.
+ * The words are mcp-core's business (1.0.2): the grammar files of
+ * `slots/<slot>/grammars/<agent>/<locale>.json` are loaded and checked by
+ * `loadGrammarDirectory`, composed over `default/<locale>`, and resolved per
+ * session by the demo's policy (`grammars.ts`: families, locale); the
+ * server's own words (`server.description`, `server.instructions`) come from
+ * the same files; `withWordingRule` refuses at start a tool or a resource
+ * described in two places or in none. A slot's code declares structure. The
+ * older slots still carry their English inline, which the rule accepts as
+ * the one place.
  *
  * `McpGrammarBehavior` is registered too: the operator can rewrite a wording
  * for one family during a session (`grammar_set` on the key in use) and the
@@ -30,17 +32,22 @@ import * as path from "node:path";
 import { McpBehaviorBase, McpGrammarBehavior, McpGrammarStore, McpToolResults, grammarResolverFromOptions } from "@cyanmycelium/mcp-core";
 import type { IMcpInitializer, IMcpServer, McpClientCapabilities, McpClientInfo, McpResource, McpResourceContent, McpResourceTemplate, McpServerIdentity, McpTool, McpToolResult } from "@cyanmycelium/mcp-core";
 import { McpServerBuilder } from "@cyanmycelium/mcp-core/server";
+import { loadGrammarDirectory, type GrammarDirectoryFile } from "@cyanmycelium/mcp-core/node";
 import { MultiplexTransport } from "@cyanmycelium/mcp-broker-provider";
 import { fromRoot } from "../../lib/paths.js";
 import { errorMessage } from "../../lib/files.js";
-import { DEFAULT_LOCALE, loadGrammars, localeOfKey, resolverOptions, type GrammarFile } from "./grammars.js";
+import { BASELINE_KEY, DEFAULT_LOCALE, localeOfKey, resolverOptions } from "./grammars.js";
 
 export type JsonObject = Record<string, unknown>;
 
 export interface SlotTool<S> {
     name: string;
-    /** The English baseline, written next to the schema; grammars override it per audience. */
-    description: string;
+    /**
+     * The English baseline. Written once: either here, next to the schema, or
+     * in `grammars/default/en.json` (the tool's `description`, `title` and
+     * `properties`), never both. A tool with neither is refused at start.
+     */
+    description?: string;
     title?: string;
     inputSchema: object;
     /** Computes a result from the arguments and the slot state; may mutate the state; throws to refuse. Without it, the tool echoes its arguments. */
@@ -59,8 +66,9 @@ export const isBlob = (v: unknown): v is SlotBlob => typeof v === "object" && v 
 export interface SlotResource<S> {
     /** A fixed URI, or, with `template: true`, an RFC 6570 template (`speech://utterances/{id}`): every URI under its prefix is read by `read`. */
     uri: string;
-    name: string;
-    description: string;
+    /** Wording: here or in `grammars/default/en.json` under `resources[uri]`, never both. */
+    name?: string;
+    description?: string;
     template?: boolean;
     /** Announced type; JSON unless the resource returns blobs. */
     mimeType?: string;
@@ -71,9 +79,9 @@ export interface SlotResource<S> {
 export interface SlotOptions<S extends object> {
     /** Slot name on the broker. */
     slot: string;
-    /** One line, shown by `_broker` and by the dashboard. */
-    description: string;
-    /** The usage note handed to a session in `initialize.instructions`, per locale (`en` required). */
+    /** One line, shown by `_broker` and by the dashboard. Here or in `grammars/default/en.json` under `slot.description`, never both. */
+    description?: string;
+    /** The usage note handed to a session in `initialize.instructions`, per locale. Here or in `grammars/default/<locale>.json` under `slot.instructions`, never both for one locale. */
     instructions?: Record<string, string>;
     tools: SlotTool<S>[];
     resources?: SlotResource<S>[];
@@ -87,6 +95,8 @@ export interface SlotOptions<S extends object> {
     version?: string;
     /** Where the grammar files are; defaults to `slots/<slot>/grammars` under the repository. */
     grammarsDir?: string;
+    /** Other behaviors served on the same slot, next to the slot's own tools: the runtime's surface (`RuntimeBehavior`), for one. */
+    behaviors?: McpBehaviorBase[];
 }
 
 export interface PublishedSlot<S extends object> {
@@ -94,7 +104,7 @@ export interface PublishedSlot<S extends object> {
     state: S;
     /** The resolver keys this slot loaded from files. */
     grammarKeys: string[];
-    grammarFiles: GrammarFile[];
+    grammarFiles: GrammarDirectoryFile[];
     store: McpGrammarStore;
     server: IMcpServer;
     open(): Promise<void>;
@@ -117,15 +127,15 @@ class SlotBehavior<S extends object> extends McpBehaviorBase {
     }
 
     override getTools(): McpTool[] {
-        return this.tools.map(({ name, title, description, inputSchema }) => (title ? { name, title, description, inputSchema } : { name, description, inputSchema }));
+        return this.tools.map(({ name, title, description, inputSchema }) => (title ? { name, title, description: description ?? "", inputSchema } : { name, description: description ?? "", inputSchema }));
     }
 
     override getResources(): McpResource[] {
-        return this.resources.filter((r) => !r.template).map(({ uri, name, description, mimeType }) => ({ uri, name, description, mimeType: mimeType ?? "application/json" }));
+        return this.resources.filter((r) => !r.template).map(({ uri, name, description, mimeType }) => ({ uri, name: name ?? uri, description: description ?? "", mimeType: mimeType ?? "application/json" }));
     }
 
     override getResourceTemplates(): McpResourceTemplate[] {
-        return this.resources.filter((r) => r.template).map(({ uri, name, description, mimeType }) => ({ uriTemplate: uri, name, description, mimeType: mimeType ?? "application/json" }));
+        return this.resources.filter((r) => r.template).map(({ uri, name, description, mimeType }) => ({ uriTemplate: uri, name: name ?? uri, description: description ?? "", mimeType: mimeType ?? "application/json" }));
     }
 
     override async readResourceAsync(uri: string): Promise<McpResourceContent | undefined> {
@@ -154,14 +164,20 @@ class SlotBehavior<S extends object> extends McpBehaviorBase {
     }
 }
 
-/** Answers `initialize`: the slot's identity, and the usage note in the resolved language with the grammar key. */
+/**
+ * Answers `initialize` with the slot's identity. The usage note is given
+ * here only when the slot carries one inline (the older slots); otherwise
+ * it is left to mcp-core, which takes it from the session grammar's
+ * `server.instructions`, as it takes the description and puts the matched
+ * key in `_meta.grammar`.
+ */
 class SlotInitializer implements IMcpInitializer {
     private readonly resolve = grammarResolverFromOptions(resolverOptions());
 
     constructor(
         private readonly slot: string,
         private readonly version: string,
-        private readonly description: string,
+        private readonly description: string | undefined,
         private readonly instructions: Record<string, string>,
         private readonly hasGrammar: (key: string) => boolean,
         private readonly log: (line: string) => void,
@@ -178,53 +194,64 @@ class SlotInitializer implements IMcpInitializer {
         const { key } = this.resolvedKey(clientInfo, capabilities);
         const locale = (key && localeOfKey(key)) ?? DEFAULT_LOCALE;
         const language = locale.split("-")[0];
-        const note = this.instructions[locale] ?? this.instructions[language] ?? this.instructions[DEFAULT_LOCALE] ?? this.description;
+        const note = this.instructions[locale] ?? this.instructions[language] ?? this.instructions[DEFAULT_LOCALE];
         this.log(`[${this.slot}] session for ${clientInfo.name ?? "unknown"} ${clientInfo.version ?? ""}: grammar ${key ?? "none (inline descriptions)"}`);
-        // `description` is not in the MCP `Implementation` shape; the dashboard reads it from every slot it opens, so it stays.
-        const serverInfo = { name: this.slot, version: this.version, description: this.description } as McpServerIdentity["serverInfo"];
-        return { serverInfo, instructions: `${note}\ngrammar: ${key ?? "none"}` };
+        const serverInfo = { name: this.slot, version: this.version, ...(this.description ? { description: this.description } : {}) } as McpServerIdentity["serverInfo"];
+        return note ? { serverInfo, instructions: note } : { serverInfo };
     }
 }
 
 export function publishSlot<S extends object>(options: SlotOptions<S>): PublishedSlot<S> {
-    const { slot, description, tools, resources = [], state, wsBase, stub = true } = options;
+    const { slot, tools, resources = [], state, wsBase, stub = true } = options;
     const log = options.log ?? console.log;
     const version = options.version ?? (stub ? "0.1.0-stub" : "0.1.0");
-    const instructions = { en: description, ...(options.instructions ?? {}) };
+    const grammarsDir = options.grammarsDir ?? fromRoot("slots", slot, "grammars");
+
+    // The words: the grammar files, checked against this slot's tools and resources, composed over the default.
+    const surfaceTools: McpTool[] = tools.map(({ name, title, description, inputSchema }) => ({ name, ...(title ? { title } : {}), description: description ?? "", inputSchema }));
+    const surfaceResources = [...resources.map((r) => ({ uri: r.uri })), { uri: `${slot}://grammars` }];
+    const loaded = loadGrammarDirectory(grammarsDir, { surface: { tools: surfaceTools, resources: surfaceResources } });
+    const baseline = loaded.grammars.get(BASELINE_KEY);
+    const description = options.description ?? baseline?.getServerDescription();
+    if (options.description && baseline?.getServerDescription()) throw new Error(`[${slot}] the slot is described both inline and in grammars/default/en.json: keep one`);
+    if (!description) throw new Error(`[${slot}] no description: write it inline or in grammars/default/en.json under server.description`);
+    const store = new McpGrammarStore();
+    const hasGrammar = (key: string) => loaded.grammars.has(key) || store.has(key);
     const behavior = new SlotBehavior(slot, tools, resources, state, stub, log, description);
 
-    const grammarsDir = options.grammarsDir ?? fromRoot("slots", slot, "grammars");
-    const { grammars, files } = loadGrammars(grammarsDir, behavior.getTools());
-    const store = new McpGrammarStore();
-    const hasGrammar = (key: string) => grammars.has(key) || store.has(key);
-
     // The audit resource: which wordings this slot holds and where they came from.
-    const grammarResource: SlotResource<S> = {
+    resources.push({
         uri: `${slot}://grammars`,
         name: "Grammars",
         description: "The grammar files this slot loaded (resolver key, file, sha256) and the keys edited at runtime",
-        read: () => ({ files: files.map((f) => ({ key: f.key, file: path.relative(fromRoot(), f.file).split(path.sep).join("/"), sha256: f.sha256 })), runtime: store.list() }),
-    };
-    resources.push(grammarResource);
+        read: () => ({ files: loaded.files.map((f) => ({ key: f.key, file: path.relative(fromRoot(), f.file).split(path.sep).join("/"), sha256: f.sha256 })), runtime: store.list() }),
+    });
 
-    const builder = new McpServerBuilder()
+    let server: IMcpServer;
+    try {
+        server = new McpServerBuilder()
         .withName(slot)
-        .withInitializer(new SlotInitializer(slot, version, description, instructions, hasGrammar, log))
+        .withInitializer(new SlotInitializer(slot, version, options.description, options.instructions ?? {}, hasGrammar, log))
         .withTransport(MultiplexTransport.create(slot, `${wsBase}/providers`, { aggregate: true }))
         .withGrammarResolver(resolverOptions())
         .withGrammarStore(store)
-        .register(behavior, new McpGrammarBehavior(store, { domain: "habitat", namespace: `${slot}-grammar`, name: `${slot} grammars` }));
-    for (const [key, grammar] of grammars) builder.withGrammar(key, grammar);
-    const server = builder.build();
+        .withGrammars(loaded.grammars)
+        .withWordingRule(BASELINE_KEY)
+        .register(behavior, new McpGrammarBehavior(store, { domain: "habitat", namespace: `${slot}-grammar`, name: `${slot} grammars` }), ...(options.behaviors ?? []))
+        .build();
+    } catch (e) {
+        // Named, so a start that fails says which slot and what to write where, instead of a stack in a hook.
+        throw new Error(`slot "${slot}" cannot be published: ${errorMessage(e)} (its words: ${path.relative(fromRoot(), grammarsDir).split(path.sep).join("/")}/default/en.json)`);
+    }
 
-    const keys = [...grammars.keys()].sort();
+    const keys = [...loaded.grammars.keys()].sort();
     log(`[${slot}] grammars: ${keys.length ? keys.join(", ") : "none (inline English only)"}`);
 
     return {
         slot,
         state,
         grammarKeys: keys,
-        grammarFiles: files,
+        grammarFiles: loaded.files,
         store,
         server,
         async open() {

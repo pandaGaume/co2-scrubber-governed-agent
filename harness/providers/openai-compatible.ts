@@ -11,8 +11,8 @@
  * for the trace.
  */
 import type { PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
-import type { Provider, ProviderExchange, ProviderProfile } from "./provider.js";
-import { apiKeyFor, compactRequest, decisionFrom, familyOf, fromApiName, intentionText, observationText, parseJsonArgs, toApiName } from "./llm-common.js";
+import type { Provider, ProviderExchange, ProviderProfile } from "../lib/provider.js";
+import { apiKeyFor, compactRequest, decisionFrom, familyOf, fromApiName, intentionText, observationText, parseJsonArgs, toApiName } from "../lib/llm-common.js";
 
 interface ToolCall {
     id: string;

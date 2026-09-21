@@ -92,6 +92,9 @@ export async function connectMcp(baseUrl, slot, options = {}) {
         slot,
         sessionId,
         serverInfo: initResult?.result?.serverInfo,
+        instructions: initResult?.result?.instructions,
+        // The wording the server resolved for this session (mcp-core 1.0.2 puts its key in `_meta.grammar`).
+        grammar: typeof initResult?.result?._meta?.grammar === "string" ? initResult.result._meta.grammar : null,
         request,
         listTools: () => request("tools/list", {}),
         callTool: (name, args = {}) => request("tools/call", { name, arguments: args }),
