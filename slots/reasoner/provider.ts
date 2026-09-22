@@ -26,6 +26,7 @@ import { objectSchema as obj, publishSlot, type PublishedSlot } from "../lib/slo
 import type { Provider, ProviderProfile } from "../../harness/lib/provider.js";
 import { familyOf } from "../../harness/lib/llm-common.js";
 import { existsSync, readFileSync } from "node:fs";
+import { oneLine, runtimeEvents } from "../lib/events.js";
 
 export interface ReasonerState {
     profileFile: string;
@@ -125,9 +126,20 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
                 description: "A text from the model with no tool call and no conversation: instructions (what to write, for whom, how long) and a context (the facts to phrase, which the text must not go beyond). Returns the text, the model, latency, tokens. For the station's spoken lines that are not decisions (a welcome from the boot report).",
                 inputSchema: obj({ instructions: { type: "string", description: "what to write, for whom, how long" }, context: { type: "string", description: "the facts to phrase; the text must not add any" }, maxTokens: { type: "number", description: "default 300" } }, ["instructions"]),
                 handle: async (args, s) => {
-                    const composition = await composeText(profile, { instructions: String(args.instructions ?? ""), context: typeof args.context === "string" ? args.context : undefined, maxTokens: typeof args.maxTokens === "number" ? args.maxTokens : undefined });
-                    s.calls++;
-                    return { ...composition, family: identity().family };
+                    // Said before the wait, so a reader watching the log sees the
+                    // question standing while the model is still thinking.
+                    const asked = oneLine(args.instructions);
+                    runtimeEvents.append("model.asked", { ...identity(), kindOfCall: "compose", asked });
+                    const started = Date.now();
+                    try {
+                        const composition = await composeText(profile, { instructions: String(args.instructions ?? ""), context: typeof args.context === "string" ? args.context : undefined, maxTokens: typeof args.maxTokens === "number" ? args.maxTokens : undefined });
+                        s.calls++;
+                        runtimeEvents.append("model.answered", { ...identity(), kindOfCall: "compose", asked, answered: oneLine(composition.text), latencyMs: composition.latencyMs, tokens: composition.tokens ?? null });
+                        return { ...composition, family: identity().family };
+                    } catch (e) {
+                        runtimeEvents.append("model.failed", { ...identity(), kindOfCall: "compose", asked, reason: oneLine(errorMessage(e)), latencyMs: Date.now() - started });
+                        throw e;
+                    }
                 },
             },
             {
@@ -160,8 +172,17 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
                         candidates: (args.candidates ?? []) as PolicyCandidate[],
                         recentFailures: (args.recentFailures ?? []) as Experience[],
                     };
+                    const asked = oneLine(intention.description ?? intention.id);
+                    runtimeEvents.append("model.asked", { model: provider.model, family: provider.family, wire, kindOfCall: "decide", conversationId, decisionId: input.decisionId ?? null, asked });
+                    const started = Date.now();
                     const before = provider.exchanges.length;
-                    const decision = await provider.resolve(input);
+                    let decision: Awaited<ReturnType<typeof provider.resolve>>;
+                    try {
+                        decision = await provider.resolve(input);
+                    } catch (e) {
+                        runtimeEvents.append("model.failed", { model: provider.model, family: provider.family, wire, kindOfCall: "decide", conversationId, decisionId: input.decisionId ?? null, asked, reason: oneLine(errorMessage(e)), latencyMs: Date.now() - started });
+                        throw e;
+                    }
                     s.calls++;
                     s.conversations = conversations.size;
                     const x = provider.exchanges[before] ?? provider.exchanges[provider.exchanges.length - 1];
@@ -176,6 +197,23 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
                         tokens: x?.tokens ?? null,
                         exchange: { request: x?.request ?? null, response: x?.response ?? null },
                     };
+                    // What the model proposed against what the harness will run.
+                    // When the two differ the governance overrode the model, and
+                    // that is the one line worth showing above all the others.
+                    runtimeEvents.append("model.answered", {
+                        model: provider.model,
+                        family: provider.family,
+                        wire,
+                        kindOfCall: "decide",
+                        conversationId,
+                        decisionId: input.decisionId ?? null,
+                        asked,
+                        answered: oneLine(decision.invocation.capabilityId),
+                        proposedCapabilityId: result.proposedCapabilityId,
+                        ranCapabilityId: decision.invocation.capabilityId,
+                        latencyMs: result.latencyMs,
+                        tokens: result.tokens,
+                    });
                     return result;
                 },
             },

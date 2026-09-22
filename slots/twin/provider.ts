@@ -16,6 +16,7 @@
  */
 import { objectSchema as obj, publishSlot, type PublishedSlot } from "../lib/slot-server.js";
 import { RuntimeBehavior } from "@spiky-panda/mcp/runtime";
+import { runtimeEvents } from "../lib/events.js";
 import { WorkshopDocumentStore } from "../tools/lib/workshop.js";
 import { checkCrew, runCabin, stateName, steadyStatePpm, summarize, twin, type Twin } from "./cabin-twin.js";
 import { param, type CommandSegment, type CrewGroup } from "../../lib/factory.js";
@@ -56,7 +57,10 @@ export function twinSlot(wsBase: string, log: (line: string) => void): Published
 
     // The runtime's own surface (catalogue, documents, sessions), on the twin's registry, the workshop as document
     // store: a factory task builds documents by name here and runs them in this sandbox (`docs/factory-harness.fr.md`, 3.3 and 3.4).
-    const runtime = RuntimeBehavior.on(loadOnce().registry, { documents: new WorkshopDocumentStore(), maxTicks: budget.maxMinutesPerRun * budget.maxRunsPerCall * 60 });
+    // The log is this process's, not this slot's: every slot appends to it and
+    // the runtime publishes it (`spk://events`, docs/runtime-events.md), so a
+    // reader sees one ordered stream with one cursor.
+    const runtime = RuntimeBehavior.on(loadOnce().registry, { documents: new WorkshopDocumentStore(), events: runtimeEvents, maxTicks: budget.maxMinutesPerRun * budget.maxRunsPerCall * 60 });
 
     return publishSlot<TwinState>({
         slot: "twin",

@@ -418,9 +418,14 @@ export default async function activate(studio: Studio): Promise<void> {
     resetBtn.title = "reset the board to the scenario's start and rebuild the agent";
     playBtn.title = "set the board where the selected event happens and let the agent decide until it hands back";
 
-    // The Control Board, when this page is its centre, drives it by postMessage and hears back what happens.
+    // The control room drives this page by postMessage and hears back what
+    // happens. It reaches it two ways: embedded, where the room is `parent`,
+    // and in a window of its own, where the room is `opener` and `parent` is
+    // this window itself. Answering only `parent` left the room deaf as soon
+    // as the loop moved out into its own window.
+    const room = (): Window | null => (window.parent !== window ? window.parent : window.opener);
     const tell = (payload: Record<string, unknown>) => {
-        if (window.parent !== window) window.parent.postMessage({ type: "tier3", ...payload }, location.origin);
+        room()?.postMessage({ type: "tier3", ...payload }, location.origin);
     };
     window.addEventListener("message", (m: MessageEvent<{ type?: string; cmd?: string; intention?: string }>) => {
         if (m.origin !== location.origin || m.data?.type !== "tier3") return;

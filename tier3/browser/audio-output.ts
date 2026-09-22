@@ -54,8 +54,17 @@ function startClock(ms: number, onTick: () => void): () => void {
     }
 }
 
+/** The refusal that means "come back", from the speech slot's `take`. Kept in
+    step with `FLOOR_BUSY` in slots/speech/service.ts by the test that plays two
+    outputs against one queue. */
+const FLOOR_BUSY = "speech:floor-busy";
+
 export class AudioOutput {
     private readonly el = new Audio();
+    /** Used only to decode the bytes of an utterance, never connected. */
+    private decoder?: AudioContext;
+    /** The shape of the utterance being said. See `wave`. */
+    private envelope?: number[] | null;
     private stopClock: (() => void) | null = null;
     private playing: QueueItem | null = null;
     private readonly played = new Set<string>();
@@ -104,6 +113,59 @@ export class AudioOutput {
         this.playing = null;
     }
 
+    /**
+     * The shape of the sentence being said, and how far through it we are.
+     *
+     * The bytes are the ones already fetched to play it, decoded in a context
+     * of their own that is never connected to anything: **the playback path is
+     * not touched**. An earlier version tapped the element with
+     * `createMediaElementSource`, which permanently reroutes its output
+     * through the Web Audio graph; a context that fails to leave `suspended`
+     * then costs the sound itself, not just the meter. No indicator is worth
+     * that.
+     *
+     * `envelope` is the peak of each slice of the whole utterance, so the
+     * drawing is the sentence, and `progress` is where the element actually
+     * is in it.
+     */
+    public wave(): { envelope: ReadonlyArray<number>; progress: number } | null {
+        if (!this.playing || !this.envelope) return null;
+        const d = this.el.duration;
+        const progress = Number.isFinite(d) && d > 0 ? Math.min(1, this.el.currentTime / d) : 0;
+        return { envelope: this.envelope, progress };
+    }
+
+    /**
+     * The peak of each slice of an utterance, for the meter. Decoding only:
+     * nothing here is connected to an output.
+     *
+     * Fine on purpose. A coarse envelope makes the running trace climb in
+     * steps, because several frames in a row read the same slice and the
+     * signal turns into a staircase; at this resolution a frame advances one
+     * or two slices and the trace has the grain of a voice.
+     */
+    private async shapeOf(bytes: Uint8Array, slices = 1600): Promise<number[] | null> {
+        if (typeof AudioContext === "undefined") return null;
+        try {
+            this.decoder ??= new AudioContext();
+            const copy = bytes.slice().buffer as ArrayBuffer;
+            const buffer = await this.decoder.decodeAudioData(copy);
+            const channel = buffer.getChannelData(0);
+            const per = Math.max(1, Math.floor(channel.length / slices));
+            const out: number[] = [];
+            let loudest = 0;
+            for (let i = 0; i < slices; i++) {
+                let peak = 0;
+                for (let k = i * per, end = Math.min(channel.length, k + per); k < end; k++) peak = Math.max(peak, Math.abs(channel[k]));
+                out.push(peak);
+                loudest = Math.max(loudest, peak);
+            }
+            return loudest > 0 ? out.map((v) => v / loudest) : out;
+        } catch {
+            return null;   // no shape; the sound is untouched either way
+        }
+    }
+
     private async tick(): Promise<void> {
         if (this.busy) return;
         this.busy = true;
@@ -130,6 +192,14 @@ export class AudioOutput {
         this.played.add(item.utteranceId);
         const taken = await this.broker.call("speech", "take", { utteranceId: item.utteranceId, output: this.outputId });
         if (!taken.ok) {
+            // The room is busy with another line: this one has not been said by
+            // anyone, so it stays for the next tick. Forgetting that distinction
+            // dropped every line that happened to arrive while another was
+            // playing, and the voice went quiet for half the night.
+            if (String(taken.error ?? "").includes(FLOOR_BUSY)) {
+                this.played.delete(item.utteranceId);
+                return;
+            }
             this.events.onTakenElsewhere?.(item);
             return;
         }
@@ -138,6 +208,7 @@ export class AudioOutput {
         if (!c?.blob) throw new Error(`no audio for ${item.utteranceId}`);
         const bytes = Uint8Array.from(atob(c.blob), (ch) => ch.charCodeAt(0));
         const url = URL.createObjectURL(new Blob([bytes], { type: c.mimeType ?? item.mimeType }));
+        this.envelope = await this.shapeOf(bytes);
         this.playing = item;
         this.events.onPlay?.(item);
         const started = performance.now();
@@ -146,6 +217,7 @@ export class AudioOutput {
                 this.el.onended = null;
                 this.el.onerror = null;
                 URL.revokeObjectURL(url);
+                this.envelope = null;
                 resolve();
             };
             this.el.onended = finish;

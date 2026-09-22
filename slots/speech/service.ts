@@ -42,6 +42,8 @@ export interface Utterance {
     queued: boolean;
     /** The output that took it: an utterance is delivered once (two pages on one machine would say everything twice). */
     takenBy?: string;
+    /** When the floor was taken, so a holder that went away frees it. */
+    takenAt?: number;
     playedBy?: Array<{ output: string; at: string; durationMs?: number }>;
 }
 
@@ -55,6 +57,19 @@ export interface SpeechServiceOptions {
 
 const MAX_TEXT = 1500;
 const PRIORITIES: Priority[] = ["low", "normal", "high"];
+/**
+ * Longest a single utterance may hold the floor before it is treated as
+ * abandoned.
+ *
+ * A page closed mid-sentence never reports it played, and the room must not
+ * stay silent for its sake: this is the whole cost of the rule, so it is kept
+ * short. Twenty seconds is longer than any line this demo speaks and short
+ * enough that a lost holder is a hiccup rather than a silence.
+ */
+const FLOOR_MS = 20_000;
+/** Prefix of the refusal that means "come back", not "skip it". An output
+    that sees it leaves the utterance pending and tries again. */
+export const FLOOR_BUSY = "speech:floor-busy";
 
 export class SpeechService {
     private readonly audio = new Map<string, Uint8Array>();
@@ -142,19 +157,63 @@ export class SpeechService {
         return { stopMark: this.stopMark, stopped };
     }
 
-    /** An output claims an utterance before playing it; the first wins, the others are refused and skip it. */
+    /**
+     * An output claims an utterance before playing it; the first wins, the
+     * others are refused and skip it.
+     *
+     * It also claims **the floor**. Claiming one utterance only stopped the
+     * same line being said twice; it did nothing about two outputs each
+     * taking a different line and playing them over each other, which is what
+     * two boards open at once actually sounded like. So a take is refused
+     * while another output holds an utterance it has taken and not yet
+     * reported played: there is one room and one voice in it.
+     *
+     * A floor is released when the holder says `played`, and on its own after
+     * `FLOOR_MS`, because a page that is closed mid-sentence never says
+     * anything again and must not silence the room for ever.
+     */
     take(utteranceId: string, output: string): Utterance {
         const u = this.utterances.find((x) => x.utteranceId === utteranceId);
         if (!u) throw new Error(`unknown utterance ${utteranceId}`);
         if (u.takenBy && u.takenBy !== output) throw new Error(`${utteranceId} is already taken by ${u.takenBy}`);
+        // An output that asks for a new line has finished the one before it,
+        // whether or not it managed to say so: a holder that moved on is not a
+        // holder. This is what keeps a missed `played` from costing the full
+        // timeout every time.
+        this.release(output);
+        const holder = this.speaking(output);
+        // Two refusals, and an output must tell them apart: this line is
+        // already someone else's (skip it, they are saying it) or the room is
+        // busy with another line (come back, nobody has said this one yet).
+        // Conflating them dropped the second kind on the floor for ever.
+        if (holder) throw new Error(`${FLOOR_BUSY}: ${holder.output} is speaking (${holder.utteranceId}); one voice in the room at a time`);
         u.takenBy = output;
+        u.takenAt = Date.now();
         return u;
+    }
+
+    /** Frees whatever floor this output still held. */
+    private release(output: string): void {
+        for (const u of this.utterances) if (u.takenBy === output && u.takenAt) u.takenAt = undefined;
+    }
+
+    /** The output that holds the floor, if it is not `output` itself. */
+    private speaking(output: string): { output: string; utteranceId: string } | null {
+        const now = Date.now();
+        for (const u of this.utterances) {
+            if (!u.takenBy || u.takenBy === output) continue;
+            if (u.playedBy?.length) continue;
+            if (u.takenAt && now - u.takenAt > FLOOR_MS) continue;   // the holder went away
+            return { output: u.takenBy, utteranceId: u.utteranceId };
+        }
+        return null;
     }
 
     played(utteranceId: string, output: string, durationMs?: number): Utterance {
         const u = this.utterances.find((x) => x.utteranceId === utteranceId);
         if (!u) throw new Error(`unknown utterance ${utteranceId}`);
         (u.playedBy ??= []).push({ output, at: new Date().toISOString(), ...(durationMs !== undefined ? { durationMs } : {}) });
+        u.takenAt = undefined;   // the floor is free
         return u;
     }
 

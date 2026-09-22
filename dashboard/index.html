@@ -3,60 +3,168 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CO2 scrubber, control board</title>
-<link rel="stylesheet" href="./style.css">
-<link rel="stylesheet" href="./board.css">
-</head>
-<body class="board-body">
+<meta name="color-scheme" content="dark">
+<title>CO2 scrubber, control room</title>
+<link rel="stylesheet" href="./room.css">
+<!--
+  The one screen of the demo: the boot console, then the control room.
+  The design is DESIGN_BRIEF.md.
 
-<!-- The boot console: every line is a request the page really made (docs/ui-brief.fr.md, section 12). -->
+  Two modules drive it, and they own different regions so neither writes where
+  the other reads:
+
+    board.js  the boot console, the clock and the mission state, the agent's
+              loop in its own window beside this one, the SIMULATION menu,
+              the station's voice and its audio output, the factory's window
+              and the night's telemetry. It owns `voice-log` and `slot-list`.
+
+    app.js    the cabin and the scrubber as a 3D wireframe, the CO2 curve, the
+              MCP trace, and the model: which one answers and every call the
+              station's harness makes to it. It owns the machine, the trace and
+              the model panel, and it skips the regions this page does not
+              carry (the six-step story and the tool buttons are the operator's
+              page, `panel.html`).
+
+  The pixel-art board this replaces is `drafts/panel-pixel-art.html` for the
+  control room; `style.css` still serves `story.html`.
+-->
+</head>
+<body>
+
+<!-- The boot console: every line is a request the page really made. -->
 <section id="boot" class="boot" aria-live="polite">
     <pre id="boot-log" class="boot-log"></pre>
-    <div id="boot-prompt" class="boot-prompt" hidden>PRESS ANY KEY TO ENTER THE CONTROL BOARD <span class="blink">_</span></div>
+    <div id="boot-prompt" class="boot-prompt" hidden>PRESS ANY KEY TO ENTER THE CONTROL ROOM <span class="blink">_</span></div>
 </section>
 
-<!-- The Control Board: the slots, the loop, the station's voice, the simulation menu. -->
-<main id="board" class="board" hidden>
-    <header class="board-top">
-        <span class="brand">CO2 SCRUBBER</span>
-        <span class="sep">|</span>
-        <span id="top-clock">NIGHT 9 · MIN 0</span>
-        <span class="sep">|</span>
-        <span id="top-state" class="state">IDLE</span>
-        <span class="grow"></span>
-        <span id="top-reasoner" class="badge" title="the model behind the reasoner slot"></span>
-        <span id="top-voice" class="badge" title="the engine behind the speech slot"></span>
-        <a class="badge" href="./factory.html" target="factory" title="the factory's page: the loop of its tasks, stage by stage, in its own window">FACTORY</a>
-        <a class="badge" href="./story.html" title="the story and the architecture">STORY</a>
-        <a class="badge" href="./panel.html" title="the control room: the slots and their tools, one button each">TOOLS</a>
+<main id="board" class="stage" hidden>
+
+    <header class="top board-top">
+        <span class="brand">CO2 <span>scrubber</span></span>
+        <span class="mission" id="top-clock">night 9 &middot; min 0</span>
+        <span class="mission state" id="top-state">idle</span>
+        <span class="spacer"></span>
+        <span class="badge agent" id="top-reasoner" title="the model behind the reasoner slot"></span>
+        <span class="badge" id="top-voice" title="the engine behind the speech slot"></span>
+        <span class="badge" id="badge-broker"><i class="dot"></i>broker: connecting...</span>
+        <button class="badge link" id="btn-agent" type="button" title="open the agent's decision loop in its own window; until it is open the loop is not running">agent</button>
+        <button class="badge link" id="btn-factory" type="button" title="open the factory in its own window">factory</button>
+        <a class="badge link" href="./story.html" title="the story and the architecture">story</a>
+        <a class="badge link" href="./panel.html" title="the operator's page: every tool of every slot, one button each">tools</a>
     </header>
 
-    <aside class="board-slots panel">
-        <div class="panel-title">SLOTS</div>
+    <div class="col-left">
+
+        <section class="panel simulation">
+            <h2 class="panel-title">Simulation<span class="rule"></span><span class="hint" id="centre-note"></span></h2>
+            <div class="transport">
+                <button id="btn-play" class="btn btn-primary" title="let the agent take its decisions on its own, about one a second">play</button>
+                <button id="btn-pause" class="btn" title="stop after the decision under way">pause</button>
+                <button id="btn-next" class="btn" title="one decision, then stop">next</button>
+                <button id="btn-stop" class="btn btn-dim" title="abandon the run; the board is not touched">stop</button>
+                <button id="btn-reset" class="btn btn-dim" title="put the board back at the scenario's start and rebuild the agent">reset</button>
+            </div>
+            <div class="agent-now" id="agent-now">idle</div>
+            <div class="panel-body"><div id="menu" class="menu"><span class="hint">asking the agent slot for the night...</span></div></div>
+            <div class="panel-foot menu-foot">
+                <button id="btn-sound" class="btn" title="this page is the audio output of the speech slot">sound on</button>
+            </div>
+        </section>
+
+        <section class="panel station">
+            <h2 class="panel-title">Mother<span class="rule"></span><span class="hint">the station's voice</span></h2>
+            <canvas id="voice-meter" class="voice-meter" title="what is being said, drawn from the audio that is playing: it oscillates behind the words and is flat ahead of them"></canvas>
+            <div id="voice-log" class="voice-log"></div>
+        </section>
+
+    </div>
+
+    <div class="col-centre">
+
+        <section class="panel cabin">
+            <h2 class="panel-title">Cabin and scrubber<span class="rule"></span><span class="hint" id="cabin-age">connecting...</span></h2>
+            <div class="panel-body">
+
+                <div class="hero">
+                    <div class="big" id="co2-ppm">----</div>
+                    <div class="unit">ppm CO2</div>
+                    <div class="side">
+                        <div class="state" id="co2-state">...</div>
+                        <div class="delta" id="co2-delta"></div>
+                    </div>
+                </div>
+
+                <div class="scene" id="scene">
+                    <canvas id="model"></canvas>
+                    <span class="power-pill"><i class="led" id="power-led"></i>power <span class="val" id="power-val"><span id="power">--</span></span></span>
+                    <div class="rail">
+                        <div class="callout" id="cal-flow">
+                            <div class="k">Flow, % of full</div>
+                            <div class="v" id="speed">--</div>
+                            <div class="note" id="speed-note">&nbsp;</div>
+                        </div>
+                        <div class="callout" id="cal-current">
+                            <div class="k">Motor current</div>
+                            <div class="v" id="current">--</div>
+                            <div class="note" id="current-note">measured on the board</div>
+                        </div>
+                        <div class="callout" id="cal-residual">
+                            <div class="k">Health residual</div>
+                            <div class="v" id="residual">--</div>
+                            <div class="note" id="residual-note">&nbsp;</div>
+                        </div>
+                        <div class="curve">
+                            <div class="legend">CO2, the readings this page took</div>
+                            <canvas id="co2-curve"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="panel-foot">Tier 1, the board, read from <code>scrubber.motor.state</code> every 2 s. The impeller turns at the measured flow and stops with the power; the bed fills with the health residual and turns amber past the alarm of 0.04. The curve is coloured by the <code>co2State</code> the board sent with each reading.</div>
+        </section>
+
+    </div>
+
+    <div class="col-right">
+
+        <section class="panel trace">
+            <h2 class="panel-title">MCP trace<span class="rule"></span></h2>
+            <div class="tally" id="tally"></div>
+            <div class="legend-row">
+                <span class="outcome ok">completed</span>
+                <span class="outcome refused">device refused</span>
+                <span class="outcome deny">policy deny</span>
+                <span class="last">newest first</span>
+            </div>
+            <div class="panel-body"><ol id="trace-list" class="trace-list"></ol></div>
+        </section>
+
+        <!-- Not this page that calls the model: the station's harness does,
+             through `reasoner.decide`. This watches those calls. -->
+        <section class="panel model" id="model-panel">
+            <h2 class="panel-title">The model<span class="rule"></span><span class="hint" id="model-wire"></span></h2>
+            <div class="panel-body">
+                <div class="model-id">
+                    <div class="model-name" id="model-name">connecting...</div>
+                    <div class="model-sub" id="model-sub"></div>
+                </div>
+                <div class="model-figures" id="model-figures"></div>
+                <div class="model-exchange" id="model-exchange"></div>
+            </div>
+            <div class="panel-foot" id="model-foot">The calls are the station harness's, not this page's: <code>spk://events</code>.</div>
+        </section>
+
+    </div>
+
+    <section class="panel slots">
+        <h2 class="panel-title">Slots<span class="rule"></span><span class="hint" id="slot-note"></span></h2>
         <ul id="slot-list" class="slot-leds"></ul>
-        <div id="slot-note" class="hint"></div>
-    </aside>
-
-    <section class="board-centre panel">
-        <div class="panel-title">AGENT LOOP <span id="centre-note" class="dim"></span></div>
-        <iframe id="loop" class="loop" title="the agent's decision loop in the SpikyPanda studio"></iframe>
     </section>
 
-    <aside class="board-menu panel">
-        <div class="panel-title">SIMULATION</div>
-        <div id="menu" class="menu"><span class="hint">waiting for the loop...</span></div>
-        <div class="menu-foot">
-            <button id="btn-sound" class="btn" title="the Control Board is the audio output of the speech slot">SOUND ON</button>
-            <button id="btn-reset" class="btn btn-dim" title="reset the board to the scenario's start and rebuild the agent">RESET</button>
-        </div>
-    </aside>
-
-    <section class="board-voice panel">
-        <div class="panel-title">STATION <span class="dim">voice</span></div>
-        <div id="voice-log" class="voice-log"></div>
-    </section>
 </main>
 
 <script type="module" src="./board.js"></script>
+<script type="module" src="./app.js"></script>
 </body>
 </html>

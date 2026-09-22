@@ -1,261 +1,292 @@
-# Design brief: the scrubber dashboard, 1990s pixel art
+# Design brief: the control room
 
-> **Superseded on 2026-09-22.** Guillaume dropped the pixel-art direction for
-> a futuristic one in blue tones. This brief is written end to end around the
-> pixel art, so it is to be rewritten, not patched. The references and the
-> rules drawn from them are in `dashboard/inspiration/README.md`. What does
-> NOT change and must survive into the new brief: the page explains itself
-> with no presenter, every element says where its data comes from and says it
-> in place (never on hover, hover does not exist on video), the cabin state
-> reads from across a room in under a second, a trace line reads in two, and
-> a step that is not built says so instead of being faked.
+*Rewritten 2026-09-22, when the 1990s pixel art was dropped for a futuristic
+direction in cold tones. The pixel-art brief it replaces is gone with its page,
+which is kept in [`drafts/panel-pixel-art.html`](drafts/panel-pixel-art.html).
+The references and the rules drawn from them are in
+[`inspiration/README.md`](inspiration/README.md). The direction was chosen from
+three prototypes; the two that lost are in [`drafts/`](drafts/README.md) with
+the reason each lost.*
 
-*For Claude Design. Written 2026-09-18. The page exists and works
-(`dashboard/index.html`, `app.js`, `style.css`); this brief asks for its
-visual design, not its behaviour. The behaviour, the data and the states are
-fixed below and must not be changed by the design.*
+*This brief describes a page that exists and works:
+`panel.html`, `room.css`, `app.js`, `room-model.js`, with
+`prototypes/control-room.html` holding the same layout with hard-coded readings
+and no broker behind it. It is written so the page can be argued with, not so
+it can be built from scratch again.*
 
-## 0. Two levels, one rule: the page explains itself
+## 0. What survived the change of direction
 
-Nobody presents this page. A jury member opens the link, a Datacraft
-attendee scans a QR code, a stranger clones the repository: each of them
-must understand what they are looking at and what they can do without a
-guide. So the site has two levels, and both carry their own explanations.
+Four rules outlived the pixel art and are not up for discussion:
 
-| Level | URL | Purpose | Reader's time |
-|---|---|---|---|
-| **Home** | `/` | tells the story and shows the architecture: what the machine is, who is allowed to talk to it, why the authority runs backwards, what is real and what is simulated, and a door to the control room | two minutes, scrolling |
-| **Control room** (the dashboard) | `/panel.html` | makes the story happen: the cabin, the slots, the trace, and the story itself as six steps with a button each | as long as they like |
+1. **The page explains itself.** Nobody presents it. A jury member opens the
+   link, a Datacraft attendee scans a QR code, a stranger clones the
+   repository: each of them must understand what they are looking at without
+   a guide.
+2. **Every element says where its figure comes from, in place.** Never on
+   hover: hover does not exist on video.
+3. **The cabin state reads from across a room in under a second**, and a trace
+   line reads in two, on a compressed video.
+4. **A step that is not built says so instead of being faked**, and a figure
+   the page has not read is drawn as absent, never filled with a plausible
+   number. A jury that catches one invented figure stops believing the rest.
 
-Every element of the control room carries a one-line explanation of what it
-is and where its data comes from, readable in place (no hover-only text on
-the filmed page: hover does not exist on video). The story panel is the
-spine of the control room: the six steps of the scenario, each with one
-sentence, one button that performs it through the broker, and the outcome
-it should produce; a step that needs a piece not built yet says so and is
-disabled, never faked.
+To which the references added a fifth, which now governs everything:
+
+5. **Nothing moves on the screen that is not a datum moving.** No sweep, no
+   scanning ring, no drifting camera, no idle shimmer. An animation that
+   encodes nothing tells an engineering jury "this is a mockup" louder than
+   any sentence the narrator can say.
 
 ## 1. What the page is
 
-The control panel of a CO2 scrubber in a crew cabin, and the audit log of
-an AI agent that is allowed to talk to that scrubber only through an MCP
-broker. It is filmed for a three-minute hackathon video (1280 x 720) and
-projected at a conference (1920 x 1080). It is not a product UI: it is a
-stage, and every element on it exists to make one of these visible:
+The control panel of a CO2 scrubber in a crew cabin, and the audit log of an
+AI agent that is allowed to talk to that scrubber only through an MCP broker.
+It is filmed for a three-minute hackathon video (1280 x 720) and projected at a
+conference (1920 x 1080). It is not a product UI: it is a stage, and every
+element on it exists to make one of these visible:
 
 1. the cabin is breathing or not (CO2 state);
-2. the machine is doing something real (speed, current, health);
-3. an agent asked for something, and one of three things happened: the
-   policy denied it, the device refused it, or it was done;
-4. which vendor's model is the agent right now (a badge), because the
-   video swaps it live.
+2. the machine is doing something real (flow, current, health);
+3. an agent asked for something, and one of three things happened: the policy
+   denied it, the device refused it, or it was done;
+4. which vendor's model is the agent right now (a badge), because the video
+   swaps it live.
 
-The audience must read the state of the cabin from across a room in under
-a second, and read a single trace line in two seconds on a compressed video.
+## 2. Art direction: the machine, in wireframe
 
-## 2. Art direction: pixel art, 1990s
+The reference that decided it is [SIRIUS](inspiration/03-sirius-system-overview.webp):
+a near-black ground, one cold hue held everywhere, a warm colour used three
+times in a whole screen, dense data and no decoration. It reads like an
+instrument, not like a film poster.
 
-The reference is a 1990s console or DOS game HUD and a 16-bit
-mission-control screen: hard pixels, a small palette, bitmap type, bevelled
-panels, LED lights, seven-segment digits. Warm, legible, a little playful,
-never cluttered. What that means concretely:
+The reference that decided the *shape* is [CRETAX](inspiration/02-cretax-genome-map.webp)
+with [InGen](inspiration/01-ingen-incubation-pod.png): one luminous object in
+the middle of the screen, and the numbers hung off it on leader lines that
+touch the parts they describe. The specimen in the tank, the helix with its
+callouts. The figures are annotations **on** the thing, not a table beside it.
 
-- **Pixels are integers.** Everything is drawn on a virtual grid of 320 x 180
-  or 640 x 360 logical pixels and scaled by a whole number (x4 or x2 at
-  1280 x 720, x6 or x3 at 1920 x 1080). No fractional scaling, no
-  anti-aliasing on pixel elements: `image-rendering: pixelated` on sprites,
-  bitmap fonts at their native size times an integer.
-- **Palette of 16 colours at most**, declared once as CSS variables. Include:
-  a deep background (near black, slightly blue), a panel colour, a bevel light
-  and a bevel dark, a text colour, a muted text colour, and the four semantic
-  colours below. Dithering (checkerboard) is allowed for gradients; smooth
-  gradients are not.
-- **Type**: a bitmap or pixel typeface for everything. Titles and badges in a
-  chunky 8 x 8 face (Press Start 2P or equivalent), body and trace in a
-  narrower readable pixel face (VT323, Pixelify Sans, or a 5 x 7 bitmap).
-  Minimum rendered size 16 px for the trace, 24 px for values, 48 px or more
-  for the CO2 figure.
-- **Panels** with 1-pixel bevels (light top-left, dark bottom-right), a
-  title bar, no rounded corners, no shadows, no blur.
-- **Indicators**: LED dots (on, off, blinking), a seven-segment or
-  dot-matrix display for the CO2 ppm, a horizontal bar with ticks for the
-  speed, a small needle or bar for the current, a bar with a threshold mark
-  for the health residual.
-- **One sprite animation**: the turbine, 8 frames, frame rate proportional
-  to the speed (still at 0 %, about 12 frames per second at 100 %).
-  Optional: a CO2 "haze" that thickens with the ppm, as a dithered overlay
-  on the cabin panel.
-- **Motion rules**: blink at 2 Hz for CRITICAL only; a one-frame flash on a
-  new trace line; nothing else moves. No scanline or CRT overlay: it kills
-  legibility on video compression.
-- **No sound.**
+That is the whole direction. The first attempt laid the same figures out as
+panels of numbers ([`drafts/control-room-a-instrument.html`](drafts/control-room-a-instrument.html)):
+clean, correct, and dull, because it looks like a settings screen. The second
+drew the machine flat with the callouts on it
+([`drafts/control-room-b-flat-machine.html`](drafts/control-room-b-flat-machine.html)):
+right idea. The one in service draws it as a **3D wireframe**.
 
-Semantic colours, used for nothing else:
+### Tokens
 
-| Meaning | Where | Suggestion |
+The palette and the type are `biomed.html`'s, value for value, declared once in
+`room.css`. The two pages are one instrument and must not drift apart; anything
+added to one that the other would also want belongs in both.
+
+| token | value | what it is for |
 |---|---|---|
-| NOMINAL, completed | CO2 state, trace outcome | green |
-| ELEVATED, device refused | CO2 state, trace outcome | amber |
-| CRITICAL, policy deny | CO2 state, trace outcome | red |
-| the agent (tier3) as a caller, links | trace caller, badge | cyan or light blue |
+| `--bg`, `--bg-2` | `#04090c`, `#061218` | the ground, near black, slightly blue |
+| `--panel` | `rgba(10, 28, 34, 0.66)` | the panels, translucent over the ground |
+| `--line`, `--line-strong` | teal at 16 % and 34 % | every rule, border and hairline |
+| `--teal`, `--teal-soft` | `#2fe0c8`, `#7ad6cc` | the one cold hue: the machine, the agent, every value that is fine |
+| `--text`, `--muted`, `--muted-2` | `#d3ecea`, `#6d908e`, `#4d6f6e` | three levels of text, and nothing between them |
+| `--amber` | `#ffb648` | **the device refused.** Nothing else, ever |
+| `--red` | `#ff5064` | **CRITICAL, and policy deny.** Nothing else, ever |
 
-The two red meanings (CRITICAL cabin, policy deny) never appear in the same
-element, so sharing the colour is safe; the same for amber.
+The warm colours are the whole point of holding the cold one everywhere. A slot
+that is down is **muted**, not amber; a disabled button is muted; an empty
+state is muted. The moment amber decorates something, it stops meaning "the
+firmware said no" at the moment it has to mean it.
 
-## 3. Layout, fixed
+Type is the system monospace for everything with a number in it and the system
+sans for prose. No web fonts: nothing is fetched from a third party at runtime.
+Labels are small capitals with wide letter-spacing; values are 600 weight with
+tabular numerals so a figure does not jitter as it changes.
 
-### 3.0 The home (`/`)
+There is no fixed artboard any more. The bitmap faces were the only reason for
+the 1280 x 720 stage scaled by quarter steps; without them the page is fluid
+and fills 1280 x 720 and 1920 x 1080 alike.
 
-A single scrolling page, same art direction, mostly text and one picture,
-in this order:
+## 3. Layout
 
-1. **The title and the one-sentence thesis**: an agent never touches the
-   scrubber; it goes through a broker; the survival authority lives in the
-   firmware. A door button: "Enter the control room".
-2. **The picture**: the five tiers stacked, with the authority arrows
-   pointing down and the deliberation arrows pointing up, the broker as the
-   only gate between the agent and the machine. Drawn in the pixel style
-   (a cabin cross-section works: crew at the top, agent behind a wall with
-   one door labelled broker, the scrubber and its board at the bottom).
-3. **The three layers** that decide what a call does: policy, safety
-   envelope, physical cut-off; the three outcomes a call can have.
-4. **The four slots** as four cards: name, tier, what it is, what is real
-   today and what is a stub.
-5. **The story in six steps**, the same six as the control room, as a
-   numbered list with what the reader will see happen.
-6. **What is real, what is simulated**: the motor and the current are real,
-   the cabin CO2 is simulated on the board; the model behind the agent is
-   named; the substrate's license in one sentence.
-7. The door again.
-
-### 3.1 The control room (`/panel.html`)
-
-Four regions at 16:9: a story strip on the left, then cabin, slots and
-trace side by side, with the header above. Proportions about
-0.9 : 1 : 1.2 : 1.6. Below 1100 px wide they stack; that case is not filmed.
+Three columns under a header, a strip of slots along the bottom. At 16:9 the
+columns are about 0.72 : 1.86 : 1.12.
 
 ```
-+----------------------------------------------------------------------------------+
-| co2-scrubber-governed-agent      [tier3: nvidia/<model> via host] [gateway] [broker] |
-+---------------------+---------------------------+--------------------------------+
-| CABIN               | SLOTS                     | MCP TRACE                      |
-|  2600 ppm  ELEVATED |  scrubber                 |  legend: completed / device    |
-|  [turbine sprite]   |   motor.state             |   refused / policy deny / err  |
-|  speed   ====|      |   motor.set_speed  ...    |  12:23:37 operator             |
-|  current ==         |  twin                     |   scrubber.motor.set_speed     |
-|  health  ===|       |   sweep  time_to_critical |   {"percent":60}  [completed]  |
-|  power   (o)        |  station                  |  12:23:36 operator             |
-|                     |   register_artifact ...   |   scrubber.scrubber.power      |
-|                     |  factory                  |   {"on":false} [device refused]|
-|                     |   run_sweep ...           |   MIN-FLOW: CO2 is ELEVATED... |
-+---------------------+---------------------------+--------------------------------+
++------------------------------------------------------------------------------+
+| CO2 SCRUBBER   control room, night 9 of 14, crew 4    [tier3][gateway][broker] |
++-------------+--------------------------------------+-------------------------+
+| STORY       | CABIN AND SCRUBBER                   | MCP TRACE               |
+|  6 steps    |   2 600 ppm   ELEVATED               |  calls / ok / refused /  |
+|  one button |   +1 400 ppm in 4 min, from 1 210    |   denied, counted off it |
+|  each       |                                      |  legend                  |
+|             |   [ the machine, 3D wireframe ]--o   |  12:23:37 regulator      |
++-------------+   cabin | column | bed          |    |   scrubber.motor...      |
+| MOTHER      |                              [flow]  |   {"percent":60}   [ok]  |
+|  the voice  |                           [current]  |  12:23:36 operator       |
+|  as a queue |                          [residual]  |   scrubber.power         |
+|             |                             [curve]  |   {"on":false} [refused] |
++-------------+--------------------------------------+-------------------------+
+| SLOTS   scrubber | twin | station | factory                                   |
++------------------------------------------------------------------------------+
 ```
 
-### Story panel
-
-- The six steps of the scenario, numbered, each as: a title, one sentence
-  of what happens, the outcome to expect (in the outcome colour), and one
-  button "do it". A step runs a fixed sequence of calls through the broker;
-  its outcome pill turns to what actually happened. A step that depends on a
-  piece not yet built (the language model, the profile swap) shows "needs
-  tier3" and a disabled button.
-- A one-line note at the bottom: "until the broker's authorization is on,
-  this page signs every call as operator; the caller shown is the role the
-  step plays".
-- A "reset" link that returns the cabin to nominal.
+Below 1180 px wide the columns stack. That case is not filmed.
 
 ### Header
 
-- Product name, left, linking back to the home.
-- Three badges, right, always visible, never truncated at 1280 px:
-  `tier3: <model> via <host>`, `gateway: <host>`, `broker: <name> <version>`.
-  The tier3 badge is the one the video swaps live; it must be readable in a
-  single frame. Give it the agent colour.
+Product name linking to the story, the mission line, then three badges that are
+always visible and never truncated at 1280 px: `tier3: <model> via <host>`,
+`gateway: <host>`, `broker: <name> <version>`. The tier3 badge is the one the
+video swaps live, so it is the only filled badge on the page: filled survives
+video compression, an outline does not. The broker badge turns red and says
+`unreachable` when it is.
 
-### Cabin panel
+### The cabin panel: the machine
 
-- The CO2 figure in ppm, the largest thing on the page, seven-segment or
-  dot-matrix, with its state word right under it: NOMINAL, ELEVATED,
-  CRITICAL. The state word carries the semantic colour and, for CRITICAL,
-  the 2 Hz blink.
-- The turbine sprite.
-- Four gauges with label, value and bar: speed (0 to 100 %), current (0 to
-  4 A on the twin, 0 to 1 A on the board: the scale is a parameter), health
-  residual (0 to 0.2, with a threshold mark at 0.04 by default), power (an
-  LED: on, off).
-- Ranges are physical facts; the design must not bake in other values.
+The hero, and the only place on the page allowed to be big.
 
-### Slots panel
+- **The reading**, largest thing on the screen: the ppm figure, its unit, the
+  state word (NOMINAL, ELEVATED, CRITICAL) with the semantic colour, and one
+  line under it of the InGen pattern: the value against a reference the page
+  owns, plus what the firmware does in this state. The reference is the page's
+  own oldest kept reading, never a threshold. See §5.
+- **The machine**, drawn once as a 3D wireframe on a canvas: the cabin module
+  with the four crew in it and a CO2 field whose density is the measured ppm,
+  the duct out, the scrubber column holding the impeller, the motor under it
+  and the sorbent bed under that, and the return duct back into the cabin
+  floor. What is modelled is what the tools act on, and nothing else. The
+  dimensions are proportions of a machine, not measurements of one: no
+  dimension of the real scrubber is published, so none is claimed.
+- **Three callouts** in a column on the right, each on a leader line that ends
+  in a dot on its own part: flow, motor current, health residual. Each carries
+  the value, its scale, and one sentence saying what it means here.
+- **The curve**, under them: the readings this page has taken, coloured by the
+  state word the board sent with each one, ticked where that word changed.
+- **The power pill**, top left of the scene.
+- Behind it all, **the view out of the window**: the lunar surface in
+  wireframe, the Earth over the horizon, cleared where the machine stands in
+  front of it. See §6.
 
-- One group per slot (scrubber, twin, station, factory), a title bar with the
-  slot name, then its tools as buttons in a wrap. Buttons are the only
-  interactive element besides the dialog: bevelled, pressable, with a hover
-  state. Tool names are monospace pixel text and may be long
-  (`diagnostic_load_model`): let them wrap, never truncate.
-- A slot that is down shows an "unreachable" line in muted text.
+### MOTHER
 
-### Trace panel
+The station speaking, under the story. It is the `speech` slot's own queue
+(`speech://queue`), rendered; the words are the `station` slot's phrases
+(`grammar://phrases`). **The page chooses when something is said and never
+chooses the words.** When the station has no phrase for what happened, nothing
+is said: the page does not write a sentence to fill a silence. When the voice
+is not ready it says so and prints nothing else.
 
-- A legend row with the four outcomes as small pills.
-- A list, newest first, one entry per call: time, caller, `slot.tool`,
-  arguments, the outcome pill, and a collapsible one-line result. The
-  outcome pill is the most important thing on the line; the caller is the
-  second (operator vs tier3, in the agent colour).
-- Entries with a refusal or a deny get a left border in their colour.
+The caret is the one blinking thing on the page. It blinks while the link is
+up and goes dark and still when it is down, so it is the link indicator, not
+decoration.
 
-### Call dialog
+### Story, trace, slots
 
-- A modal with the tool name, its description, a JSON text area, cancel and
-  "call as operator". Same panel style.
+- **Story**: the six steps of the scenario, numbered, each with one sentence,
+  one button that plays it through the broker, and the outcome it should
+  produce. The pill turns to what actually happened, which is the worst outcome
+  among that step's calls. A step that depends on a piece not yet built shows
+  why and is disabled.
+- **Trace**: four figures counted off the list itself (calls, completed,
+  refused, denied), so they cannot drift from what is under them; then the
+  legend; then the entries, newest first, each with time, caller, `slot.tool`,
+  arguments, the outcome pill and the result. A refusal or a deny gets a left
+  border in its colour.
+- **Slots**: one card per provider behind the broker, its tools as buttons. The
+  six `grammar_*` tools mcp-core puts on every slot sit behind one small
+  `wording (n)` button, out of the story's way. A slot that is down is dimmed
+  and says why.
 
-## 4. Data the page has at runtime (do not invent others)
+## 4. What moves
 
-| Element | Source | Values |
+Four things, and the page is otherwise still:
+
+| what | driven by | stops when |
 |---|---|---|
-| tier3 badge | `config.json` | model id, endpoint host |
-| gateway badge | `config.json` | a host name |
-| broker badge | `_broker` `initialize` | name and version |
-| slots and tools | `_broker.providers_list`, `tools/list` | names, descriptions, JSON schemas |
-| cabin readout | `scrubber.motor.state` every 2 s | `co2Ppm` (400 to 5000), `co2State` (NOMINAL, ELEVATED, CRITICAL), `speedPercent` (0 to 100), `currentAmps`, `healthResidual` (0 to 0.2), `power` (true, false) |
-| trace entry | every call the page makes | time, caller (`operator`, later `tier3`), slot, tool, arguments, outcome (`completed`, `device refused`, `policy deny`, `error`), result text |
+| the impeller turns | the measured flow; one turn of the blades is one turn of the real thing | the power is off, or there is no reading |
+| the dashes in the ducts travel | the same measured flow | the same |
+| the state word blinks at 2 Hz | CRITICAL only | the cabin leaves CRITICAL |
+| the MOTHER caret blinks | the link being up | the link drops |
 
-## 5. States to design
+A new trace entry fades in over 0.45 s. That is a transition, not an animation:
+it marks an arrival that really happened.
 
-1. **Nominal**: 1200 ppm, NOMINAL, 33 %, 0.15 A, residual 0.02, power on, an
-   empty trace.
-2. **Elevated with a refusal**: 2600 ppm, ELEVATED, 60 %, three trace
-   entries, the middle one `scrubber.power {"on": false}` refused with
-   "MIN-FLOW: CO2 is ELEVATED, the scrubber cannot be powered off".
-3. **Critical**: 5000 ppm, CRITICAL blinking, 100 % forced, a `set_speed 40`
-   entry refused, then a `policy deny` entry from `tier3`.
-4. **Broker unreachable**: badges say so, panels empty, no error styling
-   beyond muted text.
+The camera never moves. There is no ring, no reticle, no scan line. This is the
+rule that costs the most and buys the most.
 
-## 6. Deliverables
+## 5. Two figures that must never be put side by side
 
-- The home page as one long artboard, and the control room in the four
-  states at 1280 x 720, plus one at 1920 x 1080 to show the integer scaling.
-- The palette and type as a CSS token sheet (`:root` variables), the
-  bevel and LED as reusable CSS classes, the turbine as an 8-frame sprite
-  sheet (PNG, native pixel size) with its CSS animation.
-- One HTML page, one CSS file, vanilla JS only: the design replaces
-  `style.css` and may restructure `index.html`, but every element id in
-  `app.js` must survive (`badge-tier3`, `badge-gateway`, `badge-broker`,
-  `co2-ppm`, `co2-state`, `speed`, `current`, `residual`, `power`,
-  `slot-list`, `trace-list`, `call-dialog`, `call-form`, `call-title`,
-  `call-description`, `call-args`, `call-cancel`, `story-list`, `story-note`,
-  `story-reset`) and the class names
-  `state.nominal|elevated|critical`, `entry.ok|refused|deny|error`,
-  `outcome.ok|refused|deny|error`.
-- No frameworks, no build step, no web fonts loaded from a third party at
-  runtime if a bitmap font can be embedded; Google Fonts is acceptable as a
-  fallback.
+The board sets its CO2 state directly (`debug.set_co2`) and picks a stub ppm per
+state: 1200, 2600, 5000. `specs/cabin-parameters.json` puts the thresholds at
+3500 and 4000 and says NOMINAL is below the first. So the board reports
+`co2State: ELEVATED` with `co2Ppm: 2600`, which by the spec is nominal, and the
+twin reads the spec while the board does not.
 
-## 7. What not to do
+A page that draws the spec's thresholds against the board's ppm therefore
+writes "900 ppm below the elevated threshold" directly beside the word
+ELEVATED, and argues with itself in front of the jury.
 
-- No text smaller than 16 px rendered, anywhere.
-- No CRT scanlines, vignettes, glow or blur.
-- No decorative icons that compete with the LEDs and the state word.
-- No colour used for two meanings in the same panel.
-- No animation that does not encode a value (the turbine and the CRITICAL
-  blink are the only ones).
+Until the two agree, the rule here is: **the state word the device reported
+wins, and the ppm is a reading printed beside it.** The curve is coloured by
+that word. No threshold line is drawn. The delta compares the reading to the
+page's own oldest kept reading, which is a number the page can defend. This is
+a workaround, and the underlying disagreement is a separate piece of work.
+
+## 6. The one thing that measures nothing
+
+The lunar surface behind the machine carries no value. It is allowed because it
+is the view out of the window, because it never moves, and because it is held
+at about a tenth of the contrast of anything that does carry a value, and
+cleared where the machine stands in front of it. Night 9 of 14 means the sun is
+down and the Earth is up, which is why the Earth is drawn and the sun is not.
+
+If it ever competes with a figure for attention, it is wrong and it goes.
+
+## 7. Where the page gets everything
+
+| element | source |
+|---|---|
+| tier3 and gateway badges | `config.json` |
+| broker badge | the broker's `initialize` |
+| slots and tools | `_broker.providers_list`, then each slot's `tools/list` |
+| the cabin, the machine, the curve | `scrubber.motor.state` every 2 s: `co2Ppm`, `co2State`, `speedPercent`, `currentAmps`, `healthResidual`, `power`. The page keeps the last 120 readings, which is four minutes |
+| the flow floor, 40 % | compiled into the firmware, `slots/scrubber/provider.ts` |
+| the residual alarm, 0.04 | the monitor's contract, `specs/scrubber-health-twin.json` |
+| trace entries and the four figures | every call this page makes |
+| MOTHER's words | the `station` slot's `grammar://phrases` |
+| MOTHER's list | the `speech` slot's `speech://queue` |
+
+Nothing else is invented, and the page shows nothing it has not read.
+
+## 8. States the page must be seen in
+
+1. **Nominal**: 1200 ppm, NOMINAL, 33 %, power on, an empty trace, MOTHER with
+   the boot lines.
+2. **Elevated with a refusal**: 2600 ppm, ELEVATED, 60 %, a
+   `scrubber.power {"on": false}` refused with "MIN-FLOW: CO2 is ELEVATED, the
+   scrubber cannot be powered off".
+3. **Critical**: 5000 ppm, CRITICAL blinking, full flow forced, a `set_speed 40`
+   refused and a `policy deny` from `tier3`.
+4. **Broker unreachable**: the badge says so, the machine keeps its shape and
+   loses its values, every figure is dashes, the caret is dark, the slots are
+   dimmed and say why. No error styling beyond muted text.
+
+`prototypes/control-room.html` switches between the four with no broker
+running, which is how the design is reviewed and how the video is rehearsed.
+
+## 9. Files
+
+| file | what |
+|---|---|
+| `panel.html` | the frame, and nothing with a value in it |
+| `room.css` | the tokens and every class. `style.css` is the old pixel-art sheet and still serves `index.html` and `story.html` |
+| `app.js` | the broker, the badges, the slots, the trace, the story, the curve, MOTHER |
+| `room-model.js` | the machine and the window, given a reading, knowing nothing about MCP |
+| `prototypes/control-room.html` | the same layout, hard-coded, for review |
+| `drafts/` | what was tried and kept: the pixel-art page and the two prototypes that lost |
+
+## 10. What not to do
+
+- No text under 9 px rendered, and nothing under 16 px that carries a value.
+- No second cold hue. One teal, three levels of text, and the two warm colours
+  reserved.
+- No amber or red on anything that is not a refusal, a deny, or CRITICAL.
+- No animation that does not encode a value.
+- No hover-only information.
+- No figure the page has not read.

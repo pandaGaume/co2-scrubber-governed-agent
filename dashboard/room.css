@@ -1,0 +1,482 @@
+/* The control room (`panel.html`), futuristic in cold tones.
+ *
+ * The design is DESIGN_BRIEF.md; the prototype it was accepted from is
+ * `prototypes/control-room.html`, which holds the same layout with its data in
+ * hard-coded states and no broker behind it.
+ *
+ * The tokens below are `biomed.html`'s, value for value: the two pages are one
+ * instrument and must not drift apart. Anything added here that the medical
+ * page would also want belongs in both.
+ *
+ * `style.css` is the old pixel-art sheet. It still serves `index.html` and
+ * `story.html` and is not loaded by this page.
+ */
+
+:root {
+    --bg: #04090c;
+    --bg-2: #061218;
+    --panel: rgba(10, 28, 34, 0.66);
+    --line: rgba(64, 214, 200, 0.16);
+    --line-strong: rgba(64, 214, 200, 0.34);
+    --teal: #2fe0c8;
+    --teal-soft: #7ad6cc;
+    --text: #d3ecea;
+    --muted: #6d908e;
+    --muted-2: #4d6f6e;
+    --amber: #ffb648;
+    --red: #ff5064;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, -apple-system, "Segoe UI", system-ui, sans-serif;
+}
+
+/* Scrollbars in the same skin as everything else: a thin teal thumb on
+   nothing. A grey native bar is the one element on a dark panel that has not
+   been designed, and it reads as damage. */
+* { scrollbar-width: thin; scrollbar-color: rgba(47, 224, 200, 0.28) transparent; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(47, 224, 200, 0.24); border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(47, 224, 200, 0.45); }
+::-webkit-scrollbar-corner { background: transparent; }
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+body {
+    margin: 0; height: 100dvh; padding: 14px 18px;
+    background:
+        radial-gradient(1200px 700px at 55% 16%, rgba(47, 224, 200, 0.10), transparent 60%),
+        linear-gradient(180deg, var(--bg-2), var(--bg) 62%);
+    color: var(--text); font-family: var(--mono); font-size: 14px;
+    -webkit-font-smoothing: antialiased; overflow: hidden;
+}
+body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none;
+    background-image:
+        linear-gradient(rgba(64, 214, 200, 0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(64, 214, 200, 0.045) 1px, transparent 1px);
+    background-size: 52px 52px;
+    mask-image: radial-gradient(860px 540px at 50% 34%, #000 14%, transparent 74%);
+}
+
+/* The page is fluid. It filled 1280 x 720 and 1920 x 1080 without an integer
+   scale as soon as the bitmap faces went. */
+.stage {
+    position: relative; height: 100%; display: grid;
+    grid-template-columns: minmax(225px, 0.72fr) minmax(0, 1.86fr) minmax(0, 1.12fr);
+    grid-template-rows: auto minmax(0, 1fr) auto; gap: 12px;
+}
+.top { grid-column: 1 / -1; }
+.slots { grid-column: 1 / -1; }
+
+/* ---------- header ---------- */
+
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.brand { font-size: 15px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text); text-decoration: none; white-space: nowrap; }
+.brand span { color: var(--teal); }
+.mission { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.top .spacer { flex: 1; }
+
+.badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px; border: 1px solid var(--line-strong); border-radius: 999px;
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--teal-soft); background: rgba(47, 224, 200, 0.06); white-space: nowrap; text-decoration: none;
+}
+/* The one badge the video swaps live: filled, so it survives compression. */
+.badge.agent { color: #03181a; background: var(--teal); border-color: var(--teal); font-weight: 600; }
+.badge.down { color: var(--red); border-color: rgba(255, 80, 100, 0.45); background: rgba(255, 80, 100, 0.09); }
+.badge.link:hover { border-color: var(--teal); color: var(--teal); }
+/* A badge that is a button: the two windows open only when asked for. */
+button.badge { font-family: var(--mono); cursor: pointer; }
+/* A model call landed. It marks an arrival that really happened, like a trace
+   line arriving, and it runs once rather than looping. */
+.badge.agent.fired { animation: fired 1s ease-out 1; }
+@keyframes fired {
+    0% { box-shadow: 0 0 0 0 rgba(47, 224, 200, 0.85); }
+    100% { box-shadow: 0 0 0 14px rgba(47, 224, 200, 0); }
+}
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 8px var(--teal); }
+.badge.down .dot { background: var(--red); box-shadow: 0 0 8px var(--red); }
+
+/* ---------- panels ---------- */
+
+.panel { display: flex; flex-direction: column; min-width: 0; min-height: 0; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); }
+.panel-title {
+    flex: none; margin: 0; padding: 11px 15px 9px; display: flex; align-items: center; gap: 10px;
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--teal-soft);
+}
+.panel-title .rule { flex: 1; height: 1px; background: linear-gradient(90deg, var(--line-strong), transparent); }
+/* A note in a title stays on its line: a title that wraps pushes everything
+   under it down, and these titles sit above panels that are already exact. */
+.panel-title .hint { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.panel-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 15px 8px; }
+/* Where a figure comes from, written in place. Hover does not exist on video. */
+.panel-foot { flex: none; padding: 9px 15px 11px; border-top: 1px solid var(--line); font-family: var(--sans); font-size: 10.5px; line-height: 1.45; color: var(--muted-2); text-wrap: pretty; }
+.panel-foot code { font-family: var(--mono); color: var(--muted); }
+.hint { font-family: var(--sans); font-size: 11px; color: var(--muted); margin: 0; }
+
+.btn {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; padding: 6px 11px; border-radius: 8px; cursor: pointer;
+    color: var(--teal-soft); background: rgba(47, 224, 200, 0.05); border: 1px solid var(--line-strong); text-align: left; white-space: nowrap;
+}
+.btn:hover:not(:disabled) { background: rgba(47, 224, 200, 0.14); color: var(--teal); border-color: var(--teal); }
+.btn:disabled { color: var(--muted-2); border-color: var(--line); background: transparent; cursor: not-allowed; }
+.btn-primary { color: #03181a; background: var(--teal); border-color: var(--teal); font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; }
+.btn-primary:hover:not(:disabled) { background: #5cead6; }
+.btn-dim { font-size: 10px; color: var(--muted); border-color: var(--line); }
+
+/* The four words a call can end on, and nothing else uses these colours. */
+.outcome {
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 999px;
+    font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; white-space: nowrap;
+    color: var(--muted); border: 1px solid var(--line); background: rgba(120, 170, 168, 0.07);
+}
+.outcome.ok { color: var(--teal); border-color: var(--line-strong); background: rgba(47, 224, 200, 0.09); }
+.outcome.refused { color: var(--amber); border-color: rgba(255, 182, 72, 0.42); background: rgba(255, 182, 72, 0.09); }
+.outcome.deny { color: var(--red); border-color: rgba(255, 80, 100, 0.45); background: rgba(255, 80, 100, 0.10); }
+
+/* ---------- the left column: the story, and MOTHER under it ---------- */
+
+.col-left { display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; }
+.story { flex: 1 1 auto; min-height: 0; }
+.mother { flex: 0 0 38%; min-height: 0; }
+
+/* MOTHER is the station speaking through the speech slot. The page writes no
+   line here: the words are the station's phrases (`grammar://phrases`) and the
+   list is the speech slot's own queue (`speech://queue`). The caret is the one
+   blinking thing on the page, and it blinks only while the link is up, so it
+   is the link indicator and not decoration. */
+.mother-log { display: flex; flex-direction: column; gap: 7px; font-size: 11.5px; line-height: 1.45; }
+.mother-log .line { color: var(--teal-soft); text-wrap: pretty; }
+.mother-log .line .t { color: var(--muted-2); letter-spacing: 0.08em; margin-right: 7px; }
+.mother-log .line.warn { color: var(--amber); }
+.mother-log .line.bad { color: var(--red); }
+.mother-log .line.dim { color: var(--muted-2); }
+.mother-log .line.pending { opacity: 0.6; }
+.caret { display: inline-block; width: 7px; height: 13px; vertical-align: -2px; background: var(--teal); animation: caret 1.05s steps(1, end) infinite; }
+.caret.down { background: var(--muted-2); animation: none; }
+@keyframes caret { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+
+/* ---------- story ---------- */
+
+.story-list { list-style: none; margin: 0; padding: 0; }
+.step { padding: 10px 0 12px; border-bottom: 1px solid var(--line); }
+.step:last-child { border-bottom: 0; }
+.step-head { display: flex; align-items: baseline; gap: 9px; }
+.step-n { font-size: 10px; color: var(--muted-2); font-variant-numeric: tabular-nums; }
+.step-title { font-size: 13px; letter-spacing: 0.04em; color: var(--text); }
+.step p { font-family: var(--sans); font-size: 11.5px; line-height: 1.5; color: var(--muted); margin: 5px 0 8px; text-wrap: pretty; }
+.step .needs { color: var(--amber); opacity: 0.85; }
+.step-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* ---------- the cabin panel: the machine ---------- */
+
+.cabin .panel-body { display: flex; flex-direction: column; gap: 8px; padding-bottom: 12px; overflow: hidden; }
+
+.hero { flex: none; display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap; }
+.big { font-size: clamp(44px, 5vw, 78px); font-weight: 600; line-height: 0.86; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.hero .unit { font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); padding-bottom: 9px; }
+.hero .side { padding-bottom: 4px; }
+.state { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+.state::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; }
+.state.nominal { color: var(--teal); }
+.state.elevated { color: var(--amber); }
+.state.critical { color: var(--red); animation: blink2hz 0.5s steps(1, end) infinite; }
+@keyframes blink2hz { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0.2; } }
+.delta { margin-top: 6px; font-family: var(--sans); font-size: 11.5px; color: var(--muted); }
+.delta b { color: var(--teal-soft); font-weight: 600; font-variant-numeric: tabular-nums; }
+.delta.warn b { color: var(--amber); }
+.delta.bad b { color: var(--red); }
+
+/* The model fills the scene; the callouts are a column over it and the leader
+   lines are drawn on the canvas, from the projected part to the card the
+   browser actually laid out. Nothing is aligned by hand. */
+.scene { position: relative; flex: 1 1 auto; min-height: 0; }
+#model { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+.rail {
+    position: absolute; right: 0; top: 0; bottom: 0; width: 31%;
+    display: flex; flex-direction: column; justify-content: space-between; gap: 8px;
+}
+.callout { padding: 8px 11px 9px; border: 1px solid var(--line); border-radius: 12px; background: rgba(6, 20, 25, 0.82); }
+.callout .k { font-size: 8.5px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted-2); }
+.callout .v { margin-top: 2px; font-size: 21px; font-weight: 600; line-height: 1.05; font-variant-numeric: tabular-nums; color: var(--text); }
+.callout .v small { font-size: 9.5px; color: var(--muted); margin-left: 4px; letter-spacing: 0.1em; }
+.callout .note { margin-top: 4px; font-family: var(--sans); font-size: 9.5px; line-height: 1.35; color: var(--muted-2); }
+.callout.hot { border-color: rgba(255, 182, 72, 0.38); }
+.callout.hot .v { color: var(--amber); }
+
+.power-pill {
+    position: absolute; left: 0; top: 0; display: inline-flex; align-items: center; gap: 8px;
+    padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; background: rgba(6, 20, 25, 0.85);
+    font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
+}
+.power-pill .val { color: var(--teal); }
+.power-pill .val.off { color: var(--muted-2); }
+.led { width: 8px; height: 8px; border-radius: 50%; background: var(--muted-2); flex: none; }
+.led.on { background: var(--teal); box-shadow: 0 0 9px var(--teal); }
+
+.curve { flex: none; height: 62px; display: flex; flex-direction: column; }
+.curve .legend { flex: none; font-size: 8.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted-2); }
+.curve canvas { flex: 1; display: block; width: 100%; min-height: 0; }
+
+/* ---------- the right column: the trace, and the model under it ---------- */
+
+.col-right { display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; }
+.trace { flex: 1 1 auto; min-height: 0; }
+.trace .panel-body { min-height: 42px; }
+.model { flex: 0 0 46%; min-height: 0; }
+
+/* Which model is answering is one of the things this page exists to make
+   visible, so it is named in full and never truncated. */
+/* The panel never scrolls: which model answered has to be on screen at all
+   times, and a figure you have to scroll to is a figure nobody reads. The two
+   lines of the exchange are clamped instead, and the next poll brings the
+   whole of the next one. */
+.model .panel-body { display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+.model-name { font-size: 14px; font-weight: 600; letter-spacing: 0.02em; color: var(--teal); word-break: break-word; }
+.model-sub { margin-top: 3px; font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted-2); }
+.model-sub.bad { color: var(--red); letter-spacing: 0.08em; text-transform: none; font-family: var(--sans); font-size: 10.5px; }
+
+.model-figures { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+.model-figures div { border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; }
+.model-figures .n { font-size: 16px; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--text); }
+.model-figures .k { margin-top: 1px; font-size: 7.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted-2); }
+
+.model-exchange { display: flex; flex-direction: column; gap: 7px; font-size: 11px; line-height: 1.45; }
+.model-exchange .who { font-size: 8.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted-2); }
+.model-exchange .said {
+    margin-top: 2px; color: var(--teal-soft); text-wrap: pretty;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+/* The question gets one line and the answer two: what the model said back is
+   what the panel is for. */
+.model-exchange .said.asked { color: var(--muted); -webkit-line-clamp: 1; }
+/* The model proposed one thing and the harness ran another: the single most
+   important line this panel can show, so it gets the deny colour. */
+.model-exchange .substituted { color: var(--red); }
+.model-none { font-family: var(--sans); font-size: 11px; line-height: 1.5; color: var(--muted-2); text-wrap: pretty; }
+
+/* ---------- trace ---------- */
+
+/* The four figures are counted off the list itself, so they cannot drift. */
+.tally { flex: none; display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; padding: 0 15px 10px; }
+.tally div { border: 1px solid var(--line); border-radius: 10px; padding: 6px 7px; }
+.tally .n { font-size: 17px; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tally .k { margin-top: 1px; font-size: 7.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted-2); }
+.tally .ok .n { color: var(--teal); }
+.tally .refused .n { color: var(--amber); }
+.tally .deny .n { color: var(--red); }
+
+/* At the filmed height the four counts go: they are the most expendable thing
+   in this column, because a jury reads them off the entries anyway, and the
+   room they free is exactly what the model's answer needs. */
+@media (max-height: 820px) {
+    .tally { display: none; }
+}
+
+.legend-row { flex: none; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 0 15px 9px; }
+.legend-row .last { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-2); margin-left: auto; }
+.trace-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.trace-empty { font-family: var(--sans); font-size: 11.5px; color: var(--muted-2); padding: 6px 0; }
+.entry { padding: 9px 12px; border-radius: 12px; background: rgba(8, 24, 29, 0.6); border: 1px solid var(--line); border-left: 3px solid var(--muted-2); animation: arrive 0.45s ease 1; }
+@keyframes arrive { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.entry.ok { border-left-color: var(--teal); }
+.entry.refused { border-left-color: var(--amber); }
+.entry.deny { border-left-color: var(--red); }
+.entry-head { display: flex; align-items: center; gap: 10px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-2); }
+.entry .who { color: var(--muted); letter-spacing: 0.16em; }
+.entry .who.tier3 { color: var(--teal); }
+.entry .spacer { flex: 1; }
+.entry .call { margin-top: 6px; font-size: 12.5px; color: var(--text); word-break: break-word; }
+.entry .args { color: var(--muted); }
+.entry .result { margin: 5px 0 0; font-family: var(--sans); font-size: 11px; line-height: 1.45; color: var(--muted); white-space: pre-wrap; word-break: break-word; }
+/* Whether the slot that answered has a body behind it. Muted, because it is
+   a fact about the slot and not an outcome, and the two warm colours are
+   spoken for. */
+.entry .stub {
+    display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 999px;
+    border: 1px solid var(--line); font-family: var(--mono); font-size: 8.5px;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted-2); vertical-align: 1px;
+}
+.entry.refused .result { color: var(--amber); }
+.entry.deny .result { color: var(--red); }
+
+/* ---------- slots ---------- */
+
+/* The strip takes the slots the broker actually has, which today is nine and
+   tomorrow is another number. It is a palette of tools, not a reading surface,
+   so it is capped and scrolls inside rather than pushing the machine off the
+   page. */
+/* At 720, the filmed height, the strip has to give way before anything that
+   carries a reading does: it is a palette of tools, not a reading surface. */
+.slots { max-height: clamp(104px, 20vh, 200px); }
+.slot-list {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+    gap: 10px; padding: 0 15px 10px; overflow-y: auto; align-content: start; min-height: 0;
+}
+.slot-card { border: 1px solid var(--line); border-radius: 12px; padding: 9px 11px 11px; min-width: 0; background: rgba(8, 24, 29, 0.45); }
+/* A slot that is down is muted, not amber. Amber means one thing on this page,
+   "the device refused", and it stops meaning it the moment it decorates. */
+.slot-card.down { opacity: 0.55; }
+.slot-head { display: flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; }
+.slot-head .name { color: var(--text); }
+.slot-head .tier { margin-left: auto; font-size: 9px; letter-spacing: 0.14em; color: var(--muted-2); }
+.slot-tools { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 5px; }
+.slot-tools .btn { font-size: 10px; padding: 4px 8px; white-space: normal; }
+.slot-tools .unreachable { font-family: var(--sans); font-size: 10.5px; color: var(--muted-2); }
+
+/* ---------- the control room after the boot (index.html) ----------
+   The regions board.js owns, in the same language as the rest. The layout is
+   four columns' worth of work in three: the events and the voice on the left,
+   the machine over the agent's loop in the middle, the trace over the model on
+   the right, the slots along the bottom. */
+
+.col-centre { display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; }
+/* The middle of the control room belongs to the cabin and the scrubber. The
+   agent's loop is a window of its own, beside this one, like the factory's. */
+.col-centre .cabin { flex: 1 1 auto; min-height: 0; }
+
+/* The simulation is the smaller of the two on purpose: it is the operator's
+   driver and it is on its way out, to a tablet beside the room. What stays is
+   the voice, so the voice gets the height. */
+.simulation { flex: 0 0 auto; max-height: 46%; min-height: 0; }
+.station { flex: 1 1 auto; min-height: 0; }
+
+/* The boot console: the one place that is green phosphor on black, kept from
+   the pixel-art board because it is a terminal and a terminal is that colour.
+   It is the only screen of the demo that is not in the cold palette. */
+.boot {
+    position: fixed; inset: 0; z-index: 10;
+    background: #020604; color: #39ff8a;
+    font-family: var(--mono); font-size: 15px; line-height: 1.5;
+    padding: 32px 40px; display: flex; flex-direction: column; justify-content: flex-end;
+    text-shadow: 0 0 6px rgba(57, 255, 138, 0.45);
+    transition: opacity 600ms ease;
+}
+.boot.fade { opacity: 0; pointer-events: none; }
+.boot-log { margin: 0; white-space: pre-wrap; font-family: inherit; overflow: hidden; }
+.boot-log .ok { color: #39ff8a; }
+.boot-log .wait { color: var(--amber); }
+.boot-log .fail { color: var(--red); }
+.boot-log .dim { color: #1f9c56; }
+.boot-prompt { margin-top: 18px; font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; }
+.blink { animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* The mission line in the header, and the state word beside it. */
+.board-top .mission.state { color: var(--teal); }
+.board-top .mission.state.busy { color: var(--amber); }
+
+/* The agent's transport: five buttons, and under them the decision it is on. */
+.transport { flex: none; display: flex; gap: 5px; padding: 0 15px 7px; }
+.transport .btn { flex: 1; text-align: center; padding: 5px 3px; font-size: 10px; letter-spacing: 0.04em; }
+.agent-now {
+    flex: none; margin: 0 15px 7px; padding: 5px 9px;
+    border: 1px solid var(--line); border-radius: 10px; background: rgba(8, 24, 29, 0.5);
+    font-size: 10.5px; letter-spacing: 0.04em; color: var(--teal-soft);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.menu-foot { display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
+.menu-foot .btn { text-align: center; }
+
+/* The events of the night, as the agent slot lists them: what it will play,
+   in order, the one under way marked. One line each, the message on the
+   title: the panel is a driver, not a reading surface, and the message is
+   spoken aloud anyway. */
+.menu { display: flex; flex-direction: column; gap: 4px; }
+.menu .btn { display: flex; align-items: baseline; gap: 8px; text-align: left; white-space: nowrap; padding: 5px 9px; overflow: hidden; }
+.menu .btn small { flex: none; margin-left: auto; font-family: var(--mono); font-size: 9px; color: var(--muted-2); letter-spacing: 0.08em; text-transform: none; }
+.menu .btn.playing { border-color: var(--teal); color: var(--teal); background: rgba(47, 224, 200, 0.14); }
+
+
+/* The station's voice.
+   The log is its own scroller, not the panel body: `column-reverse` keeps the
+   scroll pinned to the newest line for free, so the sentence being said is
+   always the one on screen. With the body scrolling instead, each new line
+   landed below the fold and stayed there. */
+.voice-log {
+    flex: 1; min-height: 0; overflow-y: auto; padding: 0 15px 8px;
+    display: flex; flex-direction: column-reverse; gap: 6px; font-size: 11.5px; line-height: 1.45;
+}
+
+/* What is being said, across the card, under the name. It oscillates behind
+   the words and is flat ahead of them, and flat throughout when nothing is
+   being said: a meter that moves without a voice behind it would be an
+   ornament, and this page does not draw those. */
+.voice-meter {
+    flex: none; display: block; width: calc(100% - 30px); height: 56px;
+    margin: 0 15px 9px; padding-bottom: 9px; border-bottom: 1px solid var(--line);
+}
+.voice-log .line { color: var(--teal-soft); text-wrap: pretty; }
+.voice-log .line .who { color: var(--muted-2); letter-spacing: 0.14em; text-transform: uppercase; font-size: 9px; margin-right: 7px; }
+.voice-log .line.now { color: var(--text); }
+.voice-log .line.info { color: var(--muted-2); font-family: var(--sans); font-size: 10.5px; }
+
+/* The slots as board.js polls them: a LED, a name, a version. Liveness, not a
+   tool palette; the buttons are the operator's page. */
+.slot-leds { list-style: none; margin: 0; padding: 0 15px 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 6px 14px; overflow-y: auto; align-content: start; min-height: 0; }
+.slot-leds li { display: grid; grid-template-columns: 10px 1fr auto; gap: 9px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 11px; }
+.slot-leds .led { width: 8px; height: 8px; border-radius: 50%; background: var(--muted-2); transition: background 0.2s ease; }
+.slot-leds .led.on { background: var(--teal); box-shadow: 0 0 9px var(--teal); }
+.slot-leds .led.wait { background: var(--amber); box-shadow: 0 0 9px var(--amber); }
+
+/* Traffic on a slot: the whole row flares once per call, in the colour of what
+   came back. Teal for an ordinary call, amber when the device refused, red
+   when the policy denied. Red is not used for traffic itself: it means "this
+   was refused" everywhere else on the page, and a light that goes red on every
+   call stops saying anything at the moment a real refusal arrives.
+
+   The row and not the dot, because an eight-pixel dot blinking at the bottom
+   of a filmed screen is an effect nobody sees. One flare per call, so what
+   moves is a call that really happened. */
+.slot-leds li { border-radius: 8px; padding-left: 7px; margin-left: -7px; transition: background 0.35s ease; }
+.slot-leds li.busy { animation: row-ok 0.7s ease-out 1; }
+.slot-leds li.refused { animation: row-refused 1.1s ease-out 1; }
+.slot-leds li.deny { animation: row-deny 1.1s ease-out 1; }
+.slot-leds li.busy .led { animation: flare-ok 0.7s ease-out 1; }
+.slot-leds li.refused .led { animation: flare-refused 1.1s ease-out 1; }
+.slot-leds li.deny .led { animation: flare-deny 1.1s ease-out 1; }
+
+@keyframes row-ok {
+    0% { background: rgba(47, 224, 200, 0.26); }
+    100% { background: transparent; }
+}
+@keyframes row-refused {
+    0%, 35% { background: rgba(255, 182, 72, 0.3); }
+    100% { background: transparent; }
+}
+@keyframes row-deny {
+    0%, 35% { background: rgba(255, 80, 100, 0.32); }
+    100% { background: transparent; }
+}
+
+@keyframes flare-ok {
+    0% { transform: scale(2.1); background: #eafffb; box-shadow: 0 0 16px var(--teal); }
+    100% { transform: scale(1); background: var(--teal); box-shadow: 0 0 9px var(--teal); }
+}
+@keyframes flare-refused {
+    0%, 30% { transform: scale(2.1); background: var(--amber); box-shadow: 0 0 16px var(--amber); }
+    60% { transform: scale(1.4); background: var(--amber); box-shadow: 0 0 12px var(--amber); }
+    100% { transform: scale(1); background: var(--teal); box-shadow: 0 0 9px var(--teal); }
+}
+@keyframes flare-deny {
+    0%, 30% { transform: scale(2.1); background: var(--red); box-shadow: 0 0 18px var(--red); }
+    60% { transform: scale(1.4); background: var(--red); box-shadow: 0 0 12px var(--red); }
+    100% { transform: scale(1); background: var(--teal); box-shadow: 0 0 9px var(--teal); }
+}
+.slot-leds .name { color: var(--text); letter-spacing: 0.12em; text-transform: uppercase; }
+.slot-leds .name small { margin-left: 7px; font-size: 9px; letter-spacing: 0.1em; color: var(--muted-2); text-transform: none; }
+.slot-leds .meta { font-size: 9px; letter-spacing: 0.1em; color: var(--muted-2); text-align: right; }
+.slot-leds .meta.bad { color: var(--muted); }
+
+/* ---------- the call dialog ---------- */
+
+dialog { padding: 0; min-width: 440px; max-width: 640px; border: 1px solid var(--line-strong); border-radius: 16px; background: #061419; color: var(--text); }
+dialog::backdrop { background: rgba(2, 8, 10, 0.72); }
+dialog form { display: flex; flex-direction: column; gap: 10px; padding: 18px; }
+dialog h3 { margin: 0; font-size: 13px; letter-spacing: 0.1em; color: var(--teal-soft); }
+dialog label { font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted-2); display: flex; flex-direction: column; gap: 6px; }
+dialog textarea { font-family: var(--mono); font-size: 13px; color: var(--teal-soft); background: #041014; border: 1px solid var(--line); border-radius: 10px; padding: 10px; min-height: 96px; resize: vertical; }
+.actions { display: flex; gap: 8px; justify-content: flex-end; }

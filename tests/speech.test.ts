@@ -34,6 +34,7 @@ interface Spoken {
     queued: boolean;
     uri: string;
     playedBy?: Array<{ output: string }>;
+    takenBy?: string;
 }
 interface Queue {
     seq: number;
@@ -113,6 +114,32 @@ describe("speech slot on the silent engine", () => {
         const u = await result<Spoken>("played", { utteranceId: id, output: "test", durationMs: 1234 });
         assert.equal(u.playedBy?.[0].output, "test");
         assert.equal((await queue()).pending.length, 0);
+    });
+
+    it("one voice in the room: a second output is told to come back, and the line is still waiting for it", async () => {
+        // Two boards open on one queue. The floor is taken for the line being
+        // said, so a second output asking for ANOTHER line is refused, and the
+        // refusal must be the kind that means "come back": the line has not
+        // been said by anyone and must stay pending, or it is lost for good.
+        const first = await result<Spoken>("say", { text: "First line of the pair." });
+        const second = await result<Spoken>("say", { text: "Second line of the pair." });
+
+        await result<Spoken>("take", { utteranceId: first.utteranceId, output: "board-a" });
+        await assert.rejects(
+            result("take", { utteranceId: second.utteranceId, output: "board-b" }),
+            /speech:floor-busy/,
+            "the second output is refused while the first is speaking, with the marker that tells it to come back",
+        );
+        // Not consumed by the refusal: it is still there to be said.
+        assert.ok((await queue()).pending.some((u) => u.utteranceId === second.utteranceId), "the refused line is still pending");
+
+        // The floor is freed when the holder reports it played, and the second
+        // line can then be taken, by either output.
+        await result<Spoken>("played", { utteranceId: first.utteranceId, output: "board-a", durationMs: 800 });
+        const taken = await result<Spoken>("take", { utteranceId: second.utteranceId, output: "board-b" });
+        assert.equal(taken.takenBy, "board-b");
+        await result<Spoken>("played", { utteranceId: second.utteranceId, output: "board-b", durationMs: 800 });
+        assert.equal((await queue()).pending.length, 0, "both lines were said, once each");
     });
 
     it("speakers have their own voice; an unknown one is refused", async () => {

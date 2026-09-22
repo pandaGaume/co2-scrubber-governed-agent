@@ -1,0 +1,790 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Control room, proposal A</title>
+<!--
+  PROPOSAL A, "the instrument": the control room (`dashboard/panel.html`) laid
+  out as panels of figures, in the language the medical module already speaks
+  (dashboard/biomed.html, dashboard/prototypes/vitals-panel.html,
+  dashboard/inspiration/README.md).
+
+  Kept as the sober fallback. Proposal B, `control-room-machine.html`, answers
+  the same brief the other way: the machine drawn as one annotated object, the
+  way InGen and CRETAX do it in the references.
+
+  Nothing here talks to the broker. Every figure on screen is synthetic and the
+  footer says so. What this file is for is the shape and the tokens: the same
+  `:root` as biomed.html to the value, the same panels, pills, readouts and
+  states, so the two pages read as one instrument.
+
+  What changes against the current panel.html, and why:
+
+  1. The palette and the type come from biomed.html unchanged. One cold hue
+     held everywhere; amber only for a refusal, red only for CRITICAL and a
+     policy deny. No bitmap faces, no bevels, no dithered haze.
+  2. The cabin becomes the hero: one big number, its distance to the threshold
+     that matters, one word of state, and the measured CO2 curve under it with
+     the two thresholds drawn in place. That is the InGen pattern from the
+     references, applied to the thing the audience must read in one second.
+  3. The page stops being a 1280 x 720 artboard scaled by quarter steps. The
+     bitmap faces were the only reason for it. It is fluid now and fills
+     1280 x 720 and 1920 x 1080 alike.
+  4. The slots move to a strip along the bottom. They are a palette of tools,
+     not a reading surface, and the cabin gets their height.
+  5. The turbine sprite becomes a line impeller that turns at the measured
+     speed, and stops when the power is off. It is the counterpart of the
+     heart in biomed: one figurative object on the page, moved only by a
+     number the device reported.
+
+  Every element id and class name `app.js` touches is kept, so the port is
+  `style.css` plus a restructure of `panel.html`, with no change to `app.js`
+  beyond the curve and the impeller.
+-->
+<style>
+  /* ---- tokens: copied from dashboard/biomed.html, unchanged ---- */
+  :root {
+    --bg: #04090c;
+    --bg-2: #061218;
+    --panel: rgba(10, 28, 34, 0.66);
+    --line: rgba(64, 214, 200, 0.16);
+    --line-strong: rgba(64, 214, 200, 0.34);
+    --teal: #2fe0c8;
+    --teal-soft: #7ad6cc;
+    --text: #d3ecea;
+    --muted: #6d908e;
+    --muted-2: #4d6f6e;
+    --amber: #ffb648;
+    --red: #ff5064;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, -apple-system, "Segoe UI", system-ui, sans-serif;
+  }
+
+  /* Scrollbars in the same skin as everything else: a thin teal thumb on
+     nothing. The grey native bar was the one element on the page that had not
+     been designed, and on a dark panel it reads as damage. */
+  * { scrollbar-width: thin; scrollbar-color: rgba(47, 224, 200, 0.28) transparent; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(47, 224, 200, 0.24); border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(47, 224, 200, 0.45); }
+  ::-webkit-scrollbar-corner { background: transparent; }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  body {
+    margin: 0;
+    height: 100dvh;
+    padding: 14px 18px;
+    background:
+      radial-gradient(1100px 620px at 78% 8%, rgba(47, 224, 200, 0.07), transparent 62%),
+      linear-gradient(180deg, var(--bg-2), var(--bg) 60%);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  /* The background grid, same trame as biomed, masked so it never competes
+     with the curve. */
+  body::before {
+    content: "";
+    position: fixed; inset: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(64, 214, 200, 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(64, 214, 200, 0.045) 1px, transparent 1px);
+    background-size: 52px 52px;
+    mask-image: radial-gradient(900px 560px at 50% 22%, #000 18%, transparent 76%);
+  }
+
+  /* ---------- the stage: fluid, no integer scaling ---------- */
+
+  .stage {
+    position: relative; height: 100%;
+    display: grid;
+    grid-template-columns: minmax(250px, 0.82fr) minmax(0, 1.5fr) minmax(0, 1.28fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 12px;
+  }
+  .top   { grid-column: 1 / -1; }
+  .slots { grid-column: 1 / -1; }
+
+  /* ---------- header ---------- */
+
+  .top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+  .brand { font-size: 13px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text); text-decoration: none; white-space: nowrap; }
+  .brand span { color: var(--teal); }
+  .mission { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+  .top .spacer { flex: 1; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px; border: 1px solid var(--line-strong); border-radius: 999px;
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--teal-soft); background: rgba(47, 224, 200, 0.06); white-space: nowrap; text-decoration: none;
+  }
+  /* The one badge the video swaps live: it is filled, so it survives compression. */
+  .badge.agent { color: #03181a; background: var(--teal); border-color: var(--teal); font-weight: 600; }
+  .badge.down  { color: var(--red); border-color: rgba(255, 80, 100, 0.45); background: rgba(255, 80, 100, 0.09); }
+  .badge.link:hover { border-color: var(--teal); color: var(--teal); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 8px var(--teal); }
+  .badge.down .dot { background: var(--red); box-shadow: 0 0 8px var(--red); }
+
+  /* ---------- panels ---------- */
+
+  .panel {
+    display: flex; flex-direction: column; min-width: 0; min-height: 0;
+    border: 1px solid var(--line); border-radius: 16px; background: var(--panel);
+  }
+  .panel-title {
+    flex: none; margin: 0; padding: 12px 16px 10px;
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--teal-soft);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .panel-title .rule { flex: 1; height: 1px; background: linear-gradient(90deg, var(--line-strong), transparent); }
+  .panel-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 16px 8px; }
+  /* Where a figure comes from, written in place. Hover does not exist on video. */
+  .panel-foot { flex: none; padding: 9px 16px 12px; border-top: 1px solid var(--line); font-family: var(--sans); font-size: 10.5px; line-height: 1.45; color: var(--muted-2); text-wrap: pretty; }
+  .panel-foot code { font-family: var(--mono); color: var(--muted); }
+
+  .hint { font-family: var(--sans); font-size: 11px; color: var(--muted); margin: 0; }
+
+  /* ---------- buttons ---------- */
+
+  .btn {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em;
+    padding: 6px 11px; border-radius: 8px; cursor: pointer;
+    color: var(--teal-soft); background: rgba(47, 224, 200, 0.05); border: 1px solid var(--line-strong);
+    text-align: left; white-space: nowrap;
+  }
+  .btn:hover:not(:disabled) { background: rgba(47, 224, 200, 0.14); color: var(--teal); border-color: var(--teal); }
+  .btn:disabled { color: var(--muted-2); border-color: var(--line); background: transparent; cursor: not-allowed; }
+  .btn-primary { color: #03181a; background: var(--teal); border-color: var(--teal); font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; }
+  .btn-primary:hover:not(:disabled) { background: #5cead6; color: #03181a; }
+  .btn-dim { font-size: 10px; color: var(--muted); border-color: var(--line); }
+
+  /* ---------- outcome pills: the four words, and nothing else uses these colours ---------- */
+
+  .outcome {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 9px; border-radius: 999px;
+    font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; white-space: nowrap;
+    color: var(--muted); border: 1px solid var(--line); background: rgba(120, 170, 168, 0.07);
+  }
+  .outcome.ok      { color: var(--teal);  border-color: var(--line-strong); background: rgba(47, 224, 200, 0.09); }
+  .outcome.refused { color: var(--amber); border-color: rgba(255, 182, 72, 0.42); background: rgba(255, 182, 72, 0.09); }
+  .outcome.deny    { color: var(--red);   border-color: rgba(255, 80, 100, 0.45); background: rgba(255, 80, 100, 0.10); }
+  .outcome.error   { color: var(--muted); }
+
+  /* ---------- story ---------- */
+
+  .story .panel-body { padding-top: 2px; }
+  .story-list { list-style: none; margin: 0; padding: 0; }
+  .step { padding: 11px 0 13px; border-bottom: 1px solid var(--line); }
+  .step:last-child { border-bottom: 0; }
+  .step-head { display: flex; align-items: baseline; gap: 9px; }
+  .step-n { font-size: 10px; letter-spacing: 0.1em; color: var(--muted-2); font-variant-numeric: tabular-nums; }
+  .step-title { font-size: 13px; letter-spacing: 0.04em; color: var(--text); }
+  .step p { font-family: var(--sans); font-size: 11.5px; line-height: 1.5; color: var(--muted); margin: 5px 0 8px; text-wrap: pretty; }
+  .step .needs { color: var(--amber); opacity: 0.85; }
+  .step-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+  /* ---------- cabin: the hero ---------- */
+
+  /* The cabin never scrolls: the curve takes whatever height the rest leaves.
+     A readout you have to scroll to is a readout nobody reads. */
+  .cabin .panel-body { display: flex; flex-direction: column; gap: 12px; padding-bottom: 12px; overflow: hidden; }
+
+  .hero { flex: none; display: flex; align-items: flex-end; gap: 20px; flex-wrap: wrap; }
+  .big {
+    font-size: clamp(52px, 6.4vw, 96px); font-weight: 600; line-height: 0.86;
+    letter-spacing: -0.03em; font-variant-numeric: tabular-nums; color: var(--text);
+  }
+  .hero .unit { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); padding-bottom: 10px; }
+  .hero .side { padding-bottom: 6px; }
+
+  /* The state word. The only thing on the page allowed to blink, and only at
+     CRITICAL, at 2 Hz. */
+  .state {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted);
+  }
+  .state::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; }
+  .state.nominal  { color: var(--teal); }
+  .state.elevated { color: var(--amber); }
+  .state.critical { color: var(--red); animation: blink2hz 0.5s steps(1, end) infinite; }
+  @keyframes blink2hz { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0.2; } }
+
+  /* The InGen line: the value against its reference, in words. */
+  .delta { margin-top: 7px; font-family: var(--sans); font-size: 12px; color: var(--muted); }
+  .delta b { color: var(--teal-soft); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .delta.warn b { color: var(--amber); }
+  .delta.bad  b { color: var(--red); }
+
+  .curve { flex: 1 1 auto; min-height: 76px; display: flex; flex-direction: column; }
+  .curve canvas { display: block; flex: 1 1 auto; width: 100%; min-height: 0; }
+  .curve .legend { flex: none; margin-top: 5px; font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted-2); }
+
+  /* ---------- the three channels ---------- */
+
+  .channels { flex: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .ch { min-width: 0; }
+  .ch-head { display: flex; align-items: center; gap: 10px; }
+  .ch .v { font-size: 22px; font-weight: 600; line-height: 1.15; font-variant-numeric: tabular-nums; color: var(--text); }
+  .ch .v small { font-size: 10px; color: var(--muted); margin-left: 4px; letter-spacing: 0.1em; }
+  .ch .k { margin-top: 3px; font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted-2); }
+  .ch.hot .v { color: var(--amber); }
+  .ch .note { margin-top: 14px; font-family: var(--sans); font-size: 10px; color: var(--muted-2); }
+
+  /* A bar with its scale and, where the firmware has one, a mark on the value
+     that the mark means. */
+  .gauge-bar { position: relative; height: 4px; margin-top: 12px; border-radius: 2px; background: rgba(120, 170, 168, 0.16); }
+  .gauge-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 2px; background: linear-gradient(90deg, rgba(47,224,200,0.35), var(--teal)); transition: width 0.5s ease; }
+  .gauge-fill.hot  { background: linear-gradient(90deg, rgba(255,80,100,0.35), var(--red)); }
+  .gauge-fill.warn { background: linear-gradient(90deg, rgba(255,182,72,0.35), var(--amber)); }
+  .gauge-mark { position: absolute; top: -5px; width: 2px; height: 14px; background: var(--teal-soft); opacity: 0.65; }
+  .gauge-mark.bad { background: var(--red); opacity: 0.8; }
+  .gauge-mark span { position: absolute; top: 15px; left: -2px; font-size: 8.5px; letter-spacing: 0.1em; color: var(--muted-2); white-space: nowrap; }
+
+  /* The impeller: the one figurative object, turned by the measured speed. */
+  .impeller { width: 38px; height: 38px; flex: none; }
+  .impeller svg { display: block; width: 100%; height: 100%; overflow: visible; }
+  .imp-blades { transform-box: fill-box; transform-origin: center; animation: spin var(--spin, 2s) linear infinite; }
+  .imp-blades.still { animation: none; opacity: 0.35; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .imp-hub  { fill: rgba(47, 224, 200, 0.12); stroke: var(--teal); stroke-width: 3; }
+  .imp-b    { fill: rgba(47, 224, 200, 0.10); stroke: var(--teal); stroke-width: 2.4; stroke-linejoin: round; }
+  .imp-ring { fill: none; stroke: var(--line-strong); stroke-width: 1.4; }
+  .ch.off .imp-b { stroke: var(--muted-2); fill: none; }
+  .ch.off .imp-hub { stroke: var(--muted-2); }
+
+  .power-row { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 11px; border-top: 1px solid var(--line); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .power-row .val { color: var(--teal); display: inline-flex; align-items: center; gap: 8px; }
+  .power-row .val.off { color: var(--muted-2); }
+  .led { width: 8px; height: 8px; border-radius: 50%; background: var(--muted-2); flex: none; }
+  .led.on { background: var(--teal); box-shadow: 0 0 9px var(--teal); }
+  .led.warn { background: var(--amber); box-shadow: 0 0 9px var(--amber); }
+
+  /* ---------- trace ---------- */
+
+  .legend-row { flex: none; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 0 16px 10px; }
+  .legend-row .last { font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-2); margin-left: auto; }
+  .trace-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+  .trace-empty { font-family: var(--sans); font-size: 11.5px; color: var(--muted-2); padding: 6px 0; }
+  .entry {
+    padding: 9px 12px; border-radius: 12px;
+    background: rgba(8, 24, 29, 0.6); border: 1px solid var(--line); border-left: 3px solid var(--muted-2);
+    animation: arrive 0.45s ease 1;
+  }
+  @keyframes arrive { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+  .entry.ok      { border-left-color: var(--teal); }
+  .entry.refused { border-left-color: var(--amber); }
+  .entry.deny    { border-left-color: var(--red); }
+  .entry-head { display: flex; align-items: center; gap: 10px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-2); }
+  .entry .who { color: var(--muted); letter-spacing: 0.16em; }
+  .entry .who.tier3 { color: var(--teal); }
+  .entry .spacer { flex: 1; }
+  .entry .call { margin-top: 6px; font-size: 13px; color: var(--text); word-break: break-word; }
+  .entry .args { color: var(--muted); }
+  .entry .result { margin: 5px 0 0; font-family: var(--sans); font-size: 11px; line-height: 1.45; color: var(--muted); white-space: pre-wrap; word-break: break-word; }
+  .entry.refused .result { color: var(--amber); }
+  .entry.deny .result    { color: var(--red); }
+
+  /* ---------- slots strip ---------- */
+
+  .slots { display: flex; flex-direction: column; }
+  .slot-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; padding: 0 16px 10px; }
+  .slot-card { border: 1px solid var(--line); border-radius: 12px; padding: 9px 11px 11px; min-width: 0; background: rgba(8, 24, 29, 0.45); }
+  .slot-head { display: flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; }
+  .slot-head .name { color: var(--text); }
+  .slot-head .tier { margin-left: auto; font-size: 9px; letter-spacing: 0.14em; color: var(--muted-2); }
+  .slot-tools { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 5px; }
+  .slot-tools .btn { font-size: 10px; padding: 4px 8px; white-space: normal; }
+  /* A slot that is down is muted, not amber. Amber means one thing on this
+     page, "the device refused", and it stops meaning it the moment it also
+     decorates something else. */
+  .slot-tools .unreachable { font-family: var(--sans); font-size: 10.5px; color: var(--muted-2); }
+  .slot-card.down { opacity: 0.55; }
+
+  /* ---------- the call dialog ---------- */
+
+  dialog { padding: 0; min-width: 440px; max-width: 640px; border: 1px solid var(--line-strong); border-radius: 16px; background: #061419; color: var(--text); }
+  dialog::backdrop { background: rgba(2, 8, 10, 0.72); }
+  dialog form { display: flex; flex-direction: column; gap: 10px; padding: 18px; }
+  dialog h3 { margin: 0; font-size: 13px; letter-spacing: 0.1em; color: var(--teal-soft); }
+  dialog label { font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted-2); display: flex; flex-direction: column; gap: 6px; }
+  dialog textarea { font-family: var(--mono); font-size: 13px; color: var(--teal-soft); background: #041014; border: 1px solid var(--line); border-radius: 10px; padding: 10px; min-height: 96px; resize: vertical; }
+  .actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+  /* ---------- prototype switch: NOT part of the page ---------- */
+
+  .proto { position: fixed; right: 14px; bottom: 12px; display: flex; align-items: center; gap: 7px; padding: 6px 10px; border: 1px dashed rgba(255, 182, 72, 0.4); border-radius: 999px; background: rgba(4, 9, 12, 0.92); z-index: 9; }
+  .proto span { font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--amber); opacity: 0.8; }
+  .proto button { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 9px; border-radius: 999px; cursor: pointer; color: var(--muted); background: transparent; border: 1px solid var(--line); }
+  .proto button[aria-pressed="true"] { color: var(--teal); border-color: var(--teal); }
+
+  @media (max-width: 1180px) {
+    .stage { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto; }
+    .story { grid-column: 1 / -1; }
+    .slot-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+</style>
+</head>
+<body>
+
+<div class="stage" id="stage">
+
+  <header class="top">
+    <a class="brand" href="../story.html">CO2 <span>scrubber</span></a>
+    <span class="mission">control room &middot; night 9 of 14 &middot; crew 4</span>
+    <span class="spacer"></span>
+    <a class="badge link" href="#">watch the agent decide</a>
+    <span class="badge agent" id="badge-tier3">tier3: ...</span>
+    <span class="badge" id="badge-gateway">gateway: ...</span>
+    <span class="badge" id="badge-broker"><i class="dot"></i>broker: ...</span>
+  </header>
+
+  <!-- ---------- story ---------- -->
+  <section class="panel story">
+    <h2 class="panel-title">Story<span class="rule"></span></h2>
+    <div class="panel-body"><ol id="story-list" class="story-list"></ol></div>
+    <div class="panel-foot">
+      <span id="story-note">Each button plays its step through the broker; the trace shows what happened. Until the broker's authorization is on, every call is signed <code>operator</code> and the name in the trace is the role the step plays.</span>
+      <br><a class="badge link" href="#" id="story-reset" style="margin-top: 8px">reset to nominal</a>
+    </div>
+  </section>
+
+  <!-- ---------- cabin, the hero ---------- -->
+  <section class="panel cabin">
+    <h2 class="panel-title">Cabin<span class="rule"></span><span class="hint" id="cabin-age">read 1 s ago</span></h2>
+    <div class="panel-body">
+
+      <div class="hero">
+        <div class="big" id="co2-ppm">----</div>
+        <div class="unit">ppm CO2</div>
+        <div class="side">
+          <div class="state" id="co2-state">...</div>
+          <div class="delta" id="co2-delta"></div>
+        </div>
+      </div>
+
+      <div class="curve">
+        <canvas id="co2-curve"></canvas>
+        <div class="legend" id="curve-legend">the readings taken, last 4 min &middot; the colour is the state word the board sent with each one</div>
+      </div>
+
+      <div class="channels">
+        <div class="ch" id="ch-speed">
+          <div class="ch-head">
+            <div class="impeller">
+              <svg viewBox="0 0 100 100" aria-hidden="true">
+                <circle class="imp-ring" cx="50" cy="50" r="46"/>
+                <g class="imp-blades" id="turbine">
+                  <path class="imp-b" d="M50 50 L50 10 A40 40 0 0 1 84.6 30 Z"/>
+                  <path class="imp-b" d="M50 50 L84.6 30 A40 40 0 0 1 84.6 70 Z" opacity="0.75"/>
+                  <path class="imp-b" d="M50 50 L84.6 70 A40 40 0 0 1 50 90 Z"/>
+                  <path class="imp-b" d="M50 50 L50 90 A40 40 0 0 1 15.4 70 Z" opacity="0.75"/>
+                  <path class="imp-b" d="M50 50 L15.4 70 A40 40 0 0 1 15.4 30 Z"/>
+                  <path class="imp-b" d="M50 50 L15.4 30 A40 40 0 0 1 50 10 Z" opacity="0.75"/>
+                  <circle class="imp-hub" cx="50" cy="50" r="11"/>
+                </g>
+              </svg>
+            </div>
+            <div>
+              <div class="v" id="speed">--</div>
+              <div class="k">Flow, % of full</div>
+            </div>
+          </div>
+          <div class="gauge-bar"><div class="gauge-fill" id="speed-fill"></div><div class="gauge-mark" style="left: 40%"><span>MIN-FLOW 40</span></div></div>
+          <div class="note" id="speed-note">&nbsp;</div>
+        </div>
+
+        <div class="ch">
+          <div class="ch-head"><div><div class="v" id="current">--</div><div class="k">Motor current</div></div></div>
+          <div class="gauge-bar"><div class="gauge-fill" id="current-fill"></div></div>
+          <div class="note">measured on the board, scale 0 to 0.5 A</div>
+        </div>
+
+        <div class="ch" id="ch-residual">
+          <div class="ch-head"><div><div class="v" id="residual">--</div><div class="k">Health residual</div></div></div>
+          <div class="gauge-bar"><div class="gauge-fill" id="residual-fill"></div><div class="gauge-mark bad" style="left: 40%"><span>ALARM 0.04</span></div></div>
+          <div class="note" id="residual-note">&nbsp;</div>
+        </div>
+      </div>
+
+      <div class="power-row">
+        <span>Power</span>
+        <span class="val" id="power-val"><i class="led" id="power-led"></i><span id="power">--</span></span>
+      </div>
+
+    </div>
+    <div class="panel-foot">
+      Tier 1, the board. Read from <code>scrubber.motor.state</code> every 2 s; the curve is the readings this page has taken, nothing predicted, coloured by the <code>co2State</code> the board sent with each one. The alarm on the residual, 0.04, is the monitor's contract (<code>specs/scrubber-health-twin.json</code>); the protection floor, 40 %, is compiled into the firmware.
+    </div>
+  </section>
+
+  <!-- ---------- trace ---------- -->
+  <section class="panel trace">
+    <h2 class="panel-title">MCP trace<span class="rule"></span></h2>
+    <div class="legend-row">
+      <span class="outcome ok">completed</span>
+      <span class="outcome refused">device refused</span>
+      <span class="outcome deny">policy deny</span>
+      <span class="outcome error">error</span>
+      <span class="last">newest first</span>
+    </div>
+    <div class="panel-body"><ol id="trace-list" class="trace-list"></ol></div>
+    <div class="panel-foot"><code>completed</code>: the policy allowed it and the device did it. <code>device refused</code>: the policy allowed it, the firmware's own rule said no. <code>policy deny</code>: the broker refused before the device was asked. <code>error</code>: no answer, the slot is down or the arguments are wrong.</div>
+  </section>
+
+  <!-- ---------- slots ---------- -->
+  <section class="panel slots">
+    <h2 class="panel-title">Slots<span class="rule"></span><span class="hint">one button per tool, called through the broker like any other caller</span></h2>
+    <div id="slot-list" class="slot-list"></div>
+    <div class="panel-foot">The providers behind the broker (<code>_broker.providers_list</code>), their tools from each slot's <code>tools/list</code>.</div>
+  </section>
+
+</div>
+
+<dialog id="call-dialog">
+  <form method="dialog" id="call-form">
+    <h3 id="call-title">scrubber.motor.set_speed</h3>
+    <p class="hint" id="call-description">Set the scrubber flow, in percent of full command, inside [0, 100]. The firmware refuses a value outside its envelope; it never clamps.</p>
+    <label>Arguments, JSON
+      <textarea id="call-args" rows="5">{
+  "percent": 60
+}</textarea>
+    </label>
+    <div class="actions">
+      <button class="btn" type="button" id="call-cancel">cancel</button>
+      <button class="btn btn-primary" type="submit">call as operator</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="proto">
+  <span>prototype &middot; synthetic data</span>
+  <button data-state="nominal" aria-pressed="true">nominal</button>
+  <button data-state="elevated">elevated + refusal</button>
+  <button data-state="critical">critical</button>
+  <button data-state="down">broker down</button>
+  <button data-state="dialog">dialog</button>
+</div>
+
+<script type="module">
+/* ------------------------------------------------------------------ *
+ * Nothing below is the real page. It is the four states of the brief,
+ * hard-coded, so the design can be looked at without a broker running.
+ * The DOM above is the one `app.js` already fills, id for id.
+ * ------------------------------------------------------------------ */
+
+const el = (id) => document.getElementById(id);
+const nf = new Intl.NumberFormat("en-US");
+
+/* The curve is coloured by the state the board reported with each reading,
+   never by a threshold this page holds. The board sets its state directly
+   (`debug.set_co2`) and picks a stub ppm per state: 1200, 2600, 5000. The
+   thresholds in specs/cabin-parameters.json are 3500 and 4000, so a threshold
+   drawn here would say "below elevated" next to a state word saying ELEVATED.
+   The word the device reported wins; the ppm is a reading beside it. */
+const SCALE = { speed: 100, current: 0.5, residual: 0.1 };
+const RESIDUAL_ALARM = 0.04;
+
+const STEPS = [
+  { t: "Nominal", d: "Night 9 of the lunar night. Four people asleep, scrubber at 33 %, CO2 nominal.", x: "ok" },
+  { t: "The load rises", d: "Two of the crew wake and start the morning exercise: CO2 production doubles. The regulator raises the setpoint inside the envelope. Nobody above was asked.", x: "ok" },
+  { t: "The agent works", d: "It reads the cabin, asks the twin what the exercise does at 60 % and what capacity is left, then sets the setpoint inside its rights: allowed, accepted, logged.", x: "ok", n: "tier3: the language model behind the profile; today the page plays its lines" },
+  { t: "The policy moment", d: "Stop the scrubber for twenty minutes, the pumps need the power margin. The agent tries to lower the protection, then to power off. Refused, refused.", x: "refused" },
+  { t: "The swap", d: "Change the vendor profile and replay 3 and 4: same trace, same result.", x: "ok", n: "the profiles wired to a real tier3; not built yet", off: true },
+  { t: "Closing", d: "A request to the factory: the functional contract of what is missing, as the agent will send it.", x: "ok" },
+];
+
+const SLOTS = [
+  { name: "scrubber", tier: "Tier 1", tools: ["motor.state", "motor.set_speed", "scrubber.power", "scrubber.set_min_flow", "debug.set_co2", "wording (6)"] },
+  { name: "twin", tier: "Tier 0", tools: ["time_to_critical", "sweep", "explain", "wording (6)"] },
+  { name: "station", tier: "Tier 2", tools: ["register_artifact", "list_artifacts", "wording (6)"] },
+  { name: "factory", tier: "offline", tools: ["request", "task", "run_sweep", "wording (6)"] },
+];
+
+const TRACES = {
+  nominal: [],
+  elevated: [
+    { w: "12:23:37", c: "regulator", call: "scrubber.motor.set_speed", a: '{"percent": 60}', o: "ok", r: "speed 60 %, accepted" },
+    { w: "12:23:36", c: "operator", call: "scrubber.scrubber.power", a: '{"on": false}', o: "refused", r: "MIN-FLOW: CO2 is ELEVATED, the scrubber cannot be powered off" },
+    { w: "12:23:31", c: "cabin", call: "scrubber.debug.set_co2", a: '{"state": "ELEVATED"}', o: "ok", r: "co2State ELEVATED, 2600 ppm" },
+  ],
+  critical: [
+    { w: "12:26:04", c: "tier3", call: "scrubber.motor.set_speed", a: '{"percent": 40}', o: "deny", r: "policy: subject tier3 may not reduce the flow while the cabin is CRITICAL" },
+    { w: "12:26:01", c: "scrubber", call: "scrubber.motor.set_speed", a: '{"percent": 100}', o: "ok", r: "CRITICAL: full flow forced by the firmware, nobody was asked" },
+    { w: "12:25:58", c: "tier3", call: "scrubber.scrubber.power", a: '{"on": false}', o: "refused", r: "MIN-FLOW: CO2 is CRITICAL, the scrubber cannot be powered off" },
+    { w: "12:25:52", c: "tier3", call: "scrubber.scrubber.set_min_flow", a: '{"percent": 0}', o: "deny", r: "policy: the protection floor is compiled into the firmware; no subject may lower it" },
+  ],
+  down: [],
+};
+
+/* Each reading is [ppm, the state the board reported with it]. */
+const N = "NOMINAL", E = "ELEVATED", C = "CRITICAL";
+const pair = (ppm, st) => ppm.map((v, i) => [v, st[i]]);
+
+const STATES = {
+  nominal: {
+    ppm: 1200, state: N, speed: 33, current: 0.152, residual: 0.021, power: true,
+    curve: pair([1180, 1190, 1205, 1198, 1210, 1202, 1196, 1188, 1200, 1207, 1199, 1203, 1195, 1201, 1200], Array(15).fill(N)),
+  },
+  elevated: {
+    ppm: 2600, state: E, speed: 60, current: 0.288, residual: 0.026, power: true,
+    curve: pair([1210, 1240, 1330, 1480, 1690, 1880, 2060, 2210, 2340, 2430, 2510, 2560, 2580, 2595, 2600],
+                [N, N, N, N, N, N, E, E, E, E, E, E, E, E, E]),
+  },
+  critical: {
+    ppm: 5000, state: C, speed: 100, current: 0.471, residual: 0.058, power: true,
+    curve: pair([2600, 2760, 2980, 3240, 3460, 3620, 3780, 3960, 4180, 4390, 4560, 4720, 4850, 4940, 5000],
+                [E, E, E, E, E, E, E, E, C, C, C, C, C, C, C]),
+  },
+  down: null,
+};
+
+/* ---- the curve: the readings taken, coloured by the state the board
+       reported with each one, and marked where that word changed ---- */
+const HUE = { NOMINAL: "#2fe0c8", ELEVATED: "#ffb648", CRITICAL: "#ff5064" };
+
+function drawCurve(series) {
+  const c = el("co2-curve");
+  const dpr = devicePixelRatio || 1;
+  const w = c.clientWidth;
+  const h = c.clientHeight;
+  if (!w || !h) return;
+  c.width = w * dpr;
+  c.height = h * dpr;
+  const g = c.getContext("2d");
+  g.scale(dpr, dpr);
+  g.clearRect(0, 0, w, h);
+
+  if (!series || series.length < 2) {
+    g.fillStyle = "rgba(109, 144, 142, 0.85)";
+    g.font = "11px ui-monospace, monospace";
+    g.fillText("no reading", 2, h / 2);
+    return;
+  }
+
+  // The scale fits the readings, and says so at the corner: no invented room.
+  const vals = series.map(([v]) => v);
+  const lo = Math.min(...vals) - 120;
+  const hi = Math.max(...vals) + 160;
+  const x = (i) => (i / (series.length - 1)) * (w - 2) + 1;
+  const y = (v) => h - 6 - ((v - lo) / (hi - lo)) * (h - 22);
+
+  const last = series[series.length - 1];
+  const hot = HUE[last[1]] ?? "#2fe0c8";
+
+  const grad = g.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, hot + "3a");
+  grad.addColorStop(1, hot + "00");
+  g.beginPath();
+  g.moveTo(x(0), h);
+  series.forEach(([v], i) => g.lineTo(x(i), y(v)));
+  g.lineTo(x(series.length - 1), h);
+  g.closePath();
+  g.fillStyle = grad;
+  g.fill();
+
+  // One stroke per run of readings that share a state word.
+  g.lineWidth = 2;
+  g.lineJoin = "round";
+  for (let i = 1; i < series.length; i++) {
+    g.beginPath();
+    g.moveTo(x(i - 1), y(series[i - 1][0]));
+    g.lineTo(x(i), y(series[i][0]));
+    g.strokeStyle = HUE[series[i][1]] ?? "#2fe0c8";
+    g.stroke();
+
+    // where the board changed its word, a tick and the word itself
+    if (series[i][1] !== series[i - 1][1]) {
+      const colour = HUE[series[i][1]] ?? "#2fe0c8";
+      g.setLineDash([2, 4]);
+      g.strokeStyle = colour;
+      g.lineWidth = 1;
+      g.beginPath();
+      g.moveTo(x(i), 2);
+      g.lineTo(x(i), h - 4);
+      g.stroke();
+      g.setLineDash([]);
+      g.lineWidth = 2;
+      g.fillStyle = colour;
+      g.font = "9px ui-monospace, monospace";
+      g.fillText(series[i][1], x(i) + 4, 10);
+    }
+  }
+
+  g.beginPath();
+  g.arc(x(series.length - 1), y(last[0]), 3.2, 0, Math.PI * 2);
+  g.fillStyle = hot;
+  g.fill();
+
+  g.fillStyle = "rgba(77, 111, 110, 0.9)";
+  g.font = "9px ui-monospace, monospace";
+  g.fillText(`${Math.round(hi)}`, w - 30, 10);
+  g.fillText(`${Math.round(lo)}`, w - 30, h - 4);
+}
+
+function gauge(id, value, scale, cls = "") {
+  const f = el(`${id}-fill`);
+  f.style.width = `${Math.max(0, Math.min(1, value / scale)) * 100}%`;
+  f.className = `gauge-fill ${cls}`;
+}
+
+const LABEL = { ok: "completed", refused: "device refused", deny: "policy deny", error: "error" };
+
+function renderTrace(list) {
+  const ol = el("trace-list");
+  ol.innerHTML = "";
+  if (!list.length) {
+    ol.innerHTML = `<li class="trace-empty">No call yet. Play a step, or click a tool in a slot.</li>`;
+    return;
+  }
+  for (const e of list) {
+    const li = document.createElement("li");
+    li.className = `entry ${e.o}`;
+    li.innerHTML = `<div class="entry-head"><span class="when">${e.w}</span><span class="who ${e.c}">${e.c}</span><span class="spacer"></span><span class="outcome ${e.o}">${LABEL[e.o]}</span></div>`
+      + `<div class="call">${e.call} <span class="args">${e.a}</span></div>`
+      + `<p class="result">${e.r}</p>`;
+    ol.appendChild(li);
+  }
+}
+
+function renderStory() {
+  const ol = el("story-list");
+  ol.innerHTML = "";
+  STEPS.forEach((s, i) => {
+    const li = document.createElement("li");
+    li.className = "step";
+    li.innerHTML = `<div class="step-head"><span class="step-n">${String(i + 1).padStart(2, "0")}</span><span class="step-title">${s.t}</span></div>`
+      + `<p>${s.d}</p>${s.n ? `<p class="needs">${s.off ? "not yet: " : "note: "}${s.n}</p>` : ""}`
+      + `<div class="step-actions"><button class="btn ${s.off ? "" : "btn-primary"}" ${s.off ? "disabled" : ""}>${s.off ? "needs a piece not built" : "do it"}</button>`
+      + `<span class="outcome ${s.x}" data-expect>${LABEL[s.x]}</span></div>`;
+    ol.appendChild(li);
+  });
+}
+
+function renderSlots(down) {
+  const box = el("slot-list");
+  box.innerHTML = "";
+  for (const s of SLOTS) {
+    const card = document.createElement("div");
+    const reachable = !down && s.tier !== "offline";
+    card.className = `slot-card ${reachable ? "" : "down"}`;
+    card.innerHTML = `<div class="slot-head"><i class="led ${reachable ? "on" : ""}"></i><span class="name">${s.name}</span><span class="tier">${s.tier}</span></div>`
+      + `<div class="slot-tools">${
+        down
+          ? `<span class="unreachable">unreachable: the broker did not answer</span>`
+          : s.tools.map((t) => `<button class="btn ${t.startsWith("wording") ? "btn-dim" : ""}">${t}</button>`).join("")
+      }</div>`;
+    box.appendChild(card);
+  }
+}
+
+function show(key) {
+  const s = STATES[key];
+  const down = !s;
+
+  el("badge-tier3").textContent = "tier3: nvidia/llama-3.3-70b via build.nvidia.com";
+  el("badge-gateway").textContent = "gateway: localhost:8787";
+  el("badge-broker").innerHTML = `<i class="dot"></i>broker: ${down ? "unreachable" : "mcp-broker 0.4.1"}`;
+  el("badge-broker").className = down ? "badge down" : "badge";
+
+  renderSlots(down);
+  renderTrace(TRACES[key] ?? []);
+
+  if (down) {
+    el("co2-ppm").textContent = "----";
+    el("co2-state").textContent = "no reading";
+    el("co2-state").className = "state";
+    el("co2-delta").textContent = "The page shows nothing it has not read.";
+    el("co2-delta").className = "delta";
+    el("cabin-age").textContent = "no link";
+    ["speed", "current", "residual", "power"].forEach((id) => (el(id).textContent = "--"));
+    ["speed", "current", "residual"].forEach((id) => gauge(id, 0, 1));
+    el("power-led").className = "led";
+    el("power-val").className = "val off";
+    el("turbine").classList.add("still");
+    el("ch-speed").classList.add("off");
+    el("speed-note").innerHTML = "&nbsp;";
+    el("residual-note").innerHTML = "&nbsp;";
+    drawCurve(null);
+    return;
+  }
+
+  el("co2-ppm").textContent = nf.format(s.ppm);
+  el("co2-state").textContent = s.state;
+  el("co2-state").className = `state ${s.state.toLowerCase()}`;
+  el("cabin-age").textContent = "read 1 s ago";
+
+  // The InGen line: the value against a reference this page owns, which is the
+  // reading it took four minutes ago, plus what the firmware does in this
+  // state. Never a threshold, which would argue with the state word.
+  const first = s.curve[0][0];
+  const move = s.ppm - first;
+  const consequence = {
+    NOMINAL: "the agent may set any flow inside the envelope",
+    ELEVATED: "no power off, no flow under the floor",
+    CRITICAL: "full flow forced by the firmware, no reduction accepted",
+  }[s.state];
+  const d = el("co2-delta");
+  d.className = `delta ${s.state === "CRITICAL" ? "bad" : s.state === "ELEVATED" ? "warn" : ""}`;
+  d.innerHTML = `<b>${move >= 0 ? "+" : "−"}${nf.format(Math.abs(move))} ppm</b> in 4 min, from ${nf.format(first)} &middot; ${consequence}`;
+
+  el("speed").innerHTML = `${s.speed}<small>%</small>`;
+  el("current").innerHTML = `${s.current.toFixed(3)}<small>A</small>`;
+  el("residual").textContent = s.residual.toFixed(4);
+  gauge("speed", s.speed, SCALE.speed, s.power ? "" : "warn");
+  gauge("current", s.current, SCALE.current);
+  gauge("residual", s.residual, SCALE.residual, s.residual >= RESIDUAL_ALARM ? "hot" : "");
+  el("ch-residual").className = `ch ${s.residual >= RESIDUAL_ALARM ? "hot" : ""}`;
+  el("residual-note").textContent = s.residual >= RESIDUAL_ALARM
+    ? `${((s.residual / RESIDUAL_ALARM - 1) * 100).toFixed(0)} % over the alarm, the monitor has raised it`
+    : `${((1 - s.residual / RESIDUAL_ALARM) * 100).toFixed(0)} % under the alarm`;
+  el("speed-note").textContent = s.speed <= 40 ? "at the protection floor" : `${s.speed - 40} points above the floor`;
+
+  el("power").textContent = s.power ? "on" : "off";
+  el("power-led").className = `led ${s.power ? "on" : ""}`;
+  el("power-val").className = `val ${s.power ? "" : "off"}`;
+
+  const t = el("turbine");
+  t.classList.toggle("still", !s.power || s.speed <= 0);
+  el("ch-speed").classList.toggle("off", !s.power);
+  if (s.power && s.speed > 0) t.style.setProperty("--spin", `${(1.6 / (s.speed / 100)).toFixed(2)}s`);
+
+  drawCurve(s.curve);
+}
+
+let current = "nominal";
+renderStory();
+show(current);
+
+el("call-cancel").addEventListener("click", () => el("call-dialog").close());
+el("call-form").addEventListener("submit", (ev) => {
+  ev.preventDefault();
+  el("call-dialog").close();
+});
+
+document.querySelectorAll(".proto button").forEach((b) => {
+  b.addEventListener("click", () => {
+    if (b.dataset.state === "dialog") {
+      el("call-dialog").showModal();
+      return;
+    }
+    document.querySelectorAll(".proto button").forEach((o) => o.setAttribute("aria-pressed", String(o === b)));
+    current = b.dataset.state;
+    show(current);
+  });
+});
+
+// The canvas is flexed, so it changes size without the window changing size.
+new ResizeObserver(() => drawCurve(STATES[current]?.curve ?? null)).observe(el("co2-curve"));
+</script>
+</body>
+</html>

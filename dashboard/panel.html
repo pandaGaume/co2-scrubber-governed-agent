@@ -3,98 +3,148 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
 <title>Control room: CO2 scrubber, governed agent</title>
-<link rel="stylesheet" href="./style.css">
+<link rel="stylesheet" href="./room.css">
+<!--
+  The control room. The design is DESIGN_BRIEF.md; the prototype it was
+  accepted from is prototypes/control-room.html, which holds this same layout
+  with hard-coded states and no broker behind it. The pixel-art version this
+  replaces is kept in drafts/panel-pixel-art.html.
+
+  This file is the frame only. Everything with a value in it is filled by
+  app.js from the broker, and the machine in the middle is drawn on the canvas
+  from the readings, not written here.
+-->
 </head>
-<body class="room">
-<div class="stage-box">
-<div class="stage" id="stage">
+<body>
+
+<div class="stage">
 
     <header class="top">
-        <a class="brand" href="./story.html" title="The story and the architecture">CO2 SCRUBBER</a>
-        <span class="mission">control room, night 9 of 14, crew 4</span>
-        <a class="badge agent-door" href="./studio/node-editor-v2/index.html?mcp=0&amp;ext=/agent/tier3.js&amp;autoplay=1" title="The agent's decision loop as a graph in the SpikyPanda studio: watch each stage light up as it decides">WATCH THE AGENT DECIDE</a>
+        <a class="brand" href="./story.html" title="The story and the architecture">CO2 <span>scrubber</span></a>
+        <span class="mission">control room &middot; night 9 of 14 &middot; crew 4</span>
         <span class="spacer"></span>
+        <a class="badge link" href="./studio/node-editor-v2/index.html?mcp=0&amp;ext=/agent/tier3.js&amp;autoplay=1" title="The agent's decision loop as a graph in the SpikyPanda studio: watch each stage light up as it decides">watch the agent decide</a>
         <span class="badge agent" id="badge-tier3">tier3: ...</span>
         <span class="badge" id="badge-gateway">gateway: ...</span>
-        <span class="badge" id="badge-broker">broker: connecting...</span>
+        <span class="badge" id="badge-broker"><i class="dot"></i>broker: connecting...</span>
     </header>
 
-    <main class="regions">
+    <div class="col-left">
 
-        <section class="panel" id="story">
-            <h2 class="panel-title">STORY</h2>
-            <div class="panel-body">
-                <ol id="story-list" class="story-list"></ol>
-            </div>
+        <section class="panel story">
+            <h2 class="panel-title">Story<span class="rule"></span></h2>
+            <div class="panel-body"><ol id="story-list" class="story-list"></ol></div>
             <div class="panel-foot">
-                <span id="story-note" title="Until the broker's authorization is on, every call is signed operator; the name in the trace is the role the step plays.">Each button plays its step through the broker; the trace shows what happened.</span>
-                <a href="#" id="story-reset">reset to nominal</a>
+                <span id="story-note">Each button plays its step through the broker; the trace shows what happened. Until the broker's authorization is on, every call is signed <code>operator</code> and the name in the trace is the role the step plays.</span>
+                <br><a class="badge link" href="#" id="story-reset" style="margin-top: 8px">reset to nominal</a>
             </div>
         </section>
 
-        <section class="panel" id="cabin">
-            <h2 class="panel-title">CABIN</h2>
-            <div class="cabin-body">
-                <div class="haze" id="haze"></div>
-                <div class="readout">
-                    <div class="big" id="co2-ppm">----</div>
-                    <div class="unit">ppm CO2</div>
+        <section class="panel mother">
+            <h2 class="panel-title">Mother<span class="rule"></span><span class="hint">station voice</span></h2>
+            <div class="panel-body"><div class="mother-log" id="mother-log"></div></div>
+            <div class="panel-foot">The <code>speech</code> slot's queue (<code>speech://queue</code>), said in the <code>station</code> slot's own words (<code>grammar://phrases</code>). This page prints them and writes none of them.</div>
+        </section>
+
+    </div>
+
+    <section class="panel cabin">
+        <h2 class="panel-title">Cabin and scrubber<span class="rule"></span><span class="hint" id="cabin-age">connecting...</span></h2>
+        <div class="panel-body">
+
+            <div class="hero">
+                <div class="big" id="co2-ppm">----</div>
+                <div class="unit">ppm CO2</div>
+                <div class="side">
                     <div class="state" id="co2-state">...</div>
+                    <div class="delta" id="co2-delta"></div>
                 </div>
-                <div class="turbine-box">
-                    <div class="turbine well"><div id="turbine"></div></div>
+            </div>
+
+            <div class="scene" id="scene">
+                <canvas id="model"></canvas>
+
+                <span class="power-pill"><i class="led" id="power-led"></i>power <span class="val" id="power-val"><span id="power">--</span></span></span>
+
+                <div class="rail">
+                    <div class="callout" id="cal-flow">
+                        <div class="k">Flow, % of full</div>
+                        <div class="v" id="speed">--</div>
+                        <div class="note" id="speed-note">&nbsp;</div>
+                    </div>
+
+                    <div class="callout" id="cal-current">
+                        <div class="k">Motor current</div>
+                        <div class="v" id="current">--</div>
+                        <div class="note" id="current-note">measured on the board</div>
+                    </div>
+
+                    <div class="callout" id="cal-residual">
+                        <div class="k">Health residual</div>
+                        <div class="v" id="residual">--</div>
+                        <div class="note" id="residual-note">&nbsp;</div>
+                    </div>
+
+                    <div class="curve">
+                        <div class="legend">CO2, the readings this page took</div>
+                        <canvas id="co2-curve"></canvas>
+                    </div>
                 </div>
-                <div class="gauges">
-                    <div class="gauge">
-                        <div class="gauge-head"><span>speed</span><span id="speed">--</span></div>
-                        <div class="gauge-bar well"><div class="gauge-fill" id="speed-fill"></div><div class="gauge-ticks"></div><div class="gauge-mark" style="left: 40%" title="MIN-FLOW: 40 %"></div></div>
-                    </div>
-                    <div class="gauge">
-                        <div class="gauge-head"><span>current</span><span id="current">--</span></div>
-                        <div class="gauge-bar well"><div class="gauge-fill" id="current-fill"></div><div class="gauge-ticks"></div></div>
-                    </div>
-                    <div class="gauge">
-                        <div class="gauge-head"><span>health residual</span><span id="residual">--</span></div>
-                        <div class="gauge-bar well"><div class="gauge-fill" id="residual-fill"></div><div class="gauge-ticks"></div><div class="gauge-mark" style="left: 40%" title="alarm threshold: 0.04"></div></div>
-                    </div>
-                </div>
-                <div class="power-row"><span>power</span><span><span class="led" id="power-led"></span> <span id="power">--</span></span></div>
             </div>
-            <div class="panel-foot">Tier 1, the board, read from <code>scrubber.motor.state</code> every 2 s. Marks: MIN-FLOW at 40 % of speed, alarm at 0.04 of residual.</div>
-        </section>
 
-        <section class="panel" id="slots">
-            <h2 class="panel-title">SLOTS</h2>
-            <div class="panel-body">
-                <div id="slot-list" class="slot-list"></div>
-            </div>
-            <div class="panel-foot">The providers behind the broker (<code>_broker.providers_list</code>), their tools from <code>tools/list</code>. A button calls the tool as this page, through the broker like any other caller.</div>
-        </section>
+        </div>
+        <div class="panel-foot">
+            Tier 1, the board, read from <code>scrubber.motor.state</code> every 2 s. The impeller turns at the measured flow and stops with the power; the bed fills with the health residual and turns amber past the alarm of 0.04, the monitor's contract. The curve is the readings this page took, coloured by the <code>co2State</code> the board sent with each one, never by a threshold this page holds.
+        </div>
+    </section>
 
-        <section class="panel" id="trace">
-            <h2 class="panel-title">MCP TRACE</h2>
-            <div class="legend">
-                <span class="outcome ok" title="The policy allowed it and the device did it">completed</span>
-                <span class="outcome refused" title="The policy allowed it; the device refused it on safety (envelope, MIN-FLOW)">device refused</span>
-                <span class="outcome deny" title="The broker's policy refused it: this subject may not call this tool on this path">policy deny</span>
-                <span class="outcome error" title="No answer: the slot is down or the arguments are wrong">error</span>
-                <span>newest first</span>
-            </div>
-            <div class="panel-body">
-                <ol id="trace-list" class="trace-list"></ol>
-            </div>
-        </section>
+    <div class="col-right">
 
-    </main>
-</div>
+    <section class="panel trace">
+        <h2 class="panel-title">MCP trace<span class="rule"></span></h2>
+        <div class="tally" id="tally"></div>
+        <div class="legend-row">
+            <span class="outcome ok">completed</span>
+            <span class="outcome refused">device refused</span>
+            <span class="outcome deny">policy deny</span>
+            <span class="last">newest first</span>
+        </div>
+        <div class="panel-body"><ol id="trace-list" class="trace-list"></ol></div>
+        <div class="panel-foot"><code>completed</code>: the policy allowed it and the device did it. <code>device refused</code>: the policy allowed it, the firmware's own rule said no. <code>policy deny</code>: the broker refused before the device was asked. <code>error</code>: no answer, the slot is down or the arguments are wrong.</div>
+    </section>
+
+    <!-- The model. It is not this page that calls it: the station's harness
+         does, through `reasoner.decide`. This panel watches those calls. -->
+    <section class="panel model" id="model-panel">
+        <h2 class="panel-title">The model<span class="rule"></span><span class="hint" id="model-wire"></span></h2>
+        <div class="panel-body">
+            <div class="model-id">
+                <div class="model-name" id="model-name">connecting...</div>
+                <div class="model-sub" id="model-sub"></div>
+            </div>
+            <div class="model-figures" id="model-figures"></div>
+            <div class="model-exchange" id="model-exchange"></div>
+        </div>
+        <div class="panel-foot" id="model-foot">The calls are the station harness's, not this page's: <code>spk://events</code>.</div>
+    </section>
+
+    </div>
+
+    <section class="panel slots">
+        <h2 class="panel-title">Slots<span class="rule"></span><span class="hint">one button per tool, called through the broker like any other caller</span></h2>
+        <div id="tool-list" class="slot-list"></div>
+        <div class="panel-foot">The providers behind the broker (<code>_broker.providers_list</code>), their tools from each slot's <code>tools/list</code>.</div>
+    </section>
+
 </div>
 
 <dialog id="call-dialog">
     <form method="dialog" id="call-form">
         <h3 id="call-title">tool</h3>
         <p class="hint" id="call-description"></p>
-        <label>arguments (JSON)
+        <label>Arguments, JSON
             <textarea id="call-args" rows="6">{}</textarea>
         </label>
         <div class="actions">

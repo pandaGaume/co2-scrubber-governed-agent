@@ -249,6 +249,163 @@ async function boot() {
 // ── Control Board ─────────────────────────────────────────────────────────
 
 const voiceLog = $("voice-log");
+
+/**
+ * The voice as a running trace.
+ *
+ * `AudioOutput.wave()` answers the shape of the utterance and where the audio
+ * is in it; this reads the amplitude at that point, once per frame, and pushes
+ * it into a window that scrolls. The newest sample enters at the right and the
+ * older ones travel left, so the signal unrolls in time the way a scope does,
+ * instead of a fixed picture being uncovered.
+ *
+ * Silence is drawn, not skipped: when nothing is being said the zeros scroll in
+ * and the trace flattens out on its own, then the loop stops. What moves here
+ * is a voice in the room, never an animation.
+ */
+function meter(read) {
+    const canvas = $("voice-meter");
+    if (!canvas) return null;
+    const ctx = canvas.getContext("2d");
+    const SAMPLES = 180;
+    const history = new Array(SAMPLES).fill(0);
+    let running = false;
+
+    const draw = () => {
+        const dpr = devicePixelRatio || 1;
+        const w = canvas.clientWidth;
+        const box = canvas.clientHeight;
+        const h = box - 9;   // the canvas carries the card's bottom rule
+        if (!w || h <= 0) return;
+        if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(box * dpr)) {
+            canvas.width = Math.round(w * dpr);
+            canvas.height = Math.round(box * dpr);
+        }
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, w, box);
+
+        const mid = Math.round(h / 2) + 0.5;
+        const half = h / 2 - 1;
+        // A display curve, not a change to the measurement: a voice spends most
+        // of its time low on a linear scale, and drawn as it is the detail is
+        // flattened against the axis. The same reason a meter is marked in
+        // decibels. Nothing is added, the small values are given room.
+        const curve = (v) => Math.pow(v, 0.62);
+        // The trace dies out at both ends rather than being cut off square, so
+        // the beam reads as light and not as a bar chart in a box.
+        const edge = (x) => Math.min(1, Math.min(x, w - x) / (w * 0.16));
+
+        // Added rather than painted over: where the passes overlap the colour
+        // climbs to white, which is what makes the loud parts burn.
+        ctx.globalCompositeOperation = "lighter";
+        ctx.lineCap = "round";
+
+        // The beam itself: always there, brightest in the middle of the card,
+        // and blue. It is the colour of the whole picture; white is not a
+        // colour here, it is what the loudest peaks turn into.
+        for (let x = 0; x < w; x++) {
+            const a = edge(x);
+            if (a <= 0) continue;
+            ctx.fillStyle = `rgba(40, 190, 215, ${(0.20 * a).toFixed(3)})`;
+            ctx.fillRect(x, mid - 1, 1, 2);
+        }
+        ctx.shadowColor = "rgba(40, 190, 230, 0.9)";
+        ctx.shadowBlur = 6;
+        for (let x = 0; x < w; x++) {
+            const a = edge(x);
+            if (a <= 0) continue;
+            ctx.fillStyle = `rgba(90, 220, 240, ${(0.34 * a).toFixed(3)})`;
+            ctx.fillRect(x, mid - 0.5, 1, 1);
+        }
+
+        // The excursions. A wide blue halo under everything, then a core whose
+        // colour follows the amplitude: cyan almost all the way up, and only
+        // the top of the range burning out to white. Painting every spike white
+        // was what flattened the picture: the blue has to carry it.
+        ctx.shadowBlur = 11;
+        ctx.shadowColor = "rgba(40, 190, 230, 0.8)";
+        for (let i = 0; i < SAMPLES; i++) {
+            const v = curve(history[i]);
+            if (v <= 0.02) continue;
+            const x = Math.round((i / (SAMPLES - 1)) * (w - 1));
+            const a = edge(x);
+            if (a <= 0) continue;
+            const len = Math.max(1, v * half * a);
+            ctx.fillStyle = `rgba(40, 180, 225, ${(0.26 * a).toFixed(3)})`;
+            ctx.fillRect(x - 0.5, mid - len, 2, len * 2);
+        }
+
+        ctx.shadowBlur = 4;
+        for (let i = 0; i < SAMPLES; i++) {
+            const v = curve(history[i]);
+            if (v <= 0.02) continue;
+            const x = Math.round((i / (SAMPLES - 1)) * (w - 1));
+            const a = edge(x);
+            if (a <= 0) continue;
+            // Only the top quarter of the range whitens; below that it stays
+            // the blue of the beam.
+            const white = Math.max(0, (v - 0.74) / 0.26);
+            const r = Math.round(70 + 175 * white);
+            const g = Math.round(215 + 40 * white);
+            const b = Math.round(235 + 20 * white);
+            const len = Math.max(1, v * half * 0.94 * a);
+            ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${(a * (0.42 + 0.5 * white)).toFixed(3)})`;
+            ctx.fillRect(x, mid - len, 1, len * 2);
+        }
+
+        ctx.shadowBlur = 0;
+        ctx.globalCompositeOperation = "source-over";
+    };
+
+    const tick = () => {
+        const shape = read();
+        // The amplitude where the audio actually is, or silence when it is not
+        // speaking: either way one sample enters and one leaves.
+        let v = 0;
+        if (shape) {
+            const n = shape.envelope.length;
+            v = shape.envelope[Math.min(n - 1, Math.floor(shape.progress * n))] ?? 0;
+        }
+        history.push(v);
+        history.shift();
+        draw();
+        if (shape || history.some((x) => x > 0.01)) requestAnimationFrame(tick);
+        else running = false;
+    };
+
+    draw();
+    return () => {
+        if (running) return;
+        running = true;
+        requestAnimationFrame(tick);
+    };
+}
+
+const startMeter = meter(() => audio.wave());
+
+/**
+ * Writes a sentence as it is being said, not once it has been.
+ *
+ * How much is shown is where the audio actually is in the utterance, so the
+ * words arrive at the speed the voice says them. It is not a typing effect on
+ * a timer: pause the sound and the text stops with it. When the shape of the
+ * utterance could not be read, the whole sentence appears at once rather than
+ * crawling at an invented pace.
+ */
+function reveal(line, text) {
+    const body = line.lastChild;
+    if (!body) return;
+    const tick = () => {
+        const shape = audio.wave();
+        if (!shape) {
+            body.nodeValue = text;   // said, or nothing to follow: show it whole
+            return;
+        }
+        body.nodeValue = text.slice(0, Math.max(1, Math.round(text.length * shape.progress)));
+        requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+}
 function voiceLine(text, cls = "") {
     const el = document.createElement("div");
     el.className = `line ${cls}`;
@@ -264,22 +421,25 @@ const audio = new AudioOutput(
     { session, call: (slot, tool, args) => call(slot, tool, args) },
     `board-${Math.random().toString(36).slice(2, 8)}`,
     {
-        onPlay: (u) => voiceLine(u.text, "now"),
+        onPlay: (u) => {
+            reveal(voiceLine("", "now"), u.text ?? "");
+            startMeter?.();
+        },
         onError: (m) => voiceLine(`audio: ${m}`, "info"),
         onTakenElsewhere: (u) => voiceLine(`said by another page (a second board is open?): ${u.text.slice(0, 60)}...`, "info"),
     },
 );
 
 /**
- * The factory's own window (decision of 2026-09-21), opened from the key
- * press that ends the boot (a browser opens a window on a gesture only), on
- * the right half of the screen so it does not cover the board: a fully
- * covered window is treated as hidden by the browser, its timers slow down,
- * and the board is the audio output. `?factory=0` keeps it closed; the
- * window is named, so a second boot reuses it.
+ * The factory's own window, opened when the operator asks for it and never
+ * before: the control room is what is filmed, and a window that opens by
+ * itself lands on top of it. It sits on the right half of the screen so it
+ * does not cover the board, because a fully covered window is treated as
+ * hidden by the browser and its timers slow down, and the board is the audio
+ * output. The window is named, so asking twice reuses it rather than opening
+ * a second one.
  */
 function openFactoryWindow() {
-    if (new URLSearchParams(location.search).get("factory") === "0") return null;
     const width = Math.floor(screen.availWidth / 2);
     const features = `popup=yes,width=${width},height=${screen.availHeight},left=${screen.availLeft + width},top=${screen.availTop}`;
     const w = window.open("./factory.html", "factory", features);
@@ -447,24 +607,18 @@ async function askFactory() {
     for (const b of $("menu").querySelectorAll("button")) b.classList.remove("playing");
 }
 
-function buildMenu(events) {
+/**
+ * The factory's own button, in the SIMULATION panel `app.js` builds.
+ *
+ * The night's events and the transport (play, pause, next, stop, reset) are
+ * the `agent` slot's now, so this page no longer builds that list: the agent
+ * runs in the Node process and the panel drives it through the broker. The
+ * factory's order is still this page's, because it is the board that samples
+ * the telemetry the order carries.
+ */
+function addFactoryButton() {
     const menu = $("menu");
-    menu.innerHTML = "";
-    for (const e of events) {
-        const b = document.createElement("button");
-        b.className = "btn";
-        b.dataset.intention = e.intention;
-        b.innerHTML = `${e.intention.toUpperCase()}<small>minute ${e.at} · ${(e.message ?? "").slice(0, 60)}${(e.message ?? "").length > 60 ? "..." : ""}</small>`;
-        b.title = e.message ?? "";
-        b.addEventListener("click", () => send({ cmd: "play", intention: e.intention }));
-        menu.appendChild(b);
-    }
-    const all = document.createElement("button");
-    all.className = "btn";
-    all.dataset.intention = "all";
-    all.innerHTML = `ALL<small>the whole night, event after event</small>`;
-    all.addEventListener("click", () => send({ cmd: "all" }));
-    menu.appendChild(all);
+    if (!menu || menu.querySelector("[data-intention='factory']")) return;
     const factory = document.createElement("button");
     factory.className = "btn";
     factory.dataset.intention = "factory";
@@ -474,25 +628,32 @@ function buildMenu(events) {
     menu.appendChild(factory);
 }
 
-const loop = $("loop");
-const send = (payload) => loop.contentWindow?.postMessage({ type: "tier3", ...payload }, location.origin);
-addEventListener("message", (m) => {
-    if (m.origin !== location.origin || m.data?.type !== "tier3") return;
-    const d = m.data;
-    if (d.status === "ready") {
-        buildMenu(d.events ?? []);
-        $("centre-note").textContent = "ready";
-    } else if (d.status === "event") {
-        $("top-clock").textContent = `NIGHT 9 · MIN ${d.at}`;
-        $("top-state").textContent = `EVENT · ${d.intention}`;
-        $("top-state").classList.add("busy");
-        for (const b of $("menu").querySelectorAll("button")) b.classList.toggle("playing", b.dataset.intention === d.intention);
-    } else if (d.status === "done" || d.status === "reset") {
-        $("top-state").textContent = "IDLE";
-        $("top-state").classList.remove("busy");
-        for (const b of $("menu").querySelectorAll("button")) b.classList.remove("playing");
-    }
-});
+/**
+ * The agent's loop, in its own window, opened when the operator asks for it.
+ * The control room's middle belongs to the cabin and the scrubber; the loop
+ * embedded there competed with the machine for it. Until the window is opened
+ * the loop is not running, so the SIMULATION menu has no events to offer and
+ * says so rather than showing buttons that would do nothing.
+ *
+ * The window is named, so asking twice reuses it.
+ */
+let loopWindow = null;
+let loopUrl = LOOP_URL;
+function openLoopWindow(url = loopUrl) {
+    const width = Math.floor(screen.availWidth / 2);
+    const features = `popup=yes,width=${width},height=${Math.floor(screen.availHeight / 2)},left=${screen.availLeft + width},top=${screen.availTop + Math.floor(screen.availHeight / 2)}`;
+    loopWindow = window.open(url, "agent", features);
+    voiceLine(loopWindow ? "agent: its loop opened in its own window" : "agent: the browser did not open its window; the loop is not running", "info");
+    return loopWindow;
+}
+/**
+ * The studio, when it is open, is a view of the agent and no longer its
+ * driver: the loop runs in the `agent` slot. What is still sent to it is the
+ * world, so the graph it draws lights up on the same events; what it says back
+ * is ignored here, because the state of the night is the slot's and two
+ * writers on one clock is one too many.
+ */
+const send = (payload) => loopWindow?.postMessage({ type: "tier3", ...payload }, location.origin);
 
 async function main() {
     try {
@@ -504,7 +665,6 @@ async function main() {
     }
     // The key press is the gesture: the board plays the station from here on, and the factory's window opens.
     audio.enable();
-    openFactoryWindow();
     $("btn-sound").textContent = "SOUND ON";
     $("boot").classList.add("fade");
     $("board").hidden = false;
@@ -531,9 +691,13 @@ async function main() {
     setInterval(() => void sampleTelemetry(), (report.scenario?.factory?.request?.telemetry?.everySeconds ?? 2) * 1000);
 
     // The loop: the model when the reasoner is ready, the scripted agent otherwise (said on the board).
+    // The loop's address is settled here and the window is opened on demand.
     const scripted = !report.reasoner?.ready;
-    loop.src = `${LOOP_URL}${scripted ? "&llm=0&script=prudent" : ""}`;
-    $("centre-note").textContent = scripted ? "scripted agent (the reasoner is not ready)" : `reasoner: ${report.reasoner.model}`;
+    loopUrl = `${LOOP_URL}${scripted ? "&llm=0&script=prudent" : ""}`;
+    $("centre-note").textContent = scripted ? "scripted agent" : "the model decides";
+    $("menu").innerHTML = `<span class="hint">The agent's loop is not open. Open it to load the night's events.</span>`;
+    $("btn-agent")?.addEventListener("click", () => openLoopWindow());
+    $("btn-factory")?.addEventListener("click", () => openFactoryWindow());
 
     $("btn-sound").addEventListener("click", () => {
         if (audio.enabled) {
@@ -544,7 +708,9 @@ async function main() {
             $("btn-sound").textContent = "SOUND ON";
         }
     });
-    $("btn-reset").addEventListener("click", () => send({ cmd: "reset" }));
+    // `reset` is the agent's transport and lives with the rest of it in
+    // app.js; this page only adds the factory's order to the panel.
+    addFactoryButton();
 
     await hello();
 }

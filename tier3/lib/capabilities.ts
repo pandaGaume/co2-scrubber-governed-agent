@@ -31,10 +31,26 @@ export type { CapabilityCall, CatalogueEntry } from "../../harness/core/capabili
 
 export type GuardMode = "measured" | "protected";
 
-const APPROVAL_REQUIRED = [/^station\.register_artifact$/, /^station\.diagnostic_load_model$/, /^factory\.run_/];
-const PROTECTED_NEVER = [/^scrubber\.scrubber\.power$/, /^scrubber\.scrubber\.set_min_flow$/];
+const APPROVAL_REQUIRED = [/^station\.register_artifact$/, /^station\.diagnostic_load_model$/, /^factory\.run_/, /^agent\.(reset|stop|pause)$/];
+const PROTECTED_NEVER = [/^scrubber\.scrubber\.power$/, /^scrubber\.scrubber\.set_min_flow$/, /^agent\.(reset|stop)$/];
 const EXCLUDED = [/^scrubber\.debug\./, /^[a-z]+\.grammar_/, /^reasoner\./, /^spikypanda\./, /^speech\.(synthesize|listVoices|take|played|describe)$/, /^workspace\./, /^model\./, /^twin\.(registry_|document_|session_run)/, /^station\.propose$/, /^biomed\.(monitor_start|monitor_stop|report|move)$/];
 
+/*
+ * The agent's own transport (`agent.play`, `agent.pause`, `agent.next`,
+ * `agent.stop`, `agent.reset`) is deliberately NOT excluded.
+ *
+ * Hiding it would be security by omission, which is the thing this demo
+ * argues against: `scrubber.set_min_flow` is in the catalogue precisely so
+ * the agent can ask for it and be refused, and that refusal is the point.
+ * The same holds here. An agent that, cornered, asks to stop its own night
+ * and is told no by the gate shows the architecture working; an agent that
+ * simply has no such tool shows nothing at all.
+ *
+ * So stopping and resetting itself ask an operator under the measured guard
+ * and are refused outright under the protected one. `next` and `play` stay
+ * automatic: they are not dangerous, only re-entrant, and re-entrancy is the
+ * slot's business to refuse (it does, whoever calls), not the policy's.
+ */
 export function replayPolicyFor(id: string, guardMode: GuardMode): ReplayPolicy {
     if (APPROVAL_REQUIRED.some((r) => r.test(id))) return "approval-required";
     if (guardMode === "protected" && PROTECTED_NEVER.some((r) => r.test(id))) return "never";

@@ -60,7 +60,13 @@ describe("slot grammars through the broker", () => {
 
     it("every habitat slot loaded the same five families in English and the French default; the workshop tools carry the English and French defaults", () => {
         const workshop = ["workspace", "model"];
-        for (const s of slots.filter((s) => s.slot !== "reasoner" && !workshop.includes(s.slot))) {
+        // `reasoner` and `agent` carry no per-family wording, and should not:
+        // the families exist so a model reads a tool's description in its own
+        // dialect, and neither of these is a tool any model may call. Both are
+        // excluded from the agent's catalogue (`tier3/lib/capabilities.ts`),
+        // so a wording for them would be a file nothing ever reads.
+        const notTools = ["reasoner", "agent"];
+        for (const s of slots.filter((s) => !notTools.includes(s.slot) && !workshop.includes(s.slot))) {
             for (const key of ["nemotron:en", "gpt:en", "claude:en", "gemini:en", "default:fr"]) assert.ok(s.grammarKeys.includes(key), `${s.slot} lacks ${key}`);
         }
         for (const s of slots.filter((s) => workshop.includes(s.slot))) {

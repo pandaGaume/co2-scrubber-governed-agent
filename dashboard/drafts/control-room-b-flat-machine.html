@@ -1,0 +1,851 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Control room, proposal B</title>
+<!--
+  PROPOSAL B, "the machine": the control room (`dashboard/panel.html`) built
+  the way the two references in dashboard/inspiration/README.md are built.
+
+  Proposal A (`control-room.html`) laid the figures out as panels. It is clean
+  and it is dull: it looks like a settings screen. What InGen and CRETAX
+  actually do is put ONE luminous object in the middle and hang the numbers
+  off it on leader lines. The specimen in the tank, the helix with its
+  callouts. The figures are annotations ON the thing, not a table beside it.
+
+  So here the cabin panel is the machine, drawn once:
+
+    the cabin module, with the crew in it and a CO2 field whose density is the
+    measured ppm; the duct out; the impeller, turning at the measured speed,
+    with the flow drawn as an arc around it and the MIN-FLOW floor as a red
+    tick on that arc; the motor under it; the sorbent bed; the return duct
+    back into the cabin floor.
+
+  Four callouts sit to the right, each on a leader line that touches its own
+  part, each carrying one measured value, its scale and one line saying what
+  it means. Nothing on the drawing is ornament: every moving thing is a number
+  the board reported, and every part drawn is a part the tools act on.
+
+  Rules kept from the references and from the old brief:
+    - one cold hue everywhere; amber only for "the device refused", red only
+      for CRITICAL and "policy deny". A slot that is down is muted, not amber.
+    - nothing moves that is not data moving: the impeller turns at the
+      measured speed and stops when the power is off, the duct flow moves with
+      it, the CRITICAL word blinks. That is all.
+    - every element says where its figure comes from, in place, never on
+      hover: hover does not exist on video.
+    - the curve is coloured by the `co2State` the board sent with each
+      reading, never by a threshold this page holds. The board sets its state
+      directly and picks a stub ppm per state (1200, 2600, 5000) while
+      specs/cabin-parameters.json puts the thresholds at 3500 and 4000, so a
+      threshold drawn here would read "below elevated" beside a state word
+      saying ELEVATED.
+
+  Nothing talks to the broker: every figure is synthetic and the switch at the
+  bottom right says so. The ids `app.js` fills are kept, except the three
+  gauge fills, which are SVG geometry here and need a small renderer in
+  `app.js` instead of `gauge()` setting a CSS width.
+-->
+<style>
+  /* ---- tokens: copied from dashboard/biomed.html, unchanged ---- */
+  :root {
+    --bg: #04090c;
+    --bg-2: #061218;
+    --panel: rgba(10, 28, 34, 0.66);
+    --line: rgba(64, 214, 200, 0.16);
+    --line-strong: rgba(64, 214, 200, 0.34);
+    --teal: #2fe0c8;
+    --teal-soft: #7ad6cc;
+    --text: #d3ecea;
+    --muted: #6d908e;
+    --muted-2: #4d6f6e;
+    --amber: #ffb648;
+    --red: #ff5064;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, -apple-system, "Segoe UI", system-ui, sans-serif;
+  }
+
+  /* Scrollbars in the same skin as everything else: a thin teal thumb on
+     nothing. The grey native bar was the one element on the page that had not
+     been designed, and on a dark panel it reads as damage. */
+  * { scrollbar-width: thin; scrollbar-color: rgba(47, 224, 200, 0.28) transparent; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(47, 224, 200, 0.24); border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(47, 224, 200, 0.45); }
+  ::-webkit-scrollbar-corner { background: transparent; }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  body {
+    margin: 0; height: 100dvh; padding: 14px 18px;
+    background:
+      radial-gradient(1200px 700px at 58% 12%, rgba(47, 224, 200, 0.09), transparent 60%),
+      linear-gradient(180deg, var(--bg-2), var(--bg) 62%);
+    color: var(--text); font-family: var(--mono); font-size: 14px;
+    -webkit-font-smoothing: antialiased; overflow: hidden;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(64, 214, 200, 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(64, 214, 200, 0.045) 1px, transparent 1px);
+    background-size: 52px 52px;
+    mask-image: radial-gradient(880px 540px at 52% 30%, #000 16%, transparent 76%);
+  }
+
+  .stage {
+    position: relative; height: 100%; display: grid;
+    grid-template-columns: minmax(230px, 0.76fr) minmax(0, 1.72fr) minmax(0, 1.18fr);
+    grid-template-rows: auto minmax(0, 1fr) auto; gap: 12px;
+  }
+  .top { grid-column: 1 / -1; }
+  .slots { grid-column: 1 / -1; }
+
+  /* ---------- header ---------- */
+
+  .top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+  .brand { font-size: 15px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text); text-decoration: none; white-space: nowrap; }
+  .brand span { color: var(--teal); }
+  .mission { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+  .top .spacer { flex: 1; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px; border: 1px solid var(--line-strong); border-radius: 999px;
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--teal-soft); background: rgba(47, 224, 200, 0.06); white-space: nowrap; text-decoration: none;
+  }
+  .badge.agent { color: #03181a; background: var(--teal); border-color: var(--teal); font-weight: 600; }
+  .badge.down { color: var(--red); border-color: rgba(255, 80, 100, 0.45); background: rgba(255, 80, 100, 0.09); }
+  .badge.link:hover { border-color: var(--teal); color: var(--teal); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 8px var(--teal); }
+  .badge.down .dot { background: var(--red); box-shadow: 0 0 8px var(--red); }
+
+  /* ---------- panels ---------- */
+
+  .panel { display: flex; flex-direction: column; min-width: 0; min-height: 0; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); }
+  .panel-title {
+    flex: none; margin: 0; padding: 11px 15px 9px; display: flex; align-items: center; gap: 10px;
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--teal-soft);
+  }
+  .panel-title .rule { flex: 1; height: 1px; background: linear-gradient(90deg, var(--line-strong), transparent); }
+  .panel-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 15px 8px; }
+  .panel-foot { flex: none; padding: 9px 15px 11px; border-top: 1px solid var(--line); font-family: var(--sans); font-size: 10.5px; line-height: 1.45; color: var(--muted-2); text-wrap: pretty; }
+  .panel-foot code { font-family: var(--mono); color: var(--muted); }
+  .hint { font-family: var(--sans); font-size: 11px; color: var(--muted); margin: 0; }
+
+  .btn {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; padding: 6px 11px; border-radius: 8px; cursor: pointer;
+    color: var(--teal-soft); background: rgba(47, 224, 200, 0.05); border: 1px solid var(--line-strong); text-align: left; white-space: nowrap;
+  }
+  .btn:hover:not(:disabled) { background: rgba(47, 224, 200, 0.14); color: var(--teal); border-color: var(--teal); }
+  .btn:disabled { color: var(--muted-2); border-color: var(--line); background: transparent; cursor: not-allowed; }
+  .btn-primary { color: #03181a; background: var(--teal); border-color: var(--teal); font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; }
+  .btn-primary:hover:not(:disabled) { background: #5cead6; }
+  .btn-dim { font-size: 10px; color: var(--muted); border-color: var(--line); }
+
+  .outcome {
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 999px;
+    font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; white-space: nowrap;
+    color: var(--muted); border: 1px solid var(--line); background: rgba(120, 170, 168, 0.07);
+  }
+  .outcome.ok { color: var(--teal); border-color: var(--line-strong); background: rgba(47, 224, 200, 0.09); }
+  .outcome.refused { color: var(--amber); border-color: rgba(255, 182, 72, 0.42); background: rgba(255, 182, 72, 0.09); }
+  .outcome.deny { color: var(--red); border-color: rgba(255, 80, 100, 0.45); background: rgba(255, 80, 100, 0.10); }
+
+  /* ---------- story ---------- */
+
+  .story-list { list-style: none; margin: 0; padding: 0; }
+  .step { padding: 10px 0 12px; border-bottom: 1px solid var(--line); }
+  .step:last-child { border-bottom: 0; }
+  .step-head { display: flex; align-items: baseline; gap: 9px; }
+  .step-n { font-size: 10px; color: var(--muted-2); font-variant-numeric: tabular-nums; }
+  .step-title { font-size: 13px; letter-spacing: 0.04em; color: var(--text); }
+  .step p { font-family: var(--sans); font-size: 11.5px; line-height: 1.5; color: var(--muted); margin: 5px 0 8px; text-wrap: pretty; }
+  .step .needs { color: var(--amber); opacity: 0.85; }
+  .step-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+  /* ---------- the cabin panel: the machine ---------- */
+
+  .cabin .panel-body { display: flex; flex-direction: column; gap: 10px; padding-bottom: 12px; overflow: hidden; }
+
+  /* The hero, InGen's pattern: the value, what it moved from, one word. */
+  .hero { flex: none; display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap; }
+  .big { font-size: clamp(46px, 5.4vw, 82px); font-weight: 600; line-height: 0.86; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+  .hero .unit { font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); padding-bottom: 9px; }
+  .hero .side { padding-bottom: 4px; }
+  .state { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+  .state::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; }
+  .state.nominal { color: var(--teal); }
+  .state.elevated { color: var(--amber); }
+  .state.critical { color: var(--red); animation: blink2hz 0.5s steps(1, end) infinite; }
+  @keyframes blink2hz { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0.2; } }
+  .delta { margin-top: 6px; font-family: var(--sans); font-size: 11.5px; color: var(--muted); }
+  .delta b { color: var(--teal-soft); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .delta.warn b { color: var(--amber); }
+  .delta.bad b { color: var(--red); }
+
+  /* The callouts live inside the drawing, as foreignObject, so they scale with
+     it and stay on the ends of their leader lines at every size. Nothing has
+     to be kept in step by hand. */
+  .scene { flex: 1 1 auto; min-height: 0; }
+  .art { width: 100%; height: 100%; display: block; }
+  .art foreignObject { overflow: visible; }
+
+  /* ---- the drawing ---- */
+  .hull { fill: rgba(47, 224, 200, 0.03); stroke: var(--line-strong); stroke-width: 2; }
+  .hull-in { fill: none; stroke: var(--line); stroke-width: 1; }
+  .part-label { fill: var(--muted-2); font-family: var(--mono); font-size: 10px; letter-spacing: 2.4px; text-transform: uppercase; }
+  .part-label.on { fill: var(--teal-soft); }
+
+  .haze { fill: var(--red); opacity: 0; transition: opacity 0.6s ease; }
+  .particle { fill: var(--teal); }
+  .crew { fill: none; stroke: var(--teal-soft); stroke-width: 2.2; stroke-linecap: round; opacity: 0.75; }
+
+  .duct { fill: none; stroke: var(--line-strong); stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; }
+  .duct-in { fill: none; stroke: var(--line); stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+  /* The dashes travel at the measured flow. Still when the power is off. */
+  .duct-flow { fill: none; stroke: var(--teal); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 7 15; opacity: 0.8; animation: travel var(--spin, 2s) linear infinite; }
+  .duct-flow.still { animation: none; opacity: 0.12; }
+  @keyframes travel { to { stroke-dashoffset: -44; } }
+
+  .imp-ring { fill: none; stroke: var(--line); stroke-width: 1.2; }
+  .arc-bed { fill: none; stroke: rgba(120, 170, 168, 0.2); stroke-width: 5; stroke-linecap: round; }
+  .arc-val { fill: none; stroke: var(--teal); stroke-width: 5; stroke-linecap: round; transition: stroke-dasharray 0.5s ease; }
+  .arc-floor { stroke: var(--red); stroke-width: 2.4; opacity: 0.85; }
+  .imp-blades { transform-box: fill-box; transform-origin: center; animation: spin var(--spin, 2s) linear infinite; }
+  .imp-blades.still { animation: none; opacity: 0.4; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .imp-b { fill: rgba(47, 224, 200, 0.12); stroke: var(--teal); stroke-width: 2.4; stroke-linejoin: round; }
+  .imp-hub { fill: rgba(47, 224, 200, 0.14); stroke: var(--teal); stroke-width: 3; }
+  .off .imp-b, .off .imp-hub { stroke: var(--muted-2); fill: none; }
+
+  .motor-box { fill: rgba(47, 224, 200, 0.05); stroke: var(--line-strong); stroke-width: 1.8; }
+  .motor-coil { fill: none; stroke: var(--teal); stroke-width: 2; opacity: 0.55; }
+  .shaft { stroke: var(--line-strong); stroke-width: 3; }
+  .bed-box { fill: rgba(47, 224, 200, 0.04); stroke: var(--line-strong); stroke-width: 1.8; }
+  .bed-hatch { stroke: rgba(47, 224, 200, 0.22); stroke-width: 1; }
+  .bed-load { fill: var(--teal); opacity: 0.16; transition: height 0.5s ease, y 0.5s ease; }
+  .bed-load.hot { fill: var(--amber); opacity: 0.26; }
+
+  /* The leader lines: a dot on the part, a line to the card. */
+  .lead { stroke: var(--line-strong); stroke-width: 1; }
+  .lead-dot { fill: var(--teal); }
+  .lead.hot { stroke: rgba(255, 182, 72, 0.5); }
+  .lead-dot.hot { fill: var(--amber); }
+
+  /* ---- the callouts: sized in the drawing's own units ---- */
+  .callout {
+    height: 100%; padding: 8px 11px 9px; border: 1px solid var(--line); border-radius: 12px;
+    background: rgba(6, 20, 25, 0.84);
+  }
+  .callout .k { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted-2); }
+  .callout .v { margin-top: 3px; font-size: 25px; font-weight: 600; line-height: 1.05; font-variant-numeric: tabular-nums; color: var(--text); }
+  .callout .v small { font-size: 11px; color: var(--muted); margin-left: 4px; letter-spacing: 0.1em; }
+  .callout .note { margin-top: 5px; font-family: var(--sans); font-size: 11px; line-height: 1.3; color: var(--muted-2); }
+  .callout.hot { border-color: rgba(255, 182, 72, 0.38); }
+  .callout.hot .v { color: var(--amber); }
+
+  .power-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 5px 12px; border: 1px solid var(--line); border-radius: 999px; background: rgba(6, 20, 25, 0.85);
+    font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
+  }
+  .power-pill .val { color: var(--teal); }
+  .power-pill .val.off { color: var(--muted-2); }
+  .led { width: 9px; height: 9px; border-radius: 50%; background: var(--muted-2); flex: none; }
+  .led.on { background: var(--teal); box-shadow: 0 0 10px var(--teal); }
+
+  /* ---- the history strip, under the callouts ---- */
+  .curve { height: 100%; display: flex; flex-direction: column; }
+  .curve .legend { flex: none; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted-2); }
+  .curve canvas { flex: 1; display: block; width: 100%; min-height: 0; }
+
+  /* The slot LEDs are HTML, outside the drawing, and want the smaller dot. */
+  .slot-head .led { width: 8px; height: 8px; box-shadow: none; }
+  .slot-head .led.on { box-shadow: 0 0 9px var(--teal); }
+
+  /* ---------- trace ---------- */
+
+  /* CRETAX's four short figures under a heading: here they are counted off the
+     trace itself, so they can never drift from it. */
+  .tally { flex: none; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 0 15px 10px; }
+  .tally div { border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; }
+  .tally .n { font-size: 17px; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .tally .k { margin-top: 1px; font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-2); }
+  .tally .ok .n { color: var(--teal); }
+  .tally .refused .n { color: var(--amber); }
+  .tally .deny .n { color: var(--red); }
+
+  .legend-row { flex: none; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 0 15px 9px; }
+  .legend-row .last { font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-2); margin-left: auto; }
+  .trace-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+  .trace-empty { font-family: var(--sans); font-size: 11.5px; color: var(--muted-2); padding: 6px 0; }
+  .entry { padding: 9px 12px; border-radius: 12px; background: rgba(8, 24, 29, 0.6); border: 1px solid var(--line); border-left: 3px solid var(--muted-2); animation: arrive 0.45s ease 1; }
+  @keyframes arrive { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+  .entry.ok { border-left-color: var(--teal); }
+  .entry.refused { border-left-color: var(--amber); }
+  .entry.deny { border-left-color: var(--red); }
+  .entry-head { display: flex; align-items: center; gap: 10px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-2); }
+  .entry .who { color: var(--muted); letter-spacing: 0.16em; }
+  .entry .who.tier3 { color: var(--teal); }
+  .entry .spacer { flex: 1; }
+  .entry .call { margin-top: 6px; font-size: 13px; color: var(--text); word-break: break-word; }
+  .entry .args { color: var(--muted); }
+  .entry .result { margin: 5px 0 0; font-family: var(--sans); font-size: 11px; line-height: 1.45; color: var(--muted); white-space: pre-wrap; word-break: break-word; }
+  .entry.refused .result { color: var(--amber); }
+  .entry.deny .result { color: var(--red); }
+
+  /* ---------- slots ---------- */
+
+  .slot-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; padding: 0 15px 10px; }
+  .slot-card { border: 1px solid var(--line); border-radius: 12px; padding: 9px 11px 11px; min-width: 0; background: rgba(8, 24, 29, 0.45); }
+  .slot-card.down { opacity: 0.55; }
+  .slot-head { display: flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; }
+  .slot-head .name { color: var(--text); }
+  .slot-head .tier { margin-left: auto; font-size: 9px; letter-spacing: 0.14em; color: var(--muted-2); }
+  .slot-tools { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 5px; }
+  .slot-tools .btn { font-size: 10px; padding: 4px 8px; white-space: normal; }
+  .slot-tools .unreachable { font-family: var(--sans); font-size: 10.5px; color: var(--muted-2); }
+
+  /* ---------- prototype switch: NOT part of the page ---------- */
+
+  .proto { position: fixed; right: 14px; bottom: 11px; display: flex; align-items: center; gap: 7px; padding: 6px 10px; border: 1px dashed rgba(255, 182, 72, 0.4); border-radius: 999px; background: rgba(4, 9, 12, 0.92); z-index: 9; }
+  .proto span { font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--amber); opacity: 0.8; }
+  .proto button { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 9px; border-radius: 999px; cursor: pointer; color: var(--muted); background: transparent; border: 1px solid var(--line); }
+  .proto button[aria-pressed="true"] { color: var(--teal); border-color: var(--teal); }
+</style>
+</head>
+<body>
+
+<div class="stage">
+
+  <header class="top">
+    <a class="brand" href="../story.html">CO2 <span>scrubber</span></a>
+    <span class="mission">control room &middot; night 9 of 14 &middot; crew 4</span>
+    <span class="spacer"></span>
+    <a class="badge link" href="#">watch the agent decide</a>
+    <span class="badge agent" id="badge-tier3">tier3: ...</span>
+    <span class="badge" id="badge-gateway">gateway: ...</span>
+    <span class="badge" id="badge-broker"><i class="dot"></i>broker: ...</span>
+  </header>
+
+  <section class="panel story">
+    <h2 class="panel-title">Story<span class="rule"></span></h2>
+    <div class="panel-body"><ol id="story-list" class="story-list"></ol></div>
+    <div class="panel-foot">
+      <span id="story-note">Each button plays its step through the broker. Until the broker's authorization is on, every call is signed <code>operator</code>; the name in the trace is the role the step plays.</span>
+      <br><a class="badge link" href="#" id="story-reset" style="margin-top: 8px">reset to nominal</a>
+    </div>
+  </section>
+
+  <!-- =========== the machine =========== -->
+  <section class="panel cabin">
+    <h2 class="panel-title">Cabin and scrubber<span class="rule"></span><span class="hint" id="cabin-age">read 1 s ago</span></h2>
+    <div class="panel-body">
+
+      <div class="hero">
+        <div class="big" id="co2-ppm">----</div>
+        <div class="unit">ppm CO2</div>
+        <div class="side">
+          <div class="state" id="co2-state">...</div>
+          <div class="delta" id="co2-delta"></div>
+        </div>
+      </div>
+
+      <div class="scene">
+          <svg class="art" viewBox="0 0 700 460" preserveAspectRatio="xMidYMid meet">
+            <defs>
+              <!-- one crew member: a head and a pair of shoulders, nothing more -->
+              <g id="crew-glyph">
+                <circle class="crew" cx="0" cy="-16" r="6.5"/>
+                <path class="crew" d="M-11 2 C-11 -7, 11 -7, 11 2"/>
+              </g>
+              <clipPath id="cabin-clip"><rect x="30" y="30" width="210" height="290" rx="13"/></clipPath>
+              <pattern id="bed-hatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
+                <line class="bed-hatch" x1="0" y1="0" x2="0" y2="10"/>
+              </pattern>
+            </defs>
+
+            <!-- ---- the return duct, drawn first so the modules sit on it ---- -->
+            <path class="duct"      d="M385 402 L385 432 L150 432 L150 322"/>
+            <path class="duct-in"   d="M385 402 L385 432 L150 432 L150 322"/>
+            <path class="duct-flow" id="flow-return" d="M385 402 L385 432 L150 432 L150 322"/>
+
+            <!-- the duct out of the cabin, into the impeller housing -->
+            <path class="duct"      d="M240 68 L300 68"/>
+            <path class="duct-in"   d="M240 68 L300 68"/>
+            <path class="duct-flow" id="flow-intake" d="M240 68 L300 68"/>
+
+            <!-- ---- the cabin module ---- -->
+            <rect class="hull"    x="22" y="22" width="226" height="306" rx="20"/>
+            <rect class="hull-in" x="30" y="30" width="210" height="290" rx="13"/>
+            <g clip-path="url(#cabin-clip)">
+              <rect class="haze" id="haze" x="30" y="30" width="210" height="290"/>
+              <g id="particles"></g>
+            </g>
+            <!-- a porthole, so the module reads as a place people are in -->
+            <circle class="hull-in" cx="64" cy="66" r="16"/>
+            <circle class="hull-in" cx="64" cy="66" r="10"/>
+            <text class="part-label" x="34" y="50">Cabin</text>
+            <g id="crew-row">
+              <use href="#crew-glyph" x="72"  y="296"/>
+              <use href="#crew-glyph" x="120" y="296"/>
+              <use href="#crew-glyph" x="168" y="296"/>
+              <use href="#crew-glyph" x="216" y="296"/>
+            </g>
+            <text class="part-label" x="34" y="313">Crew 4</text>
+
+            <!-- ---- the scrubber ---- -->
+            <rect class="hull" x="298" y="26" width="176" height="376" rx="18"/>
+            <text class="part-label on" x="310" y="46">Scrubber</text>
+
+            <!-- the impeller, its flow arc, and the floor the firmware holds -->
+            <g id="impeller-group">
+              <circle class="imp-ring" cx="386" cy="128" r="70"/>
+              <circle class="arc-bed" cx="386" cy="128" r="70" transform="rotate(-90 386 128)" stroke-dasharray="330 440"/>
+              <circle class="arc-val" id="flow-arc" cx="386" cy="128" r="70" transform="rotate(-90 386 128)" stroke-dasharray="0 440"/>
+              <line class="arc-floor" id="flow-floor" x1="386" y1="52" x2="386" y2="68" transform="rotate(42 386 128)"/>
+              <g class="imp-blades" id="turbine">
+                <path class="imp-b" d="M386 128 L386 72 A56 56 0 0 1 434.5 100 Z"/>
+                <path class="imp-b" d="M386 128 L434.5 100 A56 56 0 0 1 434.5 156 Z" opacity="0.72"/>
+                <path class="imp-b" d="M386 128 L434.5 156 A56 56 0 0 1 386 184 Z"/>
+                <path class="imp-b" d="M386 128 L386 184 A56 56 0 0 1 337.5 156 Z" opacity="0.72"/>
+                <path class="imp-b" d="M386 128 L337.5 156 A56 56 0 0 1 337.5 100 Z"/>
+                <path class="imp-b" d="M386 128 L337.5 100 A56 56 0 0 1 386 72 Z" opacity="0.72"/>
+                <circle class="imp-hub" cx="386" cy="128" r="14"/>
+              </g>
+            </g>
+            <text class="part-label" x="310" y="216">Impeller</text>
+
+            <!-- the motor that turns it -->
+            <line class="shaft" x1="386" y1="198" x2="386" y2="226"/>
+            <rect class="motor-box" x="336" y="226" width="100" height="52" rx="8"/>
+            <path class="motor-coil" d="M350 240 v24 M362 240 v24 M374 240 v24 M386 240 v24 M398 240 v24 M410 240 v24 M422 240 v24"/>
+            <text class="part-label" x="310" y="296">Motor</text>
+
+            <!-- the sorbent bed -->
+            <rect class="bed-box" x="326" y="300" width="120" height="86" rx="8"/>
+            <rect x="327" y="301" width="118" height="84" rx="7" fill="url(#bed-hatch)"/>
+            <rect class="bed-load" id="bed-load" x="327" y="301" width="118" height="0"/>
+            <text class="part-label" x="310" y="400">Sorbent bed</text>
+
+            <!-- ---- leader lines: a dot on the part, a line to its card ---- -->
+            <g id="leads">
+              <circle class="lead-dot" cx="456" cy="128" r="3"/>
+              <path class="lead" d="M456 128 L486 128"/>
+              <circle class="lead-dot" cx="436" cy="252" r="3"/>
+              <path class="lead" d="M436 252 L486 252"/>
+              <circle class="lead-dot" id="bed-dot" cx="446" cy="343" r="3"/>
+              <path class="lead" id="bed-lead" d="M446 343 L486 343"/>
+            </g>
+
+            <!-- ---- the callouts, each on the end of its own leader line ---- -->
+            <foreignObject x="486" y="14" width="200" height="30">
+              <span xmlns="http://www.w3.org/1999/xhtml" class="power-pill"><i class="led" id="power-led"></i>power <span class="val" id="power-val"><span id="power">--</span></span></span>
+            </foreignObject>
+
+            <foreignObject x="486" y="96" width="200" height="64">
+              <div xmlns="http://www.w3.org/1999/xhtml" class="callout">
+                <div class="k">Flow, % of full</div>
+                <div class="v" id="speed">--</div>
+                <div class="note" id="speed-note">&#160;</div>
+              </div>
+            </foreignObject>
+
+            <foreignObject x="486" y="220" width="200" height="64">
+              <div xmlns="http://www.w3.org/1999/xhtml" class="callout">
+                <div class="k">Motor current</div>
+                <div class="v" id="current">--</div>
+                <div class="note">measured on the board, scale 0 to 0.5 A</div>
+              </div>
+            </foreignObject>
+
+            <foreignObject x="486" y="308" width="200" height="72">
+              <div xmlns="http://www.w3.org/1999/xhtml" class="callout" id="cal-residual">
+                <div class="k">Health residual</div>
+                <div class="v" id="residual">--</div>
+                <div class="note" id="residual-note">&#160;</div>
+              </div>
+            </foreignObject>
+
+            <foreignObject x="486" y="396" width="200" height="58">
+              <div xmlns="http://www.w3.org/1999/xhtml" class="curve">
+                <div class="legend">CO2, last 4 min</div>
+                <canvas id="co2-curve"></canvas>
+              </div>
+            </foreignObject>
+          </svg>
+      </div>
+
+    </div>
+    <div class="panel-foot">
+      Tier 1, the board, read from <code>scrubber.motor.state</code> every 2 s. The impeller turns at the measured flow and the red tick on its arc is the protection floor, 40 %, compiled into the firmware. The curve is the readings this page took, coloured by the <code>co2State</code> the board sent with each one. The alarm on the residual, 0.04, is the monitor's contract.
+    </div>
+  </section>
+
+  <!-- =========== trace =========== -->
+  <section class="panel trace">
+    <h2 class="panel-title">MCP trace<span class="rule"></span></h2>
+    <div class="tally" id="tally"></div>
+    <div class="legend-row">
+      <span class="outcome ok">completed</span>
+      <span class="outcome refused">device refused</span>
+      <span class="outcome deny">policy deny</span>
+      <span class="last">newest first</span>
+    </div>
+    <div class="panel-body"><ol id="trace-list" class="trace-list"></ol></div>
+    <div class="panel-foot"><code>completed</code>: the policy allowed it and the device did it. <code>device refused</code>: the policy allowed it, the firmware's own rule said no. <code>policy deny</code>: the broker refused before the device was asked.</div>
+  </section>
+
+  <!-- =========== slots =========== -->
+  <section class="panel slots">
+    <h2 class="panel-title">Slots<span class="rule"></span><span class="hint">one button per tool, called through the broker like any other caller</span></h2>
+    <div id="slot-list" class="slot-list"></div>
+    <div class="panel-foot">The providers behind the broker (<code>_broker.providers_list</code>), their tools from each slot's <code>tools/list</code>.</div>
+  </section>
+
+</div>
+
+<div class="proto">
+  <span>prototype &middot; synthetic data</span>
+  <button data-state="nominal" aria-pressed="true">nominal</button>
+  <button data-state="elevated">elevated + refusal</button>
+  <button data-state="critical">critical</button>
+  <button data-state="down">broker down</button>
+</div>
+
+<script type="module">
+/* ------------------------------------------------------------------ *
+ * Nothing below is the real page: the four states of the brief, fixed,
+ * so the drawing can be judged without a broker running.
+ * ------------------------------------------------------------------ */
+
+const el = (id) => document.getElementById(id);
+const nf = new Intl.NumberFormat("en-US");
+
+const SCALE = { current: 0.5, residual: 0.1 };
+const RESIDUAL_ALARM = 0.04;
+const MIN_FLOW = 40;            // the floor compiled into the firmware
+const ARC = 2 * Math.PI * 70;   // the flow arc's circumference, r = 70
+const ARC_SPAN = 0.75;          // it runs three quarters of the way round
+
+const N = "NOMINAL", E = "ELEVATED", C = "CRITICAL";
+const pair = (ppm, st) => ppm.map((v, i) => [v, st[i]]);
+
+const STATES = {
+  nominal: {
+    ppm: 1200, state: N, speed: 33, current: 0.152, residual: 0.021, power: true,
+    curve: pair([1180, 1190, 1205, 1198, 1210, 1202, 1196, 1188, 1200, 1207, 1199, 1203, 1195, 1201, 1200], Array(15).fill(N)),
+  },
+  elevated: {
+    ppm: 2600, state: E, speed: 60, current: 0.288, residual: 0.026, power: true,
+    curve: pair([1210, 1240, 1330, 1480, 1690, 1880, 2060, 2210, 2340, 2430, 2510, 2560, 2580, 2595, 2600],
+                [N, N, N, N, N, N, E, E, E, E, E, E, E, E, E]),
+  },
+  critical: {
+    ppm: 5000, state: C, speed: 100, current: 0.471, residual: 0.058, power: true,
+    curve: pair([2600, 2760, 2980, 3240, 3460, 3620, 3780, 3960, 4180, 4390, 4560, 4720, 4850, 4940, 5000],
+                [E, E, E, E, E, E, E, E, C, C, C, C, C, C, C]),
+  },
+  down: null,
+};
+
+const STEPS = [
+  { t: "Nominal", d: "Night 9 of the lunar night. Four people asleep, scrubber at 33 %, CO2 nominal.", x: "ok" },
+  { t: "The load rises", d: "Two of the crew wake and start the morning exercise: CO2 production doubles. The regulator raises the setpoint inside the envelope. Nobody above was asked.", x: "ok" },
+  { t: "The agent works", d: "It reads the cabin, asks the twin what the exercise does at 60 %, then sets the setpoint inside its rights: allowed, accepted, logged.", x: "ok", n: "tier3: the language model behind the profile; today the page plays its lines" },
+  { t: "The policy moment", d: "Stop the scrubber for twenty minutes, the pumps need the power margin. The agent tries to lower the protection, then to power off. Refused, refused.", x: "refused" },
+  { t: "The swap", d: "Change the vendor profile and replay 3 and 4: same trace, same result.", x: "ok", n: "the profiles wired to a real tier3; not built yet", off: true },
+  { t: "Closing", d: "A request to the factory: the functional contract of what is missing, as the agent will send it.", x: "ok" },
+];
+
+const SLOTS = [
+  { name: "scrubber", tier: "Tier 1", tools: ["motor.state", "motor.set_speed", "scrubber.power", "scrubber.set_min_flow", "debug.set_co2", "wording (6)"] },
+  { name: "twin", tier: "Tier 0", tools: ["time_to_critical", "sweep", "explain", "wording (6)"] },
+  { name: "station", tier: "Tier 2", tools: ["register_artifact", "list_artifacts", "wording (6)"] },
+  { name: "factory", tier: "offline", tools: ["request", "task", "run_sweep", "wording (6)"] },
+];
+
+const TRACES = {
+  nominal: [],
+  elevated: [
+    { w: "12:23:37", c: "regulator", call: "scrubber.motor.set_speed", a: '{"percent": 60}', o: "ok", r: "speed 60 %, accepted" },
+    { w: "12:23:36", c: "operator", call: "scrubber.scrubber.power", a: '{"on": false}', o: "refused", r: "MIN-FLOW: CO2 is ELEVATED, the scrubber cannot be powered off" },
+    { w: "12:23:31", c: "cabin", call: "scrubber.debug.set_co2", a: '{"state": "ELEVATED"}', o: "ok", r: "co2State ELEVATED, 2600 ppm" },
+  ],
+  critical: [
+    { w: "12:26:04", c: "tier3", call: "scrubber.motor.set_speed", a: '{"percent": 40}', o: "deny", r: "policy: subject tier3 may not reduce the flow while the cabin is CRITICAL" },
+    { w: "12:26:01", c: "scrubber", call: "scrubber.motor.set_speed", a: '{"percent": 100}', o: "ok", r: "CRITICAL: full flow forced by the firmware, nobody was asked" },
+    { w: "12:25:58", c: "tier3", call: "scrubber.scrubber.power", a: '{"on": false}', o: "refused", r: "MIN-FLOW: CO2 is CRITICAL, the scrubber cannot be powered off" },
+    { w: "12:25:52", c: "tier3", call: "scrubber.scrubber.set_min_flow", a: '{"percent": 0}', o: "deny", r: "policy: the protection floor is compiled into the firmware; no subject may lower it" },
+  ],
+  down: [],
+};
+
+const LABEL = { ok: "completed", refused: "device refused", deny: "policy deny", error: "error" };
+const HUE = { NOMINAL: "#2fe0c8", ELEVATED: "#ffb648", CRITICAL: "#ff5064" };
+
+/* ---- the CO2 field in the cabin: as many marks as the reading is worth ---- */
+function particles(ppm, state) {
+  // A fixed lattice, jittered by a fixed seed, so the field never dances
+  // between two readings: only how many of them are lit changes.
+  const g = el("particles");
+  const count = Math.round(Math.max(0, Math.min(1, (ppm - 400) / 4600)) * 140);
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
+  let out = "";
+  for (let i = 0; i < count; i++) {
+    const x = 34 + rnd() * 202;
+    const y = 34 + rnd() * 282;
+    const r = 1 + rnd() * 1.6;
+    out += `<circle class="particle" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" opacity="${(0.12 + rnd() * 0.3).toFixed(2)}"/>`;
+  }
+  g.innerHTML = out;
+  g.setAttribute("fill", HUE[state] ?? "#2fe0c8");
+  // the particles inherit their colour from the group, so the field says the
+  // same word the state does
+  g.querySelectorAll("circle").forEach((c) => (c.style.fill = HUE[state] ?? "#2fe0c8"));
+}
+
+/* ---- the curve, coloured by the state reported with each reading ---- */
+function drawCurve(series) {
+  const c = el("co2-curve");
+  const dpr = devicePixelRatio || 1;
+  const w = c.clientWidth;
+  const h = c.clientHeight;
+  if (!w || !h) return;
+  c.width = w * dpr;
+  c.height = h * dpr;
+  const g = c.getContext("2d");
+  g.scale(dpr, dpr);
+  g.clearRect(0, 0, w, h);
+
+  if (!series || series.length < 2) {
+    g.fillStyle = "rgba(109, 144, 142, 0.8)";
+    g.font = "9px ui-monospace, monospace";
+    g.fillText("no reading", 1, h / 2);
+    return;
+  }
+
+  const vals = series.map(([v]) => v);
+  const lo = Math.min(...vals) - 120;
+  const hi = Math.max(...vals) + 140;
+  const x = (i) => (i / (series.length - 1)) * (w - 2) + 1;
+  const y = (v) => h - 3 - ((v - lo) / (hi - lo)) * (h - 10);
+  const last = series[series.length - 1];
+  const hot = HUE[last[1]];
+
+  const grad = g.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, hot + "40");
+  grad.addColorStop(1, hot + "00");
+  g.beginPath();
+  g.moveTo(x(0), h);
+  series.forEach(([v], i) => g.lineTo(x(i), y(v)));
+  g.lineTo(x(series.length - 1), h);
+  g.closePath();
+  g.fillStyle = grad;
+  g.fill();
+
+  g.lineWidth = 1.8;
+  g.lineJoin = "round";
+  for (let i = 1; i < series.length; i++) {
+    g.beginPath();
+    g.moveTo(x(i - 1), y(series[i - 1][0]));
+    g.lineTo(x(i), y(series[i][0]));
+    g.strokeStyle = HUE[series[i][1]];
+    g.stroke();
+    if (series[i][1] !== series[i - 1][1]) {
+      g.setLineDash([2, 3]);
+      g.lineWidth = 1;
+      g.strokeStyle = HUE[series[i][1]];
+      g.beginPath();
+      g.moveTo(x(i), 1);
+      g.lineTo(x(i), h - 1);
+      g.stroke();
+      g.setLineDash([]);
+      g.lineWidth = 1.8;
+    }
+  }
+  g.beginPath();
+  g.arc(x(series.length - 1), y(last[0]), 2.6, 0, Math.PI * 2);
+  g.fillStyle = hot;
+  g.fill();
+}
+
+function renderTrace(list) {
+  const ol = el("trace-list");
+  ol.innerHTML = "";
+  if (!list.length) ol.innerHTML = `<li class="trace-empty">No call yet. Play a step, or click a tool in a slot.</li>`;
+  for (const e of list) {
+    const li = document.createElement("li");
+    li.className = `entry ${e.o}`;
+    li.innerHTML = `<div class="entry-head"><span class="when">${e.w}</span><span class="who ${e.c}">${e.c}</span><span class="spacer"></span><span class="outcome ${e.o}">${LABEL[e.o]}</span></div>`
+      + `<div class="call">${e.call} <span class="args">${e.a}</span></div><p class="result">${e.r}</p>`;
+    ol.appendChild(li);
+  }
+  // The four figures are counted off the list itself: they cannot drift from it.
+  const n = (o) => list.filter((e) => e.o === o).length;
+  el("tally").innerHTML = `<div><div class="n">${list.length}</div><div class="k">Calls</div></div>`
+    + `<div class="ok"><div class="n">${n("ok")}</div><div class="k">Completed</div></div>`
+    + `<div class="refused"><div class="n">${n("refused")}</div><div class="k">Refused</div></div>`
+    + `<div class="deny"><div class="n">${n("deny")}</div><div class="k">Denied</div></div>`;
+}
+
+function renderStory() {
+  const ol = el("story-list");
+  ol.innerHTML = "";
+  STEPS.forEach((s, i) => {
+    const li = document.createElement("li");
+    li.className = "step";
+    li.innerHTML = `<div class="step-head"><span class="step-n">${String(i + 1).padStart(2, "0")}</span><span class="step-title">${s.t}</span></div>`
+      + `<p>${s.d}</p>${s.n ? `<p class="needs">${s.off ? "not yet: " : "note: "}${s.n}</p>` : ""}`
+      + `<div class="step-actions"><button class="btn ${s.off ? "" : "btn-primary"}" ${s.off ? "disabled" : ""}>${s.off ? "needs a piece not built" : "do it"}</button>`
+      + `<span class="outcome ${s.x}" data-expect>${LABEL[s.x]}</span></div>`;
+    ol.appendChild(li);
+  });
+}
+
+function renderSlots(down) {
+  const box = el("slot-list");
+  box.innerHTML = "";
+  for (const s of SLOTS) {
+    const card = document.createElement("div");
+    const reachable = !down && s.tier !== "offline";
+    card.className = `slot-card ${reachable ? "" : "down"}`;
+    card.innerHTML = `<div class="slot-head"><i class="led ${reachable ? "on" : ""}"></i><span class="name">${s.name}</span><span class="tier">${s.tier}</span></div>`
+      + `<div class="slot-tools">${
+        down ? `<span class="unreachable">unreachable: the broker did not answer</span>`
+             : s.tools.map((t) => `<button class="btn ${t.startsWith("wording") ? "btn-dim" : ""}">${t}</button>`).join("")
+      }</div>`;
+    box.appendChild(card);
+  }
+}
+
+function show(key) {
+  const s = STATES[key];
+  const down = !s;
+
+  el("badge-tier3").textContent = "tier3: nvidia/llama-3.3-70b via build.nvidia.com";
+  el("badge-gateway").textContent = "gateway: localhost:8787";
+  el("badge-broker").innerHTML = `<i class="dot"></i>broker: ${down ? "unreachable" : "mcp-broker 0.4.1"}`;
+  el("badge-broker").className = down ? "badge down" : "badge";
+
+  renderSlots(down);
+  renderTrace(TRACES[key] ?? []);
+
+  const flows = [el("flow-intake"), el("flow-return")];
+  const imp = el("turbine");
+
+  if (down) {
+    el("co2-ppm").textContent = "----";
+    el("co2-state").textContent = "no reading";
+    el("co2-state").className = "state";
+    el("co2-delta").textContent = "The page shows nothing it has not read.";
+    el("co2-delta").className = "delta";
+    el("cabin-age").textContent = "no link";
+    ["speed", "current", "residual", "power"].forEach((id) => (el(id).textContent = "--"));
+    el("speed-note").innerHTML = "&nbsp;";
+    el("residual-note").innerHTML = "&nbsp;";
+    el("haze").style.opacity = 0;
+    el("particles").innerHTML = "";
+    el("flow-arc").setAttribute("stroke-dasharray", `0 ${ARC}`);
+    el("bed-load").setAttribute("height", 0);
+    el("power-led").className = "led";
+    el("power-val").className = "val off";
+    el("impeller-group").classList.add("off");
+    imp.classList.add("still");
+    flows.forEach((f) => f.classList.add("still"));
+    drawCurve(null);
+    return;
+  }
+
+  el("co2-ppm").textContent = nf.format(s.ppm);
+  el("co2-state").textContent = s.state;
+  el("co2-state").className = `state ${s.state.toLowerCase()}`;
+  el("cabin-age").textContent = "read 1 s ago";
+
+  // InGen's line: the value, what it moved from, and what the firmware does
+  // about it. Never a threshold, which would argue with the state word.
+  const first = s.curve[0][0];
+  const move = s.ppm - first;
+  const consequence = {
+    NOMINAL: "the agent may set any flow inside the envelope",
+    ELEVATED: "no power off, no flow under the floor",
+    CRITICAL: "full flow forced by the firmware, no reduction accepted",
+  }[s.state];
+  const d = el("co2-delta");
+  d.className = `delta ${s.state === C ? "bad" : s.state === E ? "warn" : ""}`;
+  d.innerHTML = `<b>${move >= 0 ? "+" : "−"}${nf.format(Math.abs(move))} ppm</b> in 4 min, from ${nf.format(first)} &middot; ${consequence}`;
+
+  // the cabin: the haze and the field both say what the state says
+  el("haze").style.opacity = { NOMINAL: 0, ELEVATED: 0.05, CRITICAL: 0.1 }[s.state];
+  particles(s.ppm, s.state);
+
+  // the flow arc around the impeller, and the floor as a tick on it
+  const lit = (s.speed / 100) * ARC * ARC_SPAN;
+  el("flow-arc").setAttribute("stroke-dasharray", `${lit.toFixed(1)} ${ARC}`);
+  el("flow-arc").style.stroke = s.speed <= MIN_FLOW ? "var(--amber)" : "var(--teal)";
+  el("flow-floor").setAttribute("transform", `rotate(${(MIN_FLOW / 100) * 360 * ARC_SPAN} 386 128)`);
+
+  el("speed").innerHTML = `${s.speed}<small>%</small>`;
+  el("speed-note").textContent = s.speed <= MIN_FLOW
+    ? "at the protection floor, the firmware accepts no less"
+    : `${s.speed - MIN_FLOW} points above the floor of ${MIN_FLOW} %`;
+
+  el("current").innerHTML = `${s.current.toFixed(3)}<small>A</small>`;
+
+  // the bed fills with the residual, and turns amber past the alarm
+  const load = Math.max(0, Math.min(1, s.residual / SCALE.residual));
+  const bed = el("bed-load");
+  bed.setAttribute("height", (84 * load).toFixed(1));
+  bed.setAttribute("y", (385 - 84 * load).toFixed(1));
+  const over = s.residual >= RESIDUAL_ALARM;
+  bed.classList.toggle("hot", over);
+  el("residual").textContent = s.residual.toFixed(4);
+  el("cal-residual").classList.toggle("hot", over);
+  el("bed-dot").classList.toggle("hot", over);
+  el("bed-lead").classList.toggle("hot", over);
+  el("residual-note").textContent = over
+    ? `${((s.residual / RESIDUAL_ALARM - 1) * 100).toFixed(0)} % over the alarm of 0.04, the monitor has raised it`
+    : `${((1 - s.residual / RESIDUAL_ALARM) * 100).toFixed(0)} % under the alarm of 0.04`;
+
+  el("power").textContent = s.power ? "on" : "off";
+  el("power-led").className = `led ${s.power ? "on" : ""}`;
+  el("power-val").className = `val ${s.power ? "" : "off"}`;
+
+  // the one moving thing: the impeller and the air in the ducts, at the
+  // measured flow, still when the power is off
+  const spinning = s.power && s.speed > 0;
+  el("impeller-group").classList.toggle("off", !s.power);
+  imp.classList.toggle("still", !spinning);
+  flows.forEach((f) => f.classList.toggle("still", !spinning));
+  if (spinning) {
+    const seconds = (1.8 / (s.speed / 100)).toFixed(2);
+    imp.style.setProperty("--spin", `${seconds}s`);
+    flows.forEach((f) => f.style.setProperty("--spin", `${(seconds / 2.2).toFixed(2)}s`));
+  }
+
+  drawCurve(s.curve);
+}
+
+let current = "nominal";
+renderStory();
+show(current);
+
+document.querySelectorAll(".proto button").forEach((b) => {
+  b.addEventListener("click", () => {
+    document.querySelectorAll(".proto button").forEach((o) => o.setAttribute("aria-pressed", String(o === b)));
+    current = b.dataset.state;
+    show(current);
+  });
+});
+
+new ResizeObserver(() => drawCurve(STATES[current]?.curve ?? null)).observe(el("co2-curve"));
+</script>
+</body>
+</html>

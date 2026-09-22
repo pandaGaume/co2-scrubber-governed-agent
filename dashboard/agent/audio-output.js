@@ -10,6 +10,7 @@ function startClock(ms, onTick) {
     return () => window.clearInterval(timer);
   }
 }
+var FLOOR_BUSY = "speech:floor-busy";
 var AudioOutput = class {
   constructor(broker, outputId, events = {}) {
     this.broker = broker;
@@ -17,6 +18,10 @@ var AudioOutput = class {
     this.events = events;
   }
   el = new Audio();
+  /** Used only to decode the bytes of an utterance, never connected. */
+  decoder;
+  /** The shape of the utterance being said. See `wave`. */
+  envelope;
   stopClock = null;
   playing = null;
   played = /* @__PURE__ */ new Set();
@@ -52,6 +57,57 @@ var AudioOutput = class {
     this.el.removeAttribute("src");
     this.playing = null;
   }
+  /**
+   * The shape of the sentence being said, and how far through it we are.
+   *
+   * The bytes are the ones already fetched to play it, decoded in a context
+   * of their own that is never connected to anything: **the playback path is
+   * not touched**. An earlier version tapped the element with
+   * `createMediaElementSource`, which permanently reroutes its output
+   * through the Web Audio graph; a context that fails to leave `suspended`
+   * then costs the sound itself, not just the meter. No indicator is worth
+   * that.
+   *
+   * `envelope` is the peak of each slice of the whole utterance, so the
+   * drawing is the sentence, and `progress` is where the element actually
+   * is in it.
+   */
+  wave() {
+    if (!this.playing || !this.envelope) return null;
+    const d = this.el.duration;
+    const progress = Number.isFinite(d) && d > 0 ? Math.min(1, this.el.currentTime / d) : 0;
+    return { envelope: this.envelope, progress };
+  }
+  /**
+   * The peak of each slice of an utterance, for the meter. Decoding only:
+   * nothing here is connected to an output.
+   *
+   * Fine on purpose. A coarse envelope makes the running trace climb in
+   * steps, because several frames in a row read the same slice and the
+   * signal turns into a staircase; at this resolution a frame advances one
+   * or two slices and the trace has the grain of a voice.
+   */
+  async shapeOf(bytes, slices = 1600) {
+    if (typeof AudioContext === "undefined") return null;
+    try {
+      this.decoder ??= new AudioContext();
+      const copy = bytes.slice().buffer;
+      const buffer = await this.decoder.decodeAudioData(copy);
+      const channel = buffer.getChannelData(0);
+      const per = Math.max(1, Math.floor(channel.length / slices));
+      const out = [];
+      let loudest = 0;
+      for (let i = 0; i < slices; i++) {
+        let peak = 0;
+        for (let k = i * per, end = Math.min(channel.length, k + per); k < end; k++) peak = Math.max(peak, Math.abs(channel[k]));
+        out.push(peak);
+        loudest = Math.max(loudest, peak);
+      }
+      return loudest > 0 ? out.map((v) => v / loudest) : out;
+    } catch {
+      return null;
+    }
+  }
   async tick() {
     if (this.busy) return;
     this.busy = true;
@@ -75,6 +131,10 @@ var AudioOutput = class {
     this.played.add(item.utteranceId);
     const taken = await this.broker.call("speech", "take", { utteranceId: item.utteranceId, output: this.outputId });
     if (!taken.ok) {
+      if (String(taken.error ?? "").includes(FLOOR_BUSY)) {
+        this.played.delete(item.utteranceId);
+        return;
+      }
       this.events.onTakenElsewhere?.(item);
       return;
     }
@@ -83,6 +143,7 @@ var AudioOutput = class {
     if (!c?.blob) throw new Error(`no audio for ${item.utteranceId}`);
     const bytes = Uint8Array.from(atob(c.blob), (ch) => ch.charCodeAt(0));
     const url = URL.createObjectURL(new Blob([bytes], { type: c.mimeType ?? item.mimeType }));
+    this.envelope = await this.shapeOf(bytes);
     this.playing = item;
     this.events.onPlay?.(item);
     const started = performance.now();
@@ -91,6 +152,7 @@ var AudioOutput = class {
         this.el.onended = null;
         this.el.onerror = null;
         URL.revokeObjectURL(url);
+        this.envelope = null;
         resolve();
       };
       this.el.onended = finish;
