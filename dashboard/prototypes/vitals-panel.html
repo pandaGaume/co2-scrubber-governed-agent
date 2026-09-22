@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Medical monitoring</title>
+<!--
+  Style prototype for the medical monitoring panel (slot `biomed`).
+
+  Structure reference: dashboard/inspiration/02-cretax-genome-map.webp (a rail
+  of short figures on the left, a detailed card, the measured object on the
+  right with its labels). Rules: dashboard/inspiration/README.md.
+
+  WORDS. The page speaks en-US and nothing is written in the code: every
+  sentence is a keyed phrase, `?locale=fr` picks the French one, and the keys
+  below are the ones that go into the biomed slot's grammar
+  (`slots/biomed/grammars/default/{en,fr}.json`, section `phrases`). Wired to
+  the broker, `harness/browser/words.ts` reads them off `grammar://phrases` on
+  the page's own session and the dictionary in this file disappears. Numbers
+  are formatted for the locale too, which is why 2,800 reads 2 800 in French.
+
+  What is true here and must stay true:
+  - one cool hue, the warm ones reserved for the breach and the abort;
+  - nothing moves that is not a datum moving;
+  - every block says where its figure comes from, readable in place;
+  - the trace is a TACHOGRAM (one tick is one beat, at its real spacing), not
+    an ECG: the strap gives no ECG over the standard Bluetooth service, and we
+    do not draw a datum we do not have.
+
+  The beats on this page are simulated and the page says so. Wired to the
+  slot, it reads biomed://state and biomed://trace/{subjectId}.
+-->
+<style>
+  :root {
+    --bg: #04090c;
+    --bg-2: #061218;
+    --panel: rgba(10, 28, 34, 0.66);
+    --line: rgba(64, 214, 200, 0.16);
+    --line-strong: rgba(64, 214, 200, 0.34);
+    --teal: #2fe0c8;
+    --teal-soft: #7ad6cc;
+    --text: #d3ecea;
+    --muted: #6d908e;
+    --muted-2: #4d6f6e;
+    --amber: #ffb648;
+    --red: #ff5064;
+    --mono: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, "Liberation Mono", monospace;
+    --sans: ui-sans-serif, "Segoe UI", system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    padding: 28px 24px 40px;
+    background:
+      radial-gradient(1100px 600px at 78% 12%, rgba(47, 224, 200, 0.07), transparent 62%),
+      linear-gradient(180deg, var(--bg-2), var(--bg) 60%);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* The backdrop grid, well behind: depth without drawing the eye, and it
+     does not move. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(64, 214, 200, 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(64, 214, 200, 0.045) 1px, transparent 1px);
+    background-size: 46px 46px;
+    mask-image: radial-gradient(900px 540px at 60% 30%, #000 20%, transparent 78%);
+  }
+
+  .shell { position: relative; max-width: 1180px; margin: 0 auto; }
+
+  /* ---------- top bar ---------- */
+
+  .bar {
+    display: flex;
+    flex-wrap: wrap;   /* the pills do not break, so without this they overflow when narrow */
+    align-items: center;
+    gap: 12px 16px;
+    padding: 0 4px 16px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .bar h1 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+
+  .bar h1 span { color: var(--teal); }
+  .bar .spacer { flex: 1; }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 11px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    font-size: 10.5px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--teal-soft);
+    background: rgba(47, 224, 200, 0.06);
+    white-space: nowrap;
+  }
+
+  .pill.warn { color: var(--amber); border-color: rgba(255, 182, 72, 0.4); background: rgba(255, 182, 72, 0.08); }
+
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 8px var(--teal); }
+  .pill.warn .dot { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+
+  /* ---------- layout ---------- */
+
+  .grid { display: grid; grid-template-columns: 310px 1fr; gap: 18px; margin-top: 18px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+  .card {
+    position: relative;
+    padding: 16px 18px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--panel);
+    backdrop-filter: blur(3px);
+  }
+
+  /* The cut corner of the HUD sheets, in one rule, with nothing spinning. */
+  .card::after {
+    content: "";
+    position: absolute;
+    top: 10px; right: 10px;
+    width: 14px; height: 14px;
+    border-top: 1px solid var(--line-strong);
+    border-right: 1px solid var(--line-strong);
+    border-radius: 0 4px 0 0;
+    opacity: 0.8;
+  }
+
+  .card h2 {
+    margin: 0 0 3px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--teal-soft);
+  }
+
+  .source { margin: 0 0 14px; font-size: 10px; letter-spacing: 0.06em; color: var(--muted-2); }
+
+  /* ---------- left rail ---------- */
+
+  .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 12px; }
+  .metric .v { font-size: 25px; font-weight: 600; line-height: 1.05; color: var(--text); font-variant-numeric: tabular-nums; }
+  .metric .v small { font-size: 12px; color: var(--muted); margin-left: 2px; }
+  .metric .k { margin-top: 3px; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+
+  .rows { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .row { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; font-size: 12px; }
+  .row .k { color: var(--muted); }
+  .row .v { color: var(--text); text-align: right; }
+
+  /* The abort list: the list is the point, not the ornament. */
+  .aborts { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; display: grid; gap: 8px; }
+  .abort { display: grid; grid-template-columns: 12px 1fr auto; align-items: center; gap: 9px; font-size: 11.5px; }
+  .abort i { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 7px rgba(47, 224, 200, 0.7); }
+  .abort.near i { background: var(--amber); box-shadow: 0 0 7px rgba(255, 182, 72, 0.8); }
+  .abort .t { color: var(--muted); }
+  .abort .n { color: var(--text); font-variant-numeric: tabular-nums; }
+  .abort.near .n { color: var(--amber); }
+
+  /* ---------- subjects ---------- */
+
+  .subjects { display: grid; gap: 18px; }
+  .subject { display: grid; grid-template-columns: 172px 1fr; gap: 20px; align-items: center; }
+  @media (max-width: 720px) { .subject { grid-template-columns: 1fr; } }
+
+  .who { display: flex; align-items: baseline; gap: 10px; }
+  .who .cs { font-size: 15px; letter-spacing: 0.14em; color: var(--text); }
+  .who .mod { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted-2); }
+
+  /* The InGen pattern: a big number, its delta to a reference, a state word.
+     Repeated wherever there is a measurement. */
+  .bpm { margin-top: 6px; display: flex; align-items: flex-end; gap: 8px; }
+  .bpm .n { font-size: 52px; font-weight: 600; line-height: 0.92; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .bpm .u { font-size: 11px; letter-spacing: 0.18em; color: var(--muted); padding-bottom: 7px; }
+
+  .delta { margin-top: 5px; font-size: 11px; color: var(--muted); }
+  .delta b { color: var(--teal-soft); font-weight: 600; }
+
+  .state { margin-top: 9px; display: inline-flex; align-items: center; gap: 7px; font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--teal); }
+
+  .subject.out .bpm .n, .subject.out .state { color: var(--amber); }
+  .subject.out .state .dot { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+  .subject.lost .bpm .n, .subject.lost .state { color: var(--red); }
+  .subject.lost .state .dot { background: var(--red); box-shadow: 0 0 8px var(--red); }
+
+  .trace canvas { display: block; width: 100%; height: 92px; }
+
+  .band { position: relative; height: 22px; margin-top: 8px; }
+  .band .track { position: absolute; inset: 9px 0 auto; height: 3px; background: rgba(120, 170, 168, 0.16); border-radius: 2px; }
+  .band .ok { position: absolute; top: 9px; height: 3px; background: linear-gradient(90deg, rgba(47,224,200,0.25), rgba(47,224,200,0.55)); border-radius: 2px; }
+  .band .mark { position: absolute; top: 3px; width: 2px; height: 15px; background: var(--teal); box-shadow: 0 0 9px var(--teal); transition: left 0.45s ease; }
+  .subject.out .band .mark { background: var(--amber); box-shadow: 0 0 9px var(--amber); }
+  .band .lab { position: absolute; top: 0; font-size: 9.5px; color: var(--muted-2); letter-spacing: 0.08em; }
+
+  .legend { margin-top: 7px; font-size: 9.5px; letter-spacing: 0.08em; color: var(--muted-2); }
+  .sep { height: 1px; background: var(--line); margin: 4px 0; }
+
+  /* Prose is not data: it leaves the monospace, where ligatures are
+     unreadable at this size. */
+  footer {
+    margin-top: 18px;
+    padding: 0 4px;
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--muted-2);
+    line-height: 1.75;
+    max-width: 92ch;
+  }
+  footer b { color: var(--muted); font-weight: 600; }
+  footer code { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="bar">
+    <h1><span id="w-title-lead"></span> <span id="w-title-tail"></span></h1>
+    <span class="pill"><i class="dot"></i><span id="w-session"></span></span>
+    <span class="pill" id="w-authorised"></span>
+    <span class="spacer"></span>
+    <span class="pill warn" id="w-source-badge"><i class="dot"></i><span></span></span>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2 id="w-test-title"></h2>
+      <p class="source" id="w-test-source"></p>
+      <div class="metrics" id="metrics"></div>
+      <div class="rows" id="rows"></div>
+      <div class="aborts" id="aborts"></div>
+      <p class="source" style="margin:12px 0 0" id="w-test-note"></p>
+    </div>
+
+    <div class="card">
+      <h2 id="w-subjects-title"></h2>
+      <p class="source" id="w-subjects-source"></p>
+      <div class="subjects" id="subjects"></div>
+    </div>
+  </div>
+
+  <footer id="footer"></footer>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ------------------------------------------------------------------ *
+   * The words. Keys only in the code; en-US by default, ?locale=fr for
+   * French. These keys are the biomed slot's grammar phrases: wired to the
+   * broker this object goes away and `harness/browser/words.ts` reads them
+   * off `grammar://phrases` on the page's session. Same keys, same holes,
+   * which is what mcp-core checks at publish time.
+   * ------------------------------------------------------------------ */
+
+  const WORDS = {
+    "en-US": {
+      "panel.title.lead": "Medical",
+      "panel.title.tail": "monitoring",
+      "panel.session": "Session {sessionId}",
+      "panel.authorised": "Authorised by the commander · {time}",
+      "panel.source.simulated": "Simulated heartbeats",
+      "panel.source.live": "Polar H10 · live",
+      "card.test.title": "Test in progress",
+      "card.test.source": "biomed://session · procedure {procedureId}",
+      "card.test.note": "The procedure's abort conditions. This panel measures; it stops nothing.",
+      "metric.occupants": "Occupants, {module}",
+      "metric.step": "Test step",
+      "metric.elapsed": "Under monitoring",
+      "metric.aborts": "Aborts",
+      "row.module": "Module under test",
+      "row.scrubber": "Scrubber",
+      "row.band": "Nominal band",
+      "row.source": "Source",
+      "value.band": "{min} to {max} bpm",
+      "value.minutes": "{n}{unit}",
+      "abort.co2": "CO2 {module}",
+      "abort.vitals": "Vital signs",
+      "abort.monitoring": "Monitoring",
+      "abort.battery": "Battery",
+      "abort.value.ratio": "{a} / {b}",
+      "abort.value.nominal": "nominal",
+      "abort.value.links": "{n} links",
+      "abort.value.percent": "{n} %",
+      "card.subjects.title": "Occupants under monitoring",
+      "card.subjects.source": "biomed://state · one tick is one beat, at its real spacing",
+      "subject.delta": "resting {resting} · delta {delta}",
+      "state.nominal": "nominal",
+      "state.outOfBand": "out of band",
+      "state.signalLost": "signal lost",
+      "state.waiting": "waiting",
+      "trace.legend": "TACHOGRAM · {seconds} S · NOMINAL BAND {min} TO {max} BPM",
+      "unit.bpm": "bpm",
+      "unit.min": "min",
+      "footer.claim": "The heart is real, the air is simulated.",
+      "footer.body": "On this page both are, and the badge says so. Wired to the slot it reads <code>biomed://state</code> and <code>biomed://trace/{subjectId}</code>. The Polar H10 gives a rate and the intervals between beats, not an ECG trace: this is a tachogram, one tick per beat, at its real spacing.",
+    },
+    "fr": {
+      "panel.title.lead": "Surveillance",
+      "panel.title.tail": "médicale",
+      "panel.session": "Session {sessionId}",
+      "panel.authorised": "Autorisée par le commandant · {time}",
+      "panel.source.simulated": "Battements simulés",
+      "panel.source.live": "Polar H10 · en direct",
+      "card.test.title": "Essai en cours",
+      "card.test.source": "biomed://session · procédure {procedureId}",
+      "card.test.note": "Conditions d'arrêt de la procédure. Ce panneau mesure ; il n'interrompt rien.",
+      "metric.occupants": "Occupants, {module}",
+      "metric.step": "Pas de l'essai",
+      "metric.elapsed": "Sous surveillance",
+      "metric.aborts": "Arrêts",
+      "row.module": "Module sous essai",
+      "row.scrubber": "Épurateur",
+      "row.band": "Bande nominale",
+      "row.source": "Source",
+      "value.band": "{min} à {max} bpm",
+      "value.minutes": "{n}{unit}",
+      "abort.co2": "CO2 {module}",
+      "abort.vitals": "Signes vitaux",
+      "abort.monitoring": "Surveillance",
+      "abort.battery": "Batterie",
+      "abort.value.ratio": "{a} / {b}",
+      "abort.value.nominal": "nominaux",
+      "abort.value.links": "{n} liens",
+      "abort.value.percent": "{n} %",
+      "card.subjects.title": "Occupants sous surveillance",
+      "card.subjects.source": "biomed://state · un trait est un battement, à son espacement réel",
+      "subject.delta": "repos {resting} · écart {delta}",
+      "state.nominal": "nominal",
+      "state.outOfBand": "hors bande",
+      "state.signalLost": "signal perdu",
+      "state.waiting": "en attente",
+      "trace.legend": "TACHOGRAMME · {seconds} S · BANDE NOMINALE {min} À {max} BPM",
+      "unit.bpm": "bpm",
+      "unit.min": "min",
+      "footer.claim": "Le cœur est réel, l'air est simulé.",
+      "footer.body": "Sur cette page les deux le sont, et la pastille le dit. Branchée sur le slot, elle lit <code>biomed://state</code> et <code>biomed://trace/{subjectId}</code>. La ceinture Polar H10 donne un rythme et les intervalles entre battements, pas un tracé d'ECG : ce trait est un tachogramme, un battement par trait, à son espacement réel.",
+    },
+  };
+
+  const asked = new URLSearchParams(location.search).get("locale") || "en-US";
+  const locale = WORDS[asked] ? asked : (WORDS[asked.split("-")[0]] ? asked.split("-")[0] : "en-US");
+  const dict = WORDS[locale];
+  document.documentElement.lang = locale;
+
+  /** mcp-core's `grammar.phrase(key, values)`: the key, and the holes filled. */
+  const phrase = (key, values = {}) =>
+    (dict[key] ?? key).replace(/\{(\w+)\}/g, (whole, name) => (name in values ? values[name] : whole));
+
+  const num = new Intl.NumberFormat(locale);
+  const n = (v) => num.format(v);
+  const signed = (v) => (v >= 0 ? "+" : "−") + n(Math.abs(v));
+
+  /* ------------------------------------------------------------------ *
+   * The figures. Wired to the broker these come from biomed://session and
+   * biomed://state; here they are written down and the page says so.
+   * ------------------------------------------------------------------ */
+
+  const SESSION = {
+    sessionId: "crew-20261014T2104",
+    procedureId: "decay-2026-10-14-01",
+    authorisedAt: "21:04",
+    module: "Lab",
+    occupants: 2,
+    authorisedFor: 2,
+    step: 2,
+    steps: 4,
+    elapsedMinutes: 18,
+    aborts: 0,
+    scrubberPercent: 30,
+    co2: { now: 2740, limit: 2800 },
+    batteryPercent: 41,
+    live: false,
+  };
+
+  const SUBJECTS = [
+    { id: "fe-1", callsign: "FE-1", module: "Lab", resting: 64, band: { min: 45, max: 120 } },
+    { id: "fe-2", callsign: "FE-2", module: "Lab", resting: 58, band: { min: 45, max: 120 } },
+  ];
+
+  const SCALE = { min: 30, max: 150 };   // the span drawn under the band
+  const WINDOW_MS = 24000;               // what the tachogram shows
+  const band = SUBJECTS[0].band;
+
+  /* ---------------------------- the frame ---------------------------- */
+
+  const set = (id, text) => { document.getElementById(id).textContent = text; };
+
+  set("w-title-lead", phrase("panel.title.lead"));
+  set("w-title-tail", phrase("panel.title.tail"));
+  set("w-session", phrase("panel.session", { sessionId: SESSION.sessionId }));
+  set("w-authorised", phrase("panel.authorised", { time: SESSION.authorisedAt }));
+  document.querySelector("#w-source-badge span").textContent = phrase(SESSION.live ? "panel.source.live" : "panel.source.simulated");
+  document.getElementById("w-source-badge").classList.toggle("warn", !SESSION.live);
+  set("w-test-title", phrase("card.test.title"));
+  set("w-test-source", phrase("card.test.source", { procedureId: SESSION.procedureId }));
+  set("w-test-note", phrase("card.test.note"));
+  set("w-subjects-title", phrase("card.subjects.title"));
+  set("w-subjects-source", phrase("card.subjects.source"));
+
+  document.getElementById("footer").innerHTML =
+    `<b>${phrase("footer.claim")}</b> ${phrase("footer.body")}`;
+
+  const metrics = [
+    [`${n(SESSION.occupants)}<small>/${n(SESSION.authorisedFor)}</small>`, phrase("metric.occupants", { module: SESSION.module })],
+    [`${n(SESSION.step)}<small>/${n(SESSION.steps)}</small>`, phrase("metric.step")],
+    [`${n(SESSION.elapsedMinutes)}<small>${phrase("unit.min")}</small>`, phrase("metric.elapsed")],
+    [n(SESSION.aborts), phrase("metric.aborts")],
+  ];
+  document.getElementById("metrics").innerHTML = metrics
+    .map(([v, k]) => `<div class="metric"><div class="v">${v}</div><div class="k">${k}</div></div>`)
+    .join("");
+
+  const rows = [
+    [phrase("row.module"), SESSION.module],
+    [phrase("row.scrubber"), phrase("abort.value.percent", { n: n(SESSION.scrubberPercent) })],
+    [phrase("row.band"), phrase("value.band", { min: n(band.min), max: n(band.max) })],
+    [phrase("row.source"), SESSION.live ? "polar-h10" : "simulated"],
+  ];
+  document.getElementById("rows").innerHTML = rows
+    .map(([k, v]) => `<div class="row"><span class="k">${k}</span><span class="v">${v}</span></div>`)
+    .join("");
+
+  const aborts = [
+    [phrase("abort.co2", { module: SESSION.module }), phrase("abort.value.ratio", { a: n(SESSION.co2.now), b: n(SESSION.co2.limit) }), SESSION.co2.now / SESSION.co2.limit > 0.95],
+    [phrase("abort.vitals"), phrase("abort.value.nominal"), false],
+    [phrase("abort.monitoring"), phrase("abort.value.links", { n: n(SUBJECTS.length) }), false],
+    [phrase("abort.battery"), phrase("abort.value.percent", { n: n(SESSION.batteryPercent) }), false],
+  ];
+  document.getElementById("aborts").innerHTML = aborts
+    .map(([t, v, near]) => `<div class="abort${near ? " near" : ""}"><i></i><span class="t">${t}</span><span class="n">${v}</span></div>`)
+    .join("");
+
+  /* --------------------------- the subjects -------------------------- */
+
+  const host = document.getElementById("subjects");
+  const css = getComputedStyle(document.documentElement);
+  const colour = (name) => css.getPropertyValue(name).trim();
+
+  const views = SUBJECTS.map((s, i) => {
+    const el = document.createElement("div");
+    el.className = "subject";
+    el.innerHTML = `
+      <div>
+        <div class="who"><span class="cs">${s.callsign}</span><span class="mod">${s.module}</span></div>
+        <div class="bpm"><span class="n">--</span><span class="u">${phrase("unit.bpm")}</span></div>
+        <div class="delta"></div>
+        <div class="state"><i class="dot"></i><span class="w">${phrase("state.waiting")}</span></div>
+      </div>
+      <div class="trace">
+        <canvas></canvas>
+        <div class="band">
+          <div class="track"></div><div class="ok"></div><div class="mark"></div>
+          <span class="lab" style="left:0">${n(SCALE.min)}</span>
+          <span class="lab" style="right:0">${n(SCALE.max)}</span>
+        </div>
+        <div class="legend">${phrase("trace.legend", { seconds: n(WINDOW_MS / 1000), min: n(s.band.min), max: n(s.band.max) })}</div>
+      </div>`;
+    if (i) host.appendChild(Object.assign(document.createElement("div"), { className: "sep" }));
+    host.appendChild(el);
+
+    const span = SCALE.max - SCALE.min;
+    const ok = el.querySelector(".ok");
+    ok.style.left = ((s.band.min - SCALE.min) / span) * 100 + "%";
+    ok.style.width = ((s.band.max - s.band.min) / span) * 100 + "%";
+
+    return {
+      subject: s,
+      el,
+      n: el.querySelector(".bpm .n"),
+      d: el.querySelector(".delta"),
+      w: el.querySelector(".state .w"),
+      mark: el.querySelector(".mark"),
+      canvas: el.querySelector("canvas"),
+      beats: [],        // one timestamp per beat
+      base: s.resting,  // the slow walk, anchored to the resting rate
+      bpm: s.resting,
+      // Start one window back, so the tachogram is already full on the first
+      // frame instead of filling up for twenty-four seconds on camera.
+      nextBeat: performance.now() - WINDOW_MS,
+    };
+  });
+
+  // The simulated beat: a slow walk around the resting rate, and a breath.
+  // The breath is read on top of the walk and never added into it; added, it
+  // accumulates beat after beat and the rate drifts for good (seen on the
+  // first run: a resting 64 showed 55 after a minute).
+  function advance(v, now) {
+    while (now >= v.nextBeat) {
+      const drift = (v.subject.resting - v.base) * 0.08 + (Math.random() - 0.5) * 1.6;
+      v.base = Math.max(42, Math.min(150, v.base + drift));
+      v.bpm = v.base + Math.sin(v.nextBeat / 4200) * 2.2;
+      v.beats.push(v.nextBeat);
+      v.nextBeat += 60000 / v.bpm;
+    }
+    const cut = now - WINDOW_MS;
+    while (v.beats.length && v.beats[0] < cut) v.beats.shift();
+  }
+
+  function paint(v, now, out) {
+    const c = v.canvas;
+    const dpr = window.devicePixelRatio || 1;
+    const w = c.clientWidth, h = c.clientHeight;
+    if (c.width !== Math.round(w * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+    const g = c.getContext("2d");
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, h);
+
+    const ink = out ? colour("--amber") : colour("--teal");
+
+    g.strokeStyle = "rgba(120,170,168,0.14)";
+    g.lineWidth = 1;
+    g.beginPath(); g.moveTo(0, h - 0.5); g.lineTo(w, h - 0.5); g.stroke();
+
+    g.lineWidth = 1.6;
+    g.lineCap = "round";
+    for (const t of v.beats) {
+      const age = (now - t) / WINDOW_MS;   // 0 is now
+      const x = w - age * w;
+      const fade = Math.max(0, 1 - age * 0.85);
+      g.globalAlpha = fade;
+      g.strokeStyle = ink;
+      g.shadowColor = ink;
+      g.shadowBlur = 9 * fade;
+      const tall = h * (0.42 + 0.34 * fade);
+      g.beginPath(); g.moveTo(x, h - 2); g.lineTo(x, h - 2 - tall); g.stroke();
+    }
+    g.globalAlpha = 1;
+    g.shadowBlur = 0;
+  }
+
+  function frame(now) {
+    for (const v of views) {
+      advance(v, now);
+      const bpm = Math.round(v.bpm);
+      const out = bpm < v.subject.band.min || bpm > v.subject.band.max;
+      paint(v, now, out);
+
+      v.n.textContent = n(bpm);
+      v.d.innerHTML = phrase("subject.delta", { resting: `<b>${n(v.subject.resting)}</b>`, delta: `<b>${signed(bpm - v.subject.resting)}</b>` });
+      v.w.textContent = phrase(out ? "state.outOfBand" : "state.nominal");
+      v.el.classList.toggle("out", out);
+      const span = SCALE.max - SCALE.min;
+      v.mark.style.left = Math.max(0, Math.min(100, ((bpm - SCALE.min) / span) * 100)) + "%";
+    }
+    requestAnimationFrame(frame);
+  }
+
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

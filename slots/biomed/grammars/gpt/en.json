@@ -1,0 +1,28 @@
+{
+    "tools": {
+        "describe": {
+            "description": "Describe the biomedical monitor: its source, the roster, the nominal band, and whether readings are simulated."
+        },
+        "presence": {
+            "description": "Return the occupants of every module, so you can tell whether a test exposes people."
+        },
+        "monitor_start": {
+            "description": "Start monitoring the occupants of the given modules for the duration of a procedure."
+        },
+        "monitor_stop": {
+            "description": "Stop the monitoring session and return its record."
+        },
+        "report": {
+            "description": "Relay one heart rate reading from a chest strap through a gateway."
+        },
+        "state": {
+            "description": "Return every monitored subject with their last rate, their band and their status."
+        },
+        "verdict": {
+            "description": "Return one line saying whether there is a reason to abort. It never aborts anything itself."
+        },
+        "move": {
+            "description": "Move a subject to a module (scenario control, standing in for a presence sensor)."
+        }
+    }
+}

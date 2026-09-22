@@ -1,0 +1,738 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Biomed">
+<meta name="color-scheme" content="dark">
+<title>Medical monitoring</title>
+<!--
+  The medical monitoring station, on its own page, meant to be held in
+  someone's hands on a tablet while the test runs.
+
+  It is a display and nothing else. It opens a session on the `biomed` slot
+  through the broker, reads, and draws. It starts no test, it authorises
+  nothing, it stops nothing: the tools that command are not even in the
+  catalogue it uses. The strap is paired to the machine that runs the slot,
+  not to this device, so this page needs nothing but a browser on the same
+  network.
+
+  Two screens, and the page switches itself:
+  - STANDBY while no monitoring session is open. It shows who is in which
+    module, which is what makes an authorisation necessary in the first place.
+  - MONITORING as soon as the commander has authorised one, and back to
+    standby when it ends.
+
+  Words: en-US, `?locale=fr` for French, and nothing written in this file
+  that a human reads. The sentences come from `grammar://phrases` on this
+  page's own session, which is the biomed slot's grammar. The dictionary
+  below is the fallback used when the resource cannot be read, so the page
+  still says something sensible when the link is down.
+
+  Style prototype and rationale: dashboard/prototypes/vitals-panel.html and
+  dashboard/inspiration/README.md.
+-->
+<style>
+  :root {
+    --bg: #04090c;
+    --bg-2: #061218;
+    --panel: rgba(10, 28, 34, 0.66);
+    --line: rgba(64, 214, 200, 0.16);
+    --line-strong: rgba(64, 214, 200, 0.34);
+    --teal: #2fe0c8;
+    --teal-soft: #7ad6cc;
+    --text: #d3ecea;
+    --muted: #6d908e;
+    --muted-2: #4d6f6e;
+    --amber: #ffb648;
+    --red: #ff5064;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, -apple-system, "Segoe UI", system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  /* `hidden` has to win over a `display` set by an id selector, which is more
+     specific than any attribute rule. Without this the standby screen stays
+     on top of the monitoring one and both are drawn at once. */
+  [hidden] { display: none !important; }
+
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    padding: max(18px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+    background:
+      radial-gradient(1100px 620px at 78% 10%, rgba(47, 224, 200, 0.07), transparent 62%),
+      linear-gradient(180deg, var(--bg-2), var(--bg) 60%);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
+    /* A monitoring screen is not a document: nothing scrolls away by accident. */
+    overflow: hidden;
+    overscroll-behavior: none;
+    user-select: none;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(64, 214, 200, 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(64, 214, 200, 0.045) 1px, transparent 1px);
+    background-size: 52px 52px;
+    mask-image: radial-gradient(900px 560px at 60% 28%, #000 20%, transparent 78%);
+  }
+
+  .shell { position: relative; height: 100%; display: flex; flex-direction: column; }
+
+  /* ---------- top bar ---------- */
+
+  .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+  .bar h1 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; }
+  .bar h1 span { color: var(--teal); }
+  .bar .spacer { flex: 1; }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 6px 12px; border: 1px solid var(--line-strong); border-radius: 999px;
+    font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--teal-soft); background: rgba(47, 224, 200, 0.06); white-space: nowrap;
+  }
+  .pill.warn { color: var(--amber); border-color: rgba(255, 182, 72, 0.4); background: rgba(255, 182, 72, 0.08); }
+  .pill.bad  { color: var(--red);   border-color: rgba(255, 80, 100, 0.45); background: rgba(255, 80, 100, 0.09); }
+  .pill[hidden] { display: none; }
+
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 8px var(--teal); }
+  .pill.warn .dot { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+  .pill.bad  .dot { background: var(--red);   box-shadow: 0 0 8px var(--red); }
+
+  /* ---------- screens ---------- */
+
+  main { flex: 1; min-height: 0; padding-top: 16px; }
+  .screen { height: 100%; }
+  .screen[hidden] { display: none; }
+
+  /* standby */
+
+  #standby { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 26px; text-align: center; }
+  #standby .big { font-size: clamp(26px, 5vw, 46px); letter-spacing: 0.16em; text-transform: uppercase; color: var(--teal-soft); }
+  #standby .note { font-family: var(--sans); font-size: clamp(14px, 1.8vw, 18px); color: var(--muted); max-width: 56ch; line-height: 1.6; margin: 10px auto 0; }
+
+  .modules { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; }
+  .module {
+    min-width: 200px; padding: 16px 20px;
+    border: 1px solid var(--line); border-radius: 14px; background: var(--panel);
+  }
+  .module .k { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .module .people { margin-top: 14px; display: flex; gap: 18px; justify-content: center; }
+  /* Three fixed rows, so the call signs land on the same line whether a name
+     fits on one line or wraps onto two. Left to itself the row was ragged. */
+  .module .one { display: grid; grid-template-rows: auto 2.5em auto; justify-items: center; align-items: start; width: 84px; }
+  .module .one svg { display: block; width: 52px; height: auto; margin: 0 auto; overflow: visible; }
+  .module .one .hb-ring, .module .one .hb-arcbed, .module .one .hb-arc, .module .one .hb-ticks { display: none; }
+  .module .one .hb-body { fill: rgba(47, 224, 200, 0.06); stroke: var(--line-strong); stroke-width: 2.6; }
+  .module .one .hb-vessel { stroke: var(--line-strong); }
+  .module .one .hb-mesh, .module .one .hb-inner { stroke: rgba(47, 224, 200, 0.18); }
+  .module .one .nm { margin-top: 8px; font-size: 11px; line-height: 1.25; color: var(--text); letter-spacing: 0.01em; }
+  .module .one .cs { font-size: 9px; letter-spacing: 0.16em; color: var(--muted-2); align-self: start; }
+
+  /* monitoring */
+
+  #monitoring { display: grid; grid-template-rows: auto 1fr; gap: 14px; }
+
+  .strip { display: flex; flex-wrap: wrap; gap: 10px 26px; align-items: baseline; font-size: 12px; color: var(--muted); }
+  .strip b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* The cards take the height their content needs. Forcing equal rows made
+     them overflow their own border as soon as the trace wrapped underneath. */
+  .subjects { display: grid; gap: 14px; min-height: 0; grid-auto-rows: minmax(min-content, 1fr); align-content: stretch; overflow-y: auto; }
+
+  .subject {
+    display: grid; grid-template-columns: 140px minmax(150px, 19%) minmax(150px, 20%) 1fr; gap: 20px; align-items: center;
+    padding: 14px 18px; border: 1px solid var(--line); border-radius: 16px; background: var(--panel);
+    min-height: 0;
+  }
+  @media (max-width: 1020px) { .subject { grid-template-columns: 120px 1fr 1fr; } .subject .trace { grid-column: 1 / -1; } }
+  @media (max-width: 680px) { .subject { grid-template-columns: 96px 1fr; } .subject .readouts, .subject .trace { grid-column: 1 / -1; } }
+
+  /* ---------- the heart ---------- */
+
+  /* A call sign and a number read as a sensor channel. A heart, beating on
+     every measured beat, reads as someone being watched, which is what this
+     is. Nothing here is decoration that moves on its own: the ring is fixed,
+     the arc is the rate inside the nominal band, and the only animation is
+     one pulse per beat the device actually reported. */
+  .heartbox { width: 100%; max-width: 140px; }
+  .heartbox svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+  .hb-ring   { fill: none; stroke: var(--line); stroke-width: 1.1; }
+  .hb-ticks  { fill: none; stroke: var(--line-strong); stroke-width: 2.6; stroke-dasharray: 1.4 7.6; }
+  .hb-arcbed { fill: none; stroke: rgba(120, 170, 168, 0.18); stroke-width: 2.6; stroke-linecap: round; }
+  .hb-arc    { fill: none; stroke: var(--teal); stroke-width: 2.6; stroke-linecap: round; transition: stroke-dasharray 0.5s ease; }
+
+  .hb-heart {
+    transform-box: fill-box;
+    transform-origin: center;
+    transform: scale(calc(0.95 + 0.11 * var(--beat, 0)));
+    filter: drop-shadow(0 0 calc(2px + 11px * var(--beat, 0)) var(--teal));
+  }
+  .hb-body   { fill: rgba(47, 224, 200, 0.08); stroke: var(--teal); stroke-width: 2.2; stroke-linejoin: round; }
+  .hb-vessel { fill: none; stroke: var(--teal); stroke-width: 3.4; stroke-linecap: round; opacity: 0.85; }
+  .hb-mesh   { fill: none; stroke: rgba(47, 224, 200, 0.3); stroke-width: 0.75; }
+  .hb-inner  { fill: none; stroke: rgba(47, 224, 200, 0.45); stroke-width: 1.1; }
+
+  .subject.out .hb-heart { filter: drop-shadow(0 0 calc(2px + 11px * var(--beat, 0)) var(--amber)); }
+  .subject.out .hb-body   { stroke: var(--amber); fill: rgba(255, 182, 72, 0.08); }
+  .subject.out .hb-vessel { stroke: var(--amber); }
+  .subject.out .hb-arc    { stroke: var(--amber); }
+  .subject.out .hb-mesh   { stroke: rgba(255, 182, 72, 0.3); }
+  .subject.out .hb-inner  { stroke: rgba(255, 182, 72, 0.45); }
+
+  .subject.lost .hb-heart { filter: none; opacity: 0.32; }
+  .subject.lost .hb-body  { stroke: var(--red); fill: none; }
+  .subject.lost .hb-arc   { stroke: var(--red); }
+
+  .who-line { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .who-line .nm { font-size: 19px; letter-spacing: 0.04em; color: var(--text); }
+  .who-line .cs { font-size: 11px; letter-spacing: 0.18em; color: var(--teal-soft); }
+  .who-line .mod { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted-2); }
+
+  .bpm { margin-top: 6px; display: flex; align-items: flex-end; gap: 8px; }
+  .bpm .n { font-size: clamp(44px, 7vw, 74px); font-weight: 600; line-height: 0.9; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .bpm .u { font-size: 11px; letter-spacing: 0.18em; color: var(--muted); padding-bottom: 8px; }
+
+  .delta { margin-top: 5px; font-size: 12px; color: var(--muted); }
+  .delta b { color: var(--teal-soft); font-weight: 600; }
+  .state { margin-top: 9px; display: inline-flex; align-items: center; gap: 7px; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--teal); }
+
+  .subject.out .bpm .n, .subject.out .state { color: var(--amber); }
+  .subject.out .state .dot { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+  .subject.lost .bpm .n, .subject.lost .state { color: var(--red); }
+  .subject.lost .state .dot { background: var(--red); box-shadow: 0 0 8px var(--red); }
+  .subject.stale { opacity: 0.45; }
+
+  /* The readouts around the heart. Every figure here is measured or
+     computed from measurements; a channel with no sensor behind it is shown
+     as absent rather than filled with a plausible number. A monitor with
+     honest dashes reads truer than one that invents, and a jury that spots
+     one invented figure stops believing the rest. */
+  .readouts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 18px; align-content: center; }
+  .ro .v { font-size: 19px; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--text); }
+  .ro .v small { font-size: 10px; color: var(--muted); margin-left: 3px; letter-spacing: 0.1em; }
+  .ro .k { margin-top: 2px; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted-2); }
+  .ro.off .v { color: var(--muted-2); }
+  .ro.off .k { color: rgba(77, 111, 110, 0.7); }
+
+  .trace { min-width: 0; }
+  .trace canvas { display: block; width: 100%; height: clamp(70px, 14vh, 130px); }
+
+  .band { position: relative; height: 22px; margin-top: 8px; }
+  .band .track { position: absolute; inset: 9px 0 auto; height: 3px; background: rgba(120, 170, 168, 0.16); border-radius: 2px; }
+  .band .ok { position: absolute; top: 9px; height: 3px; background: linear-gradient(90deg, rgba(47,224,200,0.25), rgba(47,224,200,0.55)); border-radius: 2px; }
+  .band .mark { position: absolute; top: 3px; width: 2px; height: 15px; background: var(--teal); box-shadow: 0 0 9px var(--teal); transition: left 0.5s ease; }
+  .subject.out .band .mark { background: var(--amber); box-shadow: 0 0 9px var(--amber); }
+  .band .lab { position: absolute; top: 0; font-size: 9.5px; color: var(--muted-2); letter-spacing: 0.08em; }
+
+  .legend { margin-top: 6px; font-size: 9.5px; letter-spacing: 0.08em; color: var(--muted-2); }
+
+  footer { padding-top: 12px; font-family: var(--sans); font-size: 11.5px; color: var(--muted-2); }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="bar">
+    <h1><span id="w-title-lead">Medical</span> <span id="w-title-tail">monitoring</span></h1>
+    <span class="pill" id="p-session" hidden><i class="dot"></i><span></span></span>
+    <span class="spacer"></span>
+    <span class="pill warn" id="p-source" hidden><i class="dot"></i><span></span></span>
+    <span class="pill" id="p-link"><i class="dot"></i><span></span></span>
+  </div>
+
+  <main>
+    <section class="screen" id="standby">
+      <div>
+        <div class="big" id="s-title"></div>
+        <p class="note" id="s-note"></p>
+      </div>
+      <div class="modules" id="s-modules"></div>
+    </section>
+
+    <section class="screen" id="monitoring" hidden>
+      <div class="strip" id="m-strip"></div>
+      <div class="subjects" id="m-subjects"></div>
+    </section>
+  </main>
+
+  <footer id="foot"></footer>
+</div>
+
+<script type="module">
+import { connectMcp, toolText } from "./vendor/mcp-http-client.js";
+
+/* ------------------------------------------------------------------ *
+ * Words. The page asks the slot for them; this is only the fallback,
+ * so a page whose link is down still says something sensible.
+ * ------------------------------------------------------------------ */
+
+const FALLBACK = {
+  "panel.title.lead": "Medical",
+  "panel.title.tail": "monitoring",
+  "panel.session": "Session {sessionId}",
+  "panel.source.simulated": "Simulated heartbeats",
+  "panel.source.live": "Polar H10 · live",
+  "link.connecting": "Connecting",
+  "link.ok": "Linked",
+  "link.lost": "Link lost",
+  "standby.title": "Standby",
+  "standby.note": "No test under way. This screen wakes up on its own when the commander authorises one.",
+  "standby.occupants": "Occupants",
+  "state.nominal": "nominal",
+  "state.outOfBand": "out of band",
+  "state.signalLost": "signal lost",
+  "state.waiting": "waiting",
+  "subject.delta": "resting {resting} · delta {delta}",
+  "trace.legend": "TACHOGRAM · {seconds} S · NOMINAL BAND {min} TO {max} BPM",
+  "unit.bpm": "bpm",
+  "ro.hrv": "Variability, RMSSD",
+  "ro.inState": "In this state",
+  "ro.band": "Nominal band",
+  "ro.samples": "Readings",
+  "ro.spo2": "SpO2 · no sensor",
+  "ro.resp": "Respiration · no sensor",
+  "strip.module": "Module under test",
+  "strip.procedure": "Procedure",
+  "strip.elapsed": "Under monitoring",
+  "strip.events": "Events",
+  "unit.min": "min",
+  "foot.note": "This screen measures. It starts nothing, authorises nothing, stops nothing.",
+};
+
+const asked = new URLSearchParams(location.search).get("locale") || "en-US";
+let dict = { ...FALLBACK };
+document.documentElement.lang = asked;
+
+const phrase = (key, values = {}) =>
+  (dict[key] ?? FALLBACK[key] ?? key).replace(/\{(\w+)\}/g, (whole, name) => (name in values ? values[name] : whole));
+
+const num = new Intl.NumberFormat(asked);
+const n = (v) => num.format(v);
+const signed = (v) => (v >= 0 ? "+" : "−") + n(Math.abs(v));
+
+/* ------------------------------------------------------------------ *
+ * The link. One session on the biomed slot, reopened when it drops.
+ * ------------------------------------------------------------------ */
+
+const SCALE = { min: 30, max: 150 };
+const WINDOW_MS = 24000;
+const POLL_MS = 1000;
+const TRACE_EVERY = 2;          // one trace read every N polls
+const STALE_AFTER_MS = 6000;    // beyond this the figures are old and say so
+
+/**
+ * A bust with a heart in it. One shape, no decoration: the outline says
+ * "a person", the heart is what the strap measures, and `--beat` is driven
+ * from the real beat timestamps.
+ */
+/**
+ * The heart, in a scan ring.
+ *
+ * The body and the great vessels are one shape each, a mesh clipped to the
+ * body gives the wireframe, and `--beat` scales and lights the whole thing
+ * once per measured beat. The ring is fixed; its arc is the rate inside the
+ * nominal band, set from the data. Placement lives on a wrapping <g> because
+ * a CSS transform overrides an element's own transform attribute.
+ */
+const heartSvg = (uid) => `
+  <svg viewBox="0 0 150 150" aria-hidden="true">
+    <defs>
+      <clipPath id="hb-${uid}">
+        <path d="M75 129 C53 114, 33 96, 29 76 C25 57, 36 43, 52 44 C62 45, 69 51, 73 58
+                 C79 48, 91 42, 103 47 C118 53, 123 71, 116 88 C108 107, 90 120, 75 129 Z" />
+      </clipPath>
+    </defs>
+
+    <circle class="hb-ring"  cx="75" cy="75" r="68" />
+    <circle class="hb-ticks" cx="75" cy="75" r="62" />
+    <circle class="hb-arcbed" cx="75" cy="75" r="56" transform="rotate(-90 75 75)"
+            stroke-dasharray="264 352" />
+    <circle class="hb-arc" cx="75" cy="75" r="56" transform="rotate(-90 75 75)"
+            stroke-dasharray="0 352" />
+
+    <g class="hb-heart">
+      <path class="hb-vessel" d="M73 58 C71 40, 64 28, 52 26" />
+      <path class="hb-vessel" d="M97 46 C99 32, 104 24, 114 22" />
+      <path class="hb-vessel" d="M86 44 C88 30, 86 22, 80 17" />
+      <path class="hb-body"
+            d="M75 129 C53 114, 33 96, 29 76 C25 57, 36 43, 52 44 C62 45, 69 51, 73 58
+               C79 48, 91 42, 103 47 C118 53, 123 71, 116 88 C108 107, 90 120, 75 129 Z" />
+      <g clip-path="url(#hb-${uid})" class="hb-mesh">
+        <path d="M20 56 H130 M20 68 H130 M20 80 H130 M20 92 H130 M20 104 H130 M20 116 H130" />
+        <path d="M38 36 V140 M50 36 V140 M62 36 V140 M74 36 V140 M86 36 V140 M98 36 V140 M110 36 V140" />
+      </g>
+      <path class="hb-inner" d="M73 58 C70 76, 70 98, 75 129" />
+      <path class="hb-inner" d="M36 68 C52 80, 72 84, 92 76" />
+    </g>
+  </svg>`;
+
+const el = (id) => document.getElementById(id);
+const setText = (id, text) => { el(id).textContent = text; };
+
+let session = null;
+/** The session the cards on screen were built for; a new one rebuilds them. */
+let shownSession = null;
+let lastGood = 0;
+let ticks = 0;
+const views = new Map();
+
+function link(kind) {
+  const pill = el("p-link");
+  pill.classList.toggle("warn", kind === "connecting");
+  pill.classList.toggle("bad", kind === "lost");
+  pill.querySelector("span").textContent = phrase(kind === "ok" ? "link.ok" : kind === "lost" ? "link.lost" : "link.connecting");
+}
+
+/** The slot's own words for this session, if it will give them. */
+async function loadWords(s) {
+  try {
+    const r = await s.request("resources/read", { uri: "grammar://phrases" });
+    for (const c of r?.contents ?? []) {
+      const parsed = JSON.parse(c.text ?? "{}");
+      const table = parsed.phrases ?? parsed;
+      if (table && typeof table === "object") dict = { ...FALLBACK, ...table };
+    }
+  } catch {
+    /* the fallback stands; the page says nothing it cannot say */
+  }
+  setText("w-title-lead", phrase("panel.title.lead"));
+  setText("w-title-tail", phrase("panel.title.tail"));
+  setText("s-title", phrase("standby.title"));
+  setText("s-note", phrase("standby.note"));
+  setText("foot", phrase("foot.note"));
+}
+
+async function open() {
+  link("connecting");
+  session = await connectMcp(location.origin, "biomed", {
+    locale: asked,
+    clientInfo: { name: "biomed-station", version: "0.1.0" },
+  });
+  await loadWords(session);
+  link("ok");
+}
+
+/**
+ * What a tool actually answered. Every slot wraps a completed call in
+ * `{ slot, tool, arguments, result, stub, at }`, so the value is one level
+ * down; resources are not wrapped and come back as they are.
+ */
+const json = (result) => {
+  try {
+    const parsed = JSON.parse(toolText(result));
+    return parsed && typeof parsed === "object" && "result" in parsed && "tool" in parsed ? parsed.result : parsed;
+  } catch {
+    return null;
+  }
+};
+
+/* ------------------------------------------------------------------ *
+ * The two screens.
+ * ------------------------------------------------------------------ */
+
+/**
+ * Takes the cards away, not just the handles on them. Forgetting the map
+ * without emptying the container left the previous session's cards in the
+ * page, and the next session stacked its own underneath.
+ */
+function clearSubjects() {
+  for (const v of views.values()) v.node.remove();
+  views.clear();
+  el("m-subjects").innerHTML = "";
+  shownSession = null;
+}
+
+function showStandby(presence) {
+  el("standby").hidden = false;
+  el("monitoring").hidden = true;
+  el("p-session").hidden = true;
+  el("p-source").hidden = true;
+  clearSubjects();
+  el("s-modules").innerHTML = (presence ?? [])
+    .map((m) => `<div class="module">
+        <div class="k">${m.module} · ${n(m.occupants)} ${phrase("standby.occupants")}</div>
+        <div class="people">${(m.subjects ?? [])
+          .map((s) => `<div class="one">${heartSvg('s-' + s.id)}<div class="nm">${s.name ?? s.callsign}</div><div class="cs">${s.callsign}</div></div>`)
+          .join("")}</div>
+      </div>`)
+    .join("");
+}
+
+function showMonitoring(state, record) {
+  el("standby").hidden = true;
+  el("monitoring").hidden = false;
+
+  const pill = el("p-session");
+  pill.hidden = false;
+  pill.querySelector("span").textContent = phrase("panel.session", { sessionId: state.session });
+
+  const source = el("p-source");
+  source.hidden = false;
+  source.classList.toggle("warn", !!state.simulated);
+  source.querySelector("span").textContent = phrase(state.simulated ? "panel.source.simulated" : "panel.source.live");
+
+  // A session of its own gets cards of its own: two runs must never share a card.
+  if (shownSession !== state.session) clearSubjects();
+  shownSession = state.session;
+
+  const host = el("m-subjects");
+  host.classList.toggle("two", state.subjects.length === 2);
+
+  for (const s of state.subjects) {
+    let v = views.get(s.subjectId);
+    if (!v) {
+      const node = document.createElement("div");
+      node.className = "subject";
+      node.innerHTML = `
+        <div class="heartbox">${heartSvg(s.subjectId)}</div>
+        <div>
+          <div class="who-line"><span class="nm">${s.name ?? s.callsign}</span><span class="cs">${s.callsign}</span><span class="mod">${s.module}</span></div>
+          <div class="bpm"><span class="n">--</span><span class="u">${phrase("unit.bpm")}</span></div>
+          <div class="delta"></div>
+          <div class="state"><i class="dot"></i><span class="w"></span></div>
+        </div>
+        <div class="readouts"></div>
+        <div class="trace">
+          <canvas></canvas>
+          <div class="band"><div class="track"></div><div class="ok"></div><div class="mark"></div>
+            <span class="lab" style="left:0">${n(SCALE.min)}</span><span class="lab" style="right:0">${n(SCALE.max)}</span></div>
+          <div class="legend">${phrase("trace.legend", { seconds: n(WINDOW_MS / 1000), min: n(s.band.minBpm), max: n(s.band.maxBpm) })}</div>
+        </div>`;
+      host.appendChild(node);
+      const span = SCALE.max - SCALE.min;
+      const ok = node.querySelector(".ok");
+      ok.style.left = ((s.band.minBpm - SCALE.min) / span) * 100 + "%";
+      ok.style.width = ((s.band.maxBpm - s.band.minBpm) / span) * 100 + "%";
+      v = { node, heart: node.querySelector(".hb-heart"), arc: node.querySelector(".hb-arc"), ro: node.querySelector(".readouts"), n: node.querySelector(".bpm .n"), d: node.querySelector(".delta"), w: node.querySelector(".state .w"), mark: node.querySelector(".mark"), canvas: node.querySelector("canvas"), beats: [] };
+      views.set(s.subjectId, v);
+    }
+
+    v.node.classList.toggle("out", s.status === "out-of-band");
+    v.node.classList.toggle("lost", s.status === "signal-lost");
+    v.n.textContent = s.bpm === null ? "--" : n(s.bpm);
+    v.w.textContent = phrase(
+      s.status === "out-of-band" ? "state.outOfBand" : s.status === "signal-lost" ? "state.signalLost" : s.status === "nominal" ? "state.nominal" : "state.waiting",
+    );
+    const resting = s.resting ?? null;
+    v.d.innerHTML = s.bpm === null || resting === null ? "" : phrase("subject.delta", { resting: `<b>${n(resting)}</b>`, delta: `<b>${signed(s.bpm - resting)}</b>` });
+    // What sits around the heart. Measured, computed from measurements, or
+    // shown as a channel with nothing behind it; never invented.
+    const hrv = rmssd(v.beats);
+    const readouts = [
+      [hrv === null ? "--" : n(Math.round(hrv)), "ms", phrase("ro.hrv"), false],
+      [clock(s.forSeconds ?? 0), "", phrase("ro.inState"), false],
+      [`${n(s.band.minBpm)}\u2013${n(s.band.maxBpm)}`, "bpm", phrase("ro.band"), false],
+      [n(s.samples ?? 0), "", phrase("ro.samples"), false],
+      ["--", "%", phrase("ro.spo2"), true],
+      ["--", "/min", phrase("ro.resp"), true],
+    ];
+    v.ro.innerHTML = readouts
+      .map(([value, unit, label, off]) => `<div class="ro${off ? " off" : ""}"><div class="v">${value}${unit ? `<small>${unit}</small>` : ""}</div><div class="k">${label}</div></div>`)
+      .join("");
+
+    const span = SCALE.max - SCALE.min;
+    if (s.bpm !== null) {
+      const at = Math.max(0, Math.min(1, (s.bpm - SCALE.min) / span));
+      v.mark.style.left = at * 100 + "%";
+      // The ring's arc is the same figure as the slider: three quarters of the
+      // circle, filled to where the rate sits. 2*pi*56 = 352, and 0.75 of it is 264.
+      if (v.arc) v.arc.setAttribute("stroke-dasharray", `${(264 * at).toFixed(1)} 352`);
+    }
+  }
+
+  // A subject who left the session leaves the screen with it.
+  const alive = new Set(state.subjects.map((s) => s.subjectId));
+  for (const [id, v] of views) if (!alive.has(id)) { v.node.remove(); views.delete(id); }
+
+  // The strip reads the session record, not the state: the state knows the
+  // people, the record knows the test they are in.
+  const r = record ?? {};
+  const minutes = r.startedAt ? Math.max(0, Math.round((Date.now() - new Date(r.startedAt).getTime()) / 60000)) : null;
+  el("m-strip").innerHTML = [
+    [phrase("strip.module"), (r.modules ?? []).join(", ") || state.subjects[0]?.module || "--"],
+    [phrase("strip.procedure"), r.procedureId ?? r.reason ?? "--"],
+    [phrase("strip.elapsed"), minutes === null ? "--" : `${n(minutes)} ${phrase("unit.min")}`],
+    [phrase("strip.events"), n((r.events ?? []).length)],
+  ].map(([k, v]) => `${k} <b>${v}</b>`).join("");
+}
+
+/* ------------------------------------------------------------------ *
+ * The tachogram. One tick per beat, placed by the real intervals the
+ * device reported. Nothing is drawn between two beats, because between
+ * two beats there is nothing to draw.
+ * ------------------------------------------------------------------ */
+
+/**
+ * Root mean square of successive differences, in milliseconds: the standard
+ * short-term measure of heart rate variability, computed from the intervals
+ * the device reported and nothing else. Needs at least three beats; below
+ * that it says so rather than guessing.
+ */
+function rmssd(beats) {
+  if (!beats || beats.length < 4) return null;
+  const rr = [];
+  for (let i = 1; i < beats.length; i++) rr.push(beats[i] - beats[i - 1]);
+  let sum = 0;
+  for (let i = 1; i < rr.length; i++) { const d = rr[i] - rr[i - 1]; sum += d * d; }
+  return rr.length > 1 ? Math.sqrt(sum / (rr.length - 1)) : null;
+}
+
+/** mm:ss, for a duration in seconds. */
+function clock(seconds) {
+  const t = Math.max(0, Math.round(seconds));
+  return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
+}
+
+function beatsFrom(samples) {
+  const out = [];
+  for (const s of samples ?? []) {
+    const at = new Date(s.at).getTime();
+    if (!Number.isFinite(at)) continue;
+    const rr = Array.isArray(s.rrMs) && s.rrMs.length ? s.rrMs : null;
+    if (!rr) { out.push(at); continue; }
+    // The intervals end at the sample: walk them backwards from `at`.
+    let t = at;
+    for (let i = rr.length - 1; i >= 0; i--) { out.push(t); t -= rr[i]; }
+  }
+  return out.sort((a, b) => a - b);
+}
+
+function paint(v, now, kind) {
+  const c = v.canvas;
+  const dpr = window.devicePixelRatio || 1;
+  const w = c.clientWidth, h = c.clientHeight;
+  if (!w || !h) return;
+  if (c.width !== Math.round(w * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+  const g = c.getContext("2d");
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, h);
+
+  const css = getComputedStyle(document.documentElement);
+  const ink = css.getPropertyValue(kind === "out-of-band" ? "--amber" : kind === "signal-lost" ? "--red" : "--teal").trim();
+
+  g.strokeStyle = "rgba(120,170,168,0.14)";
+  g.lineWidth = 1;
+  g.beginPath(); g.moveTo(0, h - 0.5); g.lineTo(w, h - 0.5); g.stroke();
+
+  g.lineWidth = 1.8;
+  g.lineCap = "round";
+  for (const t of v.beats) {
+    const age = (now - t) / WINDOW_MS;
+    if (age < 0 || age > 1) continue;
+    const x = w - age * w;
+    const fade = Math.max(0, 1 - age * 0.85);
+    g.globalAlpha = fade;
+    g.strokeStyle = ink;
+    g.shadowColor = ink;
+    g.shadowBlur = 9 * fade;
+    const tall = h * (0.42 + 0.34 * fade);
+    g.beginPath(); g.moveTo(x, h - 2); g.lineTo(x, h - 2 - tall); g.stroke();
+  }
+  g.globalAlpha = 1;
+  g.shadowBlur = 0;
+}
+
+let lastStatus = new Map();
+
+/** How long one beat stays visible in the heart, in milliseconds. */
+const BEAT_MS = 260;
+
+function draw() {
+  const now = Date.now();
+  for (const [id, v] of views) {
+    paint(v, now, lastStatus.get(id));
+    // The last beat, and how long ago. Nothing is interpolated between two
+    // beats: the heart is lit by a measurement or it is not lit.
+    const last = v.beats.length ? v.beats[v.beats.length - 1] : null;
+    const age = last === null ? Infinity : now - last;
+    const beat = age >= 0 && age < BEAT_MS ? 1 - age / BEAT_MS : 0;
+    if (v.heart) v.heart.style.setProperty("--beat", beat.toFixed(3));
+  }
+  requestAnimationFrame(draw);
+}
+
+/* ------------------------------------------------------------------ *
+ * The loop.
+ * ------------------------------------------------------------------ */
+
+async function poll() {
+  try {
+    if (!session) await open();
+
+    const state = json(await session.callTool("state", {}));
+    if (!state) throw new Error("no state");
+
+    if (state.session) {
+      // The roster's resting rates are not in `state`; `describe` carries them
+      // and they change only when the profile does, so they are read once.
+      if (!poll.resting) {
+        const described = json(await session.callTool("describe", {}));
+        poll.resting = new Map((described?.roster ?? []).map((r) => [r.id, r.restingBpm ?? null]));
+      }
+      for (const s of state.subjects) s.resting = poll.resting.get(s.subjectId) ?? null;
+      const rec = await session.request("resources/read", { uri: "biomed://session" });
+      const record = JSON.parse(rec?.contents?.[0]?.text ?? "{}");
+      showMonitoring(state, record);
+      lastStatus = new Map(state.subjects.map((s) => [s.subjectId, s.status]));
+
+      if (ticks % TRACE_EVERY === 0) {
+        for (const s of state.subjects) {
+          const v = views.get(s.subjectId);
+          if (!v) continue;
+          const r = await session.request("resources/read", { uri: `biomed://trace/${s.subjectId}` });
+          const body = JSON.parse(r?.contents?.[0]?.text ?? "{}");
+          v.beats = beatsFrom(body.samples);
+        }
+      }
+    } else {
+      poll.resting = null;
+      const presence = json(await session.callTool("presence", {}));
+      showStandby(presence?.modules);
+    }
+
+    lastGood = Date.now();
+    link("ok");
+  } catch {
+    // A dropped session is reopened on the next tick; until the figures are
+    // fresh again the screen greys out rather than lying quietly.
+    session = null;
+    if (Date.now() - lastGood > STALE_AFTER_MS) {
+      link("lost");
+      for (const v of views.values()) v.node.classList.add("stale");
+    }
+  }
+  ticks += 1;
+  setTimeout(poll, POLL_MS);
+}
+
+/* A monitoring screen that goes dark mid-test is useless; ask to stay awake. */
+let wakeLock = null;
+async function keepAwake() {
+  try { wakeLock = await navigator.wakeLock?.request("screen"); } catch { /* not granted, not fatal */ }
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") keepAwake(); });
+
+setText("foot", FALLBACK["foot.note"]);
+link("connecting");
+keepAwake();
+poll();
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>

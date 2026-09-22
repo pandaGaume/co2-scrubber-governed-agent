@@ -1,0 +1,28 @@
+{
+    "tools": {
+        "describe": {
+            "description": "The monitor: source, roster, nominal band, open session, and whether readings are simulated."
+        },
+        "presence": {
+            "description": "Occupants of every module. Read before proposing a test on a volume."
+        },
+        "monitor_start": {
+            "description": "Open monitoring over the occupants of the given modules for a procedure."
+        },
+        "monitor_stop": {
+            "description": "Close the monitoring session and return its record."
+        },
+        "report": {
+            "description": "Relay one chest strap reading: beats per minute, and beat intervals when sent."
+        },
+        "state": {
+            "description": "Monitored subjects with last rate, band and status."
+        },
+        "verdict": {
+            "description": "One line on whether to abort. This slot stops nothing."
+        },
+        "move": {
+            "description": "Put a subject in a module. Scenario control."
+        }
+    }
+}

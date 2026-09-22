@@ -1,0 +1,113 @@
+{
+    "tools": {
+        "describe": {
+            "title": "Ce qu’est ce moniteur",
+            "description": "Le moniteur médical : la source des mesures, l’équipage inscrit, la bande nominale, et s’il y a une session ouverte. Dit clairement quand les mesures sont simulées."
+        },
+        "presence": {
+            "title": "Qui est dans quel module",
+            "description": "Les occupants de chaque module, lus avant d’ouvrir quoi que ce soit. C’est ce qui vous apprend qu’un essai sur un volume expose des personnes, et donc qu’un humain doit l’autoriser."
+        },
+        "monitor_start": {
+            "title": "Mettre les occupants sous surveillance",
+            "description": "Ouvre une session de surveillance sur les personnes présentes dans ces modules, pour la durée d’une procédure. Refuse si une session est déjà ouverte, et si personne n’est dans les modules nommés.",
+            "properties": {
+                "reason": "Pourquoi la surveillance est active : la procédure qu’elle couvre",
+                "procedureId": "L’identifiant de la procédure couverte",
+                "modules": "Les modules sous essai ; tout le monde à l’intérieur est surveillé",
+                "subjectIds": "Des personnes nommées plutôt que des modules entiers"
+            }
+        },
+        "monitor_stop": {
+            "title": "Fermer la session",
+            "description": "Ferme la session et rend son compte rendu : qui était surveillé, par quelle source, et chaque verdict qui n’était pas nominal.",
+            "properties": {
+                "reason": "Pourquoi elle se termine : la procédure est finie, interrompue, refusée"
+            }
+        },
+        "report": {
+            "title": "Remettre une mesure",
+            "description": "Une passerelle Bluetooth transmet une mesure de ceinture thoracique : le rythme en battements par minute et, quand l’appareil les envoie, les intervalles entre battements. Refuse une personne que personne n’a demandé de surveiller et un rythme qu’aucun cœur n’a.",
+            "properties": {
+                "subjectId": "À quelle personne surveillée cette mesure appartient",
+                "bpm": "Battements par minute tels que l’appareil les a rapportés",
+                "rrMs": "Intervalles entre battements en millisecondes, le plus récent en dernier",
+                "at": "Quand la mesure a été prise, ISO 8601 ; maintenant si absent",
+                "source": "Ce qui l’a produite, pour le compte rendu : polar-h10, ..."
+            }
+        },
+        "state": {
+            "title": "Les personnes surveillées maintenant",
+            "description": "Chaque personne surveillée avec son dernier rythme, sa bande, et son état : nominal, hors bande, signal perdu. C’est ce que le panneau affiche."
+        },
+        "verdict": {
+            "title": "Y a-t-il une raison d’interrompre",
+            "description": "Une ligne pour la liste d’arrêt d’une procédure : un dépassement qui dure, une surveillance perdue, ou quelqu’un qui est entré dans un module sous essai. Ce slot n’interrompt jamais rien lui-même."
+        },
+        "move": {
+            "title": "Déplacer une personne entre les modules",
+            "description": "Le capteur de présence de la démo tant qu’il n’y en a pas : place une personne dans un module. Le scénario s’en sert pour faire entrer une troisième personne dans un volume sous essai.",
+            "properties": {
+                "subjectId": "La personne",
+                "module": "Le module"
+            }
+        }
+    },
+    "phrases": {
+        "panel.title.lead": "Surveillance",
+        "panel.title.tail": "médicale",
+        "panel.session": "Session {sessionId}",
+        "panel.authorised": "Autorisée par le commandant · {time}",
+        "panel.source.simulated": "Battements simulés",
+        "panel.source.live": "Polar H10 · en direct",
+        "card.test.title": "Essai en cours",
+        "card.test.source": "biomed://session · procédure {procedureId}",
+        "card.test.note": "Conditions d'arrêt de la procédure. Ce panneau mesure ; il n'interrompt rien.",
+        "metric.occupants": "Occupants, {module}",
+        "metric.step": "Pas de l'essai",
+        "metric.elapsed": "Sous surveillance",
+        "metric.aborts": "Arrêts",
+        "row.module": "Module sous essai",
+        "row.scrubber": "Épurateur",
+        "row.band": "Bande nominale",
+        "row.source": "Source",
+        "value.band": "{min} à {max} bpm",
+        "abort.co2": "CO2 {module}",
+        "abort.vitals": "Signes vitaux",
+        "abort.monitoring": "Surveillance",
+        "abort.battery": "Batterie",
+        "abort.value.ratio": "{a} / {b}",
+        "abort.value.nominal": "nominaux",
+        "abort.value.links": "{n} liens",
+        "abort.value.percent": "{n} %",
+        "card.subjects.title": "Occupants sous surveillance",
+        "card.subjects.source": "biomed://state · un trait est un battement, à son espacement réel",
+        "subject.delta": "repos {resting} · écart {delta}",
+        "state.nominal": "nominal",
+        "state.outOfBand": "hors bande",
+        "state.signalLost": "signal perdu",
+        "state.waiting": "en attente",
+        "trace.legend": "TACHOGRAMME · {seconds} S · BANDE NOMINALE {min} À {max} BPM",
+        "unit.bpm": "bpm",
+        "unit.min": "min",
+        "footer.claim": "Le cœur est réel, l'air est simulé.",
+        "footer.body": "Sur cette page les deux le sont, et la pastille le dit. Branchée sur le slot, elle lit biomed://state et biomed://trace/{subjectId}. La ceinture Polar H10 donne un rythme et les intervalles entre battements, pas un tracé d'ECG : ce trait est un tachogramme, un battement par trait, à son espacement réel.",
+        "link.connecting": "Connexion",
+        "link.ok": "Lié",
+        "link.lost": "Lien perdu",
+        "standby.title": "En attente",
+        "standby.note": "Aucun essai en cours. Cet écran se réveille tout seul quand le commandant en autorise un.",
+        "standby.occupants": "Occupants",
+        "strip.module": "Module sous essai",
+        "strip.procedure": "Procédure",
+        "strip.elapsed": "Sous surveillance",
+        "strip.events": "Événements",
+        "foot.note": "Cet écran mesure. Il ne lance rien, n'autorise rien, n'interrompt rien.",
+        "ro.hrv": "Variabilite, RMSSD",
+        "ro.inState": "Dans cet etat",
+        "ro.band": "Bande nominale",
+        "ro.samples": "Mesures",
+        "ro.spo2": "SpO2 · pas de capteur",
+        "ro.resp": "Respiration · pas de capteur"
+    }
+}

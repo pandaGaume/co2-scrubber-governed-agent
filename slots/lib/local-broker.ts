@@ -5,6 +5,7 @@
  * origins that go with it, are passed through its environment.
  */
 import { spawn, type ChildProcess } from "node:child_process";
+import { networkInterfaces } from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ROOT } from "../../lib/paths.js";
@@ -14,7 +15,31 @@ export interface LocalBroker {
     port: number;
     httpBase: string;
     wsBase: string;
+    /** The addresses another device on the same network can open, `http://<ip>:<port>`. */
+    lanBases: string[];
     stop(): void;
+}
+
+/**
+ * The machine's addresses on the local network.
+ *
+ * The broker already listens on every interface (`host: "0.0.0.0"` in its
+ * config), but a page opened from a tablet carries the origin it was served
+ * from, and the broker answers 403 to an origin it was not told about. The
+ * medical monitoring page is meant to be held in someone's hands, away from
+ * the machine, so those origins are added at start rather than typed in by
+ * hand on a filming day.
+ */
+export function lanAddresses(): string[] {
+    const out: string[] = [];
+    for (const list of Object.values(networkInterfaces())) {
+        for (const n of list ?? []) {
+            // `family` is "IPv4" on Node 18+ and 4 on some older typings; accept both.
+            const v4 = n.family === "IPv4" || (n.family as unknown as number) === 4;
+            if (v4 && !n.internal) out.push(n.address);
+        }
+    }
+    return [...new Set(out)];
 }
 
 /**
@@ -52,8 +77,10 @@ export async function waitForBroker(httpBase: string, timeoutMs = 15_000): Promi
 /** Starts the broker on `port` and waits until it answers; `stdio` "inherit" shows its banner, "ignore" keeps a test quiet. */
 export async function startBroker(port: number, stdio: "inherit" | "ignore" = "inherit"): Promise<LocalBroker> {
     const httpBase = `http://localhost:${port}`;
+    const lanBases = lanAddresses().map((ip) => `http://${ip}:${port}`);
     // The browser origins follow the port: the config file names 3001, a page served on another port would get 403 on every call.
-    const origins = `http://localhost:${port},http://127.0.0.1:${port}`;
+    // The local network addresses go in too, so a tablet on the same wifi can open the monitoring page and be answered.
+    const origins = [`http://localhost:${port}`, `http://127.0.0.1:${port}`, ...lanBases].join(",");
     const child = spawn(process.execPath, [brokerBin()], { cwd: ROOT, stdio, env: { ...process.env, MCP_BROKER_PORT: String(port), MCP_BROKER_ALLOWED_ORIGINS: process.env.MCP_BROKER_ALLOWED_ORIGINS ?? origins } });
     const stop = () => {
         if (!child.killed) child.kill("SIGINT");
@@ -62,5 +89,5 @@ export async function startBroker(port: number, stdio: "inherit" | "ignore" = "i
         stop();
         throw new Error(`the broker did not answer on ${httpBase} within 15 s`);
     }
-    return { process: child, port, httpBase, wsBase: `ws://localhost:${port}`, stop };
+    return { process: child, port, httpBase, wsBase: `ws://localhost:${port}`, lanBases, stop };
 }

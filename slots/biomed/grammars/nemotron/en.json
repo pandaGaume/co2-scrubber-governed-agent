@@ -1,0 +1,28 @@
+{
+    "tools": {
+        "describe": {
+            "description": "Read the monitor: source, roster, nominal band, open session. Says if readings are simulated."
+        },
+        "presence": {
+            "description": "Occupants per module. Call before proposing a test on a volume."
+        },
+        "monitor_start": {
+            "description": "Open monitoring over the people in these modules for a procedure. Refused if a session is open or the modules are empty."
+        },
+        "monitor_stop": {
+            "description": "Close the session. Returns the record."
+        },
+        "report": {
+            "description": "Gateway relays one strap reading: bpm and beat intervals."
+        },
+        "state": {
+            "description": "Monitored subjects: last rate, band, status (nominal, out-of-band, signal-lost)."
+        },
+        "verdict": {
+            "description": "One line for an abort list. This slot stops nothing itself."
+        },
+        "move": {
+            "description": "Put a subject in a module. Scenario control."
+        }
+    }
+}

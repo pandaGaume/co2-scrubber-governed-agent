@@ -4,11 +4,17 @@
 
 ## 0. La phrase que la vidéo doit rendre évidente
 
-Le microcontrôleur tient le life-support ; l'agent propose ; l'usine fabrique ce qui manque ; rien n'arrive sur le microcontrôleur sans avoir été jugé par le jumeau, enregistré par la station, approuvé par l'opérateur et revérifié par le microcontrôleur lui-même ; et ce qu'un appareil a appris et éprouvé est proposé aux autres, par la même chaîne.
+**La phrase du début.** Le microcontrôleur tient le life-support ; la machine mesure elle-même la pièce où on l'a posée ; l'agent propose ; l'usine fabrique ce qui manque ; et rien n'arrive sur le microcontrôleur sans avoir été jugé par le jumeau, enregistré par la station, approuvé par l'opérateur et revérifié par le microcontrôleur lui-même.
 
-La seconde phrase, celle de la fin : la boucle de vie tourne tout le temps et l'usine n'est appelée qu'une fois ; la prochaine fois que cette porte s'ouvre, sur cette base ou sur une autre, personne n'appelle l'usine.
+**La phrase de la fin.** La boucle de vie tourne tout le temps, et l'usine n'est appelée que deux fois dans toute la nuit : une fois pour que la machine sache où elle est, une fois pour qu'elle comprenne ce qui a changé. La prochaine fois que cette porte s'ouvre, personne ne l'appelle.
+
+**La phrase qui fait le pont avec ce que le jury connaît déjà.** Un robot qui se trompe d'objet casse une tasse. Un épurateur qui se trompe de pièce, et qu'on écoute, tue quatre personnes. Donc il apprend, et ce qu'il apprend n'a jamais le droit de commander.
+
+*Cette troisième phrase existe parce que le jury sait ce qu'est un robot qui apprend à reconnaître des objets, et ne sait pas ce qu'est un modèle physique de site. Le pont complet, si on a dix secondes de plus : un modèle de vision se réentraîne pour chaque entrepôt, un modèle physique se réécrit pour chaque installation, et personne ne le fait parce que c'est un ingénieur pendant deux semaines.*
 
 Une seule idée pour le jury, le matériel au centre, l'usine comme scène. Tout chiffre à l'écran est lu dans un manifeste ; rien n'est montré avant d'avoir tourné.
+
+*Décision du 22 septembre 2026 : l'étape G (le tier de propagation) est abandonnée pour l'instant, et ses jours vont à la mise en service, qui devient l'introduction de la vidéo (`mise-en-service.fr.md`). Les phrases ci-dessus sont réécrites en conséquence. La première perd « et ce qu'un appareil a appris et éprouvé est proposé aux autres, par la même chaîne », qui n'est plus démontré, et gagne la mesure de l'installation, qui l'est. La seconde perd « sur cette base ou sur une autre » et dit maintenant les deux appels à l'usine, tous deux filmés. La troisième est nouvelle. La règle du dépôt tient : ce qui ne tourne pas ne se revendique pas, et la propagation passe en « écrit, pas filmé » (section 8).*
 
 ## 1. La chaîne de confiance et les droits
 
@@ -210,6 +216,8 @@ Le jury est fait d'ingénieurs et de gens qui achètent. L'ingénieur cherche l'
 
 ## 8. Ce qui sort du périmètre
 
+**La propagation à la flotte** (depuis le 22 septembre 2026) : le rapport d'épreuve, la proposition, le push OTA au témoin, le témoin qui revérifie et rejoue. La section 7.1 garde la spécification complète et l'architecture reste vraie ; simplement, rien de tout cela ne tourne, donc rien ne se montre. Au mieux une phrase du narrateur qui dit ce que la chaîne permettrait, au conditionnel, et il vaut sans doute mieux ne rien dire du tout.
+
 La génération de code exécutable pour la carte (un contrôleur C++) ; le mode ombre ; les assets 3D ; O2, pression, température, humidité ; la base à quatre espaces ; l'identification automatique d'une topologie sans capteur de porte. Chacun a une place dans la définition de l'usine ; aucun n'est nécessaire pour prouver la chaîne, et chacun ajouterait une chose non prouvée à l'écran.
 
 ## 9. Ordre de construction et estimation
@@ -222,7 +230,8 @@ La génération de code exécutable pour la carte (un contrôleur C++) ; le mode
 | D | le jumeau juge : `ML.Contract:features`, `ML.Contract:alarm`, `Logic.Time:replay`, le générateur du document de jugement, `twin.evaluate`, `twin.report`, la station qui vérifie | `spk.onnx:model`, `fit`, la bibliothèque `evaluate` | 2 |
 | E | l'usine comme harnais : slot `factory` réel, outils `graph.build`, `model.fit`, `twin.instantiate`, `plan.run`, `station.propose` ; lanceur local puis Nebius derrière le profil ; second document du studio | tout le Tier 3, les jobs, la page du studio | 2 |
 | F | le scénario complet : les situations 200 à 360, la récurrence et ses deux colonnes de compteurs, le scorecard, les chiffres lus | le runner, le scorecard | 1 |
-| G | le tier de propagation : rapport d'épreuve dans la station, proposition, approbation, push OTA au témoin (`scrubber-2` stub), le témoin qui rejoue l'événement de 360, journal ; côté firmware, le modèle par l'OTA en banque B avec activation sur épreuve | la station, `ota_mgr`, le push validé | 2 |
+| ~~G~~ | **abandonné le 22 septembre 2026**, ses jours vont à la mise en service. Était : le tier de propagation (rapport d'épreuve dans la station, proposition, approbation, push OTA au témoin `scrubber-2` stub, le témoin qui rejoue l'événement de 360, journal ; côté firmware, le modèle par l'OTA en banque B avec activation sur épreuve). La section 7.1 reste écrite : c'est la spécification du jour où on le construit | la station, `ota_mgr`, le push validé | ~~2~~ 0 |
+| J | **la mise en service, nouvelle introduction de la vidéo** (`mise-en-service.fr.md`) : la détection par la station, l'inventaire, le sujet `procedure`, le sujet `graph` à deux candidats, le CO2 en masse sur `atmosphere`, la page d'introduction et la courbe héros | la station, l'usine, le runtime | 6 |
 | H | la page comme vidéo (section 6.1 et `ui-brief.fr.md`) : l'horloge et le battement, l'alerte clignotante (message entrant, approbation, propagation), le monde à deux volumes, la console de la carte relayée, la flotte et le journal, la caméra incrustée, la vignette et les transitions entre les trois documents, la carte du résidu, les deux colonnes de la récurrence, le scorecard en superposition, la ligne de temps de la nuit | le studio, la tuile du moniteur, les slots | 3,5 |
 | I | le storyboard tourné en répétition, en une prise, relu par le physicien relecteur et par une personne extérieure avec une seule question : « qu'a fait l'IA ? » | | 0,5 |
 

@@ -20,6 +20,7 @@ import { stationSlot } from "./station/provider.js";
 import { factorySlot } from "./factory/provider.js";
 import { reasonerSlot } from "./reasoner/provider.js";
 import { speechSlot } from "./speech/provider.js";
+import { biomedSlot } from "./biomed/provider.js";
 import { workspaceSlot } from "./tools/workspace/provider.js";
 import { modelSlot } from "./tools/model/provider.js";
 import type { PublishedSlot } from "./lib/slot-server.js";
@@ -36,6 +37,7 @@ const SLOTS: Array<[string, (wsBase: string, logger: (line: string) => void) => 
     ["factory", factorySlot],
     ["reasoner", reasonerSlot],
     ["speech", speechSlot],
+    ["biomed", biomedSlot],
     ["workspace", workspaceSlot],
     ["model", modelSlot],
 ];
@@ -115,6 +117,10 @@ async function main(): Promise<void> {
     const { slots, failures } = await publishAll(wsBase);
     if (failures.length) log(`DEGRADED: ${failures.length} slot(s) not published (${failures.map((f) => f.slot).join(", ")}); the others run, the board shows the missing ones red`);
     log(`dashboard: ${httpBase}/   slots: ${slots.map((s) => s.slot).join(", ")}   introspection: ${httpBase}/_broker/mcp`);
+    // The medical monitoring page is meant to be held in someone's hands, on a
+    // tablet, away from the machine. Say where to point it rather than making
+    // anyone look the address up on a filming day.
+    for (const base of broker?.lanBases ?? []) log(`medical monitoring, on another device on this network: ${base}/biomed.html`);
     // The board opens the factory's window itself, beside it, on the key press that ends its boot (a second window opened
     // here would cover the board, and a covered page is a hidden page: its timers slow down and the sound with them).
     if (!flag("--no-open") && !flag("--no-broker")) openBrowser(`${httpBase}/`);

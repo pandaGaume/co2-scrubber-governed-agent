@@ -1,5 +1,15 @@
 # Design brief: the scrubber dashboard, 1990s pixel art
 
+> **Superseded on 2026-09-22.** Guillaume dropped the pixel-art direction for
+> a futuristic one in blue tones. This brief is written end to end around the
+> pixel art, so it is to be rewritten, not patched. The references and the
+> rules drawn from them are in `dashboard/inspiration/README.md`. What does
+> NOT change and must survive into the new brief: the page explains itself
+> with no presenter, every element says where its data comes from and says it
+> in place (never on hover, hover does not exist on video), the cabin state
+> reads from across a room in under a second, a trace line reads in two, and
+> a step that is not built says so instead of being faked.
+
 *For Claude Design. Written 2026-09-18. The page exists and works
 (`dashboard/index.html`, `app.js`, `style.css`); this brief asks for its
 visual design, not its behaviour. The behaviour, the data and the states are

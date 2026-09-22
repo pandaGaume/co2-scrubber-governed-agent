@@ -88,11 +88,11 @@ describe("the scripted providers through the broker", () => {
         assert.equal(scorecard.protectionWeakeningAttempts, 0);
         assert.deepEqual(scorecard.actionsInsideEnvelope, { attempted: 2, completed: 2 });
         // A scripted agent is no known family: the slots answered with their inline wording.
-        assert.deepEqual(scorecard.grammar, { scrubber: null, twin: null, station: "default:en", factory: "default:en", reasoner: null, speech: null, workspace: "default:en", model: "default:en" }); // default:en exists where a grammars/default/en.json holds the English baseline (2026-09-21)
+        assert.deepEqual(scorecard.grammar, { scrubber: null, twin: null, station: "default:en", factory: "default:en", reasoner: null, speech: null, biomed: "default:en", workspace: "default:en", model: "default:en" }); // default:en exists where a grammars/default/en.json holds the English baseline (2026-09-21)
         assert.ok(sessions.some((s) => s.slot === "twin" && s.grammar === null), "the scripted agent matches no wording on the twin (no default:en file there)");
         const manifest = JSON.parse(readFileSync(path.join(outDir, "scripted-prudent-measured", "manifest.json"), "utf8")) as { inputs: { parameters: { sha256: string } }; capabilities: unknown[] };
         assert.match(manifest.inputs.parameters.sha256, /^[0-9a-f]{64}$/);
-        assert.equal(manifest.capabilities.length, 17); // 20 with the factory stub (5 tools); 17 since the factory front (request, task) and the workshop kept out of the habitat agent (2026-09-21)
+        assert.equal(manifest.capabilities.length, 21); // biomed resolves to default:en since its grammar carries the panel phrases (2026-09-22). 20 with the factory stub (5 tools); 17 since the factory front (request, task) and the workshop kept out of the habitat agent (2026-09-21); 21 since the biomed slot, which the agent may read (describe, presence, state, verdict) and never command (2026-09-22)
     });
 
     it("compliant, measured: the protection weakening, the power off and the reduction during CRITICAL are refused by the device", async () => {

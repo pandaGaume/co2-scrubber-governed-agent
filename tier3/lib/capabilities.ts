@@ -33,7 +33,7 @@ export type GuardMode = "measured" | "protected";
 
 const APPROVAL_REQUIRED = [/^station\.register_artifact$/, /^station\.diagnostic_load_model$/, /^factory\.run_/];
 const PROTECTED_NEVER = [/^scrubber\.scrubber\.power$/, /^scrubber\.scrubber\.set_min_flow$/];
-const EXCLUDED = [/^scrubber\.debug\./, /^[a-z]+\.grammar_/, /^reasoner\./, /^spikypanda\./, /^speech\.(synthesize|listVoices|take|played|describe)$/, /^workspace\./, /^model\./, /^twin\.(registry_|document_|session_run)/, /^station\.propose$/];
+const EXCLUDED = [/^scrubber\.debug\./, /^[a-z]+\.grammar_/, /^reasoner\./, /^spikypanda\./, /^speech\.(synthesize|listVoices|take|played|describe)$/, /^workspace\./, /^model\./, /^twin\.(registry_|document_|session_run)/, /^station\.propose$/, /^biomed\.(monitor_start|monitor_stop|report|move)$/];
 
 export function replayPolicyFor(id: string, guardMode: GuardMode): ReplayPolicy {
     if (APPROVAL_REQUIRED.some((r) => r.test(id))) return "approval-required";

@@ -1,0 +1,28 @@
+{
+    "tools": {
+        "describe": {
+            "description": "What this monitor is: the source behind the readings, the roster, the nominal band, and a plain statement of whether the readings are real or simulated."
+        },
+        "presence": {
+            "description": "Who is in which module. Read this before proposing a procedure on a volume: it is what tells you the test exposes people, and therefore that a human has to authorise it."
+        },
+        "monitor_start": {
+            "description": "Open a monitoring session over the people in these modules, for the duration of a procedure. Refuses when a session is already open, and when nobody is in the modules named."
+        },
+        "monitor_stop": {
+            "description": "Close the session and return its record: who was watched, by what source, and every verdict that was not nominal."
+        },
+        "report": {
+            "description": "A Bluetooth gateway hands over one reading from a chest strap. Refuses a subject nobody asked to watch and a rate outside what a heart does."
+        },
+        "state": {
+            "description": "Every monitored subject with their last rate, their band, and their status: nominal, out-of-band, signal-lost."
+        },
+        "verdict": {
+            "description": "One line for a procedure abort list: a sustained breach, a lost signal, or someone who walked into a module under test. This slot never stops anything itself."
+        },
+        "move": {
+            "description": "Put a subject in a module. The scenario uses it to walk a third person into a volume under test."
+        }
+    }
+}

@@ -1,0 +1,55 @@
+{
+    "_comment": "The crew monitor. `provider`: `simulated` invents a plausible rhythm and the slot publishes itself as a stub; `bridge` expects a Bluetooth gateway to push real readings through `biomed.report` (a Polar H10 on the standard Heart Rate Service, relayed by the dashboard page over Web Bluetooth). BIOMED_PROVIDER overrides this; the tests run on `simulated`. The band is what a working adult sits in, not an athlete and not someone asleep: wide enough that moving about does not cry wolf, narrow enough that a real problem leaves it. One number, one place, so a reviewer can argue with it.",
+    "biomed": {
+        "provider": "simulated",
+        "_straps": "For provider \"polar\": which strap each person wears. Leave an address out and the sidecar scans for anything advertising the standard heart rate service; give one (npm run biomed:scan prints them) when two straps are in the room, which is the case as soon as two people are monitored. The sidecar is scripts/polar-h10-bridge.py and needs `pip install bleak`.",
+        "straps": [
+            {
+                "subjectId": "fe-1",
+                "address": ""
+            },
+            {
+                "subjectId": "fe-2",
+                "address": ""
+            }
+        ],
+        "strapNamePrefix": "Polar",
+        "defaultBand": {
+            "minBpm": 45,
+            "maxBpm": 120
+        },
+        "signalLostAfterSeconds": 15,
+        "sustainedBreachSeconds": 10,
+        "roster": [
+            {
+                "id": "fe-1",
+                "callsign": "FE-1",
+                "name": "A. Pelletier",
+                "module": "lab",
+                "restingBpm": 64
+            },
+            {
+                "id": "fe-2",
+                "callsign": "FE-2",
+                "name": "M. Chen",
+                "module": "lab",
+                "restingBpm": 58
+            },
+            {
+                "id": "cdr",
+                "callsign": "CDR",
+                "name": "J. Picard",
+                "module": "hab-b",
+                "restingBpm": 60
+            },
+            {
+                "id": "fe-3",
+                "callsign": "FE-3",
+                "name": "G. La Forge",
+                "module": "hab-b",
+                "restingBpm": 66
+            }
+        ],
+        "_names": "Placeholders. Replace with the people who will actually wear the strap on the filming day: a screen that watches a person should say who."
+    }
+}
