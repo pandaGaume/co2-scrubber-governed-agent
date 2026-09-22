@@ -291,9 +291,37 @@ function meter(read) {
         // flattened against the axis. The same reason a meter is marked in
         // decibels. Nothing is added, the small values are given room.
         const curve = (v) => Math.pow(v, 0.62);
-        // The trace dies out at both ends rather than being cut off square, so
-        // the beam reads as light and not as a bar chart in a box.
-        const edge = (x) => Math.min(1, Math.min(x, w - x) / (w * 0.16));
+        /**
+         * How white a spike goes, from the loudness around it rather than its
+         * own.
+         *
+         * Taken sample by sample, one value crossing the line turned white on
+         * its own and the trace grew isolated needles among the blue. A voice
+         * does not do that: a loud passage is loud for a while. So the colour
+         * follows a short neighbourhood, and drifts from cyan to white over
+         * half the range instead of switching near the top of it.
+         */
+        const warmth = (i) => {
+            let sum = 0;
+            let n = 0;
+            for (let k = i - 3; k <= i + 3; k++) {
+                const u = history[k];
+                if (u === undefined) continue;
+                sum += curve(u);
+                n++;
+            }
+            const t = Math.min(1, Math.max(0, (n ? sum / n : 0) - 0.42) / 0.5);
+            return t * t * (3 - 2 * t);
+        };
+        // The trace dissolves towards both ends rather than being cut off, so
+        // the beam reads as light and not as a bar chart in a box. The fade is
+        // long on purpose: only the middle of the card is at full strength and
+        // the energy is gone well before the edge. A short taper left the trace
+        // looking clipped at both ends, which is the one thing light never does.
+        const edge = (x) => {
+            const t = Math.min(1, Math.min(x, w - x) / (w * 0.38));
+            return t * t * (3 - 2 * t);   // smooth at both ends of the ramp
+        };
 
         // Added rather than painted over: where the passes overlap the colour
         // climbs to white, which is what makes the loud parts burn.
@@ -342,9 +370,7 @@ function meter(read) {
             const x = Math.round((i / (SAMPLES - 1)) * (w - 1));
             const a = edge(x);
             if (a <= 0) continue;
-            // Only the top quarter of the range whitens; below that it stays
-            // the blue of the beam.
-            const white = Math.max(0, (v - 0.74) / 0.26);
+            const white = warmth(i);
             const r = Math.round(70 + 175 * white);
             const g = Math.round(215 + 40 * white);
             const b = Math.round(235 + 20 * white);
