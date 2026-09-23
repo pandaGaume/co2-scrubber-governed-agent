@@ -784,14 +784,9 @@ async function refreshModel() {
                     agentIntention = e.intention ?? null;
                     if (typeof e.minute === "number") put("top-clock", `night 9 · min ${e.minute}`);
                 }
-                if (e.kind === "agent.step" && e.capabilityId) {
-                    put("agent-now", `${e.capabilityId} · ${e.outcome ?? ""}`);
-                    traceAgentStep(e);
-                }
-                if (e.kind === "agent.handback") put("agent-now", "handed the console back to the crew");
+                if (e.kind === "agent.step" && e.capabilityId) traceAgentStep(e);
                 put("top-state", MODE_WORD[agentMode] ?? agentMode);
                 $("top-state")?.classList.toggle("busy", agentMode === "playing");
-                renderNight();
                 continue;
             }
             if (!e.kind.startsWith("model.")) continue;
@@ -837,107 +832,73 @@ async function openModel() {
 // ── The agent ─────────────────────────────────────────────────────────────
 //
 // The agent runs in the Node process, as the `agent` slot, and this panel is
-// its transport: play, pause, next, stop, reset, through the broker like every
-// other call this page makes. It used to be the studio page that ran the loop
-// and this panel that asked it by postMessage, so closing the window closed
-// the agent; now the studio is one view of the slot among others.
+// this page reads: which event it is on and whether it is playing, in the
+// header. Driving it is the phone's job now, through the same slot, so there
+// is one way to start a night and it is not this screen.
 //
 // What the agent does arrives in the same event log as the model's calls
 // (`spk://events`), so the two read as one story: the question, the answer,
 // and the decision it produced.
 
 const MODE_WORD = { idle: "idle", playing: "playing", paused: "paused", ended: "night played" };
-let night = [];          // the events of the scenario, from the slot
 let agentMode = "idle";
 let agentIntention = null;
-
-/** One call on the agent slot, traced like any other. */
-async function agentCall(tool, args = {}) {
-    const payload = await call("agent", tool, args, "operator");
-    const st = payload?.result ?? payload;
-    if (st && typeof st === "object") applyAgentState(st);
-    return st;
-}
 
 function applyAgentState(st) {
     if (typeof st.mode === "string") agentMode = st.mode;
     if ("intention" in st) agentIntention = st.intention ?? null;
-    if (Array.isArray(st.events) && st.events.length) night = st.events;
     put("top-state", MODE_WORD[agentMode] ?? agentMode);
     $("top-state")?.classList.toggle("busy", agentMode === "playing");
     if (typeof st.minute === "number") put("top-clock", `night 9 · min ${st.minute}`);
-    renderNight();
-}
-
-function renderNight() {
-    const menu = $("menu");
-    if (!menu) return;
-    const rows = night
-        .map((e) => {
-            const on = e.intention === agentIntention;
-            const text = String(e.message ?? "");
-            // One line: the name and its minute. The message is on the title
-            // and is said aloud when the event is played; repeating it here
-            // only cost the voice its height.
-            return `<button class="btn ${on ? "playing" : ""}" data-intention="${escapeHtml(e.intention)}" title="${escapeHtml(text)}">${escapeHtml(String(e.intention).toUpperCase())}<small>min ${e.minute ?? "?"}</small></button>`;
-        })
-        .join("");
-    menu.innerHTML = rows || `<span class="hint">the agent slot did not answer; the night is unknown</span>`;
-    // Pressing an event jumps the agent to it and plays from there. It is the
-    // operator's move, not the agent's: `agent.play` takes the intention, and
-    // the slot refuses the jump while a decision is being taken.
-    for (const b of menu.querySelectorAll("button[data-intention]")) {
-        if (b.dataset.intention === "factory") continue;
-        b.addEventListener("click", async () => {
-            b.disabled = true;
-            try {
-                await agentCall("play", { intention: b.dataset.intention });
-            } finally {
-                b.disabled = false;
-            }
-        });
-    }
-    const factory = menu.querySelector("[data-intention='factory']");
-    if (factory) menu.appendChild(factory);
-}
-
-function wireTransport() {
-    for (const [id, tool] of [["btn-play", "play"], ["btn-pause", "pause"], ["btn-next", "next"], ["btn-stop", "stop"], ["btn-reset", "reset"]]) {
-        $(id)?.addEventListener("click", async (ev) => {
-            const button = ev.currentTarget;
-            button.disabled = true;
-            try {
-                await agentCall(tool);
-            } finally {
-                button.disabled = false;
-            }
-        });
-    }
 }
 
 async function openAgent() {
-    if (!has("menu")) return;
+    if (!has("top-state")) return;
     try {
         const s = await session("agent");
         const described = JSON.parse(toolText(await s.callTool("describe", {})));
         applyAgentState(described.result ?? described);
-    } catch (e) {
-        const menu = $("menu");
-        if (menu) menu.innerHTML = `<span class="hint">the agent slot did not answer: ${escapeHtml(e.message)}</span>`;
+    } catch {
+        put("top-state", "no agent");
     }
-    wireTransport();
 }
 
 /** The agent's own state, polled beside the events so a run started elsewhere
     (the operator's page, a second board) shows here too. */
 async function refreshAgent() {
-    if (!has("menu")) return;
+    if (!has("top-state")) return;
     try {
         const s = await session("agent");
         const st = JSON.parse(toolText(await s.callTool("state", {})));
         applyAgentState(st.result ?? st);
     } catch {
         // said once by openAgent; a poll that fails says nothing new
+    }
+}
+
+// ── The codes a phone reads ───────────────────────────────────────────────
+//
+// The pages meant for a hand are reached by scanning, not by typing an address
+// off a screen. The `qr` slot draws them, because the address a phone needs is
+// this machine's on the local network and a page opened at localhost cannot
+// know it: `location.origin` would send the phone to its own loopback.
+
+async function showCodes() {
+    if (!has("qr-simulation")) return;
+    for (const [page, box, label] of [
+        ["simulation.html", "qr-simulation", "url-simulation"],
+        ["biomed.html", "qr-biomed", "url-biomed"],
+    ]) {
+        try {
+            const s = await session("qr");
+            const answer = JSON.parse(toolText(await s.callTool("page", { page, light: "#d3ecea", dark: "#04090c" })));
+            const got = answer.result ?? answer;
+            $(box).innerHTML = got.svg;
+            put(label, String(got.url ?? "").replace(/^https?:\/\//u, ""));
+        } catch (e) {
+            $(box).innerHTML = "";
+            put(label, `no code: ${e.message}`);
+        }
     }
 }
 
@@ -1096,6 +1057,8 @@ loadSlots()
         openVoice().then(() => setInterval(refreshVoice, POLL_MS));
         openModel().then(() => setInterval(refreshModel, POLL_MS));
         openAgent().then(() => setInterval(refreshAgent, POLL_MS * 2));
+        // Once: the machine's addresses do not change while it runs.
+        void showCodes();
         setInterval(refreshSpeechPulse, POLL_MS);
     })
     .catch((e) => {

@@ -822,7 +822,7 @@ async function buildCapabilities(broker, { profile = {}, approve, onCall } = {})
 // tier3/lib/capabilities.ts
 var APPROVAL_REQUIRED = [/^station\.register_artifact$/, /^station\.diagnostic_load_model$/, /^factory\.run_/, /^agent\.(reset|stop|pause)$/];
 var PROTECTED_NEVER = [/^scrubber\.scrubber\.power$/, /^scrubber\.scrubber\.set_min_flow$/, /^agent\.(reset|stop)$/];
-var EXCLUDED = [/^scrubber\.debug\./, /^[a-z]+\.grammar_/, /^reasoner\./, /^scenario\./, /^spikypanda\./, /^speech\.(synthesize|listVoices|take|played|describe)$/, /^workspace\./, /^model\./, /^twin\.(registry_|document_|session_run)/, /^station\.propose$/, /^biomed\.(monitor_start|monitor_stop|report|move)$/];
+var EXCLUDED = [/^scrubber\.debug\./, /^[a-z]+\.grammar_/, /^reasoner\./, /^scenario\./, /^spikypanda\./, /^speech\.(synthesize|listVoices|take|played|describe)$/, /^workspace\./, /^model\./, /^qr\./, /^twin\.(registry_|document_|session_run)/, /^station\.propose$/, /^biomed\.(monitor_start|monitor_stop|report|move)$/];
 function replayPolicyFor(id, guardMode) {
   if (APPROVAL_REQUIRED.some((r) => r.test(id))) return "approval-required";
   if (guardMode === "protected" && PROTECTED_NEVER.some((r) => r.test(id))) return "never";

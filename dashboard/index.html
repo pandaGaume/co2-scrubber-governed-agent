@@ -55,17 +55,23 @@
 
     <div class="col-left">
 
-        <section class="panel simulation">
-            <h2 class="panel-title">Simulation<span class="rule"></span><span class="hint" id="centre-note"></span></h2>
-            <div class="transport">
-                <button id="btn-play" class="btn btn-primary" title="let the agent take its decisions on its own, about one a second">play</button>
-                <button id="btn-pause" class="btn" title="stop after the decision under way">pause</button>
-                <button id="btn-next" class="btn" title="one decision, then stop">next</button>
-                <button id="btn-stop" class="btn btn-dim" title="abandon the run; the board is not touched">stop</button>
-                <button id="btn-reset" class="btn btn-dim" title="put the board back at the scenario's start and rebuild the agent">reset</button>
+        <!-- The night is driven from a phone now, and the medical monitoring
+             is read on one. Both codes carry this machine's address on the
+             local network, which the `qr` slot resolves: a page opened at
+             localhost cannot know it, and a phone pointed at loopback finds
+             nothing. -->
+        <section class="panel handsets">
+            <h2 class="panel-title">In hand<span class="rule"></span><span class="hint" id="centre-note"></span></h2>
+            <div class="codes">
+                <figure class="code">
+                    <div class="qr" id="qr-simulation"></div>
+                    <figcaption><b>The night</b><span id="url-simulation">asking the qr slot...</span></figcaption>
+                </figure>
+                <figure class="code">
+                    <div class="qr" id="qr-biomed"></div>
+                    <figcaption><b>Medical</b><span id="url-biomed"></span></figcaption>
+                </figure>
             </div>
-            <div class="agent-now" id="agent-now">idle</div>
-            <div class="panel-body"><div id="menu" class="menu"><span class="hint">asking the agent slot for the night...</span></div></div>
             <div class="panel-foot menu-foot">
                 <button id="btn-sound" class="btn" title="this page is the audio output of the speech slot">sound on</button>
             </div>

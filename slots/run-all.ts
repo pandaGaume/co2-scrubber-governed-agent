@@ -21,6 +21,7 @@ import { factorySlot } from "./factory/provider.js";
 import { reasonerSlot } from "./reasoner/provider.js";
 import { agentSlot } from "./agent/provider.js";
 import { scenarioSlot } from "./scenario/provider.js";
+import { qrSlot } from "./tools/qr/provider.js";
 import { speechSlot } from "./speech/provider.js";
 import { biomedSlot } from "./biomed/provider.js";
 import { workspaceSlot } from "./tools/workspace/provider.js";
@@ -40,6 +41,7 @@ const SLOTS: Array<[string, (wsBase: string, logger: (line: string) => void) => 
     ["reasoner", reasonerSlot],
     ["agent", agentSlot],
     ["scenario", scenarioSlot],
+    ["qr", qrSlot],
     ["speech", speechSlot],
     ["biomed", biomedSlot],
     ["workspace", workspaceSlot],
