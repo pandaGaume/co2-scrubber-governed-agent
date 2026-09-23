@@ -4,8 +4,8 @@
     "nodes": [
       {
         "id": "scene",
-        "x": 0,
-        "y": -80,
+        "x": -220,
+        "y": -140,
         "typeId": "Physics.Scene:moon",
         "inputs": [
           {
@@ -84,8 +84,8 @@
       },
       {
         "id": "solver",
-        "x": -360,
-        "y": 0,
+        "x": -520,
+        "y": -120,
         "typeId": "Control.Sim:rk4-solver",
         "inputs": [],
         "outputs": [
@@ -98,8 +98,8 @@
       },
       {
         "id": "crew-a-count",
-        "x": -200,
-        "y": 300,
+        "x": -220,
+        "y": 260,
         "typeId": "Logic.Time:timeline",
         "inputs": [],
         "outputs": [
@@ -112,8 +112,8 @@
       },
       {
         "id": "crew-a-activity",
-        "x": -200,
-        "y": 440,
+        "x": -220,
+        "y": 420,
         "typeId": "Logic.Time:timeline",
         "inputs": [],
         "outputs": [
@@ -126,7 +126,7 @@
       },
       {
         "id": "crew-b-count",
-        "x": -200,
+        "x": -220,
         "y": 580,
         "typeId": "Logic.Time:timeline",
         "inputs": [],
@@ -140,8 +140,8 @@
       },
       {
         "id": "crew-b-activity",
-        "x": -200,
-        "y": 720,
+        "x": -220,
+        "y": 740,
         "typeId": "Logic.Time:timeline",
         "inputs": [],
         "outputs": [
@@ -204,8 +204,8 @@
       },
       {
         "id": "command",
-        "x": 280,
-        "y": 180,
+        "x": 180,
+        "y": -60,
         "typeId": "Logic.Time:timeline",
         "inputs": [],
         "outputs": [
@@ -218,8 +218,8 @@
       },
       {
         "id": "scrubber",
-        "x": 480,
-        "y": 180,
+        "x": 400,
+        "y": -60,
         "typeId": "Physics.LifeSupport:scrubber",
         "inputs": [
           {
@@ -249,7 +249,7 @@
       {
         "id": "cabin",
         "x": 780,
-        "y": 400,
+        "y": 300,
         "typeId": "Physics.LifeSupport:cabin-air",
         "inputs": [
           {
@@ -298,8 +298,8 @@
       },
       {
         "id": "battery",
-        "x": 780,
-        "y": 180,
+        "x": 980,
+        "y": -140,
         "typeId": "Physics.Electric:battery",
         "inputs": [
           {

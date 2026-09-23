@@ -29,7 +29,7 @@ export interface CabinDocumentSpec {
     end: number;
 }
 
-/** The node spec of the cabin twin: type ids, parameters from the files, positions as laid out in the editor on 19 September 2026 (graph_save). */
+/** The node spec of the cabin twin: type ids, parameters from the files, positions as laid out in the editor on 23 September 2026 (the twin's page, saved as a graph). */
 export function cabinDocumentSpec(parameters: CabinParameters, scenario: Scenario): CabinDocumentSpec {
     const p = <T = number>(dotted: string) => param<T>(parameters, dotted);
     const activities = p<string[]>("crew.activities");
@@ -54,27 +54,27 @@ export function cabinDocumentSpec(parameters: CabinParameters, scenario: Scenari
         emissionHeavyWorkPpmPerMinute: p("crew.emissionPerPerson.heavy_work"),
     };
     const nodes: DocumentNodeSpec[] = [
-        { id: "scene", typeId: "Physics.Scene:moon", x: 0, y: -80, label: "Lunar habitat" },
-        { id: "solver", typeId: "Control.Sim:rk4-solver", x: -360, y: 0, label: "Solver (one story minute)", params: { tolerance: 1e-6, maxStep: p("time.solverStepMinutes") * MINUTE } },
-        { id: "crew-a-count", typeId: "Logic.Time:timeline", x: -200, y: 300, label: "Crew A: count", params: { segments: segments(group(0, "count")), defaultValue: 0 } },
-        { id: "crew-a-activity", typeId: "Logic.Time:timeline", x: -200, y: 440, label: "Crew A: activity", params: { segments: segments(group(0, "activity")), defaultValue: 0 } },
-        { id: "crew-b-count", typeId: "Logic.Time:timeline", x: -200, y: 580, label: "Crew B: count", params: { segments: segments(group(1, "count")), defaultValue: 0 } },
-        { id: "crew-b-activity", typeId: "Logic.Time:timeline", x: -200, y: 720, label: "Crew B: activity", params: { segments: segments(group(1, "activity")), defaultValue: 0 } },
+        { id: "scene", typeId: "Physics.Scene:moon", x: -220, y: -140, label: "Lunar habitat" },
+        { id: "solver", typeId: "Control.Sim:rk4-solver", x: -520, y: -120, label: "Solver (one story minute)", params: { tolerance: 1e-6, maxStep: p("time.solverStepMinutes") * MINUTE } },
+        { id: "crew-a-count", typeId: "Logic.Time:timeline", x: -220, y: 260, label: "Crew A: count", params: { segments: segments(group(0, "count")), defaultValue: 0 } },
+        { id: "crew-a-activity", typeId: "Logic.Time:timeline", x: -220, y: 420, label: "Crew A: activity", params: { segments: segments(group(0, "activity")), defaultValue: 0 } },
+        { id: "crew-b-count", typeId: "Logic.Time:timeline", x: -220, y: 580, label: "Crew B: count", params: { segments: segments(group(1, "count")), defaultValue: 0 } },
+        { id: "crew-b-activity", typeId: "Logic.Time:timeline", x: -220, y: 740, label: "Crew B: activity", params: { segments: segments(group(1, "activity")), defaultValue: 0 } },
         { id: "crew-a", typeId: "Physics.LifeSupport:crew", x: 20, y: 340, label: "Crew A", params: crewParams },
         { id: "crew-b", typeId: "Physics.LifeSupport:crew", x: 20, y: 580, label: "Crew B", params: crewParams },
         {
             id: "command",
             typeId: "Logic.Time:timeline",
-            x: 280,
-            y: 180,
+            x: 180,
+            y: -60,
             label: "Scrubber command",
             params: { segments: segments([{ from: 0, to: end, value: scenario.start.scrubberCommandPercent / 100 }]), defaultValue: scenario.start.scrubberCommandPercent / 100 },
         },
         {
             id: "scrubber",
             typeId: "Physics.LifeSupport:scrubber",
-            x: 480,
-            y: 180,
+            x: 400,
+            y: -60,
             label: "CO2 scrubber",
             params: {
                 rateAtFullCommandPerMinute: p("scrubber.rateAtFullCommand"),
@@ -89,7 +89,7 @@ export function cabinDocumentSpec(parameters: CabinParameters, scenario: Scenari
             id: "cabin",
             typeId: "Physics.LifeSupport:cabin-air",
             x: 780,
-            y: 400,
+            y: 300,
             label: "Cabin air",
             params: {
                 initialPpm: scenario.start.co2Ppm,
@@ -104,8 +104,8 @@ export function cabinDocumentSpec(parameters: CabinParameters, scenario: Scenari
         {
             id: "battery",
             typeId: "Physics.Electric:battery",
-            x: 780,
-            y: 180,
+            x: 980,
+            y: -140,
             label: "Night reserve",
             params: { capacityWh: p("battery.capacityWh"), initialStateOfChargePercent: scenario.start.stateOfChargePercent, otherLoadsW: p("battery.otherLoadsW") },
         },

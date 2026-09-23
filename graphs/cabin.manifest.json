@@ -1,6 +1,6 @@
 {
   "document": "graphs/cabin.spikypanda",
-  "builtOn": "2026-09-19T12:34:51.512Z",
+  "builtOn": "2026-09-23T16:20:41.300Z",
   "inputs": {
     "parameters": {
       "file": "specs/cabin-parameters.json",
@@ -10,7 +10,7 @@
     },
     "scenario": {
       "file": "specs/scenario-night-9.json",
-      "sha256": "29e34c6be112367aa9ee86284125e7ba798d63cd03d2c28ce78a07f4171eca50",
+      "sha256": "ebc15bacf1f4f424fdfe221bfe5142b3896f7065f8273e6e33c0d935ddb2eac4",
       "version": 1,
       "status": "draft, not yet reviewed"
     }
@@ -67,5 +67,5 @@
       "typeId": "Physics.Electric:battery"
     }
   ],
-  "sha256": "aaac82c9d1177dee2bad13c328340034d6066a1a5a354f886aa998d20429c9cd"
+  "sha256": "7d855e9fecabd671010428a6d768847bf52d8748d639493154b75f372211b8d1"
 }
