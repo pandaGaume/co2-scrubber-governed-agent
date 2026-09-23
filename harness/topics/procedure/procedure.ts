@@ -94,6 +94,21 @@ export const PROCEDURE_ENVELOPE = {
     vitalsSource: "biomed.verdict",
 } as const;
 
+/**
+ * The abort conditions the executor knows how to read (`tier3/procedure.ts`),
+ * and where it reads each. A procedure names them by these ids; any other id
+ * is a condition nobody can read, and the guard refuses it rather than let
+ * the run trip on it at its first minute. Written in the schema the builder
+ * is given, as an API's documentation says what an instrument measures: it
+ * says what can be read, not which of them a good procedure needs.
+ */
+export const ABORT_READERS: Readonly<Record<string, string>> = {
+    co2: "scrubber.motor.state: the CO2 of the volume, at or above limits.co2AbortPpm",
+    refused: "scrubber.motor.set_speed: the device refused a step's command",
+    battery: "station.registry_list: the battery's state of charge under `threshold` percent (35 when absent)",
+    vitals: "biomed.verdict: a monitored person out of their band, the monitoring lost, or one more person in the volume under test",
+};
+
 /** The module an ISA-95 volume path names: `/habitat/lab` -> `lab`. */
 export const moduleOf = (volume: string): string => volume.replace(/\/+$/, "").split("/").pop() ?? "";
 
@@ -132,7 +147,15 @@ export const PROCEDURE_SCHEMA = {
             minItems: 1,
             items: { type: "object", properties: { n: { type: "number" }, hatch: { type: "string", enum: ["open", "closed"] }, speedPercent: { type: "number" }, minutes: { type: "number" }, why: { type: "string" } }, required: ["n", "hatch", "speedPercent", "minutes"] },
         },
-        abort: { type: "array", items: { type: "object", properties: { id: { type: "string" }, source: { type: "string" }, when: { type: "string" }, threshold: { type: "number" } }, required: ["id", "source", "when"] }, description: "The conditions that stop the test." },
+        abort: {
+            type: "array",
+            items: {
+                type: "object",
+                properties: { id: { type: "string", enum: ["co2", "refused", "battery", "vitals"] }, source: { type: "string" }, when: { type: "string" }, threshold: { type: "number" } },
+                required: ["id", "source", "when"],
+            },
+            description: "The conditions that stop the test, by the id of what the executor can read: co2 (scrubber.motor.state, the CO2 of the volume at or above limits.co2AbortPpm); refused (scrubber.motor.set_speed, the device refused a step's command); battery (station.registry_list, the battery's state of charge under threshold percent); vitals (biomed.verdict, a monitored person out of band, the monitoring lost, or one more person in the volume). A condition that cannot be read stops the test.",
+        },
         expected: { type: "object", additionalProperties: { type: "string" }, description: "What the test is expected to show, written before it runs." },
     },
     required: ["version", "id", "method", "volume", "device", "quantities", "limits", "steps", "abort", "expected"],

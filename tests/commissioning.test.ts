@@ -121,6 +121,10 @@ describe("the procedure's guard, alone", () => {
         assert.deepEqual(kinds({ ...PROCEDURE, steps: [{ ...PROCEDURE.steps[0], minutes: 0 }, PROCEDURE.steps[1]] }, LAB_OCCUPIED), ["duration"]);
         assert.deepEqual(kinds({ ...PROCEDURE, abort: PROCEDURE.abort.filter((a) => a.id !== "co2") }, LAB_OCCUPIED), ["abort"]);
         assert.deepEqual(kinds({ ...PROCEDURE, expected: {} }, LAB_OCCUPIED), ["expected"]);
+        // An abort condition the executor cannot read would trip at the first minute: refused as a plan, with what it can read.
+        const unreadable = checkProcedure({ ...PROCEDURE, abort: [...PROCEDURE.abort, { id: "time-exceeded", source: "clock", when: "too long" }] }, LAB_OCCUPIED);
+        assert.deepEqual(unreadable.problems.map((p) => p.kind), ["abort"]);
+        assert.match(unreadable.problems[0].message, /cannot be read by the executor, which reads co2, refused, battery, vitals/);
         assert.deepEqual(kinds({ ...PROCEDURE, volume: "lab" }, LAB_OCCUPIED), ["shape"]);
     });
 });

@@ -32,7 +32,7 @@
  * same nature: the first asks for a read, the second dictates what follows
  * from it. Neither is written in the builder's prompt.
  */
-import { PROCEDURE_ENVELOPE, moduleOf, totalMinutes, type Procedure } from "./procedure.js";
+import { ABORT_READERS, PROCEDURE_ENVELOPE, moduleOf, totalMinutes, type Procedure } from "./procedure.js";
 
 export type ProblemKind = "shape" | "floor" | "bounds" | "duration" | "abort" | "expected" | "diligence" | "monitoring";
 
@@ -102,7 +102,8 @@ export function checkProcedure(input: unknown, presence: PresenceRead | null, en
 
     // The abort conditions and the predictions.
     const aborts = Array.isArray(p.abort) ? p.abort : [];
-    for (const id of envelope.requiredAborts) if (!aborts.some((a) => a?.id === id)) add("abort", `no "${id}" abort condition`);
+    for (const id of envelope.requiredAborts) if (!aborts.some((a) => a?.id === id)) add("abort", `no abort condition with id "${id}" (${ABORT_READERS[id]})`);
+    for (const a of aborts) if (!ABORT_READERS[String(a?.id)]) add("abort", `abort condition "${String(a?.id)}" cannot be read by the executor, which reads ${Object.keys(ABORT_READERS).join(", ")}`);
     const expected = p.expected && typeof p.expected === "object" ? Object.values(p.expected).filter((v) => typeof v === "string" && v.trim()) : [];
     if (!expected.length) add("expected", "no prediction: the procedure says nothing of what it expects to see");
 
@@ -116,9 +117,9 @@ export function checkProcedure(input: unknown, presence: PresenceRead | null, en
     if (read && read.occupants > 0) {
         const watched = new Set(p.monitoring?.subjects ?? []);
         const unwatched = occupants.filter((s) => !watched.has(s.id));
-        if (!p.monitoring) add("monitoring", `${module} is occupied (${read.occupants}) and the procedure asks for no monitoring of its occupants`);
+        if (!p.monitoring) add("monitoring", `${module} is occupied (${read.occupants}) and the procedure asks for no monitoring of its occupants (its "monitoring" names no subject)`);
         else if (unwatched.length) add("monitoring", `${module} is occupied and ${unwatched.map((s) => s.callsign ?? s.id).join(", ")} would not be monitored`);
-        if (!aborts.some((a) => a?.source === envelope.vitalsSource)) add("monitoring", `${module} is occupied and no abort condition reads ${envelope.vitalsSource}`);
+        if (!aborts.some((a) => a?.id === "vitals" || a?.source === envelope.vitalsSource)) add("monitoring", `${module} is occupied and no abort condition reads ${envelope.vitalsSource}`);
         if (p.occupancy && p.occupancy.occupants !== read.occupants) add("monitoring", `the procedure declares ${p.occupancy.occupants} occupant(s) in ${module}; ${read.occupants} were read`);
     }
 
