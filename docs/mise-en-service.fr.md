@@ -642,17 +642,19 @@ storyboard.
 
 | pièce | où | jours |
 |---|---|---|
-| la détection : la station voit sur son registre un appareil sans simulateur qualifié et ouvre une mise en service. Règle écrite, aucun modèle de langage | slot `station` | 0,5 |
+| ~~la détection~~ **fait le 23 septembre** (branche `commissioning-core`) : le registre de Mother (`slots/station/registry.ts`), et la règle écrite sans modèle. Tranché en route : la règle vise un appareil **qui agit** (son descripteur déclare des actions) ; un capteur, un sas, une batterie n'ont pas besoin d'un simulateur à eux, sinon Mother ouvrirait cinq mises en service pour les cinq lignes | slot `station` | ~~0,5~~ |
 | ~~le slot `crew`~~ **fait le 22 septembre : le slot `biomed`** (`slots/biomed/`, 6 tests) : présence par module, rythme cardiaque des occupants, bande nominale, et les trois raisons d'interrompre. Nommé `biomed` parce que `crew.report` était déjà pris : c'est par là que l'agent parle à l'équipage. Reste à faire : la passerelle Bluetooth sur la page, et le panneau | `slots/biomed/` | ~~0,75~~ 0,25 |
-| la demande d'autorisation au commandant : Mother voit les occupants, compose la demande, attend, et les signes vitaux entrent dans les conditions d'arrêt du protocole | slot `station`, sujet `procedure` | 0,5 |
-| les phrases de Mother pour la mise en service : l'appareil inconnu, l'essai proposé, le refus, les occupants, la demande d'autorisation, les pas, le résultat, les deux candidats. En anglais et en français, comme toutes les autres | `slots/station/grammars` | 0,25 |
-| l'inventaire : lire le registre du point de passage et les descripteurs des appareils | slot `factory` | 0,5 |
-| le sujet `procedure` : le fichier d'essai, sa vérification contre les limites, le compte rendu ; l'exécution comme capacité de l'agent (proche de `station.apply_plan`) | `harness/topics/procedure/`, `tier3/` | 1,5 |
+| ~~la demande d'autorisation au commandant~~ **fait le 23 septembre** : Mother relit elle-même l'occupation et recontrôle le protocole, relaie la demande, et n'enregistre une autorisation que si la surveillance médicale a pu s'ouvrir ; l'occupation est relue à l'autorisation (une autorisation donnée pour deux ne vaut pas pour trois) ; le verdict de `biomed` est une condition d'arrêt | slot `station`, sujet `procedure` | ~~0,5~~ |
+| ~~les phrases de Mother~~ **fait le 23 septembre** : les clés `mother.*`, en anglais et en français, remplies avec les données du moment et poussées sur `station://mother` ; celles des deux candidats sont écrites, pas encore dites | `slots/station/grammars` | ~~0,25~~ |
+| ~~l'inventaire~~ **fait le 23 septembre** : `factory.inventory` lit le registre de Mother à travers le point de passage (le broker n'a pas de registre d'appareils à lui) ; les cinq lignes sont dans `specs/commissioning-devices.json` | slot `factory` | ~~0,5~~ |
+| ~~le sujet `procedure`~~ **fait le 23 septembre, sauf le branchement** : le fichier, la garde (section 15), le compte rendu avec l'ajustement de la décroissance ; le constructeur est le modèle du slot `reasoner` avec le prompt du sujet, le script ne sert qu'aux tests ; l'exécution est un exécuteur déterministe côté agent (`tier3/procedure.ts`). Reste : le lancer depuis la boucle de l'agent ou le tableau de bord | `harness/topics/procedure/`, `tier3/` | ~~1,5~~ 0,25 |
 | le sujet `graph` avec deux candidats et la comparaison des écarts | F5.2 plus la comparaison | 1,5 |
 | le CO2 en masse sur `atmosphere` : puits (l'épurateur) et source (l'équipage). Le nœud actuel raisonne en ppm sur une seule pièce et ne suffit plus | substrat, `plugin-physics` | 0,5 |
 | l'introduction sur la page : l'inventaire, la fiche d'essai, les deux candidats, la courbe héros, le panneau des signes vitaux qui apparaît et disparaît | `harness/browser` | 1,25 |
 
-**Une chose à trancher tout de suite, et elle ne coûte rien.** Aujourd'hui,
+**Tranché le 23 septembre** : Mother prend `JBFqnCBsd6RMkjVDRZzb`, l'autre
+voix déjà listée, qu'elle partage avec le jumeau et l'usine tant qu'une
+troisième n'est pas choisie. Le texte d'origine suit. Aujourd'hui,
 `profiles/voice.json` donne à la station et à l'agent **la même voix**
 (`eWc2pftlLqhJtXnPQknh`). Si Mother est un personnage, il lui faut la sienne,
 et de préférence la plus neutre des quatre : elle est la seule qui ne pense
