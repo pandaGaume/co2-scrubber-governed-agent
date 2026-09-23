@@ -1977,6 +1977,7 @@ async function activate(studio) {
   if (remoteOutput) soundBtn.style.display = "none";
   bar.appendChild(badge);
   studio.addBar(bar);
+  studio.reveal?.();
   const eventButtons = [playBtn, nextBtn, allBtn];
   let agent = null;
   let byStage = /* @__PURE__ */ new Map();

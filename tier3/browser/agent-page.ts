@@ -151,6 +151,8 @@ export default async function activate(studio: Studio): Promise<void> {
     if (remoteOutput) soundBtn.style.display = "none";
     bar.appendChild(badge);
     studio.addBar(bar);
+    // Laid out and skinned: the studio can show itself (an extension's page starts hidden, so its default look never flashes).
+    studio.reveal?.();
     const eventButtons = [playBtn, nextBtn, allBtn];
 
     // ── Wiring ─────────────────────────────────────────────────────────────

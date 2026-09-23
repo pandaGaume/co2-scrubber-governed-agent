@@ -268,6 +268,8 @@ export default async function activate(studio: Studio): Promise<void> {
     });
     bar.appendChild(badge);
     studio.addBar(bar);
+    // Laid out and skinned: the studio can show itself (an extension's page starts hidden, so its default look never flashes).
+    studio.reveal?.();
     const setStatus = (text: string, warn = false) => {
         badge.textContent = text;
         badge.title = text;

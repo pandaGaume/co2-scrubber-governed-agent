@@ -228,9 +228,10 @@ function drawRoomSeries(this: MonitorInternals): void {
 /**
  * Puts the studio in the control room's skin: registers it with the viewer and
  * applies it (the studio's skin menu gets it as a choice, so it can be left
- * and come back to), installs the scoped style, and gives the monitor's strip
- * the room's drawing. Which series the strip draws stays the page's
- * (`MonitorTile.series`): the agent's cabin, the factory's rewards.
+ * and come back to), and installs the scoped style. It needs no document, so
+ * the loader calls it first, before the plugin and the graph are fetched:
+ * every millisecond before it is a millisecond of the studio's own skin on
+ * screen. The monitor's strip is `roomMonitor`'s, once the document is drawn.
  */
 export function applyRoomSkin(viewer: StudioViewer): void {
     if (!document.getElementById(STYLE_ID)) {
@@ -249,7 +250,10 @@ export function applyRoomSkin(viewer: StudioViewer): void {
         }
         if (skinSel) skinSel.value = ROOM_SKIN_NAME;
     }
+}
 
+/** The monitor's strip drawn the room's way (`drawRoomSeries`): once the document is drawn, since the monitor is one of its nodes. */
+export function roomMonitor(viewer: StudioViewer): void {
     const m = findMonitor(viewer) as (MonitorTile & Partial<MonitorInternals>) | null;
     if (m && typeof m._drawSeries === "function") m._drawSeries = drawRoomSeries;
 }

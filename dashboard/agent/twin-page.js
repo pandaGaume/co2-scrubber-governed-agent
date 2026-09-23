@@ -536,6 +536,7 @@ async function activate(studio) {
   });
   bar.appendChild(badge);
   studio.addBar(bar);
+  studio.reveal?.();
   const setStatus = (text, warn = false) => {
     badge.textContent = text;
     badge.title = text;

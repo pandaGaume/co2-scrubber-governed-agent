@@ -24,6 +24,8 @@ export interface Studio {
     setLayout(layout: { palette?: boolean; properties?: boolean; console?: boolean; dashboardHeight?: number }): void;
     /** Pan (and zoom) to a node when it is farther than `threshold` px from the centre; true when the view moved. */
     centerOnNode(node: StudioNode, options?: { threshold?: number; scale?: number; animateMs?: number }): boolean;
+    /** Shows the studio, which starts hidden on an extension's page until the page is laid out (absent from a studio older than that). */
+    reveal?(): void;
 }
 export interface StudioNode {
     id: string;

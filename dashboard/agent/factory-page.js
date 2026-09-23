@@ -1283,6 +1283,7 @@ async function activate(studio) {
   boardBtn.title = "open the Control Board";
   bar.appendChild(badge);
   studio.addBar(bar);
+  studio.reveal?.();
   const setStatus = (text, short, warn = false) => {
     badge.textContent = short ?? text;
     badge.title = text;

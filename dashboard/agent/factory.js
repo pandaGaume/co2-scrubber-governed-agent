@@ -202,19 +202,22 @@ function applyRoomSkin(viewer) {
     }
     if (skinSel) skinSel.value = ROOM_SKIN_NAME;
   }
+}
+function roomMonitor(viewer) {
   const m = findMonitor(viewer);
   if (m && typeof m._drawSeries === "function") m._drawSeries = drawRoomSeries;
 }
 
 // harness/browser/loader.ts
 async function loadLoopExtension(studio, { pluginUrl, defaultGraph, pageUrl, prepare }) {
+  applyRoomSkin(studio.getViewer());
   if (pluginUrl) await studio.loadPlugin({ url: pluginUrl, globalName: "SpkPluginHarness", id: "harness" });
   const graphUrl = new URLSearchParams(location.search).get("graph") ?? defaultGraph;
   const res = await fetch(graphUrl);
   if (!res.ok) throw new Error(`could not open ${graphUrl}: HTTP ${res.status}`);
   const json = await res.text();
   studio.openDocument(prepare ? prepare(json) : json);
-  applyRoomSkin(studio.getViewer());
+  roomMonitor(studio.getViewer());
   const page = await import(
     /* webpackIgnore: true */
     pageUrl
