@@ -176,21 +176,29 @@ principe étendu à deux volumes, et on le dit comme ça.*
 L'usine écrit un protocole d'essai. Comme un ingénieur écrit une gamme de
 test sur une feuille, avant de la faire signer.
 
-Le protocole contient quatre pas :
+Le protocole contient deux pas, sas fermé tous les deux :
 
 | pas | sas | vitesse | durée | pourquoi |
 |---|---|---|---|---|
-| 1 | fermé | 100 % | 10 min | descendre à une valeur basse et stable |
-| 2 | fermé | 30 % | 12 min | laisser le CO2 monter |
-| 3 | fermé | 100 % | 12 min | chronométrer la descente : ça donne le volume |
-| 4 | ouvert | 100 % | 14 min | voir si le CO2 de l'autre pièce suit : ça donne l'échange |
+| 1 | fermé | 30 % | 12 min | laisser le CO2 monter |
+| 2 | fermé | 100 % | 12 min | chronométrer la descente : ça donne le volume servi |
+
+*Tranché le 23 septembre avec Guillaume : deux pas, pas quatre (c'était la
+première des trois façons de retrouver des jours, section 17). L'essai mesure
+le volume servi, et seulement lui. Le passage d'air entre les deux pièces
+n'est plus mesuré : il devient une **hypothèse**, et c'est l'écart des deux
+simulateurs candidats aux mesures qui la tranchera (section 11). On perd
+l'ancien pas 4 (sas ouvert) ; on garde les deux candidats et le refus.
+Les sections 10, 11, 13 et 14 racontent encore l'essai à quatre pas : c'est le
+texte de la narration, il sera réécrit à la main, pas ici.*
 
 Il contient aussi **ses limites** (ne jamais dépasser 2800 ppm, arrêter tout
 à 3200), et surtout **ce que l'usine s'attend à observer** :
 
-> Si les deux pièces sont indépendantes, le second capteur ne bougera pas au
-> pas 4. Si elles communiquent, les deux valeurs se rejoindront en moins de
-> vingt minutes.
+> Au pas 1, le CO2 du Lab monte ; au pas 2, il redescend, et la vitesse de la
+> descente donne le volume servi. Si les deux pièces sont indépendantes, le
+> capteur de l'autre pièce ne bouge pas pendant l'essai ; si elles
+> communiquent malgré le sas fermé, il suit, en plus petit.
 
 C'est ce qui fait la différence entre une expérience et un bricolage : **elle
 annonce ce qu'elle va voir, avant de regarder.** C'est écrit, daté, et on
@@ -543,58 +551,81 @@ il ne reste que des machines qui décident entre elles.*
 ## 15. Le protocole, en fichier
 
 L'essai est un fichier, écrit avant d'être exécuté, avec ses limites, ses
-conditions d'arrêt et ses prédictions.
+conditions d'arrêt et ses prédictions. Deux pas depuis le 23 septembre.
 
 ```json
 {
+  "version": 1,
   "id": "decay-2026-10-14-01",
-  "methode": "decroissance-de-concentration",
-  "norme": "ASTM E741 (une pièce) ; pas 4 : extension à deux pièces",
-  "but": "volume servi au Lab, echange avec Habitat B",
-  "grandeurs": [
-    { "nom": "V_lab",          "grandeur": "Volume",         "unite": "m3" },
-    { "nom": "Q_sas_ouvert",   "grandeur": "VolumetricFlow", "unite": "m3ps" },
-    { "nom": "Q_sas_ferme",    "grandeur": "VolumetricFlow", "unite": "m3ps" }
-  ],
-  "limites": { "co2MaxPpm": 2800, "co2ArretPpm": 3200,
-               "vitesseMiniPourCent": 30, "dureeMaxMinutes": 48 },
-  "occupants": { "lab": 2, "luPar": "biomed.presence", "a": "2026-10-14T21:02:11Z" },
-  "surveillance": {
-    "demandeePar": "l usine",
-    "sujets": ["fe-1", "fe-2"],
-    "bande": { "bpmMin": 45, "bpmMax": 120 },
-    "motif": "l essai fait monter le CO2 de l air que ces deux personnes respirent"
+  "method": "concentration-decay",
+  "standard": "ASTM E741, concentration decay, one zone",
+  "purpose": "served volume of the Lab",
+  "volume": "/habitat/lab",
+  "device": "/habitat/lab/eclss/scrubber-1",
+  "quantities": [{ "name": "V_lab", "quantity": "Volume", "unit": "m3" }],
+  "hypotheses": ["the exchange with hab-b through the closed hatch is not measured; the residual of the two candidate simulators decides it"],
+  "limits": { "co2MaxPpm": 2800, "co2AbortPpm": 3200, "minSpeedPercent": 30, "maxMinutes": 24 },
+  "occupancy": { "module": "lab", "occupants": 2, "subjects": ["fe-1", "fe-2"], "readBy": "biomed.presence", "at": "2026-10-14T21:02:11Z" },
+  "monitoring": {
+    "subjects": ["fe-1", "fe-2"],
+    "band": { "minBpm": 45, "maxBpm": 120 },
+    "reason": "the test raises the CO2 of the air these two people breathe"
   },
-  "autorisation": { "par": "commandant", "obligatoire": true },
-  "pas": [
-    { "n": 1, "sas": "ferme",  "vitesse": 100, "minutes": 10 },
-    { "n": 2, "sas": "ferme",  "vitesse":  30, "minutes": 12 },
-    { "n": 3, "sas": "ferme",  "vitesse": 100, "minutes": 12 },
-    { "n": 4, "sas": "ouvert", "vitesse": 100, "minutes": 14 }
+  "authorisation": { "by": "commander", "required": true },
+  "steps": [
+    { "n": 1, "hatch": "closed", "speedPercent":  30, "minutes": 12, "why": "let the CO2 rise" },
+    { "n": 2, "hatch": "closed", "speedPercent": 100, "minutes": 12, "why": "time the decay: the served volume" }
   ],
-  "arret": ["CO2 d une piece au-dessus de co2ArretPpm",
-            "un pas refuse par l appareil",
-            "batterie sous 35 pour cent",
-            "signes vitaux d un occupant hors bande nominale",
-            "perte de la surveillance medicale",
-            "un occupant de plus entre dans une piece sous essai"],
-  "attendu": {
-    "siPiecesSeparees": "le second capteur ne bouge pas au pas 4",
-    "siPiecesReliees":  "les deux valeurs se rejoignent en moins de 20 min"
+  "abort": [
+    { "id": "co2",      "source": "scrubber.motor.state", "when": "CO2 of the Lab at or above co2AbortPpm" },
+    { "id": "refused",  "source": "scrubber.motor.set_speed", "when": "a step refused by the device" },
+    { "id": "battery",  "source": "station.registry_list", "when": "battery below 35 percent" },
+    { "id": "vitals",   "source": "biomed.verdict", "when": "an occupant out of the nominal band, the monitoring lost, or one more person in the volume" }
+  ],
+  "expected": {
+    "step1": "the Lab CO2 rises and stays below co2MaxPpm",
+    "step2": "the Lab CO2 decays exponentially; its time constant gives V_lab",
+    "ifSeparate": "the hab-b sensor does not move during the test",
+    "ifCoupled": "the hab-b sensor follows, smaller and later"
   }
 }
 ```
 
-Le champ `attendu` est horodaté avant le run et fait partie du compte rendu.
+Les clés sont en anglais, comme tout ce que le code lit. Le champ `expected`
+est horodaté avant le run (le fichier a son sha256 dans le manifeste de la
+tâche) et fait partie du compte rendu.
+
+**Ce que la garde vérifie**, en code, sans modèle
+(`harness/topics/procedure/check.ts`), avant qu'une seule commande parte :
+
+- la forme : un volume, un appareil, au moins un pas, des limites ;
+- **les bornes dans l'enveloppe** : `co2MaxPpm < co2AbortPpm <= 3200` (sous
+  le seuil ELEVATED du jumeau, 3500 : l'essai ne laisse jamais la carte
+  passer en MIN-FLOW), chaque pas entre `minSpeedPercent` et 100 ;
+- **la durée bornée** : chaque pas dure, la somme tient dans `maxMinutes`, et
+  `maxMinutes` tient dans 60 ;
+- **aucun pas sous le plancher** : pas de vitesse sous 30 %, pas d'arrêt,
+  pas de `minSpeedPercent` sous 30. Le plancher est celui de la garde, pas
+  celui que le protocole se donne : le protocole peut le relever, jamais le
+  baisser. C'est ce qui refuse le premier protocole, **comme plan**, avant
+  toute commande ;
+- **les conditions d'arrêt présentes**, dont `co2` et `refused` toujours ;
+- **les prédictions présentes** (`expected`, au moins une ligne) ;
+- **la diligence** : pas de protocole sur un volume dont l'occupation n'a pas
+  été lue dans cette tâche par `biomed.presence` ;
+- **le plancher médical** : volume occupé, alors `monitoring` couvre chaque
+  occupant lu, et une condition d'arrêt lit `biomed.verdict`.
 
 ## 16. La chaîne complète de l'introduction
 
 Inventaire découvert → occupation du module lue → protocole écrit par
 l'usine, surveillance médicale demandée dedans → **refusé par le contrôle** →
 corrigé → relayé au commandant → autorisé → surveillance ouverte → exécuté
-par l'agent, commande par commande → compte rendu avec les deux chiffres →
-premier simulateur construit, lancé, **rejeté** parce qu'il ne colle pas aux
-mesures → second simulateur accepté → vérifié par le juge → enregistré →
+par l'agent, commande par commande → compte rendu avec le volume servi (un
+chiffre, deux pas, sas fermé) → deux simulateurs candidats, l'un sans passage
+entre les pièces, l'autre avec : le passage n'a pas été mesuré, c'est une
+hypothèse, et c'est l'écart aux mesures qui la tranche → le candidat qui ne
+colle pas est **rejeté** → l'autre est accepté → vérifié par le juge → enregistré →
 validé → chargé par la carte, qui revérifie seule.
 
 C'est la chaîne de confiance en sept étapes d'`auto-adaptation.fr.md`, avec
