@@ -29,12 +29,13 @@ const base = `${location.protocol}//${location.host}`;
 const EXPECTED = ["scrubber", "twin", "station", "factory", "reasoner", "speech"];
 const TIER = { scrubber: "Tier 1, the board", twin: "Tier 0, the oracle", station: "Tier 2", factory: "the factory", reasoner: "the model", speech: "the voice" };
 /* The slots that serve a page of their own, and what it is. A page is how a
-   slot reaches a hand that is not at this keyboard: the agent is driven from a
-   phone, the medical module is read on one, the factory is reviewed on a
-   second screen. `app.js` turns these rows into buttons that show the address
-   as a code. */
+   slot reaches a hand that is not at this keyboard: the night's events are
+   played from a phone, the medical module is read on one, the factory is
+   reviewed on a second screen. The night belongs to `scenario`, whose events
+   the page lists, rather than to `agent`, which runs them. `app.js` turns
+   these rows into buttons that show the address as a code. */
 const PAGES = {
-    agent: { page: "simulation.html", what: "The night, in hand" },
+    scenario: { page: "simulation.html", what: "The night, in hand" },
     biomed: { page: "biomed.html", what: "The medical module" },
     factory: { page: "factory.html", what: "The factory" },
 };
