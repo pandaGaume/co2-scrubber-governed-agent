@@ -30,8 +30,9 @@
  *      another with a pause between them (`&pause=4000` ms); the page the demo links to uses it,
  *      so opening it is enough to watch the loop run.
  *      `&llm=0` runs the scripted reasoner (prudent) instead of the model: no call to the model
- *      while the page itself is being worked on; `&view=follow&threshold=120&zoom=1` makes the
- *      viewer pan to the lit node when it is farther than the threshold from the centre.
+ *      while the page itself is being worked on; the viewer pans to the lit node when it is
+ *      farther than the threshold from the centre (`&threshold=120&zoom=1`), or frames the whole
+ *      loop with `&view=fit`.
  */
 import { RuntimeGraphBuilder, type Channel } from "@spiky-panda/core";
 import { HarnessNode, createRuntimeGraphDriver, validateHarnessGraph, type DecisionTrace, type HarnessGraph, type Intention, type StageEvent } from "@spiky-panda/harness";
@@ -48,6 +49,7 @@ import type { Scenario, ScenarioEvent } from "../../lib/factory.js";
 import { createBar, createStageLights, disableStudioPlayer, findMonitor, hideMonitorNode, installLoopStyle, viewControls, type MonitorTile, type Studio, type StudioNode, type StudioViewer, type ViewMode } from "../../harness/browser/studio-loop.js";
 import { ROOM_COLORS } from "../../harness/browser/room-skin.js";
 import { loadWords, NO_WORDS, type Words } from "../../harness/browser/words.js";
+import { eventsAfter, watchSlot } from "../../harness/browser/pushes.js";
 
 /** `claude-haiku-4-5-20251001` -> `claude-haiku-4-5`: the date suffix says nothing on a badge. */
 const shortModel = (model: string) => model.replace(/^.*\//, "").replace(/-\d{8}$/, "").slice(0, 22);
@@ -96,8 +98,8 @@ export default async function activate(studio: Studio): Promise<void> {
     // Without the model: which scripted agent plays. `compliant` tries what it is told (the poisoned
     // procedure included), which is what makes the two guard profiles differ on screen.
     let scriptVariant: "prudent" | "compliant" = params.get("script") === "compliant" ? "compliant" : "prudent";
-    // View: `fit` frames the whole loop; `follow` pans to the lit node when it drifts farther than `threshold` px from the centre.
-    const initialView = { mode: (params.get("view") === "follow" ? "follow" : "fit") as ViewMode, threshold: Number(params.get("threshold") ?? 120), zoom: Number(params.get("zoom") ?? 1) };
+    // View: `follow` (the default) pans to the lit node when it drifts farther than `threshold` px from the centre.
+    const initialView = { mode: (params.get("view") === "fit" ? "fit" : "follow") as ViewMode, threshold: Number(params.get("threshold") ?? 120), zoom: Number(params.get("zoom") ?? 1) };
     // `?output=none`: this page speaks but does not play; another page (the Control Board) is the audio output.
     const remoteOutput = params.get("output") === "none";
 
@@ -159,6 +161,8 @@ export default async function activate(studio: Studio): Promise<void> {
     let monitor: MonitorTile | null = null;
     let current: (ScenarioEvent & { intention: string }) | null = null;
     let busy = false;
+    /** Who decided the step being shown, when it is the `agent` slot's rather than this page's (see "Following the agent slot"). */
+    let slotDecider: string | null = null;
     const world = new Broker(brokerUrl, { name: "studio-world", version: "0.1.0", locale: pageLocale });
     // The station's sentences, in this page's language: read once from the station slot; without them, every key shows as itself.
     let words: Words = NO_WORDS;
@@ -199,7 +203,7 @@ export default async function activate(studio: Studio): Promise<void> {
     let lastCall: { id: string; input: unknown; outcome: string; error?: string } | null = null;
     const narrate = (stage: string, text: string, now?: string, level: "info" | "warn" | "error" = "info") => monitor?.push({ kind: "narrate", stage, text, now, level });
     const cabinText = () => (lastObs ? words.phrase("cabin.text", { ppm: Math.round(lastObs.co2Ppm), state: lastObs.co2State, scrubber: lastObs.power ? words.phrase("cabin.scrubber.on", { percent: Math.round(lastObs.speedPercent) }) : words.phrase("cabin.scrubber.off") }) : words.phrase("cabin.reading"));
-    const modelName = () => agent?.provider.model ?? "?";
+    const modelName = () => slotDecider ?? agent?.provider.model ?? "?";
     /** One sentence per stage, said when the node lights (`stage.<stage>` and `.now` of the station's wording); the next cue tells which branch the loop took. */
     const sentenceFor = (stage: string, next: string | undefined): [string, string] => {
         const values = {
@@ -448,9 +452,157 @@ export default async function activate(studio: Studio): Promise<void> {
         else if (cmd === "events") tell({ status: "events", events: events.map((e) => ({ intention: e.intention, at: e.at, message: e.message })) });
     });
 
+    // ── Following the agent slot ───────────────────────────────────────────
+    // The night is played by the `agent` slot, in the server (the simulation's
+    // page, the control room's menu): its decisions are not this page's, and
+    // they reach no page directly. The slot says each one in the event log
+    // (`spk://events`, `agent.event`, `agent.step`, `agent.handback`), the log
+    // is pushed to this page (`followSlot`), and the page walks the stages of
+    // every step on the canvas, as the
+    // factory's page does with its manifest. The path is the step's: a learned
+    // replay skips the request and the model; a step the harness stopped ends
+    // at the guard, one the reasoner could not answer at the reasoner. What
+    // the log held before the page opened is not replayed; while the page
+    // plays an event itself, the slot's steps are left to the log.
+    const EVENT_SOURCES = ["twin", "reasoner"];
+    const EVENTS_URI = "spk://events";
+    let eventSource: string | null = null;
+    /** The last event shown; `received`, the last one handed to the queue, which runs behind while a step is walked stage by stage. */
+    let cursor = -1;
+    let received = -1;
+    let followedProvider: string | null = null;
+    type SlotEvent = { seq?: number; kind?: string; mode?: string; intention?: string; minute?: number; message?: string; step?: number; capabilityId?: string; input?: string; outcome?: string; source?: string; latencyMs?: number; failed?: string; stoppedByHarness?: boolean; note?: string };
+    const readEvents = async (): Promise<SlotEvent[] | null> => {
+        for (const slot of eventSource ? [eventSource] : EVENT_SOURCES) {
+            try {
+                const s = await world.session(slot);
+                const r = await s.request<{ contents: Array<{ text?: string }> }>("resources/read", { uri: cursor > 0 ? `${EVENTS_URI}?since=${cursor}` : EVENTS_URI });
+                eventSource = slot;
+                const body = JSON.parse(r.contents[0]?.text ?? "{}") as { events?: SlotEvent[] };
+                return Array.isArray(body.events) ? body.events : [];
+            } catch {
+                continue;
+            }
+        }
+        return null;
+    };
+    const stagesOfSlotStep = (e: SlotEvent): Array<{ stage: string; error?: string }> => {
+        const before = ["observe", "context", "lookup", "gate"];
+        const after = ["merge", "guard", "execute", "observe-after", "evaluate", "record"];
+        if (e.failed) {
+            const walked = e.stoppedByHarness ? [...before, "request", "reason", "merge"] : [...before, "request"];
+            return [...walked.map((stage) => ({ stage })), { stage: e.stoppedByHarness ? "guard" : "reason", error: e.failed }];
+        }
+        return (e.source === "policy" ? [...before, ...after] : [...before, "request", "reason", ...after]).map((stage) => ({ stage }));
+    };
+    const enterSlotEvent = (e: SlotEvent) => {
+        current = events.find((ev) => ev.intention === e.intention) ?? ({ intention: e.intention ?? "?", at: e.minute, message: e.message } as ScenarioEvent & { intention: string });
+        eventSel.value = current.intention;
+        lights.clear();
+        monitor?.push({ kind: "intention", id: current.intention, description: current.message ?? e.message, minute: current.at, guard: guardMode, reasoner: followedProvider ?? "?" });
+        log("info", `[agent slot] [minute ${current.at ?? "?"}] ${current.intention}: ${current.message ?? ""}`);
+    };
+    async function showSlotStep(e: SlotEvent): Promise<void> {
+        lastCall = e.capabilityId ? { id: e.capabilityId, input: e.input, outcome: e.outcome ?? "?" } : null;
+        slotDecider = followedProvider ?? "the agent slot";
+        for (const { stage, error } of stagesOfSlotStep(e)) {
+            monitor?.push({ kind: "stage", stage, status: error ? "error" : "start", message: error });
+            lights.cue(error ? { stage, status: "error", message: error } : { stage, status: "start" });
+            if (stage === "execute" && e.capabilityId) monitor?.push({ kind: "call", capabilityId: e.capabilityId, input: e.input, outcome: e.outcome ?? "?", latencyMs: e.latencyMs });
+        }
+        await lights.settled();
+        await observeForMonitor();
+        if (e.failed) {
+            monitor?.push({ kind: "outcome", outcome: "stopped", error: e.failed });
+            narrate("decision", words.phrase("decision.stopped", { message: e.failed }), undefined, "warn");
+        } else {
+            const id = e.capabilityId ?? "?";
+            const outcome = e.outcome ?? "?";
+            monitor?.push({ kind: "decision", capabilityId: id, input: e.input, source: e.source === "policy" ? "policy" : "fallback" });
+            monitor?.push({ kind: "outcome", outcome });
+            const said = id.startsWith("crew.") ? words.phrase(id === "crew.ask" ? "decision.asks" : "decision.reports") : words.phrase("decision.made", { capability: id, outcome, error: "" });
+            narrate("decision", said, said, outcome === "refused" || outcome === "deny" ? "warn" : "info");
+        }
+        log("info", `[agent slot] ${e.intention} step ${e.step ?? "?"}: ${e.capabilityId ?? e.failed ?? "?"} -> ${e.outcome ?? "stopped"}`);
+        lastCall = null;
+        slotDecider = null;
+    }
+    /** The slot's events the page has not shown yet, in order; the page's own run leaves them to the log. */
+    async function showSlotEvents(fresh: SlotEvent[]): Promise<void> {
+        const seen = fresh.filter((e) => typeof e.seq === "number" && e.seq > cursor);
+        for (const e of seen) cursor = Math.max(cursor, e.seq ?? 0);
+        for (const e of seen) {
+            if (!e.kind?.startsWith("agent.") || busy || playingAll) continue;
+            if (!followedProvider) followedProvider = await slotProvider();
+            if (e.kind === "agent.reset") {
+                lights.clear();
+                monitor?.push({ kind: "reset" });
+                await observeForMonitor();
+            } else if (e.kind === "agent.event") enterSlotEvent(e);
+            else if (e.kind === "agent.step") await showSlotStep(e);
+            else if (e.kind === "agent.handback") monitor?.push({ kind: "console", level: "info", message: `${e.intention ?? "?"}: ${e.note ?? `handed back (${e.capabilityId ?? "?"})`}` });
+            else if (e.kind === "agent.mode" && e.note) monitor?.push({ kind: "console", level: "info", message: e.note });
+        }
+    }
+    /** Reads the log from the cursor: when the page opens, when a push says there is a gap, and while the stream is down. */
+    async function catchUp(): Promise<void> {
+        const fresh = await readEvents();
+        if (!fresh) return;
+        received = Math.max(received, ...fresh.map((e) => e.seq ?? 0));
+        if (cursor < 0) {
+            // Opened mid-night: the event being played is shown, its past steps are not.
+            const agentEvents = fresh.filter((e) => e.kind?.startsWith("agent."));
+            const last = agentEvents.filter((e) => e.kind === "agent.event").at(-1);
+            if (last && agentEvents.at(-1)?.mode === "playing") enterSlotEvent(last);
+            cursor = Math.max(0, ...fresh.map((e) => e.seq ?? 0));
+            return;
+        }
+        await showSlotEvents(fresh);
+    }
+    /** Who decides in the slot, for the stage sentences that name it. */
+    const slotProvider = async (): Promise<string | null> => {
+        const r = await world.call("agent", "state", {});
+        const st = (r.ok ? r.output : null) as { provider?: string | null; result?: { provider?: string | null } } | null;
+        return st?.provider ?? st?.result?.provider ?? null;
+    };
+    // One thing at a time: a step is walked stage by stage, and the next waits for it.
+    let followQueue: Promise<void> = Promise.resolve();
+    const enqueue = (work: () => Promise<void>) => {
+        followQueue = followQueue.then(work).catch((e) => log("warn", `agent slot: ${e instanceof Error ? e.message : String(e)}`));
+    };
+    /**
+     * The log is pushed: the slot that publishes it (`twin`) sends
+     * `resources/updated` with the new events (`harness/browser/pushes.ts`),
+     * and the page reads it only to fill a gap. While the stream is down it
+     * looks every `slow` ms; when it is back it looks once, for what it missed.
+     */
+    function followSlot(): void {
+        const slowMs = Math.max(2000, Number(params.get("slow") ?? 15000));
+        enqueue(catchUp);
+        const stream = watchSlot(
+            brokerUrl,
+            eventSource ?? EVENT_SOURCES[0],
+            (update) => {
+                if (update.uri !== EVENTS_URI) return;
+                const pushed = cursor < 0 ? null : eventsAfter<SlotEvent>(update, Math.max(cursor, received));
+                if (!pushed) return enqueue(catchUp);
+                received = Math.max(received, ...pushed.map((e) => e.seq ?? 0));
+                enqueue(() => showSlotEvents(pushed));
+            },
+            (open) => {
+                log(open ? "info" : "warn", open ? "agent slot: following its events as they are pushed" : `agent slot: the event stream dropped; looking every ${slowMs / 1000} s until it is back`);
+                if (open) enqueue(catchUp);
+            },
+        );
+        setInterval(() => {
+            if (!stream.open) enqueue(catchUp);
+        }, slowMs);
+    }
+
     try {
         await connect();
         await observeForMonitor();
+        followSlot();
         tell({ status: "ready", events: events.map((e) => ({ intention: e.intention, at: e.at, message: e.message })) });
     } catch (e) {
         setStatus(`not connected: ${e instanceof Error ? e.message : String(e)}`, "not connected", true);

@@ -45,13 +45,38 @@ What is used, and all of it is standard:
 | read the log | `resources/read` | everywhere |
 | read it from a cursor | a resource template, RFC 6570 | `speech://utterances/{id}` in the speech slot |
 | learn the log exists | `resources/list` | everywhere |
-| be told it changed | `notifications/resources/updated`, after `resources/subscribe` | **not** implemented by mcp-core 1.2.1 today |
+| be told it changed | `notifications/resources/updated` | the `twin` slot, on `spk://events` |
 
-The last row is the only gap, and it needs no invention either: subscription is
-in the MCP specification. Until mcp-core implements it, a client polls the
-resource with its cursor, which costs one small read every two seconds. The
-control room is written that way and will switch to the notification the day it
-exists, with no change to the payload and no change to this contract.
+The log is pushed. The slot that publishes it (`twin`) sends
+`notifications/resources/updated` on `spk://events` whenever it grows
+(`pushEvents`, `slots/lib/events.ts`); the broker relays a slot's notifications
+to every client of that slot, and a page follows them on the broker's SSE
+endpoint (`/twin/sse`, `harness/browser/pushes.ts`). mcp-core has no
+`resources/subscribe` yet, so there is no per-client subscription: every client
+of the slot is told.
+
+A notification says which resource changed and nothing else, and the
+specification has the client read it back. To spare that read, the new events
+travel in the notification's `_meta`, the extension point every MCP message
+carries:
+
+```json
+{ "jsonrpc": "2.0", "method": "notifications/resources/updated",
+  "params": { "uri": "spk://events",
+              "_meta": { "spikypanda/events": [ { "seq": 812, "kind": "agent.step" } ],
+                         "spikypanda/seq": 812 } } }
+```
+
+Events appended in the same turn of the loop go out as one notification. A
+reader whose cursor is not right before the first event carried missed a
+notification (its stream dropped) and reads `spk://events?since=<cursor>`; a
+client that does not know the key reads the resource, as the specification says.
+While its stream is down a page reads with its cursor every fifteen seconds.
+
+The factory does the same on its task list: `notifications/resources/updated`
+on `factory://tasks`, with the changed task's answer (what `factory.task`
+returns) under `spikypanda/task`, when a task opens, after each of its steps,
+and when it ends.
 
 The payload below is the *content* of a resource. Content is free-form by
 design: putting a JSON document in a resource is what resources are for, and it

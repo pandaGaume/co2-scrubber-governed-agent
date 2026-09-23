@@ -142,9 +142,10 @@ what the agent said to the crew.
 
 Two controls for working on the page itself: `LLM off` (or `&llm=0`) runs
 the scripted prudent reasoner instead of the model, same loop, no call, no
-cost; `follow` (or `&view=follow&threshold=120&zoom=1`) makes the viewer pan
-to the lit node whenever it drifts farther than the threshold from the
-centre, at the given zoom, instead of framing the whole loop.
+cost; the view follows by default: the viewer pans to the lit node whenever
+it drifts farther than the threshold from the centre, at the given zoom
+(`&threshold=120&zoom=1`); `fit all` (or `&view=fit`) frames the whole loop
+instead.
 
 Verified on 2026-09-19 with Haiku 4.5 behind the `reasoner` slot: the four
 events run from the page, twelve nodes lit per decision, the tile and the

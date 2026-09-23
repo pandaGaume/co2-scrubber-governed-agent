@@ -205,6 +205,7 @@ function applyRoomSkin(viewer) {
   const m = findMonitor(viewer);
   if (m && typeof m._drawSeries === "function") m._drawSeries = drawRoomSeries;
 }
+var ROOM_COLORS = { teal: TEAL, tealSoft: TEAL_SOFT, amber: AMBER, red: RED };
 
 // harness/browser/loader.ts
 async function loadLoopExtension(studio, { pluginUrl, defaultGraph, pageUrl, prepare }) {
@@ -222,15 +223,48 @@ async function loadLoopExtension(studio, { pluginUrl, defaultGraph, pageUrl, pre
   await page.default(studio);
 }
 
-// tier3/browser/loader.ts
+// harness/browser/twin-plots.ts
+var NOTES_LABEL = "Twin: the question";
+var NOTES_AT = { x: -520, y: 60 };
+var PLOTS = [
+  { id: "plot-co2", label: "Plot: cabin CO2", title: "cabin CO2 (ppm)", from: { node: "cabin", port: "co2Ppm" }, column: 1, color: ROOM_COLORS.teal, at: { x: 1240, y: 340 }, tile: { x: 3, w: 3 } },
+  { id: "plot-rate", label: "Plot: removal rate", title: "removal rate (/min)", from: { node: "scrubber", port: "effectiveRate" }, column: 3, color: ROOM_COLORS.tealSoft, at: { x: 1240, y: 200 }, tile: { x: 6, w: 2 } },
+  { id: "plot-power", label: "Plot: scrubber power", title: "scrubber power (W)", from: { node: "scrubber", port: "power" }, column: 4, color: ROOM_COLORS.amber, at: { x: 1240, y: 60 }, tile: { x: 8, w: 2 } },
+  { id: "plot-reserve", label: "Plot: night reserve", title: "night reserve (%)", from: { node: "battery", port: "stateOfChargePercent" }, column: 5, color: ROOM_COLORS.tealSoft, at: { x: 1240, y: -100 }, tile: { x: 10, w: 2 } }
+];
+var TILE_H = 4;
+var MAX_SAMPLES = 1500;
+function withTwinTiles(json) {
+  const doc = JSON.parse(json);
+  const tiles = [];
+  doc.layout.nodes.push({ id: "twin-notes", typeId: "Viz.Markdown:cell", x: NOTES_AT.x, y: NOTES_AT.y, inputs: [], outputs: [] });
+  doc.model.nodes.push({ id: "twin-notes", label: NOTES_LABEL, typeId: "Viz.Markdown:cell", data: { enabled: true, _content: "Waiting for a question to the twin.", _locked: true } });
+  tiles.push({ nodeId: "twin-notes", renderableType: "Viz.Markdown:cell", x: 0, y: 0, w: 3, h: TILE_H });
+  for (const p of PLOTS) {
+    const source = doc.layout.nodes.find((n) => n.id === p.from.node);
+    const portIndex = source?.outputs.findIndex((o) => o.name === p.from.port) ?? -1;
+    doc.layout.nodes.push({ id: p.id, typeId: "Viz.Plot:line", x: p.at.x, y: p.at.y, inputs: [{ name: "value", type: "float", direction: "input" }], outputs: [] });
+    doc.model.nodes.push({ id: p.id, label: p.label, typeId: "Viz.Plot:line", data: { enabled: true, _maxSamples: MAX_SAMPLES, _title: p.title, _yAuto: true, _yMin: -1, _yMax: 1, _maxPushHz: 0 } });
+    if (source && portIndex >= 0) {
+      const id = `${p.from.node}:${p.from.port}->${p.id}:value`;
+      doc.layout.connections.push({ id, fromNodeId: p.from.node, fromPortIndex: portIndex, toNodeId: p.id, toPortIndex: 0 });
+      doc.model.connections.push({ id, from: { node: p.from.node, port: p.from.port }, to: { node: p.id, port: "value" } });
+    }
+    tiles.push({ nodeId: p.id, renderableType: "Viz.Plot:line", x: p.tile.x, y: 0, w: p.tile.w, h: TILE_H });
+  }
+  doc.dashboards = [{ id: "main", name: "Main", tiles }];
+  return JSON.stringify(doc);
+}
+
+// harness/browser/twin-loader.ts
 function load(studio) {
   return loadLoopExtension(studio, {
-    pluginUrl: new URL("./SpkPluginHarness.js", import.meta.url).href,
-    defaultGraph: "/graphs/tier3-agent.spikypanda",
-    pageUrl: new URL("./page.js", import.meta.url).href
+    defaultGraph: "/graphs/cabin.spikypanda",
+    pageUrl: new URL("./twin-page.js", import.meta.url).href,
+    prepare: withTwinTiles
   });
 }
 export {
   load as default
 };
-//# sourceMappingURL=tier3.js.map
+//# sourceMappingURL=twin.js.map

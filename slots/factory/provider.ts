@@ -93,8 +93,24 @@ function writeData(dir: string, entry: Record<string, unknown>): TaskFile["task"
     return out;
 }
 
-/** Starts the loop on a task, in this process, on the factory's own client of the broker; the manifest carries the outcome. */
-function launch(httpBase: string, taskId: string, s: FactoryState, log: (line: string) => void): TaskRun {
+/** The URI of the task list, and the `_meta` key its notification carries the changed task under. */
+export const TASKS_URI = "factory://tasks";
+export const META_TASK = "spikypanda/task";
+
+/** What `task` answers for one task: its status, and its run when this process runs it. `manifest` replaces the one on disk while the run holds a newer one in memory. */
+function taskAnswer(taskId: string, s: FactoryState, manifest?: Readonly<Record<string, unknown>>): TaskStatus & { run: (TaskRun & { steps: number }) | null } {
+    const status = statusOf(taskId);
+    if (manifest) {
+        status.manifest = manifest as Record<string, unknown>;
+        status.state = (manifest.state as TaskStatus["state"] | undefined) ?? status.state;
+    }
+    s.tasks[taskId] = status;
+    const run = s.runs[taskId];
+    return { ...status, run: run ? { ...run, steps: Array.isArray(status.manifest?.steps) ? (status.manifest.steps as unknown[]).length : 0 } : null };
+}
+
+/** Starts the loop on a task, in this process, on the factory's own client of the broker; the manifest carries the outcome, and `announce` tells the readers of the task list as it goes. */
+function launch(httpBase: string, taskId: string, s: FactoryState, log: (line: string) => void, announce: (taskId: string, manifest?: Readonly<Record<string, unknown>>) => void): TaskRun {
     const run: TaskRun = { startedAt: new Date().toISOString(), builder: "scripted:onnx", lastStage: null, ended: null };
     s.runs[taskId] = run;
     const broker = new Broker(httpBase, { name: "factory", version: VERSION, locale: "en" });
@@ -108,6 +124,7 @@ function launch(httpBase: string, taskId: string, s: FactoryState, log: (line: s
         onStage: (e) => {
             if (e.status === "complete") run.lastStage = e.stage;
         },
+        onProgress: (manifest) => announce(taskId, manifest as unknown as Record<string, unknown>),
     })
         .then((r) => {
             run.ended = r.state;
@@ -121,13 +138,24 @@ function launch(httpBase: string, taskId: string, s: FactoryState, log: (line: s
             const manifest = existsSync(manifestFile) ? (JSON.parse(readFileSync(manifestFile, "utf8")) as Record<string, unknown>) : { version: 1, taskId, steps: [] };
             writeFileSync(manifestFile, JSON.stringify({ ...manifest, state: "failed", ended: reason, endedAt: new Date().toISOString() }, null, 2) + "\n");
         })
-        .finally(() => void broker.close());
+        .finally(() => {
+            announce(taskId);
+            void broker.close();
+        });
     return run;
 }
 
 export function factorySlot(wsBase: string, log: (line: string) => void): PublishedSlot<FactoryState> {
     const httpBase = wsBase.replace(/^ws(s?):\/\//, "http$1://");
     const state: FactoryState = { root: WORKSHOP_ROOT, tasks: {}, runs: {} };
+    /**
+     * Tells the readers of `factory://tasks` that a task changed: the MCP
+     * notification for a changed resource, with the task's answer (what `task`
+     * returns) in its `_meta`, so a page following it reads nothing back. A
+     * reader that does not know the key reads the list, as the specification
+     * says. Set once the slot is built (below).
+     */
+    let announce: (taskId: string, manifest?: Readonly<Record<string, unknown>>) => void = () => undefined;
     const tools: SlotTool<FactoryState>[] = [
         {
             name: "request",
@@ -185,29 +213,24 @@ export function factorySlot(wsBase: string, log: (line: string) => void): Publis
                 const status = statusOf(taskId);
                 s.tasks[taskId] = status;
                 log(`[factory] task ${taskId}: ${outputs.map((o) => o.name).join(", ")} for ${task.task.requestedBy}, ${data.length} data file(s)`);
-                const run = args.run === false ? null : launch(httpBase, taskId, s, log);
+                const run = args.run === false ? null : launch(httpBase, taskId, s, log, (id, manifest) => announce(id, manifest));
+                if (!run) announce(taskId);
                 return { taskId, state: run ? "running" : status.state, workspace: status.workspace, taskSha256: status.taskSha256, data, builder: run?.builder ?? null, started: Boolean(run) };
             },
         },
         {
             name: "task",
             inputSchema: obj({ taskId: { type: "string" } }, ["taskId"]),
-            handle: (args, s) => {
-                const taskId = checkTaskId(args.taskId);
-                const status = statusOf(taskId);
-                s.tasks[taskId] = status;
-                const run = s.runs[taskId];
-                return { ...status, run: run ? { ...run, steps: Array.isArray(status.manifest?.steps) ? (status.manifest.steps as unknown[]).length : 0 } : null };
-            },
+            handle: (args, s) => taskAnswer(checkTaskId(args.taskId), s),
         },
     ];
 
-    return publishSlot<FactoryState>({
+    const published = publishSlot<FactoryState>({
         slot: "factory",
         tools,
         resources: [
             {
-                uri: "factory://tasks",
+                uri: TASKS_URI,
                 read: () => {
                     if (!existsSync(WORKSHOP_ROOT)) return [];
                     return listTaskIds().map((id) => {
@@ -227,6 +250,14 @@ export function factorySlot(wsBase: string, log: (line: string) => void): Publis
         version: VERSION,
         grammarsDir: fromRoot("slots", "factory", "grammars"),
     });
+    announce = (taskId, manifest) => {
+        try {
+            published.notify("notifications/resources/updated", { uri: TASKS_URI, _meta: { [META_TASK]: taskAnswer(taskId, state, manifest) } });
+        } catch (e) {
+            log(`[factory] task ${taskId}: could not tell its readers (${errorMessage(e)})`);
+        }
+    };
+    return published;
 }
 
 function listTaskIds(): string[] {

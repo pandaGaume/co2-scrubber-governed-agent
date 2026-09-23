@@ -61,6 +61,8 @@ export interface RunTaskOptions {
     promptFile?: string | null;
     timeoutMs?: number;
     onStage?: (event: StageEvent) => void;
+    /** The manifest as it stands, once it is opened and after every step: it reaches the disk only at the start and the end, and a reader following the task (the factory slot's push) needs the steps as they come. */
+    onProgress?: (manifest: Readonly<Manifest>) => void;
     log?: (line: string) => void;
 }
 
@@ -111,7 +113,7 @@ async function writeText(broker: Broker, taskId: string, file: string, text: str
     return (r.output as { sha256: string }).sha256;
 }
 
-export async function runTask({ broker, provider: providerOrBuild, taskId, topic: topicName, recipesDir = path.join(WORKSHOP_ROOT, "_recipes"), runtimeSlot = "twin", promptFile = null, timeoutMs = 60000, onStage, log = () => undefined }: RunTaskOptions): Promise<RunTaskResult> {
+export async function runTask({ broker, provider: providerOrBuild, taskId, topic: topicName, recipesDir = path.join(WORKSHOP_ROOT, "_recipes"), runtimeSlot = "twin", promptFile = null, timeoutMs = 60000, onStage, onProgress, log = () => undefined }: RunTaskOptions): Promise<RunTaskResult> {
     const startedAt = new Date();
     const { task: file, sha256: taskSha256 } = await readTask(broker, taskId);
     const task = file.task;
@@ -177,13 +179,18 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         ended: null,
     };
     await writeText(broker, taskId, "manifest.json", manifestText(manifest));
+    onProgress?.(manifest);
     log(`[factory] task ${taskId}: topic ${topicId}, signature ${signature.id}, ${capabilities.catalogue.length} tools, recipes ${recipes.loaded ? `${recipes.experiences} experiences` : "none"}`);
 
     const lines: TraceLine[] = [];
     const attached = new Set<string | undefined>();
     provider.begin?.(intention.id);
     let ended: string | null = null;
+    let reported = 0;
     while (progress.phase !== "done" && progress.phase !== "failed") {
+        // The step just recorded, said before the next one starts (every branch below ends in `continue`).
+        if (manifest.steps.length > reported) onProgress?.(manifest);
+        reported = manifest.steps.length;
         const n = progress.iteration + 1;
         const minutes = (Date.now() - startedAt.getTime()) / 60000;
         if (progress.iteration >= budget.iterations) {
@@ -242,6 +249,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         ended = `the reasoner failed: ${failed}`;
         break;
     }
+    if (manifest.steps.length > reported) onProgress?.(manifest);
     if (progress.phase !== "done") progress.phase = "failed";
 
     // What the task leaves: the artifacts with their sha256, the contract next to a model.

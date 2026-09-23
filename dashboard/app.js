@@ -26,6 +26,7 @@
 import { connectMcp, toolText } from "./vendor/mcp-http-client.js";
 import { loadWords, NO_WORDS } from "./agent/factory-voice.js";
 import { createScene, HUE } from "./room-model.js";
+import { eventsAfter, watchSlot } from "./agent/pushes.js";
 
 /* This module serves two pages: the control room after the boot
    (`index.html`), where `board.js` owns the loop, the events and the
@@ -682,12 +683,11 @@ async function openVoice() {
 // (`broker_info`, `providers_list`, `provider_status`, and two guides), and the
 // reasoner slot publishes only `reasoner://profile`.
 //
-// So the calls are watched through the graph runtime's event log, `spk://events`,
-// read with a cursor. mcp-core carries `notifications/resources/list_changed`
-// but no per-resource subscription, and this client reads notifications off a
-// POST response rather than holding a stream open, so a cursor is what the
-// protocol actually supports today. The contract is docs/runtime-events.md; when
-// the runtime gains a subscription the panel switches source without a redesign.
+// So the calls are watched through the graph runtime's event log, `spk://events`.
+// The slot that publishes it pushes it: `notifications/resources/updated` on the
+// log, relayed by the broker to the page's SSE stream, with the new events in
+// its `_meta` (`followEvents`). The page reads the log with its cursor only to
+// fill a gap, or while the stream is down. The contract is docs/runtime-events.md.
 //
 // Until the runtime publishes it, the panel says which model answers and says
 // plainly that the calls are not published yet. It does not draw a call it has
@@ -763,6 +763,43 @@ async function readEvents(slot) {
     return JSON.parse(r?.contents?.[0]?.text ?? "{}");
 }
 
+/** What the log says, in order: the model's calls and the agent's steps. An
+    event seen already (its `seq` at or under the cursor) is skipped, so a push
+    and a read that overlap never count a call twice. */
+function applyEvents(all) {
+    const events = all.filter((e) => typeof e.seq !== "number" || e.seq > eventCursor);
+    for (const e of events) {
+        if (typeof e.seq === "number" && e.seq > eventCursor) eventCursor = e.seq;
+        if (typeof e.kind !== "string") continue;
+        if (e.kind.startsWith("agent.")) {
+            if (typeof e.mode === "string") agentMode = e.mode;
+            if (e.kind === "agent.event") {
+                agentIntention = e.intention ?? null;
+                if (typeof e.minute === "number") put("top-clock", `night 9 · min ${e.minute}`);
+            }
+            if (e.kind === "agent.step" && e.capabilityId) traceAgentStep(e);
+            put("top-state", MODE_WORD[agentMode] ?? agentMode);
+            $("top-state")?.classList.toggle("busy", agentMode === "playing");
+            continue;
+        }
+        if (!e.kind.startsWith("model.")) continue;
+        if (e.kind === "model.answered" || e.kind === "model.failed") {
+            modelCalls += 1;
+            lastModelCall = {
+                latencyMs: e.latencyMs ?? null,
+                tokens: e.tokens ?? null,
+                asked: e.asked ?? e.intention ?? "",
+                answered: e.kind === "model.failed" ? `failed: ${e.reason ?? "no reason given"}` : (e.answered ?? e.proposedCapabilityId ?? ""),
+                proposedCapabilityId: e.proposedCapabilityId ?? null,
+                ranCapabilityId: e.ranCapabilityId ?? null,
+            };
+            markModelCall();
+            pulseSlot("reasoner", e.kind === "model.failed" ? "error" : "ok");
+        }
+    }
+    if (events.length) renderModelCalls();
+}
+
 async function refreshModel() {
     if (eventsAbsent) return;
     const candidates = eventSource ? [eventSource] : EVENT_SOURCES;
@@ -774,42 +811,40 @@ async function refreshModel() {
             continue;   // this slot does not carry the log
         }
         eventSource = slot;
-        const events = Array.isArray(body.events) ? body.events : [];
-        for (const e of events) {
-            if (typeof e.seq === "number" && e.seq > eventCursor) eventCursor = e.seq;
-            if (typeof e.kind !== "string") continue;
-            if (e.kind.startsWith("agent.")) {
-                if (typeof e.mode === "string") agentMode = e.mode;
-                if (e.kind === "agent.event") {
-                    agentIntention = e.intention ?? null;
-                    if (typeof e.minute === "number") put("top-clock", `night 9 · min ${e.minute}`);
-                }
-                if (e.kind === "agent.step" && e.capabilityId) traceAgentStep(e);
-                put("top-state", MODE_WORD[agentMode] ?? agentMode);
-                $("top-state")?.classList.toggle("busy", agentMode === "playing");
-                continue;
-            }
-            if (!e.kind.startsWith("model.")) continue;
-            if (e.kind === "model.answered" || e.kind === "model.failed") {
-                modelCalls += 1;
-                lastModelCall = {
-                    latencyMs: e.latencyMs ?? null,
-                    tokens: e.tokens ?? null,
-                    asked: e.asked ?? e.intention ?? "",
-                    answered: e.kind === "model.failed" ? `failed: ${e.reason ?? "no reason given"}` : (e.answered ?? e.proposedCapabilityId ?? ""),
-                    proposedCapabilityId: e.proposedCapabilityId ?? null,
-                    ranCapabilityId: e.ranCapabilityId ?? null,
-                };
-                markModelCall();
-                pulseSlot("reasoner", e.kind === "model.failed" ? "error" : "ok");
-            }
-        }
-        if (events.length) renderModelCalls();
+        applyEvents(Array.isArray(body.events) ? body.events : []);
         return;
     }
     // Nothing answered: say so once, and stop asking.
     eventsAbsent = true;
     renderModelCalls();
+}
+
+/**
+ * The log is pushed, not polled: the slot that publishes it sends
+ * `resources/updated` on `spk://events` with the new events in its `_meta`
+ * (`harness/browser/pushes.ts`, bundled as `agent/pushes.js`). The page reads
+ * the log only to fill a gap, and every `EVENTS_SLOW_MS` while the stream is
+ * down.
+ */
+const EVENTS_SLOW_MS = 15000;
+function followEvents() {
+    if (eventsAbsent || !eventSource) return;
+    const stream = watchSlot(
+        base,
+        eventSource,
+        (update) => {
+            if (update.uri !== EVENTS_URI) return;
+            const pushed = eventsAfter(update, eventCursor);
+            if (pushed) applyEvents(pushed);
+            else void refreshModel();
+        },
+        (open) => {
+            if (open) void refreshModel();
+        },
+    );
+    setInterval(() => {
+        if (!stream.open) void refreshModel();
+    }, EVENTS_SLOW_MS);
 }
 
 async function openModel() {
@@ -1111,7 +1146,7 @@ loadSlots()
         refreshCabin();
         setInterval(refreshCabin, POLL_MS);
         openVoice().then(() => setInterval(refreshVoice, POLL_MS));
-        openModel().then(() => setInterval(refreshModel, POLL_MS));
+        openModel().then(followEvents);
         openAgent().then(() => setInterval(refreshAgent, POLL_MS * 2));
         // Once: the machine's addresses do not change while it runs.
         watchSlotPages();

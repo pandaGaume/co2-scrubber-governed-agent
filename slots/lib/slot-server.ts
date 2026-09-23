@@ -107,6 +107,13 @@ export interface PublishedSlot<S extends object> {
     grammarFiles: GrammarDirectoryFile[];
     store: McpGrammarStore;
     server: IMcpServer;
+    /**
+     * Sends a JSON-RPC notification to the broker, which hands it to every
+     * client connected to this slot (WebSocket, SSE, Streamable HTTP): how a
+     * slot tells its readers that something changed instead of waiting to be
+     * asked. Dropped while the slot is not open.
+     */
+    notify(method: string, params: Record<string, unknown>): void;
     open(): Promise<void>;
     close(): Promise<void>;
     readonly isOpen: boolean;
@@ -229,11 +236,12 @@ export function publishSlot<S extends object>(options: SlotOptions<S>): Publishe
     });
 
     let server: IMcpServer;
+    const transport = MultiplexTransport.create(slot, `${wsBase}/providers`, { aggregate: true });
     try {
         server = new McpServerBuilder()
         .withName(slot)
         .withInitializer(new SlotInitializer(slot, version, options.description, options.instructions ?? {}, hasGrammar, log))
-        .withTransport(MultiplexTransport.create(slot, `${wsBase}/providers`, { aggregate: true }))
+        .withTransport(transport)
         .withGrammarResolver(resolverOptions())
         .withGrammarStore(store)
         .withGrammars(loaded.grammars)
@@ -255,6 +263,9 @@ export function publishSlot<S extends object>(options: SlotOptions<S>): Publishe
         grammarFiles: loaded.files,
         store,
         server,
+        notify(method, params) {
+            if (transport.isOpen) transport.send(JSON.stringify({ jsonrpc: "2.0", method, params }));
+        },
         async open() {
             await server.start();
             log(`[${slot}] published on ${wsBase}/providers`);

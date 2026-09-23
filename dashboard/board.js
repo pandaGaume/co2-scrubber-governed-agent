@@ -13,15 +13,17 @@
  * the FACTORY button: the board asks the factory for the monitor that is
  * missing (the request is in the scenario file, `factory.request`), with the
  * telemetry it sampled from the board during the night (`motor.state`, one
- * sample every two seconds), then follows the task (`factory.task` every
- * second) and the station says one sentence per step, read from the task's
- * manifest (`factory-voice.js`).
+ * sample every two seconds), then follows the task as the factory pushes it
+ * (`resources/updated` on `factory://tasks`, `agent/pushes.js`) and the
+ * station says one sentence per step, read from the task's manifest
+ * (`factory-voice.js`).
  *
  * The board is the audio output of the speech slot (the loop page speaks and
  * does not play: `&output=none`).
  */
 import { connectMcp, toolText } from "./vendor/mcp-http-client.js";
 import { AudioOutput } from "./agent/audio-output.js";
+import { watchSlot } from "./agent/pushes.js";
 import { endSentence, loadWords, NO_WORDS, stepSentence } from "./agent/factory-voice.js";
 
 const $ = (id) => document.getElementById(id);
@@ -31,13 +33,20 @@ const TIER = { scrubber: "Tier 1, the board", twin: "Tier 0, the oracle", statio
 /* The slots that serve a page of their own, and what it is. A page is how a
    slot reaches a hand that is not at this keyboard: the night's events are
    played from a phone, the medical module is read on one, the factory is
-   reviewed on a second screen. The night belongs to `scenario`, whose events
-   the page lists, rather than to `agent`, which runs them. `app.js` turns
-   these rows into buttons that show the address as a code. */
+   reviewed on a second screen, the agent's loop is watched on one, and so is
+   the twin's graph, which replays every question the agent asks it. The night
+   belongs to `scenario`, whose events the page lists; `agent` serves the
+   studio drawing its loop as it runs them. `app.js` turns these rows into
+   buttons that show the address as a code; the arrow on the row opens the
+   page here, in its own window (`openSlotPage`). */
+const LOOP_URL = "./studio/node-editor-v2/index.html?mcp=0&ext=/agent/tier3.js&output=none";
+const TWIN_URL = "./studio/node-editor-v2/index.html?mcp=0&ext=/agent/twin.js";
 const PAGES = {
     scenario: { page: "simulation.html", what: "The night, in hand" },
     biomed: { page: "biomed.html", what: "The medical module" },
     factory: { page: "factory.html", what: "The factory" },
+    agent: { page: LOOP_URL.replace(/^\.\//u, ""), what: "The agent's loop" },
+    twin: { page: TWIN_URL.replace(/^\.\//u, ""), what: "The twin's graph" },
 };
 /* A code, small: three finder squares and some noise. It says a code is
    behind the row without drawing one on every row. */
@@ -45,6 +54,10 @@ const PAGE_GLYPH =
     '<svg class="page-glyph" viewBox="0 0 11 11" aria-hidden="true">' +
     '<path d="M0 0h4v4H0zm1 1v2h2V1zM7 0h4v4H7zm1 1v2h2V1zM0 7h4v4H0zm1 1v2h2V8z"/>' +
     '<path d="M5 0h1v2H5zM6 5h2v1H6zM5 6h1v2H5zM9 6h1v1H9zM7 9h1v2H7zM5 10h1v1H5zM10 5h1v1h-1z"/></svg>';
+/* A box with an arrow leaving it: the page itself, opened here rather than read as a code. */
+const OPEN_GLYPH =
+    '<svg viewBox="0 0 11 11" aria-hidden="true"><path d="M6 0h5v5H9.6V2.4L5.5 6.5l-1-1L8.6 1.4H6z"/>' +
+    '<path d="M0 2h4.5v1.4H1.4v6.2h6.2V6.5H9V11H0z"/></svg>';
 const SLOT_WAIT_MS = 20_000;
 const POLL_MS = 2000;
 // The console's pace: the checks take milliseconds, the eye needs more. A line every LINE_MS at least,
@@ -52,8 +65,6 @@ const POLL_MS = 2000;
 const LINE_MS = 450;
 const HOLD_MS = 300;
 const TYPE_MS = 28;
-const LOOP_URL = "./studio/node-editor-v2/index.html?mcp=0&ext=/agent/tier3.js&output=none&view=fit";
-
 // ── The broker, as this page sees it ──────────────────────────────────────
 
 /** The page's language: `?locale=`, else en-US (the demo is filmed in English; the scenario's messages and the model's words are English); every slot picks its wording for this page's sessions on it. */
@@ -490,6 +501,30 @@ function openFactoryWindow() {
     return w;
 }
 
+/** A slot's page, in its own window. The agent's and the factory's have theirs, placed and named (the agent's window is also the one the board sends the world to); any other opens in a window named after its slot, so a second click reuses it. */
+function openSlotPage(slot, serves) {
+    if (slot === "agent") return openLoopWindow();
+    if (slot === "factory") return openFactoryWindow();
+    if (slot === "twin") return openTwinWindow();
+    const w = window.open(`./${serves.page}`, slot);
+    voiceLine(w ? `${slot}: its page opened in its own window` : `${slot}: the browser did not open its window; open ./${serves.page} yourself`, "info");
+    return w;
+}
+
+/**
+ * The twin's graph, in its own window: the cabin's physics, replaying every
+ * question the agent asks the twin. Top right, above the agent's loop (which
+ * takes the bottom right), so the question and the loop that asked it are
+ * seen together. Named, so asking twice reuses it.
+ */
+function openTwinWindow() {
+    const width = Math.floor(screen.availWidth / 2);
+    const features = `popup=yes,width=${width},height=${Math.floor(screen.availHeight / 2)},left=${screen.availLeft + width},top=${screen.availTop}`;
+    const w = window.open(TWIN_URL, "twin", features);
+    voiceLine(w ? "twin: its graph opened in its own window" : "twin: the browser did not open its window; open the twin's page yourself", "info");
+    return w;
+}
+
 async function renderSlots() {
     let names = [];
     try {
@@ -506,12 +541,18 @@ async function renderSlots() {
             li.dataset.slot = slot;
             const serves = PAGES[slot];
             li.innerHTML =
-                `<span class="led"></span><span class="name">${slot}<small>${TIER[slot] ?? ""}</small>${serves ? PAGE_GLYPH : ""}</span><span class="meta"></span>`;
+                `<span class="led"></span><span class="name">${slot}<small>${TIER[slot] ?? ""}</small>${serves ? PAGE_GLYPH : ""}` +
+                `${serves ? `<button class="page-open" type="button" title="${serves.what}: open it in its own window">${OPEN_GLYPH}</button>` : ""}</span><span class="meta"></span>`;
             if (serves) {
                 li.classList.add("has-page");
                 li.dataset.page = serves.page;
                 li.dataset.what = serves.what;
-                li.title = `${serves.what}: show the address of ${serves.page} as a code a phone can read`;
+                li.title = `${serves.what}: show the address as a code a phone can read`;
+                // Its own click: the row's shows the code (`app.js`), and this one must not also open or close it.
+                li.querySelector(".page-open").addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    openSlotPage(slot, serves);
+                });
             }
             list.appendChild(li);
         }
@@ -586,7 +627,10 @@ async function say(text, priority = "normal") {
 
 // ── The factory: the night's telemetry, the request, the task followed ─────
 
-const TASK_POLL_MS = 1000;
+const TASK_SLOW_MS = 15000;
+/** What the factory slot pushes on its task list (`slots/factory/provider.ts`). */
+const TASKS_URI = "factory://tasks";
+const META_TASK = "spikypanda/task";
 const boardStartedAt = Date.now();
 const telemetry = [];
 /** One sample of the board's state every `everySeconds` (the scenario's `factory.request.telemetry`): what the factory will be handed. */
@@ -636,13 +680,8 @@ async function askFactory() {
     $("top-state").textContent = `FACTORY · ${factoryTask}`;
     $("top-state").classList.add("busy");
     let said = 0;
-    const tick = async () => {
-        const t = await call("factory", "task", { taskId: factoryTask });
-        if (!t.ok) {
-            voiceLine(w("board.taskError", { error: t.error }), "info");
-            return false;
-        }
-        const status = t.output;
+    /** One look at the task: the sentences of its new steps, and whether it is still running. */
+    const show = async (status) => {
         const steps = Array.isArray(status.manifest?.steps) ? status.manifest.steps : [];
         for (; said < steps.length; said++) await say(stepSentence(words, steps[said]));
         $("top-state").textContent = `FACTORY · step ${steps.length}${status.run?.lastStage ? ` · ${status.run.lastStage}` : ""}`;
@@ -651,7 +690,47 @@ async function askFactory() {
         await say(endSentence(words, status));
         return false;
     };
-    while (await tick()) await sleep(TASK_POLL_MS);
+    const read = async () => {
+        const t = await call("factory", "task", { taskId: factoryTask });
+        if (!t.ok) voiceLine(w("board.taskError", { error: t.error }), "info");
+        return t.ok ? t.output : null;
+    };
+    // The factory pushes the task as it changes (`resources/updated` on `factory://tasks`, the task's answer in `_meta`);
+    // the board reads it once to start, again when the stream comes back, and every TASK_SLOW_MS while it is down.
+    await new Promise((resolve) => {
+        let queue = Promise.resolve();
+        let done = false;
+        const look = (next) => {
+            queue = queue.then(async () => {
+                if (done) return;
+                const status = await next();
+                if (!status || !(await show(status))) finish();
+            });
+        };
+        const stream = watchSlot(
+            base,
+            "factory",
+            (update) => {
+                if (update.uri !== TASKS_URI) return;
+                const t = update.meta[META_TASK];
+                if (!t) look(read);
+                else if (t.taskId === factoryTask) look(async () => t);
+            },
+            (open) => {
+                if (open) look(read);
+            },
+        );
+        const slow = setInterval(() => {
+            if (!stream.open) look(read);
+        }, TASK_SLOW_MS);
+        function finish() {
+            done = true;
+            clearInterval(slow);
+            stream.close();
+            resolve();
+        }
+        look(read);
+    });
     factoryTask = null;
     $("top-state").textContent = "IDLE";
     $("top-state").classList.remove("busy");
@@ -748,6 +827,7 @@ async function main() {
     $("centre-note").textContent = scripted ? "scripted agent" : "the model decides";
     $("btn-agent")?.addEventListener("click", () => openLoopWindow());
     $("btn-factory")?.addEventListener("click", () => openFactoryWindow());
+    $("btn-twin")?.addEventListener("click", () => openTwinWindow());
 
     $("btn-sound").addEventListener("click", () => {
         if (audio.enabled) {

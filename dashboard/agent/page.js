@@ -1859,6 +1859,46 @@ async function loadWords(session) {
 }
 var NO_WORDS = McpGrammar.fromJSON({ phrases: {} });
 
+// harness/browser/pushes.ts
+function watchSlot(base, slot, onUpdate, onState = () => void 0) {
+  const source = new EventSource(`${base.replace(/\/+$/u, "")}/${encodeURIComponent(slot)}/sse`);
+  let open = false;
+  const setOpen = (value) => {
+    if (value === open) return;
+    open = value;
+    onState(value);
+  };
+  source.onopen = () => setOpen(true);
+  source.onerror = () => setOpen(false);
+  source.onmessage = (m) => {
+    let frame;
+    try {
+      frame = JSON.parse(m.data);
+    } catch {
+      return;
+    }
+    if (frame.method !== "notifications/resources/updated" || typeof frame.params?.uri !== "string") return;
+    const meta = frame.params._meta && typeof frame.params._meta === "object" ? frame.params._meta : {};
+    onUpdate({ uri: frame.params.uri, meta });
+  };
+  return {
+    close: () => {
+      source.close();
+      setOpen(false);
+    },
+    get open() {
+      return open;
+    }
+  };
+}
+function eventsAfter(update, cursor) {
+  const events = update.meta["spikypanda/events"];
+  if (!Array.isArray(events) || !events.length) return null;
+  const first = events[0].seq;
+  if (typeof first !== "number" || first > cursor + 1) return null;
+  return events.filter((e) => typeof e.seq === "number" && e.seq > cursor);
+}
+
 // tier3/browser/agent-page.ts
 var shortModel = (model) => model.replace(/^.*\//, "").replace(/-\d{8}$/, "").slice(0, 22);
 var SOURCE = "tier3";
@@ -1898,7 +1938,7 @@ async function activate(studio) {
   const pauseMs = Number(params.get("pause") ?? 4e3);
   let llmEnabled = !["0", "false", "off", "no"].includes(params.get("llm") ?? "1");
   let scriptVariant = params.get("script") === "compliant" ? "compliant" : "prudent";
-  const initialView = { mode: params.get("view") === "follow" ? "follow" : "fit", threshold: Number(params.get("threshold") ?? 120), zoom: Number(params.get("zoom") ?? 1) };
+  const initialView = { mode: params.get("view") === "fit" ? "fit" : "follow", threshold: Number(params.get("threshold") ?? 120), zoom: Number(params.get("zoom") ?? 1) };
   const remoteOutput = params.get("output") === "none";
   installLoopStyle();
   const viewer = studio.getViewer();
@@ -1944,6 +1984,7 @@ async function activate(studio) {
   let monitor = null;
   let current = null;
   let busy = false;
+  let slotDecider = null;
   const world = new Broker(brokerUrl, { name: "studio-world", version: "0.1.0", locale: pageLocale });
   let words = NO_WORDS;
   try {
@@ -1973,7 +2014,7 @@ async function activate(studio) {
   let lastCall = null;
   const narrate = (stage, text, now, level = "info") => monitor?.push({ kind: "narrate", stage, text, now, level });
   const cabinText = () => lastObs ? words.phrase("cabin.text", { ppm: Math.round(lastObs.co2Ppm), state: lastObs.co2State, scrubber: lastObs.power ? words.phrase("cabin.scrubber.on", { percent: Math.round(lastObs.speedPercent) }) : words.phrase("cabin.scrubber.off") }) : words.phrase("cabin.reading");
-  const modelName = () => agent?.provider.model ?? "?";
+  const modelName = () => slotDecider ?? agent?.provider.model ?? "?";
   const sentenceFor = (stage, next) => {
     const values = {
       cabin: cabinText(),
@@ -2199,9 +2240,131 @@ async function activate(studio) {
     else if (cmd === "reset") void reset().then(() => tell({ status: "reset" }));
     else if (cmd === "events") tell({ status: "events", events: events.map((e) => ({ intention: e.intention, at: e.at, message: e.message })) });
   });
+  const EVENT_SOURCES = ["twin", "reasoner"];
+  const EVENTS_URI = "spk://events";
+  let eventSource = null;
+  let cursor = -1;
+  let received = -1;
+  let followedProvider = null;
+  const readEvents = async () => {
+    for (const slot of eventSource ? [eventSource] : EVENT_SOURCES) {
+      try {
+        const s = await world.session(slot);
+        const r = await s.request("resources/read", { uri: cursor > 0 ? `${EVENTS_URI}?since=${cursor}` : EVENTS_URI });
+        eventSource = slot;
+        const body = JSON.parse(r.contents[0]?.text ?? "{}");
+        return Array.isArray(body.events) ? body.events : [];
+      } catch {
+        continue;
+      }
+    }
+    return null;
+  };
+  const stagesOfSlotStep = (e) => {
+    const before = ["observe", "context", "lookup", "gate"];
+    const after = ["merge", "guard", "execute", "observe-after", "evaluate", "record"];
+    if (e.failed) {
+      const walked = e.stoppedByHarness ? [...before, "request", "reason", "merge"] : [...before, "request"];
+      return [...walked.map((stage) => ({ stage })), { stage: e.stoppedByHarness ? "guard" : "reason", error: e.failed }];
+    }
+    return (e.source === "policy" ? [...before, ...after] : [...before, "request", "reason", ...after]).map((stage) => ({ stage }));
+  };
+  const enterSlotEvent = (e) => {
+    current = events.find((ev) => ev.intention === e.intention) ?? { intention: e.intention ?? "?", at: e.minute, message: e.message };
+    eventSel.value = current.intention;
+    lights.clear();
+    monitor?.push({ kind: "intention", id: current.intention, description: current.message ?? e.message, minute: current.at, guard: guardMode, reasoner: followedProvider ?? "?" });
+    log("info", `[agent slot] [minute ${current.at ?? "?"}] ${current.intention}: ${current.message ?? ""}`);
+  };
+  async function showSlotStep(e) {
+    lastCall = e.capabilityId ? { id: e.capabilityId, input: e.input, outcome: e.outcome ?? "?" } : null;
+    slotDecider = followedProvider ?? "the agent slot";
+    for (const { stage, error } of stagesOfSlotStep(e)) {
+      monitor?.push({ kind: "stage", stage, status: error ? "error" : "start", message: error });
+      lights.cue(error ? { stage, status: "error", message: error } : { stage, status: "start" });
+      if (stage === "execute" && e.capabilityId) monitor?.push({ kind: "call", capabilityId: e.capabilityId, input: e.input, outcome: e.outcome ?? "?", latencyMs: e.latencyMs });
+    }
+    await lights.settled();
+    await observeForMonitor();
+    if (e.failed) {
+      monitor?.push({ kind: "outcome", outcome: "stopped", error: e.failed });
+      narrate("decision", words.phrase("decision.stopped", { message: e.failed }), void 0, "warn");
+    } else {
+      const id = e.capabilityId ?? "?";
+      const outcome = e.outcome ?? "?";
+      monitor?.push({ kind: "decision", capabilityId: id, input: e.input, source: e.source === "policy" ? "policy" : "fallback" });
+      monitor?.push({ kind: "outcome", outcome });
+      const said = id.startsWith("crew.") ? words.phrase(id === "crew.ask" ? "decision.asks" : "decision.reports") : words.phrase("decision.made", { capability: id, outcome, error: "" });
+      narrate("decision", said, said, outcome === "refused" || outcome === "deny" ? "warn" : "info");
+    }
+    log("info", `[agent slot] ${e.intention} step ${e.step ?? "?"}: ${e.capabilityId ?? e.failed ?? "?"} -> ${e.outcome ?? "stopped"}`);
+    lastCall = null;
+    slotDecider = null;
+  }
+  async function showSlotEvents(fresh) {
+    const seen = fresh.filter((e) => typeof e.seq === "number" && e.seq > cursor);
+    for (const e of seen) cursor = Math.max(cursor, e.seq ?? 0);
+    for (const e of seen) {
+      if (!e.kind?.startsWith("agent.") || busy || playingAll) continue;
+      if (!followedProvider) followedProvider = await slotProvider();
+      if (e.kind === "agent.reset") {
+        lights.clear();
+        monitor?.push({ kind: "reset" });
+        await observeForMonitor();
+      } else if (e.kind === "agent.event") enterSlotEvent(e);
+      else if (e.kind === "agent.step") await showSlotStep(e);
+      else if (e.kind === "agent.handback") monitor?.push({ kind: "console", level: "info", message: `${e.intention ?? "?"}: ${e.note ?? `handed back (${e.capabilityId ?? "?"})`}` });
+      else if (e.kind === "agent.mode" && e.note) monitor?.push({ kind: "console", level: "info", message: e.note });
+    }
+  }
+  async function catchUp() {
+    const fresh = await readEvents();
+    if (!fresh) return;
+    received = Math.max(received, ...fresh.map((e) => e.seq ?? 0));
+    if (cursor < 0) {
+      const agentEvents = fresh.filter((e) => e.kind?.startsWith("agent."));
+      const last = agentEvents.filter((e) => e.kind === "agent.event").at(-1);
+      if (last && agentEvents.at(-1)?.mode === "playing") enterSlotEvent(last);
+      cursor = Math.max(0, ...fresh.map((e) => e.seq ?? 0));
+      return;
+    }
+    await showSlotEvents(fresh);
+  }
+  const slotProvider = async () => {
+    const r = await world.call("agent", "state", {});
+    const st = r.ok ? r.output : null;
+    return st?.provider ?? st?.result?.provider ?? null;
+  };
+  let followQueue = Promise.resolve();
+  const enqueue = (work) => {
+    followQueue = followQueue.then(work).catch((e) => log("warn", `agent slot: ${e instanceof Error ? e.message : String(e)}`));
+  };
+  function followSlot() {
+    const slowMs = Math.max(2e3, Number(params.get("slow") ?? 15e3));
+    enqueue(catchUp);
+    const stream = watchSlot(
+      brokerUrl,
+      eventSource ?? EVENT_SOURCES[0],
+      (update) => {
+        if (update.uri !== EVENTS_URI) return;
+        const pushed = cursor < 0 ? null : eventsAfter(update, Math.max(cursor, received));
+        if (!pushed) return enqueue(catchUp);
+        received = Math.max(received, ...pushed.map((e) => e.seq ?? 0));
+        enqueue(() => showSlotEvents(pushed));
+      },
+      (open) => {
+        log(open ? "info" : "warn", open ? "agent slot: following its events as they are pushed" : `agent slot: the event stream dropped; looking every ${slowMs / 1e3} s until it is back`);
+        if (open) enqueue(catchUp);
+      }
+    );
+    setInterval(() => {
+      if (!stream.open) enqueue(catchUp);
+    }, slowMs);
+  }
   try {
     await connect();
     await observeForMonitor();
+    followSlot();
     tell({ status: "ready", events: events.map((e) => ({ intention: e.intention, at: e.at, message: e.message })) });
   } catch (e) {
     setStatus(`not connected: ${e instanceof Error ? e.message : String(e)}`, "not connected", true);

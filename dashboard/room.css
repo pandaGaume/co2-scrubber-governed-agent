@@ -325,6 +325,14 @@ button.badge { font-family: var(--mono); cursor: pointer; }
 .slot-leds li.has-page:hover .name { color: var(--teal); }
 .slot-leds li.has-page:hover .page-glyph,
 .slot-leds li.open .page-glyph { fill: var(--teal); }
+/* The page itself, one click away: a small bordered button after the code's glyph, lit on its own hover. */
+.slot-leds .page-open {
+    display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; margin-left: 6px; padding: 0; vertical-align: -4px;
+    border: 1px solid var(--line); border-radius: 5px; background: transparent; cursor: pointer; transition: border-color 0.2s ease, background 0.2s ease;
+}
+.slot-leds .page-open svg { width: 9px; height: 9px; fill: var(--muted-2); transition: fill 0.2s ease; }
+.slot-leds .page-open:hover { border-color: var(--teal); background: rgba(47, 224, 200, 0.10); }
+.slot-leds .page-open:hover svg { fill: var(--teal); }
 
 .slot-code {
     position: absolute; bottom: calc(100% + 8px); z-index: 12;

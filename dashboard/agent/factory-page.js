@@ -407,6 +407,39 @@ ${S} .hm-line.error .tag { color: #ff8a98; }
 `;
 var ROOM_COLORS = { teal: TEAL, tealSoft: TEAL_SOFT, amber: AMBER, red: RED };
 
+// harness/browser/pushes.ts
+function watchSlot(base, slot, onUpdate, onState = () => void 0) {
+  const source = new EventSource(`${base.replace(/\/+$/u, "")}/${encodeURIComponent(slot)}/sse`);
+  let open = false;
+  const setOpen = (value) => {
+    if (value === open) return;
+    open = value;
+    onState(value);
+  };
+  source.onopen = () => setOpen(true);
+  source.onerror = () => setOpen(false);
+  source.onmessage = (m) => {
+    let frame;
+    try {
+      frame = JSON.parse(m.data);
+    } catch {
+      return;
+    }
+    if (frame.method !== "notifications/resources/updated" || typeof frame.params?.uri !== "string") return;
+    const meta = frame.params._meta && typeof frame.params._meta === "object" ? frame.params._meta : {};
+    onUpdate({ uri: frame.params.uri, meta });
+  };
+  return {
+    close: () => {
+      source.close();
+      setOpen(false);
+    },
+    get open() {
+      return open;
+    }
+  };
+}
+
 // node_modules/@cyanmycelium/mcp-core/dist/index.js
 var JsonRpcMimeType = "application/json";
 var GRAMMAR_PHRASES_URI = "grammar://phrases";
@@ -1194,6 +1227,8 @@ function stageSentence(words, stage, values, next) {
 }
 
 // harness/browser/factory-page.ts
+var TASKS_URI = "factory://tasks";
+var META_TASK = "spikypanda/task";
 var SOURCE = "factory";
 function stagesOf(step) {
   const before = ["observe", "context", "lookup", "gate"];
@@ -1218,13 +1253,13 @@ var num2 = (v) => typeof v === "number" && Number.isFinite(v) ? String(v) : "?";
 async function activate(studio) {
   const params = new URLSearchParams(location.search);
   const brokerUrl = params.get("broker") ?? location.origin;
-  const pollMs = Math.max(500, Number(params.get("poll") ?? 2e3));
+  const slowMs = Math.max(2e3, Number(params.get("slow") ?? 15e3));
   const pinned = params.get("task");
   const locale = params.get("locale") ?? "en-US";
   const broker = new Broker(brokerUrl, { name: "studio-factory", version: "0.1.0", locale });
   const { words, grammar } = await loadWords(await broker.session("factory"));
   const p = (key, values = {}) => words.phrase(key, values);
-  const initialView = { mode: params.get("view") === "follow" ? "follow" : "fit", threshold: Number(params.get("threshold") ?? 120), zoom: Number(params.get("zoom") ?? 1) };
+  const initialView = { mode: params.get("view") === "fit" ? "fit" : "follow", threshold: Number(params.get("threshold") ?? 120), zoom: Number(params.get("zoom") ?? 1) };
   installLoopStyle();
   const viewer = studio.getViewer();
   studio.setLayout({ palette: false, properties: false, console: false, dashboardHeight: 300 });
@@ -1306,7 +1341,7 @@ async function activate(studio) {
   log("info", `words: wording ${grammar ?? "?"}, ${words.listPhrases().length} phrases`);
   const readTasks = async () => {
     const s = await broker.session("factory");
-    const r = await s.request("resources/read", { uri: "factory://tasks" });
+    const r = await s.request("resources/read", { uri: TASKS_URI });
     const list2 = JSON.parse(r.contents[0]?.text ?? "[]");
     return list2.filter((t) => typeof t.taskId === "string").sort((a, b) => b.taskId.localeCompare(a.taskId));
   };
@@ -1318,6 +1353,10 @@ async function activate(studio) {
   let shown = 0;
   let finished = false;
   let busy = false;
+  const known = /* @__PURE__ */ new Map();
+  const pushed = /* @__PURE__ */ new Map();
+  let again = null;
+  const newestTask = () => [...known.keys()].sort((a, b) => b.localeCompare(a))[0];
   let firstLook = true;
   const beginTask = (t) => {
     const quiet = firstLook && !pinned && taskSel.value === "latest" && ended(t.state);
@@ -1344,11 +1383,19 @@ async function activate(studio) {
     narrate("task", p("page.task", values), p("page.task.now", values));
     log("info", `following task ${t.taskId} (${t.state})`);
   };
-  const tick = async () => {
-    if (busy) return;
+  const tick = async (full = false) => {
+    if (busy) {
+      again = { full: full || (again?.full ?? false) };
+      return;
+    }
     busy = true;
     try {
-      const tasks = await readTasks();
+      if (full || !known.size) {
+        pushed.clear();
+        known.clear();
+        for (const t2 of await readTasks()) known.set(t2.taskId, t2.state);
+      }
+      const tasks = [...known].map(([taskId, state]) => ({ taskId, state })).sort((a, b) => b.taskId.localeCompare(a.taskId));
       const options = [["latest", "latest task"], ...tasks.map((t2) => [t2.taskId, `${t2.taskId} \xB7 ${t2.state}`])];
       if (taskSel.options.length !== options.length) {
         const chosen = taskSel.value;
@@ -1360,7 +1407,7 @@ async function activate(studio) {
         setStatus(p("page.noTask"), p("page.noTask.now"), true);
         return;
       }
-      const t = await readTask(wanted);
+      const t = pushed.get(wanted) ?? await readTask(wanted);
       if (!t) return;
       status = t;
       if (followed !== t.taskId) beginTask(t);
@@ -1370,7 +1417,7 @@ async function activate(studio) {
       for (; shown < steps.length; shown++) {
         await showStep(steps[shown]);
         if (!pinned && taskSel.value === "latest" && shown + 1 < steps.length) {
-          const newest = (await readTasks())[0]?.taskId;
+          const newest = newestTask();
           if (newest && newest !== followed) return;
         }
       }
@@ -1385,6 +1432,11 @@ async function activate(studio) {
       setStatus(`${p("page.notReachable")}: ${e instanceof Error ? e.message : String(e)}`, p("page.notReachable"), true);
     } finally {
       busy = false;
+      if (again) {
+        const { full: full2 } = again;
+        again = null;
+        void tick(full2);
+      }
     }
   };
   taskSel.addEventListener("change", () => void tick());
@@ -1397,8 +1449,27 @@ async function activate(studio) {
   }
   monitor?.push({ kind: "console", level: "info", message: p("page.intro") });
   narrate("idle", p("page.waiting"), p("page.waiting.now"));
-  await tick();
-  setInterval(() => void tick(), pollMs);
+  await tick(true);
+  const stream = watchSlot(
+    brokerUrl,
+    "factory",
+    (update) => {
+      if (update.uri !== TASKS_URI) return;
+      const t = update.meta[META_TASK];
+      if (t?.taskId) {
+        known.set(t.taskId, t.state);
+        pushed.set(t.taskId, t);
+        void tick();
+      } else void tick(true);
+    },
+    (open) => {
+      log(open ? "info" : "warn", open ? "tasks: following them as the factory pushes them" : `tasks: the push stream dropped; looking every ${slowMs / 1e3} s until it is back`);
+      if (open) void tick(true);
+    }
+  );
+  setInterval(() => {
+    if (!stream.open) void tick(true);
+  }, slowMs);
 }
 export {
   activate as default

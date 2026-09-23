@@ -4,8 +4,10 @@
  * (`graphs/factory-agent.spikypanda`, the same twelve stages as the agent's),
  * opened in its own window when the server starts. The loop itself runs in
  * Node (the `factory` slot steps it, `harness/core/runner.ts`); this page
- * reads what it did and shows it: it polls the factory's tasks
- * (`factory://tasks`, then `factory.task` on the task it follows), and for
+ * reads what it did and shows it: it is told of every change of a task (the
+ * slot pushes `resources/updated` on `factory://tasks` with the task's answer
+ * in `_meta`, `pushes.ts`; it reads the list when it opens and while the
+ * stream is down), and for
  * every step of the manifest it walks the twelve stages on the canvas, one
  * at a time, the way the agent's page does while it decides. It replays
  * nothing on its own when it opens: a task already ended is only named
@@ -18,14 +20,19 @@
  * speak: the Control Board is the audio output and says the same sentences.
  *
  * URL: `?mcp=0&ext=/agent/factory.js` (the loader, `factory-loader.ts`)
- *      `&broker=<origin>` (default: the page's) `&poll=2000` (ms between two looks at the tasks)
+ *      `&broker=<origin>` (default: the page's) `&slow=15000` (ms between two looks at the tasks while the push stream is down)
  *      `&locale=fr` the words (default en-US: the demo's language)
  *      `&task=<id>` follows one task instead of the latest
- *      `&view=fit|follow&threshold=120&zoom=1` as on the agent's page.
+ *      `&view=follow|fit&threshold=120&zoom=1` as on the agent's page (follow by default).
  */
 import { Broker } from "../lib/broker.js";
 import { createBar, createStageLights, disableStudioPlayer, findMonitor, hideMonitorNode, installLoopStyle, stageNodes, viewControls, type MonitorTile, type Studio, type ViewMode } from "./studio-loop.js";
 import { ROOM_COLORS } from "./room-skin.js";
+import { watchSlot } from "./pushes.js";
+
+/** What the factory slot pushes on its task list (`slots/factory/provider.ts`). */
+const TASKS_URI = "factory://tasks";
+const META_TASK = "spikypanda/task";
 import { endSentence, loadWords, stageSentence, stepSentence, type ManifestStepLike, type TaskStatusLike } from "./factory-voice.js";
 
 const SOURCE = "factory";
@@ -78,13 +85,13 @@ const num = (v: unknown): string => (typeof v === "number" && Number.isFinite(v)
 export default async function activate(studio: Studio): Promise<void> {
     const params = new URLSearchParams(location.search);
     const brokerUrl = params.get("broker") ?? location.origin;
-    const pollMs = Math.max(500, Number(params.get("poll") ?? 2000));
+    const slowMs = Math.max(2000, Number(params.get("slow") ?? 15000));
     const pinned = params.get("task");
     const locale = params.get("locale") ?? "en-US";
     const broker = new Broker(brokerUrl, { name: "studio-factory", version: "0.1.0", locale });
     const { words, grammar } = await loadWords(await broker.session("factory"));
     const p = (key: string, values: Record<string, unknown> = {}) => words.phrase(key, values);
-    const initialView = { mode: (params.get("view") === "follow" ? "follow" : "fit") as ViewMode, threshold: Number(params.get("threshold") ?? 120), zoom: Number(params.get("zoom") ?? 1) };
+    const initialView = { mode: (params.get("view") === "fit" ? "fit" : "follow") as ViewMode, threshold: Number(params.get("threshold") ?? 120), zoom: Number(params.get("zoom") ?? 1) };
 
     installLoopStyle();
     const viewer = studio.getViewer();
@@ -177,7 +184,7 @@ export default async function activate(studio: Studio): Promise<void> {
     log("info", `words: wording ${grammar ?? "?"}, ${words.listPhrases().length} phrases`);
     const readTasks = async (): Promise<Array<{ taskId: string; state: string }>> => {
         const s = await broker.session("factory");
-        const r = await s.request<{ contents: Array<{ text?: string }> }>("resources/read", { uri: "factory://tasks" });
+        const r = await s.request<{ contents: Array<{ text?: string }> }>("resources/read", { uri: TASKS_URI });
         const list = JSON.parse(r.contents[0]?.text ?? "[]") as Array<{ taskId: string; state: string }>;
         return list.filter((t) => typeof t.taskId === "string").sort((a, b) => b.taskId.localeCompare(a.taskId));
     };
@@ -190,6 +197,13 @@ export default async function activate(studio: Studio): Promise<void> {
     let shown = 0;
     let finished = false;
     let busy = false;
+    /** The tasks and their state, from the list read when the page opens and from every push since. */
+    const known = new Map<string, string>();
+    /** The newest answer the slot pushed for each task: a push always carries the task as it stands, so the page reads nothing back. */
+    const pushed = new Map<string, TaskStatus>();
+    /** Something arrived while a replay held the page: it is looked at as soon as the replay ends (`full`: read the list again). */
+    let again: { full: boolean } | null = null;
+    const newestTask = () => [...known.keys()].sort((a, b) => b.localeCompare(a))[0];
     /** The page has not chosen a task yet: the one it finds already ended is named, not replayed (no start on its own when the page opens). */
     let firstLook = true;
 
@@ -220,11 +234,20 @@ export default async function activate(studio: Studio): Promise<void> {
         log("info", `following task ${t.taskId} (${t.state})`);
     };
 
-    const tick = async () => {
-        if (busy) return;
+    const tick = async (full = false) => {
+        if (busy) {
+            again = { full: full || (again?.full ?? false) };
+            return;
+        }
         busy = true;
         try {
-            const tasks = await readTasks();
+            if (full || !known.size) {
+                // The list as the slot has it: the pushes missed while the stream was down are behind it, and so are the answers kept.
+                pushed.clear();
+                known.clear();
+                for (const t of await readTasks()) known.set(t.taskId, t.state);
+            }
+            const tasks = [...known].map(([taskId, state]) => ({ taskId, state })).sort((a, b) => b.taskId.localeCompare(a.taskId));
             const options: Array<[string, string]> = [["latest", "latest task"], ...tasks.map((t) => [t.taskId, `${t.taskId} · ${t.state}`] as [string, string])];
             if (taskSel.options.length !== options.length) {
                 const chosen = taskSel.value;
@@ -236,7 +259,7 @@ export default async function activate(studio: Studio): Promise<void> {
                 setStatus(p("page.noTask"), p("page.noTask.now"), true);
                 return;
             }
-            const t = await readTask(wanted);
+            const t = pushed.get(wanted) ?? (await readTask(wanted));
             if (!t) return;
             status = t;
             if (followed !== t.taskId) beginTask(t);
@@ -247,7 +270,7 @@ export default async function activate(studio: Studio): Promise<void> {
                 await showStep(steps[shown]);
                 // A newer task while an old one is still being replayed: the page moves on at the next look (a failed task of twenty steps takes over a minute to replay).
                 if (!pinned && taskSel.value === "latest" && shown + 1 < steps.length) {
-                    const newest = (await readTasks())[0]?.taskId;
+                    const newest = newestTask();
                     if (newest && newest !== followed) return;
                 }
             }
@@ -262,6 +285,11 @@ export default async function activate(studio: Studio): Promise<void> {
             setStatus(`${p("page.notReachable")}: ${e instanceof Error ? e.message : String(e)}`, p("page.notReachable"), true);
         } finally {
             busy = false;
+            if (again) {
+                const { full } = again;
+                again = null;
+                void tick(full);
+            }
         }
     };
     taskSel.addEventListener("change", () => void tick());
@@ -275,6 +303,26 @@ export default async function activate(studio: Studio): Promise<void> {
     }
     monitor?.push({ kind: "console", level: "info", message: p("page.intro") });
     narrate("idle", p("page.waiting"), p("page.waiting.now"));
-    await tick();
-    setInterval(() => void tick(), pollMs);
+    await tick(true);
+    // The slot says when a task changes (created, one more step, ended), with the task's answer in the notification.
+    const stream = watchSlot(
+        brokerUrl,
+        "factory",
+        (update) => {
+            if (update.uri !== TASKS_URI) return;
+            const t = update.meta[META_TASK] as TaskStatus | undefined;
+            if (t?.taskId) {
+                known.set(t.taskId, t.state);
+                pushed.set(t.taskId, t);
+                void tick();
+            } else void tick(true);
+        },
+        (open) => {
+            log(open ? "info" : "warn", open ? "tasks: following them as the factory pushes them" : `tasks: the push stream dropped; looking every ${slowMs / 1000} s until it is back`);
+            if (open) void tick(true);
+        },
+    );
+    setInterval(() => {
+        if (!stream.open) void tick(true);
+    }, slowMs);
 }

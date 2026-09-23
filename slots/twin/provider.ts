@@ -13,12 +13,19 @@
  * Budget: a question is a few runs of a few hours of story; the policy caps
  * what one call may cost (minutes simulated, points swept). Longer studies
  * are factory jobs, not twin questions.
+ *
+ * Every answer is also kept with its whole trajectory, one row per story
+ * minute (`twin://runs`, the last few), and pushed to the slot's readers as
+ * it is computed: `notifications/resources/updated` on `twin://runs`, the run
+ * in `_meta` under `spikypanda/run`. The answer the caller gets stays short;
+ * the twin's page (`harness/browser/twin-page.ts`) replays the run on the
+ * graph that computed it.
  */
 import { objectSchema as obj, publishSlot, type PublishedSlot } from "../lib/slot-server.js";
 import { RuntimeBehavior } from "@spiky-panda/mcp/runtime";
-import { runtimeEvents } from "../lib/events.js";
+import { pushEvents, runtimeEvents } from "../lib/events.js";
 import { WorkshopDocumentStore } from "../tools/lib/workshop.js";
-import { checkCrew, runCabin, stateName, steadyStatePpm, summarize, twin, type Twin } from "./cabin-twin.js";
+import { checkCrew, round, runCabin, stateName, steadyStatePpm, summarize, twin, type CabinRow, type RunSummary, type Thresholds, type Twin } from "./cabin-twin.js";
 import { param, type CommandSegment, type CrewGroup } from "../../lib/factory.js";
 
 const CREW_SCHEMA = {
@@ -37,12 +44,58 @@ export interface TwinState {
     budget: TwinBudget;
 }
 
+/** Where the last runs are read, and the `_meta` key a new one is pushed under. */
+export const RUNS_URI = "twin://runs";
+export const META_RUN = "spikypanda/run";
+const KEPT_RUNS = 12;
+/** A trajectory longer than this is thinned (every n-th minute, and the last): a day of story is still one small message. */
+const MAX_POINTS = 240;
+export const RUN_COLUMNS = ["minute", "co2Ppm", "state", "rate", "powerW", "stateOfCharge"] as const;
+
+/** One run of the graph: its command over time, its rows (`RUN_COLUMNS`), what it came to. */
+export interface TwinTrajectory {
+    label: string;
+    flowPercent: number | null;
+    command: CommandSegment[];
+    rows: number[][];
+    summary: RunSummary;
+}
+/** One question to the twin and the runs that answered it: one for time_to_critical, one per flow for sweep. */
+export interface TwinRun {
+    runId: string;
+    tool: string;
+    at: string;
+    question: Record<string, unknown>;
+    crew: CrewGroup[];
+    startPpm: number;
+    thresholds: Thresholds;
+    columns: typeof RUN_COLUMNS;
+    trajectories: TwinTrajectory[];
+}
+
+function compactRows(rows: ReadonlyArray<CabinRow>): number[][] {
+    const every = Math.max(1, Math.ceil(rows.length / MAX_POINTS));
+    return rows
+        .filter((r, i) => r.minute % every === 0 || i === rows.length - 1)
+        .map((r) => [r.minute, round(r.co2Ppm), r.state, round(r.rate, 4), round(r.powerW), round(r.stateOfCharge, 2)]);
+}
+
 export function twinSlot(wsBase: string, log: (line: string) => void): PublishedSlot<TwinState> {
     const budget: TwinBudget = { maxMinutesPerRun: 1440, maxRunsPerCall: 20 };
     let ready: Twin | null = null;
     const loadOnce = (): Twin => {
         if (!ready) ready = twin();
         return ready;
+    };
+    // The last runs, newest last, and how a new one reaches the readers (set once the slot is built, below).
+    const runs: TwinRun[] = [];
+    let announceRun: (run: TwinRun) => void = () => undefined;
+    let runCount = 0;
+    const keep = (tool: string, question: Record<string, unknown>, crew: CrewGroup[], trajectories: TwinTrajectory[]): void => {
+        const run: TwinRun = { runId: `run-${Date.now().toString(36)}-${++runCount}`, tool, at: new Date().toISOString(), question, crew, startPpm: Number(question.co2Ppm), thresholds: loadOnce().thresholds, columns: RUN_COLUMNS, trajectories };
+        runs.push(run);
+        while (runs.length > KEPT_RUNS) runs.shift();
+        announceRun(run);
     };
     const defaults = () => {
         const { scenario } = loadOnce();
@@ -62,7 +115,7 @@ export function twinSlot(wsBase: string, log: (line: string) => void): Published
     // reader sees one ordered stream with one cursor.
     const runtime = RuntimeBehavior.on(loadOnce().registry, { documents: new WorkshopDocumentStore(), events: runtimeEvents, maxTicks: budget.maxMinutesPerRun * budget.maxRunsPerCall * 60 });
 
-    return publishSlot<TwinState>({
+    const published = publishSlot<TwinState>({
         slot: "twin",
         behaviors: [runtime],
         description: "The digital twin of the cabin and the scrubber: what-if questions on the physics graph built from the reviewable parameter file",
@@ -119,8 +172,10 @@ export function twinSlot(wsBase: string, log: (line: string) => void): Published
                     const rows = runCabin({ co2Ppm, crew, command, minutes: horizon, stateOfChargePercent: d.stateOfChargePercent });
                     const summary = summarize(rows);
                     const every = Math.max(1, Math.round(horizon / 12));
+                    const question = { co2Ppm, crew, flowPercent: flow * 100, stopMinutes: stop, resumePercent: resume * 100, horizonMinutes: horizon };
+                    keep("time_to_critical", question, crew, [{ label: stop > 0 ? `stop ${stop} min, then ${Math.round(resume * 100)} %` : `${Math.round(flow * 100)} %`, flowPercent: stop > 0 ? null : flow * 100, command, rows: compactRows(rows), summary }]);
                     return {
-                        question: { co2Ppm, crew, flowPercent: flow * 100, stopMinutes: stop, resumePercent: resume * 100, horizonMinutes: horizon },
+                        question,
                         ...summary,
                         steadyStatePpmAtFlow: Math.round(steadyStatePpm(crew, stop > 0 ? resume : flow)),
                         trajectory: rows.filter((r) => r.minute % every === 0 || r.minute === rows.length).map((r) => ({ minute: r.minute, co2Ppm: Math.round(r.co2Ppm), state: stateName(r.state) })),
@@ -150,10 +205,15 @@ export function twinSlot(wsBase: string, log: (line: string) => void): Published
                     const flows = Array.isArray(args.flowPercents) ? (args.flowPercents as unknown[]).map((x) => Number(x)) : [];
                     if (!flows.length || flows.some((x) => !Number.isFinite(x) || x < 0 || x > 100)) throw new Error("flowPercents must be a list of numbers in [0, 100]");
                     checkMinutes(minutes, flows.length);
+                    const trajectories: TwinTrajectory[] = [];
                     const points = flows.map((percent) => {
-                        const rows = runCabin({ co2Ppm, crew, command: [{ from: 0, to: minutes, value: percent / 100 }], minutes, stateOfChargePercent: d.stateOfChargePercent });
-                        return { flowPercent: percent, ...summarize(rows), steadyStatePpm: Math.round(steadyStatePpm(crew, percent / 100)) };
+                        const command: CommandSegment[] = [{ from: 0, to: minutes, value: percent / 100 }];
+                        const rows = runCabin({ co2Ppm, crew, command, minutes, stateOfChargePercent: d.stateOfChargePercent });
+                        const summary = summarize(rows);
+                        trajectories.push({ label: `${percent} %`, flowPercent: percent, command, rows: compactRows(rows), summary });
+                        return { flowPercent: percent, ...summary, steadyStatePpm: Math.round(steadyStatePpm(crew, percent / 100)) };
                     });
+                    keep("sweep", { co2Ppm, crew, minutes, flowPercents: flows }, crew, trajectories);
                     return { question: { co2Ppm, crew, minutes }, points, identity: loadOnce().identity };
                 },
             },
@@ -161,6 +221,11 @@ export function twinSlot(wsBase: string, log: (line: string) => void): Published
         resources: [
             { uri: "twin://identity", name: "Identity", description: "The files the twin was built from, with their sha256", read: () => loadOnce().identity },
             { uri: "twin://parameters", name: "Parameters", description: "The reviewable parameter file the twin runs with", read: () => loadOnce().parameters },
+            { uri: RUNS_URI, name: "Runs", description: "The last questions asked to the twin, each with its whole trajectory (one row per story minute), newest last", read: () => runs },
         ],
     });
+    announceRun = (run) => published.notify("notifications/resources/updated", { uri: RUNS_URI, _meta: { [META_RUN]: run } });
+    // The log is published here, so its readers are told here when it grows (`pushEvents`).
+    pushEvents(published);
+    return published;
 }

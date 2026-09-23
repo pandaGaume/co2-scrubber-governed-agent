@@ -11,6 +11,11 @@
  * - `factory-voice.js`, the words about a factory task for the Control Board
  *   (`harness/browser/factory-voice.ts`; the sentences themselves are in
  *   `dashboard/words/factory/<locale>.json`);
+ * - `twin.js` and `twin-page.js`, the twin's extension and page
+ *   (`harness/browser/twin-loader.ts`, `twin-page.ts`): the cabin's graph,
+ *   and the twin's answers replayed on it;
+ * - `pushes.js`, what a slot pushes to a page (`harness/browser/pushes.ts`),
+ *   for the control room;
  * - `SpkPluginHarness.js`, the harness studio plugin, copied from
  *   `@spiky-panda/plugin-harness` (its `bundle/SpkPluginHarness.studio.js`);
  * - `audio-output.js`, the audio output alone, for the Control Board;
@@ -38,6 +43,10 @@ export async function buildAgentPage(outDir = fromRoot("dashboard", "agent")): P
         [fromRoot("harness", "browser", "factory-loader.ts"), "factory.js"],
         [fromRoot("harness", "browser", "factory-voice.ts"), "factory-voice.js"],
         [fromRoot("harness", "browser", "factory-page.ts"), "factory-page.js"],
+        [fromRoot("harness", "browser", "twin-loader.ts"), "twin.js"],
+        [fromRoot("harness", "browser", "twin-page.ts"), "twin-page.js"],
+        // What a slot pushes, alone, for the control room (plain JS): the same code as the studio pages'.
+        [fromRoot("harness", "browser", "pushes.ts"), "pushes.js"],
     ] as const) {
         await build({
             entryPoints: [entry],
