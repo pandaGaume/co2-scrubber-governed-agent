@@ -185,6 +185,7 @@ describe("the register, the inventory, the decay", () => {
         const fr = words("fr").listPhrases().filter((k) => k.startsWith("mother."));
         assert.ok(en.length >= 40, String(en.length));
         assert.deepEqual([...fr].sort(), [...en].sort());
+        assert.equal(words("en").phrase("mother.procedure.refused.floorLimit", { percent: 20 }), "Procedure refused. It sets its own minimum speed at 20 percent. Below the minimum flow.");
         assert.equal(words("fr").phrase("mother.procedure.refused.floor", { step: 1, what: words("fr").phrase("mother.what.stop") }), "Protocole refusé. Pas numéro 1 : arrêt complet de l'épurateur. Sous le débit minimal.");
     });
 });

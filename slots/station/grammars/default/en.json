@@ -57,7 +57,8 @@
                 "module": "the module under test",
                 "occupants": "who was read in it",
                 "ok": "whether the guard accepted it",
-                "problems": "the guard's problems, with their kind"
+                "problems": "the guard's problems, with their kind",
+                "minSpeedPercent": "the minimum speed the procedure sets for itself, percent"
             }
         },
         "commissioning_authorise": {
@@ -195,6 +196,7 @@
         "mother.what.stop": "full stop of the scrubber",
         "mother.what.speed": "{percent} percent",
         "mother.procedure.refused.floor": "Procedure refused. Step {step}: {what}. Below the minimum flow.",
+        "mother.procedure.refused.floorLimit": "Procedure refused. It sets its own minimum speed at {percent} percent. Below the minimum flow.",
         "mother.procedure.refused.diligence": "Procedure refused. The occupancy of module {module} was not read.",
         "mother.procedure.refused.monitoring": "Procedure refused. Module {module} is occupied and its occupants are not under monitoring.",
         "mother.procedure.refused.bounds": "Procedure refused. A limit is outside the envelope.",

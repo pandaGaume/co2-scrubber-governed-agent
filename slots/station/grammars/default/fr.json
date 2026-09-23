@@ -79,7 +79,8 @@
                 "module": "le module sous essai",
                 "occupants": "qui y a été lu",
                 "ok": "si la garde l'a accepté",
-                "problems": "les problèmes de la garde, avec leur nature"
+                "problems": "les problèmes de la garde, avec leur nature",
+                "minSpeedPercent": "la vitesse minimale que le protocole se fixe, en pour cent"
             }
         },
         "commissioning_authorise": {
@@ -217,6 +218,7 @@
         "mother.what.stop": "arrêt complet de l'épurateur",
         "mother.what.speed": "{percent} pour cent",
         "mother.procedure.refused.floor": "Protocole refusé. Pas numéro {step} : {what}. Sous le débit minimal.",
+        "mother.procedure.refused.floorLimit": "Protocole refusé. Il fixe sa propre vitesse minimale à {percent} pour cent. Sous le débit minimal.",
         "mother.procedure.refused.diligence": "Protocole refusé. L'occupation du module {module} n'a pas été lue.",
         "mother.procedure.refused.monitoring": "Protocole refusé. Le module {module} est occupé et ses occupants ne sont pas sous surveillance.",
         "mother.procedure.refused.bounds": "Protocole refusé. Une limite sort de l'enveloppe.",

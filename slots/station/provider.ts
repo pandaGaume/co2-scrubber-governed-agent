@@ -183,11 +183,14 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
     };
 
     /** The refusal Mother says for a set of problems: the first kind in the story's order, its step when it has one. */
-    const sayRefusal = (c: Commissioning, problems: ProcedureProblem[], module: string, speeds: Array<number | null>) => {
+    const sayRefusal = (c: Commissioning, problems: ProcedureProblem[], module: string, speeds: Array<number | null>, minSpeed?: number) => {
         const kind = REFUSAL_ORDER.find((k) => problems.some((p) => p.kind === k)) ?? "shape";
         // A step names the refusal better than a limit does: "step 1, full stop" rather than "the minimum set at 0".
         const problem = problems.find((p) => p.kind === kind && p.step !== undefined) ?? problems.find((p) => p.kind === kind);
-        if (kind === "floor") {
+        if (kind === "floor" && problem?.step === undefined) {
+            // The procedure lowers its own floor without a step going under it: say that, not a stop nobody asked for.
+            say("mother.procedure.refused.floorLimit", c, () => ({ percent: typeof minSpeed === "number" ? minSpeed : "?" }));
+        } else if (kind === "floor") {
             const step = problem?.step ?? 0;
             const speed = step ? speeds[step - 1] : null;
             say("mother.procedure.refused.floor", c, (w) => ({ step: step || "?", what: speed !== null && speed !== undefined && speed > 0 ? w.phrase("mother.what.speed", { percent: speed }) : w.phrase("mother.what.stop") }));
@@ -241,7 +244,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
         if (!check.ok) {
             proposal.status = "rejected";
             proposal.reason = check.problems.map((p) => p.message).join("; ");
-            sayRefusal(c, check.problems, check.module, procedure.steps.map((s) => s.speedPercent));
+            sayRefusal(c, check.problems, check.module, procedure.steps.map((s) => s.speedPercent), procedure.limits?.minSpeedPercent);
             announce(c);
             return;
         }
@@ -390,6 +393,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                         steps: { type: "number" },
                         minutes: { type: "number" },
                         speeds: { type: "array", items: { type: ["number", "null"] } },
+                        minSpeedPercent: { type: "number" },
                         module: { type: "string" },
                         occupants: { type: "array", items: { type: "string" } },
                         ok: { type: "boolean" },
@@ -411,7 +415,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                         const count = (await presenceNow()).modules.find((m) => m.module === module)?.occupants ?? 0;
                         say("mother.procedure.proposed", c, (w) => ({ method: methodPhrase(w, str(args.method)), steps: Number(args.steps) || 0, minutes: Number(args.minutes) || 0, occupants: occupantsPhrase(w, count), module }));
                     }
-                    if (args.ok !== true) sayRefusal(c, problems, module, speeds);
+                    if (args.ok !== true) sayRefusal(c, problems, module, speeds, typeof args.minSpeedPercent === "number" ? args.minSpeedPercent : undefined);
                     else if (refusedBefore) {
                         const lowest = Math.min(...speeds.filter((x): x is number => typeof x === "number"));
                         say("mother.procedure.corrected", c, () => ({ percent: Number.isFinite(lowest) ? lowest : "?" }));
