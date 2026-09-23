@@ -74,6 +74,8 @@ export function newProgress(): Progress {
 }
 
 export interface WorkshopFeatures extends Record<string, JsonValue> {
+    /** The harness's brief for this step (the topic's, when it writes one): first, so a model reads it first. */
+    brief: string;
     phase: Phase;
     iteration: number;
     files: number;
@@ -104,7 +106,7 @@ export async function listWorkshop(broker: Broker, taskId: string): Promise<Work
     return files.map(({ path, bytes, sha256 }) => ({ path, bytes, sha256 }));
 }
 
-export function createWorkspaceObserver(broker: Broker, taskId: string, progress: Progress): StateObserver {
+export function createWorkspaceObserver(broker: Broker, taskId: string, progress: Progress, brief: () => string = () => ""): StateObserver {
     return {
         async observe(): Promise<WorkshopState> {
             const files = await listWorkshop(broker, taskId);
@@ -113,6 +115,7 @@ export function createWorkspaceObserver(broker: Broker, taskId: string, progress
                 .digest("hex");
             const last = progress.lastCall;
             const features: WorkshopFeatures = {
+                brief: brief(),
                 phase: progress.phase,
                 iteration: progress.iteration,
                 files: files.length,
@@ -122,7 +125,7 @@ export function createWorkspaceObserver(broker: Broker, taskId: string, progress
                 planMissing: progress.plan?.missing_capabilities.length ?? 0,
                 lastCapability: last?.id ?? "",
                 lastOutcome: last?.result.outcome ?? "",
-                lastOutput: last ? JSON.stringify(last.result.output ?? last.result.error ?? null).slice(0, 4000) : "",
+                lastOutput: last ? JSON.stringify(last.result.output ?? last.result.error ?? null).slice(0, 8000) : "",
                 lastRefusal: progress.lastRefusal ? `${progress.lastRefusal.capability}: ${progress.lastRefusal.reason}` : "",
             };
             return { id: `workshop:${progress.phase}:${last?.id ?? "start"}:${last?.result.outcome ?? ""}`, features };

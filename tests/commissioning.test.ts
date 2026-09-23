@@ -43,6 +43,9 @@ import { inventoryOf, type Inventory } from "../slots/factory/inventory.js";
 import type { Commissioning, MotherLine } from "../slots/station/provider.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
 import { runProcedure } from "../tier3/procedure.js";
+import { loadLibrary, searchLibrary } from "../slots/tools/library/provider.js";
+import { briefOf } from "../harness/topics/procedure/index.js";
+import { newProgress } from "../harness/core/workspace-observer.js";
 
 const PORT = 3121;
 
@@ -156,6 +159,24 @@ describe("the register, the inventory, the decay", () => {
         assert.ok(Math.abs(fit.equilibriumPpm - 800) <= 2, String(fit.equilibriumPpm));
         assert.equal(decayVolume(samples.slice(0, 3), 3.3), null, "three samples are not a decay");
         assert.equal(decayVolume(samples.map((s) => ({ ...s, ppm: 1200 })), 3.3), null, "a flat line is not a decay");
+    });
+
+    it("the library finds the method from the quantity that is missing, and the harness briefs the builder stage by stage", () => {
+        const docs = loadLibrary();
+        assert.deepEqual(docs.filter((d) => d.measures.includes("Volume")).map((d) => d.id), ["method-concentration-decay"]);
+        assert.ok(docs.every((d) => /^[0-9a-f]{64}$/.test(d.sha256) && d.title && d.summary));
+        assert.equal(searchLibrary(docs, "time constant equilibrium")[0]?.id, "co2-mass-balance");
+        const task = { objective: { required_outputs: [{ name: "V_lab", quantity: "Volume", unit: "m3" }], constraints: {} }, observations: {} } as unknown as Parameters<typeof briefOf>[1];
+        const progress = newProgress();
+        assert.match(briefOf(progress, task), /^Stage 1 of 5, the situation.*biomed\.presence/);
+        progress.reads["factory.inventory"] = { at: "t", value: { unknowns: [{ what: "served volume of lab", quantity: "Volume", unit: "m3", how: "measured" }] } };
+        assert.match(briefOf(progress, task), /^Stage 2 of 5, the method.*measure Volume \(library\.methods\)/);
+        progress.reads["library.read"] = { at: "t", value: { id: "method-concentration-decay" } };
+        assert.match(briefOf(progress, task), /^Stage 3 of 5, the plan/);
+        progress.phase = "build";
+        assert.match(briefOf(progress, task), /^Stage 4 of 5, the procedure\. Write it by the rules of application of method-concentration-decay/);
+        // The brief names the tools, never what a good procedure concludes from them.
+        assert.doesNotMatch(briefOf(newProgress(), task) + briefOf(progress, task), /monitor the|monitoring of|30 ?%|never stop/i);
     });
 
     it("Mother's phrases: the same keys and holes in English and French", () => {

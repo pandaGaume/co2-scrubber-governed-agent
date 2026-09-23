@@ -45,4 +45,12 @@ export interface TopicDefinition {
     intention?(task: TaskFile["task"], generic: Intention): Intention;
     /** The prompt file of the topic, relative to the repository, for a builder that is a language model. */
     prompt?: string;
+    /**
+     * The harness's brief for the next step, written from what the task has
+     * read and done so far: where the work stands and what is still to be
+     * found. It rides in the observation (`features.brief`), so the builder
+     * is led one stage at a time instead of by one long prompt given once.
+     * Deterministic: the same progress gives the same brief.
+     */
+    brief?(progress: Progress, task: TaskFile["task"]): string;
 }

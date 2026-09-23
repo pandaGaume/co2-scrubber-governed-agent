@@ -842,6 +842,8 @@ var EXCLUDED = [
   /^speech\.(synthesize|listVoices|take|played|describe)$/,
   /^workspace\./,
   /^model\./,
+  // The library is the factory's documentation, like its workshop; whether the night's agent reads it too is a later choice, not a side effect.
+  /^library\./,
   /^qr\./,
   /^screens\./,
   /^twin\.(registry_|document_|session_run)/,

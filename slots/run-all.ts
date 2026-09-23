@@ -26,6 +26,7 @@ import { speechSlot } from "./speech/provider.js";
 import { biomedSlot } from "./biomed/provider.js";
 import { workspaceSlot } from "./tools/workspace/provider.js";
 import { modelSlot } from "./tools/model/provider.js";
+import { librarySlot } from "./tools/library/provider.js";
 import { screensSlot } from "./screens/provider.js";
 import { startDiscovery } from "./lib/discovery.js";
 import type { PublishedSlot } from "./lib/slot-server.js";
@@ -48,6 +49,7 @@ const SLOTS: Array<[string, (wsBase: string, logger: (line: string) => void) => 
     ["biomed", biomedSlot],
     ["workspace", workspaceSlot],
     ["model", modelSlot],
+    ["library", librarySlot],
     ["screens", screensSlot],
 ];
 

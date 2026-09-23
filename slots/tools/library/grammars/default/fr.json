@@ -1,0 +1,40 @@
+{
+    "server": {
+        "description": "La bibliothèque de l'usine : des documents choisis sur les épurateurs, l'air, les méthodes de mesure, le CO2 et les personnes, et l'installation, pour vérifier un chiffre ou une méthode plutôt que le deviner",
+        "instructions": "Lister le catalogue, y chercher avec quelques mots, lire un document en entier. Chaque document est un fichier du dépôt avec son sha256 ; ce qui est lu est dans la trace du broker."
+    },
+    "tools": {
+        "list": {
+            "title": "Le catalogue",
+            "description": "Tous les documents de la bibliothèque : identifiant, titre, résumé, les grandeurs que mesure une fiche de méthode, sha256 et taille."
+        },
+        "methods": {
+            "title": "Les méthodes qui mesurent une grandeur",
+            "description": "Les fiches de méthode de la bibliothèque qui mesurent la grandeur donnée (Volume, AirChange, VolumetricFlow...) : identifiant, titre, résumé, ce que chacune mesure. Une fiche porte le principe de la méthode et ses règles d'application ; la lire avec read.",
+            "properties": {
+                "quantity": "la grandeur à mesurer, telle que l'inventaire la nomme"
+            }
+        },
+        "search": {
+            "title": "Chercher dans la bibliothèque",
+            "description": "Les documents où apparaissent les mots de la requête, les plus pertinents d'abord, avec les lignes où ils apparaissent. Lire un document en entier avec read.",
+            "properties": {
+                "query": "quelques mots : une grandeur, une méthode, un appareil, une limite",
+                "limit": "combien de documents au plus (5 si absent)"
+            }
+        },
+        "read": {
+            "title": "Lire un document",
+            "description": "Un document en entier, en markdown, avec son sha256.",
+            "properties": {
+                "id": "l'identifiant du document, donné par list ou search"
+            }
+        }
+    },
+    "resources": {
+        "library://catalogue": {
+            "name": "Catalogue",
+            "description": "Les documents de la bibliothèque, avec leur sha256"
+        }
+    }
+}

@@ -1,0 +1,40 @@
+{
+    "server": {
+        "description": "The factory's library: chosen documents on scrubbers, air, measurement methods, CO2 and people, and the installation, to look a number or a method up rather than guess it",
+        "instructions": "List the catalogue, search it with a few words, read a document whole. Every document is a file of the repository with its sha256; what is read is in the broker's trace."
+    },
+    "tools": {
+        "list": {
+            "title": "The catalogue",
+            "description": "Every document of the library: id, title, a summary, the quantities a method card measures, sha256 and size."
+        },
+        "methods": {
+            "title": "Methods that measure a quantity",
+            "description": "The method cards of the library that measure the given quantity (Volume, AirChange, VolumetricFlow...): id, title, summary, what each measures. A card holds the method's principle and its rules of application; read it with read.",
+            "properties": {
+                "quantity": "the quantity to measure, as the inventory names it"
+            }
+        },
+        "search": {
+            "title": "Search the library",
+            "description": "The documents the query's words appear in, the most matched first, with the lines they appear on. Read a document whole with read.",
+            "properties": {
+                "query": "a few words: a quantity, a method, a device, a limit",
+                "limit": "how many documents at most (5 when absent)"
+            }
+        },
+        "read": {
+            "title": "Read a document",
+            "description": "One document whole, as markdown, with its sha256.",
+            "properties": {
+                "id": "the document's id, from list or search"
+            }
+        }
+    },
+    "resources": {
+        "library://catalogue": {
+            "name": "Catalogue",
+            "description": "The documents of the library, with their sha256"
+        }
+    }
+}

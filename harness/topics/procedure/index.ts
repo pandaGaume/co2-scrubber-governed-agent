@@ -35,7 +35,7 @@ import type { DoneClaim, Progress, WorkshopFile } from "../../core/workspace-obs
 import { checkProcedure, problemLines, type PresenceRead, type ProcedureCheck } from "./check.js";
 import { PROCEDURE_SCHEMA, totalMinutes, type Procedure } from "./procedure.js";
 
-export const PROCEDURE_TOOLS: ReadonlyArray<RegExp> = [/^factory\.inventory$/, /^station\.registry_list$/, /^biomed\.(describe|presence)$/, /^workspace\.(list|read)$/, /^procedure\.submit$/, /^task\.(plan|done|fail)$/];
+export const PROCEDURE_TOOLS: ReadonlyArray<RegExp> = [/^factory\.inventory$/, /^station\.registry_list$/, /^biomed\.(describe|presence)$/, /^library\.(list|methods|search|read)$/, /^workspace\.(list|read)$/, /^procedure\.submit$/, /^task\.(plan|done|fail)$/];
 
 export const PROCEDURE_PROMPT = "harness/topics/procedure/prompt.md";
 
@@ -54,6 +54,8 @@ export interface Submission {
 interface ProcedureTopicState {
     submissions: Submission[];
     accepted: { path: string; sha256: string; procedureId: string } | null;
+    /** The method card the builder read, once it has read one (`library.read` on a `method-` document). */
+    method?: string;
 }
 
 const ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
@@ -171,6 +173,33 @@ function intentionOf(task: TaskFile["task"], generic: Intention): Intention {
     return { ...generic, description: `Write the test procedure that measures ${outputs} for the commissioning${device}, and submit it with procedure.submit. The procedure is run later, by others, once authorised; nothing in this task commands a device.` };
 }
 
+/**
+ * The harness's brief, stage by stage, from what the task has read and
+ * done: the situation (what is installed, who is where), the method (found
+ * from the quantity that is missing, in the library's method cards, with
+ * their rules of application), the plan, the procedure, the hand-over. It
+ * names the tools of each stage, the monitor's among them, and never what
+ * a good procedure concludes from them: the guard holds the rules.
+ */
+export function briefOf(progress: Progress, task: TaskFile["task"]): string {
+    const state = stateOf(progress);
+    const lastRead = progress.reads["library.read"]?.value as { id?: string } | undefined;
+    if (!state.method && typeof lastRead?.id === "string" && lastRead.id.startsWith("method-")) state.method = lastRead.id;
+    const inventory = progress.reads["factory.inventory"]?.value as { unknowns?: Array<{ what: string; quantity: string; unit: string; how: string }> } | undefined;
+    const outputs = task.objective.required_outputs.map((o) => `${o.name} (${o.quantity}${o.unit ? `, ${o.unit}` : ""})`).join(", ");
+    if (state.accepted) return `Stage 5 of 5, hand over. The guard accepted ${state.accepted.path}. End with task.done, the procedure as the artifact.`;
+    if (!inventory) return "Stage 1 of 5, the situation. Nothing is read yet. Your tools say what is installed and what is unknown (factory.inventory, station.registry_list), who is in which module and how the medical monitor works (biomed.presence, biomed.describe).";
+    const unknowns = (inventory.unknowns ?? []).map((u) => `${u.what} (${u.quantity}, ${u.unit}): ${u.how}`).join("; ");
+    if (!state.method) {
+        const quantities = [...new Set((inventory.unknowns ?? []).filter((u) => u.how === "measured").map((u) => u.quantity))].join(", ") || task.objective.required_outputs.map((o) => o.quantity).join(", ");
+        return `Stage 2 of 5, the method. The inventory says what is unknown: ${unknowns || "nothing"}. Find the methods that measure ${quantities} (library.methods), and read the card of the one you choose (library.read): it holds the method's rules of application. The library also holds the physics, the effects of CO2 on people and this installation (library.search, library.list).`;
+    }
+    if (progress.phase === "plan") return `Stage 3 of 5, the plan. You read the method card ${state.method}. Declare with task.plan what no node of the catalogue produces: ${outputs}, topic procedure.`;
+    const last = state.submissions.at(-1);
+    const refused = last && !last.ok ? ` Your last submission was refused: ${last.problems.join("; ")}. Change what these reasons name; the same procedure submitted again gets the same refusal.` : "";
+    return `Stage 4 of 5, the procedure. Write it by the rules of application of ${state.method}, for this installation and the people in it as your tools read them, and submit it (procedure.submit).${refused}`;
+}
+
 export const PROCEDURE_TOPIC: TopicDefinition = {
     name: "procedure",
     tools: PROCEDURE_TOOLS,
@@ -179,4 +208,5 @@ export const PROCEDURE_TOPIC: TopicDefinition = {
     guard: guardProcedure,
     intention: intentionOf,
     prompt: PROCEDURE_PROMPT,
+    brief: briefOf,
 };

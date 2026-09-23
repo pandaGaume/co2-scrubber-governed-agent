@@ -151,7 +151,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         broker,
         provider,
         capabilities,
-        observer: createWorkspaceObserver(broker, taskId, progress),
+        observer: createWorkspaceObserver(broker, taskId, progress, () => topic.brief?.(progress, task) ?? ""),
         evaluator: createTaskEvaluator({ broker, taskId, task, topic, progress }),
         guard: createBuilderGuard({ broker, task, topic, runtimeSlot, taskId, progress }),
         policy: recipes.policy,
