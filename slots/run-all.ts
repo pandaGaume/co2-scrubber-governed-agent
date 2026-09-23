@@ -20,6 +20,7 @@ import { stationSlot } from "./station/provider.js";
 import { factorySlot } from "./factory/provider.js";
 import { reasonerSlot } from "./reasoner/provider.js";
 import { agentSlot } from "./agent/provider.js";
+import { scenarioSlot } from "./scenario/provider.js";
 import { speechSlot } from "./speech/provider.js";
 import { biomedSlot } from "./biomed/provider.js";
 import { workspaceSlot } from "./tools/workspace/provider.js";
@@ -38,6 +39,7 @@ const SLOTS: Array<[string, (wsBase: string, logger: (line: string) => void) => 
     ["factory", factorySlot],
     ["reasoner", reasonerSlot],
     ["agent", agentSlot],
+    ["scenario", scenarioSlot],
     ["speech", speechSlot],
     ["biomed", biomedSlot],
     ["workspace", workspaceSlot],
@@ -122,7 +124,11 @@ async function main(): Promise<void> {
     // The medical monitoring page is meant to be held in someone's hands, on a
     // tablet, away from the machine. Say where to point it rather than making
     // anyone look the address up on a filming day.
-    for (const base of broker?.lanBases ?? []) log(`medical monitoring, on another device on this network: ${base}/biomed.html`);
+    // The simulation is driven from a phone in someone's hand, beside the room.
+    for (const base of broker?.lanBases ?? []) {
+        log(`medical monitoring, on another device on this network: ${base}/biomed.html`);
+        log(`the night, from a phone on this network:               ${base}/simulation.html`);
+    }
     // The board opens the factory's window itself, beside it, on the key press that ends its boot (a second window opened
     // here would cover the board, and a covered page is a hidden page: its timers slow down and the sound with them).
     if (!flag("--no-open") && !flag("--no-broker")) openBrowser(`${httpBase}/`);

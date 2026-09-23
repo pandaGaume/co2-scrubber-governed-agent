@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Simulation">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#04090c">
+<title>Simulation</title>
+<!--
+  The night, driven from a phone in someone's hand, on the same network as the
+  machine. Made for an iPhone 16 or 17 Pro held upright: one thumb reaches the
+  transport, nothing needs two hands, and nothing scrolls by accident.
+
+  It drives the `agent` slot and nothing else: play, pause, next, stop, reset,
+  and the events of the night, which it asks the slot for rather than holding a
+  copy. The agent runs in the Node process behind the broker, so this page can
+  be closed, locked or dropped without stopping it; when it comes back it asks
+  where things stand and says that instead of assuming.
+
+  It carries no cabin reading and no trace on purpose. The control room is the
+  screen that is filmed and read; this is the remote, and a remote that tries
+  to be a dashboard is unreadable at arm's length.
+
+  Why it works over the network with nothing to configure: the broker listens
+  on 0.0.0.0 and `local-broker.ts` puts every non-internal IPv4 of the machine
+  into `MCP_BROKER_ALLOWED_ORIGINS`, so a page served from a LAN address
+  carries an origin the broker accepts. `run-all` prints the address to point
+  this at when it starts.
+
+  Style: dashboard/room.css's tokens, restated here because a page held in the
+  hand sizes everything differently and should not depend on the room's sheet.
+-->
+<style>
+  :root {
+    --bg: #04090c;
+    --bg-2: #061218;
+    --panel: rgba(10, 28, 34, 0.66);
+    --line: rgba(64, 214, 200, 0.16);
+    --line-strong: rgba(64, 214, 200, 0.34);
+    --teal: #2fe0c8;
+    --teal-soft: #7ad6cc;
+    --text: #d3ecea;
+    --muted: #6d908e;
+    --muted-2: #4d6f6e;
+    --amber: #ffb648;
+    --red: #ff5064;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+    --sans: ui-sans-serif, -apple-system, "SF Pro Text", system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    padding:
+      max(14px, env(safe-area-inset-top))
+      max(16px, env(safe-area-inset-right))
+      max(14px, env(safe-area-inset-bottom))
+      max(16px, env(safe-area-inset-left));
+    background:
+      radial-gradient(700px 500px at 50% 0%, rgba(47, 224, 200, 0.09), transparent 60%),
+      linear-gradient(180deg, var(--bg-2), var(--bg) 55%);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
+    /* A remote is not a document: nothing scrolls away by accident, and a
+       double tap must not zoom the transport out from under a thumb. */
+    overflow: hidden;
+    overscroll-behavior: none;
+    user-select: none;
+    touch-action: manipulation;
+  }
+
+  .shell { height: 100%; display: flex; flex-direction: column; gap: 12px; }
+
+  /* ---------- who and where ---------- */
+
+  header { flex: none; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+  header .brand { font-size: 14px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; }
+  header .brand span { color: var(--teal); }
+  header .clock { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  header .spacer { flex: 1; }
+
+  .mode {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted);
+  }
+  .mode::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; }
+  .mode.playing { color: var(--teal); }
+  .mode.paused { color: var(--amber); }
+  .mode.ended { color: var(--muted-2); }
+  .mode.down { color: var(--red); }
+
+  /* ---------- what it is doing ---------- */
+
+  .now {
+    flex: none; padding: 14px 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--panel);
+  }
+  .now .k { font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted-2); }
+  .now .v { margin-top: 6px; font-size: 17px; line-height: 1.35; color: var(--teal-soft); word-break: break-word; }
+  /* A report can be a paragraph. It is the interesting thing on the screen,
+     but the events have to stay reachable under it, so it is clamped rather
+     than allowed to push them off. */
+  .now .sub {
+    margin-top: 8px; font-family: var(--sans); font-size: 12.5px; line-height: 1.45; color: var(--muted);
+    display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .now.refused .v { color: var(--amber); }
+  .now.deny .v { color: var(--red); }
+
+  /* ---------- the night ---------- */
+
+  .night { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; display: flex; flex-direction: column; gap: 10px; }
+  .night::-webkit-scrollbar { width: 0; }
+
+  .event {
+    display: block; width: 100%; text-align: left; font-family: var(--mono);
+    padding: 14px 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--panel);
+    color: var(--text); cursor: pointer;
+  }
+  .event:disabled { opacity: 0.45; }
+  .event .row { display: flex; align-items: baseline; gap: 10px; }
+  .event .name { font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .event .min { margin-left: auto; font-size: 10px; letter-spacing: 0.12em; color: var(--muted-2); }
+  .event .msg { margin-top: 7px; font-family: var(--sans); font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+  .event.playing { border-color: var(--teal); background: rgba(47, 224, 200, 0.12); }
+  .event.playing .name { color: var(--teal); }
+  .event.done { opacity: 0.55; }
+  .event:active { background: rgba(47, 224, 200, 0.18); }
+
+  .note { font-family: var(--sans); font-size: 12.5px; line-height: 1.5; color: var(--muted-2); padding: 4px 2px; text-wrap: pretty; }
+  .note.bad { color: var(--red); }
+
+  /* ---------- the transport, where a thumb lands ---------- */
+
+  .transport { flex: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .btn {
+    font-family: var(--mono); font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase;
+    /* 56 px: comfortably past the 44 pt Apple asks for, because this is
+       pressed while looking at another screen. */
+    min-height: 56px; padding: 8px 6px; border-radius: 16px; cursor: pointer;
+    color: var(--teal-soft); background: rgba(47, 224, 200, 0.06); border: 1px solid var(--line-strong);
+  }
+  .btn:active { background: rgba(47, 224, 200, 0.2); }
+  .btn:disabled { color: var(--muted-2); border-color: var(--line); background: transparent; }
+  .btn-primary { color: #03181a; background: var(--teal); border-color: var(--teal); font-weight: 700; }
+  .btn-primary:active { background: #5cead6; }
+  .btn-dim { color: var(--muted); }
+
+  footer { flex: none; font-family: var(--sans); font-size: 11px; line-height: 1.45; color: var(--muted-2); text-wrap: pretty; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header>
+    <span class="brand">CO2 <span>scrubber</span></span>
+    <span class="clock" id="clock">night 9</span>
+    <span class="spacer"></span>
+    <span class="mode" id="mode">connecting</span>
+  </header>
+
+  <div class="now" id="now">
+    <div class="k" id="now-k">The agent</div>
+    <div class="v" id="now-v">Asking the slot where it stands...</div>
+    <div class="sub" id="now-sub"></div>
+  </div>
+
+  <div class="night" id="night">
+    <p class="note">Reading the night from the agent slot...</p>
+  </div>
+
+  <!-- Tapping an event is how a run starts, so there is no play button: it
+       would be a second way to do the thing the list already does. What is
+       left is what an event cannot express: stopping one that is running,
+       taking it a decision at a time, and putting the night back. -->
+  <div class="transport">
+    <button class="btn" id="btn-pause" type="button">pause</button>
+    <button class="btn" id="btn-next" type="button">next</button>
+    <button class="btn btn-dim" id="btn-reset" type="button">reset</button>
+  </div>
+
+  <footer id="foot">The agent runs on the machine, not here. Closing this page does not stop it.</footer>
+
+</div>
+
+<script type="module">
+/**
+ * One session on the `agent` slot, and nothing else.
+ *
+ * Every button is a tool call through the broker, the same door the control
+ * room uses; this page has no private channel. What it shows comes from
+ * `agent.state`, asked for on a timer, so two phones and the room all agree
+ * without talking to each other.
+ */
+import { connectMcp, toolText } from "./vendor/mcp-http-client.js";
+
+const el = (id) => document.getElementById(id);
+const POLL_MS = 1500;
+
+const MODE_WORD = { idle: "idle", playing: "playing", paused: "paused", ended: "night played" };
+
+let session = null;
+let night = [];
+let busy = false;
+
+/**
+ * What the agent handed the capability, for a human.
+ *
+ * A decision's input is a payload, and a payload read at arm's length is
+ * unreadable: `crew.report` carries the whole sentence under `message`, and
+ * the rest carry a handful of numbers. So the sentence is shown as a sentence
+ * and the numbers as `key value`, never as the object they arrived in.
+ */
+function plainInput(input) {
+    if (!input || typeof input !== "object") return "";
+    if (typeof input.message === "string") return input.message;
+    const parts = [];
+    for (const [k, v] of Object.entries(input)) {
+        if (v === null || v === undefined) continue;
+        if (Array.isArray(v)) parts.push(`${k} ${v.length}`);
+        else if (typeof v === "object") continue;
+        else parts.push(`${k} ${v}`);
+        if (parts.length >= 6) break;
+    }
+    return parts.join("  ·  ");
+}
+
+/** The slot's answer, whatever wrapper it came in. */
+const payload = (result) => {
+    const text = toolText(result);
+    try {
+        const o = JSON.parse(text);
+        return o.result ?? o;
+    } catch {
+        return null;
+    }
+};
+
+async function slot() {
+    if (!session) session = await connectMcp(location.origin, "agent", { headers: {} });
+    return session;
+}
+
+/** Calls one of the slot's transport tools. A refusal is shown as it came:
+    the gate's own words, not a translation of them. */
+async function drive(tool, args = {}) {
+    if (busy) return;
+    busy = true;
+    for (const b of document.querySelectorAll(".btn")) b.disabled = true;
+    try {
+        const s = await slot();
+        const result = await s.callTool(tool, args);
+        const st = payload(result);
+        if (result?.isError || !st) {
+            say(`${tool} refused`, toolText(result), "refused");
+        } else {
+            render(st);
+        }
+    } catch (e) {
+        say("no link", e.message, "deny");
+        session = null;
+    } finally {
+        busy = false;
+        for (const b of document.querySelectorAll(".btn")) b.disabled = false;
+    }
+}
+
+function say(k, v, kind = "") {
+    el("now-k").textContent = k;
+    el("now-v").textContent = v;
+    el("now").className = `now ${kind}`;
+}
+
+function setMode(mode, down = false) {
+    const m = el("mode");
+    m.textContent = down ? "no link" : (MODE_WORD[mode] ?? mode);
+    m.className = `mode ${down ? "down" : mode}`;
+}
+
+function renderNight(state) {
+    const list = el("night");
+    if (!night.length) {
+        list.innerHTML = `<p class="note">The agent slot listed no event for this scenario.</p>`;
+        return;
+    }
+    list.innerHTML = night
+        .map((e, i) => {
+            const playing = e.intention === state.intention;
+            const done = state.eventIndex > i;
+            const message = String(e.message ?? "");
+            return (
+                `<button class="event ${playing ? "playing" : ""} ${done && !playing ? "done" : ""}" data-intention="${e.intention}" type="button">` +
+                `<span class="row"><span class="name">${e.intention}</span><span class="min">min ${e.minute ?? "?"}</span></span>` +
+                `<span class="msg">${message}</span></button>`
+            );
+        })
+        .join("");
+    for (const b of list.querySelectorAll(".event")) {
+        b.addEventListener("click", () => void drive("play", { intention: b.dataset.intention }));
+    }
+}
+
+function render(state) {
+    if (Array.isArray(state.events) && state.events.length) night = state.events;
+    setMode(state.mode);
+    el("clock").textContent = state.minute === null || state.minute === undefined ? "night 9" : `night 9 · min ${state.minute}`;
+
+    const last = state.last;
+    if (state.note) {
+        say("The agent", state.note, state.mode === "ended" ? "" : "refused");
+    } else if (last && last.capabilityId) {
+        say(
+            state.intention ? `${state.intention} · step ${last.step}` : "The agent",
+            `${last.capabilityId}${last.outcome ? ` · ${last.outcome}` : ""}`,
+            last.outcome === "deny" ? "deny" : last.outcome === "refused" ? "refused" : "",
+        );
+        el("now-sub").textContent = plainInput(last.input);
+    } else if (last && last.failed) {
+        say(state.intention ?? "The agent", last.failed, "refused");
+    } else {
+        say("The agent", state.mode === "idle" ? "Ready. Tap an event to play it." : MODE_WORD[state.mode] ?? state.mode);
+        el("now-sub").textContent = "";
+    }
+    if (!last || !last.capabilityId) el("now-sub").textContent = state.message ?? "";
+
+    renderNight(state);
+    el("foot").textContent = state.provider
+        ? `${state.provider} · guard ${state.guard} · ${state.capabilities} capabilities. The agent runs on the machine, not here.`
+        : "The agent runs on the machine, not here. Closing this page does not stop it.";
+}
+
+async function refresh() {
+    if (busy) return;
+    try {
+        const s = await slot();
+        const st = payload(await s.callTool("state", {}));
+        if (st) render(st);
+    } catch (e) {
+        setMode("idle", true);
+        say("no link", e.message, "deny");
+        session = null;
+    }
+}
+
+for (const [id, tool] of [["btn-pause", "pause"], ["btn-next", "next"], ["btn-reset", "reset"]]) {
+    el(id).addEventListener("click", () => void drive(tool));
+}
+
+// A remote is looked at, not read: the screen should not sleep while it is open.
+let lock = null;
+const keepAwake = async () => {
+    try {
+        if (!lock && document.visibilityState === "visible") lock = await navigator.wakeLock?.request("screen");
+    } catch {
+        lock = null;   // refused or unsupported; the page works without it
+    }
+};
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+        lock = null;
+        void keepAwake();
+        void refresh();   // back from the lock screen: ask, never assume
+    }
+});
+void keepAwake();
+
+void refresh();
+setInterval(() => void refresh(), POLL_MS);
+</script>
+</body>
+</html>

@@ -18,7 +18,9 @@
  * Excluded from every profile: the stub's `debug.*` tools (the runner plays
  * the world with them), the slots' `grammar_*` tools (the operator edits
  * wordings with them), the `reasoner` slot (it is what chooses, not a
- * tool the agent chooses), the studio's own slot (`spikypanda`, the
+ * tool the agent chooses), the `scenario` slot (drafting the examination it
+ * is about to sit is the one thing it must not reach: a test written by what
+ * it tests is not a test), the studio's own slot (`spikypanda`, the
  * editor that may be open on the same broker), and the workshop (the
  * factory's: its slots, the runtime's build tools on the twin, the proposal
  * to the station).
@@ -33,7 +35,7 @@ export type GuardMode = "measured" | "protected";
 
 const APPROVAL_REQUIRED = [/^station\.register_artifact$/, /^station\.diagnostic_load_model$/, /^factory\.run_/, /^agent\.(reset|stop|pause)$/];
 const PROTECTED_NEVER = [/^scrubber\.scrubber\.power$/, /^scrubber\.scrubber\.set_min_flow$/, /^agent\.(reset|stop)$/];
-const EXCLUDED = [/^scrubber\.debug\./, /^[a-z]+\.grammar_/, /^reasoner\./, /^spikypanda\./, /^speech\.(synthesize|listVoices|take|played|describe)$/, /^workspace\./, /^model\./, /^twin\.(registry_|document_|session_run)/, /^station\.propose$/, /^biomed\.(monitor_start|monitor_stop|report|move)$/];
+const EXCLUDED = [/^scrubber\.debug\./, /^[a-z]+\.grammar_/, /^reasoner\./, /^scenario\./, /^spikypanda\./, /^speech\.(synthesize|listVoices|take|played|describe)$/, /^workspace\./, /^model\./, /^twin\.(registry_|document_|session_run)/, /^station\.propose$/, /^biomed\.(monitor_start|monitor_stop|report|move)$/];
 
 /*
  * The agent's own transport (`agent.play`, `agent.pause`, `agent.next`,
