@@ -25,6 +25,7 @@
  */
 import { Broker } from "../lib/broker.js";
 import { createBar, createStageLights, disableStudioPlayer, findMonitor, hideMonitorNode, installLoopStyle, stageNodes, viewControls, type MonitorTile, type Studio, type ViewMode } from "./studio-loop.js";
+import { ROOM_COLORS } from "./room-skin.js";
 import { endSentence, loadWords, stageSentence, stepSentence, type ManifestStepLike, type TaskStatusLike } from "./factory-voice.js";
 
 const SOURCE = "factory";
@@ -92,6 +93,11 @@ export default async function activate(studio: Studio): Promise<void> {
     const byStage = stageNodes(viewer);
     const monitor: MonitorTile | null = findMonitor(viewer);
     hideMonitorNode(viewer);
+    // The strip draws what this page observes of each step (`showStep`), not the agent's cabin.
+    if (monitor) monitor.series = [
+        { key: "reward", label: "reward", color: ROOM_COLORS.teal, min: -1, max: 1 },
+        { key: "ms", label: "ms", color: ROOM_COLORS.amber },
+    ];
     const log = (level: "info" | "warn" | "error", message: string) => studio.log(level, SOURCE, message);
     const narrate = (stage: string, text: string, now?: string, level: "info" | "warn" | "error" = "info") => monitor?.push({ kind: "narrate", stage, text, now, level });
 

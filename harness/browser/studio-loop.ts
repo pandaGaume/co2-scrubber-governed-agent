@@ -42,10 +42,23 @@ export interface StudioConnection {
 export interface StudioViewer {
     nodes: StudioNode[];
     connections: StudioConnection[];
+    /** The viewer's named skins (`--ne-*` token maps); `setSkin` applies one to the whole app shell. */
+    skins?: { register(name: string, skin: Readonly<Record<string, string>>): void };
+    setSkin?(name: string): void;
 }
 export interface MonitorTile {
     renderableType: string;
     push(event: Record<string, unknown>): void;
+    /** What the strip draws: the keys of the observation values the page pushes. */
+    series?: MonitorSeries[];
+}
+/** A series of the monitor's strip: the key of the observation values it reads, its label, its colour, its scale (none: the values seen). */
+export interface MonitorSeries {
+    key: string;
+    label: string;
+    color: string;
+    min?: number;
+    max?: number;
 }
 
 export const MONITOR_TYPE = "Harness.Monitor:trace";

@@ -8,11 +8,17 @@
  * nor the graph. Each extension (`tier3/browser/loader.ts`,
  * `factory-loader.ts`) names its document and its page; `&graph=<url>`
  * opens another document (the studio's own `&doc=` is not used, because it
- * is read before any extension has loaded its plugin).
+ * is read before any extension has loaded its plugin). Once the document is
+ * drawn, the studio takes the control room's skin (`room-skin.ts`), the same
+ * for every loop.
  */
+import { applyRoomSkin } from "./room-skin.js";
+import type { StudioViewer } from "./studio-loop.js";
+
 export interface LoaderStudio {
     loadPlugin(spec: { url: string; globalName: string; id?: string }): Promise<unknown>;
     openDocument(json: string): void;
+    getViewer(): StudioViewer;
 }
 
 export interface LoopExtension {
@@ -30,6 +36,8 @@ export async function loadLoopExtension(studio: LoaderStudio, { pluginUrl, defau
     const res = await fetch(graphUrl);
     if (!res.ok) throw new Error(`could not open ${graphUrl}: HTTP ${res.status}`);
     studio.openDocument(await res.text());
+    // Every loop page is the same studio page: it wears the Control Board's skin here, once, whichever loop it opens.
+    applyRoomSkin(studio.getViewer());
     const page = (await import(/* webpackIgnore: true */ pageUrl)) as { default: (studio: unknown) => Promise<void> };
     await page.default(studio);
 }

@@ -46,6 +46,7 @@ import type { Provider } from "../../harness/lib/provider.js";
 import { createAgent, type Agent } from "../agent.js";
 import type { Scenario, ScenarioEvent } from "../../lib/factory.js";
 import { createBar, createStageLights, disableStudioPlayer, findMonitor, hideMonitorNode, installLoopStyle, viewControls, type MonitorTile, type Studio, type StudioNode, type StudioViewer, type ViewMode } from "../../harness/browser/studio-loop.js";
+import { ROOM_COLORS } from "../../harness/browser/room-skin.js";
 import { loadWords, NO_WORDS, type Words } from "../../harness/browser/words.js";
 
 /** `claude-haiku-4-5-20251001` -> `claude-haiku-4-5`: the date suffix says nothing on a badge. */
@@ -102,6 +103,12 @@ export default async function activate(studio: Studio): Promise<void> {
 
     installLoopStyle();
     const viewer = studio.getViewer();
+    // The strip keeps the cabin's two readings, in the Control Board's colours (the skin itself is the loader's).
+    const strip = findMonitor(viewer);
+    if (strip) strip.series = [
+        { key: "co2Ppm", label: "CO2 ppm", color: ROOM_COLORS.teal, min: 0, max: 6000 },
+        { key: "speedPercent", label: "speed %", color: ROOM_COLORS.amber, min: 0, max: 100 },
+    ];
     // The page shows the loop and its story, nothing else: no palette, no
     // property panel, no console (the tile has the crew's); the graph framed
     // whole, and framed again when the window changes.
