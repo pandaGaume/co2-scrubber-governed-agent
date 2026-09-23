@@ -17,7 +17,8 @@
                 "profile": "the profile the loop runs with",
                 "run": "false to open the task without starting the loop (default true)",
                 "objective.required_outputs": "the outputs a plan must produce: name, quantity, unit, horizonMinutes",
-                "objective.constraints": "e.g. { residualPpmMax: 150, windowMinutes: 20 }"
+                "objective.constraints": "e.g. { residualPpmMax: 150, windowMinutes: 20 }",
+                "builder": "who builds: reasoner (the model behind the reasoner slot, with the topic's prompt) or scripted (the topic's script, for the tests); by default the reasoner when the topic has a prompt"
             }
         },
         "task": {
@@ -26,6 +27,10 @@
             "properties": {
                 "taskId": "the task id returned by request"
             }
+        },
+        "inventory": {
+            "title": "Who is there",
+            "description": "The inventory of the installation, read from the station's register through the broker: every device with its ISA-95 path, what it is, what it measures and in which unit, what it accepts; the volumes of air (the places that hold a CO2 sensor), the openings between them (a device that declares it connects two places), which device is being commissioned, and what the register does not say (the served volume, measured; the exchange through an opening, a hypothesis)."
         }
     },
     "resources": {

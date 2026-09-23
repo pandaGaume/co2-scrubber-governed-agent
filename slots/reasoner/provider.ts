@@ -57,18 +57,33 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
     const conversations = new Map<string, Provider>();
     let notReady: string | null = null;
 
+    /**
+     * The system prompt of a conversation: the agent's, or a topic's prompt
+     * file when a factory builder names one. Only a file under
+     * `harness/topics/<topic>/prompt.md` is read: a caller names what the
+     * model is told, it does not write it.
+     */
+    function promptOf(file: string | undefined): string {
+        if (!file) return systemPrompt;
+        if (!/^harness\/topics\/[a-z0-9-]+\/prompt\.md$/.test(file)) throw new Error(`prompt "${file}" is not a topic's prompt file (harness/topics/<topic>/prompt.md)`);
+        const full = fromRoot(file);
+        if (!existsSync(full)) throw new Error(`prompt "${file}" does not exist`);
+        return readFileSync(full, "utf8");
+    }
+
     /** A provider instance per conversation: the adapters keep one conversation each. */
-    async function providerFor(conversationId: string, intentionId: string): Promise<Provider> {
+    async function providerFor(conversationId: string, intentionId: string, promptFile?: string): Promise<Provider> {
         const existing = conversations.get(conversationId);
         if (existing) return existing;
         let provider: Provider;
+        const prompt = promptOf(promptFile);
         try {
             if (wire === "anthropic-messages") {
                 const { AnthropicProvider } = await import("../../harness/providers/anthropic.js");
-                provider = new AnthropicProvider(profile, { systemPrompt });
+                provider = new AnthropicProvider(profile, { systemPrompt: prompt });
             } else {
                 const { OpenAiCompatibleProvider } = await import("../../harness/providers/openai-compatible.js");
-                provider = new OpenAiCompatibleProvider(profile, { systemPrompt });
+                provider = new OpenAiCompatibleProvider(profile, { systemPrompt: prompt });
             }
         } catch (e) {
             notReady = errorMessage(e);
@@ -156,6 +171,7 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
                         allowedCapabilities: { type: "array", description: "[{ id, description, inputSchema?, replayPolicy? }]" },
                         candidates: { type: "array", description: "learned decisions the harness considered" },
                         recentFailures: { type: "array", description: "recent experiences that failed" },
+                        prompt: { type: "string", description: "a topic's prompt file (harness/topics/<topic>/prompt.md) the model reads instead of the agent's, for a factory builder; read once, when the conversation opens" },
                     },
                     required: ["conversationId", "intention", "state", "allowedCapabilities"],
                 },
@@ -163,7 +179,7 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
                     const conversationId = String(args.conversationId);
                     const intention = args.intention as Intention;
                     if (!intention?.id) throw new Error("intention.id is required");
-                    const provider = await providerFor(conversationId, intention.id);
+                    const provider = await providerFor(conversationId, intention.id, typeof args.prompt === "string" ? args.prompt : undefined);
                     const input: PolicyFallbackInput = {
                         decisionId: typeof args.decisionId === "string" ? args.decisionId : undefined,
                         intention,

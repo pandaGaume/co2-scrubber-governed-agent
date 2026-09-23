@@ -24,10 +24,24 @@ import { fromRoot, relativeToRoot } from "../../lib/paths.js";
 import { errorMessage, sha256File } from "../../lib/files.js";
 import { objectSchema as obj, publishSlot, type PublishedSlot, type SlotTool } from "../lib/slot-server.js";
 import { checkTaskId, listTaskFiles, safeRelative, sha256Of, taskDir, WORKSHOP_ROOT } from "../tools/lib/workshop.js";
-import { DEFAULT_BUDGET, TOPICS, type RequiredOutput, type TaskFile, type TaskState } from "../../harness/core/task.js";
-import { runTask } from "../../harness/core/runner.js";
+import { DEFAULT_BUDGET, TOPICS, type RequiredOutput, type TaskFile, type TaskState, type Topic } from "../../harness/core/task.js";
+import { runTask, TOPIC_DEFINITIONS, type RunTaskOptions } from "../../harness/core/runner.js";
 import { ScriptedBuilder } from "../../harness/scripted/onnx.js";
+import { ScriptedProcedureBuilder } from "../../harness/scripted/procedure.js";
+import { ReasonerProvider } from "../../harness/providers/reasoner.js";
 import { Broker } from "../../harness/lib/broker.js";
+import type { Device } from "../station/registry.js";
+import { inventoryOf } from "./inventory.js";
+
+/**
+ * Who builds a task: the language model behind the `reasoner` slot, which
+ * reads the topic's prompt (the default for a topic that has one: the
+ * procedure), or the topic's script (the default for `onnx`, whose prompt
+ * is F5; for the procedure only when asked by name, which the tests do).
+ * The factory never falls back from one to the other on its own: a
+ * reasoner that is not ready fails the task and says why.
+ */
+export type BuilderChoice = "reasoner" | "scripted";
 
 export interface TaskStatus {
     taskId: string;
@@ -110,22 +124,40 @@ function taskAnswer(taskId: string, s: FactoryState, manifest?: Readonly<Record<
 }
 
 /** Starts the loop on a task, in this process, on the factory's own client of the broker; the manifest carries the outcome, and `announce` tells the readers of the task list as it goes. */
-function launch(httpBase: string, taskId: string, s: FactoryState, log: (line: string) => void, announce: (taskId: string, manifest?: Readonly<Record<string, unknown>>) => void): TaskRun {
-    const run: TaskRun = { startedAt: new Date().toISOString(), builder: "scripted:onnx", lastStage: null, ended: null };
+function launch(httpBase: string, taskId: string, topic: Topic, builder: BuilderChoice, s: FactoryState, log: (line: string) => void, announce: (taskId: string, manifest?: Readonly<Record<string, unknown>>) => void): TaskRun {
+    const run: TaskRun = { startedAt: new Date().toISOString(), builder: builder === "scripted" ? `scripted:${topic}` : "reasoner", lastStage: null, ended: null };
     s.runs[taskId] = run;
     const broker = new Broker(httpBase, { name: "factory", version: VERSION, locale: "en" });
-    void runTask({
-        broker,
-        taskId,
-        provider: (ctx) => new ScriptedBuilder(ctx),
-        // The recipes of the topics: `_recipes/` next to the workshops unless the host says where (the tests keep their own).
-        ...(process.env.FACTORY_RECIPES_DIR ? { recipesDir: path.resolve(process.env.FACTORY_RECIPES_DIR) } : {}),
-        log,
-        onStage: (e) => {
-            if (e.status === "complete") run.lastStage = e.stage;
-        },
-        onProgress: (manifest) => announce(taskId, manifest as unknown as Record<string, unknown>),
-    })
+    void (async () => {
+        // The builder: the script of the topic only when asked for by name; otherwise the model behind the reasoner slot, reading the topic's prompt.
+        let provider: RunTaskOptions["provider"];
+        let promptFile: string | null = null;
+        if (builder === "scripted") provider = topic === "procedure" ? (ctx) => new ScriptedProcedureBuilder(ctx) : (ctx) => new ScriptedBuilder(ctx);
+        else {
+            const prompt = TOPIC_DEFINITIONS[topic]?.prompt;
+            if (!prompt) throw new Error(`topic ${topic} has no prompt for a model yet: ask for builder "scripted"`);
+            const reasoner = await ReasonerProvider.connect(broker);
+            if (!reasoner.description.ready) throw new Error(`the reasoner is not ready: ${reasoner.description.reason ?? "no reason given"}`);
+            reasoner.usePrompt(prompt);
+            run.builder = reasoner.name;
+            provider = reasoner;
+            promptFile = prompt;
+        }
+        return runTask({
+            broker,
+            taskId,
+            provider,
+            topic,
+            promptFile,
+            // The recipes of the topics: `_recipes/` next to the workshops unless the host says where (the tests keep their own).
+            ...(process.env.FACTORY_RECIPES_DIR ? { recipesDir: path.resolve(process.env.FACTORY_RECIPES_DIR) } : {}),
+            log,
+            onStage: (e) => {
+                if (e.status === "complete") run.lastStage = e.stage;
+            },
+            onProgress: (manifest) => announce(taskId, manifest as unknown as Record<string, unknown>),
+        });
+    })()
         .then((r) => {
             run.ended = r.state;
         })
@@ -176,6 +208,7 @@ export function factorySlot(wsBase: string, log: (line: string) => void): Publis
                     requestedBy: { type: "string" },
                     profile: { type: "string" },
                     run: { type: "boolean" },
+                    builder: { type: "string", enum: ["reasoner", "scripted"] },
                 },
                 ["objective"],
             ),
@@ -213,7 +246,9 @@ export function factorySlot(wsBase: string, log: (line: string) => void): Publis
                 const status = statusOf(taskId);
                 s.tasks[taskId] = status;
                 log(`[factory] task ${taskId}: ${outputs.map((o) => o.name).join(", ")} for ${task.task.requestedBy}, ${data.length} data file(s)`);
-                const run = args.run === false ? null : launch(httpBase, taskId, s, log, (id, manifest) => announce(id, manifest));
+                const topic: Topic = Array.isArray(topics) && topics.length ? (topics[0] as Topic) : "onnx";
+                const builder: BuilderChoice = args.builder === "scripted" || args.builder === "reasoner" ? args.builder : TOPIC_DEFINITIONS[topic]?.prompt ? "reasoner" : "scripted";
+                const run = args.run === false ? null : launch(httpBase, taskId, topic, builder, s, log, (id, manifest) => announce(id, manifest));
                 if (!run) announce(taskId);
                 return { taskId, state: run ? "running" : status.state, workspace: status.workspace, taskSha256: status.taskSha256, data, builder: run?.builder ?? null, started: Boolean(run) };
             },
@@ -222,6 +257,21 @@ export function factorySlot(wsBase: string, log: (line: string) => void): Publis
             name: "task",
             inputSchema: obj({ taskId: { type: "string" } }, ["taskId"]),
             handle: (args, s) => taskAnswer(checkTaskId(args.taskId), s),
+        },
+        {
+            // Who is there: Mother's register, read through the broker as the factory reads everything, and what can be told from it.
+            name: "inventory",
+            inputSchema: obj({}),
+            handle: async () => {
+                const reader = new Broker(httpBase, { name: "factory", version: VERSION, locale: "en" });
+                try {
+                    const r = await reader.call("station", "registry_list", {});
+                    if (!r.ok) throw new Error(`the station's register did not answer: ${r.error ?? r.outcome}`);
+                    return inventoryOf((r.output as { devices: Device[] }).devices);
+                } finally {
+                    await reader.close();
+                }
+            },
         },
     ];
 

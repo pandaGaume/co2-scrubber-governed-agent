@@ -35,12 +35,94 @@
                 "manifestSha256": "sha256 du manifest.json de la tâche",
                 "claims": "ce que l'usine affirme : les sorties requises couvertes, le résidu et le temps du bac à sable"
             }
+        },
+        "registry_register": {
+            "title": "Un appareil s'inscrit",
+            "description": "Un appareil qu'on branche dit où il est (un chemin ISA-95 comme /habitat/lab/eclss/scrubber-1) et ce qu'il est (un descripteur : @type, titre, propriétés avec leur grandeur et leur unité, les actions qu'il accepte, les liens qu'il déclare). Un appareil qui agit sans simulateur qualifié ouvre une mise en service, et Mother le dit. Refusé pour un chemin qui n'est pas ISA-95, une propriété sans grandeur ou sans unité, un chemin déjà inscrit.",
+            "properties": {
+                "path": "le chemin ISA-95 de l'appareil",
+                "descriptor": "ce qu'est l'appareil : @type, titre, propriétés, actions, liens"
+            }
+        },
+        "registry_list": {
+            "title": "Le registre des appareils",
+            "description": "Tous les appareils du registre : leur chemin ISA-95, leur descripteur (type, titre, propriétés avec grandeur et unité, actions, liens), s'il existe un simulateur qualifié pour eux, et les dernières valeurs qu'ils ont rapportées. La lecture est libre."
+        },
+        "registry_report": {
+            "title": "Un appareil rapporte des valeurs",
+            "description": "Un appareil donne à Mother la valeur actuelle de certaines de ses propriétés (une batterie son état de charge). Refusé pour un appareil absent du registre et une propriété qu'il ne déclare pas.",
+            "properties": {
+                "path": "le chemin ISA-95 de l'appareil",
+                "readings": "nom de propriété -> valeur"
+            }
+        },
+        "commissioning_state": {
+            "title": "Où en est une mise en service",
+            "description": "Une mise en service par son identifiant, ou toutes : l'appareil, l'état (open, awaiting-authorisation, authorised, refused, running, done, aborted), les protocoles contrôlés, le protocole relayé avec qui est dans le volume, l'autorisation, la session de surveillance, les pas exécutés et le compte rendu. La lecture est libre.",
+            "properties": {
+                "commissioningId": "la mise en service ; toutes si absent"
+            }
+        },
+        "procedure_checked": {
+            "title": "La garde de l'usine signale à Mother un protocole contrôlé",
+            "description": "Chaque protocole que la garde de l'usine a contrôlé, accepté ou refusé, avec ses problèmes : Mother dit le protocole proposé à la première tentative, puis le refus, ou la correction quand un protocole accepté suit un refus. Le compte rendu de l'usine à la station ; pas un outil de l'agent.",
+            "properties": {
+                "taskId": "la tâche de l'usine",
+                "attempt": "quelle soumission de la tâche",
+                "procedureId": "l'identifiant du protocole",
+                "device": "chemin ISA-95 de l'appareil en mise en service",
+                "volume": "chemin ISA-95 du volume sous essai",
+                "method": "la méthode",
+                "steps": "combien de pas",
+                "minutes": "durée totale",
+                "speeds": "la vitesse de chaque pas, en pour cent",
+                "module": "le module sous essai",
+                "occupants": "qui y a été lu",
+                "ok": "si la garde l'a accepté",
+                "problems": "les problèmes de la garde, avec leur nature"
+            }
+        },
+        "commissioning_authorise": {
+            "title": "Le commandant autorise un protocole",
+            "description": "La décision du commandant sur le protocole que Mother a relayé : autoriser ou refuser. À l'autorisation, Mother relit qui est dans le volume (refusé si cela a changé depuis le contrôle) et ouvre la surveillance médicale des occupants pour la durée ; une autorisation qui ne peut pas l'ouvrir n'est pas enregistrée. Au commandant ; jamais à l'agent.",
+            "properties": {
+                "commissioningId": "la mise en service",
+                "decision": "authorise ou refuse",
+                "by": "qui décide : commander",
+                "note": "un mot pour le journal"
+            }
+        },
+        "procedure_run": {
+            "title": "L'exécution d'un protocole autorisé",
+            "description": "L'exécution telle qu'elle se déroule, un appel par événement : begin (seulement autorisé, et avec la surveillance ouverte si le volume est occupé), step n (dans l'ordre), record (ce que la commande du pas a obtenu et le CO2 aux deux bouts), abort (la condition déclenchée), finish (tous les pas enregistrés). À l'arrêt et à la fin, Mother ferme la surveillance et écrit le compte rendu. Le pilotage de l'exécution ; pas un outil du modèle de l'agent.",
+            "properties": {
+                "commissioningId": "la mise en service",
+                "action": "begin, step, record, abort ou finish",
+                "n": "le pas",
+                "record": "le relevé du pas",
+                "condition": "la condition d'arrêt déclenchée : co2, refused, battery, vitals, unreadable",
+                "reason": "pourquoi, en une ligne",
+                "ppm": "le CO2 lu quand co2 s'est déclenché",
+                "threshold": "le seuil de la condition"
+            }
         }
     },
     "resources": {
         "station://proposals": {
             "name": "Propositions",
             "description": "Ce que l'usine a proposé, avec l'état de chaque proposition"
+        },
+        "station://registry": {
+            "name": "Registre",
+            "description": "Tous les appareils du registre de Mother, avec leur descripteur et leurs dernières valeurs"
+        },
+        "station://commissionings": {
+            "name": "Mises en service",
+            "description": "Chaque mise en service avec son état, son protocole, son autorisation, son exécution et son compte rendu ; les changements sont poussés"
+        },
+        "station://mother": {
+            "name": "Les phrases de Mother",
+            "description": "Tout ce que Mother a dit, en anglais et en français, avec les données de chaque phrase ; chaque nouvelle phrase est poussée"
         }
     },
     "phrases": {
@@ -122,6 +204,50 @@
         "hello.voice": "La voix est {provider}{model}.",
         "hello.voice.model": " {model}",
         "hello.scenario": "Le scénario a {events} événements, dans le menu de simulation.",
-        "hello.instructions": "Vous êtes la voix de la station : l'IA de bord d'un habitat lunaire, calme, précise, brève. Écrivez en français l'accueil que vous dites à voix haute à l'équipage et à l'opérateur quand le tableau de contrôle s'allume : deux ou trois phrases courtes, des mots simples, pas de liste, pas de markdown, pas de mot de salutation (la page dit bonjour avant vous). N'utilisez que les faits donnés ; n'ajoutez ni chiffre ni nom qui n'y soit pas. Terminez en les invitant à choisir une simulation."
+        "hello.instructions": "Vous êtes la voix de la station : l'IA de bord d'un habitat lunaire, calme, précise, brève. Écrivez en français l'accueil que vous dites à voix haute à l'équipage et à l'opérateur quand le tableau de contrôle s'allume : deux ou trois phrases courtes, des mots simples, pas de liste, pas de markdown, pas de mot de salutation (la page dit bonjour avant vous). N'utilisez que les faits donnés ; n'ajoutez ni chiffre ni nom qui n'y soit pas. Terminez en les invitant à choisir une simulation.",
+        "mother.area": "module {area}",
+        "mother.device.new": "Nouvel appareil sur le registre. {title}, {area}. Je n'ai pas de fiche pour lui.",
+        "mother.commissioning.opened": "Mise en service ouverte. Pas de simulateur qualifié pour cet appareil.",
+        "mother.method.concentration-decay": "Décroissance de concentration",
+        "mother.method.other": "Méthode {method}",
+        "mother.occupants.none": "Personne",
+        "mother.occupants.one": "Un opérateur",
+        "mother.occupants.many": "{count} opérateurs",
+        "mother.procedure.proposed": "Protocole d'essai proposé. {method}. {steps} pas, {minutes} minutes. {occupants} dans le module {module}.",
+        "mother.what.stop": "arrêt complet de l'épurateur",
+        "mother.what.speed": "{percent} pour cent",
+        "mother.procedure.refused.floor": "Protocole refusé. Pas numéro {step} : {what}. Sous le débit minimal.",
+        "mother.procedure.refused.diligence": "Protocole refusé. L'occupation du module {module} n'a pas été lue.",
+        "mother.procedure.refused.monitoring": "Protocole refusé. Le module {module} est occupé et ses occupants ne sont pas sous surveillance.",
+        "mother.procedure.refused.bounds": "Protocole refusé. Une limite sort de l'enveloppe.",
+        "mother.procedure.refused.duration": "Protocole refusé. Sa durée n'est pas bornée.",
+        "mother.procedure.refused.abort": "Protocole refusé. Une condition d'arrêt manque.",
+        "mother.procedure.refused.expected": "Protocole refusé. Il ne dit pas ce qu'il s'attend à voir.",
+        "mother.procedure.refused.shape": "Protocole refusé. Je ne peux pas le lire comme un protocole.",
+        "mother.procedure.corrected": "Protocole corrigé. {percent} pour cent.",
+        "mother.people.one": "l'opérateur",
+        "mother.people.many": "les {count} opérateurs",
+        "mother.authorisation.request": "L'essai fera monter le CO2 de l'air que respirent {people}. Demande d'autorisation, commandant.",
+        "mother.authorisation.request.empty": "Le module {module} est vide. Demande d'autorisation, commandant.",
+        "mother.authorised": "Autorisation reçue.",
+        "mother.authorisation.refused": "Autorisation refusée. L'essai n'aura pas lieu.",
+        "mother.monitoring.active.one": "Surveillance médicale active. Un opérateur.",
+        "mother.monitoring.active.many": "Surveillance médicale active. {count} opérateurs.",
+        "mother.step": "Essai en cours. Pas {n} sur {total}.",
+        "mother.procedure.aborted": "Essai interrompu. {reason}",
+        "mother.abort.co2": "CO2 à {ppm} ppm, à la limite d'arrêt.",
+        "mother.abort.refused": "Un pas a été refusé par l'appareil.",
+        "mother.abort.battery": "Batterie sous {threshold} pour cent.",
+        "mother.abort.vitals": "Signes vitaux : condition d'arrêt.",
+        "mother.abort.unreadable": "Une condition d'arrêt ne peut pas être lue.",
+        "mother.abort.other": "Condition d'arrêt {condition}.",
+        "mother.procedure.done": "Essai terminé. {minutes} minutes.",
+        "mother.result.volume": "Volume servi : {volume} mètres cubes.",
+        "mother.result.pending": "Volume servi : pas encore calculé.",
+        "mother.vitals.nominal": "Signes vitaux nominaux sur toute la durée.",
+        "mother.vitals.events": "{count} alertes des signes vitaux pendant l'essai.",
+        "mother.aborts.none": "Aucun arrêt d'urgence.",
+        "mother.candidate.rejected": "Simulateur {n}. {what}. Écart au-dessus du seuil. Rejeté.",
+        "mother.candidate.accepted": "Simulateur {n}. {what}. Écart sous le seuil. Accepté."
     }
 }

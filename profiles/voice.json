@@ -1,9 +1,9 @@
 {
-    "_comment": "The speech slot's engine and voices (BYOK: the key is read from the environment variable named here, never stored). One engine voice per speaker, so each tier has its own; `say { voice: \"twin\" }` picks it. Both voices below are ElevenLabs identifiers given on 2026-09-20. The station is the on-board AI the demo embodies: it reads the messages from Earth, the model's proposals, the twin's answers, the board's refusals; the agent speaks with the same voice.",
+    "_comment": "The speech slot's engine and voices (BYOK: the key is read from the environment variable named here, never stored). One engine voice per speaker, so each tier has its own; `say { voice: \"twin\" }` picks it. Both voices below are ElevenLabs identifiers given on 2026-09-20. The station is Mother, the on-board AI the demo embodies: she reads the messages from Earth, the model's proposals, the twin's answers, the board's refusals, and the commissioning. Since 2026-09-23 she no longer shares the agent's voice (docs/mise-en-service.fr.md, section 17): she is the one who does not think, and it has to be heard. She takes the other voice already listed, the calmer and more neutral of the two, which she shares with the twin and the factory until a third identifier is chosen for her.",
     "voice": {
         "provider": "elevenlabs",
         "apiKey": "${ELEVENLABS_API_KEY}",
-        "voiceId": "eWc2pftlLqhJtXnPQknh",
+        "voiceId": "JBFqnCBsd6RMkjVDRZzb",
         "model": "eleven_flash_v2_5",
         "outputFormat": "mp3_44100_128",
         "defaultVoice": "station",
@@ -11,7 +11,7 @@
             "agent": "eWc2pftlLqhJtXnPQknh",
             "twin": "JBFqnCBsd6RMkjVDRZzb",
             "factory": "JBFqnCBsd6RMkjVDRZzb",
-            "station": "eWc2pftlLqhJtXnPQknh"
+            "station": "JBFqnCBsd6RMkjVDRZzb"
         }
     }
 }

@@ -15,7 +15,8 @@
                 "budget": "iterations, minutes, twinPoints",
                 "requestedBy": "qui demande : tier3, operator",
                 "profile": "le profil avec lequel la boucle tourne",
-                "run": "false pour ouvrir la tâche sans lancer la boucle (vrai par défaut)"
+                "run": "false pour ouvrir la tâche sans lancer la boucle (vrai par défaut)",
+                "builder": "qui construit : reasoner (le modèle derrière le slot reasoner, avec le prompt du sujet) ou scripted (le script du sujet, pour les tests) ; par défaut le reasoner quand le sujet a un prompt"
             }
         },
         "task": {
@@ -24,6 +25,10 @@
             "properties": {
                 "taskId": "l'identifiant rendu par request"
             }
+        },
+        "inventory": {
+            "title": "Qui est là",
+            "description": "L'inventaire de l'installation, lu dans le registre de la station par le broker : chaque appareil avec son chemin ISA-95, ce qu'il est, ce qu'il mesure et dans quelle unité, ce qu'il accepte ; les volumes d'air (les lieux qui ont un capteur de CO2), les ouvertures entre eux (un appareil qui déclare relier deux lieux), quel appareil est en mise en service, et ce que le registre ne dit pas (le volume servi, mesuré ; l'échange par une ouverture, une hypothèse)."
         }
     },
     "resources": {

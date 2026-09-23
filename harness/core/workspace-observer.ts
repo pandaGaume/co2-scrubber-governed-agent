@@ -39,7 +39,7 @@ export interface Plan {
 
 export interface DoneClaim {
     summary: string;
-    artifacts: Array<{ kind: "graph" | "model" | "twin"; path: string }>;
+    artifacts: Array<{ kind: "graph" | "model" | "twin" | "procedure"; path: string }>;
 }
 
 export interface WorkshopFile {
@@ -63,10 +63,14 @@ export interface Progress {
     sandbox: Record<string, JsonValue> | null;
     /** Why the builder gave up (`task.fail`), when it did. */
     failure: string | null;
+    /** The last successful answer of every capability called in this task, and when: what a topic's rule asks "was this read here" of. */
+    reads: Record<string, { at: string; value: JsonValue }>;
+    /** What a topic keeps across the steps of one task (the procedure topic: its submissions). */
+    topic: Record<string, JsonValue>;
 }
 
 export function newProgress(): Progress {
-    return { phase: "plan", iteration: 0, plan: null, done: null, lastCall: null, lastRefusal: null, checkedModels: [], sandbox: null, failure: null };
+    return { phase: "plan", iteration: 0, plan: null, done: null, lastCall: null, lastRefusal: null, checkedModels: [], sandbox: null, failure: null, reads: {}, topic: {} };
 }
 
 export interface WorkshopFeatures extends Record<string, JsonValue> {
@@ -89,7 +93,7 @@ export interface WorkshopState extends State {
     readonly features: WorkshopFeatures;
 }
 
-const ARTIFACT = /(\.onnx|\.spikypanda|^models\/.*\.json)$/;
+const ARTIFACT = /(\.onnx|\.spikypanda|^models\/.*\.json|^procedures\/.*\.json)$/;
 export const isArtifact = (path: string): boolean => ARTIFACT.test(path);
 
 /** The task's files as the workspace slot lists them. */

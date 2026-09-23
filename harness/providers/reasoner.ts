@@ -60,6 +60,17 @@ export class ReasonerProvider implements Provider {
         this.broker = broker;
     }
 
+    /**
+     * The prompt file the slot's model reads instead of the agent's, for a
+     * builder of the factory (`harness/topics/<topic>/prompt.md`). A path,
+     * never a text: the slot reads it from the repository and only from the
+     * topics' folders, so what the model was told is a file with a sha256.
+     */
+    usePrompt(file: string | null): void {
+        this.prompt = file;
+    }
+    private prompt: string | null = null;
+
     get name(): string {
         return `reasoner:${this.family}`;
     }
@@ -80,6 +91,7 @@ export class ReasonerProvider implements Provider {
             allowedCapabilities: input.allowedCapabilities,
             candidates: input.candidates,
             recentFailures: input.recentFailures,
+            ...(this.prompt ? { prompt: this.prompt } : {}),
         });
         if (!r.ok) throw new Error(r.error ?? "reasoner.decide failed");
         const a = r.output as DecideAnswer;

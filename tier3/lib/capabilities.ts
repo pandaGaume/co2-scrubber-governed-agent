@@ -23,7 +23,9 @@
  * it tests is not a test), the studio's own slot (`spikypanda`, the
  * editor that may be open on the same broker), and the workshop (the
  * factory's: its slots, the runtime's build tools on the twin, the proposal
- * to the station).
+ * to the station), and the commissioning's commanding tools on the station
+ * (the register's writes, the factory's report to Mother, the commander's
+ * authorisation, the run control; see below).
  */
 import type { CapabilityRegistryOptions, CapabilityResult, ExecutionContext, JsonValue, ReplayPolicy } from "@spiky-panda/harness";
 import type { Broker } from "../../harness/lib/broker.js";
@@ -35,7 +37,48 @@ export type GuardMode = "measured" | "protected";
 
 const APPROVAL_REQUIRED = [/^station\.register_artifact$/, /^station\.diagnostic_load_model$/, /^factory\.run_/, /^agent\.(reset|stop|pause)$/];
 const PROTECTED_NEVER = [/^scrubber\.scrubber\.power$/, /^scrubber\.scrubber\.set_min_flow$/, /^agent\.(reset|stop)$/];
-const EXCLUDED = [/^scrubber\.debug\./, /^[a-z]+\.grammar_/, /^reasoner\./, /^scenario\./, /^spikypanda\./, /^speech\.(synthesize|listVoices|take|played|describe)$/, /^workspace\./, /^model\./, /^qr\./, /^screens\./, /^twin\.(registry_|document_|session_run)/, /^station\.propose$/, /^biomed\.(monitor_start|monitor_stop|report|move)$/];
+const EXCLUDED = [
+    /^scrubber\.debug\./,
+    /^[a-z]+\.grammar_/,
+    /^reasoner\./,
+    /^scenario\./,
+    /^spikypanda\./,
+    /^speech\.(synthesize|listVoices|take|played|describe)$/,
+    /^workspace\./,
+    /^model\./,
+    /^qr\./,
+    /^screens\./,
+    /^twin\.(registry_|document_|session_run)/,
+    /^station\.propose$/,
+    /^biomed\.(monitor_start|monitor_stop|report|move)$/,
+    /^station\.(registry_register|registry_report|procedure_checked|commissioning_authorise|procedure_run)$/,
+];
+
+/*
+ * The commissioning's commanding tools are excluded, and not merely
+ * approval-required (2026-09-23), because each belongs to someone else:
+ *
+ *   station.registry_register, station.registry_report  a device writes the
+ *       register about itself; an agent that could write it could make a
+ *       device appear, or a battery look full;
+ *   station.procedure_checked  the factory's guard tells Mother what it
+ *       checked; an agent that could call it could put words in her mouth;
+ *   station.commissioning_authorise  the commander's decision, and the one
+ *       moment of the story where a machine stops and waits for a human.
+ *       An approval dialog would turn it into the agent's request that the
+ *       operator clicks through; it is not a request, it is the decision;
+ *   station.procedure_run  the run control of an authorised procedure. The
+ *       agent executes a procedure, one command at a time and under its own
+ *       rights (`scrubber.motor.set_speed`, which the board still judges),
+ *       through the deterministic executor of `tier3/procedure.ts`; its model
+ *       never skips a step, finishes early, or clears an abort.
+ *
+ * This is not security by omission, as the agent's transport below would
+ * be: nothing here is a command the agent is supposed to be refused in
+ * view. The reads stay in the catalogue (`station.registry_list`,
+ * `station.commissioning_state`, `factory.inventory`), so the agent can see
+ * a commissioning and say where it stands.
+ */
 
 /*
  * The agent's own transport (`agent.play`, `agent.pause`, `agent.next`,

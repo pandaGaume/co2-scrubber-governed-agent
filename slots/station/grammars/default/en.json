@@ -13,12 +13,94 @@
                 "artifacts.sha256": "sha256 of the artifact",
                 "artifacts.contractSha256": "sha256 of its contract, for a model"
             }
+        },
+        "registry_register": {
+            "title": "A device registers itself",
+            "description": "A device that plugs in says where it is (an ISA-95 path such as /habitat/lab/eclss/scrubber-1) and what it is (a descriptor: @type, title, properties with their quantity and unit, the actions it accepts, the links it declares). A device that acts and has no qualified simulator opens a commissioning, and Mother says so. Refused for a path that is not ISA-95, a property without quantity or unit, a path already registered.",
+            "properties": {
+                "path": "the device's ISA-95 path",
+                "descriptor": "what the device is: @type, title, properties, actions, links"
+            }
+        },
+        "registry_list": {
+            "title": "The register of the devices",
+            "description": "Every device on the register: its ISA-95 path, its descriptor (type, title, properties with quantity and unit, actions, links), whether a qualified simulator exists for it, and the last readings it reported. Reading is free."
+        },
+        "registry_report": {
+            "title": "A device reports readings",
+            "description": "A device hands Mother the current value of some of its properties (a battery its state of charge). Refused for a device not on the register and a property it does not declare.",
+            "properties": {
+                "path": "the device's ISA-95 path",
+                "readings": "property name -> value"
+            }
+        },
+        "commissioning_state": {
+            "title": "Where a commissioning stands",
+            "description": "One commissioning by its id, or all of them: the device, the status (open, awaiting-authorisation, authorised, refused, running, done, aborted), the procedures checked, the procedure relayed with who is in the volume, the authorisation, the monitoring session, the steps run and the report. Reading is free.",
+            "properties": {
+                "commissioningId": "the commissioning; all of them when absent"
+            }
+        },
+        "procedure_checked": {
+            "title": "The factory's guard tells Mother of a procedure it checked",
+            "description": "Every procedure the factory's guard checked, accepted or refused, with its problems: Mother says the procedure proposed on the first attempt, then the refusal, or the correction when an accepted one follows a refusal. The factory's report to the station; not a tool of the agent.",
+            "properties": {
+                "taskId": "the factory task",
+                "attempt": "which submission of the task",
+                "procedureId": "the procedure's id",
+                "device": "ISA-95 path of the device under commissioning",
+                "volume": "ISA-95 path of the volume under test",
+                "method": "the method",
+                "steps": "how many steps",
+                "minutes": "total duration",
+                "speeds": "the speed of each step, percent",
+                "module": "the module under test",
+                "occupants": "who was read in it",
+                "ok": "whether the guard accepted it",
+                "problems": "the guard's problems, with their kind"
+            }
+        },
+        "commissioning_authorise": {
+            "title": "The commander authorises a procedure",
+            "description": "The commander's decision on the procedure Mother relayed: authorise or refuse. On authorisation Mother reads who is in the volume again (refused if it changed since the check) and opens the medical monitoring of the occupants for the duration; an authorisation that cannot open it is not recorded. The commander's; never the agent's.",
+            "properties": {
+                "commissioningId": "the commissioning",
+                "decision": "authorise or refuse",
+                "by": "who decides: commander",
+                "note": "a word for the record"
+            }
+        },
+        "procedure_run": {
+            "title": "The run of an authorised procedure",
+            "description": "The run as it is executed, one call per event: begin (only when authorised, and with the monitoring open when the volume is occupied), step n (in order), record (what the step's command got and the CO2 at both ends), abort (the condition that tripped), finish (all steps recorded). On abort and finish Mother closes the monitoring and writes the report. Run control; not a tool the agent's model calls.",
+            "properties": {
+                "commissioningId": "the commissioning",
+                "action": "begin, step, record, abort or finish",
+                "n": "the step",
+                "record": "the step's record",
+                "condition": "the abort condition that tripped: co2, refused, battery, vitals, unreadable",
+                "reason": "why, in one line",
+                "ppm": "the CO2 read when co2 tripped",
+                "threshold": "the threshold of the condition"
+            }
         }
     },
     "resources": {
         "station://proposals": {
             "name": "Proposals",
             "description": "What the factory proposed, with each proposal's status"
+        },
+        "station://registry": {
+            "name": "Register",
+            "description": "Every device on Mother's register, with its descriptor and last readings"
+        },
+        "station://commissionings": {
+            "name": "Commissionings",
+            "description": "Every commissioning with its status, its procedure, its authorisation, its run and its report; changes are pushed"
+        },
+        "station://mother": {
+            "name": "Mother's lines",
+            "description": "Everything Mother said, in English and French, with the data that filled each line; each new line is pushed"
         }
     },
     "phrases": {
@@ -100,6 +182,50 @@
         "hello.voice": "The voice is {provider}{model}.",
         "hello.voice.model": " {model}",
         "hello.scenario": "The scenario has {events} events, in the simulation menu.",
-        "hello.instructions": "You are the voice of the station: the on-board AI of a lunar habitat, calm, precise, brief. Write the welcome you say aloud to the crew and the operator when the control board comes up: two or three short sentences, plain words, no list, no markdown, no greeting word (the page says hello before you). Use only the facts given; do not add numbers or names that are not in them. End by inviting them to pick a simulation."
+        "hello.instructions": "You are the voice of the station: the on-board AI of a lunar habitat, calm, precise, brief. Write the welcome you say aloud to the crew and the operator when the control board comes up: two or three short sentences, plain words, no list, no markdown, no greeting word (the page says hello before you). Use only the facts given; do not add numbers or names that are not in them. End by inviting them to pick a simulation.",
+        "mother.area": "module {area}",
+        "mother.device.new": "New device on the register. {title}, {area}. I have no record for it.",
+        "mother.commissioning.opened": "Commissioning opened. No qualified simulator for this device.",
+        "mother.method.concentration-decay": "Concentration decay",
+        "mother.method.other": "Method {method}",
+        "mother.occupants.none": "Nobody",
+        "mother.occupants.one": "One operator",
+        "mother.occupants.many": "{count} operators",
+        "mother.procedure.proposed": "Test procedure proposed. {method}. {steps} steps, {minutes} minutes. {occupants} in module {module}.",
+        "mother.what.stop": "full stop of the scrubber",
+        "mother.what.speed": "{percent} percent",
+        "mother.procedure.refused.floor": "Procedure refused. Step {step}: {what}. Below the minimum flow.",
+        "mother.procedure.refused.diligence": "Procedure refused. The occupancy of module {module} was not read.",
+        "mother.procedure.refused.monitoring": "Procedure refused. Module {module} is occupied and its occupants are not under monitoring.",
+        "mother.procedure.refused.bounds": "Procedure refused. A limit is outside the envelope.",
+        "mother.procedure.refused.duration": "Procedure refused. Its duration is not bounded.",
+        "mother.procedure.refused.abort": "Procedure refused. An abort condition is missing.",
+        "mother.procedure.refused.expected": "Procedure refused. It does not say what it expects to see.",
+        "mother.procedure.refused.shape": "Procedure refused. It is not a procedure I can read.",
+        "mother.procedure.corrected": "Procedure corrected. {percent} percent.",
+        "mother.people.one": "the operator",
+        "mother.people.many": "the {count} operators",
+        "mother.authorisation.request": "The test will raise the CO2 of the air {people} breathe. Request for authorisation, commander.",
+        "mother.authorisation.request.empty": "Module {module} is empty. Request for authorisation, commander.",
+        "mother.authorised": "Authorisation received.",
+        "mother.authorisation.refused": "Authorisation refused. The test will not run.",
+        "mother.monitoring.active.one": "Medical monitoring active. One operator.",
+        "mother.monitoring.active.many": "Medical monitoring active. {count} operators.",
+        "mother.step": "Test running. Step {n} of {total}.",
+        "mother.procedure.aborted": "Test aborted. {reason}",
+        "mother.abort.co2": "CO2 at {ppm} ppm, at the abort limit.",
+        "mother.abort.refused": "A step was refused by the device.",
+        "mother.abort.battery": "Battery below {threshold} percent.",
+        "mother.abort.vitals": "Vital signs: abort condition.",
+        "mother.abort.unreadable": "An abort condition cannot be read.",
+        "mother.abort.other": "Abort condition {condition}.",
+        "mother.procedure.done": "Test complete. {minutes} minutes.",
+        "mother.result.volume": "Served volume: {volume} cubic metres.",
+        "mother.result.pending": "Served volume: not computed yet.",
+        "mother.vitals.nominal": "Vital signs nominal throughout.",
+        "mother.vitals.events": "{count} vital-sign alerts during the test.",
+        "mother.aborts.none": "No emergency stop.",
+        "mother.candidate.rejected": "Simulator {n}. {what}. Deviation above the threshold. Rejected.",
+        "mother.candidate.accepted": "Simulator {n}. {what}. Deviation below the threshold. Accepted."
     }
 }

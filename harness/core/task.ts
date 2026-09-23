@@ -37,7 +37,7 @@ export interface TaskFile {
 /** Where a task stands; `manifest.json` carries it, `factory.task` reads it. */
 export type TaskState = "created" | "running" | "done" | "proposed" | "accepted" | "rejected" | "failed";
 
-export const TOPICS = ["graph", "onnx"] as const;
+export const TOPICS = ["graph", "onnx", "procedure"] as const;
 export type Topic = (typeof TOPICS)[number];
 
 export const DEFAULT_BUDGET: TaskBudget = { iterations: 20, minutes: 30, twinPoints: 40 };

@@ -14,6 +14,10 @@
  *      declared in `missing_capabilities`, every missing capability has a
  *      reason and a known topic.
  *
+ * Then the topic's own rules, when it has some (`TopicDefinition.guard`:
+ * the procedure topic checks a submitted procedure against its envelope
+ * there, before the procedure is written anywhere).
+ *
  * A refusal stops the step with its reason; the runner records it and the
  * observer shows it to the model at the next step (`lastRefusal`). Budgets
  * are not here: the runner counts.
@@ -22,7 +26,7 @@ import type { DecisionContext, JsonValue, PolicyDecision, SafetyDecision, Safety
 import type { Broker } from "../lib/broker.js";
 import { TOPICS, type TaskFile } from "./task.js";
 import type { TopicDefinition } from "./topic.js";
-import type { Plan } from "./workspace-observer.js";
+import type { Plan, Progress } from "./workspace-observer.js";
 
 const PATH_KEYS = new Set(["path", "file", "name", "contractPath"]);
 
@@ -61,6 +65,9 @@ export interface BuilderGuardOptions {
     topic: TopicDefinition;
     /** The slot that publishes the runtime's catalogue (`twin` in the habitat, the container's own slot remotely). */
     runtimeSlot?: string;
+    /** The task's id and progress, for a topic's own rules; without them the topic's guard is not asked. */
+    taskId?: string;
+    progress?: Progress;
 }
 
 /** The problems of a plan against the catalogue and the task's required outputs; empty when conformant. */
@@ -95,6 +102,11 @@ export function createBuilderGuard(options: BuilderGuardOptions): SafetyGuard {
             if (id === "task.plan") {
                 const problems = await planProblems(decision.invocation.input as unknown as Plan, options);
                 if (problems.length) return { allowed: false, reason: `plan refused: ${problems.join("; ")}` };
+            }
+            const { topic, progress, taskId } = options;
+            if (topic.guard && progress && taskId) {
+                const problems = await topic.guard(id, decision.invocation.input, { broker: options.broker, taskId, task: options.task, progress });
+                if (problems.length) return { allowed: false, reason: problems.join("; ") };
             }
             return { allowed: true };
         },

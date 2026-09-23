@@ -569,6 +569,16 @@ var ReasonerProvider = class _ReasonerProvider {
   useBroker(broker) {
     this.broker = broker;
   }
+  /**
+   * The prompt file the slot's model reads instead of the agent's, for a
+   * builder of the factory (`harness/topics/<topic>/prompt.md`). A path,
+   * never a text: the slot reads it from the repository and only from the
+   * topics' folders, so what the model was told is a file with a sha256.
+   */
+  usePrompt(file) {
+    this.prompt = file;
+  }
+  prompt = null;
   get name() {
     return `reasoner:${this.family}`;
   }
@@ -585,7 +595,8 @@ var ReasonerProvider = class _ReasonerProvider {
       state: input.state,
       allowedCapabilities: input.allowedCapabilities,
       candidates: input.candidates,
-      recentFailures: input.recentFailures
+      recentFailures: input.recentFailures,
+      ...this.prompt ? { prompt: this.prompt } : {}
     });
     if (!r.ok) throw new Error(r.error ?? "reasoner.decide failed");
     const a = r.output;
@@ -822,7 +833,22 @@ async function buildCapabilities(broker, { profile = {}, approve, onCall } = {})
 // tier3/lib/capabilities.ts
 var APPROVAL_REQUIRED = [/^station\.register_artifact$/, /^station\.diagnostic_load_model$/, /^factory\.run_/, /^agent\.(reset|stop|pause)$/];
 var PROTECTED_NEVER = [/^scrubber\.scrubber\.power$/, /^scrubber\.scrubber\.set_min_flow$/, /^agent\.(reset|stop)$/];
-var EXCLUDED = [/^scrubber\.debug\./, /^[a-z]+\.grammar_/, /^reasoner\./, /^scenario\./, /^spikypanda\./, /^speech\.(synthesize|listVoices|take|played|describe)$/, /^workspace\./, /^model\./, /^qr\./, /^screens\./, /^twin\.(registry_|document_|session_run)/, /^station\.propose$/, /^biomed\.(monitor_start|monitor_stop|report|move)$/];
+var EXCLUDED = [
+  /^scrubber\.debug\./,
+  /^[a-z]+\.grammar_/,
+  /^reasoner\./,
+  /^scenario\./,
+  /^spikypanda\./,
+  /^speech\.(synthesize|listVoices|take|played|describe)$/,
+  /^workspace\./,
+  /^model\./,
+  /^qr\./,
+  /^screens\./,
+  /^twin\.(registry_|document_|session_run)/,
+  /^station\.propose$/,
+  /^biomed\.(monitor_start|monitor_stop|report|move)$/,
+  /^station\.(registry_register|registry_report|procedure_checked|commissioning_authorise|procedure_run)$/
+];
 function replayPolicyFor(id, guardMode) {
   if (APPROVAL_REQUIRED.some((r) => r.test(id))) return "approval-required";
   if (guardMode === "protected" && PROTECTED_NEVER.some((r) => r.test(id))) return "never";

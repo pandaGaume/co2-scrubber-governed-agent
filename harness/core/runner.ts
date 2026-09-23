@@ -34,9 +34,10 @@ import { DEFAULT_BUDGET, type TaskFile, type TaskState, type Topic } from "./tas
 import type { TopicDefinition } from "./topic.js";
 import { createWorkspaceObserver, isArtifact, listWorkshop, newProgress, type Progress } from "./workspace-observer.js";
 import { ONNX_TOPIC } from "../topics/onnx/index.js";
+import { PROCEDURE_TOPIC } from "../topics/procedure/index.js";
 
 /** The topics the constructor knows; `graph` is F5. */
-export const TOPIC_DEFINITIONS: Partial<Record<Topic, TopicDefinition>> = { onnx: ONNX_TOPIC };
+export const TOPIC_DEFINITIONS: Partial<Record<Topic, TopicDefinition>> = { onnx: ONNX_TOPIC, procedure: PROCEDURE_TOPIC };
 
 /** What a provider built for one task receives: the task, and the last call of the loop (what a model reads in `lastOutput`). */
 export interface BuilderContext {
@@ -96,7 +97,7 @@ const relativeOrAbsolute = (file: string): string => {
     return rel.startsWith("..") ? file.split(path.sep).join("/") : rel;
 };
 
-const kindOf = (p: string): ManifestArtifact["kind"] => (p.endsWith(".onnx") ? "model" : p.endsWith(".spikypanda") ? "graph" : p.endsWith("contract.json") ? "contract" : "file");
+const kindOf = (p: string): ManifestArtifact["kind"] => (p.endsWith(".onnx") ? "model" : p.endsWith(".spikypanda") ? "graph" : p.endsWith("contract.json") ? "contract" : /^procedures\/.*\.json$/.test(p) ? "procedure" : "file");
 
 async function readTask(broker: Broker, taskId: string): Promise<{ task: TaskFile; sha256: string }> {
     const r = await broker.call("workspace", "read", { taskId, path: "task.json" });
@@ -122,7 +123,8 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
     if (!topic) throw new Error(`topic ${topicId} is not built yet (${Object.keys(TOPIC_DEFINITIONS).join(", ")})`);
     const budget = { ...DEFAULT_BUDGET, ...(task.budget ?? {}) };
     const signature = taskSignature(task, topicId);
-    const intention: Intention = intentionFor(task, signature);
+    const generic: Intention = intentionFor(task, signature);
+    const intention: Intention = topic.intention ? topic.intention(task, generic) : generic;
     const recipes = loadRecipes(recipesDir, topicId);
     const progress = newProgress();
     const calls: CapabilityCall[] = [];
@@ -137,11 +139,12 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
                 { match: /^(workspace|model)\./, constants: { taskId } },
                 { match: new RegExp(`^${runtimeSlot}\\.(document_build|document_instantiate|session_run)$`), rewrite: (input) => (typeof input.name === "string" ? { ...input, name: `${taskId}/${input.name}` } : input) },
             ],
-            local: taskCapabilities(broker, taskId, progress),
+            local: [...taskCapabilities(broker, taskId, progress), ...(topic.local?.({ broker, taskId, task, progress }) ?? [])],
         },
         onCall: (call) => {
             progress.lastCall = call;
             calls.push(call);
+            if (call.result.ok) progress.reads[call.id] = { at: new Date().toISOString(), value: (call.result.output ?? null) as JsonValue };
         },
     });
     const agent = createAgent({
@@ -150,7 +153,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         capabilities,
         observer: createWorkspaceObserver(broker, taskId, progress),
         evaluator: createTaskEvaluator({ broker, taskId, task, topic, progress }),
-        guard: createBuilderGuard({ broker, task, topic, runtimeSlot }),
+        guard: createBuilderGuard({ broker, task, topic, runtimeSlot, taskId, progress }),
         policy: recipes.policy,
         timeoutMs,
         onStage,
@@ -274,7 +277,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         const proposedText = manifestText(manifest);
         proposedManifestSha256 = sha256Text(proposedText);
         await writeText(broker, taskId, "manifest.proposed.json", proposedText);
-        const artifacts = manifest.artifacts.filter((a) => a.kind === "model" || a.kind === "graph").map((a) => ({ kind: a.kind, path: a.path, sha256: a.sha256, ...(a.contractSha256 ? { contractSha256: a.contractSha256 } : {}) }));
+        const artifacts = manifest.artifacts.filter((a) => a.kind === "model" || a.kind === "graph" || a.kind === "procedure").map((a) => ({ kind: a.kind, path: a.path, sha256: a.sha256, ...(a.contractSha256 ? { contractSha256: a.contractSha256 } : {}) }));
         const r = await broker.call("station", "propose", {
             taskId,
             artifacts,
