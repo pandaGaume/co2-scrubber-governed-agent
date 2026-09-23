@@ -12,7 +12,7 @@
  */
 import type { PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
 import type { Provider, ProviderExchange, ProviderProfile } from "../lib/provider.js";
-import { apiKeyFor, compactRequest, decisionFrom, familyOf, fromApiName, intentionText, observationText, parseJsonArgs, toApiName } from "../lib/llm-common.js";
+import { apiKeyFor, compactRequest, decisionFrom, familyOf, fromApiName, intentionText, observationText, parseJsonArgs, toApiName, TRUNCATED_RESULT, truncatedDecision } from "../lib/llm-common.js";
 
 interface ToolCall {
     id: string;
@@ -46,7 +46,9 @@ export class OpenAiCompatibleProvider implements Provider {
     private readonly apiKey: string;
     private messages: ChatMessage[] = [];
     /** The tool calls of the last answer: the first one was executed, the others were not (one action per step). */
-    private pendingCalls: Array<{ id: string; executed: boolean }> = [];
+    private pendingCalls: Array<{ id: string; executed: boolean; truncated: boolean }> = [];
+    /** The profile's `tier3.maxTokens`, sent only when given: the server's own limit otherwise. A cut answer (`finish_reason: "length"`) is never run. */
+    private readonly maxTokens: number | null;
 
     constructor(
         profile: ProviderProfile | null,
@@ -58,6 +60,7 @@ export class OpenAiCompatibleProvider implements Provider {
         this.model = p.model;
         this.baseUrl = (p.baseUrl ?? process.env.OPENAI_BASE_URL ?? "https://api.tokenfactory.nebius.com/v1").replace(/\/$/, "");
         this.apiKey = apiKeyFor(profile, ["NEBIUS_API_KEY", "OPENAI_API_KEY"]);
+        this.maxTokens = p.maxTokens ?? null;
         this.family = familyOf(profile, this.model);
         this.messages = [{ role: "system", content: options.systemPrompt }];
     }
@@ -76,7 +79,7 @@ export class OpenAiCompatibleProvider implements Provider {
         // Every tool call of the previous answer needs a tool message now, or the API refuses the conversation; only the first was executed.
         const f = input.state.features;
         for (const call of this.pendingCalls) {
-            this.messages.push({ role: "tool", tool_call_id: call.id, content: call.executed ? `${String(f.lastOutcome || "unknown")}: ${String(f.lastOutput || "no output")}` : "not executed: the harness runs one action per step; call it again at the next step if it is still needed" });
+            this.messages.push({ role: "tool", tool_call_id: call.id, content: call.truncated ? TRUNCATED_RESULT : call.executed ? `${String(f.lastOutcome || "unknown")}: ${String(f.lastOutput || "no output")}` : "not executed: the harness runs one action per step; call it again at the next step if it is still needed" });
         }
         this.pendingCalls = [];
         if (!this.messages.some((m) => m.role === "user")) this.messages.push({ role: "user", content: intentionText(input) });
@@ -84,7 +87,7 @@ export class OpenAiCompatibleProvider implements Provider {
 
         const tools = input.allowedCapabilities.map((c) => ({ type: "function", function: { name: toApiName(c.id), description: c.description, parameters: c.inputSchema ?? { type: "object" } } }));
         // One action per step: the harness executes one decision, so the model is asked for one call at a time.
-        const body = { model: this.model, messages: this.messages, tools, tool_choice: "auto", parallel_tool_calls: false, temperature: this.options.temperature ?? 0.2 };
+        const body = { model: this.model, messages: this.messages, tools, tool_choice: "auto", parallel_tool_calls: false, temperature: this.options.temperature ?? 0.2, ...(this.maxTokens ? { max_tokens: this.maxTokens } : {}) };
         const started = Date.now();
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), this.options.timeoutMs ?? 60000);
@@ -110,8 +113,9 @@ export class OpenAiCompatibleProvider implements Provider {
         const call = calls[0] ?? null;
         const text = message.content ?? "";
         this.messages.push({ role: "assistant", content: text || null, ...(calls.length ? { tool_calls: calls } : {}) });
-        this.pendingCalls = calls.map((c, i) => ({ id: c.id, executed: i === 0 }));
-        const decision = decisionFrom(call?.function.name ?? null, parseJsonArgs(call?.function.arguments), text, input.allowedCapabilities);
+        const truncated = completion.choices?.[0]?.finish_reason === "length";
+        this.pendingCalls = calls.map((c, i) => ({ id: c.id, executed: i === 0 && !truncated, truncated }));
+        const decision = truncated && call ? truncatedDecision(fromApiName(call.function.name)) : decisionFrom(call?.function.name ?? null, parseJsonArgs(call?.function.arguments), text, input.allowedCapabilities);
         const usage = completion.usage;
         this.exchanges.push({
             decisionId: input.decisionId,

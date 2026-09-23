@@ -64,6 +64,21 @@ export function decisionFrom(name: string | null, args: JsonValue, text: string,
     return report(text.trim() || "(the model answered nothing)");
 }
 
+/**
+ * A tool call the model's answer did not finish: the output limit cut it
+ * (`max_tokens`, `finish_reason: "length"`). Its arguments are what the
+ * model had written so far, and the fields it meant to write last are
+ * missing; running it would run something the model did not ask for. So it
+ * is not run: the decision becomes a report saying so, which the loop does
+ * not execute as the call, and the model is told at its next step why its
+ * call went nowhere.
+ */
+export const TRUNCATED_RESULT = "not executed: your answer was cut at the output limit before this call was complete, so its arguments are unfinished; send the call again, complete (shorter text around it if needed)";
+
+export function truncatedDecision(capabilityId: string): PolicyDecision {
+    return report(`My call to ${capabilityId} was cut at the output limit before it was complete; it was not run.`);
+}
+
 export function report(message: string): PolicyDecision {
     return { action: { id: "crew.report", description: "report to the crew" }, invocation: { actionId: "crew.report", capabilityId: "crew.report", input: { message } }, rationale: "said in text, without a tool call" };
 }

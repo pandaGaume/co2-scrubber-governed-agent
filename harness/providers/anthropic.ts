@@ -11,7 +11,7 @@
  */
 import type { PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
 import type { Provider, ProviderExchange, ProviderProfile } from "../lib/provider.js";
-import { apiKeyFor, compactRequest, decisionFrom, familyOf, fromApiName, intentionText, observationText, parseJsonArgs, toApiName } from "../lib/llm-common.js";
+import { apiKeyFor, compactRequest, decisionFrom, familyOf, fromApiName, intentionText, observationText, parseJsonArgs, toApiName, TRUNCATED_RESULT, truncatedDecision } from "../lib/llm-common.js";
 
 type ContentBlock = { type: "text"; text: string } | { type: "tool_use"; id: string; name: string; input: unknown } | { type: "tool_result"; tool_use_id: string; content: string };
 interface Message {
@@ -40,8 +40,10 @@ export class AnthropicProvider implements Provider {
     private readonly baseUrl: string;
     private readonly apiKey: string;
     private messages: Message[] = [];
-    /** The tool_use blocks of the last answer: the first one was executed, the others were not (one action per step). */
-    private pendingToolUses: Array<{ id: string; executed: boolean }> = [];
+    /** The tool_use blocks of the last answer: the first one was executed, the others were not (one action per step); none when the answer was cut. */
+    private pendingToolUses: Array<{ id: string; executed: boolean; truncated: boolean }> = [];
+    /** The output limit per answer: the profile's `tier3.maxTokens`, 4096 by default (a procedure written as one tool call runs past 1024). */
+    private readonly maxTokens: number;
 
     constructor(
         profile: ProviderProfile | null,
@@ -53,6 +55,7 @@ export class AnthropicProvider implements Provider {
         this.model = p.model;
         this.baseUrl = (p.baseUrl ?? process.env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com").replace(/\/$/, "");
         this.apiKey = apiKeyFor(profile, ["ANTHROPIC_API_KEY"]);
+        this.maxTokens = options.maxTokens ?? p.maxTokens ?? 4096;
         this.family = familyOf(profile, this.model) === "default" ? "claude" : familyOf(profile, this.model);
     }
 
@@ -71,7 +74,7 @@ export class AnthropicProvider implements Provider {
         // Every tool_use of the previous answer needs a tool_result in this message, or the API refuses the conversation.
         const f = input.state.features;
         for (const use of this.pendingToolUses) {
-            blocks.push({ type: "tool_result", tool_use_id: use.id, content: use.executed ? `${String(f.lastOutcome || "unknown")}: ${String(f.lastOutput || "no output")}` : "not executed: the harness runs one action per step; call it again at the next step if it is still needed" });
+            blocks.push({ type: "tool_result", tool_use_id: use.id, content: use.truncated ? TRUNCATED_RESULT : use.executed ? `${String(f.lastOutcome || "unknown")}: ${String(f.lastOutput || "no output")}` : "not executed: the harness runs one action per step; call it again at the next step if it is still needed" });
         }
         this.pendingToolUses = [];
         if (this.messages.length === 0) blocks.push({ type: "text", text: intentionText(input) });
@@ -80,7 +83,7 @@ export class AnthropicProvider implements Provider {
 
         const tools = input.allowedCapabilities.map((c) => ({ name: toApiName(c.id), description: c.description, input_schema: c.inputSchema ?? { type: "object" } }));
         // One action per step: the harness executes one decision, so the model is asked for one call at a time.
-        const body = { model: this.model, system: this.options.systemPrompt, messages: this.messages, tools, tool_choice: { type: "auto", disable_parallel_tool_use: true }, max_tokens: this.options.maxTokens ?? 1024, temperature: this.options.temperature ?? 0.2 };
+        const body = { model: this.model, system: this.options.systemPrompt, messages: this.messages, tools, tool_choice: { type: "auto", disable_parallel_tool_use: true }, max_tokens: this.maxTokens, temperature: this.options.temperature ?? 0.2 };
         const started = Date.now();
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), this.options.timeoutMs ?? 60000);
@@ -109,8 +112,9 @@ export class AnthropicProvider implements Provider {
             .filter((b): b is Extract<ContentBlock, { type: "text" }> => b.type === "text")
             .map((b) => b.text)
             .join("\n");
-        this.pendingToolUses = toolUses.map((u, i) => ({ id: u.id, executed: i === 0 }));
-        const decision = decisionFrom(toolUse?.name ?? null, parseJsonArgs(toolUse?.input), text, input.allowedCapabilities);
+        const truncated = result.stop_reason === "max_tokens";
+        this.pendingToolUses = toolUses.map((u, i) => ({ id: u.id, executed: i === 0 && !truncated, truncated }));
+        const decision = truncated && toolUse ? truncatedDecision(fromApiName(toolUse.name)) : decisionFrom(toolUse?.name ?? null, parseJsonArgs(toolUse?.input), text, input.allowedCapabilities);
         const usage = result.usage;
         this.exchanges.push({
             decisionId: input.decisionId,

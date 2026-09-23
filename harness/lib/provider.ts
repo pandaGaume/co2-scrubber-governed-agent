@@ -51,6 +51,8 @@ export interface ProviderProfile {
         model?: string;
         apiKey?: { env?: string };
         capabilities?: string[];
+        /** The output limit per answer, in tokens; the provider's default when absent (4096 on the Anthropic wire, the server's own on an OpenAI-compatible one). */
+        maxTokens?: number;
         /** The family as the slots' grammars key it (nemotron, gpt, claude, gemini); inferred from the model name when absent. */
         family?: string;
         locale?: string;
