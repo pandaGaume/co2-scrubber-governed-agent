@@ -3,7 +3,7 @@
  *
  * It exists because of one thing a browser cannot know. The control room is
  * usually opened at `http://localhost:3001`, so `location.origin` is
- * `localhost`, and a phone pointed at a QR of that reaches its own loopback
+ * `localhost`, and a phone pointed at a code of that reaches its own loopback
  * and finds nothing. The address a phone needs is the machine's address on the
  * local network, and only this process knows it: `lanAddresses()` is what the
  * broker already uses to decide which origins to allow.
@@ -11,16 +11,23 @@
  * So the page asks for a code rather than drawing one, and gets an address
  * that is true from where the phone is standing.
  *
- * The encoder is `lib/qr.ts`, written here rather than fetched: a filmed demo
- * that loads a library from someone else's CDN stops working the moment the
- * room's network does, and the design brief forbids it anyway. It is checked
- * by reading its own output back (`tests/qr.test.ts`).
+ * The codes themselves come from `qrcode`, an ordinary dependency of this
+ * repository like `@cyanmycelium/*`. An earlier version of this slot carried a
+ * hand-written encoder, on the grounds that the design brief forbids loading
+ * anything from a third party at runtime. That conflated two different things:
+ * fetching a library from a CDN while the demo runs, which would break the
+ * moment the room's network did, and installing one, which is offline, pinned
+ * and reviewable like every other dependency here. The hand-written one also
+ * shipped a real defect straight to a phone camera, a second copy of the
+ * format information written one module long, and no test that reads its own
+ * output back can catch a mistake it makes twice. A library thousands of
+ * cameras have already argued with is the better answer.
  *
  * Kept out of the agent's catalogue with the rest of the workshop's tools: a
  * picture of a link is an operator's business, not a cabin capability.
  */
+import QRCode from "qrcode";
 import { lanAddresses } from "../../lib/local-broker.js";
-import { matrix, svg } from "../../../lib/qr.js";
 import { objectSchema as obj, publishSlot, type PublishedSlot, type SlotTool } from "../../lib/slot-server.js";
 
 export interface QrState {
@@ -30,6 +37,16 @@ export interface QrState {
 
 /** The port the broker serves on; the slot is published by the same process. */
 const PORT = Number(process.env.MCP_BROKER_PORT ?? 3001);
+
+/** The room's near-black on its pale face, so a code sits in the page rather
+    than punching a white hole through it. The contrast is about seventeen to
+    one, far past what a camera needs. */
+const DARK = "#04090c";
+const LIGHT = "#d3ecea";
+
+/** Four modules of quiet zone, which is what the specification asks for and
+    what a camera needs to find the code against a busy background. */
+const MARGIN = 4;
 
 /** A path under the dashboard, with nothing that could climb out of it. */
 function safePath(value: unknown): string {
@@ -56,28 +73,36 @@ export function qrSlot(wsBase: string, log: (line: string) => void): PublishedSl
         while (state.made.length > 20) state.made.shift();
     };
 
+    const render = async (text: string, dark: unknown, light: unknown): Promise<string> =>
+        QRCode.toString(text, {
+            type: "svg",
+            margin: MARGIN,
+            // L is plenty for a screen read at arm's length, and it keeps the
+            // code coarse, which matters more than redundancy at this size.
+            errorCorrectionLevel: "L",
+            color: { dark: typeof dark === "string" ? dark : DARK, light: typeof light === "string" ? light : LIGHT },
+        });
+
     const tools: SlotTool<QrState>[] = [
         {
             name: "encode",
             title: "A QR code for a text",
-            description: "The text as a QR code, returned as an SVG a page can show as it is. Version 4, error correction L: up to 78 bytes, which any local address fits.",
+            description: "The text as a QR code, returned as an SVG a page can show as it is.",
             inputSchema: obj(
                 {
-                    text: { type: "string", description: "what the code carries, 78 bytes at most" },
+                    text: { type: "string", description: "what the code carries" },
                     dark: { type: "string", description: "colour of the modules; the room's near-black by default" },
                     light: { type: "string", description: "colour behind them; a quiet zone in this colour is part of the code and cannot be removed" },
                 },
                 ["text"],
             ),
-            handle: (args, s) => {
+            handle: async (args, s) => {
                 const text = String(args.text ?? "");
-                const image = svg(text, {
-                    ...(typeof args.dark === "string" ? { dark: args.dark } : {}),
-                    ...(typeof args.light === "string" ? { light: args.light } : {}),
-                });
+                if (!text) throw new Error("a code of nothing is nothing");
+                const svg = await render(text, args.dark, args.light);
                 remember(text);
                 s.made = state.made;
-                return { text, modules: matrix(text).length, svg: image };
+                return { text, svg };
             },
         },
         {
@@ -92,21 +117,18 @@ export function qrSlot(wsBase: string, log: (line: string) => void): PublishedSl
                 },
                 ["page"],
             ),
-            handle: (args, s) => {
+            handle: async (args, s) => {
                 const path = safePath(args.page);
                 const bases = addresses();
                 const url = `${bases[0]}${path}`;
-                const image = svg(url, {
-                    ...(typeof args.dark === "string" ? { dark: args.dark } : {}),
-                    ...(typeof args.light === "string" ? { light: args.light } : {}),
-                });
+                const svg = await render(url, args.dark, args.light);
                 remember(url);
                 s.made = state.made;
                 log(`[qr] ${path} -> ${url}`);
                 // Every address is returned, not only the one drawn: a machine
                 // with two network cards answers on both, and the operator is
                 // the one who knows which one the phone is on.
-                return { url, page: path, addresses: bases.map((b) => `${b}${path}`), modules: matrix(url).length, svg: image };
+                return { url, page: path, addresses: bases.map((b) => `${b}${path}`), svg };
             },
         },
         {
@@ -126,7 +148,7 @@ export function qrSlot(wsBase: string, log: (line: string) => void): PublishedSl
             fr: "Fabrique des QR codes. `page` est l'outil à utiliser pour une page de ce tableau de bord : il résout l'adresse que le téléphone doit atteindre, ce qu'une page ouverte sur localhost ne peut pas savoir. `encode` prend n'importe quel texte.",
         },
         stub: false,
-        version: "0.1.0",
+        version: "0.2.0",
         wsBase,
         log,
         state,

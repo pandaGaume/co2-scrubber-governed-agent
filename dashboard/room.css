@@ -347,7 +347,22 @@ button.badge { font-family: var(--mono); cursor: pointer; }
    an operator who cannot scan can type it. */
 .codes { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 15px 10px; }
 .code { margin: 0; display: flex; flex-direction: column; gap: 8px; align-items: center; }
-.code .qr { width: 100%; aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: rgba(211, 236, 234, 0.9); }
+.code .qr { width: 100%; aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: rgba(211, 236, 234, 0.9); cursor: zoom-in; }
+.code .qr:hover { outline: 1px solid var(--teal); outline-offset: 2px; }
+
+/* Held up to a camera. In the column a code is about ninety pixels across,
+   which is two and a bit pixels a module: enough close up, thin from a metre.
+   Clicking one puts it on the whole screen, which is what a room full of
+   people needs, and the page keeps its colours because a white card in the
+   middle of this one would be a hole. */
+.zoom {
+    position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 18px;
+    background: rgba(2, 8, 10, 0.94); cursor: zoom-out;
+}
+.zoom svg { width: min(62vh, 62vw); height: auto; border-radius: 12px; }
+.zoom .what { font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--teal-soft); }
+.zoom .where { font-size: 12px; letter-spacing: 0.04em; color: var(--muted); }
 .code .qr svg { display: block; width: 100%; height: 100%; }
 .code figcaption { display: flex; flex-direction: column; gap: 3px; text-align: center; }
 .code figcaption b { font-size: 10px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--teal-soft); }

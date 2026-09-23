@@ -883,6 +883,20 @@ async function refreshAgent() {
 // this machine's on the local network and a page opened at localhost cannot
 // know it: `location.origin` would send the phone to its own loopback.
 
+/** A code on the whole screen, for a room rather than a desk. */
+function zoom(svg, what, where) {
+    const over = document.createElement("div");
+    over.className = "zoom";
+    over.innerHTML = `${svg}<div class="what">${escapeHtml(what)}</div><div class="where">${escapeHtml(where)}</div>`;
+    over.addEventListener("click", () => over.remove());
+    addEventListener("keydown", function once(e) {
+        if (e.key !== "Escape") return;
+        removeEventListener("keydown", once);
+        over.remove();
+    });
+    document.body.appendChild(over);
+}
+
 async function showCodes() {
     if (!has("qr-simulation")) return;
     for (const [page, box, label] of [
@@ -894,7 +908,10 @@ async function showCodes() {
             const answer = JSON.parse(toolText(await s.callTool("page", { page, light: "#d3ecea", dark: "#04090c" })));
             const got = answer.result ?? answer;
             $(box).innerHTML = got.svg;
-            put(label, String(got.url ?? "").replace(/^https?:\/\//u, ""));
+            const url = String(got.url ?? "");
+            put(label, url.replace(/^https?:\/\//u, ""));
+            $(box).title = `${url} — click to fill the screen`;
+            $(box).addEventListener("click", () => zoom(got.svg, page.replace(".html", ""), url));
         } catch (e) {
             $(box).innerHTML = "";
             put(label, `no code: ${e.message}`);
