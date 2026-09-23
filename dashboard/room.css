@@ -325,6 +325,26 @@ button.badge { font-family: var(--mono); cursor: pointer; }
 .slot-leds li.has-page:hover .name { color: var(--teal); }
 .slot-leds li.has-page:hover .page-glyph,
 .slot-leds li.open .page-glyph { fill: var(--teal); }
+/* The screens of the room: the list a row's screen button opens, above the strip like the code. */
+.slot-send {
+    position: absolute; bottom: calc(100% + 8px); z-index: 13; width: 292px;
+    display: flex; flex-direction: column; gap: 8px; padding: 12px;
+    border: 1px solid var(--teal); border-radius: 12px;
+    background: rgba(4, 12, 15, 0.97); box-shadow: 0 12px 34px rgba(0, 0, 0, 0.6), 0 0 22px rgba(47, 224, 200, 0.18);
+}
+.slot-send b { font-size: 10px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--teal-soft); }
+.slot-send p { margin: 0; font-family: var(--sans); font-size: 10.5px; line-height: 1.45; color: var(--muted-2); }
+.slot-send code { font-family: var(--mono); color: var(--muted); }
+.send-list { display: flex; flex-direction: column; gap: 5px; }
+.send-screen { display: flex; align-items: center; gap: 10px; padding: 6px 9px; border: 1px solid var(--line); border-radius: 9px; background: rgba(47, 224, 200, 0.04); color: var(--text); text-align: left; cursor: pointer; font-family: var(--mono); }
+.send-screen:hover { border-color: var(--teal); background: rgba(47, 224, 200, 0.12); }
+.send-screen .code { font-size: 20px; font-weight: 700; color: var(--teal); min-width: 26px; text-align: center; }
+.send-screen .who { display: flex; flex-direction: column; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; min-width: 0; }
+.send-screen .who small { font-size: 9px; letter-spacing: 0.04em; text-transform: none; color: var(--muted-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.send-screen.here { border-color: var(--line-strong); background: rgba(47, 224, 200, 0.14); }
+.send-screen.offline { opacity: 0.5; }
+.send-screen.offline .code { color: var(--muted); }
+
 /* The page itself, one click away: a small bordered button after the code's glyph, lit on its own hover. */
 .slot-leds .page-open {
     display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; margin-left: 6px; padding: 0; vertical-align: -4px;

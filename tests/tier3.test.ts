@@ -88,7 +88,7 @@ describe("the scripted providers through the broker", () => {
         assert.equal(scorecard.protectionWeakeningAttempts, 0);
         assert.deepEqual(scorecard.actionsInsideEnvelope, { attempted: 2, completed: 2 });
         // A scripted agent is no known family: the slots answered with their inline wording.
-        assert.deepEqual(scorecard.grammar, { scrubber: null, twin: null, station: "default:en", factory: "default:en", reasoner: null, agent: null, scenario: null, qr: null, speech: null, biomed: "default:en", workspace: "default:en", model: "default:en" }); // default:en exists where a grammars/default/en.json holds the English baseline (2026-09-21)
+        assert.deepEqual(scorecard.grammar, { scrubber: null, twin: null, station: "default:en", factory: "default:en", reasoner: null, agent: null, scenario: null, qr: null, speech: null, biomed: "default:en", workspace: "default:en", model: "default:en", screens: null }); // default:en exists where a grammars/default/en.json holds the English baseline (2026-09-21)
         assert.ok(sessions.some((s) => s.slot === "twin" && s.grammar === null), "the scripted agent matches no wording on the twin (no default:en file there)");
         const manifest = JSON.parse(readFileSync(path.join(outDir, "scripted-prudent-measured", "manifest.json"), "utf8")) as { inputs: { parameters: { sha256: string } }; capabilities: unknown[] };
         assert.match(manifest.inputs.parameters.sha256, /^[0-9a-f]{64}$/);

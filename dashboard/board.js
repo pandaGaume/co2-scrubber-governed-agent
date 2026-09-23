@@ -55,6 +55,10 @@ const PAGE_GLYPH =
     '<path d="M0 0h4v4H0zm1 1v2h2V1zM7 0h4v4H7zm1 1v2h2V1zM0 7h4v4H0zm1 1v2h2V8z"/>' +
     '<path d="M5 0h1v2H5zM6 5h2v1H6zM5 6h1v2H5zM9 6h1v1H9zM7 9h1v2H7zM5 10h1v1H5zM10 5h1v1h-1z"/></svg>';
 /* A box with an arrow leaving it: the page itself, opened here rather than read as a code. */
+/* A screen with an arrow into it: the page sent to a screen of the room (`screens` slot). */
+const SEND_GLYPH =
+    '<svg viewBox="0 0 11 11" aria-hidden="true"><path d="M0 1h11v7H6.4v1.4H8V11H3V9.4h1.6V8H0zm1.3 1.3v4.4h8.4V2.3z"/>' +
+    '<path d="M3 3.8h2.6V2.9l1.9 1.6-1.9 1.6v-.9H3z"/></svg>';
 const OPEN_GLYPH =
     '<svg viewBox="0 0 11 11" aria-hidden="true"><path d="M6 0h5v5H9.6V2.4L5.5 6.5l-1-1L8.6 1.4H6z"/>' +
     '<path d="M0 2h4.5v1.4H1.4v6.2h6.2V6.5H9V11H0z"/></svg>';
@@ -525,6 +529,78 @@ function openTwinWindow() {
     return w;
 }
 
+// ── The room's screens ─────────────────────────────────────────────────────
+//
+// A machine of the room becomes a screen by opening `screen.html` (or by
+// running `scripts/screen.mjs` on it, which finds this server by itself): it
+// shows a code, and the `screens` slot lists it. The screen button of a row
+// lists them here, and a click sends the row's page to one; the screen is
+// told by push and shows it. Clicking the screen that already shows this page
+// takes it back to its code.
+
+let sendOpen = null;
+function closeSendMenu() {
+    $("slot-send")?.remove();
+    sendOpen = null;
+}
+async function openSendMenu(row, serves) {
+    if (sendOpen === serves.page) return closeSendMenu();
+    closeSendMenu();
+    sendOpen = serves.page;
+    const box = document.createElement("div");
+    box.id = "slot-send";
+    box.className = "slot-send";
+    box.innerHTML = `<b>${serves.what}: send to a screen</b><p>asking the screens slot...</p>`;
+    const strip = row.closest(".slots");
+    strip.appendChild(box);
+    const at = row.getBoundingClientRect();
+    const rect = strip.getBoundingClientRect();
+    box.style.left = `${Math.max(8, Math.min(at.left - rect.left, rect.width - 300))}px`;
+
+    const [listed, where] = await Promise.all([readScreens(), call("qr", "addresses")]);
+    if (sendOpen !== serves.page) return;
+    const address = where.ok ? String(where.output?.addresses?.[0] ?? "") : "";
+    const hint = `A machine becomes a screen with <code>node screen.mjs</code> (in <code>scripts/</code>), or by opening <code>${address || "this machine's address"}/screen.html</code>.`;
+    if (!listed.ok) {
+        box.innerHTML = `<b>${serves.what}: send to a screen</b><p>no screens slot: ${listed.error}</p>`;
+        return;
+    }
+    const screens = listed.screens;
+    box.innerHTML = `<b>${serves.what}: send to a screen</b>` + (screens.length ? "" : `<p>No screen yet.</p>`) + `<p>${hint}</p>`;
+    const list = document.createElement("div");
+    list.className = "send-list";
+    for (const s of screens) {
+        const here = s.page === serves.page;
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = `send-screen${s.online ? "" : " offline"}${here ? " here" : ""}`;
+        b.innerHTML = `<span class="code">${s.code}</span><span class="who">${s.name.replace(/[<&>]/gu, "")}<small>${s.online ? (s.page ? `shows ${s.page.split("?")[0]}` : "shows its code") : "offline"}</small></span>`;
+        b.title = here ? `screen ${s.code} shows this page: click to bring its code back` : `show ${serves.what} on screen ${s.code}`;
+        b.addEventListener("click", async () => {
+            const r = await call("screens", "show", { screenId: s.screenId, page: here ? "" : serves.page });
+            voiceLine(r.ok ? `screen ${s.code} (${s.name}): ${here ? "back to its code" : serves.what}` : `screen ${s.code}: ${r.error}`, "info");
+            closeSendMenu();
+        });
+        list.appendChild(b);
+    }
+    box.insertBefore(list, box.children[1] ?? null);
+}
+async function readScreens() {
+    try {
+        const s = await session("screens");
+        const r = await s.request("resources/read", { uri: "screens://list" });
+        return { ok: true, screens: JSON.parse(r?.contents?.[0]?.text ?? "[]") };
+    } catch (e) {
+        return { ok: false, error: e.message, screens: [] };
+    }
+}
+addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeSendMenu();
+});
+document.addEventListener("click", (e) => {
+    if (sendOpen && !e.target.closest("#slot-send, .page-send")) closeSendMenu();
+});
+
 async function renderSlots() {
     let names = [];
     try {
@@ -542,16 +618,21 @@ async function renderSlots() {
             const serves = PAGES[slot];
             li.innerHTML =
                 `<span class="led"></span><span class="name">${slot}<small>${TIER[slot] ?? ""}</small>${serves ? PAGE_GLYPH : ""}` +
-                `${serves ? `<button class="page-open" type="button" title="${serves.what}: open it in its own window">${OPEN_GLYPH}</button>` : ""}</span><span class="meta"></span>`;
+                `${serves ? `<button class="page-open" type="button" title="${serves.what}: open it in its own window">${OPEN_GLYPH}</button>` : ""}` +
+                `${serves ? `<button class="page-open page-send" type="button" title="${serves.what}: send it to a screen of the room">${SEND_GLYPH}</button>` : ""}</span><span class="meta"></span>`;
             if (serves) {
                 li.classList.add("has-page");
                 li.dataset.page = serves.page;
                 li.dataset.what = serves.what;
                 li.title = `${serves.what}: show the address as a code a phone can read`;
                 // Its own click: the row's shows the code (`app.js`), and this one must not also open or close it.
-                li.querySelector(".page-open").addEventListener("click", (e) => {
+                li.querySelector(".page-open:not(.page-send)").addEventListener("click", (e) => {
                     e.stopPropagation();
                     openSlotPage(slot, serves);
+                });
+                li.querySelector(".page-send").addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    void openSendMenu(li, serves);
                 });
             }
             list.appendChild(li);

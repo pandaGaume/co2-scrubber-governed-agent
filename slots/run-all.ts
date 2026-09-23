@@ -26,6 +26,8 @@ import { speechSlot } from "./speech/provider.js";
 import { biomedSlot } from "./biomed/provider.js";
 import { workspaceSlot } from "./tools/workspace/provider.js";
 import { modelSlot } from "./tools/model/provider.js";
+import { screensSlot } from "./screens/provider.js";
+import { startDiscovery } from "./lib/discovery.js";
 import type { PublishedSlot } from "./lib/slot-server.js";
 
 /** The port `.mcp-broker/config.json` declares; the same default here, so the dashboard's allowed origins match. */
@@ -46,6 +48,7 @@ const SLOTS: Array<[string, (wsBase: string, logger: (line: string) => void) => 
     ["biomed", biomedSlot],
     ["workspace", workspaceSlot],
     ["model", modelSlot],
+    ["screens", screensSlot],
 ];
 
 /** A slot that could not be published: its name and the reason, said once at start and kept for whoever asks. */
@@ -130,12 +133,16 @@ async function main(): Promise<void> {
     for (const base of broker?.lanBases ?? []) {
         log(`medical monitoring, on another device on this network: ${base}/biomed.html`);
         log(`the night, from a phone on this network:               ${base}/simulation.html`);
+        log(`a screen of the room (or run scripts/screen.mjs on it): ${base}/screen.html`);
     }
+    // The room's other machines find this one by asking on the network (`scripts/screen.mjs`), not by an address typed in.
+    const discovery = broker ? startDiscovery(port, log) : null;
     // The board opens the factory's window itself, beside it, on the key press that ends its boot (a second window opened
     // here would cover the board, and a covered page is a hidden page: its timers slow down and the sound with them).
     if (!flag("--no-open") && !flag("--no-broker")) openBrowser(`${httpBase}/`);
 
     const stop = async () => {
+        discovery?.close();
         for (const s of slots) await s.close().catch(() => undefined);
         broker?.stop();
         process.exit(0);

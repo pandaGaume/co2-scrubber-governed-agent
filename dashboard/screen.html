@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CO2 scrubber, a screen of the room</title>
+<!--
+  A screen of the room. Opened once on a PC, a Mac or a tablet (by hand, from
+  a code, or by `scripts/screen.mjs`, which finds the demo on the network), it
+  registers with the `screens` slot, shows its code large, and shows whatever
+  page the control room sends to that code, full window, until another one
+  comes. It stays on this page the whole time (the page it shows is in a
+  frame), so it is always there to be told the next one. `screen.js`.
+-->
+<style>
+    :root {
+        --bg: #04090c; --bg-2: #061218; --teal: #2fe0c8; --teal-soft: #7ad6cc; --text: #d3ecea; --muted: #6d908e; --muted-2: #4d6f6e; --amber: #ffb648;
+        --line: rgba(64, 214, 200, 0.16); --line-strong: rgba(64, 214, 200, 0.34);
+        --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+    }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html, body { margin: 0; height: 100%; overflow: hidden; }
+    body {
+        background: radial-gradient(1200px 700px at 50% 30%, rgba(47, 224, 200, 0.10), transparent 60%), linear-gradient(180deg, var(--bg-2), var(--bg) 62%);
+        color: var(--text); font-family: var(--mono);
+    }
+    .idle { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; padding: 24px; }
+    .kicker { font-size: 12px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--teal-soft); }
+    .code { font-size: min(42vh, 46vw); line-height: 0.9; font-weight: 700; color: var(--teal); text-shadow: 0 0 40px rgba(47, 224, 200, 0.45); letter-spacing: 0.04em; }
+    .name { font-size: 22px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text); cursor: pointer; border-bottom: 1px dashed var(--line-strong); padding-bottom: 2px; }
+    .name:hover { color: var(--teal); }
+    .status { font-size: 12px; letter-spacing: 0.08em; color: var(--muted); max-width: 640px; }
+    .status.warn { color: var(--amber); }
+    .frame { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; background: var(--bg); }
+    .tag { position: fixed; right: 10px; bottom: 10px; z-index: 2; pointer-events: none; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; letter-spacing: 0.12em;
+        color: var(--teal); background: rgba(4, 9, 12, 0.72); border: 1px solid var(--line-strong); opacity: 0.55; }
+</style>
+</head>
+<body>
+    <main class="idle" id="idle">
+        <div class="kicker">co2 scrubber · a screen of the room</div>
+        <div class="code" id="code">·</div>
+        <div class="name" id="name" title="click to rename this screen">connecting...</div>
+        <div class="status" id="status">asking the demo for a code...</div>
+    </main>
+    <iframe class="frame" id="frame" hidden allow="autoplay; fullscreen" title="the page sent to this screen"></iframe>
+    <div class="tag" id="tag" hidden></div>
+    <script type="module" src="./screen.js"></script>
+</body>
+</html>

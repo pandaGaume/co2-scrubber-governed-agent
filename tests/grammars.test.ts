@@ -65,7 +65,7 @@ describe("slot grammars through the broker", () => {
         // dialect, and neither of these is a tool any model may call. Both are
         // excluded from the agent's catalogue (`tier3/lib/capabilities.ts`),
         // so a wording for them would be a file nothing ever reads.
-        const notTools = ["reasoner", "agent", "scenario", "qr"];
+        const notTools = ["reasoner", "agent", "scenario", "qr", "screens"];
         for (const s of slots.filter((s) => !notTools.includes(s.slot) && !workshop.includes(s.slot))) {
             for (const key of ["nemotron:en", "gpt:en", "claude:en", "gemini:en", "default:fr"]) assert.ok(s.grammarKeys.includes(key), `${s.slot} lacks ${key}`);
         }
