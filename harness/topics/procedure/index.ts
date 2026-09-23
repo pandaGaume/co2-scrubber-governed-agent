@@ -182,6 +182,7 @@ function intentionOf(task: TaskFile["task"], generic: Intention): Intention {
  * a good procedure concludes from them: the guard holds the rules.
  */
 export function briefOf(progress: Progress, task: TaskFile["task"]): string {
+    // Everything read here is written after a step completes (the runner's reads, the phase, the accepted file), never by the guard.
     const state = stateOf(progress);
     const lastRead = progress.reads["library.read"]?.value as { id?: string } | undefined;
     if (!state.method && typeof lastRead?.id === "string" && lastRead.id.startsWith("method-")) state.method = lastRead.id;
@@ -194,9 +195,11 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
         const quantities = [...new Set((inventory.unknowns ?? []).filter((u) => u.how === "measured").map((u) => u.quantity))].join(", ") || task.objective.required_outputs.map((o) => o.quantity).join(", ");
         return `Stage 2 of 5, the method. The inventory says what is unknown: ${unknowns || "nothing"}. Find the methods that measure ${quantities} (library.methods), and read the card of the one you choose (library.read): it holds the method's rules of application. The library also holds the physics, the effects of CO2 on people and this installation (library.search, library.list).`;
     }
-    if (progress.phase === "plan") return `Stage 3 of 5, the plan. You read the method card ${state.method}. Declare with task.plan what no node of the catalogue produces: ${outputs}, topic procedure.`;
-    const last = state.submissions.at(-1);
-    const refused = last && !last.ok ? ` Your last submission was refused: ${last.problems.join("; ")}. Change what these reasons name; the same procedure submitted again gets the same refusal.` : "";
+    if (progress.phase === "plan") return `Stage 3 of 5, the plan. You read the method card ${state.method}. Declare with task.plan what no node of the catalogue produces: selected_nodes empty (this topic builds no graph), and ${outputs} in missing_capabilities with its reason and the topic procedure.`;
+    // The refusal as the runner recorded it after the step, never the guard's own record: the guard writes while a decision
+    // is checked, and an observation that moved between the decision and its execution makes the decision stale.
+    const refusal = progress.lastRefusal?.capability === "procedure.submit" ? progress.lastRefusal.reason : null;
+    const refused = refusal ? ` Your last submission was refused: ${refusal}. Change what these reasons name; the same procedure submitted again gets the same refusal.` : "";
     return `Stage 4 of 5, the procedure. Write it by the rules of application of ${state.method}, for this installation and the people in it as your tools read them, and submit it (procedure.submit).${refused}`;
 }
 
