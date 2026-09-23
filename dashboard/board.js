@@ -27,7 +27,7 @@ import { endSentence, loadWords, NO_WORDS, stepSentence } from "./agent/factory-
 const $ = (id) => document.getElementById(id);
 const base = `${location.protocol}//${location.host}`;
 const EXPECTED = ["scrubber", "twin", "station", "factory", "reasoner", "speech"];
-const TIER = { scrubber: "Tier 1, the board", twin: "Tier 0, the oracle", station: "Tier 2", factory: "the factory", reasoner: "the model", speech: "the voice" };
+const TIER = { scrubber: "Tier 1, the board", twin: "Tier 0, the oracle", station: "Tier 2", factory: "the factory", reasoner: "the model", speech: "the voice", agent: "the harness" };
 /* The slots that serve a page of their own, and what it is. A page is how a
    slot reaches a hand that is not at this keyboard: the night's events are
    played from a phone, the medical module is read on one, the factory is

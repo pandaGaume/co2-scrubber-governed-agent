@@ -62,7 +62,7 @@ examples are laboratory automation.
 | Shared state dictionary | the device's MCP resources: motor state, cabin CO2 and its state, health residual, network; described by a Thing Model |
 | Command execution | `motor.set_speed`, `scrubber.power`, `scrubber.set_profile`; command surface closed by default |
 | Live data streams | notifications: CO2 and state, health residual, fouling alarm, MIN-FLOW alarm. The raw current samples never cross MCP: they stay on board |
-| Checks that block before equipment moves | the three layers above |
+| Checks that block before equipment moves | the three layers above; `scrubber.check` returns the device layer's verdict on a command without moving anything, so an agent pressed to run it reports the firmware's refusal rather than its own memory of the rule |
 | Inventory and capabilities | the reserved `_broker` provider and the Thing Description derived from the Thing Model |
 | Log | the broker's audit log |
 

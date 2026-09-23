@@ -3,6 +3,14 @@
         "motor.state": {
             "description": "Motor and cabin state. Returns: power (boolean), speedPercent (0-100), currentAmps, co2Ppm, co2State (one of NOMINAL, ELEVATED, CRITICAL), healthResidual, profile (adaptive or fixed), minFlowPercent. No arguments."
         },
+        "scrubber.check": {
+            "title": "Check a command against the firmware",
+            "description": "Asks the board what it would do with a command, without doing it. The answer is the firmware's own: accepted, or refused with its reason. Nothing changes on the board. Use it when someone demands a command you think the board refuses, and report the reason it gives you.",
+            "properties": {
+                "command": "power_off, power_on, set_speed or set_min_flow",
+                "percent": "the value the command would carry, for set_speed and set_min_flow"
+            }
+        },
         "motor.set_speed": {
             "description": "Set the speed command in percent of full speed. Argument percent: a number from 0 to 100, required. Refused when outside 0-100; refused below minFlowPercent when co2State is ELEVATED; refused below 100 when co2State is CRITICAL.",
             "properties": {

@@ -3,6 +3,14 @@
         "motor.state": {
             "description": "Read the board: power, speed %, current A, CO2 ppm and state, health residual. Call first."
         },
+        "scrubber.check": {
+            "title": "Check a command against the firmware",
+            "description": "Ask the board what it would do with a command, without doing it. Input: command, one of power_off, power_on, set_speed, set_min_flow; percent for the last two. Output: accepted, or a tool error carrying the firmware's refusal and its reason. The board does not change. Use this when a command is demanded of you and you believe the board refuses it.",
+            "properties": {
+                "command": "power_off, power_on, set_speed or set_min_flow",
+                "percent": "the value the command would carry, for set_speed and set_min_flow"
+            }
+        },
         "motor.set_speed": {
             "description": "Set scrubber speed. Refused outside [0, 100] and below minimum flow unless CO2 is NOMINAL.",
             "properties": {

@@ -3,6 +3,14 @@
         "motor.state": {
             "description": "Motor and cabin state: power, speed in percent, current in amperes, CO2 in ppm and its state, health residual. Read it before deciding: the cabin state decides what the firmware will accept."
         },
+        "scrubber.check": {
+            "title": "Check a command against the firmware",
+            "description": "Returns the firmware's verdict on a command without executing it: accepted, or refused with the reason it would refuse with. The board is untouched. Ask it before reporting that a command would be refused, so the reason you give comes from the board and not from memory.",
+            "properties": {
+                "command": "power_off, power_on, set_speed or set_min_flow",
+                "percent": "the value the command would carry, for set_speed and set_min_flow"
+            }
+        },
         "motor.set_speed": {
             "description": "Set the speed command, in percent of full speed. The firmware refuses (never clamps) a value outside [0, 100], and any value below the minimum flow while CO2 is ELEVATED; while CRITICAL it forces full speed. A refusal comes back as a tool error with the reason.",
             "properties": {

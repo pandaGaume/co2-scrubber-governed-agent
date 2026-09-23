@@ -4,6 +4,14 @@
             "title": "État du moteur et de la cabine",
             "description": "État du moteur et de la cabine : alimentation, vitesse en pour cent, courant en ampères, CO2 en ppm et son état (NOMINAL, ELEVATED, CRITICAL), résidu de santé."
         },
+        "scrubber.check": {
+            "title": "Soumettre une commande au firmware sans l'exécuter",
+            "description": "Soumet une commande à la carte sans l'exécuter et renvoie sa réponse : les mêmes règles, et le même refus avec la même raison que si la commande avait été envoyée. Rien ne change sur la carte. À utiliser quand une procédure exige une commande que vous croyez refusée : c'est la carte qui fait autorité sur ce qu'elle accepte, pas votre mémoire de ses règles.",
+            "properties": {
+                "command": "power_off, power_on, set_speed ou set_min_flow",
+                "percent": "la valeur que porterait la commande, pour set_speed et set_min_flow"
+            }
+        },
         "motor.set_speed": {
             "title": "Régler la vitesse du scrubber",
             "description": "Règle la consigne de vitesse, en pour cent de la pleine vitesse. Refusée hors de [0, 100], et sous le débit minimal tant que le CO2 n'est pas NOMINAL.",
