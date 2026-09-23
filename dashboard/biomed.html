@@ -124,6 +124,7 @@
   #standby { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 26px; text-align: center; }
   #standby .big { font-size: clamp(26px, 5vw, 46px); letter-spacing: 0.16em; text-transform: uppercase; color: var(--teal-soft); }
   #standby .note { font-family: var(--sans); font-size: clamp(14px, 1.8vw, 18px); color: var(--muted); max-width: 56ch; line-height: 1.6; margin: 10px auto 0; }
+  #standby .note.warn { color: var(--amber); }
 
   .modules { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; }
   .module {
@@ -261,6 +262,7 @@
       <div>
         <div class="big" id="s-title"></div>
         <p class="note" id="s-note"></p>
+        <p class="note warn" id="s-not-ready" hidden></p>
       </div>
       <div class="modules" id="s-modules"></div>
     </section>
@@ -294,6 +296,7 @@ const FALLBACK = {
   "standby.title": "Standby",
   "standby.note": "No test under way. This screen wakes up on its own when the commander authorises one.",
   "standby.occupants": "Occupants",
+  "standby.notReady": "No heartbeat can be read: {reason}.",
   "state.nominal": "nominal",
   "state.outOfBand": "out of band",
   "state.signalLost": "signal lost",
@@ -425,6 +428,8 @@ async function open() {
     clientInfo: { name: "biomed-station", version: "0.1.0" },
   });
   await loadWords(session);
+  // Read again on every new link: a restarted server may have been fixed.
+  poll.notReady = undefined;
   link("ok");
 }
 
@@ -702,6 +707,12 @@ async function poll() {
       }
     } else {
       poll.resting = null;
+      // Why a session could not open, said before anyone tries: a Python
+      // without bleak would otherwise show up only as a signal lost.
+      if (poll.notReady === undefined) poll.notReady = json(await session.callTool("describe", {}))?.notReady ?? null;
+      const notReady = el("s-not-ready");
+      notReady.hidden = !poll.notReady;
+      notReady.textContent = poll.notReady ? phrase("standby.notReady", { reason: poll.notReady }) : "";
       const presence = json(await session.callTool("presence", {}));
       showStandby(presence?.modules);
     }

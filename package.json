@@ -16,6 +16,7 @@
         "biomed:start": "node dist/scripts/biomed-session.js start",
         "biomed:stop": "node dist/scripts/biomed-session.js stop",
         "biomed:state": "node dist/scripts/biomed-session.js state",
+        "biomed:setup": "python -m pip install -r requirements.txt",
         "biomed:scan": "python scripts/polar-h10-bridge.py --scan",
         "biomed:strap": "python scripts/polar-h10-bridge.py --self-test",
         "slots": "node --env-file-if-exists=.env dist/slots/run-all.js --no-broker",

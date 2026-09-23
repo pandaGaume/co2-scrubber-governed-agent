@@ -18,7 +18,7 @@
  * fix, and the service will say `signal-lost` in the meantime, which is the
  * truth.
  */
-import { spawn, type ChildProcessByStdio } from "node:child_process";
+import { spawn, spawnSync, type ChildProcessByStdio } from "node:child_process";
 import type { Readable } from "node:stream";
 import { createInterface, type Interface } from "node:readline";
 import { fromRoot } from "../../../lib/paths.js";
@@ -43,6 +43,19 @@ export interface PolarOptions {
 }
 
 const SCRIPT = "scripts/polar-h10-bridge.py";
+
+/**
+ * Why the sidecar could not run on this interpreter, or null when it could.
+ * Asked once, when the slot comes up: a missing `bleak` otherwise shows only
+ * as a signal lost a few seconds into a session, which reads like a strap
+ * that slipped off rather than a package nobody installed.
+ */
+export function sidecarProblem(python: string = process.env.BIOMED_PYTHON ?? "python"): string | null {
+    const probe = spawnSync(python, ["-c", "import bleak"], { encoding: "utf8", timeout: 15000 });
+    if (probe.error) return `${python} cannot be run (${probe.error.message}); set BIOMED_PYTHON to the interpreter that has bleak`;
+    if (probe.status !== 0) return `bleak is not installed for ${python}: run npm run biomed:setup, then restart the server`;
+    return null;
+}
 
 /** stdin is closed: the sidecar is a source, it takes no orders. */
 type Sidecar = ChildProcessByStdio<null, Readable, Readable>;

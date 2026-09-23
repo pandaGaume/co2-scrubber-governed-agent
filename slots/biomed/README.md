@@ -60,7 +60,7 @@ Three reasons, and the third is the one people forget:
 | provider | what is behind it |
 |---|---|
 | `simulated` | a resting rate that drifts and breathes, deterministic for a seed. `live: false`, so **the slot publishes itself as a stub** and every sample carries `source: "simulated"`. A rehearsal cannot be passed off as a measurement |
-| `polar` | a real chest strap, read by a Python sidecar the slot spawns itself, one process per person (`scripts/polar-h10-bridge.py`, `pip install bleak`). `live: true`, the stub flag is gone |
+| `polar` | a real chest strap, read by a Python sidecar the slot spawns itself, one process per person (`scripts/polar-h10-bridge.py`, `npm run biomed:setup` for `bleak`). `live: true`, the stub flag is gone |
 | `bridge` | a real strap read by something else entirely (a phone, an MQTT client), pushing each reading through `report`. Same honesty, another transport |
 
 The band is 45 to 120 bpm: a working adult at a bench, not asleep and not
@@ -89,9 +89,15 @@ stack with nothing installed and no driver touched, so the radio lives in a
 Python sidecar the slot spawns and reads line by line. From outside, the slot
 owns its radio; inside, the machine keeps its Bluetooth.
 
-    pip install bleak
+    npm run biomed:setup      pip install -r requirements.txt, which is bleak
     npm run biomed:strap      the decoder, against frames from the specification
     npm run biomed:scan       the straps in range, with their addresses
+
+With `polar`, the slot asks the interpreter for `bleak` when it comes up
+(`python`, or `BIOMED_PYTHON`). Without it the slot is not ready,
+`monitor_start` refuses, and the page says why on its standby screen, with the
+command to run: otherwise a missing package would show only as a signal lost
+a few seconds into a session, which reads like a strap that slipped off.
 
 `biomed:strap` needs neither a radio nor `bleak`: it checks the decoding of
 the Heart Rate Measurement characteristic against frames built from the

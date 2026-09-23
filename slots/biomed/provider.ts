@@ -38,7 +38,7 @@ import { CrewService, type Band, type Subject } from "./service.js";
 import type { HeartRateProvider } from "./heart-rate-provider.js";
 import { SimulatedProvider } from "./providers/simulated.js";
 import { BridgeProvider } from "./providers/bridge.js";
-import { PolarProvider, type StrapBinding } from "./providers/polar.js";
+import { PolarProvider, sidecarProblem, type StrapBinding } from "./providers/polar.js";
 
 export interface BiomedProfile {
     provider?: string;
@@ -79,8 +79,11 @@ export function buildProvider(requested: string, roster: Subject[], profile: Bio
         }
         case "bridge":
             return new BridgeProvider();
-        case "polar":
+        case "polar": {
+            const problem = sidecarProblem();
+            if (problem) throw new Error(problem);
             return new PolarProvider({ straps: profile.straps, namePrefix: profile.strapNamePrefix, log });
+        }
         default:
             throw new Error(`unknown biomed provider "${requested}" (simulated, bridge, polar)`);
     }

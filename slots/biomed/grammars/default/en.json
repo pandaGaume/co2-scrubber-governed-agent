@@ -45,6 +45,7 @@
         "standby.title": "Standby",
         "standby.note": "No test under way. This screen wakes up on its own when the commander authorises one.",
         "standby.occupants": "Occupants",
+        "standby.notReady": "No heartbeat can be read: {reason}.",
         "strip.module": "Module under test",
         "strip.procedure": "Procedure",
         "strip.elapsed": "Under monitoring",

@@ -98,6 +98,7 @@
         "standby.title": "En attente",
         "standby.note": "Aucun essai en cours. Cet écran se réveille tout seul quand le commandant en autorise un.",
         "standby.occupants": "Occupants",
+        "standby.notReady": "Aucun battement ne peut être lu : {reason}.",
         "strip.module": "Module sous essai",
         "strip.procedure": "Procédure",
         "strip.elapsed": "Sous surveillance",
