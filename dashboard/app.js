@@ -879,44 +879,83 @@ async function refreshAgent() {
 // ── The codes a phone reads ───────────────────────────────────────────────
 //
 // The pages meant for a hand are reached by scanning, not by typing an address
-// off a screen. The `qr` slot draws them, because the address a phone needs is
-// this machine's on the local network and a page opened at localhost cannot
-// know it: `location.origin` would send the phone to its own loopback.
+// off a screen, and the `qr` slot draws them: the address a phone needs is this
+// machine's on the local network, and a page opened at localhost cannot know it
+// because `location.origin` would send the phone to its own loopback.
+//
+// The codes belong to the slots rather than to a card of their own. They are
+// there to open the phones before the demo and are read by nobody afterwards,
+// so a panel holding two bright squares all night was two bright squares of
+// the screen spent on a minute of setup. A slot that serves a page carries a
+// small glyph; clicking the row puts the code over the strip until it is
+// clicked again.
 
-/** A code on the whole screen, for a room rather than a desk. */
-function zoom(svg, what, where) {
-    const over = document.createElement("div");
-    over.className = "zoom";
-    over.innerHTML = `${svg}<div class="what">${escapeHtml(what)}</div><div class="where">${escapeHtml(where)}</div>`;
-    over.addEventListener("click", () => over.remove());
-    addEventListener("keydown", function once(e) {
-        if (e.key !== "Escape") return;
-        removeEventListener("keydown", once);
-        over.remove();
-    });
-    document.body.appendChild(over);
+/** Kept per page: the slot is asked once and the answer does not change while
+    the process lives, since the machine's addresses do not. */
+const codes = new Map();
+let codeOpen = null;
+
+async function codeFor(page) {
+    if (codes.has(page)) return codes.get(page);
+    const s = await session("qr");
+    const answer = JSON.parse(toolText(await s.callTool("page", { page })));
+    const got = answer.result ?? answer;
+    codes.set(page, got);
+    return got;
 }
 
-async function showCodes() {
-    if (!has("qr-simulation")) return;
-    for (const [page, box, label] of [
-        ["simulation.html", "qr-simulation", "url-simulation"],
-        ["biomed.html", "qr-biomed", "url-biomed"],
-    ]) {
-        try {
-            const s = await session("qr");
-            const answer = JSON.parse(toolText(await s.callTool("page", { page, light: "#d3ecea", dark: "#04090c" })));
-            const got = answer.result ?? answer;
-            $(box).innerHTML = got.svg;
-            const url = String(got.url ?? "");
-            put(label, url.replace(/^https?:\/\//u, ""));
-            $(box).title = `${url} — click to fill the screen`;
-            $(box).addEventListener("click", () => zoom(got.svg, page.replace(".html", ""), url));
-        } catch (e) {
-            $(box).innerHTML = "";
-            put(label, `no code: ${e.message}`);
-        }
+function hideCode() {
+    const box = $("slot-code");
+    if (box) box.hidden = true;
+    document.querySelector("#slot-list li.open")?.classList.remove("open");
+    codeOpen = null;
+}
+
+async function showCode(row) {
+    const page = row.dataset.page;
+    const box = $("slot-code");
+    if (!box || !page) return;
+    if (codeOpen === page) return hideCode();
+
+    document.querySelector("#slot-list li.open")?.classList.remove("open");
+    row.classList.add("open");
+    codeOpen = page;
+    box.hidden = false;
+    box.innerHTML = `<p>asking the qr slot for this machine's address...</p>`;
+    // Above the row that was clicked, and never off either edge of the strip.
+    const strip = box.parentElement.getBoundingClientRect();
+    const at = row.getBoundingClientRect();
+    box.style.left = `${Math.max(8, Math.min(at.left - strip.left + at.width / 2 - 100, strip.width - 208))}px`;
+
+    try {
+        const got = await codeFor(page);
+        if (codeOpen !== page) return;
+        const url = String(got.url ?? "");
+        box.innerHTML =
+            `${got.svg}<b>${escapeHtml(String(row.dataset.what ?? page))}</b>` +
+            `<span>${escapeHtml(url.replace(/^https?:\/\//u, ""))}</span>`;
+    } catch (e) {
+        if (codeOpen !== page) return;
+        box.innerHTML = `<p>no code: ${escapeHtml(e.message)}</p>`;
     }
+}
+
+/* Delegated, because the rows are built by `board.js` as the slots answer and
+   rebuilt on every poll. */
+function watchSlotPages() {
+    const list = $("slot-list");
+    if (!list) return;
+    list.addEventListener("click", (e) => {
+        const row = e.target.closest("li.has-page");
+        if (row) void showCode(row);
+        else hideCode();
+    });
+    addEventListener("keydown", (e) => {
+        if (e.key === "Escape") hideCode();
+    });
+    document.addEventListener("click", (e) => {
+        if (codeOpen && !e.target.closest("#slot-list, #slot-code")) hideCode();
+    });
 }
 
 // ── The story ─────────────────────────────────────────────────────────────
@@ -1075,7 +1114,7 @@ loadSlots()
         openModel().then(() => setInterval(refreshModel, POLL_MS));
         openAgent().then(() => setInterval(refreshAgent, POLL_MS * 2));
         // Once: the machine's addresses do not change while it runs.
-        void showCodes();
+        watchSlotPages();
         setInterval(refreshSpeechPulse, POLL_MS);
     })
     .catch((e) => {

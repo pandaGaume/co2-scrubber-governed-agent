@@ -55,32 +55,13 @@
 
     <div class="col-left">
 
-        <!-- The night is driven from a phone now, and the medical monitoring
-             is read on one. Both codes carry this machine's address on the
-             local network, which the `qr` slot resolves: a page opened at
-             localhost cannot know it, and a phone pointed at loopback finds
-             nothing. -->
-        <section class="panel handsets">
-            <h2 class="panel-title">In hand<span class="rule"></span><span class="hint" id="centre-note"></span></h2>
-            <div class="codes">
-                <figure class="code">
-                    <div class="qr" id="qr-simulation"></div>
-                    <figcaption><b>The night</b><span id="url-simulation">asking the qr slot...</span></figcaption>
-                </figure>
-                <figure class="code">
-                    <div class="qr" id="qr-biomed"></div>
-                    <figcaption><b>Medical</b><span id="url-biomed"></span></figcaption>
-                </figure>
-            </div>
-            <div class="panel-foot menu-foot">
-                <button id="btn-sound" class="btn" title="this page is the audio output of the speech slot">sound on</button>
-            </div>
-        </section>
-
         <section class="panel station">
             <h2 class="panel-title">Mother<span class="rule"></span><span class="hint">the station's voice</span></h2>
             <canvas id="voice-meter" class="voice-meter" title="what is being said, drawn from the audio that is playing: it oscillates behind the words and is flat ahead of them"></canvas>
             <div id="voice-log" class="voice-log"></div>
+            <div class="panel-foot menu-foot">
+                <button id="btn-sound" class="btn" title="this page is the audio output of the speech slot">sound on</button>
+            </div>
         </section>
 
     </div>
@@ -154,6 +135,10 @@
                 <div class="model-id">
                     <div class="model-name" id="model-name">connecting...</div>
                     <div class="model-sub" id="model-sub"></div>
+                    <!-- Whether the loop is the model's or the scripted stand-in's,
+                         said under the model's own name because that is the one
+                         place where the answer matters. -->
+                    <div class="model-sub" id="centre-note"></div>
                 </div>
                 <div class="model-figures" id="model-figures"></div>
                 <div class="model-exchange" id="model-exchange"></div>
@@ -163,9 +148,15 @@
 
     </div>
 
+    <!-- A slot that serves a page can hand it to a phone: clicking its light
+         asks the `qr` slot for the address on the local network, which a page
+         opened at localhost cannot know, and shows it as a code over the
+         strip. Nothing in the room reads it; it is how the phones in the demo
+         are opened. -->
     <section class="panel slots">
         <h2 class="panel-title">Slots<span class="rule"></span><span class="hint" id="slot-note"></span></h2>
         <ul id="slot-list" class="slot-leds"></ul>
+        <div class="slot-code" id="slot-code" hidden></div>
     </section>
 
 </main>

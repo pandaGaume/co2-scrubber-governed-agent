@@ -28,6 +28,22 @@ const $ = (id) => document.getElementById(id);
 const base = `${location.protocol}//${location.host}`;
 const EXPECTED = ["scrubber", "twin", "station", "factory", "reasoner", "speech"];
 const TIER = { scrubber: "Tier 1, the board", twin: "Tier 0, the oracle", station: "Tier 2", factory: "the factory", reasoner: "the model", speech: "the voice" };
+/* The slots that serve a page of their own, and what it is. A page is how a
+   slot reaches a hand that is not at this keyboard: the agent is driven from a
+   phone, the medical module is read on one, the factory is reviewed on a
+   second screen. `app.js` turns these rows into buttons that show the address
+   as a code. */
+const PAGES = {
+    agent: { page: "simulation.html", what: "The night, in hand" },
+    biomed: { page: "biomed.html", what: "The medical module" },
+    factory: { page: "factory.html", what: "The factory" },
+};
+/* A code, small: three finder squares and some noise. It says a code is
+   behind the row without drawing one on every row. */
+const PAGE_GLYPH =
+    '<svg class="page-glyph" viewBox="0 0 11 11" aria-hidden="true">' +
+    '<path d="M0 0h4v4H0zm1 1v2h2V1zM7 0h4v4H7zm1 1v2h2V1zM0 7h4v4H0zm1 1v2h2V8z"/>' +
+    '<path d="M5 0h1v2H5zM6 5h2v1H6zM5 6h1v2H5zM9 6h1v1H9zM7 9h1v2H7zM5 10h1v1H5zM10 5h1v1h-1z"/></svg>';
 const SLOT_WAIT_MS = 20_000;
 const POLL_MS = 2000;
 // The console's pace: the checks take milliseconds, the eye needs more. A line every LINE_MS at least,
@@ -487,7 +503,15 @@ async function renderSlots() {
         if (!li) {
             li = document.createElement("li");
             li.dataset.slot = slot;
-            li.innerHTML = `<span class="led"></span><span class="name">${slot}<small>${TIER[slot] ?? ""}</small></span><span class="meta"></span>`;
+            const serves = PAGES[slot];
+            li.innerHTML =
+                `<span class="led"></span><span class="name">${slot}<small>${TIER[slot] ?? ""}</small>${serves ? PAGE_GLYPH : ""}</span><span class="meta"></span>`;
+            if (serves) {
+                li.classList.add("has-page");
+                li.dataset.page = serves.page;
+                li.dataset.what = serves.what;
+                li.title = `${serves.what}: show the address of ${serves.page} as a code a phone can read`;
+            }
             list.appendChild(li);
         }
         const led = li.querySelector(".led");
@@ -607,7 +631,7 @@ async function askFactory() {
     }
     factoryTask = r.output.taskId;
     voiceLine(w("board.opened", { taskId: factoryTask, builder: r.output.builder ?? "?", rows: telemetry.length }), "info");
-    for (const b of $("menu").querySelectorAll("button")) b.classList.toggle("playing", b.dataset.intention === "factory");
+    for (const b of document.querySelectorAll("#menu button")) b.classList.toggle("playing", b.dataset.intention === "factory");
     $("top-state").textContent = `FACTORY · ${factoryTask}`;
     $("top-state").classList.add("busy");
     let said = 0;
@@ -630,17 +654,17 @@ async function askFactory() {
     factoryTask = null;
     $("top-state").textContent = "IDLE";
     $("top-state").classList.remove("busy");
-    for (const b of $("menu").querySelectorAll("button")) b.classList.remove("playing");
+    for (const b of document.querySelectorAll("#menu button")) b.classList.remove("playing");
 }
 
 /**
- * The factory's own button, in the SIMULATION panel `app.js` builds.
+ * The factory's own button, when there is a menu to put it in.
  *
- * The night's events and the transport (play, pause, next, stop, reset) are
- * the `agent` slot's now, so this page no longer builds that list: the agent
- * runs in the Node process and the panel drives it through the broker. The
- * factory's order is still this page's, because it is the board that samples
- * the telemetry the order carries.
+ * There is not, on the control room: the SIMULATION panel it belonged to went
+ * to the phone, and the night's events and the transport are the `agent`
+ * slot's. So this does nothing here and the board's own factory order
+ * (`askFactory`, which carries the telemetry this page sampled) is placed from
+ * the factory's window instead. Kept because `panel.html` still builds a menu.
  */
 function addFactoryButton() {
     const menu = $("menu");
@@ -721,7 +745,6 @@ async function main() {
     const scripted = !report.reasoner?.ready;
     loopUrl = `${LOOP_URL}${scripted ? "&llm=0&script=prudent" : ""}`;
     $("centre-note").textContent = scripted ? "scripted agent" : "the model decides";
-    $("menu").innerHTML = `<span class="hint">The agent's loop is not open. Open it to load the night's events.</span>`;
     $("btn-agent")?.addEventListener("click", () => openLoopWindow());
     $("btn-factory")?.addEventListener("click", () => openFactoryWindow());
 
