@@ -78,7 +78,7 @@ export class ScriptedProcedureBuilder implements Provider {
             volume: volume.path,
             device: scrubber?.path ?? "/habitat/lab/eclss/scrubber-1",
             quantities: [{ name: `V_${volume.name.replace(/-/g, "_")}`, quantity: "Volume", unit: "m3" }],
-            hypotheses: ["the exchange with the next volume through the closed hatch is not measured; the residual of the candidate simulators decides it"],
+            hypotheses: ["the flow the inter-module ventilation delivers, hatch closed, is not measured by this test; the design says 3 m3/min, and the residual of the candidate simulators says whether the installation delivers it"],
             limits: { co2MaxPpm: 2800, co2AbortPpm: 3200, minSpeedPercent: speed === 0 ? 0 : 30, maxMinutes: 24 },
             ...(read ? { occupancy: { module: volume.name, occupants: read.occupants, subjects, readBy: "biomed.presence" } } : {}),
             ...(monitoring && occupied ? { monitoring: { subjects, band: { minBpm: 45, maxBpm: 120 }, reason: `the test raises the CO2 of the air ${subjects.length} people breathe` } } : {}),

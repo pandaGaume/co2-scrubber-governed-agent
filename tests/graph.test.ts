@@ -151,7 +151,7 @@ describe("the parametric graph and its residual", () => {
 
     it("the stand-in world rises at 30 %, decays at 100 %, and its neighbour moves", () => {
         assert.equal(TELEMETRY.length, 51);
-        assert.ok(TELEMETRY[20].co2_lab_ppm > TELEMETRY[0].co2_lab_ppm + 200, "the rise");
+        assert.ok(TELEMETRY[20].co2_lab_ppm > TELEMETRY[0].co2_lab_ppm + 150, "the rise");
         assert.ok(TELEMETRY[50].co2_lab_ppm < TELEMETRY[20].co2_lab_ppm - 200, "the decay");
         assert.ok(TELEMETRY[50].co2_habb_ppm > TELEMETRY[0].co2_habb_ppm + 50, "Hab-B is not a constant");
     });
@@ -196,12 +196,13 @@ describe("the graph factory's loop on the gap, through the broker", () => {
         if (recipesDir) rmSync(recipesDir, { recursive: true, force: true });
     });
 
-    it("the Lab alone is refused by its residual, the Lab with the exchange holds and finds the world's volume and flow", async () => {
+    it("the ventilation at its design flow is refused by its residual, the same structure with the delivered flow fitted holds and finds the world's volume and flow", async () => {
         const r = await broker.call("factory", "request", {
-            objective: { required_outputs: [{ name: "predicted_co2", quantity: "Concentration", unit: "ppm" }], constraints: { residualPpmMax: 25 } },
+            // 10 ppm, a few times the sensors' noise: at 25 the design flow passes too (about 19 ppm, the volume compensating).
+            objective: { required_outputs: [{ name: "predicted_co2", quantity: "Concentration", unit: "ppm" }], constraints: { residualPpmMax: 10 } },
             observations: { labOccupants: 2 },
             data: [{ file: "telemetry.json", rows: TELEMETRY }],
-            requirements: { objective: "reproduce the Lab CO2 during the decay test", missing_information: ["the exchange through the closed hatch"] },
+            requirements: { objective: "reproduce the Lab CO2 during the decay test", missing_information: ["the flow the inter-module ventilation delivers, hatch closed"] },
             budget: { iterations: 12, twinPoints: 200 },
             builder: "scripted",
             requestedBy: "graph-test",
@@ -215,20 +216,21 @@ describe("the graph factory's loop on the gap, through the broker", () => {
         assert.equal(result.state, "proposed", result.manifest.ended ?? "");
         const candidates = JSON.parse(readFileSync(path.join(taskDir(taskId), "candidates.json"), "utf8")) as Candidate[];
         assert.equal(candidates.length, 2, result.manifest.steps.map((s) => `${s.n} ${s.capability} ${s.outcome} ${String(s.reason).slice(0, 300)}`).join("\n"));
-        const [alone, coupled] = candidates;
+        const [nominal, coupled] = candidates;
+        const alone = nominal;
         assert.equal(alone.pass, false);
-        assert.ok(alone.residuals[0].rmse > 25, `the Lab alone: ${alone.residuals[0].rmse} ppm at V ${alone.variables.V}`);
+        assert.ok(alone.residuals[0].rmse > 10, `the design flow: ${alone.residuals[0].rmse} ppm at V ${alone.variables.V}`);
         assert.equal(coupled.pass, true);
         assert.ok(coupled.residuals[0].rmse < 10, `with the exchange: ${coupled.residuals[0].rmse} ppm`);
         assert.ok(Math.abs(coupled.variables.V - LAB_WORLD.VLab) / LAB_WORLD.VLab < 0.1, `V ${coupled.variables.V} for ${LAB_WORLD.VLab}`);
         assert.ok(Math.abs(coupled.variables.q - LAB_WORLD.q) / LAB_WORLD.q < 0.15, `q ${coupled.variables.q} for ${LAB_WORLD.q}`);
         assert.equal(coupled.estimator, "nelder-mead");
         assert.ok(coupled.combinations <= 41, `${coupled.combinations} runs`);
-        assert.ok(coupled.types.includes("Logic.Time:timeline") && coupled.nodes === alone.nodes + 1, "the topology changed: one more node");
+        assert.ok(coupled.nodes === alone.nodes && coupled.fitted.includes("q") && !alone.fitted.includes("q"), "the structure is the design's in both; what changed is that the flow is measured");
         assert.ok(result.manifest.artifacts.some((a) => a.kind === "graph" && a.path === coupled.path && a.sha256 === coupled.sha256));
         assert.ok(result.manifest.artifacts.some((a) => a.kind === "graph" && a.path === alone.path), "the refused candidate stays, as evidence");
         const said = JSON.parse((await (await broker.session("station")).request<{ contents: Array<{ text: string }> }>("resources/read", { uri: "station://mother" })).contents[0].text) as MotherLine[];
         const lines = said.filter((l) => l.key.startsWith("mother.candidate")).map((l) => l.text.en);
-        assert.deepEqual(lines, [`Simulator 1. 4 nodes. Residual ${Math.round(alone.residuals[0].rmse)} ppm, above the threshold of 25. Rejected.`, `Simulator 2. 5 nodes. Residual ${Math.round(coupled.residuals[0].rmse)} ppm, under the threshold of 25. Accepted.`]);
+        assert.deepEqual(lines, [`Simulator 1. 5 nodes. Residual ${Math.round(alone.residuals[0].rmse)} ppm, above the threshold of 10. Rejected.`, `Simulator 2. 5 nodes. Residual ${Math.round(coupled.residuals[0].rmse)} ppm, under the threshold of 10. Accepted.`]);
     });
 });

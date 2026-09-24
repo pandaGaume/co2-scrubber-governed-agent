@@ -38,7 +38,7 @@ const REQUEST: TwinFactoryRequest = {
     inputs: [{ name: "scrubber speed", quantity: "Ratio", unit: "percent", column: "speed_percent" }],
     outputs: [{ name: "predicted_co2", quantity: "Concentration", unit: "ppm", horizonMinutes: 30 }],
     required_behaviors: ["CO2 accumulation from the occupants", "CO2 removal by the scrubber, faster at higher speed"],
-    missing_information: ["the served volume", "the exchange through the closed hatch"],
+    missing_information: ["the served volume", "the flow the inter-module ventilation delivers, hatch closed"],
     assumptions: ["the Lab air is well mixed"],
     validation: { criteria: ["residual under 150 ppm over the test"], compare: [{ output: "predicted_co2", against: "co2_ppm" }] },
 };

@@ -240,9 +240,10 @@ async function main(): Promise<void> {
         // ── 8. the graph factory: candidates, residuals, the loop on the gap. The threshold is the operator's.
         t0 = Date.now();
         const contract = factoryContractOf(obs.request);
+        // The operator's threshold: 10 ppm, a few times the sensors' noise. At 25 a ventilation delivering a third less than designed passed unseen (the volume compensating).
         const reqG = await call<{ taskId: string; builder: string }>(operator, "factory", "request", {
             ...contract,
-            objective: { ...contract.objective, constraints: { ...contract.objective.constraints, residualPpmMax: 25 } },
+            objective: { ...contract.objective, constraints: { ...contract.objective.constraints, residualPpmMax: 10 } },
             data: [{ file: "telemetry.json", rows: telemetry }],
             budget: { iterations: 30, minutes: 20, twinPoints: 600 },
             requestedBy: "observer",
@@ -258,7 +259,7 @@ async function main(): Promise<void> {
                 name: "graph factory",
                 kind: "model",
                 who: `the graph factory, builder ${reqG.builder}`,
-                goal: "build the twin from the catalogue and make it evolve by its gap to the telemetry until the residual is under 25 ppm",
+                goal: "build the twin from the catalogue and make it evolve by its gap to the telemetry until the residual is under 10 ppm",
                 tools: g.tools,
                 decisions: g.steps.length,
                 modelCalls: g.steps.filter((s) => s.source === "fallback" || s.source === "refused").length,
@@ -277,15 +278,15 @@ async function main(): Promise<void> {
         // What the documentation gives, and nothing the world alone knows: the crew's rate is NASA's band, not the world's value.
         const given = { N: 2, Qe: 1.0, lag: 3.33 };
         const compare = [{ node: "lab", property: "co2Ppm", column: "co2_lab_ppm" }];
-        const byHand: Array<{ name: string; spec: Spec; fit: Record<string, { min: number; max: number }> }> = [
-            { name: "by hand: the Lab alone", spec: labCandidate(false) as unknown as Spec, fit: { V: { min: 10, max: 200 }, g: { min: 0.26, max: 0.45 } } },
-            { name: "by hand: the Lab and the exchange through the hatch", spec: labCandidate(true) as unknown as Spec, fit: { V: { min: 10, max: 200 }, g: { min: 0.26, max: 0.45 }, q: { min: 0, max: 2 } } },
+        const byHand: Array<{ name: string; spec: Spec; fit: Record<string, { min: number; max: number }>; held?: Record<string, number> }> = [
+            { name: "by hand: the ventilation at its design flow (3 m3/min)", spec: labCandidate(true) as unknown as Spec, fit: { V: { min: 10, max: 200 }, g: { min: 0.26, max: 0.45 } }, held: { q: 3.0 } },
+            { name: "by hand: the ventilation's delivered flow measured", spec: labCandidate(true) as unknown as Spec, fit: { V: { min: 10, max: 200 }, g: { min: 0.26, max: 0.45 }, q: { min: 0, max: 6 } } },
         ];
         const references: Array<{ name: string; rmse: number | null; variables: Record<string, number> | null; error?: string }> = [];
         let handFit: Record<string, number> | null = null;
         for (const [i, h] of byHand.entries()) {
             try {
-                const r = await evaluateCandidate({ label: h.name, spec: h.spec, compare, variables: given, fit: h.fit, maxRuns: 60 }, { broker: operator, taskId: reqG.taskId, task: { ...task, requirements: undefined }, rows, remaining: 200, n: 100 + i });
+                const r = await evaluateCandidate({ label: h.name, spec: h.spec, compare, variables: { ...given, ...h.held }, fit: h.fit, maxRuns: 60 }, { broker: operator, taskId: reqG.taskId, task: { ...task, requirements: undefined }, rows, remaining: 200, n: 100 + i });
                 references.push({ name: h.name, rmse: Math.max(...r.candidate.residuals.map((x) => x.rmse)), variables: r.candidate.variables });
                 if (i === 1) handFit = r.candidate.variables;
             } catch (e) {
@@ -316,7 +317,7 @@ async function main(): Promise<void> {
                 tokens: null,
                 refusals: [],
                 steps: [],
-                output: { truth: { V: LAB_WORLD.VLab, q: LAB_WORLD.q, g: LAB_WORLD.gLabPerson }, references, stationTwin: station, handGraph, comparisons },
+                output: { truth: { V: LAB_WORLD.VLab, q: LAB_WORLD.q, qNominal: LAB_WORLD.qNominal, g: LAB_WORLD.gLabPerson }, references, stationTwin: station, handGraph, comparisons },
             },
             t0,
         );

@@ -6,10 +6,13 @@
  *
  * It plays the two candidates of the commissioning (mise-en-service.fr.md,
  * section 11), so the loop can be watched without a key: the catalogue, the
- * plan, a first candidate with the Lab alone (its volume fitted over a wide
- * range), refused by its residual; a second with the exchange through the
- * hatch, the neighbour's measured CO2 as an input (the volume and the
- * exchange flow fitted), accepted; the claim. It decides from what it
+ * plan, a first candidate with the Lab and the inter-module ventilation at
+ * its design flow (the volume fitted), refused by its residual; a second
+ * with the same structure and the ventilation's flow fitted, accepted; the
+ * claim. The structure is the design's from the start: the scrubber is
+ * centralised and serves Hab-B through the ventilation, so a Lab without
+ * exchange is not a candidate; what the test finds is how much the
+ * ventilation delivers. It decides from what it
  * observes (the phase, the last capability, the last evaluation), like the
  * other scripts.
  */
@@ -61,6 +64,8 @@ export class ScriptedGraphBuilder implements Provider {
         const occupants = Number((task.observations as { labOccupants?: unknown })?.labOccupants ?? 2);
         // What the documentation gives: the scrubber's effective flow and lag (its datasheet), the crew and their rate (the station's page).
         const fixed = { N: occupants, g: 0.42, Qe: 1.0, lag: 3.33 };
+        // The ventilation's design flow, hatch closed (the station's topology).
+        const qNominal = 3.0;
         const compare = [{ node: "lab", property: "co2Ppm", column: "co2_lab_ppm" }];
         if (last && !last.result.ok) return decide("task.fail", { reason: (last.result.error ?? last.result.outcome).replace(/^(device refused|error):\s*/i, "") }, `${last.id} failed: nothing else to try`);
         switch (after) {
@@ -69,12 +74,12 @@ export class ScriptedGraphBuilder implements Provider {
             case "plan:twin.registry_search":
                 return decide("task.plan", { selected_nodes: ["Physics.LifeSupport:cabin-air", "Physics.LifeSupport:crew", "Physics.LifeSupport:scrubber", "Logic.Time:timeline"], missing_capabilities: [] }, "a cabin, its crew, its scrubber, the measured command");
             case "build:task.plan":
-                return decide("graph.evaluate", { label: "the Lab alone, a sealed volume", spec: labCandidate(false), compare, variables: fixed, fit: { V: { min: 10, max: 100 } } } as unknown as JsonValue, "first candidate: the simplest structure");
+                return decide("graph.evaluate", { label: "the Lab and the inter-module ventilation at its design flow", spec: labCandidate(true), compare, variables: { ...fixed, q: qNominal }, fit: { V: { min: 10, max: 100 } } } as unknown as JsonValue, "first candidate: the installation as designed");
             default: {
                 const value = (last?.result.output ?? {}) as { value?: { pass?: boolean; candidate?: number; path?: string } };
                 const v = value.value ?? {};
                 if (last?.id === "graph.evaluate" && v.pass) return decide("task.done", { summary: `candidate ${v.candidate} holds the residual threshold`, artifacts: [{ kind: "graph", path: v.path ?? "" }] }, "the candidate holds");
-                return decide("graph.evaluate", { label: "the Lab and an exchange through the closed hatch with Hab-B, its measured CO2 as an input", spec: labCandidate(true), compare, variables: fixed, fit: { V: { min: 10, max: 100 }, q: { min: 0, max: 2 } } } as unknown as JsonValue, "the gap the volume alone cannot close: add the exchange the task names as a hypothesis");
+                return decide("graph.evaluate", { label: "the Lab and the inter-module ventilation, its delivered flow measured", spec: labCandidate(true), compare, variables: fixed, fit: { V: { min: 10, max: 100 }, q: { min: 0, max: 6 } } } as unknown as JsonValue, "the gap the design flow cannot close: fit what the ventilation actually delivers");
             }
         }
     }

@@ -2,7 +2,9 @@
  * A stand-in for the room, until the two-volume world runs in the
  * substrate (the CO2 in mass on `atmosphere`, spec section 17): the Lab and
  * Hab-B as two well-mixed zones, a scrubber in the Lab with a first-order
- * lag, the occupants as sources, and an exchange through the closed hatch.
+ * lag, the occupants as sources, and the inter-module ventilation that
+ * carries Hab-B's air to the scrubber and back (the scrubber is centralised,
+ * as on the ISS: without that flow Hab-B would have no CO2 removal).
  *
  *     VLab * dCl/dt = Gl - r(t) * Cl - q * (Cl - Ch)
  *     VHab * dCh/dt = Gh + q * (Cl - Ch)
@@ -20,8 +22,10 @@ export interface TwoZoneWorld {
     VHab: number;
     /** The scrubber's effective flow at full speed, m3/min. */
     QeFull: number;
-    /** The exchange through the closed hatch, m3/min. */
+    /** The flow the inter-module ventilation delivers, hatch closed, m3/min: what the commissioning measures. */
     q: number;
+    /** The ventilation's design flow, hatch closed, m3/min: what the documentation says. */
+    qNominal: number;
     /** CO2 per person, L/min, in each zone. */
     gLabPerson: number;
     gHabPerson: number;
@@ -37,9 +41,11 @@ export interface TwoZoneWorld {
  * band for a crewmember awake in the cabin (BVAD Rev2, Table 3-26: 0.26 to
  * 0.45 L/min, reference 0.38): two operators slightly above the reference,
  * as people at work are; Hab-B's two between asleep and awake. The twin
- * knows the band, never these numbers.
+ * knows the band, never these numbers. The ventilation delivers 2 m3/min
+ * where its design says 3 (a clogged filter, a damper half shut): the gap the
+ * commissioning finds.
  */
-export const LAB_WORLD: TwoZoneWorld = { VLab: 30, VHab: 400, QeFull: 1.0, q: 0.6, gLabPerson: 0.42, gHabPerson: 0.3, labOccupants: 2, habOccupants: 2, lagMinutes: 3.33, labStartPpm: 1480, habStartPpm: 1500 };
+export const LAB_WORLD: TwoZoneWorld = { VLab: 30, VHab: 400, QeFull: 1.0, q: 2.0, qNominal: 3.0, gLabPerson: 0.42, gHabPerson: 0.3, labOccupants: 2, habOccupants: 2, lagMinutes: 3.33, labStartPpm: 1480, habStartPpm: 1500 };
 
 export interface TelemetryRow {
     minute: number;
