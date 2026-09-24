@@ -319,7 +319,7 @@ describe("the commissioning, through the broker", () => {
         assert.equal(result.status, "done", JSON.stringify(result.aborted));
         assert.deepEqual(commands, [30, 100]);
         const report = result.report!;
-        assert.ok(report.result.value !== null && Math.abs(report.result.value - 60.7) < 1, JSON.stringify(report.result));
+        assert.ok(report.result.value !== null && Math.abs(report.result.value - 18.4) < 0.5, JSON.stringify(report.result));
         assert.deepEqual(report.steps.map((s) => [s.n, s.accepted, s.speedPercent]), [[1, true, 30], [2, true, 100]]);
         assert.equal(report.authorisedBy, "commander");
         assert.equal(report.aborted, null);
@@ -327,7 +327,7 @@ describe("the commissioning, through the broker", () => {
         assert.equal((await commissioning("c001-lab")).status, "done");
         const lines = (await mother()).map((l) => l.text.en);
         assert.ok(lines.includes("Test running. Step 1 of 2.") && lines.includes("Test running. Step 2 of 2."));
-        assert.deepEqual(lines.slice(-4), ["Test complete. 24 minutes.", "Served volume: 61 cubic metres.", "Vital signs nominal throughout.", "No emergency stop."]);
+        assert.deepEqual(lines.slice(-4), ["Test complete. 24 minutes.", "Served volume: 18 cubic metres.", "Vital signs nominal throughout.", "No emergency stop."]);
     });
 
     it("a builder that did not read who was there is refused for it; the procedure it corrects is authorised, and a third person walking in aborts the test", async () => {

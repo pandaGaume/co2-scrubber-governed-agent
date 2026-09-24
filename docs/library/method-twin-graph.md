@@ -32,7 +32,8 @@ An exchange flow q (m3/min) between the volume and a neighbour of concentration 
 ## Writing a candidate for `graph.evaluate`
 
 - Parameters may be formulas: `{"$expr": "0.5 * 1e3 / V"}`; a timeline's segments may come from a telemetry column: `{"$series": {"column": "speed_percent", "scale": "0.01"}}`; an initial state from the first measurement: `{"$first": "co2_lab_ppm"}`.
-- `vary` gives the values the harness tries for each variable (every combination is run, 80 at most per evaluation); `variables` holds the fixed ones.
+- `fit` gives the bounds of each variable nobody knows (`{"V": {"min": 10, "max": 200}}`): the harness searches them with an optimiser, a few dozen runs; `variables` holds the known ones.
+- **What the documentation gives is known, not fitted.** A device's constants (its flow, its efficiency, its lag: its datasheet in this library) and the station's (its topology, its metrics: library `station-topology`) are inputs. Fitting them as well lets a wrong structure hide behind a wrong constant: the residual is then small for the wrong reason.
 - `compare` names the probe (`{"node": "lab", "property": "co2Ppm"}`) and the telemetry column it is judged against.
 
 ## Reading the residual

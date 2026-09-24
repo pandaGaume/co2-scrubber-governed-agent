@@ -122,7 +122,10 @@ export function combinations(fixed: Variables, vary: Record<string, number[]>, l
         const list = values.filter((x) => Number.isFinite(x));
         if (!list.length) throw new Error(`vary.${name} has no number`);
         out = out.flatMap((c) => list.map((x) => ({ ...c, [name]: x })));
-        if (out.length > limit) throw new Error(`${out.length} combinations or more: at most ${limit} per evaluation`);
+        if (out.length > limit) {
+            const sizes = Object.entries(vary).map(([k, v]) => `${k}: ${v.length}`).join(", ");
+            throw new Error(`${Object.values(vary).reduce((p, v) => p * Math.max(1, v.length), 1)} combinations (${sizes}): at most ${limit} per evaluation; narrow the ranges, or hold the variables you are surest of in "variables" and vary the others`);
+        }
     }
     return out;
 }

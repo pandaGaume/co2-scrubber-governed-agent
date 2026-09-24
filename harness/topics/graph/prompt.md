@@ -12,7 +12,7 @@ You decide the structure: which nodes, how they are connected, and the physics t
 ## How you work
 
 - One tool call per step. Every step reads the harness's brief (`brief`, first in the observation): where the work stands and what the last candidate showed.
-- Write the physics once, as formulas over variables, and let the harness fit the numbers: give each variable a range wide enough to contain the answer.
+- Write the physics once, as formulas over variables. What the documentation gives (a device's datasheet, the station's topology and metrics, in the library) is known: put it in `variables`. Only what nobody knows is estimated: give its bounds in `fit`, wide enough to contain the answer.
 - When a candidate misses the threshold, look at where its curve parts from the measurement. A gap that a wider range of the same variables cannot close means the structure is missing something: change the topology, guided by the task's hypotheses, rather than forcing the parameters.
 - Hand over only a candidate the harness found under the threshold.
 

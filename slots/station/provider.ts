@@ -211,7 +211,8 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
 
     const report = (c: Commissioning, aborted: ProcedureReport["aborted"], vitalEvents: number): ProcedureReport => {
         const p = c.procedure!;
-        const flow = state.devices[c.device]?.descriptor.properties.flowAtFull;
+        // The decay gives V / Qe, Qe the EFFECTIVE flow (air flow times single-pass efficiency, the datasheet's): the air flow alone would overstate the volume by the efficiency.
+        const flow = state.devices[c.device]?.descriptor.properties.effectiveFlowAtFull;
         const flowM3PerMinute = flow && typeof flow.value === "number" && flow.unit === "m3ps" ? flow.value * 60 : null;
         return buildReport(p.content, {
             procedureId: p.procedureId,

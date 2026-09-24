@@ -115,7 +115,8 @@ export function createWorkspaceObserver(broker: Broker, taskId: string, progress
                 .digest("hex");
             const last = progress.lastCall;
             const features: WorkshopFeatures = {
-                brief: brief(),
+                // A text answer is not read here: the loop turns it into a crew report, which a factory does not have; said in the brief, so the builder answers with a tool.
+                brief: (progress.lastRefusal?.capability === "crew.report" ? "Your last answer was text, which nobody reads here: answer with one tool call. " : "") + brief(),
                 phase: progress.phase,
                 iteration: progress.iteration,
                 files: files.length,

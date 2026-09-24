@@ -20,6 +20,7 @@ import type { JsonValue } from "@spiky-panda/harness";
 import type { Broker } from "../../lib/broker.js";
 import type { TaskFile } from "../../core/task.js";
 import { combinations, resolveSpec, type Row, type Spec, type Variables } from "./params.js";
+import { estimatorFor, type Bounds } from "./fit.js";
 
 export interface Compare {
     node: string;
@@ -47,7 +48,12 @@ export interface Candidate {
     residuals: Residual[];
     threshold: number;
     pass: boolean;
+    /** Sandbox runs this candidate cost, the final one included. */
     combinations: number;
+    /** The variables the harness fitted; the others were given. */
+    fitted: string[];
+    /** The estimator that fitted them (`fit.ts`), or `given` when nothing was fitted. */
+    estimator: string;
     at: string;
 }
 
@@ -56,14 +62,27 @@ export interface EvaluateInput {
     spec: Spec;
     compare: Compare[];
     variables?: Variables;
+    /** The bounds of the variables nobody knows: the optimiser searches them. */
+    fit?: Bounds;
+    /** Which estimator searches the bounds: `nelder-mead` (default) or `grid`. */
+    estimator?: string;
+    /** For the grid: levels per parameter (5 by default). */
+    levels?: number;
+    /** An explicit list of values per variable, every combination run (the older way; `fit` is preferred). */
     vary?: Record<string, number[]>;
+    maxRuns?: number;
 }
 
 const DT_SECONDS = 6;
 const SAMPLE_EVERY = 10;
 export const MAX_COMBINATIONS = 80;
+/** Runs the optimiser may spend on one candidate unless the builder says otherwise. */
+export const DEFAULT_FIT_RUNS = 40;
 
 const round = (v: number) => Number(v.toFixed(1));
+
+/** A runtime error as the builder can read it: the reason, without the kilobytes of a resolved parameter it may quote. */
+const brief = (s: string | undefined): string => (s ?? "").replace(/"\[\{.*?\}\]"/g, '"[segments]"').slice(0, 500);
 
 /** The residual of one run against the telemetry, per compared column; the series index is the minute. */
 export function residualsOf(series: Record<string, number[]>, compare: Compare[], rows: Row[]): Residual[] {
@@ -113,28 +132,40 @@ export async function evaluateCandidate(input: EvaluateInput, ctx: EvaluateConte
     for (const c of input.compare) if (!columns.has(c.column)) throw new Error(`compare: the telemetry has no column "${c.column}" (${[...columns].join(", ")})`);
     const last = Math.max(...rows.map((r) => Number(r.minute)).filter(Number.isFinite));
     if (!Number.isFinite(last) || last <= 0) throw new Error("the telemetry has no \"minute\" column to run the candidate over");
-    const combos = combinations(input.variables ?? {}, input.vary ?? {}, Math.min(MAX_COMBINATIONS, ctx.remaining));
-    if (!combos.length || ctx.remaining <= 0) throw new Error("the task's budget of sandbox runs (twinPoints) is spent");
+    if (ctx.remaining <= 1) throw new Error("the task's budget of sandbox runs (twinPoints) is spent");
     const probes = input.compare.map((c) => ({ node: c.node, property: c.property }));
+    const fixed = input.variables ?? {};
+    const hasFit = input.fit && Object.keys(input.fit).length > 0;
+    const hasVary = input.vary && Object.keys(input.vary).length > 0;
+    for (const k of Object.keys(input.fit ?? {})) if (k in fixed) throw new Error(`"${k}" is both fixed (variables) and fitted (fit): a known constant is not fitted`);
 
     const run = async (vars: Variables, name?: string) => {
         const spec = resolveSpec(input.spec, vars, rows);
         const built = await broker.call(runtimeSlot, "document_build", name ? { spec, name } : { spec });
-        if (!built.ok) throw new Error(`the candidate does not build: ${built.error ?? built.outcome}`);
+        if (!built.ok) throw new Error(`the candidate does not build: ${brief(built.error ?? built.outcome)} (a measured input is a Logic.Time:timeline whose segments are the $series, wired into the port; a port takes a connection, not a series)`);
         const doc = built.output as { json?: string; sha256: string; nodes?: unknown[]; connections?: unknown[] };
         const ran = await broker.call(runtimeSlot, "session_run", { ...(name ? { name } : { document: doc.json }), dt: DT_SECONDS, duration: last * 60, sampleEvery: SAMPLE_EVERY, probes });
-        if (!ran.ok) throw new Error(`the candidate does not run: ${ran.error ?? ran.outcome}`);
+        if (!ran.ok) throw new Error(`the candidate does not run: ${brief(ran.error ?? ran.outcome)}`);
         const series = (ran.output as { series: Record<string, number[]> }).series;
         return { residuals: residualsOf(series, input.compare, rows), series, sha256: doc.sha256 };
     };
 
     const tried: Array<{ variables: Variables; score: number }> = [];
     let best: { variables: Variables; score: number } | null = null;
-    for (const vars of combos) {
-        const r = await run(vars);
-        const score = scoreOf(r.residuals);
-        tried.push({ variables: vars, score: round(score) });
-        if (!best || score < best.score) best = { variables: vars, score };
+    const budget = Math.min(ctx.remaining - 1, input.maxRuns ?? DEFAULT_FIT_RUNS, MAX_COMBINATIONS);
+    if (hasFit) {
+        // The variables nobody knows, searched within their bounds by the optimiser; the known ones held.
+        const fit = await estimatorFor(input.estimator).estimate(input.fit!, async (vars) => scoreOf((await run({ ...fixed, ...vars })).residuals), budget, { levels: input.levels });
+        for (const t of fit.tried) tried.push({ variables: { ...fixed, ...t.variables }, score: round(t.score) });
+        best = { variables: { ...fixed, ...fit.best }, score: fit.score };
+    } else {
+        // An explicit list of values (`vary`), or one run with the variables as given.
+        for (const vars of hasVary ? combinations(fixed, input.vary!, budget) : [fixed]) {
+            const r = await run(vars);
+            const score = scoreOf(r.residuals);
+            tried.push({ variables: vars, score: round(score) });
+            if (!best || score < best.score) best = { variables: vars, score };
+        }
     }
     // The best, built once more under its name: the candidate is a file of the task, its sha256 what the validator checks.
     const final = await run(best!.variables, `${taskId}/candidate-${ctx.n}`);
@@ -146,11 +177,13 @@ export async function evaluateCandidate(input: EvaluateInput, ctx: EvaluateConte
         nodes: input.spec.nodes.length,
         types: [...new Set(input.spec.nodes.map((n) => n.typeId))].sort(),
         connections: input.spec.connections.length,
-        variables: best!.variables,
+        variables: Object.fromEntries(Object.entries(best!.variables).map(([k, v]) => [k, Number(v.toPrecision(4))])),
         residuals: final.residuals.map((r) => ({ ...r, rmse: round(r.rmse), worst: round(r.worst) })),
         threshold,
         pass: final.residuals.every((r) => r.rmse <= threshold),
-        combinations: combos.length + 1,
+        combinations: tried.length + 1,
+        fitted: Object.keys(input.fit ?? input.vary ?? {}),
+        estimator: hasFit ? estimatorFor(input.estimator).id : hasVary ? "grid (values given)" : "given",
         at: new Date().toISOString(),
     };
     const first = input.compare[0];

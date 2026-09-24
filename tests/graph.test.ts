@@ -27,6 +27,7 @@ import { topicFor, type TaskFile } from "../harness/core/task.js";
 import { combinations, evaluateExpression, resolveParam } from "../harness/topics/graph/params.js";
 import { residualsOf, type Candidate } from "../harness/topics/graph/evaluate.js";
 import { validateGraph } from "../harness/topics/graph/index.js";
+import { estimatorFor } from "../harness/topics/graph/fit.js";
 import { ScriptedGraphBuilder } from "../harness/scripted/graph.js";
 import { LAB_WORLD, twoZoneTelemetry } from "../harness/stand-in/two-zone-world.js";
 import type { MotherLine } from "../slots/station/provider.js";
@@ -59,6 +60,20 @@ describe("the parametric graph and its residual", () => {
         assert.throws(() => combinations({}, { a: [1, 2, 3, 4, 5, 6, 7, 8, 9], b: [1, 2, 3, 4, 5, 6, 7, 8, 9], c: [1, 2] }, 80), /at most 80/);
     });
 
+    it("the two estimators are interchangeable: same question, same answer shape, their costs and limits as documented", async () => {
+        const cost = async (v: Record<string, number>) => (v.V - 30) ** 2 + 100 * (v.q - 0.6) ** 2;
+        const bounds = { V: { min: 10, max: 100 }, q: { min: 0, max: 2 } };
+        const nm = await estimatorFor("nelder-mead").estimate(bounds, cost, 40);
+        assert.ok(Math.abs(nm.best.V - 30) < 1 && Math.abs(nm.best.q - 0.6) < 0.05, JSON.stringify(nm.best));
+        assert.ok(nm.runs <= 40);
+        const grid = await estimatorFor("grid").estimate(bounds, cost, 80, { levels: 7 });
+        assert.equal(grid.runs, 49, "levels ^ parameters");
+        assert.ok(grid.score >= nm.score, "the grid is blind between its levels");
+        await assert.rejects(estimatorFor("grid").estimate({ a: { min: 0, max: 1 }, b: { min: 0, max: 1 }, c: { min: 0, max: 1 } }, cost, 80), /125 runs, above the 80 allowed/);
+        assert.equal(estimatorFor(undefined).id, "nelder-mead");
+        assert.throws(() => estimatorFor("gradient"), /no estimator "gradient" \(grid, nelder-mead\)/);
+    });
+
     it("the residual is measured per compared column, minute by minute, with where it is worst", () => {
         const [r] = residualsOf({ "lab.co2Ppm": [100, 110, 150] }, [{ node: "lab", property: "co2Ppm", column: "c" }], [{ minute: 0, c: 100 }, { minute: 1, c: 100 }, { minute: 2, c: 100 }]);
         assert.equal(r.worst, 50);
@@ -75,7 +90,7 @@ describe("the parametric graph and its residual", () => {
 
     it("the validator accepts only a candidate the harness built and found under the threshold", () => {
         const progress = newProgress();
-        const c = (n: number, pass: boolean): Candidate => ({ n, label: "", path: `candidate-${n}.spikypanda`, sha256: String(n).repeat(64), nodes: 4, types: [], connections: 3, variables: {}, residuals: [{ column: "c", probe: "lab.co2Ppm", rmse: pass ? 3 : 45, worst: 0, worstMinute: 0 }], threshold: 25, pass, combinations: 1, at: "" });
+        const c = (n: number, pass: boolean): Candidate => ({ n, label: "", path: `candidate-${n}.spikypanda`, sha256: String(n).repeat(64), nodes: 4, types: [], connections: 3, variables: {}, residuals: [{ column: "c", probe: "lab.co2Ppm", rmse: pass ? 3 : 45, worst: 0, worstMinute: 0 }], threshold: 25, pass, combinations: 1, fitted: [], estimator: "given", at: "" });
         progress.topic.graph = { candidates: [c(1, false), c(2, true)], runs: 2 } as never;
         const files = [1, 2].map((n) => ({ path: `candidate-${n}.spikypanda`, bytes: 1, sha256: String(n).repeat(64) }));
         assert.match(validateGraph({ summary: "", artifacts: [{ kind: "graph", path: "candidate-1.spikypanda" }] }, files, progress).problems.join(), /residual of 45 ppm, above the threshold of 25/);
@@ -137,8 +152,10 @@ describe("the graph factory's loop on the gap, through the broker", () => {
         assert.ok(alone.residuals[0].rmse > 25, `the Lab alone: ${alone.residuals[0].rmse} ppm at V ${alone.variables.V}`);
         assert.equal(coupled.pass, true);
         assert.ok(coupled.residuals[0].rmse < 10, `with the exchange: ${coupled.residuals[0].rmse} ppm`);
-        assert.equal(coupled.variables.V, LAB_WORLD.VLab);
-        assert.equal(coupled.variables.q, LAB_WORLD.q);
+        assert.ok(Math.abs(coupled.variables.V - LAB_WORLD.VLab) / LAB_WORLD.VLab < 0.1, `V ${coupled.variables.V} for ${LAB_WORLD.VLab}`);
+        assert.ok(Math.abs(coupled.variables.q - LAB_WORLD.q) / LAB_WORLD.q < 0.15, `q ${coupled.variables.q} for ${LAB_WORLD.q}`);
+        assert.equal(coupled.estimator, "nelder-mead");
+        assert.ok(coupled.combinations <= 41, `${coupled.combinations} runs`);
         assert.ok(coupled.types.includes("Logic.Time:timeline") && coupled.nodes === alone.nodes + 1, "the topology changed: one more node");
         assert.ok(result.manifest.artifacts.some((a) => a.kind === "graph" && a.path === coupled.path && a.sha256 === coupled.sha256));
         assert.ok(result.manifest.artifacts.some((a) => a.kind === "graph" && a.path === alone.path), "the refused candidate stays, as evidence");

@@ -30,7 +30,7 @@ export function labCandidate(exchange: boolean): JsonValue {
     const nodes: JsonValue[] = [
         { id: "crew", typeId: "Physics.LifeSupport:crew", params: { count: { $expr: "N" }, activity: "light_work", emissionLightWorkPpmPerMinute: { $expr: "g * 1e3 / V" } } },
         { id: "command", typeId: "Logic.Time:timeline", params: { segments: { $series: { column: "speed_percent", scale: "0.01" } }, defaultValue: 1 } },
-        { id: "scrubber", typeId: "Physics.LifeSupport:scrubber", params: { rateAtFullCommandPerMinute: { $expr: "Qe / V" } } },
+        { id: "scrubber", typeId: "Physics.LifeSupport:scrubber", params: { rateAtFullCommandPerMinute: { $expr: "Qe / V" }, lagTimeConstantMinutes: { $expr: "lag" } } },
         { id: "lab", typeId: "Physics.LifeSupport:cabin-air", params: { initialPpm: { $first: "co2_lab_ppm" }, removalFloorPpm: 0, leakPerMinute: exchange ? { $expr: "q / V" } : 0 } },
     ];
     const connections: JsonValue[] = [
@@ -59,7 +59,8 @@ export class ScriptedGraphBuilder implements Provider {
         const last = this.options.lastCall();
         const after = `${String(state.features.phase)}:${String(state.features.lastCapability)}`;
         const occupants = Number((task.observations as { labOccupants?: unknown })?.labOccupants ?? 2);
-        const fixed = { N: occupants, g: 0.5, Qe: 1.0 };
+        // What the documentation gives: the scrubber's effective flow and lag (its datasheet), the crew and their rate (the station's page).
+        const fixed = { N: occupants, g: 0.5, Qe: 1.0, lag: 3.33 };
         const compare = [{ node: "lab", property: "co2Ppm", column: "co2_lab_ppm" }];
         if (last && !last.result.ok) return decide("task.fail", { reason: (last.result.error ?? last.result.outcome).replace(/^(device refused|error):\s*/i, "") }, `${last.id} failed: nothing else to try`);
         switch (after) {
@@ -68,12 +69,12 @@ export class ScriptedGraphBuilder implements Provider {
             case "plan:twin.registry_search":
                 return decide("task.plan", { selected_nodes: ["Physics.LifeSupport:cabin-air", "Physics.LifeSupport:crew", "Physics.LifeSupport:scrubber", "Logic.Time:timeline"], missing_capabilities: [] }, "a cabin, its crew, its scrubber, the measured command");
             case "build:task.plan":
-                return decide("graph.evaluate", { label: "the Lab alone, a sealed volume", spec: labCandidate(false), compare, variables: fixed, vary: { V: [15, 20, 25, 30, 35, 40, 50, 60, 80] } } as unknown as JsonValue, "first candidate: the simplest structure");
+                return decide("graph.evaluate", { label: "the Lab alone, a sealed volume", spec: labCandidate(false), compare, variables: fixed, fit: { V: { min: 10, max: 100 } } } as unknown as JsonValue, "first candidate: the simplest structure");
             default: {
                 const value = (last?.result.output ?? {}) as { value?: { pass?: boolean; candidate?: number; path?: string } };
                 const v = value.value ?? {};
                 if (last?.id === "graph.evaluate" && v.pass) return decide("task.done", { summary: `candidate ${v.candidate} holds the residual threshold`, artifacts: [{ kind: "graph", path: v.path ?? "" }] }, "the candidate holds");
-                return decide("graph.evaluate", { label: "the Lab and an exchange through the closed hatch with Hab-B, its measured CO2 as an input", spec: labCandidate(true), compare, variables: fixed, vary: { V: [20, 25, 30, 35, 40], q: [0.1, 0.2, 0.3, 0.4, 0.6, 0.8] } } as unknown as JsonValue, "the gap the volume alone cannot close: add the exchange the task names as a hypothesis");
+                return decide("graph.evaluate", { label: "the Lab and an exchange through the closed hatch with Hab-B, its measured CO2 as an input", spec: labCandidate(true), compare, variables: fixed, fit: { V: { min: 10, max: 100 }, q: { min: 0, max: 2 } } } as unknown as JsonValue, "the gap the volume alone cannot close: add the exchange the task names as a hypothesis");
             }
         }
     }

@@ -8,11 +8,13 @@
  *                           (a volume, an exchange flow), and decides what
  *                           to change when a candidate does not hold: a
  *                           parameter's range, or the topology;
- *   the harness (code)      fits the variables on a grid, runs every
- *                           combination in the twin's sandbox, measures the
- *                           residual against the telemetry, keeps every
- *                           candidate with its residual, and says whether the
- *                           task's threshold is held.
+ *   the harness (code)      estimates the unknown variables within the
+ *                           bounds given, with an interchangeable estimator
+ *                           (`fit.ts`: a simplex search or a grid), runs every
+ *                           trial in the twin's sandbox, measures the residual
+ *                           against the telemetry, keeps every candidate with
+ *                           its residual, and says whether the task's
+ *                           threshold is held.
  *
  * The loop is the task's own: `graph.evaluate` answers with the residual and
  * where the curves part, the stage brief says what the last candidate
@@ -86,7 +88,10 @@ export const EVALUATE_SCHEMA = {
         },
         compare: { type: "array", minItems: 1, items: COMPARE, description: "Which probe of the graph (node, property) is judged against which telemetry column." },
         variables: { type: "object", additionalProperties: { type: "number" }, description: "Variables held fixed for this evaluation." },
-        vary: { type: "object", additionalProperties: { type: "array", items: { type: "number" } }, description: `Variables the harness fits: the values to try for each; every combination is run, ${80} at most.` },
+        fit: { type: "object", additionalProperties: { type: "object", properties: { min: { type: "number" }, max: { type: "number" } }, required: ["min", "max"] }, description: "The bounds of each variable nobody knows: the harness searches them with an optimiser (a few dozen runs). A constant the documentation gives goes in variables, not here." },
+        estimator: { type: "string", enum: ["nelder-mead", "grid"], description: "How the bounds are searched: nelder-mead (default; a simplex search, about 10 to 20 runs per parameter, local) or grid (every combination of evenly spaced levels; levels ^ parameters runs; shows the shape of the cost)." },
+        levels: { type: "number", description: "For the grid: levels per parameter (5 when absent)." },
+        maxRuns: { type: "number", description: "Sandbox runs the estimator may spend on this candidate (40 when absent, 80 at most)." },
     },
     required: ["label", "spec", "compare"],
 } as const;
@@ -95,7 +100,7 @@ function evaluateCapability(context: TopicContext): LocalCapability {
     const { broker, taskId, task, progress } = context;
     return {
         id: "graph.evaluate",
-        description: "Build a candidate twin from a parametric graph, fit its variables on the values given, run every combination in the twin's sandbox over the telemetry, and measure the residual against the columns named. The best combination is kept as candidate-<n>.spikypanda in the workshop. Answers whether the task's residual threshold is held, the residual per column and where the gap is worst, the prediction against the measurement every five minutes, and the best combinations.",
+        description: "Build a candidate twin from a parametric graph, estimate its unknown variables within their bounds (fit, with the estimator chosen), run every trial in the twin's sandbox over the telemetry, and measure the residual against the columns named. The best is kept as candidate-<n>.spikypanda in the workshop. Answers whether the task's residual threshold is held, the residual per column and where the gap is worst, the prediction against the measurement every five minutes, and the best trials.",
         inputSchema: EVALUATE_SCHEMA as unknown as JsonValue,
         async execute(input: JsonValue): Promise<CapabilityResult> {
             const state = stateOf(progress);
@@ -120,7 +125,8 @@ function evaluateCapability(context: TopicContext): LocalCapability {
 
 export function validateGraph(claim: DoneClaim, files: WorkshopFile[], progress: Progress): Validation {
     const problems: string[] = [];
-    const graphs = claim.artifacts.filter((a) => a.kind === "graph");
+    // A twin is a graph here: the claim may name it either way, the file is what counts.
+    const graphs = claim.artifacts.filter((a) => a.kind === "graph" || a.kind === "twin" || a.path.endsWith(".spikypanda"));
     if (!graphs.length) problems.push("no graph among the claimed artifacts");
     for (const g of graphs) {
         const file = files.find((f) => f.path === g.path);
@@ -138,13 +144,16 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
     const { candidates } = stateOf(progress);
     const threshold = (task.objective.constraints as { residualPpmMax?: unknown })?.residualPpmMax;
     const outputs = task.objective.required_outputs.map((o) => `${o.name} (${o.quantity}${o.unit ? `, ${o.unit}` : ""})`).join(", ");
-    if (!progress.reads["workspace.read"] && !progress.reads["library.read"] && progress.phase === "plan") return `Stage 1 of 5, what to reproduce. Read the task (workspace.read task.json: the requirements, the observations, the hypotheses) and its telemetry (the data file), and the library's card on building a twin graph (library.read method-twin-graph). The twin must produce ${outputs} within a residual of ${String(threshold)} ppm of the telemetry.`;
+    if (!progress.reads["workspace.read"] && !progress.reads["library.read"] && progress.phase === "plan") return `Stage 1 of 5, what to reproduce. Read the task (workspace.read task.json: the requirements, the observations, the hypotheses) and its telemetry (the data file), the library's card on building a twin graph (library.read method-twin-graph), and the documentation of the devices and of the station (library.list: a device's datasheet, the station's topology and metrics): what the documentation gives is known, and is not fitted. The twin must produce ${outputs} within a residual of ${String(threshold)} ppm of the telemetry.`;
     if (progress.phase === "plan") return `Stage 2 of 5, the plan. Choose the node types of the catalogue (twin.registry_search, twin.registry_describe_node) and submit them with task.plan; declare missing only what no node can express.`;
     const last = candidates.at(-1);
-    if (!last) return `Stage 3 of 5, a first candidate. Write the graph with the physics as formulas over a few variables, give the ranges to fit, and evaluate it (graph.evaluate). Threshold: ${String(threshold)} ppm.`;
-    if (last.pass) return `Stage 5 of 5, hand over. Candidate ${last.n} (${last.path}) holds the threshold: residual ${Math.max(...last.residuals.map((r) => r.rmse))} ppm. End with task.done, the graph as the artifact.`;
+    // An evaluation the harness could not run says why, here, until one runs: the builder reads it at every step, not only in the answer it may have skimmed.
+    const call = progress.lastCall;
+    const refused = call?.id === "graph.evaluate" && !call.result.ok ? ` Your last evaluation was not run: ${String(call.result.error ?? call.result.outcome).slice(0, 600)}. Change what that names; the same call gets the same answer.` : "";
+    if (!last) return `Stage 3 of 5, a first candidate. Write the graph with the physics as formulas over a few variables, give the bounds of the variables nobody knows (fit), and evaluate it (graph.evaluate). Threshold: ${String(threshold)} ppm.${refused}`;
+    if (last.pass) return `Stage 5 of 5, hand over. Candidate ${last.n} (${last.path}) holds the threshold: residual ${Math.max(...last.residuals.map((r) => r.rmse))} ppm. End with task.done, the graph as the artifact: {"kind": "graph", "path": "${last.path}"}.`;
     const where = last.residuals.map((r) => `${r.column}: ${r.rmse} ppm, worst ${r.worst} at minute ${r.worstMinute}`).join("; ");
-    return `Stage 4 of 5, the gap. Candidate ${last.n} (${last.label}) misses the threshold of ${last.threshold} ppm: ${where}, with ${JSON.stringify(last.variables)} its best fit over ${last.combinations} runs. ${candidates.length} candidate(s) so far. Look at where the curves part: if a wider range of the same variables cannot close the gap, the topology is missing something the task's hypotheses may name. Evaluate the next candidate.`;
+    return `Stage 4 of 5, the gap. Candidate ${last.n} (${last.label}) misses the threshold of ${last.threshold} ppm: ${where}, with ${JSON.stringify(last.variables)} its best fit over ${last.combinations} runs. ${candidates.length} candidate(s) so far. Look at where the curves part: if a wider range of the same variables cannot close the gap, the topology is missing something the task's hypotheses may name. Evaluate the next candidate.${refused}`;
 }
 
 function intentionOf(task: TaskFile["task"], generic: Intention): Intention {
