@@ -1,11 +1,14 @@
 # Questions for a control engineer: the CO2 twin, its identification, its use in control
 
-*Written on 24 September 2026 for Dr Grigoriadis, from the commissioning work
+*Written on 24 September 2026 for UH, from the commissioning work
 on branch `commissioning-core`. The French documents it summarises are
-`usine-de-graphes.fr.md` (the identification) and
-`exemple-mise-en-service.fr.md` (a full run on the real model). This page is
-self-contained: section 1 gives the system and what we do today, sections 2
-to 10 are the questions, grouped by topic, each with why we ask it.*
+`usine-de-graphes.fr.md` (the identification), `exemple-mise-en-service.fr.md`
+and `exemple-mise-en-service-2.fr.md` (runs on the real model),
+`nasa-protocoles-et-conclusions.fr.md` (NASA's public values and test
+protocols) and `graphe-de-reference.fr.md` (the hand-written graph as a
+reference). This page is self-contained: section 1 gives the system and what
+we do today, sections 2 to 11 are the questions, grouped by topic, each with
+why we ask it. Updated in the evening of 24 September after nine runs.*
 
 ---
 
@@ -29,15 +32,21 @@ tau du_f/dt = u(t) - u_f(t)                     (scrubber lag, tau = 3.33 min)
 - `u(t)`: speed command, 0 to 1; `Qe`: effective flow at full speed,
   1.0 m3/min (flow 3.3 m3/min times single-pass efficiency 0.30, from the
   bench datasheet).
-- `G_L`: CO2 produced by the Lab's crew (from occupancy and activity).
+- `G_L`: CO2 produced by the Lab's crew: N people times a per-person rate g.
+  NASA gives g as a band, not a value (BVAD Rev2, awake in the cabin: 0.26 to
+  0.45 L/min from the 5th to the 95th percentile, 0.38 for the reference
+  crewmember).
 - **Unknown:** `V_L`, the as-built volume (m3), and `q`, the exchange flow
   through the closed hatch (m3/min). The hatch seals are not rated for
-  tightness, so q is a hypothesis, not a fact.
+  tightness, so q is a hypothesis, not a fact. `g` is known only within its
+  band.
 
 The system is **bilinear**: the command multiplies the state.
 
-**The experiment.** A two-step test, hatch closed: 30 % for 30 minutes (the
-CO2 rises), then 100 % for 30 minutes (it decays towards an equilibrium).
+**The experiment.** A two-step test, hatch closed: a low speed (the CO2
+rises), then 100 % (it decays towards an equilibrium). The language model
+writes the procedure; the lengths have varied from run to run, from 15 to 60
+minutes in total.
 Safety envelope, enforced by code: never below 30 % (the minimum flow),
 abort above 3200 ppm, at most 60 minutes, medical monitoring of the
 occupants.
@@ -51,34 +60,37 @@ formulas over a few variables. Code does everything numeric:
 - it computes the RMSE per compared column and accepts a candidate only
   under a threshold (25 ppm today, set by the operator).
 
-What the documentation gives (Qe, the lag, the crew's CO2 rate) is held
-fixed, never fitted. When a candidate fails, the builder may change the
-parameters' bounds or the structure (add the exchange term, for instance).
+What the documentation gives is held fixed, never fitted (Qe and the lag,
+from the datasheet). A constant the documentation gives as a band (the
+crew's rate) may be fitted within the band only. When a candidate fails, the
+builder may change the parameters' bounds or the structure (add the exchange
+term, for instance).
 
-**What the first real run showed.**
-- The one-room decay fit (the classic concentration-decay method) gave an
-  apparent volume of 38.6 m3 against a true 30 m3: the unmodelled exchange
-  was absorbed by the volume.
-- The graph builder made a unit error in all seven of its candidates (Qe in
-  m3/min where the node expects Qe/V in 1/min), so no fit could close the
-  gap.
-- We now check the slope of the first five minutes, predicted against
-  measured: a twin that parts from the measurement at once, or moves the
-  wrong way, is told its rates are probably in the wrong unit. The check
-  refuses nothing; it says so with the numbers.
+**What nine runs on the real model showed** (24 September; the world is a
+simulation with V = 30 m3, q = 0.6 m3/min, g = 0.42 L/min):
 
-**What the second run showed** (after that check, a shared vocabulary of
-quantities and library access for the requirement writer):
-- The best candidate came to 41.5 ppm (threshold 25), against 679 ppm in the
-  first run. The first-slope check fired on four candidates; after the two where
-  the rates were off by an order of magnitude, the next candidate went back
-  to plausible rates.
-- But the known and the unknown were swapped. The apparent volume (35 m3,
-  from the one-room decay) was taken as a fact and held fixed. The datasheet
-  constants were fitted: the scrubber lag came out at 41 to 45 minutes
-  against 3.33 on the bench. A constant "extra emission" with no physics
-  behind it was added to close the gap. The threshold held, and nothing was
-  accepted, but it is equifinality in practice (question 8).
+| run | best twin | what stopped it, or what it showed |
+|---|---|---|
+| 1 | 679 ppm | a unit error in every candidate (Qe where the node expects Qe/V); the one-room decay gave an apparent volume of 38.6 m3 for a true 30 |
+| 2 | 41.5 ppm | the known and the unknown swapped: the apparent volume held as a fact, the datasheet constants fitted (the lag at 41 to 45 min against 3.33), a constant source with no physics added |
+| 3 to 5 | none to 134.6 ppm | errors in how the graph was written, caught one by one by checks (question 15); in run 5 the volume was found (29 to 30 m3) but a daily average was taken for an hourly rate |
+| 6 | 16.9 ppm, accepted | accepted for the wrong reasons: a 15-minute test, V = 42.5, the crew's rate fitted freely |
+| 7, 8 | 114 and 147 ppm | a matching structure with a frozen command: a text where a number was expected, a timeline that ended after 60 seconds |
+| 9 | **12.6 ppm, accepted at the first candidate** | V = 29.6 m3, g held at 0.38, the Lab alone (no exchange term) |
+
+**The run that matters for these questions is the ninth.** On its telemetry
+(30 % for about 15 minutes, then 100 % for about 15), our hand-written
+graphs, fitted with only what the model had (g within NASA's band), gave:
+
+| structure | RMSE | V (true 30) | g (true 0.42) | q (true 0.6) |
+|---|---|---|---|---|
+| the Lab alone | 10.1 ppm | 28.0 | 0.37 | (none) |
+| the Lab and the exchange | 4.1 ppm | 27.5 | 0.42 | 1.09 |
+| the model's twin (Lab alone) | 12.6 ppm | 29.6 | 0.38 (held) | (none) |
+
+Both structures pass the 25 ppm threshold. The volume is well determined;
+the exchange is not (1.09 for a true 0.6). This is what questions 4, 7, 12
+and 14 are about.
 
 ---
 
@@ -98,11 +110,14 @@ quantities and library access for the requirement writer):
 ## 3. Experiment design
 
 4. **Is two steps enough?** In theory, 30 % then 100 % separates V and q
-   when Qe is known. Within the envelope (never below 30 %, CO2 under 3200
-   ppm, 60 minutes at most), what command sequence gives the most
-   information on (V, q)? Would a pseudo-random binary sequence between 30 %
-   and 100 % do better for the same duration, given the 3.33 min lag of the
-   scrubber and the one-minute sampling?
+   when Qe is known; run 9 shows it does not in practice over 30 minutes (q
+   off by 80 %, and a structure without q passing as well). Within the
+   envelope (never below 30 %, CO2 under 3200 ppm, 60 minutes at most),
+   what command sequence gives the most information on (V, q, g)? Would a
+   pseudo-random binary sequence between 30 % and 100 % do better for the
+   same duration, given the 3.33 min lag of the scrubber and the one-minute
+   sampling? Or should the test be staged, as NASA and analog habitats do
+   (question 25)?
 5. **The bilinearity.** Because the command multiplies the state, does the
    choice of the operating levels (where the CO2 sits when the step comes)
    change the information? Should the experiment be designed on a
@@ -122,11 +137,12 @@ quantities and library access for the requirement writer):
 8. **Equifinality.** The one-room fit shows that a wrong structure can hide
    behind a wrong parameter (38.6 m3 instead of 30). The second run went
    further: a lag fitted at 45 minutes instead of 3.33, plus a constant
-   source with no physics, brought the residual down to 41.5 ppm. Beyond
-   "hold the known constants", what practical test detects that a good fit
-   is good for the wrong reason? Would bounding each fitted parameter by its
-   documented tolerance be enough, or should a structure that needs an
-   unphysical term be rejected by rule?
+   source with no physics, brought the residual down to 41.5 ppm. We now
+   bound a documented parameter by its documented band (the crew's rate by
+   NASA's percentiles) and hold the others. Is a hard bound the right form,
+   or should the band enter as a prior (a penalty in the cost, a Bayesian
+   estimate)? And should a structure that needs an unphysical term be
+   rejected by rule?
 9. **What to report.** Should each identified parameter come with a
    confidence interval (from the Hessian of the cost, or by bootstrap on the
    residuals) before the twin is accepted? What width would you consider
@@ -148,7 +164,9 @@ quantities and library access for the requirement writer):
 12. **The acceptance threshold.** How should the threshold follow from the
     sensor noise and accuracy (30 ppm + 3 %) rather than from an operator's
     choice? Should we use a statistical test on the residuals instead of,
-    or in addition to, a threshold on the RMSE?
+    or in addition to, a threshold on the RMSE? In run 9 the threshold of
+    25 ppm let through both a structure with the exchange (4.1 ppm) and one
+    without (10.1 ppm): it is wider than what separates them.
 13. **Residual analysis.** Which tests on the residuals would you run to
     decide that a structure is missing a term: whiteness (autocorrelation),
     cross-correlation with the command, or a look at the phase where the gap
@@ -156,11 +174,20 @@ quantities and library access for the requirement writer):
 14. **Choosing between structures.** When the builder proposes several
     structures (one room; one room plus exchange; two states), which
     selection rule is safest: AIC, BIC, or cross-validation on a second test
-    held out?
-15. **Plausibility checks before the fit.** Our first-slope check flags a
-    unit error from the first minutes. Which other cheap checks would you add before trusting a
-    candidate: the static gain (the equilibrium at each command level), the
-    time constant against V/Qe, or a dimensional analysis of the parameters?
+    held out? And when two structures pass, should the twin be the simpler
+    one, or the one the physics says is there (the hatch seals are not
+    rated for tightness)?
+15. **Plausibility checks before the fit.** Three checks run today, all by
+    code: the slope of the first five minutes, predicted against measured
+    (it flags a rate in the wrong unit, and lists what enters the balance at
+    the first minute); a refusal of inputs written so that the simulator
+    would take them silently and wrongly; and a comparison of each candidate
+    with a hand-written reference graph, structure and fitted numbers side
+    by side (this is how a command frozen after 60 seconds was found in a
+    candidate whose structure matched). Which other cheap checks would you
+    add before trusting a candidate: the static gain (the equilibrium at
+    each command level), the time constant against V/Qe, or a dimensional
+    analysis of the parameters?
 
 ## 7. The twin in control
 
@@ -225,9 +252,34 @@ The control is layered, and each layer is enforced by a different party:
     occupancy pattern, a maintenance event on the scrubber? And how do we
     keep the agent from treating a bad twin as the truth in the meantime?
 
+## 11. What NASA's tests and standards suggest
+
+The public protocols we read (JSC closed-chamber tests with a human
+metabolic simulator, MSFC 4-bed scrubber ground tests, SAM's first scrubber
+run in 2026) separate the unknowns one at a time, and use a known CO2
+source rather than people.
+
+25. **A staged test in an empty Lab.** First the leak through the hatch
+    (CO2 injected, scrubber off), then the scrubber against a metered CO2
+    source, then the crew. Does such a sequence make (V, q, g) identifiable
+    where our two steps do not, and what length would each stage need at a
+    one-minute sampling? Is the loss of realism (no people, a steady source)
+    a problem for a twin that will then run with the crew inside?
+26. **An efficiency that depends on the state.** At MSFC, the removal rate
+    depends on the inlet CO2 and on the regeneration: the single-pass
+    efficiency is a value at an operating point. Should the twin's scrubber
+    term be `Qe(C) * u_f * C` rather than `Qe * u_f * C`, and does that
+    change the answers to questions 5 (bilinearity) and 17 (LPV)?
+27. **Limits as partial pressures.** NASA-STD-3001 sets the one-hour limit
+    at 3 mmHg of CO2 partial pressure. In ppm, that depends on the cabin's
+    total pressure (about 3,950 ppm at 101.3 kPa, 7,080 ppm at 56.5 kPa).
+    Should the constraints of the supervisory law be written in partial
+    pressure, with the total pressure a measured input, rather than in ppm?
+
 ---
 
-*If only a few questions can be discussed, we would start with 7
-(identifiability as a computed guard), 12 (a threshold from the sensor
-model), 15 (plausibility checks) and 17 (the LPV frame for both
-identification and supervision).*
+*If only a few questions can be discussed, we would start with 4 and 25
+(the experiment: two steps or a staged test), 7 (identifiability as a
+computed guard), 12 and 14 (a threshold from the sensor model, and how to
+choose between two structures that both pass), and 17 (the LPV frame for
+both identification and supervision).*
