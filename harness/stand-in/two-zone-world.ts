@@ -41,6 +41,45 @@ export interface TelemetryRow {
     speed_percent: number;
 }
 
+/**
+ * The same world, stepped a minute at a time by whoever drives the
+ * scrubber: the example of the commissioning runs it under the agent's
+ * procedure, reading the speed the board actually took at each minute, so
+ * the telemetry answers the commands that were really sent.
+ */
+export class TwoZoneWorldSim {
+    private cl: number;
+    private ch: number;
+    private r = 0;
+    minute = 0;
+    constructor(private readonly world: TwoZoneWorld) {
+        this.cl = world.labStartPpm;
+        this.ch = world.habStartPpm;
+    }
+    /** The row of the current minute, as the logger records it. */
+    row(speedPercent: number): TelemetryRow {
+        return { minute: this.minute, co2_lab_ppm: Math.round(this.cl), co2_habb_ppm: Math.round(this.ch), speed_percent: speedPercent };
+    }
+    /** One minute at this speed. */
+    step(speedPercent: number): void {
+        const w = this.world;
+        const gl = w.labOccupants * w.gLabPerson * 1e3;
+        const gh = w.habOccupants * w.gHabPerson * 1e3;
+        const dt = 0.05;
+        for (let k = 0; k < 1 / dt; k++) {
+            this.r += (((speedPercent / 100) * w.QeFull - this.r) / w.lagMinutes) * dt;
+            const dcl = (gl - this.r * this.cl - w.q * (this.cl - this.ch)) / w.VLab;
+            const dch = (gh + w.q * (this.cl - this.ch)) / w.VHab;
+            this.cl += dcl * dt;
+            this.ch += dch * dt;
+        }
+        this.minute++;
+    }
+    get labPpm(): number {
+        return this.cl;
+    }
+}
+
 /** One row a minute over the steps (speed percent, minutes), integrated in twentieths of a minute. */
 export function twoZoneTelemetry(world: TwoZoneWorld, steps: Array<{ speedPercent: number; minutes: number }>): TelemetryRow[] {
     const total = steps.reduce((s, x) => s + x.minutes, 0);

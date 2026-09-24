@@ -106,19 +106,20 @@ chaque usine apporte son harnais :
 |---|---|---|
 | modèle ONNX (moniteur de l'épurateur) | `onnx` | construite (F4), constructeur scripté ; le prompt est F5 |
 | protocole d'essai (mise en service) | `procedure` | construite le 23 septembre, constructeur = le modèle, essai réel réussi |
-| graphe de jumeau | `graph` | à construire : la prochaine |
+| graphe de jumeau | `graph` | construite le 24 septembre : la structure par le modèle, les nombres par un estimateur interchangeable, l'écart par le code ; détail et limites dans `usine-de-graphes.fr.md` |
 | code (un nœud nouveau) | `code` | en réserve (section 6) |
 | 3D, autres | | plus tard, même forme |
 
 **L'aiguillage est du côté des usines, jamais de l'Observateur.** Chaque usine
 publiera une fiche de ce qu'elle sait produire (les genres d'artefacts, les
-grandeurs). La première version de l'aiguillage sera écrite en code : une
-demande dont les sorties sont des grandeurs dynamiques à reproduire va au
-graphe. Une version suivante pourra confier ce choix au planificateur de
+grandeurs). La première version de l'aiguillage est écrite en code depuis le
+24 septembre (`topicFor`, `harness/core/task.ts`) : une tâche qui porte les
+exigences d'un Observateur va à l'usine de graphes, une tâche qui nomme son
+sujet le garde, le reste va au modèle ONNX. Une version suivante pourra confier ce choix au planificateur de
 l'usine (le `task.plan` existe déjà). Dans les deux cas l'Observateur n'en
 sait rien.
 
-## 5. La boucle d'apprentissage structurel
+## 5. La boucle d'apprentissage structurel (construite le 24 septembre, voir `usine-de-graphes.fr.md`)
 
 C'est le retour qui compte : l'usine ne construit pas un graphe une fois, elle
 le fait **évoluer d'après son écart au réel**.
@@ -195,5 +196,5 @@ fait ; la conception est la même.
 | la demande portée entière dans la tâche de l'usine (`requirements`) | construit |
 | le cache du prompt côté Anthropic | construit ; inactif sous le seuil de Haiku 4.5 |
 | l'aiguillage vers les usines | à construire (section 4) |
-| l'usine de graphes, et la boucle écart puis correction | à construire (section 5) |
+| l'usine de graphes, et la boucle écart puis correction | construite le 24 septembre (`usine-de-graphes.fr.md`, exemple complet dans `exemple-mise-en-service.fr.md`) |
 | l'usine de code et le plugin `generated` | en réserve (section 6) |
