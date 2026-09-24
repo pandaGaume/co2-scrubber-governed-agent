@@ -196,7 +196,7 @@ async function main(): Promise<void> {
         // ── 6. the report.
         t0 = Date.now();
         const report = run.report;
-        await record({ name: "report", kind: "code", who: "the station (Mother), the decay fit", goal: "close the monitoring, compute the served volume from the decay", decisions: null, modelCalls: null, tokens: null, refusals: [], steps: [], output: { volume: report?.result, steps: report?.steps.map((s) => ({ n: s.n, speed: s.speedPercent, co2: [s.co2StartPpm, s.co2EndPpm] })), vitalEvents: report?.vitalEvents } }, t0);
+        await record({ name: "report", kind: "code", who: "the station (Mother), the decay fit", goal: "close the monitoring, compute the apparent volume from the decay (one room assumed)", decisions: null, modelCalls: null, tokens: null, refusals: [], steps: [], output: { volume: report?.result, steps: report?.steps.map((s) => ({ n: s.n, speed: s.speedPercent, co2: [s.co2StartPpm, s.co2EndPpm] })), vitalEvents: report?.vitalEvents } }, t0);
 
         // ── 7. the Observer: from the description and the telemetry, what the twin must do.
         t0 = Date.now();
@@ -205,7 +205,7 @@ async function main(): Promise<void> {
             "Asset: the CO2 scrubber of the Lab module of a lunar habitat, just installed and commissioned.",
             "Purpose: keep the CO2 of the air the crew breathes within limits; its twin will be asked what if questions about scrubber speed strategies at night.",
             "Physical components: the Lab module (a volume of air); the scrubber, variable speed; a CO2 sensor in the Lab; a hatch between the Lab and Hab-B, closed during the test; a CO2 sensor in Hab-B; the crew (two operators in the Lab, two people in Hab-B).",
-            `Test just run: ${report?.steps.map((s) => `${s.speedPercent} % for ${s.minutes} min`).join(", then ")}, hatch closed. Served volume from the decay: ${report?.result.value ?? "not computed"} m3 (${report?.result.why ?? ""}).`,
+            `Test just run: ${report?.steps.map((s) => `${s.speedPercent} % for ${s.minutes} min`).join(", then ")}, hatch closed. Apparent volume from the decay, one room assumed: ${report?.result.value ?? "not computed"} m3 (${report?.result.why ?? ""}).`,
             "Available telemetry: see the summary.",
             "Controllable: scrubber speed.",
             "Objective: the twin must reproduce the CO2 of the Lab well enough to evaluate scrubber speed strategies.",
