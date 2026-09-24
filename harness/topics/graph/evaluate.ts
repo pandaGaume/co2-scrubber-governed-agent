@@ -34,6 +34,21 @@ import type { Broker } from "../../lib/broker.js";
 import type { TaskFile } from "../../core/task.js";
 import { combinations, resolveSpec, type Row, type Spec, type Variables } from "./params.js";
 import { estimatorFor, type Bounds } from "./fit.js";
+import { CABIN_DOCUMENT_FILE } from "../../../lib/paths.js";
+import { compareStructure, referenceOfDocument, referenceOfSpec, type ReferenceGraph, type StructureComparison } from "./reference.js";
+
+/** The station's own twin, read once: the structure a candidate is compared with. */
+let stationTwin: ReferenceGraph | null | undefined;
+export function stationReference(): ReferenceGraph | null {
+    if (stationTwin === undefined) {
+        try {
+            stationTwin = referenceOfDocument(CABIN_DOCUMENT_FILE, "the station's cabin twin (graphs/cabin.spikypanda)");
+        } catch {
+            stationTwin = null;
+        }
+    }
+    return stationTwin;
+}
 
 export interface Compare {
     node: string;
@@ -71,6 +86,10 @@ export interface Candidate {
     early?: EarlySlope;
     /** What the plausibility check found; empty when the dynamics start right. */
     warnings: string[];
+    /** The candidate's structure, by node types and typed connections: what a comparison reads. */
+    structure?: ReferenceGraph;
+    /** The candidate against the station's twin, by types and typed connections. */
+    reference?: StructureComparison;
     at: string;
 }
 
@@ -305,6 +324,9 @@ export async function evaluateCandidate(input: EvaluateInput, ctx: EvaluateConte
         candidate.early.inflows = inflowsOf(read, input.spec, first.node);
     }
     candidate.warnings = plausibilityOf(candidate.early);
+    candidate.structure = referenceOfSpec(input.spec, `candidate ${ctx.n}`);
+    const station = stationReference();
+    if (station) candidate.reference = compareStructure(input.spec, station);
     const series = final.series[`${first.node}.${first.property}`] ?? [];
     const profile = rows
         .filter((r) => Number(r.minute) % 5 === 0)
@@ -323,6 +345,7 @@ export const evaluationOutput = (r: Awaited<ReturnType<typeof evaluateCandidate>
         residuals: r.candidate.residuals,
         ...(r.candidate.early ? { firstSlope: r.candidate.early } : {}),
         ...(r.candidate.warnings.length ? { warnings: r.candidate.warnings } : {}),
+        ...(r.candidate.reference ? { againstStationTwin: { wiringMatch: r.candidate.reference.wiringMatch, missingWires: r.candidate.reference.missingWires, extraWires: r.candidate.reference.extraWires } } : {}),
         profile: r.profile,
         bestCombinations: r.ranking,
         runs: r.candidate.combinations,

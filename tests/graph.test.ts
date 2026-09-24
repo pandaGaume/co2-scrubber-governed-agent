@@ -28,6 +28,9 @@ import { combinations, evaluateExpression, resolveParam } from "../harness/topic
 import { earlySlopeOf, evaluateCandidate, inflowsOf, plausibilityOf, residualsOf, type Candidate } from "../harness/topics/graph/evaluate.js";
 import { validateGraph } from "../harness/topics/graph/index.js";
 import { estimatorFor } from "../harness/topics/graph/fit.js";
+import { compareStructure, referenceOfSpec } from "../harness/topics/graph/reference.js";
+import { stationReference } from "../harness/topics/graph/evaluate.js";
+import { labCandidate } from "../harness/scripted/graph.js";
 import { ScriptedGraphBuilder } from "../harness/scripted/graph.js";
 import { LAB_WORLD, twoZoneTelemetry } from "../harness/stand-in/two-zone-world.js";
 import type { MotherLine } from "../slots/station/provider.js";
@@ -122,6 +125,19 @@ describe("the parametric graph and its residual", () => {
         // Within the band the search is allowed: it reaches the sandbox (which, here, refuses).
         await assert.rejects(evaluateCandidate({ label: "x", spec, compare, fit: { g: { min: 0.26, max: 0.45 } } }, { broker, taskId: "t", task, rows, remaining: 40, n: 1 }), /the candidate does not build/);
         assert.ok(calls > 0);
+    });
+
+    it("the station's twin is read as a reference by types and ports, and a candidate is compared with it", () => {
+        const station = stationReference();
+        assert.ok(station, "graphs/cabin.spikypanda is readable");
+        const wires = station!.wires.map((w) => `${w.from} -> ${w.to}`);
+        assert.ok(wires.includes("Logic.Time:timeline.value -> Physics.LifeSupport:scrubber.command"));
+        assert.ok(wires.includes("Physics.LifeSupport:scrubber.effectiveRate -> Physics.LifeSupport:cabin-air.scrubberRate"));
+        assert.ok(!station!.types.some((t) => /Scene|Sim|Electric/.test(t)), "the frame and the battery are not the twin's physics");
+        const hand = compareStructure(labCandidate(true) as never, station!);
+        assert.deepEqual(hand.missingWires, ["Logic.Time:timeline.value -> Physics.LifeSupport:crew.count", "Logic.Time:timeline.value -> Physics.LifeSupport:crew.activity", "Physics.LifeSupport:crew.co2Emission -> Physics.LifeSupport:cabin-air.emissionB"], "the hand graph sets its one crew as parameters; the station twin has a second crew group");
+        assert.ok(hand.extraWires.includes("Logic.Time:timeline.value -> Physics.LifeSupport:cabin-air.emissionB"), "and adds the neighbour as an input");
+        assert.equal(referenceOfSpec(labCandidate(false) as never, "x").wires.length, 3);
     });
 
     it("the stand-in world rises at 30 %, decays at 100 %, and its neighbour moves", () => {

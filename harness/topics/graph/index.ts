@@ -28,7 +28,8 @@ import type { LocalCapability } from "../../core/capabilities.js";
 import type { TaskFile } from "../../core/task.js";
 import type { TopicContext, TopicDefinition, Validation } from "../../core/topic.js";
 import type { DoneClaim, Progress, WorkshopFile } from "../../core/workspace-observer.js";
-import { evaluateCandidate, evaluationOutput, knownOf, type Candidate, type EvaluateInput } from "./evaluate.js";
+import { evaluateCandidate, evaluationOutput, knownOf, stationReference, type Candidate, type EvaluateInput } from "./evaluate.js";
+import { wiringLines } from "./reference.js";
 import type { Row } from "./params.js";
 
 export const GRAPH_TOOLS: ReadonlyArray<RegExp> = [/^workspace\.(list|read)$/, /^library\.(list|methods|search|read)$/, /^twin\.registry_(search|describe_node|list_nodes)$/, /^twin\.document_validate$/, /^graph\.evaluate$/, /^task\.(plan|done|fail)$/];
@@ -153,11 +154,14 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
     // An evaluation the harness could not run says why, here, until one runs: the builder reads it at every step, not only in the answer it may have skimmed.
     const call = progress.lastCall;
     const refused = call?.id === "graph.evaluate" && !call.result.ok ? ` Your last evaluation was not run: ${String(call.result.error ?? call.result.outcome).slice(0, 600)}. Change what that names; the same call gets the same answer.` : "";
-    if (!last) return `Stage 3 of 5, a first candidate. Write the graph with the physics as formulas over a few variables, give the bounds of the variables nobody knows (fit), and evaluate it (graph.evaluate). Threshold: ${String(threshold)} ppm.${held}${refused}`;
+    // What already runs: the station's twin, its wiring by types and ports, read from its document by code.
+    const station = stationReference();
+    const start = station ? ` The station already runs a twin of the cabin (graphs/cabin.spikypanda: one room, its rates folded on a volume nobody measured, never fitted to telemetry); start from its structure and extend it. It is wired: ${wiringLines(station)}. A measured input is a Logic.Time:timeline whose segments are the $series, its value port wired into the input.` : "";
+    if (!last) return `Stage 3 of 5, a first candidate.${start} Write the graph with the physics as formulas over a few variables, give the bounds of the variables nobody knows (fit), and evaluate it (graph.evaluate). Threshold: ${String(threshold)} ppm.${held}${refused}`;
     if (last.pass) return `Stage 5 of 5, hand over. Candidate ${last.n} (${last.path}) holds the threshold: residual ${Math.max(...last.residuals.map((r) => r.rmse))} ppm. End with task.done, the graph as the artifact: {"kind": "graph", "path": "${last.path}"}.`;
     const where = last.residuals.map((r) => `${r.column}: ${r.rmse} ppm, worst ${r.worst} at minute ${r.worstMinute}`).join("; ");
     const warned = last.warnings?.length ? ` First, ${last.warnings.join(" ")}` : "";
-    return `Stage 4 of 5, the gap. Candidate ${last.n} (${last.label}) misses the threshold of ${last.threshold} ppm: ${where}, with ${JSON.stringify(last.variables)} its best fit over ${last.combinations} runs. ${candidates.length} candidate(s) so far.${warned} Look at where the curves part: if a wider range of the same variables cannot close the gap, the topology is missing something the task's hypotheses may name. A term added must name its physical hypothesis (an exchange, a source); a constant term with no physics behind it closes a gap for the wrong reason.${held} Evaluate the next candidate.${refused}`;
+    return `Stage 4 of 5, the gap. Candidate ${last.n} (${last.label}) misses the threshold of ${last.threshold} ppm: ${where}, with ${JSON.stringify(last.variables)} its best fit over ${last.combinations} runs. ${candidates.length} candidate(s) so far.${warned} Look at where the curves part: if a wider range of the same variables cannot close the gap, the topology is missing something the task's hypotheses may name. ${last.reference && last.reference.missingWires.length ? `Against the station's twin, candidate ${last.n} lacks: ${last.reference.missingWires.join("; ")}. ` : ""}A term added must name its physical hypothesis (an exchange, a source); a constant term with no physics behind it closes a gap for the wrong reason.${held} Evaluate the next candidate.${refused}`;
 }
 
 function intentionOf(task: TaskFile["task"], generic: Intention): Intention {
