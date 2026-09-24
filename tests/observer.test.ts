@@ -67,6 +67,15 @@ describe("the Observer's guard and its telemetry", () => {
         assert.ok(problems.some((p) => /no validation criterion/.test(p)));
     });
 
+    it("vocabulary: an output named outside the quantities the factories share is refused, with the vocabulary to name it by", () => {
+        const vocabulary = [{ quantity: "Concentration", units: ["ppm"] }, { quantity: "Volume", units: ["m3"] }];
+        assert.equal(checkTwinRequest(REQUEST, { vocabulary }).ok, true);
+        const own = { ...REQUEST, outputs: [{ name: "predicted_co2", quantity: "CO2 mole fraction", unit: "ppm" }] };
+        assert.match(checkTwinRequest(own, { vocabulary }).problems.join(), /^vocabulary: output "predicted_co2" is a "CO2 mole fraction", which is not a quantity of the shared vocabulary; name it with one of: Concentration \(ppm\); Volume \(m3\)/);
+        const unit = { ...REQUEST, outputs: [{ name: "predicted_co2", quantity: "Concentration", unit: "percent" }] };
+        assert.match(checkTwinRequest(unit, { vocabulary }).problems.join(), /is a Concentration in "percent"; the shared vocabulary writes it in ppm/);
+    });
+
     it("the telemetry is summarised by code: counts, ends, range, mean, and whether a column moves", () => {
         const s = summarizeTelemetry(ROWS);
         assert.equal(s.rows, 25);

@@ -25,7 +25,7 @@ import { runTask, type BuilderContext } from "../harness/core/runner.js";
 import { newProgress } from "../harness/core/workspace-observer.js";
 import { topicFor, type TaskFile } from "../harness/core/task.js";
 import { combinations, evaluateExpression, resolveParam } from "../harness/topics/graph/params.js";
-import { residualsOf, type Candidate } from "../harness/topics/graph/evaluate.js";
+import { earlySlopeOf, plausibilityOf, residualsOf, type Candidate } from "../harness/topics/graph/evaluate.js";
 import { validateGraph } from "../harness/topics/graph/index.js";
 import { estimatorFor } from "../harness/topics/graph/fit.js";
 import { ScriptedGraphBuilder } from "../harness/scripted/graph.js";
@@ -81,6 +81,18 @@ describe("the parametric graph and its residual", () => {
         assert.ok(Math.abs(r.rmse - Math.sqrt((0 + 100 + 2500) / 3)) < 1e-9);
     });
 
+    it("the plausibility check: a twin that parts from the first minute has a rate in the wrong unit, and is told so by numbers", () => {
+        const rows = [0, 1, 2, 3, 4, 5, 6].map((minute) => ({ minute, co2_lab_ppm: 1480 + 25 * minute }));
+        const compare = { node: "lab", property: "co2Ppm", column: "co2_lab_ppm" };
+        // Qe given where Qe / V was meant: the twin empties the room at once.
+        const wrong = earlySlopeOf({ "lab.co2Ppm": [1480, 1300, 1100, 950, 820, 730, 660] }, compare, rows);
+        assert.deepEqual(wrong, { column: "co2_lab_ppm", minutes: 5, predicted: -150, measured: 25 });
+        assert.match(plausibilityOf(wrong).join(), /^units: over the first 5 minutes the twin moves -150 ppm\/min where co2_lab_ppm moves 25 ppm\/min, the other way\. .*Qe \/ V \(1\/min\)/);
+        // A right start and a late parting (an exchange) is not a unit's fault: nothing said.
+        const right = earlySlopeOf({ "lab.co2Ppm": [1480, 1506, 1531, 1555, 1580, 1602, 1600] }, compare, rows);
+        assert.deepEqual(plausibilityOf(right), []);
+    });
+
     it("the stand-in world rises at 30 %, decays at 100 %, and its neighbour moves", () => {
         assert.equal(TELEMETRY.length, 51);
         assert.ok(TELEMETRY[20].co2_lab_ppm > TELEMETRY[0].co2_lab_ppm + 300, "the rise");
@@ -90,7 +102,7 @@ describe("the parametric graph and its residual", () => {
 
     it("the validator accepts only a candidate the harness built and found under the threshold", () => {
         const progress = newProgress();
-        const c = (n: number, pass: boolean): Candidate => ({ n, label: "", path: `candidate-${n}.spikypanda`, sha256: String(n).repeat(64), nodes: 4, types: [], connections: 3, variables: {}, residuals: [{ column: "c", probe: "lab.co2Ppm", rmse: pass ? 3 : 45, worst: 0, worstMinute: 0 }], threshold: 25, pass, combinations: 1, fitted: [], estimator: "given", at: "" });
+        const c = (n: number, pass: boolean): Candidate => ({ n, label: "", path: `candidate-${n}.spikypanda`, sha256: String(n).repeat(64), nodes: 4, types: [], connections: 3, variables: {}, residuals: [{ column: "c", probe: "lab.co2Ppm", rmse: pass ? 3 : 45, worst: 0, worstMinute: 0 }], threshold: 25, pass, combinations: 1, fitted: [], estimator: "given", warnings: [], at: "" });
         progress.topic.graph = { candidates: [c(1, false), c(2, true)], runs: 2 } as never;
         const files = [1, 2].map((n) => ({ path: `candidate-${n}.spikypanda`, bytes: 1, sha256: String(n).repeat(64) }));
         assert.match(validateGraph({ summary: "", artifacts: [{ kind: "graph", path: "candidate-1.spikypanda" }] }, files, progress).problems.join(), /residual of 45 ppm, above the threshold of 25/);

@@ -14,6 +14,13 @@
  * the smallest residual wins. When the step did not give enough samples,
  * or no flow is known, the report says the volume is not computed and why:
  * a missing number is written as missing.
+ *
+ * The number is an apparent volume, and said so: the fit reads one room.
+ * Air exchanged with a neighbouring volume during the decay changes the
+ * time constant and the equilibrium together, and the one-room fit
+ * compensates one with the other; the volume it gives is then not the
+ * room's. Separating the two (the volume, the exchange) is the twin's
+ * identification, done by the graph factory on the whole telemetry.
  */
 import type { Procedure } from "./procedure.js";
 
@@ -111,7 +118,7 @@ export function buildReport(procedure: Procedure, run: ProcedureRun): ProcedureR
     else if (run.flowM3PerMinute === null) why = "the scrubber's descriptor gives no flow at full speed: the time constant cannot become a volume";
     else {
         fit = decayVolume(decay.samples, run.flowM3PerMinute);
-        why = fit ? `decay of step ${decay.n}: tau ${fit.tauMinutes.toFixed(1)} min over ${fit.samples} samples, residual ${fit.rmsePpm.toFixed(1)} ppm` : `step ${decay.n} gave ${decay.samples.length} sample(s) and no decay the fit can read`;
+        why = fit ? `apparent volume, one room assumed: decay of step ${decay.n}: tau ${fit.tauMinutes.toFixed(1)} min over ${fit.samples} samples, residual ${fit.rmsePpm.toFixed(1)} ppm` : `step ${decay.n} gave ${decay.samples.length} sample(s) and no decay the fit can read`;
     }
     return { ...run, minutes, expected: procedure.expected, result: { quantity: q.quantity, name: q.name, value: fit ? Number(fit.volumeM3.toFixed(1)) : null, unit: q.unit, fit, why } };
 }

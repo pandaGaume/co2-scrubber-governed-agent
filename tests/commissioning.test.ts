@@ -327,7 +327,7 @@ describe("the commissioning, through the broker", () => {
         assert.equal((await commissioning("c001-lab")).status, "done");
         const lines = (await mother()).map((l) => l.text.en);
         assert.ok(lines.includes("Test running. Step 1 of 2.") && lines.includes("Test running. Step 2 of 2."));
-        assert.deepEqual(lines.slice(-4), ["Test complete. 24 minutes.", "Served volume: 18 cubic metres.", "Vital signs nominal throughout.", "No emergency stop."]);
+        assert.deepEqual(lines.slice(-4), ["Test complete. 24 minutes.", "Apparent volume: 18 cubic metres.", "Vital signs nominal throughout.", "No emergency stop."]);
     });
 
     it("a builder that did not read who was there is refused for it; the procedure it corrects is authorised, and a third person walking in aborts the test", async () => {

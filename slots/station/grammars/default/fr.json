@@ -257,7 +257,7 @@
         "mother.abort.unreadable": "Une condition d'arrêt ne peut pas être lue.",
         "mother.abort.other": "Condition d'arrêt {condition}.",
         "mother.procedure.done": "Essai terminé. {minutes} minutes.",
-        "mother.result.volume": "Volume servi : {volume} mètres cubes.",
+        "mother.result.volume": "Volume apparent : {volume} mètres cubes.",
         "mother.result.pending": "Volume servi : pas encore calculé.",
         "mother.vitals.nominal": "Signes vitaux nominaux sur toute la durée.",
         "mother.vitals.events": "{count} alertes des signes vitaux pendant l'essai.",

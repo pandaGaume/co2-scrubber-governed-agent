@@ -235,7 +235,7 @@
         "mother.abort.unreadable": "An abort condition cannot be read.",
         "mother.abort.other": "Abort condition {condition}.",
         "mother.procedure.done": "Test complete. {minutes} minutes.",
-        "mother.result.volume": "Served volume: {volume} cubic metres.",
+        "mother.result.volume": "Apparent volume: {volume} cubic metres.",
         "mother.result.pending": "Served volume: not computed yet.",
         "mother.vitals.nominal": "Vital signs nominal throughout.",
         "mother.vitals.events": "{count} vital-sign alerts during the test.",

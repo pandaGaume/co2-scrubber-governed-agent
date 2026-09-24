@@ -153,7 +153,8 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
     if (!last) return `Stage 3 of 5, a first candidate. Write the graph with the physics as formulas over a few variables, give the bounds of the variables nobody knows (fit), and evaluate it (graph.evaluate). Threshold: ${String(threshold)} ppm.${refused}`;
     if (last.pass) return `Stage 5 of 5, hand over. Candidate ${last.n} (${last.path}) holds the threshold: residual ${Math.max(...last.residuals.map((r) => r.rmse))} ppm. End with task.done, the graph as the artifact: {"kind": "graph", "path": "${last.path}"}.`;
     const where = last.residuals.map((r) => `${r.column}: ${r.rmse} ppm, worst ${r.worst} at minute ${r.worstMinute}`).join("; ");
-    return `Stage 4 of 5, the gap. Candidate ${last.n} (${last.label}) misses the threshold of ${last.threshold} ppm: ${where}, with ${JSON.stringify(last.variables)} its best fit over ${last.combinations} runs. ${candidates.length} candidate(s) so far. Look at where the curves part: if a wider range of the same variables cannot close the gap, the topology is missing something the task's hypotheses may name. Evaluate the next candidate.${refused}`;
+    const warned = last.warnings?.length ? ` First, ${last.warnings.join(" ")}` : "";
+    return `Stage 4 of 5, the gap. Candidate ${last.n} (${last.label}) misses the threshold of ${last.threshold} ppm: ${where}, with ${JSON.stringify(last.variables)} its best fit over ${last.combinations} runs. ${candidates.length} candidate(s) so far.${warned} Look at where the curves part: if a wider range of the same variables cannot close the gap, the topology is missing something the task's hypotheses may name. Evaluate the next candidate.${refused}`;
 }
 
 function intentionOf(task: TaskFile["task"], generic: Intention): Intention {

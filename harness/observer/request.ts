@@ -17,7 +17,13 @@
  *                states needs, the factory chooses nodes;
  *   facts        an observable or an input said to come from the telemetry
  *                names a column the telemetry has: the Observer does not
- *                invent a measurement.
+ *                invent a measurement;
+ *   vocabulary   an output names its quantity and unit in the vocabulary
+ *                the factories share (Concentration in ppm, not "CO2 mole
+ *                fraction"): the names of the quantities, never the nodes
+ *                that produce them. A factory matches a required output by
+ *                its quantity; a name of its own makes the request
+ *                unbuildable for a reason that is only words.
  */
 
 export interface Quantity {
@@ -78,7 +84,13 @@ export interface RequestCheck {
 }
 
 /** The guard of a request: the shape, the separation from the catalogue, and the facts of the telemetry. */
-export function checkTwinRequest(input: unknown, context: { catalogueTypes?: string[]; telemetryColumns?: string[] } = {}): RequestCheck {
+/** A quantity of the shared vocabulary and the units it is written in. */
+export interface VocabularyEntry {
+    quantity: string;
+    units: string[];
+}
+
+export function checkTwinRequest(input: unknown, context: { catalogueTypes?: string[]; telemetryColumns?: string[]; vocabulary?: VocabularyEntry[] } = {}): RequestCheck {
     const problems: string[] = [];
     const r = (input && typeof input === "object" ? input : {}) as Partial<TwinFactoryRequest>;
     const list = <T>(v: T[] | undefined): T[] => (Array.isArray(v) ? v : []);
@@ -99,6 +111,18 @@ export function checkTwinRequest(input: unknown, context: { catalogueTypes?: str
     if (columns) {
         for (const section of ["observables", "controls", "inputs", "external_influences"] as const) {
             for (const q of list(r[section] as Array<{ name?: string; column?: string }> | undefined)) if (q?.column && !columns.includes(q.column)) problems.push(`facts: ${section} "${String(q.name)}" is read from column "${q.column}", which the telemetry does not have (${columns.join(", ") || "no column"})`);
+        }
+    }
+
+    // Vocabulary: what the twin must expose, named as the factories name quantities.
+    const vocabulary = list(context.vocabulary);
+    if (vocabulary.length) {
+        const names = vocabulary.map((v) => `${v.quantity} (${v.units.join(", ")})`).join("; ");
+        for (const o of list(r.outputs)) {
+            if (!o?.quantity) continue;
+            const entry = vocabulary.find((v) => v.quantity.toLowerCase() === String(o.quantity).toLowerCase());
+            if (!entry) problems.push(`vocabulary: output "${String(o.name)}" is a "${o.quantity}", which is not a quantity of the shared vocabulary; name it with one of: ${names}`);
+            else if (entry.units.length && o.unit && !entry.units.includes(o.unit)) problems.push(`vocabulary: output "${String(o.name)}" is a ${entry.quantity} in "${o.unit}"; the shared vocabulary writes it in ${entry.units.join(" or ")}`);
         }
     }
     return { ok: problems.length === 0, problems };

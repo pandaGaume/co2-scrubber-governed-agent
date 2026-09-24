@@ -15,6 +15,13 @@
  * (`objective.constraints.residualPpmMax`), the numbers are computed here,
  * every candidate is kept in `candidates.json` with its residual, rejected
  * ones included, and Mother is told of each (`station.candidate_evaluated`).
+ *
+ * A plausibility check comes with the residual: the slope of the first
+ * minutes, predicted against measured. A twin that parts from the
+ * measurement at the very first minute, several times too fast or the wrong
+ * way, is not missing a term (a missing exchange shows late, as the
+ * volumes drift apart): it has a rate in the wrong unit or scale. The check
+ * says so, by numbers; it refuses nothing.
  */
 import type { JsonValue } from "@spiky-panda/harness";
 import type { Broker } from "../../lib/broker.js";
@@ -54,7 +61,18 @@ export interface Candidate {
     fitted: string[];
     /** The estimator that fitted them (`fit.ts`), or `given` when nothing was fitted. */
     estimator: string;
+    /** The slope of the first minutes, predicted against measured (ppm/min), on the first compared column. */
+    early?: EarlySlope;
+    /** What the plausibility check found; empty when the dynamics start right. */
+    warnings: string[];
     at: string;
+}
+
+export interface EarlySlope {
+    column: string;
+    minutes: number;
+    predicted: number;
+    measured: number;
 }
 
 export interface EvaluateInput {
@@ -108,6 +126,36 @@ export function residualsOf(series: Record<string, number[]>, compare: Compare[]
         }
         return { column: c.column, probe, rmse: n ? Math.sqrt(se / n) : Number.POSITIVE_INFINITY, worst, worstMinute };
     });
+}
+
+/** Minutes over which the first slope is read: long enough to see through a sensor's noise, short enough to be the start. */
+export const EARLY_MINUTES = 5;
+
+/** The first slope of a probe against its column, from the first minute of the telemetry. */
+export function earlySlopeOf(series: Record<string, number[]>, compare: Compare, rows: Row[]): EarlySlope | undefined {
+    const minutes = rows.map((r) => Number(r.minute)).filter(Number.isFinite).sort((a, b) => a - b);
+    const t0 = minutes[0];
+    const t1 = minutes.find((m) => m >= t0 + EARLY_MINUTES);
+    if (t0 === undefined || t1 === undefined) return undefined;
+    const at = (m: number) => Number(rows.find((r) => Number(r.minute) === m)?.[compare.column]);
+    const predicted = series[`${compare.node}.${compare.property}`] ?? [];
+    const [p0, p1, m0, m1] = [predicted[t0], predicted[t1], at(t0), at(t1)];
+    if (![p0, p1, m0, m1].every((v) => typeof v === "number" && Number.isFinite(v))) return undefined;
+    return { column: compare.column, minutes: t1 - t0, predicted: Number(((p1 - p0) / (t1 - t0)).toFixed(1)), measured: Number(((m1 - m0) / (t1 - t0)).toFixed(1)) };
+}
+
+/** Below this slope (ppm/min) the measurement is flat for the check: noise, not a trend. */
+const FLAT = 2;
+
+/** What a first slope says about the candidate's units, in words the builder can act on; nothing when it starts right. */
+export function plausibilityOf(early: EarlySlope | undefined): string[] {
+    if (!early) return [];
+    const { predicted: p, measured: m, minutes, column } = early;
+    const wrongWay = Math.abs(m) >= FLAT && Math.sign(p) !== Math.sign(m) && Math.abs(p) >= FLAT;
+    const ratio = Math.abs(m) >= FLAT ? Math.abs(p) / Math.abs(m) : Math.abs(p) >= 5 * FLAT ? Number.POSITIVE_INFINITY : 1;
+    if (!wrongWay && ratio <= 3 && ratio >= 1 / 3) return [];
+    const how = wrongWay ? "the other way" : ratio > 3 ? `${Number.isFinite(ratio) ? `${ratio.toFixed(1)} times` : "far"} faster` : `${(1 / ratio).toFixed(1)} times slower`;
+    return [`units: over the first ${minutes} minutes the twin moves ${p} ppm/min where ${column} moves ${m} ppm/min, ${how}. A gap from the first minute is not a missing term (an exchange shows late, as the volumes drift apart): check the units and scale of the rates. The catalogue's rates are per volume: a flow Qe in m3/min enters as Qe / V (1/min), a source of g L/min as g * 1e3 / V (ppm/min).`];
 }
 
 const scoreOf = (residuals: Residual[]) => Math.max(...residuals.map((r) => r.rmse));
@@ -184,9 +232,12 @@ export async function evaluateCandidate(input: EvaluateInput, ctx: EvaluateConte
         combinations: tried.length + 1,
         fitted: Object.keys(input.fit ?? input.vary ?? {}),
         estimator: hasFit ? estimatorFor(input.estimator).id : hasVary ? "grid (values given)" : "given",
+        warnings: [],
         at: new Date().toISOString(),
     };
     const first = input.compare[0];
+    candidate.early = earlySlopeOf(final.series, first, rows);
+    candidate.warnings = plausibilityOf(candidate.early);
     const series = final.series[`${first.node}.${first.property}`] ?? [];
     const profile = rows
         .filter((r) => Number(r.minute) % 5 === 0)
@@ -203,6 +254,8 @@ export const evaluationOutput = (r: Awaited<ReturnType<typeof evaluateCandidate>
         threshold: r.candidate.threshold,
         variables: r.candidate.variables,
         residuals: r.candidate.residuals,
+        ...(r.candidate.early ? { firstSlope: r.candidate.early } : {}),
+        ...(r.candidate.warnings.length ? { warnings: r.candidate.warnings } : {}),
         profile: r.profile,
         bestCombinations: r.ranking,
         runs: r.candidate.combinations,
