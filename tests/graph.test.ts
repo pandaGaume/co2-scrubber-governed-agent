@@ -25,7 +25,7 @@ import { runTask, type BuilderContext } from "../harness/core/runner.js";
 import { newProgress } from "../harness/core/workspace-observer.js";
 import { topicFor, type TaskFile } from "../harness/core/task.js";
 import { combinations, evaluateExpression, resolveParam } from "../harness/topics/graph/params.js";
-import { earlySlopeOf, evaluateCandidate, plausibilityOf, residualsOf, type Candidate } from "../harness/topics/graph/evaluate.js";
+import { earlySlopeOf, evaluateCandidate, inflowsOf, plausibilityOf, residualsOf, type Candidate } from "../harness/topics/graph/evaluate.js";
 import { validateGraph } from "../harness/topics/graph/index.js";
 import { estimatorFor } from "../harness/topics/graph/fit.js";
 import { ScriptedGraphBuilder } from "../harness/scripted/graph.js";
@@ -90,6 +90,11 @@ describe("the parametric graph and its residual", () => {
         const wrong = earlySlopeOf({ "lab.co2Ppm": [1480, 1300, 1100, 950, 820, 730, 660] }, compare, rows);
         assert.deepEqual(wrong, { column: "co2_lab_ppm", minutes: 5, predicted: -150, measured: 25 });
         assert.match(plausibilityOf(wrong).join(), /^units: over the first 5 minutes the twin moves -150 ppm\/min where co2_lab_ppm moves 25 ppm\/min, the other way\. .*Qe \/ V \(1\/min\)/);
+        // The terms of the balance at the first minute name the one out of scale: a concentration wired into an emission.
+        const spec = { nodes: [], connections: [{ from: ["habb_co2", "value"], to: ["lab", "emissionB"] }, { from: ["crew", "co2Emission"], to: ["lab", "emissionA"] }, { from: ["scrubber", "command"], to: ["other", "x"] }] } as never;
+        const inflows = inflowsOf({ "habb_co2.value": [1500, 1501], "crew.co2Emission": [33.3] }, spec, "lab");
+        assert.deepEqual(inflows, [{ from: "habb_co2.value", into: "emissionB", value: 1500 }, { from: "crew.co2Emission", into: "emissionA", value: 33.3 }]);
+        assert.match(plausibilityOf({ ...wrong!, inflows }).join(), /What enters the node at the first minute: habb_co2\.value into emissionB = 1500; crew\.co2Emission into emissionA = 33\.3\./);
         // A right start and a late parting (an exchange) is not a unit's fault: nothing said.
         const right = earlySlopeOf({ "lab.co2Ppm": [1480, 1506, 1531, 1555, 1580, 1602, 1600] }, compare, rows);
         assert.deepEqual(plausibilityOf(right), []);

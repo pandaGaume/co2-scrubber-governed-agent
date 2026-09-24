@@ -79,6 +79,17 @@ export interface EarlySlope {
     minutes: number;
     predicted: number;
     measured: number;
+    /** What enters the compared node at the first minute, term by term: the source's output, the input it feeds, its value. */
+    inflows?: Array<{ from: string; into: string; value: number }>;
+}
+
+/** The terms of the compared node's balance at the first minute: every connection into it, read from the probes of their sources. */
+export function inflowsOf(series: Record<string, number[]>, spec: Spec, node: string): Array<{ from: string; into: string; value: number }> {
+    return spec.connections
+        .filter((c) => c.to[0] === node)
+        .map((c) => ({ from: `${c.from[0]}.${c.from[1]}`, into: c.to[1], value: series[`${c.from[0]}.${c.from[1]}`]?.[0] }))
+        .filter((t): t is { from: string; into: string; value: number } => typeof t.value === "number" && Number.isFinite(t.value))
+        .map((t) => ({ ...t, value: Number(t.value.toPrecision(4)) }));
 }
 
 export interface EvaluateInput {
@@ -161,7 +172,8 @@ export function plausibilityOf(early: EarlySlope | undefined): string[] {
     const ratio = Math.abs(m) >= FLAT ? Math.abs(p) / Math.abs(m) : Math.abs(p) >= 5 * FLAT ? Number.POSITIVE_INFINITY : 1;
     if (!wrongWay && ratio <= 3 && ratio >= 1 / 3) return [];
     const how = wrongWay ? "the other way" : ratio > 3 ? `${Number.isFinite(ratio) ? `${ratio.toFixed(1)} times` : "far"} faster` : `${(1 / ratio).toFixed(1)} times slower`;
-    return [`units: over the first ${minutes} minutes the twin moves ${p} ppm/min where ${column} moves ${m} ppm/min, ${how}. A gap from the first minute is not a missing term (an exchange shows late, as the volumes drift apart): check the units and scale of the rates. The catalogue's rates are per volume: a flow Qe in m3/min enters as Qe / V (1/min), a source of g L/min as g * 1e3 / V (ppm/min).`];
+    const terms = early.inflows?.length ? ` What enters the node at the first minute: ${early.inflows.map((t) => `${t.from} into ${t.into} = ${t.value}`).join("; ")}.` : "";
+    return [`units: over the first ${minutes} minutes the twin moves ${p} ppm/min where ${column} moves ${m} ppm/min, ${how}. A gap from the first minute is not a missing term (an exchange shows late, as the volumes drift apart): check the units and scale of the rates.${terms} The catalogue's rates are per volume: a flow Qe in m3/min enters as Qe / V (1/min), a source of g L/min as g * 1e3 / V (ppm/min), an emission input takes ppm/min, and a concentration (ppm) entering one is scaled first (q / V for an exchange).`];
 }
 
 const scoreOf = (residuals: Residual[]) => Math.max(...residuals.map((r) => r.rmse));
@@ -266,6 +278,17 @@ export async function evaluateCandidate(input: EvaluateInput, ctx: EvaluateConte
     };
     const first = input.compare[0];
     candidate.early = earlySlopeOf(final.series, first, rows);
+    if (candidate.early && plausibilityOf(candidate.early).length) {
+        // An implausible start: read the terms of the compared node's balance at the first minute, one short run per source, a source the runtime cannot probe left out.
+        const sources = input.spec.connections.filter((c) => c.to[0] === first.node).map((c) => ({ node: c.from[0], property: c.from[1] }));
+        const read: Record<string, number[]> = {};
+        for (const probe of sources) {
+            const r = await broker.call(runtimeSlot, "session_run", { name: `${taskId}/candidate-${ctx.n}`, dt: DT_SECONDS, duration: SAMPLE_EVERY * DT_SECONDS, sampleEvery: SAMPLE_EVERY, probes: [probe] });
+            const s = r.ok ? (r.output as { series?: Record<string, number[]> }).series : undefined;
+            if (s) Object.assign(read, s);
+        }
+        candidate.early.inflows = inflowsOf(read, input.spec, first.node);
+    }
     candidate.warnings = plausibilityOf(candidate.early);
     const series = final.series[`${first.node}.${first.property}`] ?? [];
     const profile = rows
