@@ -21,7 +21,7 @@ import type { PublishedSlot } from "../slots/lib/slot-server.js";
 import { startAllOrFail } from "./lib/start.js";
 import { Broker } from "../harness/lib/broker.js";
 import type { Provider, ProviderExchange } from "../harness/lib/provider.js";
-import { checkTwinRequest, factoryContractOf, type TwinFactoryRequest } from "../harness/observer/request.js";
+import { checkTwinRequest, factoryContractOf, type TwinFactoryRequest, hedgedNumbers } from "../harness/observer/request.js";
 import { summarizeTelemetry } from "../harness/observer/telemetry.js";
 import { observe } from "../harness/observer/observer.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
@@ -74,6 +74,19 @@ describe("the Observer's guard and its telemetry", () => {
         assert.match(checkTwinRequest(own, { vocabulary }).problems.join(), /^vocabulary: output "predicted_co2" is a "CO2 mole fraction", which is not a quantity of the shared vocabulary; name it with one of: Concentration \(ppm\); Volume \(m3\)/);
         const unit = { ...REQUEST, outputs: [{ name: "predicted_co2", quantity: "Concentration", unit: "percent" }] };
         assert.match(checkTwinRequest(unit, { vocabulary }).problems.join(), /is a Concentration in "percent"; the shared vocabulary writes it in ppm/);
+    });
+
+    it("provenance: a known constant names a document the Observer read; a number obtained under an assumption is not a constraint", () => {
+        const description = "Test just run: 50 % for 30 min, then 100 % for 30 min, hatch closed. Apparent volume from the decay, one room assumed: 35 m3 (tau 35.0 min over 31 samples, residual 7.8 ppm).";
+        assert.deepEqual(hedgedNumbers(description).sort((a, b) => a - b), [7.8, 31, 35]);
+        const known = [{ symbol: "Qe", name: "effective flow at full speed", value: 1.0, unit: "m3/min", source: "scrubber-1-datasheet" }];
+        assert.equal(checkTwinRequest({ ...REQUEST, known }, { description, documentsRead: ["scrubber-1-datasheet"] }).ok, true);
+        assert.match(checkTwinRequest({ ...REQUEST, known }, { description, documentsRead: [] }).problems.join(), /provenance: known constant "Qe" cites "scrubber-1-datasheet", a document you did not read/);
+        const fixed = { ...REQUEST, constraints: ["Lab volume: 35 m3 (measured from decay test)", "The test lasts 60 minutes"] };
+        const problems = checkTwinRequest(fixed, { description }).problems;
+        assert.equal(problems.length, 1);
+        assert.match(problems[0], /^provenance: constraints "Lab volume: 35 m3 \(measured from decay test\)" cites 35, which the description gives only under an assumption/);
+        assert.match(checkTwinRequest({ ...REQUEST, known: [{ symbol: "V", name: "Lab volume", value: 35, unit: "m3", source: "x" }] }, { description }).problems.join(), /known constant "V" = 35 is a value the description gives only under an assumption/);
     });
 
     it("the telemetry is summarised by code: counts, ends, range, mean, and whether a column moves", () => {

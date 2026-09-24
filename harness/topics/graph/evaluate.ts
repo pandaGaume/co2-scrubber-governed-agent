@@ -22,6 +22,12 @@
  * way, is not missing a term (a missing exchange shows late, as the
  * volumes drift apart): it has a rate in the wrong unit or scale. The check
  * says so, by numbers; it refuses nothing.
+ *
+ * What the request gives as known (its `known` constants, each with the
+ * library document it comes from) is held: a variable named by a known
+ * constant's symbol cannot be fitted, and the evaluation says so before any
+ * run. A fit that moves a documented constant can close a gap for the wrong
+ * reason (equifinality): the structure must close it.
  */
 import type { JsonValue } from "@spiky-panda/harness";
 import type { Broker } from "../../lib/broker.js";
@@ -160,6 +166,21 @@ export function plausibilityOf(early: EarlySlope | undefined): string[] {
 
 const scoreOf = (residuals: Residual[]) => Math.max(...residuals.map((r) => r.rmse));
 
+/** A constant the request gives as known, as the task carries it. */
+export interface KnownConstant {
+    symbol: string;
+    name?: string;
+    value: number;
+    unit?: string;
+    source?: string;
+}
+
+/** The known constants of a task: the Observer's, carried whole in the requirements. */
+export function knownOf(task: TaskFile["task"]): KnownConstant[] {
+    const known = (task.requirements as { known?: unknown } | undefined)?.known;
+    return Array.isArray(known) ? (known as KnownConstant[]).filter((k) => k && typeof k.symbol === "string" && typeof k.value === "number") : [];
+}
+
 export interface EvaluateContext {
     broker: Broker;
     taskId: string;
@@ -186,6 +207,9 @@ export async function evaluateCandidate(input: EvaluateInput, ctx: EvaluateConte
     const hasFit = input.fit && Object.keys(input.fit).length > 0;
     const hasVary = input.vary && Object.keys(input.vary).length > 0;
     for (const k of Object.keys(input.fit ?? {})) if (k in fixed) throw new Error(`"${k}" is both fixed (variables) and fitted (fit): a known constant is not fitted`);
+    const known = knownOf(task);
+    const held = [...Object.keys(input.fit ?? {}), ...Object.keys(input.vary ?? {})].flatMap((v) => known.filter((k) => k.symbol.toLowerCase() === v.toLowerCase()).map((k) => `${v} (${k.name ?? k.symbol} = ${k.value}${k.unit ? ` ${k.unit}` : ""}, ${k.source ?? "documented"})`));
+    if (held.length) throw new Error(`the request gives ${held.join(", ")} as known: a documented constant is held in variables, never fitted. If the gap needs it moved, the structure is missing something`);
 
     const run = async (vars: Variables, name?: string) => {
         const spec = resolveSpec(input.spec, vars, rows);

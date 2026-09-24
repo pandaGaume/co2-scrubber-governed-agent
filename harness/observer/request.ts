@@ -23,13 +23,31 @@
  *                fraction"): the names of the quantities, never the nodes
  *                that produce them. A factory matches a required output by
  *                its quantity; a name of its own makes the request
- *                unbuildable for a reason that is only words.
+ *                unbuildable for a reason that is only words;
+ *   provenance   a constant given as known names the library document it
+ *                comes from, one the Observer read; and no constraint,
+ *                required behaviour or known constant cites a number the
+ *                description gives under an assumption (an "apparent"
+ *                volume, "one room assumed"): the result of an assumption
+ *                is an assumption, and the factory must stay free to find
+ *                it false.
  */
 
 export interface Quantity {
     name: string;
     quantity: string;
     unit: string;
+}
+
+/** A constant the documentation gives: the factory holds it, never fits it. */
+export interface KnownConstant {
+    /** The short symbol the factory will use as its variable (Qe, tau). */
+    symbol: string;
+    name: string;
+    value: number;
+    unit: string;
+    /** The id of the library document that states it. */
+    source: string;
 }
 
 export interface TwinFactoryRequest {
@@ -45,6 +63,7 @@ export interface TwinFactoryRequest {
     constraints?: string[];
     missing_information?: string[];
     assumptions?: string[];
+    known?: KnownConstant[];
     validation: { criteria: string[]; compare?: Array<{ output: string; against: string }> };
 }
 
@@ -65,6 +84,11 @@ export const TWIN_REQUEST_SCHEMA = {
         constraints: { type: "array", items: { type: "string" }, description: "Known limits and conditions." },
         missing_information: { type: "array", items: { type: "string" }, description: "What the description and the telemetry do not say." },
         assumptions: { type: "array", items: { type: "string" }, description: "What is assumed in its place, said as assumed." },
+        known: {
+            type: "array",
+            items: { type: "object", properties: { symbol: { type: "string", description: "a short symbol, the variable's name in the twin (Qe, tau)" }, name: { type: "string" }, value: { type: "number" }, unit: { type: "string" }, source: { type: "string", description: "the id of the library document that states it, one you read" } }, required: ["symbol", "name", "value", "unit", "source"] },
+            description: "The constants the documentation gives (a device's datasheet, the station's metrics), each with its source: the factory holds them and never fits them.",
+        },
         validation: {
             type: "object",
             properties: { criteria: { type: "array", items: { type: "string" } }, compare: { type: "array", items: { type: "object", properties: { output: { type: "string" }, against: { type: "string" } }, required: ["output", "against"] } } },
@@ -90,7 +114,35 @@ export interface VocabularyEntry {
     units: string[];
 }
 
-export function checkTwinRequest(input: unknown, context: { catalogueTypes?: string[]; telemetryColumns?: string[]; vocabulary?: VocabularyEntry[] } = {}): RequestCheck {
+export interface CheckContext {
+    catalogueTypes?: string[];
+    telemetryColumns?: string[];
+    vocabulary?: VocabularyEntry[];
+    /** The library documents the Observer read: a known constant's source must be one of them. */
+    documentsRead?: string[];
+    /** The description it was given, where a number stated under an assumption is found. */
+    description?: string;
+}
+
+/** The sentences of a description that state a result under an assumption. */
+const HEDGED = /\b(apparent|assum(e|ed|ing)|one room|if there is no|not documented)\b/i;
+
+/** The numbers a description gives only under an assumption: small integers (a count, a step) are left out, they say nothing by themselves. */
+export function hedgedNumbers(description: string): number[] {
+    const out = new Set<number>();
+    for (const sentence of description.split(/(?<=[.;])\s+|\n/)) {
+        if (!HEDGED.test(sentence)) continue;
+        for (const m of sentence.matchAll(/(?<![\w.])(\d+(?:[.,]\d+)?)/g)) {
+            const v = Number(m[1].replace(",", "."));
+            if (Number.isFinite(v) && (v >= 10 || !Number.isInteger(v))) out.add(v);
+        }
+    }
+    return [...out];
+}
+
+const numbersIn = (text: string): number[] => [...text.matchAll(/(?<![\w.])(\d+(?:[.,]\d+)?)/g)].map((m) => Number(m[1].replace(",", "."))).filter(Number.isFinite);
+
+export function checkTwinRequest(input: unknown, context: CheckContext = {}): RequestCheck {
     const problems: string[] = [];
     const r = (input && typeof input === "object" ? input : {}) as Partial<TwinFactoryRequest>;
     const list = <T>(v: T[] | undefined): T[] => (Array.isArray(v) ? v : []);
@@ -124,6 +176,24 @@ export function checkTwinRequest(input: unknown, context: { catalogueTypes?: str
             if (!entry) problems.push(`vocabulary: output "${String(o.name)}" is a "${o.quantity}", which is not a quantity of the shared vocabulary; name it with one of: ${names}`);
             else if (entry.units.length && o.unit && !entry.units.includes(o.unit)) problems.push(`vocabulary: output "${String(o.name)}" is a ${entry.quantity} in "${o.unit}"; the shared vocabulary writes it in ${entry.units.join(" or ")}`);
         }
+    }
+
+    // Provenance: a known constant says where it is written, and the Observer read it there.
+    for (const k of list(r.known)) {
+        if (!k?.symbol || !k?.source || typeof k.value !== "number" || !k.unit) problems.push(`provenance: known constant "${String(k?.name ?? k?.symbol)}" needs its symbol, value, unit and source`);
+        else if (context.documentsRead && !context.documentsRead.includes(k.source)) problems.push(`provenance: known constant "${k.symbol}" cites "${k.source}", a document you did not read (${context.documentsRead.join(", ") || "none read"}); read it, or put the constant under missing information`);
+    }
+    // And the result of an assumption is not a constraint.
+    const hedged = context.description ? hedgedNumbers(context.description) : [];
+    if (hedged.length) {
+        const cites = (text: string) => numbersIn(text).filter((v) => hedged.includes(v));
+        for (const [section, items] of [["constraints", list(r.constraints)], ["required_behaviors", list(r.required_behaviors)]] as const) {
+            for (const text of items) {
+                const found = cites(String(text));
+                if (found.length) problems.push(`provenance: ${section} "${String(text).slice(0, 120)}" cites ${found.join(", ")}, which the description gives only under an assumption; say it under assumptions, the factory will test it`);
+            }
+        }
+        for (const k of list(r.known)) if (typeof k?.value === "number" && hedged.includes(k.value)) problems.push(`provenance: known constant "${k.symbol}" = ${k.value} is a value the description gives only under an assumption; it is not known`);
     }
     return { ok: problems.length === 0, problems };
 }

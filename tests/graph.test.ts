@@ -25,7 +25,7 @@ import { runTask, type BuilderContext } from "../harness/core/runner.js";
 import { newProgress } from "../harness/core/workspace-observer.js";
 import { topicFor, type TaskFile } from "../harness/core/task.js";
 import { combinations, evaluateExpression, resolveParam } from "../harness/topics/graph/params.js";
-import { earlySlopeOf, plausibilityOf, residualsOf, type Candidate } from "../harness/topics/graph/evaluate.js";
+import { earlySlopeOf, evaluateCandidate, plausibilityOf, residualsOf, type Candidate } from "../harness/topics/graph/evaluate.js";
 import { validateGraph } from "../harness/topics/graph/index.js";
 import { estimatorFor } from "../harness/topics/graph/fit.js";
 import { ScriptedGraphBuilder } from "../harness/scripted/graph.js";
@@ -91,6 +91,16 @@ describe("the parametric graph and its residual", () => {
         // A right start and a late parting (an exchange) is not a unit's fault: nothing said.
         const right = earlySlopeOf({ "lab.co2Ppm": [1480, 1506, 1531, 1555, 1580, 1602, 1600] }, compare, rows);
         assert.deepEqual(plausibilityOf(right), []);
+    });
+
+    it("a constant the request gives as known is never fitted: the evaluation refuses before any run, and says why", async () => {
+        const task = { objective: { required_outputs: [], constraints: { residualPpmMax: 25 } }, requirements: { known: [{ symbol: "tau", name: "scrubber lag", value: 3.33, unit: "min", source: "scrubber-1-datasheet" }] } } as unknown as TaskFile["task"];
+        const rows = [0, 1, 2].map((minute) => ({ minute, co2_lab_ppm: 1480 }));
+        let calls = 0;
+        const broker = { call: async () => (calls++, { ok: false, outcome: "refused" }) } as never;
+        const input = { label: "x", spec: { nodes: [{ id: "lab", typeId: "Physics.LifeSupport:cabin-air" }], connections: [] }, compare: [{ node: "lab", property: "co2Ppm", column: "co2_lab_ppm" }], variables: { V: 30 }, fit: { TAU: { min: 1, max: 60 } } };
+        await assert.rejects(evaluateCandidate(input, { broker, taskId: "t", task, rows, remaining: 40, n: 1 }), /the request gives TAU \(scrubber lag = 3\.33 min, scrubber-1-datasheet\) as known: a documented constant is held in variables, never fitted/);
+        assert.equal(calls, 0, "refused before the sandbox");
     });
 
     it("the stand-in world rises at 30 %, decays at 100 %, and its neighbour moves", () => {
