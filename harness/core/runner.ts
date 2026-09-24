@@ -30,14 +30,15 @@ import { manifestText, sha256Text, summarize, toolsOf, type Manifest, type Manif
 import { intentionFor, loadRecipes, saveRecipes, taskSignature } from "./recipes.js";
 import { createTaskEvaluator } from "./task-evaluator.js";
 import { taskCapabilities } from "./task-capabilities.js";
-import { DEFAULT_BUDGET, type TaskFile, type TaskState, type Topic } from "./task.js";
+import { DEFAULT_BUDGET, topicFor, type TaskFile, type TaskState, type Topic } from "./task.js";
 import type { TopicDefinition } from "./topic.js";
 import { createWorkspaceObserver, isArtifact, listWorkshop, newProgress, type Progress } from "./workspace-observer.js";
 import { ONNX_TOPIC } from "../topics/onnx/index.js";
 import { PROCEDURE_TOPIC } from "../topics/procedure/index.js";
+import { GRAPH_TOPIC } from "../topics/graph/index.js";
 
-/** The topics the constructor knows; `graph` is F5. */
-export const TOPIC_DEFINITIONS: Partial<Record<Topic, TopicDefinition>> = { onnx: ONNX_TOPIC, procedure: PROCEDURE_TOPIC };
+/** The topics the constructor knows: the factories that share this loop, each with its own harness. */
+export const TOPIC_DEFINITIONS: Partial<Record<Topic, TopicDefinition>> = { onnx: ONNX_TOPIC, procedure: PROCEDURE_TOPIC, graph: GRAPH_TOPIC };
 
 /** What a provider built for one task receives: the task, and the last call of the loop (what a model reads in `lastOutput`). */
 export interface BuilderContext {
@@ -118,7 +119,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
     const startedAt = new Date();
     const { task: file, sha256: taskSha256 } = await readTask(broker, taskId);
     const task = file.task;
-    const topicId: Topic = topicName ?? (Array.isArray(task.topics) && task.topics.length ? (task.topics[0] as Topic) : "onnx");
+    const topicId: Topic = topicName ?? topicFor(task);
     const topic = TOPIC_DEFINITIONS[topicId];
     if (!topic) throw new Error(`topic ${topicId} is not built yet (${Object.keys(TOPIC_DEFINITIONS).join(", ")})`);
     const budget = { ...DEFAULT_BUDGET, ...(task.budget ?? {}) };

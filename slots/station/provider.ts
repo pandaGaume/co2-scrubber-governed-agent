@@ -425,6 +425,21 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                 },
             },
             {
+                // The graph factory's harness tells Mother of every candidate it judged, with the residual it computed: she says it, she does not judge it.
+                name: "candidate_evaluated",
+                inputSchema: obj(
+                    { taskId: { type: "string" }, n: { type: "number" }, nodes: { type: "number" }, connections: { type: "number" }, rmse: { type: "number" }, threshold: { type: "number" }, pass: { type: "boolean" } },
+                    ["taskId", "n", "rmse", "threshold", "pass"],
+                ),
+                handle: (args, s) => {
+                    const c = [...s.commissionings].reverse().find((x) => !["done", "refused", "aborted"].includes(x.status)) ?? s.commissionings.at(-1) ?? null;
+                    const params = () => ({ n: Number(args.n), nodes: Number(args.nodes ?? 0), rmse: Math.round(Number(args.rmse)), threshold: Math.round(Number(args.threshold)) });
+                    say(args.pass === true ? "mother.candidate.accepted" : "mother.candidate.rejected", c, params);
+                    if (c) announce(c);
+                    return { heard: true };
+                },
+            },
+            {
                 name: "commissioning_authorise",
                 inputSchema: obj({ commissioningId: { type: "string" }, decision: { type: "string", enum: ["authorise", "refuse"] }, by: { type: "string" }, note: { type: "string" } }, ["commissioningId", "decision", "by"]),
                 handle: async ({ commissioningId, decision, by, note }) => {

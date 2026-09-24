@@ -84,6 +84,19 @@
                 "ppm": "the CO2 read when co2 tripped",
                 "threshold": "the threshold of the condition"
             }
+        },
+        "candidate_evaluated": {
+            "title": "The graph factory tells Mother of a candidate it judged",
+            "description": "A candidate twin the graph factory's harness evaluated against the telemetry, with the residual it computed and the threshold of the task: Mother says it, accepted or rejected. The harness's report to the station; not a tool of the agent.",
+            "properties": {
+                "taskId": "the factory task",
+                "n": "the candidate's number in the task",
+                "nodes": "how many nodes its graph has",
+                "connections": "how many connections",
+                "rmse": "its residual against the telemetry, ppm",
+                "threshold": "the task's residual threshold, ppm",
+                "pass": "whether the residual is under the threshold"
+            }
         }
     },
     "resources": {
@@ -227,7 +240,7 @@
         "mother.vitals.nominal": "Vital signs nominal throughout.",
         "mother.vitals.events": "{count} vital-sign alerts during the test.",
         "mother.aborts.none": "No emergency stop.",
-        "mother.candidate.rejected": "Simulator {n}. {what}. Deviation above the threshold. Rejected.",
-        "mother.candidate.accepted": "Simulator {n}. {what}. Deviation below the threshold. Accepted."
+        "mother.candidate.rejected": "Simulator {n}. {nodes} nodes. Residual {rmse} ppm, above the threshold of {threshold}. Rejected.",
+        "mother.candidate.accepted": "Simulator {n}. {nodes} nodes. Residual {rmse} ppm, under the threshold of {threshold}. Accepted."
     }
 }

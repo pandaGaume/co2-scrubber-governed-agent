@@ -851,7 +851,7 @@ var EXCLUDED = [
   /^twin\.(registry_|document_|session_run)/,
   /^station\.propose$/,
   /^biomed\.(monitor_start|monitor_stop|report|move)$/,
-  /^station\.(registry_register|registry_report|procedure_checked|commissioning_authorise|procedure_run)$/
+  /^station\.(registry_register|registry_report|procedure_checked|candidate_evaluated|commissioning_authorise|procedure_run)$/
 ];
 function replayPolicyFor(id, guardMode) {
   if (APPROVAL_REQUIRED.some((r) => r.test(id))) return "approval-required";

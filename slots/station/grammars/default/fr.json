@@ -106,6 +106,19 @@
                 "ppm": "le CO2 lu quand co2 s'est déclenché",
                 "threshold": "le seuil de la condition"
             }
+        },
+        "candidate_evaluated": {
+            "title": "L'usine de graphes signale à Mother un candidat jugé",
+            "description": "Un jumeau candidat que le harnais de l'usine de graphes a évalué contre la télémétrie, avec l'écart qu'il a calculé et le seuil de la tâche : Mother le dit, accepté ou rejeté. Le compte rendu du harnais à la station ; pas un outil de l'agent.",
+            "properties": {
+                "taskId": "la tâche de l'usine",
+                "n": "le numéro du candidat dans la tâche",
+                "nodes": "combien de nœuds a son graphe",
+                "connections": "combien de liaisons",
+                "rmse": "son écart à la télémétrie, en ppm",
+                "threshold": "le seuil d'écart de la tâche, en ppm",
+                "pass": "si l'écart est sous le seuil"
+            }
         }
     },
     "resources": {
@@ -249,7 +262,7 @@
         "mother.vitals.nominal": "Signes vitaux nominaux sur toute la durée.",
         "mother.vitals.events": "{count} alertes des signes vitaux pendant l'essai.",
         "mother.aborts.none": "Aucun arrêt d'urgence.",
-        "mother.candidate.rejected": "Simulateur {n}. {what}. Écart au-dessus du seuil. Rejeté.",
-        "mother.candidate.accepted": "Simulateur {n}. {what}. Écart sous le seuil. Accepté."
+        "mother.candidate.rejected": "Simulateur {n}. {nodes} nœuds. Écart {rmse} ppm, au-dessus du seuil de {threshold}. Rejeté.",
+        "mother.candidate.accepted": "Simulateur {n}. {nodes} nœuds. Écart {rmse} ppm, sous le seuil de {threshold}. Accepté."
     }
 }

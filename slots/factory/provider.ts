@@ -24,10 +24,11 @@ import { fromRoot, relativeToRoot } from "../../lib/paths.js";
 import { errorMessage, sha256File } from "../../lib/files.js";
 import { objectSchema as obj, publishSlot, type PublishedSlot, type SlotTool } from "../lib/slot-server.js";
 import { checkTaskId, listTaskFiles, safeRelative, sha256Of, taskDir, WORKSHOP_ROOT } from "../tools/lib/workshop.js";
-import { DEFAULT_BUDGET, TOPICS, type RequiredOutput, type TaskFile, type TaskState, type Topic } from "../../harness/core/task.js";
+import { DEFAULT_BUDGET, TOPICS, topicFor, type RequiredOutput, type TaskFile, type TaskState, type Topic } from "../../harness/core/task.js";
 import { runTask, TOPIC_DEFINITIONS, type RunTaskOptions } from "../../harness/core/runner.js";
 import { ScriptedBuilder } from "../../harness/scripted/onnx.js";
 import { ScriptedProcedureBuilder } from "../../harness/scripted/procedure.js";
+import { ScriptedGraphBuilder } from "../../harness/scripted/graph.js";
 import { ReasonerProvider } from "../../harness/providers/reasoner.js";
 import { Broker } from "../../harness/lib/broker.js";
 import type { Device } from "../station/registry.js";
@@ -132,7 +133,7 @@ function launch(httpBase: string, taskId: string, topic: Topic, builder: Builder
         // The builder: the script of the topic only when asked for by name; otherwise the model behind the reasoner slot, reading the topic's prompt.
         let provider: RunTaskOptions["provider"];
         let promptFile: string | null = null;
-        if (builder === "scripted") provider = topic === "procedure" ? (ctx) => new ScriptedProcedureBuilder(ctx) : (ctx) => new ScriptedBuilder(ctx);
+        if (builder === "scripted") provider = topic === "procedure" ? (ctx) => new ScriptedProcedureBuilder(ctx) : topic === "graph" ? (ctx) => new ScriptedGraphBuilder(ctx) : (ctx) => new ScriptedBuilder(ctx);
         else {
             const prompt = TOPIC_DEFINITIONS[topic]?.prompt;
             if (!prompt) throw new Error(`topic ${topic} has no prompt for a model yet: ask for builder "scripted"`);
@@ -248,7 +249,7 @@ export function factorySlot(wsBase: string, log: (line: string) => void): Publis
                 const status = statusOf(taskId);
                 s.tasks[taskId] = status;
                 log(`[factory] task ${taskId}: ${outputs.map((o) => o.name).join(", ")} for ${task.task.requestedBy}, ${data.length} data file(s)`);
-                const topic: Topic = Array.isArray(topics) && topics.length ? (topics[0] as Topic) : "onnx";
+                const topic: Topic = topicFor(task.task);
                 const builder: BuilderChoice = args.builder === "scripted" || args.builder === "reasoner" ? args.builder : TOPIC_DEFINITIONS[topic]?.prompt ? "reasoner" : "scripted";
                 const run = args.run === false ? null : launch(httpBase, taskId, topic, builder, s, log, (id, manifest) => announce(id, manifest));
                 if (!run) announce(taskId);

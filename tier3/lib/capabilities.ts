@@ -55,7 +55,7 @@ const EXCLUDED = [
     /^twin\.(registry_|document_|session_run)/,
     /^station\.propose$/,
     /^biomed\.(monitor_start|monitor_stop|report|move)$/,
-    /^station\.(registry_register|registry_report|procedure_checked|commissioning_authorise|procedure_run)$/,
+    /^station\.(registry_register|registry_report|procedure_checked|candidate_evaluated|commissioning_authorise|procedure_run)$/,
 ];
 
 /*
@@ -65,8 +65,10 @@ const EXCLUDED = [
  *   station.registry_register, station.registry_report  a device writes the
  *       register about itself; an agent that could write it could make a
  *       device appear, or a battery look full;
- *   station.procedure_checked  the factory's guard tells Mother what it
- *       checked; an agent that could call it could put words in her mouth;
+ *   station.procedure_checked, station.candidate_evaluated  the factory's
+ *       guard and the graph factory's harness tell Mother what they checked
+ *       and judged; an agent that could call them could put words in her
+ *       mouth;
  *   station.commissioning_authorise  the commander's decision, and the one
  *       moment of the story where a machine stops and waits for a human.
  *       An approval dialog would turn it into the agent's request that the
