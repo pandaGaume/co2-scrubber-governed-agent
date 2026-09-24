@@ -83,7 +83,10 @@ export class AnthropicProvider implements Provider {
 
         const tools = input.allowedCapabilities.map((c) => ({ name: toApiName(c.id), description: c.description, input_schema: c.inputSchema ?? { type: "object" } }));
         // One action per step: the harness executes one decision, so the model is asked for one call at a time.
-        const body = { model: this.model, system: this.options.systemPrompt, messages: this.messages, tools, tool_choice: { type: "auto", disable_parallel_tool_use: true }, max_tokens: this.maxTokens, temperature: this.options.temperature ?? 0.2 };
+        // The system prompt is a role's fixed text (the agent's, a topic's, the Observer's): marked for the provider's cache, so
+        // the tools and the prompt, which come first and do not change, are not billed again at every step; what varies follows.
+        const system = [{ type: "text", text: this.options.systemPrompt, cache_control: { type: "ephemeral" } }];
+        const body = { model: this.model, system, messages: this.messages, tools, tool_choice: { type: "auto", disable_parallel_tool_use: true }, max_tokens: this.maxTokens, temperature: this.options.temperature ?? 0.2 };
         const started = Date.now();
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), this.options.timeoutMs ?? 60000);

@@ -1,0 +1,23 @@
+{
+    "server": {
+        "description": "The Twin Requirement Observer: from the description of a physical system and its telemetry, what a twin of it must be able to do (the TWIN_FACTORY_REQUEST), for the factory",
+        "instructions": "Give a description of the system and, when there is some, its telemetry. The Observer states needs, never nodes: it does not see the catalogue, and a request that names a node type is refused. Forward sends the accepted request to the factory as a task."
+    },
+    "tools": {
+        "observe": {
+            "title": "Formulate what the twin must do",
+            "description": "The TWIN_FACTORY_REQUEST for a system: entities and relationships, observables, controls, external influences, inputs, outputs, behaviours to reproduce, constraints, missing information and assumptions, validation against the real. Written by the model behind the reasoner slot with the Observer's prompt, checked by code (shape, no node of the catalogue named, no telemetry column that does not exist), three attempts at most. Returns the request and every attempt.",
+            "properties": {
+                "description": "the system: what it is, its components, what it is for, what is controllable",
+                "telemetry": "rows of measurements, one object per sample; the Observer is given a computed summary of them, not the rows",
+                "forward": "true to open a factory task from the accepted request"
+            }
+        }
+    },
+    "resources": {
+        "observer://requests": {
+            "name": "Requests",
+            "description": "Every request the Observer formulated, with its attempts; each new one is pushed"
+        }
+    }
+}

@@ -30,6 +30,8 @@ export interface TaskFile {
         budget: TaskBudget;
         requestedBy: string;
         requestedAt: string;
+        /** The Observer's TWIN_FACTORY_REQUEST, whole, when the task comes from it (`harness/observer/request.ts`). */
+        requirements?: Record<string, unknown>;
     };
     profile: string;
 }

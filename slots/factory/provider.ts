@@ -209,6 +209,7 @@ export function factorySlot(wsBase: string, log: (line: string) => void): Publis
                     profile: { type: "string" },
                     run: { type: "boolean" },
                     builder: { type: "string", enum: ["reasoner", "scripted"] },
+                    requirements: { type: "object" },
                 },
                 ["objective"],
             ),
@@ -239,6 +240,7 @@ export function factorySlot(wsBase: string, log: (line: string) => void): Publis
                         budget: { iterations: budgetArg.iterations ?? DEFAULT_BUDGET.iterations, minutes: budgetArg.minutes ?? DEFAULT_BUDGET.minutes, twinPoints: budgetArg.twinPoints ?? DEFAULT_BUDGET.twinPoints },
                         requestedBy: typeof args.requestedBy === "string" ? args.requestedBy : "unknown",
                         requestedAt: new Date().toISOString(),
+                        ...(args.requirements && typeof args.requirements === "object" ? { requirements: args.requirements as Record<string, unknown> } : {}),
                     },
                     profile: typeof args.profile === "string" ? args.profile : "profiles/anthropic.json",
                 };

@@ -1,0 +1,23 @@
+{
+    "server": {
+        "description": "L'Observateur des exigences du jumeau : à partir de la description d'un système physique et de sa télémétrie, ce qu'un jumeau de ce système doit savoir faire (la TWIN_FACTORY_REQUEST), pour l'usine",
+        "instructions": "Donner une description du système et, s'il y en a, sa télémétrie. L'Observateur énonce des besoins, jamais des nœuds : il ne voit pas le catalogue, et une demande qui nomme un type de nœud est refusée. forward envoie la demande acceptée à l'usine comme une tâche."
+    },
+    "tools": {
+        "observe": {
+            "title": "Formuler ce que le jumeau doit faire",
+            "description": "La TWIN_FACTORY_REQUEST d'un système : entités et relations, grandeurs observables, commandes, influences extérieures, entrées, sorties, comportements à reproduire, contraintes, informations manquantes et hypothèses, validation contre le réel. Écrite par le modèle derrière le slot reasoner avec le prompt de l'Observateur, contrôlée par du code (forme, aucun nœud du catalogue nommé, aucune colonne de télémétrie qui n'existe pas), trois tentatives au plus. Rend la demande et chaque tentative.",
+            "properties": {
+                "description": "le système : ce qu'il est, ses composants, à quoi il sert, ce qui se commande",
+                "telemetry": "des lignes de mesures, un objet par échantillon ; l'Observateur en reçoit un résumé calculé, pas les lignes",
+                "forward": "true pour ouvrir une tâche de l'usine à partir de la demande acceptée"
+            }
+        }
+    },
+    "resources": {
+        "observer://requests": {
+            "name": "Demandes",
+            "description": "Chaque demande que l'Observateur a formulée, avec ses tentatives ; chaque nouvelle est poussée"
+        }
+    }
+}

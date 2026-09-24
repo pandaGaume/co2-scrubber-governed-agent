@@ -844,6 +844,8 @@ var EXCLUDED = [
   /^model\./,
   // The library is the factory's documentation, like its workshop; whether the night's agent reads it too is a later choice, not a side effect.
   /^library\./,
+  // The Observer is a model asked to formulate a factory request; the agent asks the factory with a contract of its own (factory.request), and a second model call on its behalf is a later choice.
+  /^observer\./,
   /^qr\./,
   /^screens\./,
   /^twin\.(registry_|document_|session_run)/,
