@@ -113,7 +113,10 @@ describe("the workshop, through the broker", () => {
 
     it("the runtime on the twin: the catalogue, a spec validated, a document built by name into the task and run in the sandbox", async () => {
         const found = await runtime<{ matches: Array<{ type: string }> }>("registry_search", { requiredOutputs: [{ quantity: "Concentration", unit: "ppm" }] });
-        assert.equal(found.matches[0]?.type, "Physics.LifeSupport:cabin-air");
+        // Two types produce a concentration in ppm since the habitat plugin: the substrate's cabin and the habitat's atmosphere; asked for a cabin, the cabin comes first.
+        assert.deepEqual(found.matches.map((m) => m.type).filter((t) => /cabin-air|Physics\.Habitat:atmosphere/.test(t)).sort(), ["Physics.Habitat:atmosphere", "Physics.LifeSupport:cabin-air"]);
+        const cabin = await runtime<{ matches: Array<{ type: string }> }>("registry_search", { requiredOutputs: [{ quantity: "Concentration", unit: "ppm" }], capabilities: ["cabin"] });
+        assert.equal(cabin.matches[0]?.type, "Physics.LifeSupport:cabin-air");
         const spec = {
             nodes: [
                 { id: "crew", typeId: "Physics.LifeSupport:crew", params: { count: 4, activity: "sleep" } },

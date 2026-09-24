@@ -75,7 +75,8 @@ export class ScriptedBuilder implements Provider {
         if (last && !last.result.ok) return decide("task.fail", { reason: (last.result.error ?? last.result.outcome).replace(/^(device refused|error):\s*/i, "") }, `${last.id} failed: nothing else to try`);
         switch (after) {
             case "plan:":
-                return decide("twin.registry_search", { requiredOutputs: task.objective.required_outputs.map((o) => ({ quantity: o.quantity, ...(o.unit ? { unit: o.unit } : {}) })) }, "ask the catalogue which node types produce the required outputs");
+                // The cabin twin's outputs, from a cabin: the capability ranks the cabin node above the habitat's atmosphere, which produces the same concentration.
+                return decide("twin.registry_search", { requiredOutputs: task.objective.required_outputs.map((o) => ({ quantity: o.quantity, ...(o.unit ? { unit: o.unit } : {}) })), capabilities: ["cabin"] }, "ask the catalogue which node types produce the required outputs, for a cabin");
             case "plan:twin.registry_search": {
                 const search = valueOf(last);
                 const matches = (Array.isArray(search.matches) ? search.matches : []) as Array<{ type: string; produces: Array<{ quantity: string; unit?: string }> }>;

@@ -41,3 +41,15 @@ An exchange flow q (m3/min) between the volume and a neighbour of concentration 
 - The residual is the root mean square of the gap over the whole telemetry, per compared column; the evaluation also gives the worst gap, the minute it occurs, and the curves every five minutes.
 - A best fit sitting at the edge of a range means the range is too narrow.
 - A gap that no value of the variables closes, largest in one phase of the test (the rise, the decay), means the structure lacks a term: a source, a sink, an exchange, a lag. Name the hypothesis in the candidate's label.
+
+## The habitat's own nodes: mass, not folded rates
+
+Since 24 September the catalogue also holds the `Physics.Habitat:*` family (the repository's plugin, `plugins/habitat`), written for the physical reference of this station, `graphs/habitat.spikypanda`. They work in mass and in the devices' own units, so no volume is folded into any rate:
+
+- `Physics.Habitat:atmosphere`: a volume of air as a mass per species (the substrate's atmosphere, ideal gas), with four CO2 inputs `delta_CO2_0` to `delta_CO2_3` in kg/s (a source positive, a sink negative, summed) and the outputs `ppm_CO2`, `mass_CO2`, `pressure`, `temperature`. Parameters: `volume` (m3), `temperature_k`, `initialCo2Ppm`.
+- `Physics.Habitat:crew`: people as a source in kg/s, from a per-person rate in litres per minute by activity (NASA's bands, library `nasa-crew-metabolic-loads`): `count`, `activity`, `lightWorkLitresPerMinute` and the other three.
+- `Physics.Habitat:scrubber`: the scrubber in its datasheet's units: `flowAtFullM3ps`, `efficiency`, `lagTimeConstantMinutes`; input `command` (0 to 1) and `ppm` (the volume's `ppm_CO2`); output `co2Delta` (minus the removal, kg/s) for the volume's delta input. A twin holds these numbers; the datasheet gives them.
+- `Physics.Habitat:fan`, `Physics.Habitat:filter`: a fan's command to the flow it delivers against the filter's resistance (`flow` in m3/s), and the filter's fouling (`initialLoadingKg`, its `resistance` wired into the fan).
+- `Physics.Habitat:duct`: the CO2 the ventilation exchanges between two volumes at a `flow` (the fan's, or a variable): inputs `ppmA`, `ppmB`; outputs `co2DeltaA`, `co2DeltaB` for the two volumes' delta inputs. `Physics.Habitat:hatch` is the same exchange through an opening, `open` 0 or 1.
+
+A candidate written with these nodes states the exchange as a flow in m3/s, the crew as litres per minute and the volume as cubic metres: the quantities the documentation and the commissioning speak. The rule stays the same: what the datasheet gives is held, the room's numbers (its volume, the ventilation's delivered flow) are fitted. The reference document itself is the station's, built from `specs/habitat-parameters.json`; its structure is what a twin of this habitat starts from.

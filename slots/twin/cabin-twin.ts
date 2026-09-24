@@ -13,6 +13,7 @@
 import { readJson, sha256File } from "../../lib/files.js";
 import { loadFactory, param, type CabinParameters, type CommandSegment, type CrewGroup, type FactoryLibrary, type Scenario } from "../../lib/factory.js";
 import { CABIN_DOCUMENT_FILE, DEFAULT_SCENARIO_FILE, PARAMETERS_FILE, relativeToRoot } from "../../lib/paths.js";
+import { buildRegistry } from "../../lib/registry.js";
 
 export const DOCUMENT = CABIN_DOCUMENT_FILE;
 export const PARAMETERS = PARAMETERS_FILE;
@@ -52,7 +53,7 @@ let cache: Twin | null = null;
 export function twin(): Twin {
     if (cache) return cache;
     const factory = loadFactory();
-    const registry = factory.buildJobRegistry();
+    const registry = buildRegistry();
     const doc = factory.readDocument(DOCUMENT);
     const parameters = readJson<CabinParameters>(PARAMETERS);
     const scenario = readJson<Scenario>(SCENARIO);

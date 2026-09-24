@@ -1,0 +1,1165 @@
+{
+  "version": 3,
+  "layout": {
+    "nodes": [
+      {
+        "id": "scene",
+        "x": -520,
+        "y": -160,
+        "typeId": "Physics.Scene:moon",
+        "inputs": [
+          {
+            "name": "atmosphere_in",
+            "type": "atmosphere",
+            "direction": "input"
+          },
+          {
+            "name": "solver_in_0",
+            "type": "solver",
+            "direction": "input"
+          },
+          {
+            "name": "shared_in_0",
+            "type": "shared",
+            "direction": "input"
+          },
+          {
+            "name": "gravity_in",
+            "type": "vec3",
+            "direction": "input"
+          },
+          {
+            "name": "temperature_in",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "pressure_in",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "density_in",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "time_scale_in",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "local_position_in",
+            "type": "vec3",
+            "direction": "input"
+          },
+          {
+            "name": "local_rotation_in",
+            "type": "vec4",
+            "direction": "input"
+          },
+          {
+            "name": "local_scale_in",
+            "type": "vec3",
+            "direction": "input"
+          },
+          {
+            "name": "local",
+            "type": "matrix44",
+            "direction": "input"
+          },
+          {
+            "name": "parentWorld",
+            "type": "matrix44",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "scene_out",
+            "type": "scene",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "solver",
+        "x": -820,
+        "y": -160,
+        "typeId": "Control.Sim:rk4-solver",
+        "inputs": [],
+        "outputs": [
+          {
+            "name": "solver_out",
+            "type": "solver",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "lab",
+        "x": 0,
+        "y": 0,
+        "typeId": "Physics.Habitat:atmosphere",
+        "inputs": [
+          {
+            "name": "composition_in",
+            "type": "composition",
+            "direction": "input"
+          },
+          {
+            "name": "layer_in_0",
+            "type": "layer",
+            "direction": "input"
+          },
+          {
+            "name": "delta_CO2_0",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "delta_CO2_1",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "delta_CO2_2",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "delta_CO2_3",
+            "type": "float",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "pressure",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "temperature",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "density",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "atmosphere_out",
+            "type": "atmosphere",
+            "direction": "output"
+          },
+          {
+            "name": "ppm_CO2",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "mass_CO2",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "partial_pressure_CO2",
+            "type": "float",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "habb",
+        "x": 0,
+        "y": 420,
+        "typeId": "Physics.Habitat:atmosphere",
+        "inputs": [
+          {
+            "name": "composition_in",
+            "type": "composition",
+            "direction": "input"
+          },
+          {
+            "name": "layer_in_0",
+            "type": "layer",
+            "direction": "input"
+          },
+          {
+            "name": "delta_CO2_0",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "delta_CO2_1",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "delta_CO2_2",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "delta_CO2_3",
+            "type": "float",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "pressure",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "temperature",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "density",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "atmosphere_out",
+            "type": "atmosphere",
+            "direction": "output"
+          },
+          {
+            "name": "ppm_CO2",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "mass_CO2",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "partial_pressure_CO2",
+            "type": "float",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "crew-lab",
+        "x": -520,
+        "y": 40,
+        "typeId": "Physics.Habitat:crew",
+        "inputs": [
+          {
+            "name": "count",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "activity",
+            "type": "any",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "co2Delta",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "litresPerMinute",
+            "type": "float",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "crew-habb",
+        "x": -520,
+        "y": 460,
+        "typeId": "Physics.Habitat:crew",
+        "inputs": [
+          {
+            "name": "count",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "activity",
+            "type": "any",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "co2Delta",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "litresPerMinute",
+            "type": "float",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "speed",
+        "x": -820,
+        "y": 200,
+        "typeId": "Logic.Time:timeline",
+        "inputs": [],
+        "outputs": [
+          {
+            "name": "value",
+            "type": "any",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "scrubber",
+        "x": -520,
+        "y": 200,
+        "typeId": "Physics.Habitat:scrubber",
+        "inputs": [
+          {
+            "name": "command",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "ppm",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "pressure",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "temperature",
+            "type": "float",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "co2Delta",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "flow",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "effectiveFlow",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "power",
+            "type": "float",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "fan-command",
+        "x": 300,
+        "y": -160,
+        "typeId": "Logic.Time:timeline",
+        "inputs": [],
+        "outputs": [
+          {
+            "name": "value",
+            "type": "any",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "fan",
+        "x": 560,
+        "y": -160,
+        "typeId": "Physics.Habitat:fan",
+        "inputs": [
+          {
+            "name": "command",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "resistance",
+            "type": "float",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "flow",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "pressureRise",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "power",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "speedRatio",
+            "type": "float",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "filter",
+        "x": 820,
+        "y": -160,
+        "typeId": "Physics.Habitat:filter",
+        "inputs": [
+          {
+            "name": "flow",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "dustConcentration",
+            "type": "float",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "resistance",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "pressureDrop",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "loading",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "clogging",
+            "type": "float",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "hvac",
+        "x": 560,
+        "y": 200,
+        "typeId": "Physics.Habitat:duct",
+        "inputs": [
+          {
+            "name": "flow",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "ppmA",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "ppmB",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "pressure",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "temperature",
+            "type": "float",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "co2DeltaA",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "co2DeltaB",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "exchangeFlow",
+            "type": "float",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "hatch",
+        "x": 560,
+        "y": 420,
+        "typeId": "Physics.Habitat:hatch",
+        "inputs": [
+          {
+            "name": "open",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "ppmA",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "ppmB",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "pressure",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "temperature",
+            "type": "float",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "co2DeltaA",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "co2DeltaB",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "exchangeFlow",
+            "type": "float",
+            "direction": "output"
+          }
+        ]
+      }
+    ],
+    "connections": [
+      {
+        "id": "solver:solver_out->scene:solver_in_0",
+        "fromNodeId": "solver",
+        "fromPortIndex": 0,
+        "toNodeId": "scene",
+        "toPortIndex": 1
+      },
+      {
+        "id": "crew-lab:co2Delta->lab:delta_CO2_0",
+        "fromNodeId": "crew-lab",
+        "fromPortIndex": 0,
+        "toNodeId": "lab",
+        "toPortIndex": 2
+      },
+      {
+        "id": "hvac:co2DeltaA->lab:delta_CO2_1",
+        "fromNodeId": "hvac",
+        "fromPortIndex": 0,
+        "toNodeId": "lab",
+        "toPortIndex": 3
+      },
+      {
+        "id": "hatch:co2DeltaA->lab:delta_CO2_2",
+        "fromNodeId": "hatch",
+        "fromPortIndex": 0,
+        "toNodeId": "lab",
+        "toPortIndex": 4
+      },
+      {
+        "id": "scrubber:co2Delta->lab:delta_CO2_3",
+        "fromNodeId": "scrubber",
+        "fromPortIndex": 0,
+        "toNodeId": "lab",
+        "toPortIndex": 5
+      },
+      {
+        "id": "crew-habb:co2Delta->habb:delta_CO2_0",
+        "fromNodeId": "crew-habb",
+        "fromPortIndex": 0,
+        "toNodeId": "habb",
+        "toPortIndex": 2
+      },
+      {
+        "id": "hvac:co2DeltaB->habb:delta_CO2_1",
+        "fromNodeId": "hvac",
+        "fromPortIndex": 1,
+        "toNodeId": "habb",
+        "toPortIndex": 3
+      },
+      {
+        "id": "hatch:co2DeltaB->habb:delta_CO2_2",
+        "fromNodeId": "hatch",
+        "fromPortIndex": 1,
+        "toNodeId": "habb",
+        "toPortIndex": 4
+      },
+      {
+        "id": "speed:value->scrubber:command",
+        "fromNodeId": "speed",
+        "fromPortIndex": 0,
+        "toNodeId": "scrubber",
+        "toPortIndex": 0
+      },
+      {
+        "id": "lab:ppm_CO2->scrubber:ppm",
+        "fromNodeId": "lab",
+        "fromPortIndex": 4,
+        "toNodeId": "scrubber",
+        "toPortIndex": 1
+      },
+      {
+        "id": "fan-command:value->fan:command",
+        "fromNodeId": "fan-command",
+        "fromPortIndex": 0,
+        "toNodeId": "fan",
+        "toPortIndex": 0
+      },
+      {
+        "id": "fan:flow->filter:flow",
+        "fromNodeId": "fan",
+        "fromPortIndex": 0,
+        "toNodeId": "filter",
+        "toPortIndex": 0
+      },
+      {
+        "id": "filter:resistance->fan:resistance",
+        "fromNodeId": "filter",
+        "fromPortIndex": 0,
+        "toNodeId": "fan",
+        "toPortIndex": 1
+      },
+      {
+        "id": "fan:flow->hvac:flow",
+        "fromNodeId": "fan",
+        "fromPortIndex": 0,
+        "toNodeId": "hvac",
+        "toPortIndex": 0
+      },
+      {
+        "id": "lab:ppm_CO2->hvac:ppmA",
+        "fromNodeId": "lab",
+        "fromPortIndex": 4,
+        "toNodeId": "hvac",
+        "toPortIndex": 1
+      },
+      {
+        "id": "habb:ppm_CO2->hvac:ppmB",
+        "fromNodeId": "habb",
+        "fromPortIndex": 4,
+        "toNodeId": "hvac",
+        "toPortIndex": 2
+      },
+      {
+        "id": "lab:ppm_CO2->hatch:ppmA",
+        "fromNodeId": "lab",
+        "fromPortIndex": 4,
+        "toNodeId": "hatch",
+        "toPortIndex": 1
+      },
+      {
+        "id": "habb:ppm_CO2->hatch:ppmB",
+        "fromNodeId": "habb",
+        "fromPortIndex": 4,
+        "toNodeId": "hatch",
+        "toPortIndex": 2
+      }
+    ]
+  },
+  "model": {
+    "nodes": [
+      {
+        "id": "scene",
+        "label": "Lunar habitat",
+        "typeId": "Physics.Scene:moon",
+        "data": {
+          "_gravity": {
+            "x": 0,
+            "y": 0,
+            "z": -1.625
+          },
+          "_temperatureK": 250,
+          "_pressurePa": 0,
+          "_densityKgPerM3": 1.225,
+          "_timeScale": 1,
+          "_localPosition": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "_localRotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "w": 1
+          },
+          "_localScale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+          },
+          "_gravitySourceId": "",
+          "_temperatureSourceId": "",
+          "_pressureSourceId": "",
+          "_densitySourceId": "",
+          "_timeScaleSourceId": "",
+          "_localPositionSourceId": "",
+          "_localRotationSourceId": "",
+          "_localScaleSourceId": "",
+          "_localMatrixSourceId": "",
+          "_parentWorldMatrixSourceId": "",
+          "_atmosphereItemId": "",
+          "_solverItemIds": [],
+          "_sharedNodeIds": [],
+          "_manualHzHz": 0,
+          "_isPrimary": false
+        }
+      },
+      {
+        "id": "solver",
+        "label": "Solver",
+        "typeId": "Control.Sim:rk4-solver",
+        "data": {
+          "_tolerance": 0.000001,
+          "_maxStep": 6,
+          "_lastMicroSteps": 0,
+          "_lastMaxError": 0,
+          "_rhsEvalsTotal": 0,
+          "_ownedCount": 0
+        }
+      },
+      {
+        "id": "lab",
+        "label": "Lab air",
+        "typeId": "Physics.Habitat:atmosphere",
+        "data": {
+          "enabled": true,
+          "_requiredHzValue": 0,
+          "_requiredHzUserDefined": false,
+          "_volumeM3": 30,
+          "_temperatureK": 295.15,
+          "_initialAtmosphere": "earthHumidAirSeaLevel",
+          "_initialMassKg": [],
+          "_mass": [
+            26.770880007778697,
+            8.21266934057314,
+            0.08076623427038761,
+            0.2588569919958734,
+            0.4592021491201314
+          ],
+          "_initialCo2Ppm": 1480
+        }
+      },
+      {
+        "id": "habb",
+        "label": "Hab-B air",
+        "typeId": "Physics.Habitat:atmosphere",
+        "data": {
+          "enabled": true,
+          "_requiredHzValue": 0,
+          "_requiredHzUserDefined": false,
+          "_volumeM3": 400,
+          "_temperatureK": 295.15,
+          "_initialAtmosphere": "earthHumidAirSeaLevel",
+          "_initialMassKg": [],
+          "_mass": [
+            356.94506677038265,
+            109.50225787430854,
+            1.0914574597527027,
+            3.45142655994498,
+            6.122695321601753
+          ],
+          "_initialCo2Ppm": 1500
+        }
+      },
+      {
+        "id": "crew-lab",
+        "label": "Crew in the Lab",
+        "typeId": "Physics.Habitat:crew",
+        "data": {
+          "enabled": true,
+          "_count": 2,
+          "_activity": "light_work",
+          "_sleep": 0.24,
+          "_rest": 0.3,
+          "_lightWork": 0.42,
+          "_heavyWork": 1,
+          "_co2Density": 1.8176,
+          "_co2Delta": 0,
+          "_litresPerMinute": 0
+        }
+      },
+      {
+        "id": "crew-habb",
+        "label": "Crew in Hab-B",
+        "typeId": "Physics.Habitat:crew",
+        "data": {
+          "enabled": true,
+          "_count": 2,
+          "_activity": "rest",
+          "_sleep": 0.24,
+          "_rest": 0.3,
+          "_lightWork": 0.42,
+          "_heavyWork": 1,
+          "_co2Density": 1.8176,
+          "_co2Delta": 0,
+          "_litresPerMinute": 0
+        }
+      },
+      {
+        "id": "speed",
+        "label": "Scrubber command",
+        "typeId": "Logic.Time:timeline",
+        "data": {
+          "enabled": true,
+          "_segmentsJson": "[{\"from\":0,\"to\":1800,\"value\":0.3},{\"from\":1800,\"to\":3600,\"value\":1}]",
+          "_defaultValue": 1,
+          "_value": 0
+        }
+      },
+      {
+        "id": "scrubber",
+        "label": "CO2 scrubber",
+        "typeId": "Physics.Habitat:scrubber",
+        "data": {
+          "enabled": true,
+          "_requiredHzValue": 0,
+          "_requiredHzUserDefined": false,
+          "_flowAtFull": 0.055,
+          "_efficiency": 0.30303,
+          "_lagMinutes": 3.33,
+          "_initialFlow": 0,
+          "_supplyVolts": 6,
+          "_interceptAmps": 0.0879,
+          "_slopeAmps": 0.1611,
+          "_habitatScale": 300,
+          "_defaultPressurePa": 101325,
+          "_defaultTemperatureK": 295.15,
+          "_flow": 0,
+          "_command": 0,
+          "_removal": 0,
+          "_power": 0,
+          "_inletPpm": 0
+        }
+      },
+      {
+        "id": "fan-command",
+        "label": "Fan command",
+        "typeId": "Logic.Time:timeline",
+        "data": {
+          "enabled": true,
+          "_segmentsJson": "[{\"from\":0,\"to\":3600,\"value\":1}]",
+          "_defaultValue": 1,
+          "_value": 0
+        }
+      },
+      {
+        "id": "fan",
+        "label": "HVAC fan",
+        "typeId": "Physics.Habitat:fan",
+        "data": {
+          "enabled": true,
+          "_requiredHzValue": 0,
+          "_requiredHzUserDefined": false,
+          "_shutoffPressurePa": 250,
+          "_freeDeliveryM3ps": 0.09,
+          "_ductResistance": 20000,
+          "_spinUpSeconds": 5,
+          "_fanEfficiency": 0.5,
+          "_standbyPowerW": 2,
+          "_capacityFactor": 1,
+          "_initialSpeedRatio": 1,
+          "_speed": 0,
+          "_flow": 0,
+          "_pressureRise": 0,
+          "_power": 0,
+          "_command": 0,
+          "_systemResistance": 0
+        }
+      },
+      {
+        "id": "filter",
+        "label": "HVAC filter",
+        "typeId": "Physics.Habitat:filter",
+        "data": {
+          "enabled": true,
+          "_requiredHzValue": 0,
+          "_requiredHzUserDefined": false,
+          "_cleanResistance": 49136,
+          "_loadingDoublingKg": 0.05,
+          "_captureEfficiency": 0.9,
+          "_ambientDust": 0.000001,
+          "_initialLoadingKg": 0.127,
+          "_endOfLifeLoadingKg": 0.2,
+          "_loading": 0,
+          "_flow": 0,
+          "_resistance": 0,
+          "_pressureDrop": 0,
+          "_captureRate": 0
+        }
+      },
+      {
+        "id": "hvac",
+        "label": "Inter-module ventilation",
+        "typeId": "Physics.Habitat:duct",
+        "data": {
+          "enabled": true,
+          "_defaultPressurePa": 101325,
+          "_defaultTemperatureK": 295.15,
+          "_exchangeFlow": 0,
+          "_flux": 0
+        }
+      },
+      {
+        "id": "hatch",
+        "label": "Hatch Lab / Hab-B",
+        "typeId": "Physics.Habitat:hatch",
+        "data": {
+          "enabled": true,
+          "_defaultPressurePa": 101325,
+          "_defaultTemperatureK": 295.15,
+          "_exchangeFlow": 0,
+          "_flux": 0,
+          "_openExchangeM3ps": 0.066,
+          "_closedLeakM3ps": 0,
+          "_open": false
+        }
+      }
+    ],
+    "connections": [
+      {
+        "id": "solver:solver_out->scene:solver_in_0",
+        "from": {
+          "node": "solver",
+          "port": "solver_out"
+        },
+        "to": {
+          "node": "scene",
+          "port": "solver_in_0"
+        }
+      },
+      {
+        "id": "crew-lab:co2Delta->lab:delta_CO2_0",
+        "from": {
+          "node": "crew-lab",
+          "port": "co2Delta"
+        },
+        "to": {
+          "node": "lab",
+          "port": "delta_CO2_0"
+        }
+      },
+      {
+        "id": "hvac:co2DeltaA->lab:delta_CO2_1",
+        "from": {
+          "node": "hvac",
+          "port": "co2DeltaA"
+        },
+        "to": {
+          "node": "lab",
+          "port": "delta_CO2_1"
+        }
+      },
+      {
+        "id": "hatch:co2DeltaA->lab:delta_CO2_2",
+        "from": {
+          "node": "hatch",
+          "port": "co2DeltaA"
+        },
+        "to": {
+          "node": "lab",
+          "port": "delta_CO2_2"
+        }
+      },
+      {
+        "id": "scrubber:co2Delta->lab:delta_CO2_3",
+        "from": {
+          "node": "scrubber",
+          "port": "co2Delta"
+        },
+        "to": {
+          "node": "lab",
+          "port": "delta_CO2_3"
+        }
+      },
+      {
+        "id": "crew-habb:co2Delta->habb:delta_CO2_0",
+        "from": {
+          "node": "crew-habb",
+          "port": "co2Delta"
+        },
+        "to": {
+          "node": "habb",
+          "port": "delta_CO2_0"
+        }
+      },
+      {
+        "id": "hvac:co2DeltaB->habb:delta_CO2_1",
+        "from": {
+          "node": "hvac",
+          "port": "co2DeltaB"
+        },
+        "to": {
+          "node": "habb",
+          "port": "delta_CO2_1"
+        }
+      },
+      {
+        "id": "hatch:co2DeltaB->habb:delta_CO2_2",
+        "from": {
+          "node": "hatch",
+          "port": "co2DeltaB"
+        },
+        "to": {
+          "node": "habb",
+          "port": "delta_CO2_2"
+        }
+      },
+      {
+        "id": "speed:value->scrubber:command",
+        "from": {
+          "node": "speed",
+          "port": "value"
+        },
+        "to": {
+          "node": "scrubber",
+          "port": "command"
+        }
+      },
+      {
+        "id": "lab:ppm_CO2->scrubber:ppm",
+        "from": {
+          "node": "lab",
+          "port": "ppm_CO2"
+        },
+        "to": {
+          "node": "scrubber",
+          "port": "ppm"
+        }
+      },
+      {
+        "id": "fan-command:value->fan:command",
+        "from": {
+          "node": "fan-command",
+          "port": "value"
+        },
+        "to": {
+          "node": "fan",
+          "port": "command"
+        }
+      },
+      {
+        "id": "fan:flow->filter:flow",
+        "from": {
+          "node": "fan",
+          "port": "flow"
+        },
+        "to": {
+          "node": "filter",
+          "port": "flow"
+        }
+      },
+      {
+        "id": "filter:resistance->fan:resistance",
+        "from": {
+          "node": "filter",
+          "port": "resistance"
+        },
+        "to": {
+          "node": "fan",
+          "port": "resistance"
+        }
+      },
+      {
+        "id": "fan:flow->hvac:flow",
+        "from": {
+          "node": "fan",
+          "port": "flow"
+        },
+        "to": {
+          "node": "hvac",
+          "port": "flow"
+        }
+      },
+      {
+        "id": "lab:ppm_CO2->hvac:ppmA",
+        "from": {
+          "node": "lab",
+          "port": "ppm_CO2"
+        },
+        "to": {
+          "node": "hvac",
+          "port": "ppmA"
+        }
+      },
+      {
+        "id": "habb:ppm_CO2->hvac:ppmB",
+        "from": {
+          "node": "habb",
+          "port": "ppm_CO2"
+        },
+        "to": {
+          "node": "hvac",
+          "port": "ppmB"
+        }
+      },
+      {
+        "id": "lab:ppm_CO2->hatch:ppmA",
+        "from": {
+          "node": "lab",
+          "port": "ppm_CO2"
+        },
+        "to": {
+          "node": "hatch",
+          "port": "ppmA"
+        }
+      },
+      {
+        "id": "habb:ppm_CO2->hatch:ppmB",
+        "from": {
+          "node": "habb",
+          "port": "ppm_CO2"
+        },
+        "to": {
+          "node": "hatch",
+          "port": "ppmB"
+        }
+      }
+    ]
+  },
+  "dashboards": [
+    {
+      "id": "main",
+      "name": "Main",
+      "tiles": []
+    }
+  ]
+}

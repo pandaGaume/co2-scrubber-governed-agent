@@ -18,6 +18,7 @@
 import { readJson, sha256File } from "../lib/files.js";
 import { loadFactory, param, type CabinParameters, type CommandSegment, type CrewGroup, type Scenario } from "../lib/factory.js";
 import { PARAMETERS_FILE, fromRoot, isMain, relativeToRoot } from "../lib/paths.js";
+import { buildRegistry } from "../lib/registry.js";
 
 const MINUTE = 60;
 /** Relative tolerance on the CO2 trajectory between the solver and the explicit reference step. */
@@ -42,7 +43,7 @@ export function checkParity(scenarioFile: string, docFile: string): { parityOk: 
     const parameters = readJson<CabinParameters>(PARAMETERS_FILE);
     const scenario = readJson<Scenario>(scenarioFile);
     const p = (dotted: string) => param(parameters, dotted);
-    const registry = factory.buildJobRegistry();
+    const registry = buildRegistry();
     const doc = factory.readDocument(docFile);
     const minutes = Math.max(...scenario.schedule.map((s) => s.to));
 

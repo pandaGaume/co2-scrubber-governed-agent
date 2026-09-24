@@ -26,6 +26,7 @@
         "twin:build": "node dist/scripts/build-cabin-graph.js",
         "twin:parity": "node dist/scripts/twin-parity.js",
         "twin:draw": "python scripts/draw-cabin-graph.py",
+    "habitat:build": "node dist/scripts/build-habitat-graph.js",
         "tier3": "node --env-file-if-exists=.env dist/tier3/run.js",
         "image": "docker build -f docker/Dockerfile -t ghcr.io/pandagaume/co2-scrubber-factory:0.1.0 .",
         "agent:build": "node dist/scripts/build-agent-graph.js",

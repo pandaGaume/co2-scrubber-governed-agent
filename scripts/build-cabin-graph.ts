@@ -19,6 +19,7 @@ import type { DocumentConnectionSpec, DocumentNodeSpec } from "@spiky-panda/fact
 import { readJson, sha256File } from "../lib/files.js";
 import { loadFactory, param, type CabinParameters, type Scenario } from "../lib/factory.js";
 import { PARAMETERS_FILE, fromRoot, isMain, relativeToRoot } from "../lib/paths.js";
+import { buildRegistry } from "../lib/registry.js";
 
 const MINUTE = 60; // the session runs in seconds; the story and the files speak in minutes
 
@@ -130,7 +131,7 @@ export function buildCabinDocument(scenarioFile: string, outFile: string): void 
     const factory = loadFactory();
     const parameters = readJson<CabinParameters>(PARAMETERS_FILE);
     const scenario = readJson<Scenario>(scenarioFile);
-    const registry = factory.buildJobRegistry();
+    const registry = buildRegistry();
     const { nodes, connections, preset, end } = cabinDocumentSpec(parameters, scenario);
     const json = factory.buildDocumentJson(registry, nodes, connections);
     mkdirSync(path.dirname(outFile), { recursive: true });

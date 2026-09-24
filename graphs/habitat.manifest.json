@@ -1,0 +1,19 @@
+{
+  "document": {
+    "file": "graphs/habitat.spikypanda",
+    "sha256": "9aadb5eaa36bbb70a2fbbb30fd682d637e156c3e79674e64816dc14d984d5291",
+    "nodes": 13,
+    "connections": 18
+  },
+  "parameters": {
+    "file": "specs/habitat-parameters.json",
+    "sha256": "7f83a945f58332f0efbc9485ac26d315101c18a6c0a24808c1a838010a47db9b",
+    "status": "draft, not yet reviewed"
+  },
+  "ventilation": {
+    "deliveredM3PerMinute": 2.001,
+    "withCleanFilterM3PerMinute": 3,
+    "filterClogging": 0.635
+  },
+  "builtAt": "2026-09-24T21:02:19.485Z"
+}

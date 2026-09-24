@@ -23,6 +23,7 @@ import { HARNESS_NODES, V1_HARNESS_NODES, createHarnessNode } from "@spiky-panda
 import { sha256File } from "../lib/files.js";
 import { loadFactory } from "../lib/factory.js";
 import { fromRoot, isMain, relativeToRoot } from "../lib/paths.js";
+import { buildRegistry } from "../lib/registry.js";
 import { DEFAULT_POSITIONS, V1_EDGES } from "../harness/lib/flow.js";
 
 export const MONITOR_TYPE = "Harness.Monitor:trace";
@@ -86,7 +87,7 @@ export const FACTORY_STAGE_LABELS: Readonly<Record<string, string>> = {
 
 export function buildAgentDocument(outFile: string, labels: Readonly<Record<string, string>> = STAGE_LABELS): void {
     const factory = loadFactory();
-    const registry = factory.buildJobRegistry();
+    const registry = buildRegistry();
     // The harness's nodes, registered as the studio's plugin registers them: same type ids, same ports.
     for (const entry of HARNESS_NODES) {
         const sample = createHarnessNode(entry.type);

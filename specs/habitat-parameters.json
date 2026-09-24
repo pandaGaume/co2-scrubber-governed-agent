@@ -1,0 +1,101 @@
+{
+    "title": "Habitat reference: every physical assumption of the two-module habitat, in one reviewable file",
+    "version": 1,
+    "status": "draft, not yet reviewed",
+    "review": {
+        "requestedOn": "2026-09-24",
+        "reviewers": ["University of Houston, aerospace (life support): the ventilation and filter model, the scrubber constants, the crew rates"],
+        "howToReplay": "edit a value, keep the file, run `npm run habitat:build` then `npm test`; the document's manifest records the sha256 of this file, so a result always names the assumptions it was computed with"
+    },
+    "units": {
+        "time": "seconds of session (the story speaks in minutes; the build script converts)",
+        "co2": "ppm (mole fraction times a million) in the volumes; kg/s between nodes",
+        "flow": "m3/s between nodes; the station documents m3/min",
+        "pressure": "Pa",
+        "temperature": "K"
+    },
+    "model": {
+        "reference": "plugins/habitat (this repository) on the substrate's Physics.Scene:atmosphere; the equations are in each node's card, plugins/habitat/docs",
+        "states": "the CO2 mass of each volume (the atmosphere, ideal gas), the scrubber's flow (a lag), the fan's speed (a spin-up), the filter's loading",
+        "equations": [
+            "atmosphere   dm_CO2/dt = sum of the delta_CO2_k inputs                                  [kg/s]; ppm = n_CO2 / n_total * 1e6",
+            "crew         co2Delta = count * litresPerMinute(activity) * 1e-3 / 60 * co2Density      [kg/s]",
+            "scrubber     d(flow)/dt = (flowAtFull * command - flow) / lag; removal = efficiency * flow * co2MassPerM3(ppm)   [kg/s]",
+            "fan          Q = s * sqrt(k / (R + k / Qfree^2)), k = capacityFactor * shutoffPressure, R = ductResistance + filter.resistance; d(s)/dt = (command - s) / spinUp",
+            "filter       resistance = clean * (1 + loading / loadingDoubling); d(loading)/dt = captureEfficiency * dust * Q",
+            "duct, hatch  flux = Q * (co2MassPerM3(ppmA) - co2MassPerM3(ppmB)); deltaA = -flux, deltaB = +flux"
+        ],
+        "whatIsNotModelled": [
+            "the exchange of species other than CO2 (a thousandth of the air, no pressure effect)",
+            "an efficiency of the scrubber that depends on the inlet concentration (NASA's ground tests show it; library nasa-scrubber-test-protocols)",
+            "the fan driven by a motor node (its speed ratio is the command through a spin-up; a motor will set it later)",
+            "dust settling under gravity (the scene carries the gravity; the substrate's particulate node is a V1 stub)"
+        ]
+    },
+    "parameters": {
+        "scene": {
+            "preset": { "value": "Physics.Scene:moon", "unit": "", "source": "the substrate's lunar preset: 1.625 m/s2, the scene the cabin twin already uses", "status": "given" }
+        },
+        "lab": {
+            "volumeM3": { "value": 30, "unit": "m3", "source": "as built; the design drawing gives 32 with the racks not yet installed", "status": "the truth the commissioning measures; a twin never reads it" },
+            "initialCo2Ppm": { "value": 1480, "unit": "ppm", "source": "the sensor co2-1 at the start of the test", "status": "measured" },
+            "temperatureK": { "value": 295.15, "unit": "K", "source": "22 C, the module's setpoint", "status": "given" }
+        },
+        "habB": {
+            "volumeM3": { "value": 400, "unit": "m3", "source": "as built, the living quarters and the rest of the pressurised volume", "status": "the truth; a twin never reads it" },
+            "initialCo2Ppm": { "value": 1500, "unit": "ppm", "source": "the sensor co2-2 at the start of the test", "status": "measured" },
+            "temperatureK": { "value": 295.15, "unit": "K", "source": "22 C", "status": "given" }
+        },
+        "crew": {
+            "lab": { "count": { "value": 2, "unit": "person", "source": "biomed.presence during the test", "status": "measured" }, "activity": { "value": "light_work", "unit": "", "source": "two operators at work in the Lab", "status": "measured" } },
+            "habB": { "count": { "value": 2, "unit": "person", "source": "biomed.presence", "status": "measured" }, "activity": { "value": "rest", "unit": "", "source": "the two others at rest in Hab-B", "status": "measured" } },
+            "litresPerMinute": {
+                "sleep": { "value": 0.24, "unit": "L/min per person", "source": "NASA BVAD Rev2 Table 3-26, reference crewmember asleep (band 0.17 to 0.28)", "status": "given, a band" },
+                "rest": { "value": 0.3, "unit": "L/min per person", "source": "NASA BVAD Rev2, between asleep and awake; library nasa-crew-metabolic-loads", "status": "given, a band" },
+                "light_work": { "value": 0.42, "unit": "L/min per person", "source": "inside NASA's awake band (0.26 to 0.45, reference 0.38): people at work sit above the reference", "status": "the truth of this crew; a twin knows the band, never this number" },
+                "heavy_work": { "value": 1.0, "unit": "L/min per person", "source": "NASA HIDH 2014: exercise at 75 % VO2max gives about 2.7; heavy work well below", "status": "given, a band" }
+            },
+            "co2DensityKgPerM3": { "value": 1.8176, "unit": "kg/m3", "source": "ideal gas, CO2 at 101325 Pa and 295.15 K", "status": "computed" }
+        },
+        "scrubber": {
+            "flowAtFullM3ps": { "value": 0.055, "unit": "m3/s", "source": "library scrubber-1-datasheet: 3.3 m3/min at full command, anemometer at the outlet", "status": "measured on the bench" },
+            "efficiency": { "value": 0.30303, "unit": "", "source": "datasheet: 0.30 single-pass; 0.30303 makes the effective flow exactly 1.0 m3/min (the datasheet rounds)", "status": "measured on the bench" },
+            "lagTimeConstantMinutes": { "value": 3.33, "unit": "min", "source": "datasheet: first order, step of the command", "status": "measured on the bench" },
+            "power": {
+                "supplyVolts": { "value": 6, "unit": "V", "source": "the bench's supply", "status": "measured" },
+                "interceptAmps": { "value": 0.0879, "unit": "A", "source": "the bench's fit, 20 stable points", "status": "measured" },
+                "slopeAmps": { "value": 0.1611, "unit": "A per unit of command", "source": "the bench's fit", "status": "measured" },
+                "habitatScale": { "value": 300, "unit": "", "source": "the bench's motor scaled to the habitat's machine; the cabin twin's assumption", "status": "to review" }
+            }
+        },
+        "ventilation": {
+            "designFlowM3ps": { "value": 0.05, "unit": "m3/s", "source": "the station's design: 3 m3/min between the Lab and Hab-B with the hatch closed, a clean filter and the fan at full command", "status": "designed; what is delivered is measured" },
+            "fan": {
+                "shutoffPressurePa": { "value": 250, "unit": "Pa", "source": "a small axial duct fan's curve, left end", "status": "assumption, to review" },
+                "freeDeliveryM3ps": { "value": 0.09, "unit": "m3/s", "source": "the same curve, right end (5.4 m3/min)", "status": "assumption, to review" },
+                "ductResistance": { "value": 20000, "unit": "Pa per (m3/s)^2", "source": "the duct without the filter: 50 Pa at the design flow", "status": "assumption, to review" },
+                "spinUpSeconds": { "value": 5, "unit": "s", "source": "a small fan's inertia", "status": "assumption" },
+                "fanEfficiency": { "value": 0.5, "unit": "", "source": "air power over electrical power, a small axial fan", "status": "assumption" },
+                "standbyPowerW": { "value": 2, "unit": "W", "source": "the fan's electronics", "status": "assumption" },
+                "capacityFactor": { "value": 1, "unit": "", "source": "a healthy fan", "status": "given" },
+                "command": { "value": 1, "unit": "0 to 1", "source": "full command throughout the test", "status": "given" }
+            },
+            "filter": {
+                "cleanResistance": { "value": 49136, "unit": "Pa per (m3/s)^2", "source": "chosen so that the clean system delivers the design flow: 250 / 0.05^2 - 250 / 0.09^2 - 20000; 123 Pa across the clean filter at the design flow", "status": "derived from the design" },
+                "loadingDoublingKg": { "value": 0.05, "unit": "kg", "source": "50 g of dust doubles the resistance, a pleated filter's order", "status": "assumption, to review" },
+                "captureEfficiency": { "value": 0.9, "unit": "", "source": "a fine filter on habitat dust", "status": "assumption" },
+                "ambientDustKgPerM3": { "value": 1e-6, "unit": "kg/m3", "source": "1 mg/m3, a third of NASA's 3 mg/m3 total dust limit (library nasa-co2-limits)", "status": "assumption" },
+                "endOfLifeLoadingKg": { "value": 0.2, "unit": "kg", "source": "four doublings: 16 times the clean resistance", "status": "assumption" },
+                "initialLoadingKg": { "value": 0.127, "unit": "kg", "source": "the fault of this commissioning: a filter already fouled, so the fan delivers 2.0 m3/min where the design says 3", "status": "the truth the commissioning measures; a twin never reads it" }
+            },
+            "hatch": {
+                "openExchangeM3ps": { "value": 0.066, "unit": "m3/s", "source": "an inter-module ventilation's order with the hatch open, 140 cfm on the ISS (library nasa-scrubber-test-protocols)", "status": "assumption, to review" },
+                "closedLeakM3ps": { "value": 0, "unit": "m3/s", "source": "nothing documented for the seals; the ventilation, not the seals, is how the modules exchange", "status": "assumption" },
+                "open": { "value": false, "unit": "", "source": "closed during the test", "status": "given" }
+            }
+        },
+        "time": {
+            "solverStepSeconds": { "value": 6, "unit": "s", "source": "one sample per six seconds resolves minutes-long dynamics; ten per story minute", "status": "given" }
+        }
+    }
+}
