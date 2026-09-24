@@ -163,7 +163,7 @@ describe("the register, the inventory, the decay", () => {
 
     it("the library finds the method from the quantity that is missing, and the harness briefs the builder stage by stage", () => {
         const docs = loadLibrary();
-        assert.deepEqual(docs.filter((d) => d.measures.includes("Volume")).map((d) => d.id), ["method-concentration-decay"]);
+        assert.deepEqual(docs.filter((d) => d.measures.includes("Volume")).map((d) => d.id), ["method-concentration-decay", "nasa-scrubber-test-protocols"]);
         assert.ok(docs.every((d) => /^[0-9a-f]{64}$/.test(d.sha256) && d.title && d.summary));
         assert.equal(searchLibrary(docs, "time constant equilibrium")[0]?.id, "co2-mass-balance");
         const task = { objective: { required_outputs: [{ name: "V_lab", quantity: "Volume", unit: "m3" }], constraints: {} }, observations: {} } as unknown as Parameters<typeof briefOf>[1];

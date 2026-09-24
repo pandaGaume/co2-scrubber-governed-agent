@@ -110,10 +110,24 @@ describe("the parametric graph and its residual", () => {
         assert.equal(calls, 0, "refused before the sandbox");
     });
 
+    it("a constant documented as a band may be placed within it by the fit, never searched outside", async () => {
+        const task = { objective: { required_outputs: [], constraints: { residualPpmMax: 25 } }, requirements: { known: [{ symbol: "g", name: "CO2 per person awake", value: 0.38, unit: "L/min", source: "nasa-crew-metabolic-loads", min: 0.26, max: 0.45 }] } } as unknown as TaskFile["task"];
+        const rows = [0, 1, 2].map((minute) => ({ minute, co2_lab_ppm: 1480 }));
+        let calls = 0;
+        const broker = { call: async () => (calls++, { ok: false, outcome: "refused", error: "no sandbox here" }) } as never;
+        const spec = { nodes: [{ id: "lab", typeId: "Physics.LifeSupport:cabin-air" }], connections: [] };
+        const compare = [{ node: "lab", property: "co2Ppm", column: "co2_lab_ppm" }];
+        await assert.rejects(evaluateCandidate({ label: "x", spec, compare, fit: { g: { min: 0.1, max: 1 } } }, { broker, taskId: "t", task, rows, remaining: 40, n: 1 }), /a documented band bounds the search: g searched over 0\.1 to 1, documented 0\.26 to 0\.45 L\/min \(nasa-crew-metabolic-loads\)/);
+        assert.equal(calls, 0);
+        // Within the band the search is allowed: it reaches the sandbox (which, here, refuses).
+        await assert.rejects(evaluateCandidate({ label: "x", spec, compare, fit: { g: { min: 0.26, max: 0.45 } } }, { broker, taskId: "t", task, rows, remaining: 40, n: 1 }), /the candidate does not build/);
+        assert.ok(calls > 0);
+    });
+
     it("the stand-in world rises at 30 %, decays at 100 %, and its neighbour moves", () => {
         assert.equal(TELEMETRY.length, 51);
-        assert.ok(TELEMETRY[20].co2_lab_ppm > TELEMETRY[0].co2_lab_ppm + 300, "the rise");
-        assert.ok(TELEMETRY[50].co2_lab_ppm < TELEMETRY[20].co2_lab_ppm - 300, "the decay");
+        assert.ok(TELEMETRY[20].co2_lab_ppm > TELEMETRY[0].co2_lab_ppm + 200, "the rise");
+        assert.ok(TELEMETRY[50].co2_lab_ppm < TELEMETRY[20].co2_lab_ppm - 200, "the decay");
         assert.ok(TELEMETRY[50].co2_habb_ppm > TELEMETRY[0].co2_habb_ppm + 50, "Hab-B is not a constant");
     });
 

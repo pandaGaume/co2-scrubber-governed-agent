@@ -185,7 +185,12 @@ export interface KnownConstant {
     value: number;
     unit?: string;
     source?: string;
+    /** The documented band, when there is one: a fit may place the value within it. */
+    min?: number;
+    max?: number;
 }
+
+const hasBand = (k: KnownConstant) => typeof k.min === "number" && typeof k.max === "number" && k.min < k.max;
 
 /** The known constants of a task: the Observer's, carried whole in the requirements. */
 export function knownOf(task: TaskFile["task"]): KnownConstant[] {
@@ -220,8 +225,18 @@ export async function evaluateCandidate(input: EvaluateInput, ctx: EvaluateConte
     const hasVary = input.vary && Object.keys(input.vary).length > 0;
     for (const k of Object.keys(input.fit ?? {})) if (k in fixed) throw new Error(`"${k}" is both fixed (variables) and fitted (fit): a known constant is not fitted`);
     const known = knownOf(task);
-    const held = [...Object.keys(input.fit ?? {}), ...Object.keys(input.vary ?? {})].flatMap((v) => known.filter((k) => k.symbol.toLowerCase() === v.toLowerCase()).map((k) => `${v} (${k.name ?? k.symbol} = ${k.value}${k.unit ? ` ${k.unit}` : ""}, ${k.source ?? "documented"})`));
+    const knownAs = (v: string) => known.find((k) => k.symbol.toLowerCase() === v.toLowerCase());
+    // A documented constant without a band is held; one with a band may be fitted, within the band only.
+    const held = [...Object.keys(input.fit ?? {}).filter((v) => !(knownAs(v) && hasBand(knownAs(v)!))), ...Object.keys(input.vary ?? {})].flatMap((v) => {
+        const k = knownAs(v);
+        return k ? [`${v} (${k.name ?? k.symbol} = ${k.value}${k.unit ? ` ${k.unit}` : ""}, ${k.source ?? "documented"})`] : [];
+    });
     if (held.length) throw new Error(`the request gives ${held.join(", ")} as known: a documented constant is held in variables, never fitted. If the gap needs it moved, the structure is missing something`);
+    const outside = Object.entries(input.fit ?? {}).flatMap(([v, b]) => {
+        const k = knownAs(v);
+        return k && hasBand(k) && (b.min < k.min! || b.max > k.max!) ? [`${v} searched over ${b.min} to ${b.max}, documented ${k.min} to ${k.max}${k.unit ? ` ${k.unit}` : ""} (${k.source ?? "documented"})`] : [];
+    });
+    if (outside.length) throw new Error(`a documented band bounds the search: ${outside.join("; ")}. Search within the band; a value outside it is not this constant any more`);
 
     const run = async (vars: Variables, name?: string) => {
         const spec = resolveSpec(input.spec, vars, rows);

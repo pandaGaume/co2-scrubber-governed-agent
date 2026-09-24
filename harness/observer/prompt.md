@@ -18,7 +18,7 @@ Determine what the twin must represent, what it must receive, what it must simul
 - the information that is missing, and what you assume in its place, said as assumed;
 - how the twin will be judged against the real: which output is compared with which measurement.
 
-Before writing, read in the library what the description leaves open (the observation lists its documents; `library.read` gives one whole): the datasheets of the devices and the station's topology and metrics. A constant the documentation states goes under `known`, with its value, its unit, a short symbol and the id of the document you read it in: the factory holds it and never fits it. What the documentation says is not documented stays under missing information.
+Before writing, read in the library what the description leaves open (the observation lists its documents; `library.read` gives one whole): the datasheets of the devices and the station's topology and metrics. A constant the documentation states goes under `known`, with its value, its unit, a short symbol and the id of the document you read it in: the factory holds it and never fits it. When the documentation gives a band rather than one value (a person's CO2 rate, from the 5th to the 95th percentile), give the band as min and max: the factory may place the value within it, never outside. What the documentation says is not documented stays under missing information.
 
 Name every quantity the twin must expose with the shared vocabulary of quantities given in the observation (`quantities`), in one of its units: the factories match an output by that name.
 

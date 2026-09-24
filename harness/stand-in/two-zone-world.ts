@@ -32,7 +32,14 @@ export interface TwoZoneWorld {
     habStartPpm: number;
 }
 
-export const LAB_WORLD: TwoZoneWorld = { VLab: 30, VHab: 400, QeFull: 1.0, q: 0.6, gLabPerson: 0.5, gHabPerson: 0.3, labOccupants: 2, habOccupants: 2, lagMinutes: 3.33, labStartPpm: 1480, habStartPpm: 1500 };
+/**
+ * The Lab as the test world plays it. The crew's rates sit inside NASA's
+ * band for a crewmember awake in the cabin (BVAD Rev2, Table 3-26: 0.26 to
+ * 0.45 L/min, reference 0.38): two operators slightly above the reference,
+ * as people at work are; Hab-B's two between asleep and awake. The twin
+ * knows the band, never these numbers.
+ */
+export const LAB_WORLD: TwoZoneWorld = { VLab: 30, VHab: 400, QeFull: 1.0, q: 0.6, gLabPerson: 0.42, gHabPerson: 0.3, labOccupants: 2, habOccupants: 2, lagMinutes: 3.33, labStartPpm: 1480, habStartPpm: 1500 };
 
 export interface TelemetryRow {
     minute: number;

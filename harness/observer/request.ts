@@ -48,6 +48,9 @@ export interface KnownConstant {
     unit: string;
     /** The id of the library document that states it. */
     source: string;
+    /** The band the documentation gives, when it gives one (a crew's metabolic rate, 5th to 95th percentile): the factory may place the value within it, never outside. */
+    min?: number;
+    max?: number;
 }
 
 export interface TwinFactoryRequest {
@@ -86,7 +89,7 @@ export const TWIN_REQUEST_SCHEMA = {
         assumptions: { type: "array", items: { type: "string" }, description: "What is assumed in its place, said as assumed." },
         known: {
             type: "array",
-            items: { type: "object", properties: { symbol: { type: "string", description: "a short symbol, the variable's name in the twin (Qe, tau)" }, name: { type: "string" }, value: { type: "number" }, unit: { type: "string" }, source: { type: "string", description: "the id of the library document that states it, one you read" } }, required: ["symbol", "name", "value", "unit", "source"] },
+            items: { type: "object", properties: { symbol: { type: "string", description: "a short symbol, the variable's name in the twin (Qe, tau)" }, name: { type: "string" }, value: { type: "number" }, unit: { type: "string" }, source: { type: "string", description: "the id of the library document that states it, one you read" }, min: { type: "number", description: "the low end of the band the documentation gives, when it gives one" }, max: { type: "number", description: "the high end of that band" } }, required: ["symbol", "name", "value", "unit", "source"] },
             description: "The constants the documentation gives (a device's datasheet, the station's metrics), each with its source: the factory holds them and never fits them.",
         },
         validation: {
@@ -181,6 +184,7 @@ export function checkTwinRequest(input: unknown, context: CheckContext = {}): Re
     // Provenance: a known constant says where it is written, and the Observer read it there.
     for (const k of list(r.known)) {
         if (!k?.symbol || !k?.source || typeof k.value !== "number" || !k.unit) problems.push(`provenance: known constant "${String(k?.name ?? k?.symbol)}" needs its symbol, value, unit and source`);
+        else if ((k.min !== undefined || k.max !== undefined) && !(typeof k.min === "number" && typeof k.max === "number" && k.min <= k.value && k.value <= k.max)) problems.push(`provenance: known constant "${k.symbol}" gives a band that does not hold its value (${k.min} to ${k.max} around ${k.value}); a band is a min and a max around the documented value`);
         else if (context.documentsRead && !context.documentsRead.includes(k.source)) problems.push(`provenance: known constant "${k.symbol}" cites "${k.source}", a document you did not read (${context.documentsRead.join(", ") || "none read"}); read it, or put the constant under missing information`);
     }
     // And the result of an assumption is not a constraint.

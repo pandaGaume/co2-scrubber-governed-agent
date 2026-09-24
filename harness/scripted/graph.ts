@@ -60,7 +60,7 @@ export class ScriptedGraphBuilder implements Provider {
         const after = `${String(state.features.phase)}:${String(state.features.lastCapability)}`;
         const occupants = Number((task.observations as { labOccupants?: unknown })?.labOccupants ?? 2);
         // What the documentation gives: the scrubber's effective flow and lag (its datasheet), the crew and their rate (the station's page).
-        const fixed = { N: occupants, g: 0.5, Qe: 1.0, lag: 3.33 };
+        const fixed = { N: occupants, g: 0.42, Qe: 1.0, lag: 3.33 };
         const compare = [{ node: "lab", property: "co2Ppm", column: "co2_lab_ppm" }];
         if (last && !last.result.ok) return decide("task.fail", { reason: (last.result.error ?? last.result.outcome).replace(/^(device refused|error):\s*/i, "") }, `${last.id} failed: nothing else to try`);
         switch (after) {
