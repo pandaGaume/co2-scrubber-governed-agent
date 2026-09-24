@@ -31,7 +31,7 @@ Each part isolates one term of the mass balance before the next adds one: the ex
 
 ## 4. Several volumes, joined by ventilation flows (ISS in V-HAB)
 
-The ISS atmosphere was modeled as ten ideally stirred volumes joined by inter-module ventilation flows of 140 cfm each (about 4 m3/min), taken as constant. The authors note that diffusion and pressure differences, which were neglected, underestimate mixing between modules, and that mixing within each module is overestimated. That flow is the one with the **hatch open and the ventilation running**; through a closed hatch the exchange is a leak, much smaller, and is measured, not assumed.
+The ISS atmosphere was modeled as ten ideally stirred volumes joined by inter-module ventilation flows of 140 cfm each (about 4 m3/min), taken as constant. The authors note that diffusion and pressure differences, which were neglected, underestimate mixing between modules, and that mixing within each module is overestimated. That flow is the one with the **hatch open and the ventilation running**. The ISS relies on it: its CO2 removal is centralised (CDRA, Vozdukh) and the inter-module ventilation carries every module's air to it. With a hatch closed, what the ventilation still carries depends on the design of the ducts, and is measured, not assumed.
 
 ## Rules of application for a commissioning
 

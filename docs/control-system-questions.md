@@ -15,7 +15,10 @@ why we ask it. Updated in the evening of 24 September after nine runs.*
 ## 1. The system and what we do today
 
 **The plant.** Two air volumes of a lunar habitat, the Lab and Hab-B, joined
-by a hatch. The only CO2 scrubber is in the Lab. Four people: two in the Lab
+by a hatch. CO2 removal is centralised, as on the ISS: one scrubber, in the
+Lab, serves the whole habitat through an inter-module ventilation (fans and
+ducts) that carries Hab-B's air to it and back; the ventilation's flow is
+smaller with the hatch closed than open. Four people: two in the Lab
 at light work, two in Hab-B at rest. Measured once a minute: CO2 in each
 volume (ppm) and the scrubber's speed command (percent). Sensors: 1 ppm
 resolution, accuracy about 30 ppm + 3 % of reading, noise a few ppm.
@@ -37,9 +40,11 @@ tau du_f/dt = u(t) - u_f(t)                     (scrubber lag, tau = 3.33 min)
   0.45 L/min from the 5th to the 95th percentile, 0.38 for the reference
   crewmember).
 - **Unknown:** `V_L`, the as-built volume (m3), and `q`, the exchange flow
-  through the closed hatch (m3/min). The hatch seals are not rated for
-  tightness, so q is a hypothesis, not a fact. `g` is known only within its
-  band.
+  the ventilation delivers between the two modules as installed, hatch
+  closed (m3/min). The design gives a nominal flow; filters, dampers and
+  duct losses change what is delivered, so q is measured, not assumed. It
+  is not small by design: Hab-B's CO2 is removed only through it. `g` is
+  known only within its band.
 
 The system is **bilinear**: the command multiplies the state.
 
@@ -88,9 +93,10 @@ graphs, fitted with only what the model had (g within NASA's band), gave:
 | the Lab and the exchange | 4.1 ppm | 27.5 | 0.42 | 1.09 |
 | the model's twin (Lab alone) | 12.6 ppm | 29.6 | 0.38 (held) | (none) |
 
-Both structures pass the 25 ppm threshold. The volume is well determined;
-the exchange is not (1.09 for a true 0.6). This is what questions 4, 7, 12
-and 14 are about.
+Both structures pass the 25 ppm threshold, including the one without
+exchange, which the design rules out: the ventilation is how Hab-B is
+served. The volume is well determined; the exchange is not (1.09 for a true
+0.6). This is what questions 4, 7, 12 and 14 are about.
 
 ---
 
@@ -174,9 +180,10 @@ and 14 are about.
 14. **Choosing between structures.** When the builder proposes several
     structures (one room; one room plus exchange; two states), which
     selection rule is safest: AIC, BIC, or cross-validation on a second test
-    held out? And when two structures pass, should the twin be the simpler
-    one, or the one the physics says is there (the hatch seals are not
-    rated for tightness)?
+    held out? And when two structures pass, one of which the design rules
+    out (a Lab with no exchange, when the ventilation is how Hab-B is
+    served), how should the known design enter the selection: as a
+    constraint on the structure, or as a prior?
 15. **Plausibility checks before the fit.** Three checks run today, all by
     code: the slope of the first five minutes, predicted against measured
     (it flags a rate in the wrong unit, and lists what enters the balance at
@@ -259,8 +266,9 @@ metabolic simulator, MSFC 4-bed scrubber ground tests, SAM's first scrubber
 run in 2026) separate the unknowns one at a time, and use a known CO2
 source rather than people.
 
-25. **A staged test in an empty Lab.** First the leak through the hatch
-    (CO2 injected, scrubber off), then the scrubber against a metered CO2
+25. **A staged test in an empty Lab.** First the exchange through the
+    ventilation, hatch closed (CO2 injected, scrubber off), then the
+    scrubber against a metered CO2
     source, then the crew. Does such a sequence make (V, q, g) identifiable
     where our two steps do not, and what length would each stage need at a
     one-minute sampling? Is the loss of realism (no people, a steady source)

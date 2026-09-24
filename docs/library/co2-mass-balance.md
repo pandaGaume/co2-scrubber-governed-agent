@@ -40,7 +40,7 @@ Two volumes connected by an opening exchange air at a flow q that depends on the
     V1 * dC1/dt = G1 - Qe * C1 - q * (C1 - C2)
     V2 * dC2/dt = G2          + q * (C1 - C2)
 
-(the scrubber in volume 1). If q is zero, the second volume ignores what the scrubber does. If q is not zero, a change in C1 shows in C2, smaller and later. Whether q is zero with a closed hatch is a question a measurement of C2 during a test on volume 1 can answer.
+(the scrubber in volume 1, serving volume 2 through the exchange). A habitat with one scrubber relies on q: if q were zero, the second volume's CO2 would rise without bound, a volume nobody can live in. So q is not a question of yes or no but of how much: a change in C1 shows in C2, smaller and later, and how much and how late gives q. How large q is as installed, with the hatch closed or open, is what a measurement of C2 during a test on volume 1 answers.
 
 ## Conversions
 

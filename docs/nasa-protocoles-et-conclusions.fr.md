@@ -63,8 +63,9 @@ Liens : [BVAD Rev2](https://ntrs.nasa.gov/api/citations/20210024855/downloads/BV
    débits réglables aux postes de couchage.
 8. **Entre modules, c'est la ventilation qui mélange.** L'ISS est modélisée
    en dix volumes reliés par 140 cfm (environ 4 m³/min) chacun, sas ouverts.
-   À travers un sas fermé, l'échange est une fuite, bien plus faible, qui se
-   mesure.
+   L'ISS en dépend : son épuration est centralisée, et c'est cette
+   ventilation qui amène l'air de chaque module à l'épurateur. Sas fermé, ce
+   que la ventilation passe encore dépend des conduits, et se mesure.
 
 ## 3. Ce qu'on a repris (commit `201e837`)
 
@@ -79,7 +80,7 @@ Liens : [BVAD Rev2](https://ntrs.nasa.gov/api/citations/20210024855/downloads/BV
 
 | conclusion | ce qu'il faudrait | pourquoi ce n'est pas fait |
 |---|---|---|
-| 2 et 3 | Un **protocole de mise en service par étapes, Lab vide** : d'abord la fuite par le sas (injection de CO2, épurateur arrêté), puis l'épurateur à une source connue, sans occupants. Il faut un appareil d'injection au registre (un simulateur métabolique), et un plancher de vitesse qui dépende de l'occupation : le plancher de 30 % protège des gens, un Lab vide n'en a pas besoin | C'est un changement de l'enveloppe de sécurité (`PROCEDURE_ENVELOPE`) et du registre : à décider avec toi, pas en passant |
+| 2 et 3 | Un **protocole de mise en service par étapes, Lab vide** : d'abord l'échange par la ventilation, sas fermé (injection de CO2, épurateur arrêté), puis l'épurateur à une source connue, sans occupants. Il faut un appareil d'injection au registre (un simulateur métabolique), et un plancher de vitesse qui dépende de l'occupation : le plancher de 30 % protège des gens, un Lab vide n'en a pas besoin | C'est un changement de l'enveloppe de sécurité (`PROCEDURE_ENVELOPE`) et du registre : à décider avec toi, pas en passant |
 | 4 | Un rendement d'épurateur qui dépend du CO2 d'entrée, dans le nœud du catalogue et dans la fiche technique | Le nœud est dans le substrat (spikypanda), que je ne touche pas ; c'est aussi une question pour l'automaticien |
 | 5 | Répéter une étape du protocole et donner la répétabilité dans le compte rendu | Petit changement du sujet `procedure` ; à faire |
 | 6 | La **pression totale de la cabine** dans la topologie de la station, et des seuils écrits en mmHg puis convertis | La station ne documente pas sa pression aujourd'hui. Pour une base lunaire à atmosphère réduite, nos seuils en ppm seraient faux |

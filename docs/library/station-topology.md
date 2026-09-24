@@ -8,13 +8,14 @@ How the base is laid out and what its logger records, as the station documents i
 |---|---|---|
 | /habitat/lab | the Lab module, a volume of air | |
 | /habitat/hab-b | the Hab-B module, a volume of air (living quarters and the rest of the base's pressurised volume) | |
-| /habitat/lab/eclss/scrubber-1 | the only CO2 scrubber (library `scrubber-1-datasheet`) | Lab |
+| /habitat/lab/eclss/scrubber-1 | the habitat's CO2 scrubber, centralised: it serves every module through the ventilation (library `scrubber-1-datasheet`) | Lab |
 | /habitat/lab/eclss/co2-1 | CO2 sensor | Lab |
 | /habitat/hab-b/eclss/co2-2 | CO2 sensor | Hab-B |
 | /habitat/lab/hatch-1 | hatch between the Lab and Hab-B | both |
+| (ducting) | the inter-module ventilation between the Lab and Hab-B: fans and ducts, not a connected device, so not on the register | both |
 | /habitat/power/battery-1 | battery | power |
 
-The scrubber is in the Lab; Hab-B has no scrubber of its own. Air reaches it through the hatch and the ventilation; with the hatch closed, whatever passes is not documented: the hatch seals are not rated for tightness.
+The scrubber is centralised, as on the International Space Station: one scrubber in the Lab, and an inter-module ventilation that carries Hab-B's air to it and back. Hab-B's CO2 is removed by the scrubber through that ventilation; without it, Hab-B's CO2 would rise without bound. The ventilation's flow depends on the hatch: with the hatch open it passes through the ducts and the hatchway, with the hatch closed through the ducts alone, a smaller flow. The design gives a nominal flow; what the ventilation delivers as installed (filters, dampers, the losses of the ducts) is not documented, and is measured in place.
 
 The as-built volumes are not documented: the drawings give the design, not what the installed racks and stores leave free.
 
