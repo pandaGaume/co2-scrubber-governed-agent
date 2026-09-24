@@ -29,7 +29,20 @@ Note that the curve decays towards C_eq, not towards zero and not towards the ou
 
 ## Occupants as a source
 
-A resting adult produces roughly 0.3 L of CO2 per minute, more when working. Spaceflight planning uses about 1 kg of CO2 per crew member per day (about 0.35 L/min at cabin conditions). At 1 atm and 20 C, 1 ppm of CO2 is about 1.8 mg per m3.
+The CO2 an adult produces follows the metabolic rate, so it depends on the activity. Typical values per person, at cabin conditions:
+
+| activity | CO2 produced |
+|---|---|
+| sleep | about 0.2 L/min |
+| rest (seated, quiet) | about 0.3 L/min |
+| light work (standing, handling equipment, a commissioning test) | about 0.5 L/min |
+| heavy work (exercise, hauling) | 1.0 to 1.5 L/min |
+
+Spaceflight planning uses about 1 kg of CO2 per crew member per day (about 0.35 L/min at cabin conditions). **That figure is a day's average, over sleep, rest and work: it sizes a scrubber for a mission, it is not the rate of a person during a given hour.** For a test or a twin over an hour, take the rate of the activity the occupants are doing; who is where and doing what is the medical monitor's and the station's (library station-topology).
+
+These are typical values, not measurements of this crew: an individual can differ by a quarter or more. A twin that holds them should say so; a residual that only a different rate closes points first at the occupants, not at the volume.
+
+At 1 atm and 20 C, 1 ppm of CO2 is about 1.8 mg per m3.
 
 ## Two volumes
 
