@@ -53,6 +53,8 @@ describe("the parametric graph and its residual", () => {
         assert.deepEqual(JSON.parse(String(resolveParam({ $series: { column: "s", scale: "0.01" } }, {}, rows))), [{ from: 0, to: 60, value: 0.3 }, { from: 60, to: 1e9, value: 1 }]);
         assert.equal(resolveParam({ $first: "s" }, {}, rows), 30);
         assert.equal(resolveParam(0.4, {}, rows), 0.4);
+        assert.equal(resolveParam("tau", { tau: 3.33 }, rows), 3.33, "a bare variable name reads as its variable");
+        assert.equal(resolveParam("light_work", { tau: 3.33 }, rows), "light_work", "any other string stays a string");
     });
 
     it("the grid is every combination, bounded", () => {

@@ -24,7 +24,7 @@
  *
  *     node --env-file=.env dist/scripts/commissioning-example.js
  */
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
 import { fromRoot, isMain, relativeToRoot } from "../lib/paths.js";
 import { errorMessage } from "../lib/files.js";
@@ -245,7 +245,9 @@ async function main(): Promise<void> {
         operator.take();
         const g = await factoryLoop(reqG.taskId);
         operator.take();
-        const candidates = JSON.parse(readFileSync(path.join(taskDir(reqG.taskId), "candidates.json"), "utf8"));
+        // No candidate file when no evaluation ran: the journal says so rather than stopping.
+        const candidatesFile = path.join(taskDir(reqG.taskId), "candidates.json");
+        const candidates = existsSync(candidatesFile) ? JSON.parse(readFileSync(candidatesFile, "utf8")) : [];
         await record(
             {
                 name: "graph factory",

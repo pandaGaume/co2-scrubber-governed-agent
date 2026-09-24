@@ -217,7 +217,12 @@ export async function evaluateCandidate(input: EvaluateInput, ctx: EvaluateConte
         if (!built.ok) throw new Error(`the candidate does not build: ${brief(built.error ?? built.outcome)} (a measured input is a Logic.Time:timeline whose segments are the $series, wired into the port; a port takes a connection, not a series)`);
         const doc = built.output as { json?: string; sha256: string; nodes?: unknown[]; connections?: unknown[] };
         const ran = await broker.call(runtimeSlot, "session_run", { ...(name ? { name } : { document: doc.json }), dt: DT_SECONDS, duration: last * 60, sampleEvery: SAMPLE_EVERY, probes });
-        if (!ran.ok) throw new Error(`the candidate does not run: ${brief(ran.error ?? ran.outcome)}`);
+        if (!ran.ok) {
+            const why = brief(ran.error ?? ran.outcome);
+            // A NaN in the sandbox is a parameter that resolved to no number: say which way to write it.
+            const hint = /NaN/.test(why) ? ` (a parameter resolved to no number: a formula over the variables is {"$expr": "..."} and names only variables given in variables or fit; the resolved parameters were ${JSON.stringify(Object.fromEntries(spec.nodes.flatMap((n) => Object.entries(n.params ?? {}).filter(([, v]) => typeof v !== "string" || v.length < 40).map(([k, v]) => [`${n.id}.${k}`, v]))))})` : "";
+            throw new Error(`the candidate does not run: ${why}${hint}`);
+        }
         const series = (ran.output as { series: Record<string, number[]> }).series;
         return { residuals: residualsOf(series, input.compare, rows), series, sha256: doc.sha256 };
     };

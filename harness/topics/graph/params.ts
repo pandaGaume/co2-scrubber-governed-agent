@@ -76,6 +76,8 @@ const num = (v: unknown): number | null => (typeof v === "number" && Number.isFi
 
 /** One parameter value resolved for these variables and this telemetry. */
 export function resolveParam(value: unknown, vars: Variables, rows: Row[]): unknown {
+    // A bare variable name reads as its variable: "tau" is {"$expr": "tau"}, the only thing it can mean.
+    if (typeof value === "string" && Object.prototype.hasOwnProperty.call(vars, value)) return vars[value];
     if (!value || typeof value !== "object" || Array.isArray(value)) return value;
     const v = value as Record<string, unknown>;
     if (typeof v.$expr === "string") return evaluateExpression(v.$expr, vars);
