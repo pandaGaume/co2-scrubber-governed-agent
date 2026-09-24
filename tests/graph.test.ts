@@ -25,7 +25,7 @@ import { runTask, type BuilderContext } from "../harness/core/runner.js";
 import { newProgress } from "../harness/core/workspace-observer.js";
 import { topicFor, type TaskFile } from "../harness/core/task.js";
 import { combinations, evaluateExpression, resolveParam } from "../harness/topics/graph/params.js";
-import { earlySlopeOf, evaluateCandidate, inflowsOf, plausibilityOf, residualsOf, type Candidate } from "../harness/topics/graph/evaluate.js";
+import { earlySlopeOf, evaluateCandidate, inflowsOf, plausibilityOf, residualsOf, specProblems, type Candidate } from "../harness/topics/graph/evaluate.js";
 import { validateGraph } from "../harness/topics/graph/index.js";
 import { estimatorFor } from "../harness/topics/graph/fit.js";
 import { compareStructure, referenceOfSpec } from "../harness/topics/graph/reference.js";
@@ -138,6 +138,15 @@ describe("the parametric graph and its residual", () => {
         assert.deepEqual(hand.missingWires, ["Logic.Time:timeline.value -> Physics.LifeSupport:crew.count", "Logic.Time:timeline.value -> Physics.LifeSupport:crew.activity", "Physics.LifeSupport:crew.co2Emission -> Physics.LifeSupport:cabin-air.emissionB"], "the hand graph sets its one crew as parameters; the station twin has a second crew group");
         assert.ok(hand.extraWires.includes("Logic.Time:timeline.value -> Physics.LifeSupport:cabin-air.emissionB"), "and adds the neighbour as an input");
         assert.equal(referenceOfSpec(labCandidate(false) as never, "x").wires.length, 3);
+    });
+
+    it("a spec the runtime would take silently and wrongly is refused before any run: a formula as a segment's text, segments that end in seconds", () => {
+        const spec = { nodes: [{ id: "speed", typeId: "Logic.Time:timeline", params: { segments: JSON.stringify([{ from: 0, to: 60, value: "speed_percent * 0.01" }]) } }, { id: "crew", typeId: "Logic.Time:timeline", params: { segments: JSON.stringify([{ from: 0, to: 3600, value: "light_work" }]) } }], connections: [] } as never;
+        const problems = specProblems(spec, ["V"], ["minute", "speed_percent"], 60);
+        assert.equal(problems.length, 2);
+        assert.match(problems[0], /node "speed": a segment's value is the text "speed_percent \* 0\.01"/);
+        assert.match(problems[1], /node "speed": its segments end at 60 s, and the telemetry runs 60 min/);
+        assert.deepEqual(specProblems(labCandidate(true) as never, ["V"], ["minute"], 60), [], "the $series form is not literal segments");
     });
 
     it("the stand-in world rises at 30 %, decays at 100 %, and its neighbour moves", () => {

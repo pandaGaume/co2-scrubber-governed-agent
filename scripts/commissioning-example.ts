@@ -37,7 +37,7 @@ import { LAB_WORLD, TwoZoneWorldSim, type TelemetryRow } from "../harness/stand-
 import { runProcedure } from "../tier3/procedure.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
 import { evaluateCandidate, stationReference, type Candidate } from "../harness/topics/graph/evaluate.js";
-import { compareGraphs, referenceOfSpec } from "../harness/topics/graph/reference.js";
+import { compareGraphs, compareParameters, referenceOfSpec } from "../harness/topics/graph/reference.js";
 import { labCandidate } from "../harness/scripted/graph.js";
 import type { Spec } from "../harness/topics/graph/params.js";
 import type { TaskFile } from "../harness/core/task.js";
@@ -282,10 +282,12 @@ async function main(): Promise<void> {
             { name: "by hand: the Lab and the exchange through the hatch", spec: labCandidate(true) as unknown as Spec, fit: { V: { min: 10, max: 200 }, g: { min: 0.26, max: 0.45 }, q: { min: 0, max: 2 } } },
         ];
         const references: Array<{ name: string; rmse: number | null; variables: Record<string, number> | null; error?: string }> = [];
+        let handFit: Record<string, number> | null = null;
         for (const [i, h] of byHand.entries()) {
             try {
                 const r = await evaluateCandidate({ label: h.name, spec: h.spec, compare, variables: given, fit: h.fit, maxRuns: 60 }, { broker: operator, taskId: reqG.taskId, task: { ...task, requirements: undefined }, rows, remaining: 200, n: 100 + i });
                 references.push({ name: h.name, rmse: Math.max(...r.candidate.residuals.map((x) => x.rmse)), variables: r.candidate.variables });
+                if (i === 1) handFit = r.candidate.variables;
             } catch (e) {
                 references.push({ name: h.name, rmse: null, variables: null, error: errorMessage(e) });
             }
@@ -299,6 +301,8 @@ async function main(): Promise<void> {
             variables: c.variables,
             againstStationTwin: c.structure && station ? compareGraphs(c.structure, station) : null,
             againstHandGraph: c.structure ? compareGraphs(c.structure, handGraph) : null,
+            // The numbers, once both graphs are resolved at their fitted variables: a matching structure can hide a rate off by ten.
+            numbersAgainstHandGraph: c.spec && handFit ? compareParameters({ spec: c.spec, variables: c.variables }, { spec: labCandidate(true) as unknown as Spec, variables: handFit }, rows).filter((p) => !(p.ratio > 0.8 && p.ratio < 1.25)) : null,
         }));
         await record(
             {

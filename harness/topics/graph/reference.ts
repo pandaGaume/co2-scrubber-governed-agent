@@ -22,7 +22,7 @@
  *               (`labCandidate`, `harness/scripted/graph.ts`).
  */
 import { readFileSync } from "node:fs";
-import type { Spec } from "./params.js";
+import { resolveSpec, type Row, type Spec, type Variables } from "./params.js";
 
 export interface Wire {
     from: string;
@@ -100,6 +100,39 @@ export function compareGraphs(c: ReferenceGraph, reference: ReferenceGraph): Str
         extraWires: [...cw].filter((w) => !rw.has(w)),
         wiringMatch: rw.size ? Number((shared.length / rw.size).toFixed(2)) : 1,
     };
+}
+
+export interface ParameterGap {
+    parameter: string;
+    candidate: number;
+    reference: number;
+    /** candidate / reference */
+    ratio: number;
+}
+
+/**
+ * Two graphs' numbers side by side, once each is resolved at its own fitted
+ * variables: every numeric parameter of a node type both use, by type and
+ * parameter name. A structure can match and a number be off by ten; this is
+ * where it shows.
+ */
+export function compareParameters(candidate: { spec: Spec; variables: Variables }, reference: { spec: Spec; variables: Variables }, rows: Row[]): ParameterGap[] {
+    const valuesOf = (g: { spec: Spec; variables: Variables }) => {
+        const out = new Map<string, number>();
+        let resolved: Spec;
+        try {
+            resolved = resolveSpec(g.spec, g.variables, rows);
+        } catch {
+            return out;
+        }
+        for (const n of resolved.nodes) for (const [k, v] of Object.entries(n.params ?? {})) if (typeof v === "number" && Number.isFinite(v)) out.set(`${n.typeId}.${k}`, v);
+        return out;
+    };
+    const c = valuesOf(candidate);
+    const r = valuesOf(reference);
+    return [...r]
+        .filter(([k]) => c.has(k))
+        .map(([k, v]) => ({ parameter: k, candidate: Number(c.get(k)!.toPrecision(4)), reference: Number(v.toPrecision(4)), ratio: v !== 0 ? Number((c.get(k)! / v).toFixed(2)) : Number.NaN }));
 }
 
 /** The reference's wiring in words, for the builder's brief. */

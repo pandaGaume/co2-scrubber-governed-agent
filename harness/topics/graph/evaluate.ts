@@ -86,6 +86,8 @@ export interface Candidate {
     early?: EarlySlope;
     /** What the plausibility check found; empty when the dynamics start right. */
     warnings: string[];
+    /** The spec as the builder wrote it (formulas unresolved): what a comparison of numbers resolves. */
+    spec?: Spec;
     /** The candidate's structure, by node types and typed connections: what a comparison reads. */
     structure?: ReferenceGraph;
     /** The candidate against the station's twin, by types and typed connections. */
@@ -164,6 +166,37 @@ export function residualsOf(series: Record<string, number[]>, compare: Compare[]
     });
 }
 
+/**
+ * What a spec says that the runtime would take silently and wrongly: a
+ * timeline segment whose value is a formula or a column's name written as
+ * text (a timeline holds numbers, or words such as an activity, and a text
+ * stays text), and literal segments that end long before the telemetry
+ * does (segments are in seconds of session time, not minutes). Found by
+ * comparing the builder's graphs with the one written by hand: both had the
+ * same wiring, one had its command frozen after sixty seconds.
+ */
+export function specProblems(spec: Spec, variables: string[], columns: string[], lastMinute: number): string[] {
+    const problems: string[] = [];
+    for (const n of spec.nodes) {
+        const segments = n.params?.segments;
+        if (typeof segments !== "string") continue;
+        let list: Array<{ from?: unknown; to?: unknown; value?: unknown }>;
+        try {
+            list = JSON.parse(segments);
+        } catch {
+            continue;
+        }
+        if (!Array.isArray(list)) continue;
+        for (const s of list) {
+            const v = s?.value;
+            if (typeof v === "string" && (variables.includes(v) || columns.some((c) => v.includes(c)) || /[*/+]|\d\s*-/.test(v))) problems.push(`node "${n.id}": a segment's value is the text "${v}"; a timeline holds a number or a word, never a formula or a column: a measured input is segments {"$series": {"column": "...", "scale": "..."}}, a variable is a number resolved from {"$expr": "..."} in a parameter`);
+        }
+        const end = Math.max(...list.map((s) => Number(s?.to)).filter(Number.isFinite));
+        if (Number.isFinite(end) && end < lastMinute * 60 * 0.9) problems.push(`node "${n.id}": its segments end at ${end} s, and the telemetry runs ${lastMinute} min (${lastMinute * 60} s): segments are in seconds of session time`);
+    }
+    return problems;
+}
+
 /** Minutes over which the first slope is read: long enough to see through a sensor's noise, short enough to be the start. */
 export const EARLY_MINUTES = 5;
 
@@ -239,6 +272,8 @@ export async function evaluateCandidate(input: EvaluateInput, ctx: EvaluateConte
     if (!Number.isFinite(last) || last <= 0) throw new Error("the telemetry has no \"minute\" column to run the candidate over");
     if (ctx.remaining <= 1) throw new Error("the task's budget of sandbox runs (twinPoints) is spent");
     const probes = input.compare.map((c) => ({ node: c.node, property: c.property }));
+    const written = specProblems(input.spec, [...Object.keys(input.variables ?? {}), ...Object.keys(input.fit ?? {}), ...Object.keys(input.vary ?? {})], [...columns], last);
+    if (written.length) throw new Error(`the candidate would run, but not as written: ${written.join("; ")}`);
     const fixed = input.variables ?? {};
     const hasFit = input.fit && Object.keys(input.fit).length > 0;
     const hasVary = input.vary && Object.keys(input.vary).length > 0;
@@ -324,6 +359,7 @@ export async function evaluateCandidate(input: EvaluateInput, ctx: EvaluateConte
         candidate.early.inflows = inflowsOf(read, input.spec, first.node);
     }
     candidate.warnings = plausibilityOf(candidate.early);
+    candidate.spec = input.spec;
     candidate.structure = referenceOfSpec(input.spec, `candidate ${ctx.n}`);
     const station = stationReference();
     if (station) candidate.reference = compareStructure(input.spec, station);
