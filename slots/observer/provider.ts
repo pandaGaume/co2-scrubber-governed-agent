@@ -5,8 +5,10 @@
  * TWIN_FACTORY_REQUEST the guard accepted, with every attempt and why the
  * refused ones were refused. With `forward`, the request becomes a factory
  * task (`factory.request`, the requirements carried whole in the task file,
- * `requestedBy: "observer"`); the task is opened, not run, until the
- * factory's `graph` topic exists.
+ * `requestedBy: "observer"`, no topic: which factory builds it, graph,
+ * model, code or another, is decided on the factory side, never here); the
+ * task is opened, not run, until that dispatch exists
+ * (docs/observateur-et-usines.fr.md).
  *
  * The model is the one behind the `reasoner` slot, reached through the
  * broker like everything else, with the Observer's prompt; this slot holds
@@ -71,7 +73,8 @@ export function observerSlot(wsBase: string, log: (line: string) => void, option
                         let taskId: string | null = null;
                         if (result.ok && result.request && args.forward === true) {
                             const contract = factoryContractOf(result.request);
-                            const r = await broker.call("factory", "request", { ...contract, topics: ["graph"], requestedBy: "observer", run: false });
+                            // No topic: the Observer does not know which factory will build (graph, model, code, 3D...); choosing is the factory side's.
+                            const r = await broker.call("factory", "request", { ...contract, requestedBy: "observer", run: false });
                             if (!r.ok) throw new Error(`the request was accepted but the factory did not open a task: ${r.error ?? r.outcome}`);
                             taskId = (r.output as { taskId: string }).taskId;
                         }

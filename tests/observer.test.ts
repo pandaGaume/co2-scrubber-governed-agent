@@ -131,12 +131,15 @@ describe("the Observer, through the broker", () => {
         assert.equal((model.seen[0].telemetry as { rows: number }).rows, 25);
         assert.doesNotMatch(JSON.stringify(model.seen), /registry|Physics\.Transform/);
         assert.match(String(model.seen[1].lastRefusal), /^observer\.request: separation/);
-        const r = await broker.call("factory", "request", { ...factoryContractOf(result.request!), topics: ["graph"], requestedBy: "observer", run: false });
+        // The contract names no factory: the Observer does not know which one will build.
+        assert.equal("topics" in factoryContractOf(result.request!), false);
+        const r = await broker.call("factory", "request", { ...factoryContractOf(result.request!), requestedBy: "observer", run: false });
         assert.ok(r.ok, r.error);
         const taskId = (r.output as { taskId: string }).taskId;
         tasks.push(taskId);
-        const task = JSON.parse(readFileSync(path.join(taskDir(taskId), "task.json"), "utf8")) as { task: { requestedBy: string; requirements: TwinFactoryRequest; objective: { required_outputs: unknown[] } } };
+        const task = JSON.parse(readFileSync(path.join(taskDir(taskId), "task.json"), "utf8")) as { task: { requestedBy: string; topics: unknown; requirements: TwinFactoryRequest; objective: { required_outputs: unknown[] } } };
         assert.equal(task.task.requestedBy, "observer");
+        assert.equal(task.task.topics, "auto", "the factory side chooses");
         assert.deepEqual(task.task.requirements.required_behaviors, REQUEST.required_behaviors);
         assert.equal(task.task.objective.required_outputs.length, 1);
     });
