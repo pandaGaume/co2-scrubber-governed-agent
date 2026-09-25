@@ -71,12 +71,14 @@ export interface Progress {
     reads: Record<string, { at: string; value: JsonValue }>;
     /** What a topic keeps across the steps of one task (the procedure topic: its submissions). */
     topic: Record<string, JsonValue>;
+    /** What the task read so far, each answer compact, by capability and argument (`evidence:` in the state); the oldest dropped past the cap. */
+    evidence: Record<string, { at: string; summary: JsonValue }>;
     /** What the runner read once at the start, for the state and the topics' requirements: the library's shelf, the telemetry's shape. */
     context: { shelf: Array<{ id: string; description: string; variables: Record<string, string>; settings: string[]; probes: string[] }>; telemetry: { file: string; rows: number; columns: string[]; minutes: number | null } | null };
 }
 
 export function newProgress(): Progress {
-    return { phase: "plan", iteration: 0, plan: null, done: null, lastCall: null, lastSummary: null, lastArtifact: null, lastRefusal: null, checkedModels: [], sandbox: null, failure: null, reads: {}, topic: {}, context: { shelf: [], telemetry: null } };
+    return { phase: "plan", iteration: 0, plan: null, done: null, lastCall: null, lastSummary: null, lastArtifact: null, lastRefusal: null, checkedModels: [], sandbox: null, failure: null, reads: {}, topic: {}, evidence: {}, context: { shelf: [], telemetry: null } };
 }
 
 export interface WorkshopFeatures extends Record<string, JsonValue> {
@@ -115,7 +117,7 @@ export async function listWorkshop(broker: Broker, taskId: string): Promise<Work
     return files.map(({ path, bytes, sha256 }) => ({ path, bytes, sha256 }));
 }
 
-export function createWorkspaceObserver(broker: Broker, taskId: string, progress: Progress, brief: () => string = () => "", state?: () => ReasoningState, key: () => string = () => ""): StateObserver {
+export function createWorkspaceObserver(broker: Broker, taskId: string, progress: Progress, brief: () => string = () => "", state?: () => ReasoningState, key: () => string = () => "", contextMode: "conversation" | "state" = "conversation"): StateObserver {
     return {
         async observe(): Promise<WorkshopState> {
             const files = await listWorkshop(broker, taskId);
@@ -135,9 +137,10 @@ export function createWorkspaceObserver(broker: Broker, taskId: string, progress
                 planMissing: progress.plan?.missing_capabilities.length ?? 0,
                 lastCapability: last?.id ?? "",
                 lastOutcome: last?.result.outcome ?? "",
-                lastOutput: last ? (progress.lastSummary !== null ? JSON.stringify({ ...(progress.lastArtifact ? { artifact: progress.lastArtifact } : {}), summary: progress.lastSummary }) : JSON.stringify(last.result.output ?? last.result.error ?? null).slice(0, 8000)) : "",
+                // A conversation gets the whole answer back as the tool's result (as before); the state mode gets it compact, the whole at its handle.
+                lastOutput: last ? (contextMode === "state" && progress.lastSummary !== null ? JSON.stringify({ ...(progress.lastArtifact ? { artifact: progress.lastArtifact } : {}), summary: progress.lastSummary }) : JSON.stringify(last.result.output ?? last.result.error ?? null).slice(0, 8000)) : "",
                 lastRefusal: progress.lastRefusal ? `${progress.lastRefusal.capability}: ${progress.lastRefusal.reason}` : "",
-                state: state ? state() : null,
+                state: contextMode === "state" && state ? state() : null,
             };
             // The id the recipes are stored under: the phase, the last capability and its outcome, and what the topic adds (the last diagnosis), so a learned step replays only after the same evidence.
             const extra = key();

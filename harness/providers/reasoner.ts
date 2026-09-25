@@ -74,9 +74,12 @@ export class ReasonerProvider implements Provider {
 
     /** The context mode of the conversations this provider opens on the slot: `state` for a harness that rebuilds the reasoning state at every step. */
     useContext(mode: "conversation" | "state"): void {
-        this.contextMode = mode;
+        this._contextMode = mode;
     }
-    private contextMode: "conversation" | "state" = "conversation";
+    private _contextMode: "conversation" | "state" = "conversation";
+    get contextMode(): "conversation" | "state" {
+        return this._contextMode;
+    }
 
     get name(): string {
         return `reasoner:${this.family}`;
@@ -99,7 +102,7 @@ export class ReasonerProvider implements Provider {
             candidates: input.candidates,
             recentFailures: input.recentFailures,
             ...(this.prompt ? { prompt: this.prompt } : {}),
-            contextMode: this.contextMode,
+            contextMode: this._contextMode,
         });
         if (!r.ok) throw new Error(r.error ?? "reasoner.decide failed");
         const a = r.output as DecideAnswer;

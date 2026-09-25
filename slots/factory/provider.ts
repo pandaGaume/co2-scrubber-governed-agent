@@ -140,8 +140,8 @@ function launch(httpBase: string, taskId: string, topic: Topic, builder: Builder
             const reasoner = await ReasonerProvider.connect(broker);
             if (!reasoner.description.ready) throw new Error(`the reasoner is not ready: ${reasoner.description.reason ?? "no reason given"}`);
             reasoner.usePrompt(prompt);
-            // A factory task runs on the reasoning state: the model reads the state the harness rebuilds at every step, never the transcript.
-            reasoner.useContext("state");
+            // The graph factory runs on the reasoning state: the model reads the state the harness rebuilds at every step, never the transcript (the refactoring of 2026-09-25). The other topics keep the conversation until their state carries what they read.
+            reasoner.useContext(topic === "graph" ? "state" : "conversation");
             run.builder = reasoner.name;
             provider = reasoner;
             promptFile = prompt;

@@ -117,6 +117,29 @@ describe("each node on its own numbers", () => {
         assert.equal(who.activity, "light_work", "an unknown word does not change the editable");
     });
 
+    it("the scrubber's Qe and eta as the template maps them: the effective flow at full command is the registered device's, the efficiency applied once", () => {
+        // The template writes flowAtFullM3ps = Qe / eta / 60 and efficiency = eta, with Qe the registered effectiveFlowAtFull (m3/s) times 60.
+        const t = loadGraphLibrary().find((g) => g.template.id === "habitat")!.template;
+        const scrubber = t.spec.nodes.find((n) => n.id === "scrubber")!;
+        assert.deepEqual(scrubber.params!.flowAtFullM3ps, { $expr: "Qe / eta / 60" });
+        assert.deepEqual(scrubber.params!.efficiency, { $expr: "eta" });
+        const devices = (JSON.parse(readFileSync(fromRoot("specs", "commissioning-devices.json"), "utf8")) as { devices: Array<{ path: string; descriptor: { properties: Record<string, { value?: number }> } }> }).devices;
+        const registered = devices.find((d) => d.path.endsWith("scrubber-1"))!.descriptor.properties;
+        const Qe = registered.effectiveFlowAtFull.value! * 60;
+        const eta = registered.singlePassEfficiency.value!;
+        const node = new HabitatScrubberNode();
+        node.flowAtFullM3ps = Qe / eta / 60;
+        node.efficiency = eta;
+        // At full command the air flow is the datasheet's 0.055 m3/s and the effective flow the registered 0.016667 m3/s: eta once, not twice.
+        assert.ok(Math.abs(node.flowAtFullM3ps - registered.flowAtFull.value!) / registered.flowAtFull.value! < 1e-3, `air flow ${node.flowAtFullM3ps} for ${registered.flowAtFull.value}`);
+        assert.ok(Math.abs(node.flowAtFullM3ps * node.efficiency - registered.effectiveFlowAtFull.value!) / registered.effectiveFlowAtFull.value! < 1e-3, "effective flow = air flow times efficiency = the device's effectiveFlowAtFull");
+        // And in the running reference: removal = efficiency * flow * co2MassPerM3(ppm), read off a row at full command.
+        const rows = runHabitat(buildHabitatDocument({}, parameters, registry).json, 60, DEFAULT_SPEED_STEPS, registry);
+        const r = rows[60];
+        const expected = 0.30303 * r.scrubber_flow_m3ps * co2MassPerM3(r.co2_lab_ppm, 101325, 295.15);
+        assert.ok(Math.abs(r.scrubber_removal_kgps - expected) / expected < 0.02, `removal ${r.scrubber_removal_kgps} kg/s, efficiency once gives ${expected}`);
+    });
+
     it("the crew's mass flow is the litres per minute at the density of CO2; the scrubber removes efficiency times flow times the CO2 in a cubic metre", () => {
         const crew = new HabitatCrewNode();
         crew.count = 2;

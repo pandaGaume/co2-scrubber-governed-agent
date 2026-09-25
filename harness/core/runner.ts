@@ -169,7 +169,9 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
 
     // What the state carries so the model need not read it: the shelf and the telemetry's shape.
     progress.context = { shelf: await shelfOf(broker), telemetry: await telemetryShapeOf(broker, taskId, task) };
-    const telemetry = newTelemetry("contextMode" in provider ? String((provider as { contextMode?: unknown }).contextMode) : "unknown");
+    const contextMode: "conversation" | "state" = (provider as { contextMode?: unknown }).contextMode === "state" ? "state" : "conversation";
+    const telemetry = newTelemetry(contextMode);
+    const EVIDENCE_CAP = 10;
     // A long answer goes whole to the workshop and the model reads its summary and its handle; written right after the step.
     let pendingArtifact: { path: string; text: string } | null = null;
     const capabilities = await buildCapabilities(broker, {
@@ -188,6 +190,16 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             const whole = call.result.ok ? (call.result.output ?? null) : { error: call.result.error ?? null, outcome: call.result.outcome };
             const compact = compactOutput(call.id, call.input, whole);
             progress.lastSummary = compact.summary;
+            // What was read stays in the state as evidence (a read is not repeated for what the state holds); the topic's own results (an evaluation) live in its part of the state.
+            if (call.result.ok && !/^(task|graph)\./.test(call.id)) {
+                const arg = call.input && typeof call.input === "object" && !Array.isArray(call.input) ? (call.input as Record<string, unknown>) : {};
+                const named = ["id", "path", "type", "quantity", "query"].map((k) => arg[k]).find((v) => typeof v === "string") as string | undefined;
+                const key = named ? `${call.id} ${named}` : call.id;
+                delete progress.evidence[key];
+                progress.evidence[key] = { at: new Date().toISOString(), summary: compact.summary };
+                const keys = Object.keys(progress.evidence);
+                for (const old of keys.slice(0, Math.max(0, keys.length - EVIDENCE_CAP))) delete progress.evidence[old];
+            }
             telemetry.toolResultBytes += compact.bytes;
             telemetry.compactedContextBytes += JSON.stringify(compact.summary)?.length ?? 0;
             if (compact.reduced) {
@@ -206,8 +218,9 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             taskId,
             progress,
             () => topic.brief?.(progress, task) ?? "",
-            () => reasoningStateOf({ task, progress, budget, startedAt, nextActions: capabilities.catalogue.map((c) => c.id), shelf: progress.context.shelf, telemetry: progress.context.telemetry, runsSpent: topic.runsSpent?.(progress), topic: topic.state?.(progress, task) }),
+            () => reasoningStateOf({ task, progress, budget, nextActions: capabilities.catalogue.map((c) => c.id), shelf: progress.context.shelf, telemetry: progress.context.telemetry, runsSpent: topic.runsSpent?.(progress), topic: topic.state?.(progress, task) }),
             () => topic.key?.(progress) ?? "",
+            contextMode,
         ),
         evaluator: createTaskEvaluator({ broker, taskId, task, topic, progress }),
         guard: createBuilderGuard({ broker, task, topic, runtimeSlot, taskId, progress }),

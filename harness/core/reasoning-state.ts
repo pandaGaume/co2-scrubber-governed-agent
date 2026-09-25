@@ -10,7 +10,13 @@
  *                   known constants with their status and source, who and
  *                   what was observed (persons, the register's devices), the
  *                   telemetry's columns and span, the graphs on the shelf;
- *   where           the phase, the iteration, what is left of the budgets;
+ *   where           the phase, the iteration, what is left of the budgets
+ *                   (steps and sandbox runs; never the clock: the runtime
+ *                   refuses a decision whose observed world moved between
+ *                   the decision and its execution, and a clock always moves);
+ *   evidence        what the task has read so far, each answer compact
+ *                   (`compact.ts`), by capability and argument: a read is
+ *                   not repeated for what the state already holds;
  *   hypothesis      what the topic holds as the current answer (the graph or
  *                   spec under test, its fitted and held variables);
  *   lastAction      the last call, its outcome, its answer made compact, and
@@ -55,7 +61,8 @@ export interface StateInvariants {
 export interface ReasoningState extends Record<string, JsonValue> {
     phase: string;
     iteration: number;
-    budget: { iterationsLeft: number; minutesLeft: number; runsLeft: number | null };
+    budget: { iterationsLeft: number; runsLeft: number | null };
+    evidence: Record<string, JsonValue>;
     invariants: StateInvariants & Record<string, JsonValue>;
     hypothesis: JsonValue;
     lastAction: { capability: string; outcome: string; summary: JsonValue; artifact: string | null } | null;
@@ -78,7 +85,6 @@ export interface StateInputs {
     task: TaskFile["task"];
     progress: Progress;
     budget: { iterations: number; minutes: number; twinPoints?: number };
-    startedAt: Date;
     /** The capabilities the model may call now, by id. */
     nextActions: string[];
     /** The shelf, read once by the runner. */
@@ -130,18 +136,17 @@ export function invariantsOf(task: TaskFile["task"], shelf: StateInvariants["she
 }
 
 export function reasoningStateOf(inputs: StateInputs): ReasoningState {
-    const { task, progress, budget, startedAt, nextActions, shelf, telemetry, topic = {} } = inputs;
-    const minutes = (Date.now() - startedAt.getTime()) / 60000;
+    const { task, progress, budget, nextActions, shelf, telemetry, topic = {} } = inputs;
     const last = progress.lastCall;
     return {
         phase: progress.phase,
         iteration: progress.iteration,
         budget: {
             iterationsLeft: Math.max(0, budget.iterations - progress.iteration),
-            minutesLeft: Math.max(0, Math.round((budget.minutes - minutes) * 10) / 10),
             runsLeft: typeof budget.twinPoints === "number" ? Math.max(0, budget.twinPoints - (inputs.runsSpent ?? 0)) : null,
         },
         invariants: invariantsOf(task, shelf, telemetry) as StateInvariants & Record<string, JsonValue>,
+        evidence: Object.fromEntries(Object.entries(progress.evidence).map(([k, e]) => [k, e.summary])),
         hypothesis: topic.hypothesis ?? null,
         lastAction: last ? { capability: last.id, outcome: last.result.outcome, summary: (progress.lastSummary ?? null) as JsonValue, artifact: progress.lastArtifact ?? null } : null,
         lastRefusal: progress.lastRefusal ? `${progress.lastRefusal.capability}: ${progress.lastRefusal.reason}` : null,

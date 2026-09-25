@@ -65,6 +65,8 @@ export class ScriptedGraphBuilder implements Provider {
     readonly family = "scripted";
     readonly exchanges: ProviderExchange[] = [];
     calls = 0;
+    /** The script runs on the reasoning state, as the model does: the observation carries the state and the compact answers, and the tests read them. */
+    readonly contextMode = "state" as const;
 
     constructor(private readonly options: ScriptedGraphOptions) {}
 
