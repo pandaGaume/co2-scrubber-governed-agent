@@ -26,14 +26,29 @@
  *
  * The validator says the contract is held when the claimed procedure is
  * the very file the guard accepted (same sha256).
+ *
+ * Since 2026-09-25 the topic runs on the reasoning state (`reasoning-state.ts`,
+ * no replay of the conversation): its part of the state carries what it
+ * read whole where the model needs it whole (the installation's volumes,
+ * openings and unknowns; who is in which module; the monitor; the method
+ * card with its rules of application) and the submissions with their
+ * reasons; the last refused procedure is in the state whole as the
+ * constructor's `lastRefusal.input` (whatever refused it, the schema or the
+ * guard), so the model corrects it rather than writes it again from
+ * nothing. The guard writes only a refusal to the state: an accepted
+ * submission is recorded by the capability itself, after the runtime
+ * checked the world did not move (a guard that wrote to the state would
+ * move it).
  */
 import type { CapabilityResult, Intention, JsonValue } from "@spiky-panda/harness";
 import type { LocalCapability } from "../../core/capabilities.js";
 import type { TaskFile } from "../../core/task.js";
+import type { TopicState } from "../../core/reasoning-state.js";
 import type { TopicContext, TopicDefinition, Validation } from "../../core/topic.js";
 import type { DoneClaim, Progress, WorkshopFile } from "../../core/workspace-observer.js";
 import { checkProcedure, problemLines, type PresenceRead, type ProcedureCheck } from "./check.js";
 import { PROCEDURE_SCHEMA, totalMinutes, type Procedure } from "./procedure.js";
+import { resolveUnitRef } from "../../lib/units.js";
 
 export const PROCEDURE_TOOLS: ReadonlyArray<RegExp> = [/^factory\.inventory$/, /^station\.registry_list$/, /^biomed\.(describe|presence)$/, /^library\.(list|methods|search|read)$/, /^workspace\.(list|read)$/, /^procedure\.submit$/, /^task\.(plan|done|fail)$/];
 
@@ -56,6 +71,15 @@ interface ProcedureTopicState {
     accepted: { path: string; sha256: string; procedureId: string } | null;
     /** The method card the builder read, once it has read one (`library.read` on a `method-` document). */
     method?: string;
+    /** The card whole, as read: the state carries it, the model reads it once. */
+    methodCard?: string;
+}
+
+interface InventoryRead {
+    volumes?: Array<{ name: string; path: string; sensors?: string[]; devices?: string[] }>;
+    openings?: Array<{ device: string; between: string[] }>;
+    unknowns?: Array<{ what: string; quantity: string; unit: string; volume?: string; how: string }>;
+    devices?: Array<{ path: string; type: string; title: string; area: string; measures?: Array<{ property: string; quantity: string; unit: string }>; acts?: string[]; commissioning?: boolean }>;
 }
 
 const ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
@@ -67,6 +91,17 @@ function stateOf(progress: Progress): ProcedureTopicState {
     const fresh: ProcedureTopicState = { submissions: [], accepted: null };
     progress.topic.procedure = fresh as unknown as JsonValue;
     return fresh;
+}
+
+/** The method card the builder read, noted once: the last `library.read` on a `method-` document, its text kept whole. */
+function noteMethod(progress: Progress): ProcedureTopicState {
+    const state = stateOf(progress);
+    const lastRead = progress.reads["library.read"]?.value as { id?: string; text?: string } | undefined;
+    if (!state.method && typeof lastRead?.id === "string" && lastRead.id.startsWith("method-")) {
+        state.method = lastRead.id;
+        if (typeof lastRead.text === "string") state.methodCard = lastRead.text;
+    }
+    return state;
 }
 
 /** What `biomed.presence` answered in this task, if it was called. */
@@ -121,6 +156,11 @@ function submitCapability(context: TopicContext): LocalCapability {
             if (!w.ok) return { ok: false, error: w.error ?? `could not write ${path}`, output: { outcome: w.outcome } };
             const sha256 = (w.output as { sha256: string }).sha256;
             const state = stateOf(progress);
+            // The guard checked and accepted; recorded here, once the runtime has executed the decision, so the state the model read did not move under it.
+            const presence = presenceOf(progress);
+            const check = checkProcedure(procedure, presence);
+            state.submissions.push(submissionOf(state, procedure, check, presence !== null));
+            await tellMother(context, procedure, check, state.submissions.length);
             state.accepted = { path, sha256, procedureId: procedure.id };
             await broker.call("workspace", "write", { taskId, path: "scorecard.json", text: JSON.stringify(scorecardOf(progress), null, 2) + "\n" });
             return { ok: true, output: { outcome: "completed", value: { accepted: true, path, sha256, steps: procedure.steps.length, minutes: totalMinutes(procedure) } } };
@@ -128,7 +168,44 @@ function submitCapability(context: TopicContext): LocalCapability {
     };
 }
 
+function submissionOf(state: ProcedureTopicState, procedure: Partial<Procedure>, check: ProcedureCheck, presenceRead: boolean): Submission {
+    return {
+        n: state.submissions.length + 1,
+        procedureId: String(procedure.id ?? ""),
+        ok: check.ok,
+        kinds: [...new Set(check.problems.map((p) => p.kind))],
+        problems: problemLines(check),
+        presenceRead,
+        monitoringAsked: Boolean(procedure.monitoring?.subjects?.length),
+        at: new Date().toISOString(),
+    };
+}
+
+/** The evidence the stages need, each true or false (`requirements` of the state); the guard refuses a plan before the situation and the method are read. */
+export function requirementsOf(progress: Progress): Record<string, boolean> {
+    const state = noteMethod(progress);
+    return {
+        installationRead: progress.reads["factory.inventory"] !== undefined,
+        presenceRead: progress.reads["biomed.presence"] !== undefined,
+        methodRead: Boolean(state.method),
+        planDeclared: progress.plan !== null,
+        procedureAccepted: state.accepted !== null,
+    };
+}
+
+const HOW: Record<string, string> = {
+    installationRead: "read factory.inventory (what is installed, where, what is unknown)",
+    presenceRead: "read biomed.presence (who is in which module now)",
+    methodRead: "find the method that measures the missing quantity (library.methods) and read its card (library.read)",
+};
+
 async function guardProcedure(capabilityId: string, input: JsonValue, context: TopicContext): Promise<string[]> {
+    if (capabilityId === "task.plan") {
+        const requirements = requirementsOf(context.progress);
+        return Object.entries(requirements)
+            .filter(([k, v]) => !v && k in HOW && k !== "presenceRead")
+            .map(([k]) => `the plan needs ${k}: ${HOW[k]}`);
+    }
     if (capabilityId !== "procedure.submit") return [];
     const procedure = (input ?? {}) as unknown as Partial<Procedure>;
     const presence = presenceOf(context.progress);
@@ -137,20 +214,65 @@ async function guardProcedure(capabilityId: string, input: JsonValue, context: T
         check.problems.push({ kind: "shape", message: `id "${String(procedure.id)}" must be lower case letters, digits and dashes (it names the file)` });
         check.ok = false;
     }
+    // The quantities the procedure measures, in units the unit system knows for them (2026-09-25): a unit invented here would travel into the report.
+    for (const q of Array.isArray(procedure.quantities) ? procedure.quantities : []) {
+        if (!q || typeof q !== "object") continue;
+        const r = resolveUnitRef({ unit: String(q.unit ?? ""), ...(q.quantity ? { quantity: String(q.quantity) } : {}) });
+        if (!r.ok) {
+            check.problems.push({ kind: "shape", message: `quantity "${String(q.name)}": ${r.reason} (${r.code})` });
+            check.ok = false;
+        }
+    }
+    // An accepted submission is recorded by the capability, after execution; a refusal is recorded here, since nothing executes (the procedure itself stays in the state as the runner's lastRefusal.input).
+    if (check.ok) return [];
     const state = stateOf(context.progress);
-    const n = state.submissions.length + 1;
-    state.submissions.push({
-        n,
-        procedureId: String(procedure.id ?? ""),
-        ok: check.ok,
-        kinds: [...new Set(check.problems.map((p) => p.kind))],
-        problems: problemLines(check),
-        presenceRead: presence !== null,
-        monitoringAsked: Boolean(procedure.monitoring?.subjects?.length),
-        at: new Date().toISOString(),
-    });
-    await tellMother(context, procedure, check, n);
-    return check.ok ? [] : [`procedure refused: ${problemLines(check).join("; ")}`];
+    state.submissions.push(submissionOf(state, procedure, check, presence !== null));
+    await tellMother(context, procedure, check, state.submissions.length);
+    return [`procedure refused: ${problemLines(check).join("; ")}`];
+}
+
+const headOf = (v: unknown, n: number): JsonValue => {
+    const text = JSON.stringify(v ?? null);
+    return text.length <= n ? (v as JsonValue) : { head: `${text.slice(0, n)}...`, characters: text.length };
+};
+
+/**
+ * The topic's part of the reasoning state: the installation, the presence,
+ * the monitor and the method card as read (whole where the rules need them
+ * whole), the submissions with their reasons and the last refused procedure,
+ * the requirements of the stages. What is here is not read again.
+ */
+export function stateOfTopic(progress: Progress, task: TaskFile["task"]): TopicState {
+    const state = noteMethod(progress);
+    const inventory = progress.reads["factory.inventory"]?.value as InventoryRead | undefined;
+    const presence = presenceOf(progress);
+    const monitor = progress.reads["biomed.describe"]?.value;
+    const last = state.submissions.at(-1);
+    const requirements = requirementsOf(progress);
+    const openQuestions: string[] = [];
+    if (!inventory) openQuestions.push("what is installed, and what of it is unknown (factory.inventory)");
+    else for (const u of inventory.unknowns ?? []) if (u.how === "measured") openQuestions.push(`${u.what} (${u.quantity}, ${u.unit}): measured by the procedure`);
+    if (!presence) openQuestions.push("who is in the volume under test (biomed.presence): a procedure on a volume whose occupancy was not read is refused");
+    if (!state.method) openQuestions.push(`which method measures ${task.objective.required_outputs.map((o) => o.quantity).join(", ")} (library.methods), and its rules of application (library.read)`);
+    return {
+        hypothesis: {
+            installation: inventory
+                ? {
+                      volumes: (inventory.volumes ?? []).map((v) => ({ name: v.name, path: v.path, sensors: v.sensors ?? [], devices: v.devices ?? [] })),
+                      openings: inventory.openings ?? [],
+                      unknowns: inventory.unknowns ?? [],
+                      underCommissioning: (inventory.devices ?? []).filter((d) => d.commissioning).map((d) => ({ path: d.path, type: d.type, title: d.title, measures: (d.measures ?? []).map((m) => `${m.property} (${m.quantity}, ${m.unit})`), acts: d.acts ?? [] })),
+                  }
+                : null,
+            presence: presence ? presence.modules : null,
+            monitor: monitor === undefined ? null : headOf(monitor, 2500),
+            method: state.method ? { id: state.method, card: state.methodCard ?? "(read it: library.read)" } : null,
+            accepted: state.accepted,
+        } as JsonValue,
+        evaluation: last ? ({ submission: last.n, procedureId: last.procedureId, ok: last.ok, problems: last.problems } as JsonValue) : null,
+        openQuestions,
+        requirements,
+    };
 }
 
 export function validateProcedure(claim: DoneClaim, files: WorkshopFile[], progress: Progress): Validation {
@@ -184,10 +306,8 @@ function intentionOf(task: TaskFile["task"], generic: Intention): Intention {
  */
 export function briefOf(progress: Progress, task: TaskFile["task"]): string {
     // Everything read here is written after a step completes (the runner's reads, the phase, the accepted file), never by the guard.
-    const state = stateOf(progress);
-    const lastRead = progress.reads["library.read"]?.value as { id?: string } | undefined;
-    if (!state.method && typeof lastRead?.id === "string" && lastRead.id.startsWith("method-")) state.method = lastRead.id;
-    const inventory = progress.reads["factory.inventory"]?.value as { unknowns?: Array<{ what: string; quantity: string; unit: string; how: string }> } | undefined;
+    const state = noteMethod(progress);
+    const inventory = progress.reads["factory.inventory"]?.value as InventoryRead | undefined;
     const outputs = task.objective.required_outputs.map((o) => `${o.name} (${o.quantity}${o.unit ? `, ${o.unit}` : ""})`).join(", ");
     if (state.accepted) return `Stage 5 of 5, hand over. The guard accepted ${state.accepted.path}. End with task.done, the procedure as the artifact.`;
     if (!inventory) return "Stage 1 of 5, the situation. Nothing is read yet. Your tools say what is installed and what is unknown (factory.inventory, station.registry_list), who is in which module and how the medical monitor works (biomed.presence, biomed.describe).";
@@ -196,12 +316,14 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
         const quantities = [...new Set((inventory.unknowns ?? []).filter((u) => u.how === "measured").map((u) => u.quantity))].join(", ") || task.objective.required_outputs.map((o) => o.quantity).join(", ");
         return `Stage 2 of 5, the method. The inventory says what is unknown: ${unknowns || "nothing"}. Find the methods that measure ${quantities} (library.methods), and read the card of the one you choose (library.read): it holds the method's rules of application. The library also holds the physics, the effects of CO2 on people and this installation (library.search, library.list).`;
     }
-    if (progress.phase === "plan") return `Stage 3 of 5, the plan. You read the method card ${state.method}. Declare with task.plan what no node of the catalogue produces: selected_nodes empty (this topic builds no graph), and ${outputs} in missing_capabilities with its reason and the topic procedure.`;
+    const names = task.objective.required_outputs.map((o) => `required_output "${o.name}" (quantity "${o.quantity}"${o.unit ? `, unit "${o.unit}"` : ""})`).join("; ");
+    if (progress.phase === "plan") return `Stage 3 of 5, the plan. You read the method card ${state.method} (the state holds it whole, under hypothesis, field "method"; nothing to read again). Declare with task.plan what no node of the catalogue produces: selected_nodes empty (this topic builds no graph), and one entry per required output in missing_capabilities, ${names}, with its reason and the topic "procedure"; required_output is the name exactly, nothing added to it.`;
     // The refusal as the runner recorded it after the step, never the guard's own record: the guard writes while a decision
     // is checked, and an observation that moved between the decision and its execution makes the decision stale.
     const refusal = progress.lastRefusal?.capability === "procedure.submit" ? progress.lastRefusal.reason : null;
-    const refused = refusal ? ` Your last submission was refused: ${refusal}. Change what these reasons name; the same procedure submitted again gets the same refusal.` : "";
-    return `Stage 4 of 5, the procedure. Write it by the rules of application of ${state.method}, for this installation and the people in it as your tools read them, and submit it (procedure.submit).${refused}`;
+    const refused = refusal ? ` Your last submission was refused: ${refusal}. The procedure exactly as you submitted it is in the state under lastRefusal (field "input"; it is not a file, nothing to read): change in it only what these reasons name and submit it again with procedure.submit; the same procedure submitted again gets the same refusal.` : "";
+    const presence = presenceOf(progress) ? "who is in each module (field \"presence\")" : "not yet who is in the volume: read biomed.presence before submitting";
+    return `Stage 4 of 5, the procedure. Write it by the rules of application of ${state.method} (the card is in the state, under hypothesis, field "method"), for this installation (in the state under hypothesis, field "installation": its volumes, openings, unknowns and the device under commissioning) and ${presence}; the medical monitor is there too (field "monitor") once read with biomed.describe. These are fields of the state, not files: read nothing the state already gives. Submit with procedure.submit.${refused}`;
 }
 
 export const PROCEDURE_TOPIC: TopicDefinition = {
@@ -210,6 +332,9 @@ export const PROCEDURE_TOPIC: TopicDefinition = {
     validate: (claim, files, progress) => validateProcedure(claim, files, progress),
     local: (context) => [submitCapability(context)],
     guard: guardProcedure,
+    state: stateOfTopic,
+    // The submissions tell the steps apart for the recipes: a step learned after a refusal does not replay after an acceptance.
+    key: (progress) => stateOf(progress).submissions.map((s) => (s.ok ? "ok" : "refused")).join(","),
     intention: intentionOf,
     prompt: PROCEDURE_PROMPT,
     brief: briefOf,

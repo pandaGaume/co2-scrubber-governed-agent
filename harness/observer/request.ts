@@ -33,6 +33,8 @@
  *                it false.
  */
 
+import { checkAgainstDocument } from "../lib/units.js";
+
 export interface Quantity {
     name: string;
     quantity: string;
@@ -46,6 +48,8 @@ export interface KnownConstant {
     name: string;
     value: number;
     unit: string;
+    /** The quantity, when the unit alone is ambiguous (VolumetricFlow, MassFlow, Concentration). */
+    quantity?: string;
     /** The id of the library document that states it. */
     source: string;
     /** The band the documentation gives, when it gives one (a crew's metabolic rate, 5th to 95th percentile): the factory may place the value within it, never outside. */
@@ -123,6 +127,8 @@ export interface CheckContext {
     vocabulary?: VocabularyEntry[];
     /** The library documents the Observer read: a known constant's source must be one of them. */
     documentsRead?: string[];
+    /** The text of the documents read, by id: a known constant is checked against what its source states, by the unit system (2026-09-25). */
+    documents?: Record<string, string>;
     /** The description it was given, where a number stated under an assumption is found. */
     description?: string;
 }
@@ -186,6 +192,12 @@ export function checkTwinRequest(input: unknown, context: CheckContext = {}): Re
         if (!k?.symbol || !k?.source || typeof k.value !== "number" || !k.unit) problems.push(`provenance: known constant "${String(k?.name ?? k?.symbol)}" needs its symbol, value, unit and source`);
         else if ((k.min !== undefined || k.max !== undefined) && !(typeof k.min === "number" && typeof k.max === "number" && k.min <= k.value && k.value <= k.max)) problems.push(`provenance: known constant "${k.symbol}" gives a band that does not hold its value (${k.min} to ${k.max} around ${k.value}); a band is a min and a max around the documented value`);
         else if (context.documentsRead && !context.documentsRead.includes(k.source)) problems.push(`provenance: known constant "${k.symbol}" cites "${k.source}", a document you did not read (${context.documentsRead.join(", ") || "none read"}); read it, or put the constant under missing information`);
+        else if (context.documents?.[k.source] !== undefined) {
+            // The value against the document, by the unit system: a constant copied in another unit must agree once converted; one that does not was converted wrongly.
+            const verdict = checkAgainstDocument({ value: k.value, unit: k.unit, ...(k.quantity ? { quantity: k.quantity } : {}) }, context.documents[k.source]);
+            if (verdict.verdict === "INVALID_CONVERSION") problems.push(`units: known constant "${k.symbol}" = ${k.value} ${k.unit} is an INVALID_CONVERSION of what "${k.source}" states: ${verdict.reason}; copy the document's value in the document's unit, or convert it with physics.units_convert`);
+            else if (verdict.verdict === "UNKNOWN_UNIT") problems.push(`units: known constant "${k.symbol}" is written in "${k.unit}", a unit the unit system does not know (${verdict.reason}); write it in a UCUM unit of its quantity`);
+        }
     }
     // And the result of an assumption is not a constraint.
     const hedged = context.description ? hedgedNumbers(context.description) : [];

@@ -21,6 +21,9 @@
  *                   spec under test, its fitted and held variables);
  *   lastAction      the last call, its outcome, its answer made compact, and
  *                   the handle of its whole answer in the workshop;
+ *   lastRefusal     the last call the harness stopped: the capability, why,
+ *                   and the call's input whole (bounded), so the model
+ *                   corrects what it wrote rather than writes it again;
  *   evaluation      what the last evaluation said, compact (the topic's);
  *   requirements    the evidence a phase needs before the next one, each
  *                   true or false: a phase moves on facts, not on a
@@ -33,7 +36,7 @@
  * (`context` of the exchange), so the cost of every part is known.
  */
 import type { JsonValue } from "@spiky-panda/harness";
-import type { TaskFile } from "./task.js";
+import { thresholdsOf, type TaskFile } from "./task.js";
 import type { Progress } from "./workspace-observer.js";
 
 export interface KnownInvariant {
@@ -48,7 +51,8 @@ export interface KnownInvariant {
 }
 
 export interface StateInvariants {
-    objective: { outputs: string[]; threshold: number | null; constraints: Record<string, JsonValue> };
+    /** `threshold` is the RMSE bound per column; `thresholds` says both bounds by name. */
+    objective: { outputs: string[]; threshold: number | null; thresholds: { rmsePpmMax: number; absoluteResidualPpmMax: number | null } | null; constraints: Record<string, JsonValue> };
     known: KnownInvariant[];
     missingInformation: string[];
     hypotheses: string[];
@@ -66,7 +70,7 @@ export interface ReasoningState extends Record<string, JsonValue> {
     invariants: StateInvariants & Record<string, JsonValue>;
     hypothesis: JsonValue;
     lastAction: { capability: string; outcome: string; summary: JsonValue; artifact: string | null } | null;
-    lastRefusal: string | null;
+    lastRefusal: { capability: string; reason: string; input: JsonValue } | null;
     evaluation: JsonValue;
     requirements: Record<string, boolean>;
     openQuestions: string[];
@@ -98,6 +102,14 @@ export interface StateInputs {
 
 const str = (v: unknown): string => (typeof v === "string" ? v : v === undefined || v === null ? "" : JSON.stringify(v));
 
+/** Characters a refused input may weigh in the state; above it, its head and its size. */
+export const REFUSED_INPUT_CHARS = 6000;
+const boundedInput = (v: JsonValue | undefined): JsonValue => {
+    if (v === undefined) return null;
+    const text = JSON.stringify(v) ?? "null";
+    return text.length <= REFUSED_INPUT_CHARS ? v : ({ head: `${text.slice(0, REFUSED_INPUT_CHARS)}...`, characters: text.length } as JsonValue);
+};
+
 /** The known constants of a task as the Observer wrote them, each with its status: `band` when it carries one, `documented` otherwise. */
 export function knownInvariants(task: TaskFile["task"]): KnownInvariant[] {
     const raw = (task.requirements as { known?: unknown } | undefined)?.known;
@@ -119,11 +131,12 @@ export function invariantsOf(task: TaskFile["task"], shelf: StateInvariants["she
     const devices = Array.isArray(obs.devices) ? (obs.devices as Array<Record<string, unknown>>).map((d) => `${str(d.path)} (${str((d.descriptor as Record<string, unknown> | undefined)?.["@type"])})`) : [];
     const other: Record<string, JsonValue> = {};
     for (const [k, v] of Object.entries(obs)) if (k !== "persons" && k !== "devices") other[k] = v as JsonValue;
-    const threshold = Number((task.objective.constraints as { residualPpmMax?: unknown })?.residualPpmMax);
+    const thresholds = thresholdsOf(task);
     return {
         objective: {
             outputs: task.objective.required_outputs.map((o) => `${o.name} (${o.quantity}${o.unit ? `, ${o.unit}` : ""})`),
-            threshold: Number.isFinite(threshold) ? threshold : null,
+            threshold: thresholds?.rmsePpmMax ?? null,
+            thresholds,
             constraints: (task.objective.constraints ?? {}) as Record<string, JsonValue>,
         },
         known: knownInvariants(task),
@@ -149,7 +162,7 @@ export function reasoningStateOf(inputs: StateInputs): ReasoningState {
         evidence: Object.fromEntries(Object.entries(progress.evidence).map(([k, e]) => [k, e.summary])),
         hypothesis: topic.hypothesis ?? null,
         lastAction: last ? { capability: last.id, outcome: last.result.outcome, summary: (progress.lastSummary ?? null) as JsonValue, artifact: progress.lastArtifact ?? null } : null,
-        lastRefusal: progress.lastRefusal ? `${progress.lastRefusal.capability}: ${progress.lastRefusal.reason}` : null,
+        lastRefusal: progress.lastRefusal ? { capability: progress.lastRefusal.capability, reason: progress.lastRefusal.reason, input: boundedInput(progress.lastRefusal.input) } : null,
         evaluation: topic.evaluation ?? null,
         requirements: topic.requirements ?? {},
         openQuestions: topic.openQuestions ?? [],

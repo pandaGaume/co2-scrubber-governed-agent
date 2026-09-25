@@ -29,6 +29,7 @@ import type { TaskFile } from "../../core/task.js";
 import type { TopicContext, TopicDefinition, Validation } from "../../core/topic.js";
 import type { DoneClaim, Progress, WorkshopFile } from "../../core/workspace-observer.js";
 import { evaluateCandidate, evaluationOutput, knownOf, STATION_GRAPH_ID, stationReference, type Candidate, type EvaluateInput } from "./evaluate.js";
+import { thresholdsOf } from "../../core/task.js";
 import { wiringLines } from "./reference.js";
 import type { Row } from "./params.js";
 import type { TopicState } from "../../core/reasoning-state.js";
@@ -92,7 +93,7 @@ export const EVALUATE_SCHEMA = {
             description: "The candidate graph: nodes of the catalogue and their connections [node, port]. Not with graph.",
         },
         compare: { type: "array", minItems: 1, items: COMPARE, description: "Which probe of the graph (node, property) is judged against which telemetry column. A library graph brings its own when absent." },
-        variables: { type: "object", additionalProperties: { type: "number" }, description: "Variables held fixed for this evaluation." },
+        variables: { type: "object", additionalProperties: { type: "number" }, description: "Variables held fixed for this evaluation. For a library graph, only names of its interface (the shelf's variables); a graph carries its known constants itself, so this is rarely needed." },
         fit: { type: "object", additionalProperties: { type: "object", properties: { min: { type: "number" }, max: { type: "number" } }, required: ["min", "max"] }, description: "The bounds of each variable nobody knows: the harness searches them with an optimiser (a few dozen runs). A constant the documentation gives goes in variables, not here." },
         estimator: { type: "string", enum: ["nelder-mead", "grid"], description: "How the bounds are searched: nelder-mead (default; a simplex search, about 10 to 20 runs per parameter, local) or grid (every combination of evenly spaced levels; levels ^ parameters runs; shows the shape of the cost)." },
         levels: { type: "number", description: "For the grid: levels per parameter (5 when absent)." },
@@ -200,10 +201,12 @@ export function stateOfTopic(progress: Progress, task: TaskFile["task"]): TopicS
             calibration: last.calibration,
             validation: last.validation,
             pass: last.pass,
-            threshold: last.threshold,
+            thresholds: (last.thresholds ?? { rmsePpmMax: last.threshold, absoluteResidualPpmMax: null }) as unknown as JsonValue,
+            coverage: last.coverage ? { expected: last.coverage.expected, predicted: last.coverage.predicted, missing: last.coverage.missing.length, valid: last.coverage.valid } : null,
             residuals: last.residuals.map((r) => ({ column: r.column, rmse: r.rmse, worst: r.worst, worstMinute: r.worstMinute })),
+            parameters: (last.parameters ?? null) as unknown as JsonValue,
             ...(last.atBounds?.length ? { atBounds: last.atBounds } : {}),
-            ...(last.identifiability ? { identifiable: last.identifiable ?? true, identifiability: last.identifiability } : {}),
+            ...(last.identifiability ? { identifiabilityAssessment: last.identifiabilityAssessment ?? "NOT_ASSESSED", identifiability: last.identifiability } : {}),
             ...(last.diagnostics ? { diagnostics: last.diagnostics } : {}),
             ...(last.early ? { firstSlope: { predicted: last.early.predicted, measured: last.early.measured } } : {}),
             warnings: last.warnings.map((w) => w.slice(0, 300)),
@@ -225,16 +228,16 @@ export function stateOfTopic(progress: Progress, task: TaskFile["task"]): TopicS
             default:
                 break;
         }
-        if (last.identifiable === false) openQuestions.push(`the fit passes but ${Object.entries(last.identifiability ?? {}).filter(([, i]) => i.spread > 0.2).map(([k]) => k).join(", ")} are not pinned by this telemetry: several combinations fit alike; say so when handing over, the twin is calibrated, its parameters are not established`);
-        if (last.pass) openQuestions.push("calibration passed on this telemetry; validation on another profile, hatch state or occupancy has not been performed: hand over as calibrated, not validated");
-    }
+        if (last.pass && last.fitted.length) openQuestions.push(`the identifiability of ${last.fitted.join(", ")} is not assessed (no profile likelihood or sensitivity yet; evaluation.identifiability gives the range each takes among the trials under the threshold): say so when handing over`);
+        if (last.pass) openQuestions.push("calibration passed on this telemetry; validation on another profile, hatch state or occupancy has not been performed: hand over as calibrated, not validated");    }
     return { hypothesis, evaluation, openQuestions, requirements };
 }
 
 /** The harness's brief, stage by stage: what the task holds, the plan, the candidates and what the last one showed. */
 export function briefOf(progress: Progress, task: TaskFile["task"]): string {
     const { candidates } = stateOf(progress);
-    const threshold = (task.objective.constraints as { residualPpmMax?: unknown })?.residualPpmMax;
+    const bounds = thresholdsOf(task);
+    const threshold = bounds ? `an RMSE of ${bounds.rmsePpmMax} ppm per compared column${bounds.absoluteResidualPpmMax !== null ? ` and ${bounds.absoluteResidualPpmMax} ppm at the worst minute` : ""}` : "no threshold (the task must give objective.constraints.rmsePpmMax)";
     const outputs = task.objective.required_outputs.map((o) => `${o.name} (${o.quantity}${o.unit ? `, ${o.unit}` : ""})`).join(", ");
     const known = knownOf(task);
     // The documented constants, said at every stage: held in variables under their symbol, never fitted.
@@ -242,8 +245,8 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
     const requirements = requirementsOf(progress, task);
     const unmet = Object.entries(requirements).filter(([k, v]) => !v && k in HOW).map(([k]) => `${k}: ${HOW[k]}`);
     if (progress.phase === "plan") {
-        if (unmet.length) return `Plan, not yet: the evidence the plan needs is incomplete. ${unmet.join(". ")}. The state (the observation) holds what the harness already read: the task's invariants, the telemetry's shape, the shelf; read nothing it already gives. The twin must produce ${outputs} within a residual of ${String(threshold)} ppm.${held}`;
-        return `Plan. The state holds the task's invariants (objective, outputs, threshold, the known constants with their status), the telemetry's shape and the library's shelf (the reference graph "${STATION_GRAPH_ID}" with its node types, its variables and their status): nothing needs reading first. Submit task.plan with the node types you will use, copied from the shelf's "types" for the reference graph (they are the catalogue's exact ids), or a structure of your own from the catalogue (twin.registry_search); declare missing only what no node can express. The twin must produce ${outputs} within a residual of ${String(threshold)} ppm.${held}`;
+        if (unmet.length) return `Plan, not yet: the evidence the plan needs is incomplete. ${unmet.join(". ")}. The state (the observation) holds what the harness already read: the task's invariants, the telemetry's shape, the shelf; read nothing it already gives. The twin must produce ${outputs} within ${threshold}.${held}`;
+        return `Plan. The state holds the task's invariants (objective, outputs, threshold, the known constants with their status), the telemetry's shape and the library's shelf (the reference graph "${STATION_GRAPH_ID}" with its node types, its variables and their status): nothing needs reading first. Submit task.plan with the node types you will use, copied from the shelf's "types" for the reference graph (they are the catalogue's exact ids), or a structure of your own from the catalogue (twin.registry_search); declare missing only what no node can express. The twin must produce ${outputs} within ${threshold}.${held}`;
     }
     const last = candidates.at(-1);
     // An evaluation the harness could not run says why, here, until one runs: the builder reads it at every step, not only in the answer it may have skimmed.
@@ -253,10 +256,10 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
     const station = stationReference();
     const devices = Array.isArray((task.observations as { devices?: unknown }).devices) ? ((task.observations as { devices: Array<{ path: string }> }).devices.map((d) => d.path).join(", ")) : "";
     const persons = Array.isArray((task.observations as { persons?: unknown }).persons) ? ((task.observations as { persons: Array<{ module: string; activity: string; callsign?: string }> }).persons.map((p) => `${p.callsign ?? "someone"} in ${p.module} at ${p.activity}`).join(", ")) : "";
-    const start = station ? ` The library holds the station's reference graph (library.graphs, graph "${STATION_GRAPH_ID}": two volumes in mass, the persons by name, the scrubber in its datasheet's units, the ventilation through its filter, the sensors); do not rebuild it: instantiate it (graph.evaluate with graph: "${STATION_GRAPH_ID}", persons or settings for who is on board, variables for what you hold, fit for the bounds of what only the installation knows) and adapt its numbers. The scrubber's own numbers come from the registered device (${devices ? `the task carries the register: ${devices}` : "the datasheet's defaults when the task carries no device"}) and are held; what is fitted is the volumes and the filter's loading, the operators' rate within its band.${persons ? ` On board, as observed: ${persons}: give them as persons.` : ""} It is wired: ${wiringLines(station)}. A spec of your own is accepted instead, with a measured input as a Logic.Time:timeline whose segments are the $series, its value port wired into the input.` : "";
-    if (!last) return `Evaluate a first candidate.${start} Give the bounds of the variables nobody knows (fit), and evaluate the candidate (graph.evaluate); its answer is compact, the whole is at the handle the state names. Threshold: ${String(threshold)} ppm.${held}${refused}`;
+    const start = station ? ` The library holds the station's reference graph (library.graphs, graph "${STATION_GRAPH_ID}": two volumes in mass, the persons by name, the scrubber in its datasheet's units, the ventilation through its filter, the sensors); do not rebuild it: instantiate it (graph.evaluate with graph: "${STATION_GRAPH_ID}", persons for who is on board, fit for the bounds of what only the installation knows; its interface is the shelf's variables and nothing else, a name outside it is refused) and adapt its numbers. The scrubber's own numbers come from the registered device (${devices ? `the task carries the register: ${devices}` : "the datasheet's defaults when the task carries no device"}) and are held; what is fitted is the volumes and the filter's loading, the operators' rate within its band.${persons ? ` On board, as observed: ${persons}: give them as persons.` : ""} It is wired: ${wiringLines(station)}. A spec of your own is accepted instead, with a measured input as a Logic.Time:timeline whose segments are the $series, its value port wired into the input.` : "";
+    if (!last) return `Evaluate a first candidate.${start} Give the bounds of the variables nobody knows (fit), and evaluate the candidate (graph.evaluate); its answer is compact, the whole is at the handle the state names. Threshold: ${threshold}.${held}${refused}`;
     const where = last.residuals.map((r) => `${r.column}: ${r.rmse} ppm, worst ${r.worst} at minute ${r.worstMinute}`).join("; ");
-    if (last.diagnosis === "PASS") return `Hand over. Candidate ${last.n} (${last.path}) holds the threshold: ${where}. Its calibration passed on this telemetry; its validation on another profile, hatch state or occupancy was not performed: say so in the summary, with the numbers${last.identifiable === false ? ", and that the fitted parameters are not pinned by this telemetry (the state's evaluation.identifiability says which)" : ""}. End with task.done, the graph as the artifact: {"kind": "graph", "path": "${last.path}"}.`;
+    if (last.diagnosis === "PASS") return `Hand over. Candidate ${last.n} (${last.path}) holds the threshold: ${where}. The harness hands the numbers over itself, from the evaluation (the state's evaluation.parameters: for each variable its value, unit, name and how it was set); the summary says in words what was found and does not give a variable a meaning of its own. Its calibration passed on this telemetry; its validation on another profile, hatch state or occupancy was not performed, and the identifiability of the fitted parameters is not assessed: say both. End with task.done, the graph as the artifact: {"kind": "graph", "path": "${last.path}"}.`;
     if (last.diagnosis === "INVALID_EVALUATION") return `The evaluation of candidate ${last.n} is invalid, no residual was trusted: ${(last.diagnostics ?? []).map((d) => `${d.reason}${d.column ? ` on ${d.column}` : ""}${d.minute !== undefined ? ` at minute ${d.minute}` : ""}${d.detail ? ` (${d.detail})` : ""}`).join("; ")}. Fix what that names (a probe that exists, a run that covers the telemetry) and evaluate again.${refused}`;
     const warned = last.warnings?.length ? ` ${last.warnings.map((w) => w.slice(0, 400)).join(" ")}` : "";
     if (last.diagnosis === "PARAMETER_MISMATCH") {
@@ -288,6 +291,22 @@ export const GRAPH_TOPIC: TopicDefinition = {
     guard: guardGraph,
     state: stateOfTopic,
     runsSpent: (progress) => stateOf(progress).runs,
+    // The hand-over is built from the evaluator's metadata, never from a sentence: the accepted candidate's parameters, residuals, bounds and statuses.
+    claims: (progress) => {
+        const last = [...candidatesOf(progress)].reverse().find((c) => c.pass);
+        if (!last) return {};
+        return {
+            candidate: { n: last.n, path: last.path, sha256: last.sha256, graph: last.graph ?? null, label: last.label },
+            parameters: (last.parameters ?? {}) as unknown as JsonValue,
+            residuals: last.residuals as unknown as JsonValue,
+            thresholds: (last.thresholds ?? { rmsePpmMax: last.threshold, absoluteResidualPpmMax: null }) as unknown as JsonValue,
+            coverage: (last.coverage ?? null) as unknown as JsonValue,
+            calibration: last.calibration,
+            validation: last.validation,
+            identifiability: { assessment: last.identifiabilityAssessment ?? "NOT_ASSESSED", ...((last.identifiability ?? {}) as Record<string, JsonValue>) },
+            ...(last.persons ? { persons: last.persons as unknown as JsonValue } : {}),
+        };
+    },
     // The last candidate's diagnosis tells the steps apart: a step learned after a failed candidate does not replay after one that held.
     key: (progress) => stateOf(progress).candidates.at(-1)?.diagnosis ?? "",
     intention: intentionOf,

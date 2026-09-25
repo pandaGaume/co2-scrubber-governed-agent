@@ -151,7 +151,7 @@ export const PROCEDURE_SCHEMA = {
             type: "array",
             items: {
                 type: "object",
-                properties: { id: { type: "string", enum: ["co2", "refused", "battery", "vitals"] }, source: { type: "string" }, when: { type: "string" }, threshold: { type: "number" } },
+                properties: { id: { type: "string", enum: ["co2", "refused", "battery", "vitals"] }, source: { type: "string" }, when: { type: "string" }, threshold: { type: "number", description: "A number (the battery's percent); leave the field out for a condition that has none, never null" } },
                 required: ["id", "source", "when"],
             },
             description: "The conditions that stop the test, by the id of what the executor can read: co2 (scrubber.motor.state, the CO2 of the volume at or above limits.co2AbortPpm); refused (scrubber.motor.set_speed, the device refused a step's command); battery (station.registry_list, the battery's state of charge under threshold percent); vitals (biomed.verdict, a monitored person out of band, the monitoring lost, or one more person in the volume). A condition that cannot be read stops the test.",

@@ -44,7 +44,7 @@ import type { Commissioning, MotherLine } from "../slots/station/provider.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
 import { runProcedure } from "../tier3/procedure.js";
 import { loadLibrary, searchLibrary } from "../slots/tools/library/provider.js";
-import { briefOf } from "../harness/topics/procedure/index.js";
+import { briefOf, requirementsOf, stateOfTopic } from "../harness/topics/procedure/index.js";
 import { newProgress } from "../harness/core/workspace-observer.js";
 
 const PORT = 3121;
@@ -179,6 +179,39 @@ describe("the register, the inventory, the decay", () => {
         assert.doesNotMatch(briefOf(newProgress(), task) + briefOf(progress, task), /monitor the|monitoring of|30 ?%|never stop/i);
     });
 
+    it("the procedure topic's reasoning state: the installation, the presence, the method card whole, the requirements of the stages (2026-09-25)", () => {
+        const task = { objective: { required_outputs: [{ name: "V_lab", quantity: "Volume", unit: "m3" }], constraints: {} }, observations: {} } as unknown as Parameters<typeof briefOf>[1];
+        const progress = newProgress();
+        let s = stateOfTopic(progress, task);
+        assert.deepEqual(s.requirements, { installationRead: false, presenceRead: false, methodRead: false, planDeclared: false, procedureAccepted: false });
+        assert.equal((s.hypothesis as { installation: unknown }).installation, null);
+        assert.ok(s.openQuestions!.some((q) => /factory\.inventory/.test(q)) && s.openQuestions!.some((q) => /library\.methods/.test(q)));
+        progress.reads["factory.inventory"] = {
+            at: "t",
+            value: {
+                volumes: [{ name: "lab", path: "/habitat/lab", sensors: ["/habitat/lab/co2-1"], devices: ["/habitat/lab/co2-1", "/habitat/lab/eclss/scrubber-1"] }],
+                openings: [{ device: "/habitat/lab/hatch-1", between: ["lab", "hab-b"] }],
+                unknowns: [{ what: "served volume of lab", quantity: "Volume", unit: "m3", volume: "/habitat/lab", how: "measured" }],
+                devices: [{ path: "/habitat/lab/eclss/scrubber-1", type: "Scrubber", title: "Scrubber 1", area: "lab", measures: [{ property: "speed", quantity: "Ratio", unit: "percent" }], acts: ["set_speed"], commissioning: true }],
+            },
+        };
+        progress.reads["library.read"] = { at: "t", value: { id: "method-concentration-decay", text: "# Concentration decay\n\nRules of application: the hatch closed, the rise below the limit." } };
+        progress.reads["biomed.presence"] = { at: "t", value: { modules: [{ module: "lab", occupants: 2, subjects: [{ id: "fe-1" }, { id: "fe-2" }] }] } };
+        s = stateOfTopic(progress, task);
+        assert.deepEqual(s.requirements, { installationRead: true, presenceRead: true, methodRead: true, planDeclared: false, procedureAccepted: false });
+        const h = s.hypothesis as { installation: { unknowns: unknown[]; underCommissioning: Array<{ path: string; measures: string[] }> }; presence: Array<{ module: string }>; method: { id: string; card: string } };
+        assert.equal(h.installation.underCommissioning[0].path, "/habitat/lab/eclss/scrubber-1");
+        assert.deepEqual(h.installation.underCommissioning[0].measures, ["speed (Ratio, percent)"]);
+        assert.equal(h.presence[0].module, "lab");
+        assert.match(h.method.card, /Rules of application/);
+        assert.deepEqual(s.openQuestions, ["served volume of lab (Volume, m3): measured by the procedure"]);
+        assert.equal(requirementsOf(progress).methodRead, true);
+        // The brief points into the state, and still names no rule of a good procedure.
+        progress.phase = "build";
+        assert.match(briefOf(progress, task), /field "method".*field "installation".*field "presence".*not files: read nothing the state already gives/);
+        assert.doesNotMatch(briefOf(progress, task), /monitor the|monitoring of|30 ?%|never stop/i);
+    });
+
     it("Mother's phrases: the same keys and holes in English and French", () => {
         const words = (locale: string) => McpGrammar.fromJSON(JSON.parse(readFileSync(fromRoot("slots", "station", "grammars", "default", `${locale}.json`), "utf8")));
         const en = words("en").listPhrases().filter((k) => k.startsWith("mother."));
@@ -269,7 +302,7 @@ describe("the commissioning, through the broker", () => {
         assert.equal(refused.length, 1);
         assert.equal(refused[0].capability, "procedure.submit");
         assert.match(String(refused[0].reason), /floor: step 1 stops the scrubber/);
-        assert.deepEqual(result.manifest.steps.filter((s) => s.source !== "refused").map((s) => s.capability), ["factory.inventory", "biomed.presence", "task.plan", "procedure.submit", "task.done"]);
+        assert.deepEqual(result.manifest.steps.filter((s) => s.source !== "refused").map((s) => s.capability), ["factory.inventory", "library.methods", "library.read", "biomed.presence", "task.plan", "procedure.submit", "task.done"]);
         assert.ok(result.manifest.artifacts.some((a) => a.kind === "procedure" && a.path === "procedures/decay-draft-02.json"));
         assert.equal(result.manifest.provider.name, "scripted:procedure", "the manifest names the script");
         // The scorecard of question A: the presence was read before the first submission, the monitoring asked unprompted.

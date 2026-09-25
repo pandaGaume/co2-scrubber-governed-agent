@@ -1,0 +1,25 @@
+{
+    "server": {
+        "description": "The physical units, deterministic: a unit as written resolved to its quantity and its UCUM code, a value converted between units of one quantity, two units compared, and a source's value checked against a request's restatement of it in another unit",
+        "instructions": "Never convert a unit in your head: ask units_convert, and check what you copy from a document with units_validate_connection (the document's value and unit as the source, yours as the target). A unit the system does not know is refused, never guessed: write the quantity beside it."
+    },
+    "tools": {
+        "units_normalize": {
+            "title": "Resolve a unit",
+            "description": "A unit as written (m3/min, m³/min, L/min, ppm, kg/s...), with its quantity when known (VolumetricFlow, Concentration, MassFlow...): the quantity it belongs to, its UCUM code, its symbol and its factor to the quantity's base unit. Ambiguous without the quantity when the same code belongs to two quantities."
+        },
+        "units_convert": {
+            "title": "Convert a value",
+            "description": "A value converted from one unit to another of the same quantity, by the substrate's tables; refused across quantities (m3/min to kg/s is not a conversion)."
+        },
+        "units_compatible": {
+            "title": "Compare two units",
+            "description": "Whether two units measure the same quantity, and which quantities they measure when they do not."
+        },
+        "units_validate_connection": {
+            "title": "Check a restated value",
+            "description": "A source states a value in its unit (a datasheet: 1.0 m3/min); a request restates it in another (60 L/min). Converted, they must agree within the tolerance (2 percent by default): OK with the expected value, or INVALID_CONVERSION with what the restatement should have been."
+        }
+    },
+    "resources": {}
+}

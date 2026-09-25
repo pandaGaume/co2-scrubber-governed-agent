@@ -16,6 +16,13 @@
  * delivers. It decides from what it observes (the phase, the last
  * capability, the last evaluation), like the other scripts.
  *
+ * On a world the reference cannot fit as observed (2026-09-25: one more
+ * occupant in the Lab than the observation lists), the second candidate
+ * fails too and the harness diagnoses a structural gap; the script then
+ * plays the one hypothesis an engineer would try first, a source in the
+ * Lab the observation missed, and adds a person: the third candidate
+ * holds. A second structural failure ends in task.fail.
+ *
  * `labCandidate` is the older form, the same commissioning written with the
  * substrate's life-support nodes (rates folded on a volume): kept for the
  * tests of the parametric spec and for comparison.
@@ -67,6 +74,8 @@ export class ScriptedGraphBuilder implements Provider {
     calls = 0;
     /** The script runs on the reasoning state, as the model does: the observation carries the state and the compact answers, and the tests read them. */
     readonly contextMode = "state" as const;
+    /** Whether the structure was revised once already (a structural gap has one hypothesis in this script). */
+    private revised = false;
 
     constructor(private readonly options: ScriptedGraphOptions) {}
 
@@ -88,9 +97,17 @@ export class ScriptedGraphBuilder implements Provider {
             case "build:task.plan":
                 return decide("graph.evaluate", { label: "the habitat reference with a clean filter: the ventilation at its design flow", graph: STATION_GRAPH_ID, ...onBoard, variables: { ...given, L: 0 }, fit: VOLUMES } as unknown as JsonValue, "first candidate: the installation as designed, the volumes fitted");
             default: {
-                const value = (last?.result.output ?? {}) as { value?: { pass?: boolean; candidate?: number; path?: string } };
+                const value = (last?.result.output ?? {}) as { value?: { pass?: boolean; candidate?: number; path?: string; diagnosis?: string; variables?: Record<string, number> } };
                 const v = value.value ?? {};
                 if (last?.id === "graph.evaluate" && v.pass) return decide("task.done", { summary: `candidate ${v.candidate} holds the residual threshold`, artifacts: [{ kind: "graph", path: v.path ?? "" }] }, "the candidate holds");
+                // The loop on the diagnosis: a parameter's gap fits what was held; a structural gap revises the topology on a hypothesis.
+                if (v.diagnosis === "STRUCTURAL_MISMATCH") {
+                    if (this.revised) return decide("task.fail", { reason: `the revised structure misses the threshold too (${JSON.stringify(v.variables ?? {})}): no further hypothesis in this script` }, "the second structure fails as well");
+                    this.revised = true;
+                    // The hypothesis: a CO2 source in the Lab the observation did not list (one more person at work); the observed roster stays, one is added.
+                    const revised = "persons" in onBoard ? { persons: [...(onBoard.persons as Array<Record<string, JsonValue>>), { id: "unobserved-1", callsign: "someone", module: "lab", activity: "light_work" }] } : { settings: { ...onBoard.settings, labOccupants: onBoard.settings.labOccupants + 1 } };
+                    return decide("graph.evaluate", { label: "the habitat reference with one more source in the Lab: a person the observation did not list, the loading fitted", graph: STATION_GRAPH_ID, ...revised, variables: given, fit: { ...VOLUMES, L: { min: 0, max: 0.2 } } } as unknown as JsonValue, "structural: no admissible parameter set of the observed roster closes the gap where the curves part (the Lab's level); the hypothesis is a source in the Lab the observation missed");
+                }
                 return decide("graph.evaluate", { label: "the habitat reference with the filter's loading fitted: what the ventilation delivers, measured", graph: STATION_GRAPH_ID, ...onBoard, variables: given, fit: { ...VOLUMES, L: { min: 0, max: 0.2 } } } as unknown as JsonValue, "the gap the design flow cannot close: fit what the ventilation actually delivers, through the filter's loading");
             }
         }

@@ -39,6 +39,25 @@ export interface TaskFile {
 /** Where a task stands; `manifest.json` carries it, `factory.task` reads it. */
 export type TaskState = "created" | "running" | "done" | "proposed" | "accepted" | "rejected" | "failed";
 
+/**
+ * The residual thresholds of a task (2026-09-25, unambiguous): `rmsePpmMax`
+ * bounds the root mean square residual of each compared column, and
+ * `absoluteResidualPpmMax`, when given, bounds the worst residual at any
+ * minute. `residualPpmMax` is the older name of the first, still read.
+ */
+export interface Thresholds {
+    rmsePpmMax: number;
+    absoluteResidualPpmMax: number | null;
+}
+
+export function thresholdsOf(task: Pick<TaskFile["task"], "objective">): Thresholds | null {
+    const c = (task.objective?.constraints ?? {}) as Record<string, unknown>;
+    const rmse = Number(c.rmsePpmMax ?? c.residualPpmMax);
+    if (!Number.isFinite(rmse) || rmse <= 0) return null;
+    const absolute = Number(c.absoluteResidualPpmMax);
+    return { rmsePpmMax: rmse, absoluteResidualPpmMax: Number.isFinite(absolute) && absolute > 0 ? absolute : null };
+}
+
 export const TOPICS = ["graph", "onnx", "procedure"] as const;
 export type Topic = (typeof TOPICS)[number];
 

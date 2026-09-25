@@ -80,9 +80,12 @@ export async function planProblems(plan: Plan, { broker, task, runtimeSlot = "tw
         if (!r.ok) problems.push(`selected node "${type}" is not in the catalogue`);
         else described.push(r.output as DescribedNode);
     }
+    const names = task.objective.required_outputs.map((o) => o.name);
     for (const m of plan.missing_capabilities) {
         if (!m.reason?.trim()) problems.push(`missing capability "${m.required_output}" has no reason`);
         if (!(TOPICS as ReadonlyArray<string>).includes(m.topic)) problems.push(`missing capability "${m.required_output}" names an unknown topic "${m.topic}" (${TOPICS.join(", ")})`);
+        // A required output is named by its name alone, exactly: "V_lab", never "V_lab (Volume, m3)".
+        if (!names.includes(m.required_output)) problems.push(`missing capability "${m.required_output}" is not the name of a required output: write required_output exactly as the objective names it, ${names.map((n) => `"${n}"`).join(" or ")}, nothing added`);
     }
     for (const required of task.objective.required_outputs) {
         const produced = described.some((n) => Object.values(n.signature?.outputs ?? {}).some((o) => o.quantity === required.quantity && (!required.unit || o.unit === required.unit)));
@@ -99,6 +102,11 @@ export function createBuilderGuard(options: BuilderGuardOptions): SafetyGuard {
             if (!options.topic.tools.some((r) => r.test(id))) return { allowed: false, reason: `${id} is not a tool of topic ${options.topic.name}` };
             const p = pathProblem(decision.invocation.input);
             if (p) return { allowed: false, reason: p };
+            // The same call as the step before, with the same input, which completed: its answer is already in the state; asking again gives the same answer.
+            const last = options.progress?.lastCall;
+            if (last && last.result.ok && last.id === id && !/^task\./.test(id) && JSON.stringify(last.input ?? null) === JSON.stringify(decision.invocation.input ?? null)) {
+                return { allowed: false, reason: `${id} with the same input was the previous step, and completed: its answer is in the state (lastAction, and evidence for a read); calling it again gives the same answer. Decide from what the state holds, or call something else.` };
+            }
             if (id === "task.plan") {
                 const problems = await planProblems(decision.invocation.input as unknown as Plan, options);
                 if (problems.length) return { allowed: false, reason: `plan refused: ${problems.join("; ")}` };

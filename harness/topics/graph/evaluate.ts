@@ -34,6 +34,7 @@
  * reason (equifinality): the structure must close it.
  */
 import type { JsonValue } from "@spiky-panda/harness";
+import { thresholdsOf, type Thresholds } from "../../core/task.js";
 import type { Broker } from "../../lib/broker.js";
 import type { TaskFile } from "../../core/task.js";
 import { combinations, resolveSpec, type Row, type Spec, type Variables } from "./params.js";
@@ -135,19 +136,70 @@ export interface Candidate {
     atBounds?: string[];
     /** The variables a library graph marks as fitted (what only the installation knows) that the builder held at a value instead: a parameter problem before any structural one. */
     heldFitted?: string[];
-    /** For each fitted variable: the best value and the range it takes among the near-optimal trials; wide means several answers fit alike. */
-    identifiability?: Record<string, { estimate: number; nearOptimalRange: [number, number]; spread: number }>;
-    identifiable?: boolean;
+    /**
+     * For each fitted variable: the best value, the range it takes among the
+     * trials near the best score (the optimiser's own cluster, which says
+     * little), and the range it takes among the trials under the threshold
+     * (every value the telemetry accepted). Neither is a profile likelihood
+     * or a sensitivity: the assessment stays NOT_ASSESSED (2026-09-25).
+     */
+    identifiability?: Record<string, { estimate: number; nearOptimalRange: [number, number]; underThresholdRange: [number, number] | null; spread: number }>;
+    /** No profile likelihood or sensitivity analysis exists yet: never `identifiable = true` from the optimiser's cluster. */
+    identifiabilityAssessment: "NOT_ASSESSED";
+    /** The bounds the candidate was judged against, by name (`threshold` is the RMSE bound). */
+    thresholds: Thresholds;
+    /** Every compared column predicted at every telemetry minute: the count expected, the count predicted, what is missing; `valid` false makes the evaluation invalid. */
+    coverage: Coverage;
+    /**
+     * Every variable of the candidate with its value, its unit, its name in
+     * words and how it was set (fitted, held, device, default): what a
+     * hand-over is built from, so no sentence invents a meaning for "L".
+     */
+    parameters: Record<string, ParameterMeta>;
     /** The candidate against the station's twin, by types and typed connections. */
     reference?: StructureComparison;
     at: string;
 }
 
 export type EvaluationStatus = "calibration_pass" | "calibration_fail" | "invalid";
+
+export interface Coverage {
+    expected: number;
+    predicted: number;
+    missing: Array<{ column: string; probe: string; minute: number | null; reason: string }>;
+    valid: boolean;
+}
+
+export interface ParameterMeta {
+    value: number;
+    unit: string | null;
+    name: string;
+    /** How this candidate set it: fitted (searched), held (given by the builder), device (the register), default (the graph's). */
+    status: "fitted" | "held" | "device" | "default";
+    /** What the graph declares the variable to be (fitted, known, device, band, documented), when a library graph. */
+    declared?: string;
+    source?: string;
+}
+
+export interface Coverage {
+    expected: number;
+    predicted: number;
+    missing: Array<{ column: string; probe: string; minute: number | null; reason: string }>;
+    valid: boolean;
+}
+
+export interface ParameterMeta {
+    value: number;
+    unit: string | null;
+    name: string;
+    /** How this candidate set it: fitted (searched), held (given by the builder), device (the register), default (the graph's). */
+    status: "fitted" | "held" | "device" | "default";
+    /** What the graph declares the variable to be (fitted, known, device, band, documented), when a library graph. */
+    declared?: string;
+    source?: string;
+}
 export type Diagnosis = "PASS" | "INVALID_EVALUATION" | "PARAMETER_MISMATCH" | "STRUCTURAL_MISMATCH" | "INSUFFICIENT_INFORMATION";
 
-/** Above this spread (the near-optimal range over the estimate) a fitted variable is not identified by the telemetry. */
-export const IDENTIFIABLE_SPREAD = 0.2;
 
 /**
  * The evaluation is trusted only when every compared column has a finite
@@ -155,27 +207,35 @@ export const IDENTIFIABLE_SPREAD = 0.2;
  * sample, a NaN, a curve cut short, all made a candidate pass on what it
  * did predict. Now they make the evaluation invalid, with the minute named.
  */
-export function coverageProblems(series: Record<string, number[]>, compare: Compare[], rows: Row[]): NonNullable<Candidate["diagnostics"]> {
-    const problems: NonNullable<Candidate["diagnostics"]> = [];
+export function coverageOf(series: Record<string, number[]>, compare: Compare[], rows: Row[]): Coverage {
+    const missing: Coverage["missing"] = [];
     const minutes = rows.map((r) => Number(r.minute)).filter(Number.isFinite);
+    let expected = 0;
+    let predicted = 0;
     for (const c of compare) {
         const probe = `${c.node}.${c.property}`;
-        const predicted = series[probe];
-        if (!predicted) {
-            problems.push({ reason: "missing_probe", probe, column: c.column, detail: "the sandbox returned no series for this probe" });
+        const curve = series[probe];
+        const measuredMinutes = minutes.filter((m) => Number.isFinite(Number(rows.find((r) => Number(r.minute) === m)?.[c.column])));
+        expected += measuredMinutes.length;
+        if (!curve) {
+            missing.push({ column: c.column, probe, minute: null, reason: "missing_probe: the sandbox returned no series for this probe" });
             continue;
         }
-        for (const m of minutes) {
-            const measured = Number(rows.find((r) => Number(r.minute) === m)?.[c.column]);
-            if (!Number.isFinite(measured)) continue; // a gap in the telemetry is not the twin's fault
-            const p = predicted[m];
-            if (typeof p !== "number" || !Number.isFinite(p)) {
-                problems.push({ reason: "missing_prediction", column: c.column, probe, minute: m, detail: p === undefined ? "no sample at this minute (the run is shorter than the telemetry)" : `predicted ${String(p)}` });
-                if (problems.length >= 8) return problems;
-            }
+        for (const m of measuredMinutes) {
+            const p = curve[m];
+            if (typeof p === "number" && Number.isFinite(p)) predicted++;
+            else missing.push({ column: c.column, probe, minute: m, reason: p === undefined ? "missing_prediction: no sample at this minute (the run is shorter than the telemetry)" : `missing_prediction: predicted ${String(p)}` });
         }
     }
-    return problems;
+    return { expected, predicted, missing: missing.slice(0, 8), valid: missing.length === 0 };
+}
+
+/** The coverage's gaps as diagnostics (the older shape the state and the briefs read). */
+export function coverageProblems(series: Record<string, number[]>, compare: Compare[], rows: Row[]): NonNullable<Candidate["diagnostics"]> {
+    return coverageOf(series, compare, rows).missing.map((m) => {
+        const [reason, detail] = m.reason.split(/: (.+)/);
+        return { reason, probe: m.probe, column: m.column, ...(m.minute !== null ? { minute: m.minute } : {}), detail };
+    });
 }
 
 /** The fitted variables within two percent of a bound of their range. */
@@ -190,18 +250,32 @@ export function atBoundsOf(variables: Variables, fit: Bounds | undefined): strin
         .map(([k]) => k);
 }
 
-/** For each fitted variable, the range it takes among the trials whose score is within a ppm (or ten percent) of the best: wide means the telemetry does not pin it. */
-export function identifiabilityOf(tried: Array<{ variables: Variables; score: number }>, best: { variables: Variables; score: number }, fitted: string[]): NonNullable<Candidate["identifiability"]> {
+/**
+ * For each fitted variable: the range it takes among the trials near the best
+ * score (within a ppm or ten percent: the optimiser's cluster), and the range
+ * among the trials under the threshold (what the telemetry accepted). The
+ * second is the honest one; neither is a profile likelihood, so nothing here
+ * says "identifiable".
+ */
+export function identifiabilityOf(tried: Array<{ variables: Variables; score: number }>, best: { variables: Variables; score: number }, fitted: string[], threshold?: number): NonNullable<Candidate["identifiability"]> {
     const tolerance = Math.max(1, 0.1 * best.score);
     const near = tried.filter((t) => Number.isFinite(t.score) && t.score <= best.score + tolerance);
+    const accepted = typeof threshold === "number" ? tried.filter((t) => Number.isFinite(t.score) && t.score <= threshold) : [];
     const out: NonNullable<Candidate["identifiability"]> = {};
+    const p4 = (v: number) => Number(v.toPrecision(4));
     for (const k of fitted) {
         const values = near.map((t) => t.variables[k]).filter((v): v is number => typeof v === "number" && Number.isFinite(v));
         const estimate = best.variables[k];
         if (!values.length || typeof estimate !== "number") continue;
         const lo = Math.min(...values, estimate);
         const hi = Math.max(...values, estimate);
-        out[k] = { estimate: Number(estimate.toPrecision(4)), nearOptimalRange: [Number(lo.toPrecision(4)), Number(hi.toPrecision(4))], spread: Number((estimate !== 0 ? (hi - lo) / Math.abs(estimate) : hi - lo).toFixed(3)) };
+        const under = accepted.map((t) => t.variables[k]).filter((v): v is number => typeof v === "number" && Number.isFinite(v));
+        out[k] = {
+            estimate: p4(estimate),
+            nearOptimalRange: [p4(lo), p4(hi)],
+            underThresholdRange: under.length ? [p4(Math.min(...under)), p4(Math.max(...under))] : null,
+            spread: Number((estimate !== 0 ? (hi - lo) / Math.abs(estimate) : hi - lo).toFixed(3)),
+        };
     }
     return out;
 }
@@ -213,15 +287,17 @@ export function identifiabilityOf(tried: Array<{ variables: Variables; score: nu
  * structure is a structural one, whatever the bounds: widening them again
  * would not make the structure right.
  */
-export function diagnose(candidate: Pick<Candidate, "pass" | "status" | "atBounds" | "structure" | "identifiable" | "heldFitted">, previous: Array<Pick<Candidate, "pass" | "structure" | "atBounds">>): Diagnosis {
+export function diagnose(candidate: Pick<Candidate, "pass" | "status" | "atBounds" | "structure" | "heldFitted">, previous: Array<Pick<Candidate, "pass" | "structure" | "atBounds">>): Diagnosis {
     if (candidate.status === "invalid") return "INVALID_EVALUATION";
-    // A pass that is not identifiable stays a pass: the warning says it, the validation status stays cautious; INSUFFICIENT_INFORMATION is for a harness that asks for an experiment (not built).
+    // A pass stays a pass whatever the identifiability (not assessed); INSUFFICIENT_INFORMATION is for a harness that asks for an experiment (not built).
     if (candidate.pass) return "PASS";
     const key = (s: ReferenceGraph | undefined) => (s ? s.wires.map((w) => `${w.from}>${w.to}`).sort().join("|") : "");
     const sameStructureFailedBefore = previous.some((p) => !p.pass && key(p.structure) === key(candidate.structure));
     // A variable the graph says is the installation's, held at a value: fit it before doubting the structure.
     if (candidate.heldFitted?.length) return "PARAMETER_MISMATCH";
-    if (candidate.atBounds?.length && !sameStructureFailedBefore) return "PARAMETER_MISMATCH";
+    // The first failure of a structure is a parameter question (a bound, a held value, a search that did not converge): one simplex of forty runs
+    // establishes nothing about the structure. The same structure failing twice, its parameters searched, is structural (2026-09-25).
+    if (!sameStructureFailedBefore) return "PARAMETER_MISMATCH";
     return "STRUCTURAL_MISMATCH";
 }
 
@@ -408,14 +484,18 @@ function devicesOf(task: TaskFile["task"]): DeviceLike[] {
     return Array.isArray(raw) ? (raw as DeviceLike[]).filter((d) => d && typeof d.path === "string" && d.descriptor && typeof d.descriptor === "object") : [];
 }
 
-async function instantiateFromLibrary(input: EvaluateInput, ctx: EvaluateContext): Promise<{ spec: Spec; variables: Variables; settings: Record<string, number>; defaulted: string[]; fromDevice: Candidate["fromDevice"]; persons: PersonSpec[]; heldFitted: string[]; compare: Compare[] }> {
+async function instantiateFromLibrary(input: EvaluateInput, ctx: EvaluateContext): Promise<{ spec: Spec; variables: Variables; settings: Record<string, number>; defaulted: string[]; fromDevice: Candidate["fromDevice"]; persons: PersonSpec[]; heldFitted: string[]; compare: Compare[]; meta: Record<string, { unit: string | null; name: string; declared?: string; source?: string }> }> {
     const read = await ctx.broker.call("library", "graph", { id: input.graph });
     if (!read.ok) throw new Error(`the library has no graph "${String(input.graph)}": ${brief(read.error ?? read.outcome)}`);
     const template = (read.output as { template?: GraphTemplate }).template;
     if (!template) throw new Error(`the library's graph "${String(input.graph)}" carries no template`);
+    const words = (read.output as { variables?: Record<string, { description?: string }> }).variables ?? {};
     // The variables the builder fits are not defaulted: they are searched.
     const searched = [...Object.keys(input.fit ?? {}), ...Object.keys(input.vary ?? {})];
     const given = { ...(input.variables ?? {}) };
+    // Strict: a library graph has an interface, and a name outside it (Qe_full, tau_scrubber, C_ELEVATED) is not a variable of the graph, whatever it meant.
+    const outside = [...new Set([...Object.keys(given), ...searched])].filter((k) => !(k in template.variables));
+    if (outside.length) throw new Error(`graph "${template.id}" has no variable ${outside.map((k) => `"${k}"`).join(", ")}: its interface is ${Object.keys(template.variables).join(", ")}; pass only fit (the bounds of what the installation alone knows) and persons, the graph carries the rest`);
     const inst = instantiateTemplate(template, { variables: given, settings: input.settings, persons: input.persons, devices: devicesOf(ctx.task) });
     const variables: Variables = {};
     for (const [k, v] of Object.entries(inst.variables)) if (!searched.includes(k)) variables[k] = v;
@@ -428,13 +508,28 @@ async function instantiateFromLibrary(input: EvaluateInput, ctx: EvaluateContext
     }
     // What the graph says only the installation knows, held by the builder (given or defaulted) instead of searched.
     const heldFitted = Object.entries(template.variables).filter(([k, v]) => v.status === "fitted" && !searched.includes(k)).map(([k]) => k);
-    return { spec: inst.spec as Spec, variables, settings: inst.settings, defaulted, fromDevice: inst.fromDevice, persons: inst.persons, heldFitted, compare: input.compare?.length ? input.compare : inst.compare };
+    const meta: Record<string, { unit: string | null; name: string; declared?: string; source?: string }> = {};
+    for (const [k, v] of Object.entries(template.variables)) meta[k] = { unit: v.unit ?? null, name: words[k]?.description || k, declared: v.status, ...(v.source ? { source: v.source } : {}) };
+    return { spec: inst.spec as Spec, variables, settings: inst.settings, defaulted, fromDevice: inst.fromDevice, persons: inst.persons, heldFitted, compare: input.compare?.length ? input.compare : inst.compare, meta };
+}
+
+/** Every variable of a candidate with its value, unit, name and how it was set: what a hand-over is built from. */
+export function parametersOf(values: Variables, fitted: string[], shelf: { defaulted: string[]; fromDevice: Candidate["fromDevice"]; meta: Record<string, { unit: string | null; name: string; declared?: string; source?: string }> } | null): Record<string, ParameterMeta> {
+    const out: Record<string, ParameterMeta> = {};
+    for (const [k, value] of Object.entries(values)) {
+        if (typeof value !== "number") continue;
+        const m = shelf?.meta[k];
+        const status: ParameterMeta["status"] = fitted.includes(k) ? "fitted" : shelf?.fromDevice?.[k] ? "device" : shelf?.defaulted.includes(k) ? "default" : "held";
+        out[k] = { value: Number(value.toPrecision(4)), unit: m?.unit ?? null, name: m?.name ?? k, status, ...(m?.declared ? { declared: m.declared } : {}), ...(m?.source ? { source: m.source } : {}) };
+    }
+    return out;
 }
 
 export async function evaluateCandidate(input: EvaluateInput, ctx: EvaluateContext): Promise<{ candidate: Candidate; profile: Array<{ minute: number; predicted: number | null; measured: number | null }>; ranking: Array<{ variables: Variables; score: number }> }> {
     const { broker, taskId, task, rows, runtimeSlot = "twin" } = ctx;
-    const threshold = Number((task.objective.constraints as { residualPpmMax?: unknown })?.residualPpmMax);
-    if (!Number.isFinite(threshold) || threshold <= 0) throw new Error("the task gives no residual threshold (objective.constraints.residualPpmMax): nobody said how close is close enough");
+    const thresholds = thresholdsOf(task);
+    if (!thresholds) throw new Error("the task gives no residual threshold (objective.constraints.rmsePpmMax, an RMSE per compared column; absoluteResidualPpmMax bounds the worst minute when given): nobody said how close is close enough");
+    const threshold = thresholds.rmsePpmMax;
     if (!input.graph && !input.spec) throw new Error("a candidate is a spec (nodes and connections) or a graph of the library (graph: its id, from library.graphs)");
     if (input.graph && input.spec) throw new Error("a candidate is a spec or a library graph, not both");
     // A library graph: its template instantiated on the twin, the builder's variables over its defaults, its own probes when the builder names none.
@@ -508,13 +603,13 @@ export async function evaluateCandidate(input: EvaluateInput, ctx: EvaluateConte
     // The best, built once more under its name: the candidate is a file of the task, its sha256 what the validator checks.
     const final = await run(best!.variables, `${taskId}/candidate-${ctx.n}`);
     // Before any score is trusted: every compared column predicted at every minute, finite.
+    const coverage = coverageOf(final.series, compare, rows);
     const diagnostics = coverageProblems(final.series, compare, rows);
-    const covered = diagnostics.length === 0;
+    const covered = coverage.valid;
     const fittedNames = Object.keys(input.fit ?? input.vary ?? {});
-    const identifiability = hasFit ? identifiabilityOf(tried, best!, fittedNames) : {};
-    const identifiable = Object.values(identifiability).every((i) => i.spread <= IDENTIFIABLE_SPREAD);
+    const identifiability = hasFit ? identifiabilityOf(tried, best!, fittedNames, threshold) : {};
     const atBounds = atBoundsOf(best!.variables, input.fit);
-    const withinThreshold = covered && final.residuals.every((r) => r.rmse <= threshold);
+    const withinThreshold = covered && final.residuals.every((r) => r.rmse <= threshold && (thresholds.absoluteResidualPpmMax === null || r.worst <= thresholds.absoluteResidualPpmMax));
     const candidate: Candidate = {
         n: ctx.n,
         label: String(input.label ?? "").slice(0, 200),
@@ -526,6 +621,8 @@ export async function evaluateCandidate(input: EvaluateInput, ctx: EvaluateConte
         variables: Object.fromEntries(Object.entries(best!.variables).map(([k, v]) => [k, Number(v.toPrecision(4))])),
         residuals: final.residuals.map((r) => ({ ...r, rmse: round(r.rmse), worst: round(r.worst) })),
         threshold,
+        thresholds,
+        coverage,
         pass: withinThreshold,
         status: !covered ? "invalid" : withinThreshold ? "calibration_pass" : "calibration_fail",
         calibration: withinThreshold ? "PASS" : "FAIL",
@@ -533,9 +630,11 @@ export async function evaluateCandidate(input: EvaluateInput, ctx: EvaluateConte
         diagnosis: "PASS",
         ...(diagnostics.length ? { diagnostics } : {}),
         ...(atBounds.length ? { atBounds } : {}),
-        ...(Object.keys(identifiability).length ? { identifiability, identifiable } : {}),
+        ...(Object.keys(identifiability).length ? { identifiability } : {}),
+        identifiabilityAssessment: "NOT_ASSESSED",
         combinations: tried.length + 1,
         fitted: Object.keys(input.fit ?? input.vary ?? {}),
+        parameters: parametersOf(best!.variables, fittedNames, shelf),
         estimator: hasFit ? estimatorFor(input.estimator).id : hasVary ? "grid (values given)" : "given",
         warnings: [],
         ...(shelf ? { graph: input.graph, settings: shelf.settings, defaulted: shelf.defaulted, fromDevice: shelf.fromDevice, persons: shelf.persons, ...(shelf.heldFitted.length ? { heldFitted: shelf.heldFitted } : {}) } : {}),
@@ -555,11 +654,10 @@ export async function evaluateCandidate(input: EvaluateInput, ctx: EvaluateConte
         candidate.early.inflows = inflowsOf(read, inputSpec, first.node);
     }
     candidate.warnings = plausibilityOf(candidate.early);
-    if (!identifiable) {
-        const wide = Object.entries(identifiability).filter(([, i]) => i.spread > IDENTIFIABLE_SPREAD);
-        candidate.warnings.push(`identifiability: ${wide.map(([k, i]) => `${k} takes ${i.nearOptimalRange[0]} to ${i.nearOptimalRange[1]} among the near-optimal trials (best ${i.estimate})`).join("; ")}: the telemetry does not pin ${wide.length > 1 ? "these" : "this"} down, several combinations fit alike; the fit may be handed over as calibrated, its parameters are not established`);
-    }
-    if (!covered) candidate.warnings.push(`invalid: ${diagnostics.map((d) => `${d.reason}${d.column ? ` on ${d.column}` : ""}${d.minute !== undefined ? ` at minute ${d.minute}` : ""}${d.detail ? ` (${d.detail})` : ""}`).join("; ")}: no residual is scored on a curve that is not there`);
+    if (Object.keys(identifiability).length) {
+        const spans = Object.entries(identifiability).map(([k, i]) => `${k} ${i.underThresholdRange ? `${i.underThresholdRange[0]} to ${i.underThresholdRange[1]} among the trials under the threshold` : "no trial under the threshold"} (best ${i.estimate})`).join("; ");
+        candidate.warnings.push(`identifiability: not assessed (no profile likelihood or sensitivity analysis exists yet; the optimiser's cluster says nothing about it): ${spans}; hand the fit over as calibrated, its parameters not shown identified`);
+    }    if (!covered) candidate.warnings.push(`invalid: ${diagnostics.map((d) => `${d.reason}${d.column ? ` on ${d.column}` : ""}${d.minute !== undefined ? ` at minute ${d.minute}` : ""}${d.detail ? ` (${d.detail})` : ""}`).join("; ")}: no residual is scored on a curve that is not there`);
     candidate.spec = inputSpec;
     candidate.structure = referenceOfSpec(inputSpec, `candidate ${ctx.n}`);
     candidate.diagnosis = diagnose(candidate, ctx.previous ?? []);
@@ -585,9 +683,13 @@ export const evaluationOutput = (r: Awaited<ReturnType<typeof evaluateCandidate>
         ...(r.candidate.diagnostics ? { diagnostics: r.candidate.diagnostics } : {}),
         ...(r.candidate.atBounds ? { atBounds: r.candidate.atBounds } : {}),
         ...(r.candidate.heldFitted ? { heldFitted: r.candidate.heldFitted } : {}),
-        ...(r.candidate.identifiability ? { identifiability: r.candidate.identifiability, identifiable: r.candidate.identifiable } : {}),
+        ...(r.candidate.identifiability ? { identifiability: r.candidate.identifiability } : {}),
+        identifiabilityAssessment: r.candidate.identifiabilityAssessment,
         threshold: r.candidate.threshold,
+        thresholds: r.candidate.thresholds,
+        coverage: r.candidate.coverage,
         variables: r.candidate.variables,
+        parameters: r.candidate.parameters,
         ...(r.candidate.graph ? { graph: r.candidate.graph, settings: r.candidate.settings, defaulted: r.candidate.defaulted, fromDevice: r.candidate.fromDevice, persons: r.candidate.persons } : {}),
         residuals: r.candidate.residuals,
         ...(r.candidate.early ? { firstSlope: r.candidate.early } : {}),

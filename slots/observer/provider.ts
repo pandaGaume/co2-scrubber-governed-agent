@@ -48,6 +48,8 @@ export function observerSlot(wsBase: string, log: (line: string) => void, option
             const reasoner = await ReasonerProvider.connect(broker);
             if (!reasoner.description.ready) throw new Error(`the reasoner is not ready: ${reasoner.description.reason ?? "no reason given"}`);
             reasoner.usePrompt(OBSERVER_PROMPT);
+            // The Observer runs on the state (2026-09-25): each step is one message the loop rebuilds, nothing is replayed.
+            reasoner.useContext("state");
             return reasoner;
         });
     let notify: (entry: ObserverState["requests"][number]) => void = () => undefined;

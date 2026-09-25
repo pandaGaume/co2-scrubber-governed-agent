@@ -236,6 +236,7 @@ async function main(): Promise<void> {
         ].join("\n");
         const model = await ReasonerProvider.connect(operator);
         model.usePrompt(OBSERVER_PROMPT);
+        model.useContext("state");
         const obs = await observe({ provider: model, broker: operator, description, telemetry: telemetry as unknown as Array<Record<string, unknown>> });
         const obsTokens = model.exchanges.reduce((a, x) => ({ input: a.input + (x.tokens?.prompt ?? 0), output: a.output + (x.tokens?.completion ?? 0) }), { input: 0, output: 0 });
         await record(
@@ -282,7 +283,7 @@ async function main(): Promise<void> {
         const reqG = await call<{ taskId: string; builder: string }>(operator, "factory", "request", {
             ...contract,
             observations: { ...contract.observations, devices: register, persons },
-            objective: { ...contract.objective, constraints: { ...contract.objective.constraints, residualPpmMax: 10 } },
+            objective: { ...contract.objective, constraints: { ...contract.objective.constraints, rmsePpmMax: 10 } },
             data: [{ file: "telemetry.json", rows: telemetry }],
             budget: { iterations: 30, minutes: 20, twinPoints: 600 },
             requestedBy: "observer",

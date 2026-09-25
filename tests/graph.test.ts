@@ -203,27 +203,32 @@ describe("the parametric graph and its residual", () => {
         assert.deepEqual(atBoundsOf({ V: 30, g: 0.3 }, fit), []);
         const failed = { pass: false, status: "calibration_fail" as const, structure };
         assert.equal(diagnose({ ...failed, atBounds: ["V"] }, []), "PARAMETER_MISMATCH");
-        assert.equal(diagnose({ ...failed, atBounds: [] }, []), "STRUCTURAL_MISMATCH");
+        assert.equal(diagnose({ ...failed, atBounds: [] }, []), "PARAMETER_MISMATCH", "a first failure of a structure is a parameter question, whatever the bounds");
+        assert.equal(diagnose({ ...failed, atBounds: [] }, [{ pass: false, structure, atBounds: [] }]), "STRUCTURAL_MISMATCH", "the same structure failing twice, its parameters searched");
         assert.equal(diagnose({ ...failed, heldFitted: ["L"] }, []), "PARAMETER_MISMATCH", "the graph says L is the installation's and the builder held it");
         assert.equal(diagnose({ ...failed, atBounds: ["V"] }, [{ pass: false, structure, atBounds: ["V"] }]), "STRUCTURAL_MISMATCH", "widening the bounds once more would not make the structure right");
         assert.equal(diagnose({ ...failed, atBounds: ["V"] }, [{ pass: false, structure: referenceOfSpec(labCandidate(true) as never, "other"), atBounds: ["V"] }]), "PARAMETER_MISMATCH", "another structure's failure does not count");
-        assert.equal(diagnose({ pass: true, status: "calibration_pass", structure, identifiable: false }, []), "PASS");
+        assert.equal(diagnose({ pass: true, status: "calibration_pass", structure }, []), "PASS");
         assert.equal(diagnose({ pass: false, status: "invalid", structure }, []), "INVALID_EVALUATION");
     });
 
-    it("test E, identifiability: the range each fitted variable takes among the near-optimal trials, wide when several combinations fit alike", () => {
+    it("test E, identifiability: the range each fitted variable takes among the near-optimal trials and among the trials under the threshold; never a verdict", () => {
         const tried = [
             { variables: { V: 30, L: 0.1 }, score: 4 },
             { variables: { V: 25, L: 0.06 }, score: 4.5 },
             { variables: { V: 35, L: 0.14 }, score: 4.8 },
+            { variables: { V: 45, L: 0.17 }, score: 9 },
             { variables: { V: 60, L: 0.2 }, score: 40 },
         ];
-        const id = identifiabilityOf(tried, tried[0], ["V", "L"]);
-        assert.deepEqual(id.V, { estimate: 30, nearOptimalRange: [25, 35], spread: 0.333 });
+        const id = identifiabilityOf(tried, tried[0], ["V", "L"], 10);
+        assert.deepEqual(id.V, { estimate: 30, nearOptimalRange: [25, 35], underThresholdRange: [25, 45], spread: 0.333 });
         assert.deepEqual(id.L.nearOptimalRange, [0.06, 0.14]);
+        assert.deepEqual(id.L.underThresholdRange, [0.06, 0.17], "the honest range: every value the telemetry accepted under the threshold, wider than the optimiser's cluster");
         assert.ok(id.V.spread > 0.2 && id.L.spread > 0.2, "neither is pinned: the trials within a ppm of the best span a third of the value");
         const pinned = identifiabilityOf([{ variables: { V: 30 }, score: 4 }, { variables: { V: 30.5 }, score: 4.2 }, { variables: { V: 50 }, score: 30 }], { variables: { V: 30 }, score: 4 }, ["V"]);
         assert.ok(pinned.V.spread < 0.05);
+        assert.equal(pinned.V.underThresholdRange, null, "no threshold given: no accepted range");
+        assert.ok(!("identifiable" in pinned.V), "a narrow cluster is not a verdict: nothing here says identifiable");
     });
 
     it("test F, the compact answers and the reasoning state: a long answer is a summary with its size, the state carries the invariants and stays small", () => {
@@ -245,11 +250,18 @@ describe("the parametric graph and its residual", () => {
         assert.equal(state.invariants.observed.devices.length, 5);
         assert.equal(state.budget.iterationsLeft, 12);
         assert.ok(JSON.stringify(state).length < 6000, `the state weighs ${JSON.stringify(state).length} characters`);
+        // A refused call stays in the state whole, with why: the model corrects what it wrote (a schema refusal included), bounded above a size.
+        progress.lastRefusal = { capability: "procedure.submit", reason: "Invalid capability arguments: data/abort/1/threshold must be number", input: { id: "decay-1", abort: [{ id: "co2" }, { id: "refused", threshold: null }] } };
+        const refused = reasoningStateOf({ task, progress, budget: task.budget, nextActions: [], shelf: [], telemetry: null }).lastRefusal;
+        assert.deepEqual(refused, { capability: "procedure.submit", reason: "Invalid capability arguments: data/abort/1/threshold must be number", input: { id: "decay-1", abort: [{ id: "co2" }, { id: "refused", threshold: null }] } });
+        progress.lastRefusal = { capability: "x", reason: "too long", input: { text: "a".repeat(7000) } };
+        const bounded = reasoningStateOf({ task, progress, budget: task.budget, nextActions: [], shelf: [], telemetry: null }).lastRefusal as unknown as { input: { characters: number; head: string } };
+        assert.ok(bounded.input.characters > 7000 && bounded.input.head.endsWith("..."));
     });
 
     it("the validator accepts only a candidate the harness built and found under the threshold", () => {
         const progress = newProgress();
-        const c = (n: number, pass: boolean): Candidate => ({ n, label: "", path: `candidate-${n}.spikypanda`, sha256: String(n).repeat(64), nodes: 4, types: [], connections: 3, variables: {}, status: pass ? "calibration_pass" : "calibration_fail", calibration: pass ? "PASS" : "FAIL", validation: "NOT_PERFORMED", diagnosis: pass ? "PASS" : "STRUCTURAL_MISMATCH", residuals: [{ column: "c", probe: "lab.co2Ppm", rmse: pass ? 3 : 45, worst: 0, worstMinute: 0 }], threshold: 25, pass, combinations: 1, fitted: [], estimator: "given", warnings: [], at: "" });
+        const c = (n: number, pass: boolean): Candidate => ({ n, label: "", path: `candidate-${n}.spikypanda`, sha256: String(n).repeat(64), nodes: 4, types: [], connections: 3, variables: {}, identifiabilityAssessment: "NOT_ASSESSED", thresholds: { rmsePpmMax: 10, absoluteResidualPpmMax: null }, coverage: { expected: 1, predicted: 1, missing: [], valid: true }, parameters: {}, status: pass ? "calibration_pass" : "calibration_fail", calibration: pass ? "PASS" : "FAIL", validation: "NOT_PERFORMED", diagnosis: pass ? "PASS" : "STRUCTURAL_MISMATCH", residuals: [{ column: "c", probe: "lab.co2Ppm", rmse: pass ? 3 : 45, worst: 0, worstMinute: 0 }], threshold: 25, pass, combinations: 1, fitted: [], estimator: "given", warnings: [], at: "" });
         progress.topic.graph = { candidates: [c(1, false), c(2, true)], runs: 2 } as never;
         const files = [1, 2].map((n) => ({ path: `candidate-${n}.spikypanda`, bytes: 1, sha256: String(n).repeat(64) }));
         assert.match(validateGraph({ summary: "", artifacts: [{ kind: "graph", path: "candidate-1.spikypanda" }] }, files, progress).problems.join(), /residual of 45 ppm, above the threshold of 25/);
@@ -382,8 +394,20 @@ describe("the graph factory's loop on the gap, through the broker", () => {
         assert.equal(coupled.validation, "NOT_PERFORMED");
         assert.deepEqual(Object.keys(coupled.identifiability ?? {}).sort(), ["L", "V", "Vh"]);
         for (const [k, i] of Object.entries(coupled.identifiability ?? {})) assert.ok(i.nearOptimalRange[0] <= i.estimate && i.estimate <= i.nearOptimalRange[1], `${k}: ${JSON.stringify(i)}`);
-        assert.equal(typeof coupled.identifiable, "boolean");
-        if (!coupled.identifiable) assert.ok(coupled.warnings.some((w) => w.startsWith("identifiability:")), "a fit that is not pinned says so");
+        // No profile likelihood exists: nothing says identifiable; the range each fitted variable took among the trials under the threshold is reported instead.
+        assert.equal(coupled.identifiabilityAssessment, "NOT_ASSESSED");
+        assert.ok(!("identifiable" in coupled), "no identifiable flag from the optimiser's cluster");
+        assert.ok(coupled.warnings.some((w) => w.startsWith("identifiability: not assessed")), coupled.warnings.join(" | "));
+        for (const [k, i] of Object.entries(coupled.identifiability ?? {})) assert.ok(i.underThresholdRange && i.underThresholdRange[0] <= i.estimate && i.estimate <= i.underThresholdRange[1], `${k}: ${JSON.stringify(i)}`);
+        // The coverage block: every compared minute predicted; the thresholds by name; the parameters with value, unit, name and status, what the hand-over is built from.
+        assert.deepEqual(coupled.coverage, { expected: 2 * TELEMETRY.length, predicted: 2 * TELEMETRY.length, missing: [], valid: true });
+        assert.deepEqual(coupled.thresholds, { rmsePpmMax: 10, absoluteResidualPpmMax: null });
+        assert.equal(coupled.parameters.L.status, "fitted");
+        assert.equal(coupled.parameters.L.unit, "kg");
+        assert.match(coupled.parameters.L.name, /loading/);
+        assert.deepEqual([coupled.parameters.Qe.status, coupled.parameters.Qe.unit], ["device", "m3/min"]);
+        assert.equal(coupled.parameters.gRest.status, "default");
+        assert.equal(coupled.parameters.g.status, "held");
         // Test A and F on the loop: the model's context is the state, bounded, not a transcript that grows; the long answers are in results/ with their handle.
         const traceLines = readFileSync(path.join(taskDir(taskId), "trace.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l) as TraceLine);
         const sizes = traceLines.map((l) => JSON.stringify(l.trace?.stateBefore.features ?? {}).length);
@@ -403,5 +427,50 @@ describe("the graph factory's loop on the gap, through the broker", () => {
         const lines = said.filter((l) => l.key.startsWith("mother.candidate")).map((l) => l.text.en);
         const worst = (c: Candidate) => Math.round(Math.max(...c.residuals.map((r) => r.rmse)));
         assert.deepEqual(lines, [`Simulator 1. ${alone.nodes} nodes. Residual ${worst(alone)} ppm, above the threshold of 10. Rejected.`, `Simulator 2. ${coupled.nodes} nodes. Residual ${worst(coupled)} ppm, under the threshold of 10. Accepted.`]);
+    });
+
+    it("the loop on a world the reference cannot fit as observed: a third occupant in the Lab; parameter gap, then structural gap, then the revised structure holds (2026-09-25)", async () => {
+        // The same world with one more person at work in the Lab than the medical monitor lists: no parameter set of the observed roster closes the Lab's level.
+        const rows = twoZoneTelemetry({ ...LAB_WORLD, labOccupants: 3 }, [
+            { speedPercent: 30, minutes: 20 },
+            { speedPercent: 100, minutes: 30 },
+        ]);
+        const r = await broker.call("factory", "request", {
+            objective: { required_outputs: [{ name: "predicted_co2", quantity: "Concentration", unit: "ppm" }], constraints: { residualPpmMax: 10 } },
+            observations: { persons: PERSONS, devices: DEVICES },
+            data: [{ file: "telemetry.json", rows }],
+            requirements: { objective: "reproduce the Lab CO2 during the decay test", missing_information: ["the flow the inter-module ventilation delivers, hatch closed"], hypotheses: ["someone may be in the Lab the monitor does not list"] },
+            budget: { iterations: 14, twinPoints: 300 },
+            builder: "scripted",
+            requestedBy: "graph-test",
+            run: false,
+        });
+        assert.ok(r.ok, r.error);
+        const taskId = (r.output as { taskId: string }).taskId;
+        tasks.push(taskId);
+        const result = await runTask({ broker, taskId, recipesDir, provider: (ctx: BuilderContext) => new ScriptedGraphBuilder(ctx) });
+        assert.equal(result.state, "proposed", result.manifest.ended ?? "");
+        const candidates = JSON.parse(readFileSync(path.join(taskDir(taskId), "candidates.json"), "utf8")) as Candidate[];
+        assert.deepEqual(candidates.map((c) => c.diagnosis), ["PARAMETER_MISMATCH", "STRUCTURAL_MISMATCH", "PASS"], result.manifest.steps.map((s) => `${s.n} ${s.capability} ${s.outcome} ${String(s.reason).slice(0, 200)}`).join("\n"));
+        const [first, second, third] = candidates;
+        // The first held the loading: a parameter problem. The second fitted it and still missed: the same structure failed twice, no admissible parameters close it.
+        assert.deepEqual(first.heldFitted, ["L"]);
+        assert.ok(second.fitted.includes("L") && second.pass === false && second.residuals[0].rmse > 10, `the observed roster with the loading fitted: ${second.residuals[0].rmse} ppm`);
+        assert.equal(second.nodes, first.nodes, "the second candidate kept the structure");
+        // The third revised the topology on a hypothesis: one more person in the Lab; it holds, and finds the world's volume and flow again.
+        assert.equal(third.persons?.length, 5);
+        assert.equal(third.nodes, second.nodes + 1, "one node more: the person added");
+        assert.ok(third.residuals.every((x) => x.rmse < 10), `with the unobserved source: ${third.residuals.map((x) => `${x.column} ${x.rmse}`).join(", ")} ppm`);
+        assert.ok(Math.abs(third.variables.V - LAB_WORLD.VLab) / LAB_WORLD.VLab < 0.1, `V ${third.variables.V} for ${LAB_WORLD.VLab}`);
+        const delivered = deliveredFlowM3PerMinute(readHabitatParameters(), third.variables.L);
+        assert.ok(Math.abs(delivered - LAB_WORLD.q) / LAB_WORLD.q < 0.15, `the loading ${third.variables.L} kg delivers ${delivered.toFixed(2)} m3/min for ${LAB_WORLD.q}`);
+        // The briefs followed the diagnoses: a parameter's gap, then a structural one that says to revise the topology, then the hand-over.
+        const traceLines = readFileSync(path.join(taskDir(taskId), "trace.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l) as TraceLine);
+        const briefs = traceLines.map((l) => String((l.trace?.stateBefore.features as { brief?: string })?.brief ?? ""));
+        assert.ok(briefs.some((b) => b.startsWith("The gap is a parameter's.")), briefs.join("\n"));
+        assert.ok(briefs.some((b) => b.startsWith("The gap is structural.") && /revise the topology where the curves part, guided by the task's hypotheses/.test(b)), briefs.join("\n"));
+        assert.ok(briefs.some((b) => b.startsWith("Hand over.")));
+        const said = JSON.parse((await (await broker.session("station")).request<{ contents: Array<{ text: string }> }>("resources/read", { uri: "station://mother" })).contents[0].text) as MotherLine[];
+        assert.deepEqual(said.filter((l) => l.key.startsWith("mother.candidate")).slice(-3).map((l) => /Rejected|Accepted/.exec(l.text.en)?.[0]), ["Rejected", "Rejected", "Accepted"]);
     });
 });

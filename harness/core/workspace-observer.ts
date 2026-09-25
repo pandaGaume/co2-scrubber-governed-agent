@@ -57,10 +57,13 @@ export interface Progress {
     plan: Plan | null;
     done: DoneClaim | null;
     lastCall: CapabilityCall | null;
+    /** How many times in a row the builder proposed the same call with the same input (executed or refused): the observation's id carries it, so a learned step is not replayed forever on a step that changes nothing (2026-09-25). */
+    repeats: number;
     /** The last call's answer as the model reads it (`compact.ts`), and the handle of the whole answer in the workshop when it was long. */
     lastSummary: JsonValue | null;
     lastArtifact: string | null;
-    lastRefusal: { capability: string; reason: string } | null;
+    /** The last step the harness stopped (the guard, the schema, a capability outside the list): the call as proposed, whole, and why. In the state mode the model reads its own proposal here and corrects it, instead of writing it again with the same fault. */
+    lastRefusal: { capability: string; reason: string; input?: JsonValue } | null;
     /** sha256 of the models whose contract check passed in this task (`model.contract` ok). */
     checkedModels: string[];
     /** The summary of the last sandbox run (`session_run`), for the proposal's claims. */
@@ -78,7 +81,7 @@ export interface Progress {
 }
 
 export function newProgress(): Progress {
-    return { phase: "plan", iteration: 0, plan: null, done: null, lastCall: null, lastSummary: null, lastArtifact: null, lastRefusal: null, checkedModels: [], sandbox: null, failure: null, reads: {}, topic: {}, evidence: {}, context: { shelf: [], telemetry: null } };
+    return { phase: "plan", iteration: 0, plan: null, done: null, lastCall: null, repeats: 0, lastSummary: null, lastArtifact: null, lastRefusal: null, checkedModels: [], sandbox: null, failure: null, reads: {}, topic: {}, evidence: {}, context: { shelf: [], telemetry: null } };
 }
 
 export interface WorkshopFeatures extends Record<string, JsonValue> {
@@ -144,7 +147,7 @@ export function createWorkspaceObserver(broker: Broker, taskId: string, progress
             };
             // The id the recipes are stored under: the phase, the last capability and its outcome, and what the topic adds (the last diagnosis), so a learned step replays only after the same evidence.
             const extra = key();
-            return { id: `workshop:${progress.phase}:${last?.id ?? "start"}:${last?.result.outcome ?? ""}${extra ? `:${extra}` : ""}`, features };
+            return { id: `workshop:${progress.phase}:${last?.id ?? "start"}:${last?.result.outcome ?? ""}${extra ? `:${extra}` : ""}${progress.repeats > 0 ? `:again${progress.repeats}` : ""}`, features };
         },
     };
 }

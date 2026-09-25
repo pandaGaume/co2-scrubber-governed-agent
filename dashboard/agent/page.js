@@ -868,6 +868,8 @@ var EXCLUDED = [
   /^observer\./,
   /^qr\./,
   /^screens\./,
+  // The units are the factories' and the Observer's service (a number restated in another unit, checked); the night's agent reads its numbers from the twin, in the twin's units.
+  /^physics\./,
   /^twin\.(registry_|document_|session_run)/,
   /^station\.propose$/,
   /^biomed\.(monitor_start|monitor_stop|report|move)$/,

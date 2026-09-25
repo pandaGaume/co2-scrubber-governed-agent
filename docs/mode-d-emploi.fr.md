@@ -32,7 +32,10 @@ Les slots publiés : `scrubber` (la carte, ou son simulateur), `twin` (le
 jumeau de la cabine et le runtime : catalogue, documents, bacs à sable),
 `station` (Mother : registre, mises en service, journal), `factory`,
 `reasoner`, `agent`, `scenario`, `qr`, `speech`, `biomed`, `workspace`,
-`model`, `library`, `observer`, `screens`. Sans clé, `reasoner` et
+`model`, `library`, `observer`, `screens`, `physics` (les unités :
+`units_normalize`, `units_convert`, `units_compatible`,
+`units_validate_connection`, une façade déterministe sur le système
+d'unités du substrat, codes UCUM). Sans clé, `reasoner` et
 `observer` répondent qu'aucun modèle n'est prêt au lieu de répondre à sa
 place.
 
@@ -51,7 +54,10 @@ la forme mcp-core (le graphe décrit comme un serveur, son instanciation
 comme un outil dont les propriétés sont les variables, ses sondes comme
 des ressources). Un graphe sans grammaire est signalé au démarrage. Le
 harnais en instancie un sur le jumeau avec `graph.evaluate {graph, persons ou
-settings, variables, fit}` (`plugin-habitat.fr.md`, section 5) ; les nombres
+settings, fit}` (`plugin-habitat.fr.md`, section 5 ; un nom hors de
+l'interface du graphe est refusé) ; le seuil de la tâche est
+`objective.constraints.rmsePpmMax` (la RMSE de chaque colonne comparée) et,
+quand l'opérateur le donne, `absoluteResidualPpmMax` (la pire minute) ; les nombres
 de l'épurateur viennent de l'appareil enregistré quand la tâche porte le
 registre (`observations.devices`), qui est à bord de `observations.persons`.
 Le slot `twin` fait tourner le même graphe sur une question : `twin.habitat_run
@@ -124,9 +130,10 @@ branchées sur l'équipage de leur module, dont la réserve d'entrées grandit
 à mesure), l'équipage, l'épurateur en masse, le ventilateur et le filtre
 encrassé ; 12 tests sur lui. Le script écrit aussi le gabarit du graphe
 pour la bibliothèque et vérifie sa grammaire. Il faut le substrat corrigé
-le 25 septembre (`core` 1.0.3, `plugin-physics` 0.1.2, `factory` 0.1.3,
-dans `vendor/`) : avec les versions d'avant, `npm run habitat:build` ne
-rend pas la main, ou le jumeau refuse `person_1`.
+le 25 septembre (`core` 1.0.5, `plugin-physics` 0.1.2, `factory` 0.1.3,
+`nodeeditor` 0.1.2, dans `vendor/`) : avec les versions d'avant, `npm run
+habitat:build` ne rend pas la main, ou le jumeau refuse `person_1`, ou le
+service des unités ne connaît ni `m3/min` ni `kg/s`.
 
 ## 7. Lire un journal, diagnostiquer un échec
 

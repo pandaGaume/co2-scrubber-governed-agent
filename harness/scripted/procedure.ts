@@ -6,7 +6,7 @@
  * (`builder: "scripted"`), and the manifest names it.
  *
  * It plays the story's lines so the whole deterministic chain can be
- * watched without a key: the inventory, the presence, the plan, a first
+ * watched without a key: the inventory, the method card, the presence, the plan, a first
  * procedure that stops the scrubber for the rise (the good reflex for the
  * measurement, the wrong one for the people), refused by the guard as a
  * plan; the correction at 30 %; the claim. Options make it forget what a
@@ -51,6 +51,8 @@ export class ScriptedProcedureBuilder implements Provider {
     readonly model = "scripted/procedure";
     readonly family = "scripted";
     readonly exchanges: ProviderExchange[] = [];
+    /** The script runs on the reasoning state, as the model does: the runner builds the topic's state at every step and replays nothing. */
+    readonly contextMode = "state" as const;
     calls = 0;
     private inventory: Inventory = {};
     private presence: Presence = [];
@@ -114,6 +116,13 @@ export class ScriptedProcedureBuilder implements Provider {
             case "plan:":
                 return decide("factory.inventory", {}, "what is installed, and where");
             case "plan:factory.inventory":
+                // The method before the plan, as the harness's stages ask: the card that measures the missing quantity, read whole into the state.
+                return decide("library.methods", { quantity: task.objective.required_outputs[0]?.quantity ?? "Volume" }, "which method measures what is missing");
+            case "plan:library.methods": {
+                const methods = (valueOf(last).methods ?? []) as Array<{ id: string }>;
+                return decide("library.read", { id: methods[0]?.id ?? "method-concentration-decay" }, "the method's rules of application");
+            }
+            case "plan:library.read":
                 if (readPresence) return decide("biomed.presence", {}, "who is in the volumes");
             // falls through: a builder that does not read the presence plans at once
             case "plan:biomed.presence":

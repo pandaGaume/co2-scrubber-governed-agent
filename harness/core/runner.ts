@@ -172,6 +172,13 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
     // What the state carries so the model need not read it: the shelf and the telemetry's shape.
     progress.context = { shelf: await shelfOf(broker), telemetry: await telemetryShapeOf(broker, taskId, task) };
     const contextMode: "conversation" | "state" = (provider as { contextMode?: unknown }).contextMode === "state" ? "state" : "conversation";
+    // The proposals in a row: the same capability with the same input twice is counted (`progress.repeats`), whether it ran or was refused.
+    let previousProposal = "";
+    const noteProposal = (capabilityId: string | null, input: unknown): void => {
+        const key = `${capabilityId ?? ""}:${JSON.stringify(input ?? null)}`;
+        progress.repeats = key === previousProposal ? progress.repeats + 1 : 0;
+        previousProposal = key;
+    };
     const telemetry = newTelemetry(contextMode);
     const EVIDENCE_CAP = 10;
     // A long answer goes whole to the workshop and the model reads its summary and its handle; written right after the step.
@@ -329,13 +336,15 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
                 tokens: exchange?.tokens ?? null,
             });
             if (trace.source === "policy") manifest.recipes.replayedSteps++;
+            noteProposal(trace.decision.invocation.capabilityId, trace.decision.invocation.input);
             lines.push({ n, decisionId: trace.decisionId, source: trace.source, trace, failed: null, exchange, call, ms });
             log(`[factory] step ${n}: ${trace.decision.invocation.capabilityId} -> ${outcome} (${trace.evaluation.reason ?? ""})${trace.source === "policy" ? " [replayed]" : ""}`);
             continue;
         }
         if (exchange) {
             // The harness stopped the step (the guard, the schema, a capability outside the list, a timeout): the model reads the reason at the next step.
-            progress.lastRefusal = { capability: exchange.proposedCapabilityId, reason: failed ?? "refused" };
+            progress.lastRefusal = { capability: exchange.proposedCapabilityId, reason: failed ?? "refused", input: (exchange.proposedInput ?? null) as JsonValue };
+            noteProposal(exchange.proposedCapabilityId, exchange.proposedInput);
             manifest.steps.push({ n, decisionId: exchange.decisionId ?? null, source: "refused", capability: exchange.proposedCapabilityId, input: exchange.proposedInput, outcome: "refused", summary: failed, reward: null, reason: failed, ms, tokens: exchange.tokens });
             lines.push({ n, decisionId: exchange.decisionId ?? null, source: "refused", trace: null, failed, exchange, call: null, ms });
             log(`[factory] step ${n}: ${exchange.proposedCapabilityId} -> stopped by the harness (${failed})`);
@@ -377,7 +386,8 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             taskId,
             artifacts,
             manifestSha256: proposedManifestSha256,
-            claims: { requiredOutputs: task.objective.required_outputs.map((o) => o.name), summary: progress.done.summary, plan: progress.plan, sandbox: progress.sandbox },
+            // The claims: the topic's, from what it measured (the metadata of the accepted candidate), and the model's summary as a note beside them.
+            claims: { requiredOutputs: task.objective.required_outputs.map((o) => o.name), summary: progress.done.summary, plan: progress.plan, sandbox: progress.sandbox, ...(topic.claims?.(progress, task) ?? {}) },
         });
         if (r.ok) {
             const p = r.output as { proposalId: string; status: string };

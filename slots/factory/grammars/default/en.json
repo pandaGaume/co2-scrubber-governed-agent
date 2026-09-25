@@ -17,7 +17,7 @@
                 "profile": "the profile the loop runs with",
                 "run": "false to open the task without starting the loop (default true)",
                 "objective.required_outputs": "the outputs a plan must produce: name, quantity, unit, horizonMinutes",
-                "objective.constraints": "e.g. { residualPpmMax: 150, windowMinutes: 20 }",
+                "objective.constraints": "e.g. { rmsePpmMax: 10, absoluteResidualPpmMax: 20, windowMinutes: 20 }: rmsePpmMax bounds the RMSE of each compared column, absoluteResidualPpmMax (optional) the worst minute; residualPpmMax is the older name of rmsePpmMax",
                 "builder": "who builds: reasoner (the model behind the reasoner slot, with the topic's prompt) or scripted (the topic's script, for the tests); by default the reasoner when the topic has a prompt"
             }
         },

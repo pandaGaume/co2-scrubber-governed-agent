@@ -1,0 +1,25 @@
+{
+    "server": {
+        "description": "Les unités physiques, déterministes : une unité telle qu'écrite ramenée à sa grandeur et à son code UCUM, une valeur convertie entre unités d'une même grandeur, deux unités comparées, et la valeur d'une source vérifiée contre sa reformulation dans une autre unité",
+        "instructions": "Ne convertissez jamais une unité de tête : demandez units_convert, et vérifiez ce que vous copiez d'un document avec units_validate_connection (la valeur et l'unité du document comme source, la vôtre comme cible). Une unité inconnue du système est refusée, jamais devinée : écrivez la grandeur à côté."
+    },
+    "tools": {
+        "units_normalize": {
+            "title": "Résoudre une unité",
+            "description": "Une unité telle qu'écrite (m3/min, m³/min, L/min, ppm, kg/s...), avec sa grandeur quand elle est connue (VolumetricFlow, Concentration, MassFlow...) : la grandeur à laquelle elle appartient, son code UCUM, son symbole et son facteur vers l'unité de base de la grandeur. Ambiguë sans la grandeur quand le même code appartient à deux grandeurs."
+        },
+        "units_convert": {
+            "title": "Convertir une valeur",
+            "description": "Une valeur convertie d'une unité vers une autre de la même grandeur, par les tables du substrat ; refusée entre grandeurs (m3/min vers kg/s n'est pas une conversion)."
+        },
+        "units_compatible": {
+            "title": "Comparer deux unités",
+            "description": "Si deux unités mesurent la même grandeur, et lesquelles elles mesurent quand ce n'est pas le cas."
+        },
+        "units_validate_connection": {
+            "title": "Vérifier une valeur reformulée",
+            "description": "Une source donne une valeur dans son unité (une fiche technique : 1,0 m3/min) ; une demande la reformule dans une autre (60 L/min). Converties, elles doivent concorder à la tolérance près (2 pour cent par défaut) : OK avec la valeur attendue, ou INVALID_CONVERSION avec ce que la reformulation aurait dû être."
+        }
+    },
+    "resources": {}
+}

@@ -71,4 +71,11 @@ export interface TopicDefinition {
      * again" learned after a failed candidate must not replay after one that held.
      */
     key?(progress: Progress): string;
+    /**
+     * What the topic hands over with the proposal (2026-09-25), built by code
+     * from what it measured (the graph topic: the accepted candidate's
+     * parameters with value, unit, name and status, its residuals and bounds),
+     * never from the model's sentence, which stays a note beside it.
+     */
+    claims?(progress: Progress, task: TaskFile["task"]): Record<string, JsonValue>;
 }
