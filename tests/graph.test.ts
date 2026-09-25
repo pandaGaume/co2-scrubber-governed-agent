@@ -238,7 +238,7 @@ describe("the parametric graph and its residual", () => {
         const task = { objective: { required_outputs: [{ name: "co2", quantity: "Concentration", unit: "ppm" }], constraints: { residualPpmMax: 10 } }, observations: { persons: PERSONS, devices: DEVICES }, data: [{ file: "telemetry.json" }], requirements: { known: [{ symbol: "Qe", value: 1, unit: "m3/min", source: "scrubber-1-datasheet" }, { symbol: "g", value: 0.38, unit: "L/min", source: "nasa-crew-metabolic-loads", min: 0.26, max: 0.45 }], missing_information: ["the flow"] }, budget: { iterations: 12, minutes: 10, twinPoints: 100 } } as unknown as TaskFile["task"];
         assert.deepEqual(knownInvariants(task).map((k) => [k.symbol, k.status]), [["Qe", "documented"], ["g", "band"]]);
         const progress = newProgress();
-        progress.context = { shelf: [{ id: "habitat", description: "the reference", variables: { V: "fitted" }, settings: [], probes: [] }], telemetry: { file: "telemetry.json", rows: 51, columns: ["minute", "co2_lab_ppm"], minutes: 50 } };
+        progress.context = { shelf: [{ id: "habitat", description: "the reference", types: ["Physics.Scene:atmosphere"], variables: { V: "fitted" }, settings: [], probes: [] }], telemetry: { file: "telemetry.json", rows: 51, columns: ["minute", "co2_lab_ppm"], minutes: 50 } };
         const state = reasoningStateOf({ task, progress, budget: task.budget, nextActions: ["graph.evaluate"], shelf: progress.context.shelf, telemetry: progress.context.telemetry, topic: { requirements: { telemetryAvailable: true } } });
         assert.equal(state.invariants.known[1].status, "band");
         assert.deepEqual(state.invariants.observed.persons, PERSONS.map((p) => `${p.callsign} in ${p.module} at ${p.activity}`));

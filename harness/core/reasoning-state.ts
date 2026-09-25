@@ -55,7 +55,7 @@ export interface StateInvariants {
     observed: { persons: string[]; devices: string[]; other: Record<string, JsonValue> };
     telemetry: { file: string; rows: number; columns: string[]; minutes: number | null } | null;
     /** The reference graphs of the library, as the harness read them once at the start: id, one line, the variables with their status. */
-    shelf: Array<{ id: string; description: string; variables: Record<string, string>; settings: string[]; probes: string[] }>;
+    shelf: Array<{ id: string; description: string; types: string[]; variables: Record<string, string>; settings: string[]; probes: string[] }>;
 }
 
 export interface ReasoningState extends Record<string, JsonValue> {

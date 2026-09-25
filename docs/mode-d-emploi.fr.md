@@ -139,6 +139,10 @@ rend pas la main, ou le jumeau refuse `person_1`.
 - `trace.jsonl` : la décision complète, l'état que le modèle a vu (le brief
   en premier), le prompt envoyé (le prompt système, toute la conversation,
   les outils et leurs descriptions) et la réponse brute du modèle.
+- `results/step-<n>-<capacité>.json` : la réponse entière d'un appel long,
+  quand le modèle n'en a lu que le résumé et la poignée (mode « état » du
+  sujet `graph`, `harness-refactoring.fr.md`) ; `manifest.telemetry` dit où
+  sont allés les jetons.
 - `npm run trace -- outputs/factory/<tâche>` en fait un `trace.md` lisible :
   une section par pas (le nœud du harnais, l'appel avec son entrée et sa
   sortie, ce qui a été ajouté à la conversation du modèle depuis l'appel

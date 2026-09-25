@@ -74,7 +74,7 @@ export interface Progress {
     /** What the task read so far, each answer compact, by capability and argument (`evidence:` in the state); the oldest dropped past the cap. */
     evidence: Record<string, { at: string; summary: JsonValue }>;
     /** What the runner read once at the start, for the state and the topics' requirements: the library's shelf, the telemetry's shape. */
-    context: { shelf: Array<{ id: string; description: string; variables: Record<string, string>; settings: string[]; probes: string[] }>; telemetry: { file: string; rows: number; columns: string[]; minutes: number | null } | null };
+    context: { shelf: Array<{ id: string; description: string; types: string[]; variables: Record<string, string>; settings: string[]; probes: string[] }>; telemetry: { file: string; rows: number; columns: string[]; minutes: number | null } | null };
 }
 
 export function newProgress(): Progress {

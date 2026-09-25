@@ -120,6 +120,8 @@ async function shelfOf(broker: Broker): Promise<Progress["context"]["shelf"]> {
     return graphs.map((g) => ({
         id: String(g.id),
         description: String(g.description ?? "").slice(0, 400),
+        // The node types the graph is made of: what a plan names, without a search of the catalogue.
+        types: Array.isArray(g.types) ? (g.types as unknown[]).map(String) : [],
         variables: Object.fromEntries(Object.entries(rec(g.variables)).map(([k, x]) => [k, `${String(x.status)}${x.default !== undefined ? `, default ${String(x.default)}` : ""}${x.min !== undefined ? `, ${String(x.min)} to ${String(x.max)}` : ""}${x.unit ? ` ${String(x.unit)}` : ""}`])),
         settings: Object.entries(rec(g.settings)).map(([k, x]) => `${k}: default ${String(x.default)}${x.module ? ` (${String(x.module)})` : ""}`),
         probes: (Array.isArray(g.probes) ? (g.probes as Array<Record<string, unknown>>) : []).filter((p) => p.column).map((p) => `${String(p.node)}.${String(p.property)} against ${String(p.column)}`),
