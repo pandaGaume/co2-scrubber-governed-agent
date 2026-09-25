@@ -11,6 +11,8 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fromRoot } from "../lib/paths.js";
 import { ATMOSPHERE_CO2_INPUTS, ATMOSPHERE_CO2_OUTPUTS, ATMOSPHERE_TYPE, buildRegistry } from "../lib/registry.js";
 import { loadFactory } from "../lib/factory.js";
 import { buildHabitatDocument, DEFAULT_SPEED_STEPS, initialMassesKg, readHabitatParameters, runHabitat } from "../lib/habitat.js";
@@ -172,7 +174,7 @@ describe("the habitat reference as a document", () => {
         assert.match(wordsOf(entry!, null).properties.L, /the filter's loading/);
         assert.match(fr.probes["co2-1.lastMeasured"].name, /capteur/);
         const t = entry!.template;
-        assert.equal(t.variables.Qe.status, "known");
+        assert.equal(t.variables.Qe.status, "device", "the scrubber's own number when the register is given, the datasheet's otherwise; held either way");
         assert.equal(t.variables.g.status, "band");
         assert.deepEqual(Object.keys(t.settings), ["labOccupants", "habOccupants"]);
         // Instantiated at the reference's own numbers, resolved on the reference's own rows, it runs to the same ppm.
@@ -192,6 +194,38 @@ describe("the habitat reference as a document", () => {
         assert.equal(three.spec.nodes.find((n) => n.id === "crew-lab")!.params!.count, 1);
         assert.equal(three.spec.nodes.find((n) => n.id === "crew-habb")!.params!.count, 0);
         assert.throws(() => instantiateTemplate(t, { settings: { cats: 1 } }), /no setting "cats"/);
+    });
+
+    it("takes the scrubber's own numbers from the registered device, and who is on board person by person", () => {
+        const t = loadGraphLibrary().find((g) => g.template.id === "habitat")!.template;
+        assert.equal(t.variables.Qe.status, "device");
+        assert.deepEqual(t.variables.Qe.device, { type: "Scrubber", property: "effectiveFlowAtFull", scale: 60 });
+        const devices = (JSON.parse(readFileSync(fromRoot("specs", "commissioning-devices.json"), "utf8")) as { devices: Array<{ path: string; descriptor: never }> }).devices;
+        const withDevice = instantiateTemplate(t, { devices });
+        assert.ok(Math.abs(withDevice.fromDevice.Qe.value - 1.0) < 1e-3, "the register's effective flow, m3/s times 60");
+        assert.equal(withDevice.fromDevice.Qe.path, "/habitat/lab/eclss/scrubber-1");
+        assert.equal(withDevice.fromDevice.eta.value, 0.30303);
+        assert.equal(withDevice.fromDevice.lag.value, 3.33);
+        assert.deepEqual(withDevice.defaulted.sort(), ["L", "V", "Vh", "g", "gRest"], "the device's numbers are no longer defaults");
+        // A scrubber with other numbers: the twin takes them.
+        const other = devices.map((d) => (d.path.endsWith("scrubber-1") ? { ...d, descriptor: { ...(d.descriptor as object), properties: { ...(d.descriptor as { properties: Record<string, unknown> }).properties, effectiveFlowAtFull: { quantity: "VolumetricFlow", unit: "m3ps", value: 0.02 } } } } : d));
+        assert.ok(Math.abs(instantiateTemplate(t, { devices: other as never }).variables.Qe - 1.2) < 1e-6, "1.2 m3/min from this scrubber");
+        // Without the register, the datasheet's defaults; a value the caller names wins over both.
+        assert.equal(instantiateTemplate(t, {}).variables.Qe, 1.0);
+        assert.equal(instantiateTemplate(t, { devices, variables: { Qe: 0.9 } }).variables.Qe, 0.9);
+        // Who is on board, person by person: the roster gives way, the settings follow, the crews count nobody unnamed.
+        const three = instantiateTemplate(t, { persons: [{ callsign: "FE-1", name: "A. Pelletier", module: "lab", activity: "heavy_work" }, { callsign: "CDR", module: "hab-b", activity: "sleep" }, { module: "lab", activity: "rest" }] });
+        assert.deepEqual(three.settings, { labOccupants: 2, habOccupants: 1 });
+        assert.deepEqual(three.spec.nodes.filter((n) => n.typeId === "Physics.Habitat:person").map((n) => `${n.id}:${String(n.params!.activity)}`), ["person-fe-1:heavy_work", "person-cdr:sleep", "person-lab-2:rest"]);
+        assert.deepEqual(three.spec.connections.filter((c) => c.to[1].startsWith("person_")).map((c) => `${c.from[0]}->${c.to.join(".")}`), ["person-fe-1->crew-lab.person_0", "person-cdr->crew-habb.person_0", "person-lab-2->crew-lab.person_1"]);
+        assert.equal(three.spec.nodes.find((n) => n.id === "crew-lab")!.params!.count, 0);
+        assert.deepEqual(three.persons.map((p) => `${p.module}:${p.activity}`), ["lab:heavy_work", "habB:sleep", "lab:rest"]);
+        assert.throws(() => instantiateTemplate(t, { persons: [{ module: "garage", activity: "rest" }] }), /no module "garage"/);
+        // The instance runs: one person at heavy work in the Lab gives the crew 1.0 L/min.
+        const reference = runHabitat(buildHabitatDocument({}, parameters, registry).json, 2, DEFAULT_SPEED_STEPS, registry);
+        const resolved = resolveSpec(three.spec as never, three.variables, reference as unknown as Array<Record<string, unknown>>);
+        const rows = runHabitat(loadFactory().buildDocumentJson(registry as never, resolved.nodes as never, resolved.connections as never), 2, DEFAULT_SPEED_STEPS, registry);
+        assert.ok(Math.abs(rows[1].crew_lab_kgps - ((1.0 + 0.3) * 1e-3 * 1.8176) / 60) < 1e-8, `heavy work plus rest in the Lab: ${rows[1].crew_lab_kgps}`);
     });
 
     it("agrees with the stand-in world to a few ppm over the two-step test, and Hab-B follows the Lab", () => {

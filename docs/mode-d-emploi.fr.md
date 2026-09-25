@@ -50,8 +50,13 @@ ses sondes) et sa grammaire `<id>.grammars/<famille>/<langue>.json` dans
 la forme mcp-core (le graphe décrit comme un serveur, son instanciation
 comme un outil dont les propriétés sont les variables, ses sondes comme
 des ressources). Un graphe sans grammaire est signalé au démarrage. Le
-harnais en instancie un sur le jumeau avec `graph.evaluate {graph, settings,
-variables, fit}` (`plugin-habitat.fr.md`, section 5). Y sont
+harnais en instancie un sur le jumeau avec `graph.evaluate {graph, persons ou
+settings, variables, fit}` (`plugin-habitat.fr.md`, section 5) ; les nombres
+de l'épurateur viennent de l'appareil enregistré quand la tâche porte le
+registre (`observations.devices`), qui est à bord de `observations.persons`.
+Le slot `twin` fait tourner le même graphe sur une question : `twin.habitat_run
+{persons, devices, variables, flowPercent ou stopMinutes, horizonMinutes}`,
+pour ajouter ou changer la présence et l'activité de l'équipage après coup. Y sont
 aujourd'hui : la physique du CO2 et des épurateurs, la méthode de
 décroissance (ASTM E741), la méthode du graphe de jumeau, la fiche
 technique de l'épurateur, la topologie et les métriques de la station, les

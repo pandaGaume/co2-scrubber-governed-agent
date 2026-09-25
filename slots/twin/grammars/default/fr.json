@@ -29,6 +29,23 @@
                 "crew.activity": "sleep, rest, light_work ou heavy_work",
                 "minutes": "minutes d'histoire par point (240 par défaut)"
             }
+        },
+        "habitat_run": {
+            "title": "Le jumeau de l'habitat, avec qui est à bord",
+            "description": "Le jumeau de référence de la station (le graphe habitat de la bibliothèque : le Lab et Hab-B en masse, l'épurateur centralisé, la ventilation inter-modules à travers son filtre, les personnes par leur nom) tourné quelques minutes à une commande d'épurateur, avec un arrêt optionnel. Qui est à bord se donne personne par personne (module et activité : la présence du moniteur médical, ou un et-si), les nombres propres de l'épurateur depuis les appareils du registre, les nombres de l'installation tels qu'une mise en service les a ajustés (variables) ; chacun prend le défaut de la référence en son absence, et la réponse dit ce qu'elle a pris par défaut. Par module : le pic, le CO2 final, les minutes avant ELEVATED et CRITICAL, la courbe toutes les quelques minutes ; ce que la ventilation a délivré et ce que l'épurateur a retiré.",
+            "properties": {
+                "persons": "qui est à bord, une entrée par personne ; le roster de la référence sinon (deux opérateurs en travail léger dans le Lab, deux personnes au repos dans Hab-B)",
+                "persons.module": "lab ou habB",
+                "persons.activity": "sleep, rest, light_work ou heavy_work",
+                "devices": "les appareils du registre (station.registry_list) : le débit efficace, le rendement et le retard propres de l'épurateur ; ceux de la fiche sinon",
+                "variables": "les nombres de l'installation tels qu'ajustés (V, Vh, L, g...) ; ceux de la référence sinon",
+                "co2LabPpm": "le CO2 du Lab au départ, ppm",
+                "co2HabbPpm": "le CO2 de Hab-B au départ, ppm",
+                "flowPercent": "consigne de l'épurateur pendant la course (avant un arrêt)",
+                "stopMinutes": "arrêter l'épurateur à la minute 0 pendant cette durée",
+                "resumePercent": "consigne après l'arrêt (100 par défaut)",
+                "horizonMinutes": "jusqu'où regarder (120 par défaut)"
+            }
         }
     }
 }

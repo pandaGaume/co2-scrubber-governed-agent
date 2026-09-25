@@ -13,9 +13,9 @@
                 "L": "la charge du filtre, kg de poussière : ce que la ventilation inter-modules délivre, par la courbe du ventilateur contre la résistance du filtre ; 0 est un filtre propre au débit de conception (3 m3/min), 0,127 environ les deux tiers ; ajusté",
                 "g": "le CO2 que produit un opérateur en travail léger, L/min : la bande de la NASA pour un membre d'équipage éveillé, 0,26 à 0,45, référence 0,38 ; placé dans la bande",
                 "gRest": "le CO2 que produit une personne au repos, L/min : entre le sommeil et l'éveil, 0,30 pour le membre d'équipage de référence ; connu",
-                "Qe": "le débit efficace de l'épurateur à pleine commande, m3/min : son débit d'air fois son rendement en un passage, 1,0 au banc ; connu, de la fiche technique",
-                "eta": "le rendement de retrait en un passage de l'épurateur, 0,30 à la température nominale des lits ; connu, de la fiche technique",
-                "lag": "la constante de temps de la réponse de l'épurateur à un changement de commande, minutes ; connue, de la fiche technique",
+                "Qe": "le débit efficace de l'épurateur à pleine commande, m3/min : son débit d'air fois son rendement en un passage ; le nombre propre de l'épurateur enregistré (effectiveFlowAtFull) quand la tâche porte le registre, le 1,0 de la fiche sinon ; tenu, jamais ajusté",
+                "eta": "le rendement de retrait en un passage de l'épurateur ; le nombre propre de l'épurateur enregistré (singlePassEfficiency) quand la tâche porte le registre, le 0,30 de la fiche sinon ; tenu",
+                "lag": "la constante de temps de la réponse de l'épurateur à un changement de commande, minutes ; le nombre propre de l'épurateur enregistré (lagTimeConstant) quand la tâche porte le registre, le 3,33 de la fiche sinon ; tenue",
                 "labOccupants": "combien de personnes sont dans le Lab : les opérateurs du roster d'abord (FE-1, FE-2 en travail léger), des anonymes en travail léger au-delà",
                 "habOccupants": "combien de personnes sont dans Hab-B : ceux du roster d'abord (CDR, FE-3 au repos), des anonymes au repos au-delà"
             }

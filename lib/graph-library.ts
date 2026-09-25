@@ -31,6 +31,19 @@
  * (`graph.evaluate` with `graph: "<id>"`) by resolving its template into a
  * spec the twin builds and runs. Nothing here runs a graph: this is the
  * shelf and the reading of what is on it.
+ *
+ * Two things a caller changes on a graph without touching its structure
+ * (2026-09-25, evening):
+ *
+ *   the device's parameters   a variable bound to a device (`device: { type,
+ *                             property }`) takes its value from the descriptor
+ *                             of the registered device of that type, when the
+ *                             caller hands the register's devices over: the
+ *                             twin of a scrubber is the reference with that
+ *                             scrubber's numbers, not the datasheet's default;
+ *   who is on board           `persons` replaces the roster: each person by
+ *                             module and activity, a node each, wired into the
+ *                             crew of their module; the settings follow.
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import * as path from "node:path";
@@ -45,7 +58,30 @@ export const GRAPHS_DIR = fromRoot("graphs");
 export const INSTANTIATE_TOOL = "instantiate";
 export const PROBE_SCHEME = "probe://";
 
-export type VariableStatus = "known" | "fitted" | "band";
+export type VariableStatus = "known" | "fitted" | "band" | "device";
+
+/** Where a variable's value comes from when the caller hands the register's devices over: the descriptor of the device of that `@type`, its property's value, scaled. */
+export interface DeviceBinding {
+    type: string;
+    property: string;
+    /** The value as the descriptor gives it, times this (a flow in m3/s into m3/min: 60). */
+    scale?: number;
+}
+
+/** A registered device as the station's register lists it: what a binding reads. */
+export interface DeviceLike {
+    path: string;
+    descriptor: { "@type": string; properties: Record<string, { value?: unknown; unit?: string }> };
+}
+
+/** Someone on board, as a caller states them: the module they are in and what they do; the name and callsign when known. */
+export interface PersonSpec {
+    id?: string;
+    callsign?: string;
+    name?: string;
+    module: string;
+    activity: string;
+}
 
 export interface TemplateVariable {
     /** The value the graph takes when the caller says nothing. */
@@ -53,10 +89,12 @@ export interface TemplateVariable {
     min?: number;
     max?: number;
     unit?: string;
-    /** `known`: documented, held; `fitted`: what only the installation knows, searched; `band`: documented as a band, placed within it. */
+    /** `known`: documented, held; `fitted`: what only the installation knows, searched; `band`: documented as a band, placed within it; `device`: the registered device's own number, held. */
     status: VariableStatus;
     /** Where the number or the band comes from (a library document, the commissioning). */
     source?: string;
+    /** For a `device` variable: which device property gives it. */
+    device?: DeviceBinding;
 }
 
 /** A whole number that shapes the structure (how many persons in a module). */
@@ -64,6 +102,8 @@ export interface TemplateSetting {
     default: number;
     min?: number;
     max?: number;
+    /** The module this setting counts the people of (`lab`, `habB`), so a person given by module finds their setting. */
+    module?: string;
 }
 
 export interface TemplateProbe {
@@ -81,8 +121,8 @@ export interface TemplateNode {
     x?: number;
     y?: number;
     params?: Record<string, unknown>;
-    /** A person of the roster: kept while the module's setting counts them (`index` under the setting's value). */
-    $person?: { setting: string; index: number };
+    /** A person of the roster: kept while the module's setting counts them (`index` under the setting's value); the prototype of a person given for that module. */
+    $person?: { setting: string; index: number; module?: string };
     /** A crew whose `count` takes what the setting says beyond the roster (`roster` persons are nodes). */
     $unnamed?: { setting: string; roster: number };
 }
@@ -135,7 +175,39 @@ export interface InstantiatedGraph {
     settings: Record<string, number>;
     /** The variables the caller did not name, taken at their defaults. */
     defaulted: string[];
+    /** The variables a registered device gave, and which. */
+    fromDevice: Record<string, { path: string; property: string; value: number }>;
+    /** Who is on board in this instance, by module. */
+    persons: PersonSpec[];
     compare: Array<{ node: string; property: string; column: string }>;
+}
+
+export interface InstantiateOptions {
+    variables?: Record<string, number>;
+    settings?: Record<string, number>;
+    /** Who is on board, replacing the roster: the settings follow the count per module. */
+    persons?: PersonSpec[];
+    /** The register's devices: a device-bound variable takes its value from the device of its type. */
+    devices?: DeviceLike[];
+}
+
+/** The module a setting counts: its `module`, or the setting's own name without `Occupants` (`labOccupants` -> `lab`). */
+const moduleOfSetting = (name: string, s: TemplateSetting): string => s.module ?? name.replace(/Occupants$/, "");
+
+/** The setting a module's people are counted under, by module name (`lab`, `habB`, `hab-b`: the dash and the case do not matter). */
+function settingOfModule(template: GraphTemplate, module: string): string | undefined {
+    const wanted = module.toLowerCase().replace(/[^a-z0-9]/g, "");
+    return Object.entries(template.settings).find(([name, s]) => moduleOfSetting(name, s).toLowerCase().replace(/[^a-z0-9]/g, "") === wanted)?.[0];
+}
+
+/** The number a device's descriptor gives for a binding, and which device: the first registered device of that type that carries the property. */
+export function deviceValueOf(binding: DeviceBinding, devices: ReadonlyArray<DeviceLike>): { path: string; property: string; value: number } | undefined {
+    for (const d of devices) {
+        if (d.descriptor?.["@type"] !== binding.type) continue;
+        const raw = d.descriptor.properties?.[binding.property]?.value;
+        if (typeof raw === "number" && Number.isFinite(raw)) return { path: d.path, property: binding.property, value: raw * (binding.scale ?? 1) };
+    }
+    return undefined;
 }
 
 const probeUri = (p: { node: string; property: string }) => `${PROBE_SCHEME}${p.node}.${p.property}`;
@@ -246,21 +318,41 @@ export function describeGraph(entry: GraphLibraryEntry, key: string | null | und
  * did not name at their defaults. The formulas stay formulas: the harness
  * resolves them at each trial (`params.ts`).
  */
-export function instantiateTemplate(template: GraphTemplate, given: { variables?: Record<string, number>; settings?: Record<string, number> } = {}): InstantiatedGraph {
+export function instantiateTemplate(template: GraphTemplate, given: InstantiateOptions = {}): InstantiatedGraph {
+    for (const name of Object.keys(given.settings ?? {})) if (!(name in template.settings)) throw new Error(`no setting "${name}" on graph "${template.id}" (${Object.keys(template.settings).join(", ") || "none"})`);
+    // Who is on board, when the caller says: each person under the setting of their module; the counts follow.
+    const persons: Array<PersonSpec & { setting: string }> = [];
+    if (given.persons) {
+        if (!Array.isArray(given.persons)) throw new Error("persons is a list of { module, activity } (id, callsign and name when known)");
+        for (const [i, p] of given.persons.entries()) {
+            if (!p || typeof p.module !== "string" || typeof p.activity !== "string") throw new Error(`persons[${i}]: a module and an activity are needed`);
+            const setting = settingOfModule(template, p.module);
+            if (!setting) throw new Error(`persons[${i}]: no module "${p.module}" on graph "${template.id}" (${Object.entries(template.settings).map(([n, s]) => moduleOfSetting(n, s)).join(", ") || "none"})`);
+            persons.push({ ...p, setting });
+        }
+    }
     const settings: Record<string, number> = {};
     for (const [name, s] of Object.entries(template.settings)) {
-        const raw = given.settings?.[name];
+        const raw = given.persons ? persons.filter((p) => p.setting === name).length : given.settings?.[name];
         const value = typeof raw === "number" && Number.isFinite(raw) ? Math.round(raw) : s.default;
         if ((s.min !== undefined && value < s.min) || (s.max !== undefined && value > s.max)) throw new Error(`setting "${name}" = ${value} is outside ${s.min ?? "-inf"} to ${s.max ?? "inf"}`);
         settings[name] = value;
     }
-    for (const name of Object.keys(given.settings ?? {})) if (!(name in template.settings)) throw new Error(`no setting "${name}" on graph "${template.id}" (${Object.keys(template.settings).join(", ") || "none"})`);
     const variables: Record<string, number> = {};
     const defaulted: string[] = [];
+    const fromDevice: InstantiatedGraph["fromDevice"] = {};
     for (const [name, v] of Object.entries(template.variables)) {
         const raw = given.variables?.[name];
-        if (typeof raw === "number" && Number.isFinite(raw)) variables[name] = raw;
-        else {
+        if (typeof raw === "number" && Number.isFinite(raw)) {
+            variables[name] = raw;
+            continue;
+        }
+        // The registered device's own number, when the caller hands the register over and the variable is bound to a device.
+        const read = v.device && given.devices ? deviceValueOf(v.device, given.devices) : undefined;
+        if (read) {
+            variables[name] = read.value;
+            fromDevice[name] = read;
+        } else {
             variables[name] = v.default;
             defaulted.push(name);
         }
@@ -268,9 +360,12 @@ export function instantiateTemplate(template: GraphTemplate, given: { variables?
     // A variable the caller names that the template lacks is kept: a formula may still use it (a candidate's own addition).
     for (const [name, value] of Object.entries(given.variables ?? {})) if (!(name in variables) && Number.isFinite(value)) variables[name] = value;
     const kept = new Set<string>();
-    const nodes = template.spec.nodes
+    const rosterNodes = template.spec.nodes.filter((n) => n.$person);
+    const rosterIds = new Set(rosterNodes.map((n) => n.id));
+    const nodes: InstantiatedGraph["spec"]["nodes"] = template.spec.nodes
         .filter((n) => {
             if (n.$person) {
+                if (given.persons) return false; // the roster gives way to the persons given, rebuilt below
                 const count = settings[n.$person.setting];
                 if (count === undefined) throw new Error(`node "${n.id}" is a person under setting "${n.$person.setting}", which the template does not declare`);
                 if (n.$person.index >= count) return false;
@@ -284,11 +379,47 @@ export function instantiateTemplate(template: GraphTemplate, given: { variables?
             if ($unnamed) {
                 const count = settings[$unnamed.setting];
                 if (count === undefined) throw new Error(`node "${n.id}" counts the unnamed under setting "${$unnamed.setting}", which the template does not declare`);
-                node.params = { ...(node.params ?? {}), count: Math.max(0, count - $unnamed.roster) };
+                // With persons given, everyone is a node: nobody unnamed; otherwise the setting beyond the roster.
+                node.params = { ...(node.params ?? {}), count: given.persons ? 0 : Math.max(0, count - $unnamed.roster) };
             }
             return node;
         });
     const connections = template.spec.connections.filter((c) => kept.has(c.from[0]) && kept.has(c.to[0]));
+    const onBoard: PersonSpec[] = [];
+    if (given.persons) {
+        // Each person given: a node cloned from the roster's prototype for their module, wired into the same crew, at the next index of its pool.
+        const wired: Record<string, number> = {};
+        for (const [i, p] of persons.entries()) {
+            const prototype = rosterNodes.find((n) => n.$person!.setting === p.setting);
+            if (!prototype) throw new Error(`persons[${i}]: graph "${template.id}" has no person to model in module "${p.module}"`);
+            const link = template.spec.connections.find((c) => c.from[0] === prototype.id);
+            if (!link) throw new Error(`persons[${i}]: the roster's "${prototype.id}" is wired nowhere`);
+            const crew = link.to[0];
+            const k = wired[crew] ?? 0;
+            wired[crew] = k + 1;
+            const id = `person-${(p.id ?? p.callsign ?? `${moduleOfSetting(p.setting, template.settings[p.setting])}-${k + 1}`).toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+            if (nodes.some((n) => n.id === id)) throw new Error(`persons[${i}]: "${id}" is on board twice`);
+            const { $person, $unnamed, ...proto } = prototype;
+            void $person;
+            void $unnamed;
+            const who: PersonSpec = { id: id.replace(/^person-/, ""), callsign: p.callsign ?? "", name: p.name ?? "", module: moduleOfSetting(p.setting, template.settings[p.setting]), activity: p.activity };
+            nodes.push({ ...proto, id, label: `${who.callsign} ${who.name}`.trim() || id, y: (proto.y ?? 0) + 110 * k, params: { ...(proto.params ?? {}), name: who.name, callsign: who.callsign, activity: who.activity } });
+            connections.push({ from: [id, link.from[1]], to: [crew, `${link.to[1].replace(/\d+$/, "")}${k}`] });
+            onBoard.push(who);
+        }
+    } else {
+        for (const n of rosterNodes) {
+            if (!kept.has(n.id)) continue;
+            const params = n.params ?? {};
+            onBoard.push({ id: n.id.replace(/^person-/, ""), callsign: String(params.callsign ?? ""), name: String(params.name ?? ""), module: moduleOfSetting(n.$person!.setting, template.settings[n.$person!.setting]), activity: String(params.activity ?? "") });
+        }
+        for (const [name, count] of Object.entries(settings)) {
+            const unnamed = count - rosterNodes.filter((n) => n.$person!.setting === name).length;
+            const crew = template.spec.nodes.find((n) => n.$unnamed?.setting === name);
+            for (let k = 0; k < unnamed; k++) onBoard.push({ module: moduleOfSetting(name, template.settings[name]), activity: String(crew?.params?.activity ?? "") });
+        }
+    }
+    void rosterIds;
     const compare = template.probes.filter((p): p is TemplateProbe & { column: string } => typeof p.column === "string" && p.column.length > 0).map((p) => ({ node: p.node, property: p.property, column: p.column }));
-    return { spec: { nodes, connections }, variables, settings, defaulted, compare };
+    return { spec: { nodes, connections }, variables, settings, defaulted, fromDevice, persons: onBoard, compare };
 }

@@ -242,8 +242,13 @@ async function main(): Promise<void> {
         t0 = Date.now();
         const contract = factoryContractOf(obs.request);
         // The operator's threshold: 10 ppm, a few times the sensors' noise. At 25 a ventilation delivering a third less than designed passed unseen (the volume compensating).
+        // The register's devices (the scrubber's own numbers go into the twin) and who is where (the medical monitor's presence, the activities of the test) reach the factory as observations.
+        const register = (await call<{ devices: unknown[] }>(operator, "station", "registry_list")).devices;
+        const presence = (await call<{ modules: Array<{ module: string; subjects: Array<{ id: string; callsign: string; name: string | null }> }> }>(operator, "biomed", "presence")).modules;
+        const persons = presence.flatMap((m) => m.subjects.map((s) => ({ id: s.id, callsign: s.callsign, name: s.name ?? "", module: m.module, activity: m.module === "lab" ? "light_work" : "rest" })));
         const reqG = await call<{ taskId: string; builder: string }>(operator, "factory", "request", {
             ...contract,
+            observations: { ...contract.observations, devices: register, persons },
             objective: { ...contract.objective, constraints: { ...contract.objective.constraints, residualPpmMax: 10 } },
             data: [{ file: "telemetry.json", rows: telemetry }],
             budget: { iterations: 30, minutes: 20, twinPoints: 600 },

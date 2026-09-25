@@ -270,7 +270,7 @@ export function habitatTemplate(parameters: CabinParameters = readHabitatParamet
         const person = persons.find((who) => `person-${who.id}` === n.id);
         if (person) {
             const setting = settingOf(person.module);
-            node.$person = { setting, index: seen[setting] ?? 0 };
+            node.$person = { setting, index: seen[setting] ?? 0, module: person.module };
             seen[setting] = (seen[setting] ?? 0) + 1;
             // The operators' rate is the band's variable; the resting rate the documented one.
             node.params = { ...node.params, ...(person.module === "lab" ? { lightWorkLitresPerMinute: { $expr: "g" } } : { restLitresPerMinute: { $expr: "gRest" } }) };
@@ -313,13 +313,14 @@ export function habitatTemplate(parameters: CabinParameters = readHabitatParamet
         L: { default: p("ventilation.filter.initialLoadingKg"), min: 0, max: p("ventilation.filter.endOfLifeLoadingKg"), unit: "kg", status: "fitted", source: "what the ventilation delivers, through the filter's loading: 0 is a clean filter at the design flow" },
         g: { default: 0.38, min: 0.26, max: 0.45, unit: "L/min", status: "band", source: "nasa-crew-metabolic-loads: a crewmember awake, 5th to 95th percentile, reference 0.38" },
         gRest: { default: p("crew.litresPerMinute.rest"), unit: "L/min", status: "known", source: "nasa-crew-metabolic-loads: between asleep and awake" },
-        Qe: { default: Number((p("scrubber.flowAtFullM3ps") * p("scrubber.efficiency") * 60).toFixed(4)), unit: "m3/min", status: "known", source: "scrubber-1-datasheet: effective flow at full command" },
-        eta: { default: p("scrubber.efficiency"), status: "known", source: "scrubber-1-datasheet: single-pass efficiency" },
-        lag: { default: p("scrubber.lagTimeConstantMinutes"), unit: "min", status: "known", source: "scrubber-1-datasheet: first-order response" },
+        // The scrubber's own numbers: from the registered device's descriptor when the caller hands the register over, the datasheet's otherwise; held either way.
+        Qe: { default: Number((p("scrubber.flowAtFullM3ps") * p("scrubber.efficiency") * 60).toFixed(4)), unit: "m3/min", status: "device", source: "the registered scrubber's effectiveFlowAtFull (m3/s, times 60); scrubber-1-datasheet when no device is given", device: { type: "Scrubber", property: "effectiveFlowAtFull", scale: 60 } },
+        eta: { default: p("scrubber.efficiency"), status: "device", source: "the registered scrubber's singlePassEfficiency; scrubber-1-datasheet when no device is given", device: { type: "Scrubber", property: "singlePassEfficiency" } },
+        lag: { default: p("scrubber.lagTimeConstantMinutes"), unit: "min", status: "device", source: "the registered scrubber's lagTimeConstant, minutes; scrubber-1-datasheet when no device is given", device: { type: "Scrubber", property: "lagTimeConstant" } },
     };
     const settings: Record<string, TemplateSetting> = {
-        labOccupants: { default: persons.filter((who) => who.module === "lab").length, min: 0, max: 8 },
-        habOccupants: { default: persons.filter((who) => who.module !== "lab").length, min: 0, max: 8 },
+        labOccupants: { default: persons.filter((who) => who.module === "lab").length, min: 0, max: 8, module: "lab" },
+        habOccupants: { default: persons.filter((who) => who.module !== "lab").length, min: 0, max: 8, module: "habB" },
     };
     const probes: TemplateProbe[] = [
         { node: "co2-1", property: "lastMeasured", unit: "ppm", column: "co2_lab_ppm" },

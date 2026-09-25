@@ -49,7 +49,9 @@ Since 25 September the library holds the station's reference graph (`library.gra
 - Its known constants (`Qe`, `eta`, `lag` from the scrubber's datasheet, `gRest`) are held at their defaults and cannot be fitted.
 - What is fitted: `V` (the Lab's volume), `Vh` (Hab-B's), `L` (the filter's loading: what the ventilation delivers; 0 is a clean filter at the design flow). A band's variable (`g`, the operators' rate) is placed within its band.
 - Its probes are judged against the logger's columns without naming them: the two sensors (`co2-1.lastMeasured` against `co2_lab_ppm`, `co2-2.lastMeasured` against `co2_habb_ppm`).
-- The evaluation answers with the graph's id, the settings used and the variables taken at their defaults, beside the residual.
+- Its scrubber's numbers (`Qe`, `eta`, `lag`) are the registered device's own when the task carries the register's devices (`observations.devices`): the twin of a scrubber is the reference with that scrubber's numbers, held; the datasheet's defaults otherwise.
+- Who is on board is given person by person (`persons`: module and activity each, id, callsign and name when known; the task's `observations.persons` when the medical monitor read them): the roster gives way, the settings follow. `settings` alone (`labOccupants`, `habOccupants`) keeps the roster's first persons and adds unnamed people beyond them.
+- The evaluation answers with the graph's id, the persons on board, the variables the device gave (`fromDevice`) and those taken at their defaults, beside the residual.
 
 ## The habitat's own nodes: mass, not folded rates
 

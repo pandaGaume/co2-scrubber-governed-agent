@@ -45,31 +45,46 @@
     "Qe": {
       "default": 1,
       "unit": "m3/min",
-      "status": "known",
-      "source": "scrubber-1-datasheet: effective flow at full command"
+      "status": "device",
+      "source": "the registered scrubber's effectiveFlowAtFull (m3/s, times 60); scrubber-1-datasheet when no device is given",
+      "device": {
+        "type": "Scrubber",
+        "property": "effectiveFlowAtFull",
+        "scale": 60
+      }
     },
     "eta": {
       "default": 0.30303,
-      "status": "known",
-      "source": "scrubber-1-datasheet: single-pass efficiency"
+      "status": "device",
+      "source": "the registered scrubber's singlePassEfficiency; scrubber-1-datasheet when no device is given",
+      "device": {
+        "type": "Scrubber",
+        "property": "singlePassEfficiency"
+      }
     },
     "lag": {
       "default": 3.33,
       "unit": "min",
-      "status": "known",
-      "source": "scrubber-1-datasheet: first-order response"
+      "status": "device",
+      "source": "the registered scrubber's lagTimeConstant, minutes; scrubber-1-datasheet when no device is given",
+      "device": {
+        "type": "Scrubber",
+        "property": "lagTimeConstant"
+      }
     }
   },
   "settings": {
     "labOccupants": {
       "default": 2,
       "min": 0,
-      "max": 8
+      "max": 8,
+      "module": "lab"
     },
     "habOccupants": {
       "default": 2,
       "min": 0,
-      "max": 8
+      "max": 8,
+      "module": "habB"
     }
   },
   "probes": [
@@ -152,7 +167,8 @@
         },
         "$person": {
           "setting": "labOccupants",
-          "index": 0
+          "index": 0,
+          "module": "lab"
         }
       },
       {
@@ -175,7 +191,8 @@
         },
         "$person": {
           "setting": "labOccupants",
-          "index": 1
+          "index": 1,
+          "module": "lab"
         }
       },
       {
@@ -198,7 +215,8 @@
         },
         "$person": {
           "setting": "habOccupants",
-          "index": 0
+          "index": 0,
+          "module": "habB"
         }
       },
       {
@@ -221,7 +239,8 @@
         },
         "$person": {
           "setting": "habOccupants",
-          "index": 1
+          "index": 1,
+          "module": "habB"
         }
       },
       {

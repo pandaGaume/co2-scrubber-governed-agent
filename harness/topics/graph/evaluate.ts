@@ -39,7 +39,7 @@ import type { TaskFile } from "../../core/task.js";
 import { combinations, resolveSpec, type Row, type Spec, type Variables } from "./params.js";
 import { estimatorFor, type Bounds } from "./fit.js";
 import { CABIN_DOCUMENT_FILE } from "../../../lib/paths.js";
-import { instantiateTemplate, loadGraphLibrary, type GraphTemplate } from "../../../lib/graph-library.js";
+import { instantiateTemplate, loadGraphLibrary, type DeviceLike, type GraphTemplate, type PersonSpec } from "../../../lib/graph-library.js";
 import { compareStructure, referenceOfDocument, referenceOfSpec, type ReferenceGraph, type StructureComparison } from "./reference.js";
 
 /** The library graph a candidate is compared with when the request names none: the station's reference. */
@@ -118,6 +118,10 @@ export interface Candidate {
     settings?: Record<string, number>;
     /** The variables the builder did not name, taken at the graph's defaults. */
     defaulted?: string[];
+    /** The variables the registered device gave (the task's observations carry the register's devices). */
+    fromDevice?: Record<string, { path: string; property: string; value: number }>;
+    /** Who is on board in this candidate. */
+    persons?: PersonSpec[];
     /** The candidate against the station's twin, by types and typed connections. */
     reference?: StructureComparison;
     at: string;
@@ -149,6 +153,8 @@ export interface EvaluateInput {
     graph?: string;
     /** The settings of a library graph (who is on board); its defaults when absent. */
     settings?: Record<string, number>;
+    /** Who is on board, person by person (module, activity; id, callsign, name when known): replaces the graph's roster, the settings follow. */
+    persons?: PersonSpec[];
     /** What is judged against what; a library graph's own probes and columns when absent. */
     compare?: Compare[];
     variables?: Variables;
@@ -296,7 +302,13 @@ export interface EvaluateContext {
 }
 
 /** A library graph as the twin will build it: read through the library slot, instantiated with what the builder gave. */
-async function instantiateFromLibrary(input: EvaluateInput, ctx: EvaluateContext): Promise<{ spec: Spec; variables: Variables; settings: Record<string, number>; defaulted: string[]; compare: Compare[] }> {
+/** The register's devices, when the task's observations carry them (`observations.devices`, as `station.registry_list` gives them). */
+function devicesOf(task: TaskFile["task"]): DeviceLike[] {
+    const raw = (task.observations as { devices?: unknown } | undefined)?.devices;
+    return Array.isArray(raw) ? (raw as DeviceLike[]).filter((d) => d && typeof d.path === "string" && d.descriptor && typeof d.descriptor === "object") : [];
+}
+
+async function instantiateFromLibrary(input: EvaluateInput, ctx: EvaluateContext): Promise<{ spec: Spec; variables: Variables; settings: Record<string, number>; defaulted: string[]; fromDevice: Candidate["fromDevice"]; persons: PersonSpec[]; compare: Compare[] }> {
     const read = await ctx.broker.call("library", "graph", { id: input.graph });
     if (!read.ok) throw new Error(`the library has no graph "${String(input.graph)}": ${brief(read.error ?? read.outcome)}`);
     const template = (read.output as { template?: GraphTemplate }).template;
@@ -304,17 +316,17 @@ async function instantiateFromLibrary(input: EvaluateInput, ctx: EvaluateContext
     // The variables the builder fits are not defaulted: they are searched.
     const searched = [...Object.keys(input.fit ?? {}), ...Object.keys(input.vary ?? {})];
     const given = { ...(input.variables ?? {}) };
-    const inst = instantiateTemplate(template, { variables: given, settings: input.settings });
+    const inst = instantiateTemplate(template, { variables: given, settings: input.settings, persons: input.persons, devices: devicesOf(ctx.task) });
     const variables: Variables = {};
     for (const [k, v] of Object.entries(inst.variables)) if (!searched.includes(k)) variables[k] = v;
     const defaulted = inst.defaulted.filter((k) => !searched.includes(k));
     for (const k of searched) {
         const t = template.variables[k];
         const b = input.fit?.[k];
-        if (t && b && t.status === "known") throw new Error(`"${k}" is a known constant of graph "${template.id}" (${t.source ?? "documented"}): held at ${t.default}${t.unit ? ` ${t.unit}` : ""}, never fitted`);
+        if (t && b && (t.status === "known" || t.status === "device")) throw new Error(`"${k}" is a ${t.status === "device" ? "device's own number" : "known constant"} of graph "${template.id}" (${t.source ?? "documented"}): held at ${inst.variables[k]}${t.unit ? ` ${t.unit}` : ""}, never fitted`);
         if (t && b && typeof t.min === "number" && typeof t.max === "number" && (b.min < t.min || b.max > t.max)) throw new Error(`"${k}" searched over ${b.min} to ${b.max}, but graph "${template.id}" bounds it to ${t.min} to ${t.max}${t.unit ? ` ${t.unit}` : ""} (${t.source ?? "its template"})`);
     }
-    return { spec: inst.spec as Spec, variables, settings: inst.settings, defaulted, compare: input.compare?.length ? input.compare : inst.compare };
+    return { spec: inst.spec as Spec, variables, settings: inst.settings, defaulted, fromDevice: inst.fromDevice, persons: inst.persons, compare: input.compare?.length ? input.compare : inst.compare };
 }
 
 export async function evaluateCandidate(input: EvaluateInput, ctx: EvaluateContext): Promise<{ candidate: Candidate; profile: Array<{ minute: number; predicted: number | null; measured: number | null }>; ranking: Array<{ variables: Variables; score: number }> }> {
@@ -408,7 +420,7 @@ export async function evaluateCandidate(input: EvaluateInput, ctx: EvaluateConte
         fitted: Object.keys(input.fit ?? input.vary ?? {}),
         estimator: hasFit ? estimatorFor(input.estimator).id : hasVary ? "grid (values given)" : "given",
         warnings: [],
-        ...(shelf ? { graph: input.graph, settings: shelf.settings, defaulted: shelf.defaulted } : {}),
+        ...(shelf ? { graph: input.graph, settings: shelf.settings, defaulted: shelf.defaulted, fromDevice: shelf.fromDevice, persons: shelf.persons } : {}),
         at: new Date().toISOString(),
     };
     const first = compare[0];
@@ -444,7 +456,7 @@ export const evaluationOutput = (r: Awaited<ReturnType<typeof evaluateCandidate>
         pass: r.candidate.pass,
         threshold: r.candidate.threshold,
         variables: r.candidate.variables,
-        ...(r.candidate.graph ? { graph: r.candidate.graph, settings: r.candidate.settings, defaulted: r.candidate.defaulted } : {}),
+        ...(r.candidate.graph ? { graph: r.candidate.graph, settings: r.candidate.settings, defaulted: r.candidate.defaulted, fromDevice: r.candidate.fromDevice, persons: r.candidate.persons } : {}),
         residuals: r.candidate.residuals,
         ...(r.candidate.early ? { firstSlope: r.candidate.early } : {}),
         ...(r.candidate.warnings.length ? { warnings: r.candidate.warnings } : {}),

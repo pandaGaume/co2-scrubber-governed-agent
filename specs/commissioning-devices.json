@@ -1,43 +1,118 @@
 {
-    "_comment": "The five lines of the commissioning scene (docs/mise-en-service.fr.md, section 5): what registers on Mother's register when the Lab's scrubber is plugged in. Descriptors in the shape of a W3C Thing Description reduced to what the demo reads. The scrubber's air flow at full speed (0.055 m3/s) and its effective flow (air flow times the single-pass efficiency of 0.30: 1.0 m3/min) are the datasheet's (docs/library/scrubber-1-datasheet.md), until the board publishes its own. Read by the tests and by whoever rehearses the scene; the real board will register itself.",
-    "devices": [
-        {
-            "path": "/habitat/lab/eclss/scrubber-1",
-            "descriptor": {
-                "@type": "Scrubber",
-                "title": "CO2 scrubber",
-                "properties": {
-                    "speed": { "quantity": "Ratio", "unit": "percent" },
-                    "current": { "quantity": "Current", "unit": "A", "readOnly": true },
-                    "flowAtFull": { "quantity": "VolumetricFlow", "unit": "m3ps", "readOnly": true, "value": 0.055 },
-                    "effectiveFlowAtFull": { "quantity": "VolumetricFlow", "unit": "m3ps", "readOnly": true, "value": 0.016667 }
-                },
-                "actions": ["set_speed", "power", "set_min_flow"]
-            }
-        },
-        {
-            "path": "/habitat/lab/eclss/co2-1",
-            "descriptor": { "@type": "Co2Sensor", "title": "CO2 sensor", "properties": { "co2": { "quantity": "Concentration", "unit": "ppm", "readOnly": true } } }
-        },
-        {
-            "path": "/habitat/lab/hatch-1",
-            "descriptor": {
-                "@type": "Hatch",
-                "title": "Hatch",
-                "properties": { "state": { "quantity": "State", "unit": "open|closed", "readOnly": true } },
-                "links": [
-                    { "rel": "connects", "href": "/habitat/lab" },
-                    { "rel": "connects", "href": "/habitat/hab-b" }
-                ]
-            }
-        },
-        {
-            "path": "/habitat/hab-b/eclss/co2-2",
-            "descriptor": { "@type": "Co2Sensor", "title": "CO2 sensor", "properties": { "co2": { "quantity": "Concentration", "unit": "ppm", "readOnly": true } } }
-        },
-        {
-            "path": "/habitat/power/battery-1",
-            "descriptor": { "@type": "Battery", "title": "Battery", "properties": { "stateOfCharge": { "quantity": "Ratio", "unit": "percent", "readOnly": true } } }
-        }
+ "_comment": "The five lines of the commissioning scene (docs/mise-en-service.fr.md, section 5): what registers on Mother's register when the Lab's scrubber is plugged in. Descriptors in the shape of a W3C Thing Description reduced to what the demo reads. The scrubber's air flow at full speed (0.055 m3/s) and its effective flow (air flow times the single-pass efficiency of 0.30: 1.0 m3/min) are the datasheet's (docs/library/scrubber-1-datasheet.md), until the board publishes its own. Read by the tests and by whoever rehearses the scene; the real board will register itself. Since 2026-09-25 the scrubber's descriptor also carries its single-pass efficiency and its lag: the numbers a twin of this device takes from the register, not from the datasheet's default (lib/graph-library.ts, a variable bound to a device).",
+ "devices": [
+  {
+   "path": "/habitat/lab/eclss/scrubber-1",
+   "descriptor": {
+    "@type": "Scrubber",
+    "title": "CO2 scrubber",
+    "properties": {
+     "speed": {
+      "quantity": "Ratio",
+      "unit": "percent"
+     },
+     "current": {
+      "quantity": "Current",
+      "unit": "A",
+      "readOnly": true
+     },
+     "flowAtFull": {
+      "quantity": "VolumetricFlow",
+      "unit": "m3ps",
+      "readOnly": true,
+      "value": 0.055
+     },
+     "effectiveFlowAtFull": {
+      "quantity": "VolumetricFlow",
+      "unit": "m3ps",
+      "readOnly": true,
+      "value": 0.016667
+     },
+     "singlePassEfficiency": {
+      "quantity": "Ratio",
+      "unit": "ratio",
+      "readOnly": true,
+      "value": 0.30303
+     },
+     "lagTimeConstant": {
+      "quantity": "Time",
+      "unit": "min",
+      "readOnly": true,
+      "value": 3.33
+     }
+    },
+    "actions": [
+     "set_speed",
+     "power",
+     "set_min_flow"
     ]
+   }
+  },
+  {
+   "path": "/habitat/lab/eclss/co2-1",
+   "descriptor": {
+    "@type": "Co2Sensor",
+    "title": "CO2 sensor",
+    "properties": {
+     "co2": {
+      "quantity": "Concentration",
+      "unit": "ppm",
+      "readOnly": true
+     }
+    }
+   }
+  },
+  {
+   "path": "/habitat/lab/hatch-1",
+   "descriptor": {
+    "@type": "Hatch",
+    "title": "Hatch",
+    "properties": {
+     "state": {
+      "quantity": "State",
+      "unit": "open|closed",
+      "readOnly": true
+     }
+    },
+    "links": [
+     {
+      "rel": "connects",
+      "href": "/habitat/lab"
+     },
+     {
+      "rel": "connects",
+      "href": "/habitat/hab-b"
+     }
+    ]
+   }
+  },
+  {
+   "path": "/habitat/hab-b/eclss/co2-2",
+   "descriptor": {
+    "@type": "Co2Sensor",
+    "title": "CO2 sensor",
+    "properties": {
+     "co2": {
+      "quantity": "Concentration",
+      "unit": "ppm",
+      "readOnly": true
+     }
+    }
+   }
+  },
+  {
+   "path": "/habitat/power/battery-1",
+   "descriptor": {
+    "@type": "Battery",
+    "title": "Battery",
+    "properties": {
+     "stateOfCharge": {
+      "quantity": "Ratio",
+      "unit": "percent",
+      "readOnly": true
+     }
+    }
+   }
+  }
+ ]
 }

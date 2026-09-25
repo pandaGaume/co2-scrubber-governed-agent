@@ -13,9 +13,9 @@
                 "L": "the filter's loading, kg of dust: what the inter-module ventilation delivers, through the fan's curve against the filter's resistance; 0 is a clean filter at the design flow (3 m3/min), 0.127 about two thirds of it; fitted",
                 "g": "the CO2 an operator at light work produces, L/min: NASA's band for a crewmember awake, 0.26 to 0.45, reference 0.38; placed within the band",
                 "gRest": "the CO2 a person at rest produces, L/min: between asleep and awake, 0.30 for the reference crewmember; known",
-                "Qe": "the scrubber's effective flow at full command, m3/min: its air flow times its single-pass efficiency, 1.0 on the bench; known, from the datasheet",
-                "eta": "the scrubber's single-pass removal efficiency, 0.30 at nominal bed temperature; known, from the datasheet",
-                "lag": "the time constant of the scrubber's response to a change of command, minutes; known, from the datasheet",
+                "Qe": "the scrubber's effective flow at full command, m3/min: its air flow times its single-pass efficiency; the registered scrubber's own number (effectiveFlowAtFull) when the task carries the register, the datasheet's 1.0 otherwise; held, never fitted",
+                "eta": "the scrubber's single-pass removal efficiency; the registered scrubber's own number (singlePassEfficiency) when the task carries the register, the datasheet's 0.30 otherwise; held",
+                "lag": "the time constant of the scrubber's response to a change of command, minutes; the registered scrubber's own number (lagTimeConstant) when the task carries the register, the datasheet's 3.33 otherwise; held",
                 "labOccupants": "how many people are in the Lab: the roster's operators first (FE-1, FE-2 at light work), unnamed people at light work beyond them",
                 "habOccupants": "how many people are in Hab-B: the roster's first (CDR, FE-3 at rest), unnamed people at rest beyond them"
             }

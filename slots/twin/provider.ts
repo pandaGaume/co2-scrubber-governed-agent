@@ -27,6 +27,8 @@ import { pushEvents, runtimeEvents } from "../lib/events.js";
 import { WorkshopDocumentStore } from "../tools/lib/workshop.js";
 import { checkCrew, round, runCabin, stateName, steadyStatePpm, summarize, twin, type CabinRow, type RunSummary, type Thresholds, type Twin } from "./cabin-twin.js";
 import { param, type CommandSegment, type CrewGroup } from "../../lib/factory.js";
+import { checkPersons, runHabitatTwin } from "./habitat-twin.js";
+import type { HabitatRow } from "../../lib/habitat.js";
 
 const CREW_SCHEMA = {
     type: "array",
@@ -180,6 +182,64 @@ export function twinSlot(wsBase: string, log: (line: string) => void): Published
                         steadyStatePpmAtFlow: Math.round(steadyStatePpm(crew, stop > 0 ? resume : flow)),
                         trajectory: rows.filter((r) => r.minute % every === 0 || r.minute === rows.length).map((r) => ({ minute: r.minute, co2Ppm: Math.round(r.co2Ppm), state: stateName(r.state) })),
                         identity: loadOnce().identity,
+                    };
+                },
+            },
+            {
+                name: "habitat_run",
+                title: "The habitat twin, with who is on board",
+                description:
+                    "The station's reference twin (the library's habitat graph: the Lab and Hab-B in mass, the centralised scrubber, the inter-module ventilation through its filter, the persons by name) run for some minutes at a scrubber command, with an optional stop. Who is on board is given person by person (module and activity: the medical monitor's presence, or a what-if), the scrubber's own numbers from the register's devices, the installation's numbers as a commissioning fitted them (variables); each takes the reference's default when absent, and the answer says what it took by default. Per module: the peak, the final CO2, the minutes to ELEVATED and to CRITICAL, the curve every few minutes; what the ventilation delivered and what the scrubber removed.",
+                inputSchema: obj({
+                    persons: { type: "array", items: obj({ id: { type: "string" }, callsign: { type: "string" }, name: { type: "string" }, module: { type: "string", description: "lab or habB" }, activity: { type: "string", enum: ["sleep", "rest", "light_work", "heavy_work"] } }, ["module", "activity"]), description: "who is on board, one entry per person; the reference's roster when absent (two operators at light work in the Lab, two people at rest in Hab-B)" },
+                    devices: { type: "array", items: { type: "object" }, description: "the register's devices (station.registry_list): the scrubber's own effective flow, efficiency and lag; the datasheet's when absent" },
+                    variables: { type: "object", additionalProperties: { type: "number" }, description: "the installation's numbers as fitted (V, Vh, L, g...); the reference's when absent" },
+                    co2LabPpm: { type: "number", minimum: 0, description: "the Lab's CO2 at the start, ppm" },
+                    co2HabbPpm: { type: "number", minimum: 0, description: "Hab-B's CO2 at the start, ppm" },
+                    flowPercent: { type: "number", minimum: 0, maximum: 100, description: "scrubber command during the run (before a stop)" },
+                    stopMinutes: { type: "number", minimum: 0, description: "stop the scrubber at minute 0 for this long" },
+                    resumePercent: { type: "number", minimum: 0, maximum: 100, description: "command after the stop (default 100)" },
+                    horizonMinutes: { type: "number", minimum: 1, description: "how far to look (default 120)" },
+                }),
+                handle: (args) => {
+                    const persons = checkPersons(args.persons);
+                    const devices = Array.isArray(args.devices) ? (args.devices as never[]) : undefined;
+                    const variables = args.variables && typeof args.variables === "object" ? (Object.fromEntries(Object.entries(args.variables as Record<string, unknown>).filter(([, v]) => typeof v === "number" && Number.isFinite(v))) as Record<string, number>) : undefined;
+                    const flow = num(args.flowPercent, 100) / 100;
+                    const stop = num(args.stopMinutes, 0);
+                    const resume = num(args.resumePercent, 100) / 100;
+                    const horizon = Math.ceil(num(args.horizonMinutes, 120));
+                    checkMinutes(horizon);
+                    const command: CommandSegment[] = stop > 0 ? [{ from: 0, to: stop, value: 0 }, { from: stop, to: horizon, value: resume }] : [{ from: 0, to: horizon, value: flow }];
+                    const answer = runHabitatTwin({ persons, devices, variables, command, minutes: horizon, labPpm: typeof args.co2LabPpm === "number" ? args.co2LabPpm : undefined, habbPpm: typeof args.co2HabbPpm === "number" ? args.co2HabbPpm : undefined });
+                    const { thresholds } = loadOnce();
+                    const moduleSummary = (key: "co2_lab_ppm" | "co2_habb_ppm") => {
+                        let peak = answer.rows[0];
+                        let elevated: number | null = null;
+                        let critical: number | null = null;
+                        for (const r of answer.rows) {
+                            if (r[key] > peak[key]) peak = r;
+                            if (elevated === null && r[key] >= thresholds.elevatedPpm) elevated = r.minute;
+                            if (critical === null && r[key] >= thresholds.criticalPpm) critical = r.minute;
+                        }
+                        const last = answer.rows[answer.rows.length - 1];
+                        return { startPpm: Math.round(answer.rows[0][key]), peakPpm: Math.round(peak[key]), peakAtMinute: peak.minute, finalPpm: Math.round(last[key]), minutesToElevated: elevated, minutesToCritical: critical };
+                    };
+                    const every = Math.max(1, Math.round(horizon / 12));
+                    const last = answer.rows[answer.rows.length - 1];
+                    const question = { persons: answer.persons, flowPercent: flow * 100, stopMinutes: stop, resumePercent: resume * 100, horizonMinutes: horizon, co2LabPpm: answer.rows[0].co2_lab_ppm, co2HabbPpm: answer.rows[0].co2_habb_ppm };
+                    return {
+                        question,
+                        graph: answer.graph,
+                        variables: answer.variables,
+                        defaulted: answer.defaulted,
+                        fromDevice: answer.fromDevice,
+                        lab: moduleSummary("co2_lab_ppm"),
+                        habB: moduleSummary("co2_habb_ppm"),
+                        ventilationM3PerMinute: Number(last.fan_m3_per_min.toFixed(2)),
+                        scrubberRemovedKg: Number((answer.rows.reduce((s, r) => s + r.scrubber_removal_kgps, 0) * 60).toFixed(4)),
+                        trajectory: answer.rows.filter((r: HabitatRow) => r.minute % every === 0 || r.minute === horizon).map((r) => ({ minute: r.minute, labPpm: Math.round(r.co2_lab_ppm), habBPpm: Math.round(r.co2_habb_ppm), speedPercent: r.speed_percent })),
+                        thresholds,
                     };
                 },
             },

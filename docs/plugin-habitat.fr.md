@@ -189,6 +189,34 @@ rend en français à une session `claude:fr` (le défaut de la langue, faute
 d'un fichier pour la famille) ; l'usine trouve le volume du Lab et le
 débit délivré par la charge du filtre.
 
+Deux choses qu'on change sur le graphe sans toucher à sa structure, depuis
+le 25 septembre au soir :
+
+- **Les nombres de l'épurateur sont ceux de l'appareil enregistré.** Les
+  variables `Qe`, `eta` et `lag` sont liées à un appareil (statut `device`,
+  `device: { type: "Scrubber", property: "effectiveFlowAtFull", scale: 60 }`
+  et ainsi de suite) : quand la tâche porte les appareils du registre
+  (`observations.devices`, ce que `station.registry_list` rend), le jumeau
+  prend le débit efficace, le rendement et le retard que le descripteur de
+  l'épurateur déclare (`specs/commissioning-devices.json` les porte depuis
+  le 25), et la réponse le dit (`fromDevice`) ; sans registre, les défauts
+  de la fiche. Tenus dans les deux cas, jamais ajustés : le jumeau d'un
+  épurateur est la référence avec les nombres de cet épurateur, et la mise
+  en service vérifie qu'ils tiennent (le résidu).
+- **Qui est à bord se donne personne par personne.** `persons` (module et
+  activité chacune ; identifiant, indicatif et nom quand le moniteur
+  médical les connaît) remplace le roster : un nœud par personne, cloné du
+  prototype de son module et branché sur l'équipage de ce module, les
+  réglages qui suivent, aucun anonyme. L'usine le prend dans
+  `observations.persons` (l'exemple les lit dans `biomed.presence`), le
+  constructeur scripté aussi, et le slot `twin` en fait une question :
+  `habitat_run` tourne le graphe avec les personnes données (ou le roster),
+  les appareils du registre, les variables d'une mise en service (celles du
+  candidat accepté), une commande d'épurateur et un horizon, et répond par
+  module (pic, final, minutes avant ELEVATED et CRITICAL, la courbe), en
+  disant ce qu'il a pris par défaut. C'est ainsi qu'on ajoute ou modifie la
+  présence et l'activité de l'équipage après coup, sans reconstruire.
+
 ## 4. Ce que ça change pour l'usine
 
 L'usine n'a plus à inventer la structure : la référence existe. Ce qui

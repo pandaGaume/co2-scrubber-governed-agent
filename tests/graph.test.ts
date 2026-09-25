@@ -35,10 +35,20 @@ import { labCandidate } from "../harness/scripted/graph.js";
 import { deliveredFlowM3PerMinute, readHabitatParameters } from "../lib/habitat.js";
 import { ScriptedGraphBuilder } from "../harness/scripted/graph.js";
 import { LAB_WORLD, twoZoneTelemetry } from "../harness/stand-in/two-zone-world.js";
+import { fromRoot } from "../lib/paths.js";
 import type { MotherLine } from "../slots/station/provider.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
 
 const PORT = 3123;
+/** The register's devices, as the scene registers them: the scrubber's own numbers go into the twin. */
+const DEVICES = (JSON.parse(readFileSync(fromRoot("specs", "commissioning-devices.json"), "utf8")) as { devices: unknown[] }).devices;
+/** Who is where during the test, as the medical monitor would say it. */
+const PERSONS = [
+    { id: "fe-1", callsign: "FE-1", name: "A. Pelletier", module: "lab", activity: "light_work" },
+    { id: "fe-2", callsign: "FE-2", name: "M. Chen", module: "lab", activity: "light_work" },
+    { id: "cdr", callsign: "CDR", name: "J. Picard", module: "hab-b", activity: "rest" },
+    { id: "fe-3", callsign: "FE-3", name: "G. La Forge", module: "hab-b", activity: "rest" },
+];
 const TELEMETRY = twoZoneTelemetry(LAB_WORLD, [
     { speedPercent: 30, minutes: 20 },
     { speedPercent: 100, minutes: 30 },
@@ -211,7 +221,7 @@ describe("the graph factory's loop on the gap, through the broker", () => {
         assert.ok(habitat, "the habitat graph is on the shelf");
         assert.equal(habitat!.wording, "default:en");
         assert.match(habitat!.description, /two-module lunar habitat/);
-        assert.equal(habitat!.variables.Qe.status, "known");
+        assert.equal(habitat!.variables.Qe.status, "device");
         assert.match(habitat!.variables.L.description, /filter's loading/);
         assert.ok(habitat!.probes.some((p) => p.node === "co2-1" && p.column === "co2_lab_ppm" && /sensor/.test(String(p.name))));
         const fr = await broker.call("library", "graphs", { grammar: "claude:fr" });
@@ -224,16 +234,36 @@ describe("the graph factory's loop on the gap, through the broker", () => {
         assert.ok(!missing.ok && /no graph "cabin"/.test(missing.error ?? ""));
         // The harness holds a library graph's known constants: a fit on one is refused before any run.
         const task = { objective: { required_outputs: [], constraints: { residualPpmMax: 10 } }, observations: {}, requirements: {} } as unknown as TaskFile["task"];
-        await assert.rejects(evaluateCandidate({ label: "x", graph: "habitat", fit: { Qe: { min: 0.5, max: 2 } } }, { broker, taskId: "t", task, rows: TELEMETRY as never, remaining: 40, n: 1 }), /"Qe" is a known constant of graph "habitat"/);
+        await assert.rejects(evaluateCandidate({ label: "x", graph: "habitat", fit: { Qe: { min: 0.5, max: 2 } } }, { broker, taskId: "t", task, rows: TELEMETRY as never, remaining: 40, n: 1 }), /"Qe" is a device's own number of graph "habitat"/);
         await assert.rejects(evaluateCandidate({ label: "x", graph: "habitat", fit: { V: { min: 1, max: 5000 } } }, { broker, taskId: "t", task, rows: TELEMETRY as never, remaining: 40, n: 1 }), /"V" searched over 1 to 5000, but graph "habitat" bounds it/);
         await assert.rejects(evaluateCandidate({ label: "x", spec: labCandidate(false) as never, graph: "habitat", compare: [] }, { broker, taskId: "t", task, rows: TELEMETRY as never, remaining: 40, n: 1 }), /a spec or a library graph, not both/);
+    });
+
+    it("the twin slot runs the habitat graph with who is on board, the register's scrubber and a commissioning's numbers, and says what it took by default", async () => {
+        const base = await broker.call("twin", "habitat_run", { horizonMinutes: 30, flowPercent: 100 });
+        assert.ok(base.ok, base.error);
+        const b = base.output as { question: { persons: Array<{ callsign: string }> }; lab: { peakPpm: number; finalPpm: number; minutesToCritical: number | null }; habB: { finalPpm: number }; defaulted: string[]; fromDevice: Record<string, unknown>; trajectory: unknown[]; ventilationM3PerMinute: number };
+        assert.equal(b.question.persons.length, 4, "the roster when nobody is named");
+        assert.ok(b.defaulted.includes("Qe") && Object.keys(b.fromDevice).length === 0, "no register given: the datasheet's numbers, said as defaults");
+        assert.ok(b.trajectory.length >= 10 && Math.abs(b.ventilationM3PerMinute - 2.0) < 0.05);
+        // More people, harder at work: the Lab ends higher; the scrubber's numbers from the register, the volumes from a commissioning.
+        const crowd = await broker.call("twin", "habitat_run", { horizonMinutes: 30, flowPercent: 100, devices: DEVICES, variables: { V: 29.9, Vh: 439, L: 0.128 }, persons: [...PERSONS.slice(0, 2), { module: "lab", activity: "heavy_work" }, { module: "lab", activity: "heavy_work" }, ...PERSONS.slice(2)] });
+        assert.ok(crowd.ok, crowd.error);
+        const c = crowd.output as { question: { persons: unknown[] }; lab: { finalPpm: number }; defaulted: string[]; fromDevice: { Qe: { value: number } }; variables: { V: number } };
+        assert.equal(c.question.persons.length, 6);
+        assert.ok(c.lab.finalPpm > b.lab.finalPpm + 100, `${c.lab.finalPpm} ppm with two more at heavy work, ${b.lab.finalPpm} without`);
+        assert.ok(Math.abs(c.fromDevice.Qe.value - 1.0) < 1e-3 && !c.defaulted.includes("Qe") && c.variables.V === 29.9);
+        const wrong = await broker.call("twin", "habitat_run", { persons: [{ module: "garage", activity: "rest" }] });
+        assert.ok(!wrong.ok && /no module "garage"/.test(wrong.error ?? ""));
+        const bad = await broker.call("twin", "habitat_run", { persons: [{ module: "lab", activity: "nap" }] });
+        assert.ok(!bad.ok && /activity must be one of/.test(bad.error ?? ""));
     });
 
     it("the ventilation at its design flow is refused by its residual, the same graph with the filter's loading fitted holds and finds the world's volume and flow", async () => {
         const r = await broker.call("factory", "request", {
             // 10 ppm, a few times the sensors' noise: at 25 the design flow passes too (about 19 ppm, the volume compensating).
             objective: { required_outputs: [{ name: "predicted_co2", quantity: "Concentration", unit: "ppm" }], constraints: { residualPpmMax: 10 } },
-            observations: { labOccupants: 2 },
+            observations: { persons: PERSONS, devices: DEVICES },
             data: [{ file: "telemetry.json", rows: TELEMETRY }],
             requirements: { objective: "reproduce the Lab CO2 during the decay test", missing_information: ["the flow the inter-module ventilation delivers, hatch closed"] },
             budget: { iterations: 12, twinPoints: 200 },
@@ -252,8 +282,10 @@ describe("the graph factory's loop on the gap, through the broker", () => {
         const [nominal, coupled] = candidates;
         const alone = nominal;
         assert.equal(alone.graph, "habitat", "the library's graph, instantiated");
-        assert.deepEqual(alone.settings, { labOccupants: 2, habOccupants: 2 });
-        assert.deepEqual([...(alone.defaulted ?? [])].sort(), ["Qe", "eta", "gRest", "lag"], "the known constants at the graph's defaults");
+        assert.deepEqual(alone.settings, { labOccupants: 2, habOccupants: 2 }, "the settings follow the persons observed");
+        assert.deepEqual(alone.persons?.map((p) => `${p.callsign}@${p.module}:${p.activity}`), ["FE-1@lab:light_work", "FE-2@lab:light_work", "CDR@habB:rest", "FE-3@habB:rest"], "the persons observed are on board");
+        assert.ok(alone.fromDevice && Math.abs(alone.fromDevice.Qe.value - 1.0) < 1e-3 && alone.fromDevice.Qe.path === "/habitat/lab/eclss/scrubber-1", "the scrubber's own effective flow, from the register");
+        assert.deepEqual([...(alone.defaulted ?? [])].sort(), ["gRest"], "only the resting rate is a default: the scrubber's numbers are the device's");
         assert.equal(alone.pass, false);
         assert.ok(alone.residuals[0].rmse > 10, `the design flow: ${alone.residuals[0].rmse} ppm at V ${alone.variables.V}`);
         assert.equal(coupled.pass, true);

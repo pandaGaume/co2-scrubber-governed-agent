@@ -72,8 +72,9 @@ export class ScriptedGraphBuilder implements Provider {
         const { task } = this.options;
         const last = this.options.lastCall();
         const after = `${String(state.features.phase)}:${String(state.features.lastCapability)}`;
-        const observed = (task.observations ?? {}) as { labOccupants?: unknown; habOccupants?: unknown };
-        const settings = { labOccupants: Number(observed.labOccupants ?? 2), habOccupants: Number(observed.habOccupants ?? 2) };
+        const observed = (task.observations ?? {}) as { labOccupants?: unknown; habOccupants?: unknown; persons?: unknown };
+        // Who is on board: the persons the task observed (module and activity each), or the counts, or the graph's roster.
+        const onBoard = Array.isArray(observed.persons) && observed.persons.length ? { persons: observed.persons as JsonValue } : { settings: { labOccupants: Number(observed.labOccupants ?? 2), habOccupants: Number(observed.habOccupants ?? 2) } };
         // What the documentation gives beyond the graph's own defaults: the operators' rate as the station's page states it (inside NASA's band).
         const given = { g: 0.42 };
         if (last && !last.result.ok) return decide("task.fail", { reason: (last.result.error ?? last.result.outcome).replace(/^(device refused|error):\s*/i, "") }, `${last.id} failed: nothing else to try`);
@@ -83,12 +84,12 @@ export class ScriptedGraphBuilder implements Provider {
             case "plan:library.graphs":
                 return decide("task.plan", { selected_nodes: HABITAT_GRAPH_TYPES, missing_capabilities: [] }, "the station's reference graph: its types, nothing missing");
             case "build:task.plan":
-                return decide("graph.evaluate", { label: "the habitat reference with a clean filter: the ventilation at its design flow", graph: STATION_GRAPH_ID, settings, variables: { ...given, L: 0 }, fit: VOLUMES } as unknown as JsonValue, "first candidate: the installation as designed, the volumes fitted");
+                return decide("graph.evaluate", { label: "the habitat reference with a clean filter: the ventilation at its design flow", graph: STATION_GRAPH_ID, ...onBoard, variables: { ...given, L: 0 }, fit: VOLUMES } as unknown as JsonValue, "first candidate: the installation as designed, the volumes fitted");
             default: {
                 const value = (last?.result.output ?? {}) as { value?: { pass?: boolean; candidate?: number; path?: string } };
                 const v = value.value ?? {};
                 if (last?.id === "graph.evaluate" && v.pass) return decide("task.done", { summary: `candidate ${v.candidate} holds the residual threshold`, artifacts: [{ kind: "graph", path: v.path ?? "" }] }, "the candidate holds");
-                return decide("graph.evaluate", { label: "the habitat reference with the filter's loading fitted: what the ventilation delivers, measured", graph: STATION_GRAPH_ID, settings, variables: given, fit: { ...VOLUMES, L: { min: 0, max: 0.2 } } } as unknown as JsonValue, "the gap the design flow cannot close: fit what the ventilation actually delivers, through the filter's loading");
+                return decide("graph.evaluate", { label: "the habitat reference with the filter's loading fitted: what the ventilation delivers, measured", graph: STATION_GRAPH_ID, ...onBoard, variables: given, fit: { ...VOLUMES, L: { min: 0, max: 0.2 } } } as unknown as JsonValue, "the gap the design flow cannot close: fit what the ventilation actually delivers, through the filter's loading");
             }
         }
     }
