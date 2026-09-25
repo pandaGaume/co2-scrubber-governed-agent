@@ -568,6 +568,13 @@ ne lit pas seulement le monde, son registre dit ce qu'il peut y changer.
 Ce que le registre ne dit pas, et ne dira pas : qui a le droit. La
 politique du courtier et l'autorisation du commandant restent en place ;
 le commandable est l'espace où l'expérience est choisie, pas une licence
-d'agir. L'ordre convenu s'en trouve déplacé : la forge d'abord, puis cette
+d'agir. Par la suite, les objets physiques publieront une Thing Description
+du W3C (WoT) et le commandable en sera lu au lieu d'être déclaré : une
+propriété inscriptible (une forme `writeproperty`, la plage et l'unité dans
+son schéma de données) ou une action dont le schéma d'entrée porte la plage
+et règle une propriété. Il ne manquera qu'un traducteur de la TD vers le
+descripteur actuel ; la garde s'appliquera à son résultat. Les définitions
+de sécurité de la TD disent comment s'authentifier, pas qui a le droit de
+commander. L'ordre convenu s'en trouve déplacé : la forge d'abord, puis cette
 chaîne (identifiabilité, insuffisance, expérience choisie parmi les
 interventions) avant le onnx sur l'état.

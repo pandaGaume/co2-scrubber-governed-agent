@@ -29,6 +29,14 @@
  * only published. The harness reads the commandable properties as the
  * interventions it can propose (an experiment that discriminates two
  * hypotheses is chosen among them), never as a licence to act.
+ *
+ * The day the things publish a full W3C Thing Description, `commandable`
+ * is read from it rather than declared here: a writable property (a form
+ * with `writeproperty`, its data schema's minimum, maximum, enum, unit) or
+ * an action whose input schema carries the range and sets a property. A
+ * translator from the TD to this descriptor is all that is needed; the
+ * guard below applies to its result. The TD's security definitions say how
+ * to authenticate, not who may command: that stays with the policy.
  */
 
 /** How a property is commanded: the action of the device that sets it, and the range it accepts when the device says one (states for a discrete one). */
