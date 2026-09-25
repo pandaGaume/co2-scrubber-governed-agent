@@ -7,7 +7,10 @@
  * the parameter file and of the document, and the flows the graph delivers
  * at rest (the ventilation with the file's filter, and with a clean one),
  * so the document names the assumptions it was built with and what they
- * imply.
+ * imply. And `graphs/habitat.template.json`, the same graph as the library
+ * holds it for the graph factory: a parametric spec with its variables,
+ * its settings and its probes (`lib/graph-library.ts`); its words are in
+ * `graphs/habitat.grammars/`, written by hand.
  *
  *     node dist/scripts/build-habitat-graph.js [graphs/habitat.spikypanda]
  */
@@ -16,9 +19,10 @@ import * as path from "node:path";
 import { sha256File } from "../lib/files.js";
 import { fromRoot, isMain, relativeToRoot } from "../lib/paths.js";
 import { buildRegistry } from "../lib/registry.js";
-import { buildHabitatDocument, HABITAT_DOCUMENT_FILE, HABITAT_MANIFEST_FILE, HABITAT_PARAMETERS_FILE, readHabitatParameters, runHabitat } from "../lib/habitat.js";
+import { buildHabitatDocument, habitatTemplate, HABITAT_DOCUMENT_FILE, HABITAT_MANIFEST_FILE, HABITAT_PARAMETERS_FILE, HABITAT_TEMPLATE_FILE, readHabitatParameters, runHabitat } from "../lib/habitat.js";
+import { loadGraphLibrary } from "../lib/graph-library.js";
 
-export function buildHabitatGraph(outFile = HABITAT_DOCUMENT_FILE): { document: string; manifest: string } {
+export function buildHabitatGraph(outFile = HABITAT_DOCUMENT_FILE): { document: string; manifest: string; template: string } {
     const parameters = readHabitatParameters();
     const registry = buildRegistry();
     const { json, spec } = buildHabitatDocument({}, parameters, registry);
@@ -40,8 +44,14 @@ export function buildHabitatGraph(outFile = HABITAT_DOCUMENT_FILE): { document: 
     };
     const manifestFile = outFile === HABITAT_DOCUMENT_FILE ? HABITAT_MANIFEST_FILE : outFile.replace(/\.spikypanda$/, ".manifest.json");
     writeFileSync(manifestFile, JSON.stringify(manifest, null, 2) + "\n");
-    console.log(`${relativeToRoot(outFile)}: ${spec.nodes.length} nodes, ${spec.connections.length} connections; the ventilation delivers ${manifest.ventilation.deliveredM3PerMinute} m3/min (${manifest.ventilation.withCleanFilterM3PerMinute} with a clean filter)`);
-    return { document: outFile, manifest: manifestFile };
+    // The template for the library, next to the document; its grammars are checked against it at once.
+    const templateFile = outFile === HABITAT_DOCUMENT_FILE ? HABITAT_TEMPLATE_FILE : outFile.replace(/\.spikypanda$/, ".template.json");
+    const template = habitatTemplate(parameters);
+    writeFileSync(templateFile, JSON.stringify(template, null, 2) + "\n");
+    const shelf = loadGraphLibrary(path.dirname(templateFile)).find((g) => g.template.id === template.id);
+    if (shelf?.problems.length) throw new Error(`the words of ${relativeToRoot(templateFile)} do not match it: ${shelf.problems.join("; ")}`);
+    console.log(`${relativeToRoot(outFile)}: ${spec.nodes.length} nodes, ${spec.connections.length} connections; the ventilation delivers ${manifest.ventilation.deliveredM3PerMinute} m3/min (${manifest.ventilation.withCleanFilterM3PerMinute} with a clean filter); ${relativeToRoot(templateFile)}: ${Object.keys(template.variables).length} variables, ${Object.keys(template.settings).length} settings, ${template.probes.length} probes, words in ${shelf?.grammarFiles.map((f) => f.key).join(", ") ?? "none"}`);
+    return { document: outFile, manifest: manifestFile, template: templateFile };
 }
 
 if (isMain(import.meta.url)) {

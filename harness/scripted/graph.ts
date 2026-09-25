@@ -5,21 +5,26 @@
  * to (`builder: "scripted"`), and the manifest names it.
  *
  * It plays the two candidates of the commissioning (mise-en-service.fr.md,
- * section 11), so the loop can be watched without a key: the catalogue, the
- * plan, a first candidate with the Lab and the inter-module ventilation at
- * its design flow (the volume fitted), refused by its residual; a second
- * with the same structure and the ventilation's flow fitted, accepted; the
- * claim. The structure is the design's from the start: the scrubber is
- * centralised and serves Hab-B through the ventilation, so a Lab without
- * exchange is not a candidate; what the test finds is how much the
- * ventilation delivers. It decides from what it
- * observes (the phase, the last capability, the last evaluation), like the
- * other scripts.
+ * section 11) on the station's reference graph of the library: the
+ * catalogue, the plan, a first candidate that instantiates the habitat
+ * graph with a clean filter (the ventilation at its design flow, the two
+ * volumes fitted), refused by its residual; a second with the same graph
+ * and the filter's loading fitted as well (what the ventilation delivers,
+ * measured), accepted; the claim. The structure is the reference's from
+ * the start: the scrubber is centralised and serves Hab-B through the
+ * ventilation, so what the test finds is how much the ventilation
+ * delivers. It decides from what it observes (the phase, the last
+ * capability, the last evaluation), like the other scripts.
+ *
+ * `labCandidate` is the older form, the same commissioning written with the
+ * substrate's life-support nodes (rates folded on a volume): kept for the
+ * tests of the parametric spec and for comparison.
  */
 import type { JsonValue, PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
 import type { Provider, ProviderExchange } from "../lib/provider.js";
 import type { CapabilityCall } from "../core/capabilities.js";
 import type { TaskFile } from "../core/task.js";
+import { STATION_GRAPH_ID } from "../topics/graph/evaluate.js";
 
 export interface ScriptedGraphOptions {
     task: TaskFile["task"];
@@ -28,7 +33,7 @@ export interface ScriptedGraphOptions {
 
 const decide = (capabilityId: string, input: JsonValue, rationale: string): PolicyDecision => ({ action: { id: capabilityId, description: capabilityId }, invocation: { actionId: capabilityId, capabilityId, input }, rationale });
 
-/** The Lab: its crew, the scrubber on the measured speed, the air; with the exchange when asked. */
+/** The Lab with the substrate's life-support nodes: its crew, the scrubber on the measured speed, the air; with the exchange when asked. */
 export function labCandidate(exchange: boolean): JsonValue {
     const nodes: JsonValue[] = [
         { id: "crew", typeId: "Physics.LifeSupport:crew", params: { count: { $expr: "N" }, activity: "light_work", emissionLightWorkPpmPerMinute: { $expr: "g * 1e3 / V" } } },
@@ -48,6 +53,12 @@ export function labCandidate(exchange: boolean): JsonValue {
     return { nodes, connections };
 }
 
+/** The types the reference graph is made of, as the plan names them. */
+export const HABITAT_GRAPH_TYPES = ["Physics.Scene:atmosphere", "Physics.Scene:atmosphere-gate", "Physics.Habitat:person", "Physics.Habitat:crew", "Physics.Habitat:scrubber", "Physics.Habitat:fan", "Physics.Habitat:filter", "DSP.Sensor:transducer", "Logic.Time:timeline"];
+
+/** The bounds of what only the installation knows: the two volumes; the filter's loading when the flow is measured. */
+const VOLUMES = { V: { min: 10, max: 100 }, Vh: { min: 50, max: 1000 } };
+
 export class ScriptedGraphBuilder implements Provider {
     readonly name = "scripted:graph";
     readonly model = "scripted/graph";
@@ -61,25 +72,23 @@ export class ScriptedGraphBuilder implements Provider {
         const { task } = this.options;
         const last = this.options.lastCall();
         const after = `${String(state.features.phase)}:${String(state.features.lastCapability)}`;
-        const occupants = Number((task.observations as { labOccupants?: unknown })?.labOccupants ?? 2);
-        // What the documentation gives: the scrubber's effective flow and lag (its datasheet), the crew and their rate (the station's page).
-        const fixed = { N: occupants, g: 0.42, Qe: 1.0, lag: 3.33 };
-        // The ventilation's design flow, hatch closed (the station's topology).
-        const qNominal = 3.0;
-        const compare = [{ node: "lab", property: "co2Ppm", column: "co2_lab_ppm" }];
+        const observed = (task.observations ?? {}) as { labOccupants?: unknown; habOccupants?: unknown };
+        const settings = { labOccupants: Number(observed.labOccupants ?? 2), habOccupants: Number(observed.habOccupants ?? 2) };
+        // What the documentation gives beyond the graph's own defaults: the operators' rate as the station's page states it (inside NASA's band).
+        const given = { g: 0.42 };
         if (last && !last.result.ok) return decide("task.fail", { reason: (last.result.error ?? last.result.outcome).replace(/^(device refused|error):\s*/i, "") }, `${last.id} failed: nothing else to try`);
         switch (after) {
             case "plan:":
-                return decide("twin.registry_search", { requiredOutputs: task.objective.required_outputs.map((o) => ({ quantity: o.quantity, ...(o.unit ? { unit: o.unit } : {}) })) }, "which node types produce the outputs");
-            case "plan:twin.registry_search":
-                return decide("task.plan", { selected_nodes: ["Physics.LifeSupport:cabin-air", "Physics.LifeSupport:crew", "Physics.LifeSupport:scrubber", "Logic.Time:timeline"], missing_capabilities: [] }, "a cabin, its crew, its scrubber, the measured command");
+                return decide("library.graphs", {}, "which reference graphs the library holds");
+            case "plan:library.graphs":
+                return decide("task.plan", { selected_nodes: HABITAT_GRAPH_TYPES, missing_capabilities: [] }, "the station's reference graph: its types, nothing missing");
             case "build:task.plan":
-                return decide("graph.evaluate", { label: "the Lab and the inter-module ventilation at its design flow", spec: labCandidate(true), compare, variables: { ...fixed, q: qNominal }, fit: { V: { min: 10, max: 100 } } } as unknown as JsonValue, "first candidate: the installation as designed");
+                return decide("graph.evaluate", { label: "the habitat reference with a clean filter: the ventilation at its design flow", graph: STATION_GRAPH_ID, settings, variables: { ...given, L: 0 }, fit: VOLUMES } as unknown as JsonValue, "first candidate: the installation as designed, the volumes fitted");
             default: {
                 const value = (last?.result.output ?? {}) as { value?: { pass?: boolean; candidate?: number; path?: string } };
                 const v = value.value ?? {};
                 if (last?.id === "graph.evaluate" && v.pass) return decide("task.done", { summary: `candidate ${v.candidate} holds the residual threshold`, artifacts: [{ kind: "graph", path: v.path ?? "" }] }, "the candidate holds");
-                return decide("graph.evaluate", { label: "the Lab and the inter-module ventilation, its delivered flow measured", spec: labCandidate(true), compare, variables: fixed, fit: { V: { min: 10, max: 100 }, q: { min: 0, max: 6 } } } as unknown as JsonValue, "the gap the design flow cannot close: fit what the ventilation actually delivers");
+                return decide("graph.evaluate", { label: "the habitat reference with the filter's loading fitted: what the ventilation delivers, measured", graph: STATION_GRAPH_ID, settings, variables: given, fit: { ...VOLUMES, L: { min: 0, max: 0.2 } } } as unknown as JsonValue, "the gap the design flow cannot close: fit what the ventilation actually delivers, through the filter's loading");
             }
         }
     }

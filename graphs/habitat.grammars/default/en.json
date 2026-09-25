@@ -1,0 +1,70 @@
+{
+    "server": {
+        "description": "The physical reference of the two-module lunar habitat: the Lab and Hab-B as two volumes of air in mass (the substrate's atmosphere, ideal gas), four persons by name at their own activity wired into the crew of their module, the centralised CO2 scrubber in the Lab in its datasheet's units (a flow, an efficiency, a lag) drawing the Lab's air at the measured command, the inter-module ventilation as a fan on its curve through a filter whose fouling sets what it delivers, the loop exchanging the two airs at that flow, the hatch closed, and the two CO2 sensors at the station's resolution. Built from specs/habitat-parameters.json, every constant with its source.",
+        "instructions": "Start from this graph, do not rebuild it: instantiate it and adapt its numbers. What the documentation gives is known and held at its default (the scrubber's Qe, eta and lag from its datasheet; the resting rate). What only the installation knows is fitted: the Lab's volume V, Hab-B's volume Vh, and the filter's loading L, which is what the ventilation delivers (0 is a clean filter at the design flow). The operators' rate g is a band: fit it within it. Set who is on board with labOccupants and habOccupants (the roster's persons first, unnamed beyond them). Judge it on the two sensors against the logger's columns."
+    },
+    "tools": {
+        "instantiate": {
+            "title": "Instantiate the habitat reference",
+            "description": "The habitat reference as a twin of this station: the variables below as formulas in its nodes, the settings shaping who is on board, the scrubber's command from the telemetry's speed column, the two volumes seeded from the first reading of their sensor.",
+            "properties": {
+                "V": "the Lab's volume, m3: the volume the scrubber serves, what the commissioning measures; fitted (the design drawing says 32, the racks take some)",
+                "Vh": "Hab-B's volume, m3: the living quarters and the rest of the pressurised volume, not documented as built; fitted",
+                "L": "the filter's loading, kg of dust: what the inter-module ventilation delivers, through the fan's curve against the filter's resistance; 0 is a clean filter at the design flow (3 m3/min), 0.127 about two thirds of it; fitted",
+                "g": "the CO2 an operator at light work produces, L/min: NASA's band for a crewmember awake, 0.26 to 0.45, reference 0.38; placed within the band",
+                "gRest": "the CO2 a person at rest produces, L/min: between asleep and awake, 0.30 for the reference crewmember; known",
+                "Qe": "the scrubber's effective flow at full command, m3/min: its air flow times its single-pass efficiency, 1.0 on the bench; known, from the datasheet",
+                "eta": "the scrubber's single-pass removal efficiency, 0.30 at nominal bed temperature; known, from the datasheet",
+                "lag": "the time constant of the scrubber's response to a change of command, minutes; known, from the datasheet",
+                "labOccupants": "how many people are in the Lab: the roster's operators first (FE-1, FE-2 at light work), unnamed people at light work beyond them",
+                "habOccupants": "how many people are in Hab-B: the roster's first (CDR, FE-3 at rest), unnamed people at rest beyond them"
+            }
+        }
+    },
+    "resources": {
+        "probe://co2-1.lastMeasured": {
+            "name": "The Lab's CO2 as its sensor reads it",
+            "description": "ppm, at the station's resolution: what the logger's co2_lab_ppm column records; the twin is judged on it"
+        },
+        "probe://co2-2.lastMeasured": {
+            "name": "Hab-B's CO2 as its sensor reads it",
+            "description": "ppm, at the station's resolution: what the logger's co2_habb_ppm column records; the twin is judged on it"
+        },
+        "probe://lab.ppm_CO2": {
+            "name": "The Lab's CO2",
+            "description": "ppm, the volume's own mole fraction, before the sensor"
+        },
+        "probe://habb.ppm_CO2": {
+            "name": "Hab-B's CO2",
+            "description": "ppm, the volume's own mole fraction, before the sensor"
+        },
+        "probe://fan.flowM3PerMinute": {
+            "name": "What the ventilation delivers",
+            "description": "m3/min, the fan's operating point against the duct and the filter: the number the commissioning is after"
+        },
+        "probe://filter.clogging": {
+            "name": "The filter's clogging",
+            "description": "0 clean to 1 at its end of life"
+        },
+        "probe://scrubber.flowM3ps": {
+            "name": "The scrubber's air flow",
+            "description": "m3/s through the beds, after the lag"
+        },
+        "probe://scrubber.removalKgps": {
+            "name": "What the scrubber removes",
+            "description": "kg of CO2 per second"
+        },
+        "probe://hvac.lastVolumetricFlow": {
+            "name": "The air exchanged between the modules",
+            "description": "m3/s each way through the ventilation loop, as the gate delivered it"
+        },
+        "probe://crew-lab.co2Delta": {
+            "name": "The Lab's crew",
+            "description": "kg of CO2 per second, the persons in the Lab together"
+        },
+        "probe://crew-habb.co2Delta": {
+            "name": "Hab-B's crew",
+            "description": "kg of CO2 per second, the persons in Hab-B together"
+        }
+    }
+}

@@ -42,6 +42,15 @@ An exchange flow q (m3/min) between the volume and a neighbour of concentration 
 - A best fit sitting at the edge of a range means the range is too narrow.
 - A gap that no value of the variables closes, largest in one phase of the test (the rise, the decay), means the structure lacks a term: a source, a sink, an exchange, a lag. Name the hypothesis in the candidate's label.
 
+## The station's reference graph, on the shelf
+
+Since 25 September the library holds the station's reference graph (`library.graphs`, id `habitat`; `graphs/habitat.spikypanda`, its template `habitat.template.json`, its words in `habitat.grammars/`): two volumes in mass, four persons by name at their own activity wired into the crew of their module, the scrubber in its datasheet's units, the ventilation as a fan through a filter whose loading sets what it delivers, the loop between the two airs, the hatch closed, the two sensors. A twin of this station starts from it: `graph.evaluate` with `graph: "habitat"`, `settings` for who is on board (`labOccupants`, `habOccupants`), `variables` for what is held, `fit` for the bounds of what only the installation knows.
+
+- Its known constants (`Qe`, `eta`, `lag` from the scrubber's datasheet, `gRest`) are held at their defaults and cannot be fitted.
+- What is fitted: `V` (the Lab's volume), `Vh` (Hab-B's), `L` (the filter's loading: what the ventilation delivers; 0 is a clean filter at the design flow). A band's variable (`g`, the operators' rate) is placed within its band.
+- Its probes are judged against the logger's columns without naming them: the two sensors (`co2-1.lastMeasured` against `co2_lab_ppm`, `co2-2.lastMeasured` against `co2_habb_ppm`).
+- The evaluation answers with the graph's id, the settings used and the variables taken at their defaults, beside the residual.
+
 ## The habitat's own nodes: mass, not folded rates
 
 Since 24 September the catalogue also holds the `Physics.Habitat:*` family (the repository's plugin, `plugins/habitat`), written for the physical reference of this station, `graphs/habitat.spikypanda`. Since 25 September the plugin holds only what the substrate lacked; the air, the gates and the dust are the substrate's own nodes. They work in mass and in the devices' own units, so no volume is folded into any rate:

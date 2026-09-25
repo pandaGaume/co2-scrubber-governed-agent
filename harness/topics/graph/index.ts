@@ -28,11 +28,11 @@ import type { LocalCapability } from "../../core/capabilities.js";
 import type { TaskFile } from "../../core/task.js";
 import type { TopicContext, TopicDefinition, Validation } from "../../core/topic.js";
 import type { DoneClaim, Progress, WorkshopFile } from "../../core/workspace-observer.js";
-import { evaluateCandidate, evaluationOutput, knownOf, stationReference, type Candidate, type EvaluateInput } from "./evaluate.js";
+import { evaluateCandidate, evaluationOutput, knownOf, STATION_GRAPH_ID, stationReference, type Candidate, type EvaluateInput } from "./evaluate.js";
 import { wiringLines } from "./reference.js";
 import type { Row } from "./params.js";
 
-export const GRAPH_TOOLS: ReadonlyArray<RegExp> = [/^workspace\.(list|read)$/, /^library\.(list|methods|search|read)$/, /^twin\.registry_(search|describe_node|list_nodes)$/, /^twin\.document_validate$/, /^graph\.evaluate$/, /^task\.(plan|done|fail)$/];
+export const GRAPH_TOOLS: ReadonlyArray<RegExp> = [/^workspace\.(list|read)$/, /^library\.(list|methods|search|read|graphs|graph)$/, /^twin\.registry_(search|describe_node|list_nodes)$/, /^twin\.document_validate$/, /^graph\.evaluate$/, /^task\.(plan|done|fail)$/];
 export const GRAPH_PROMPT = "harness/topics/graph/prompt.md";
 
 interface GraphTopicState {
@@ -72,12 +72,14 @@ async function telemetryOf(context: TopicContext): Promise<Row[]> {
 }
 
 const COMPARE = { type: "object", properties: { node: { type: "string" }, property: { type: "string" }, column: { type: "string" } }, required: ["node", "property", "column"] };
-const PARAM_DOC = "a number, or {\"$expr\": \"formula over the variables\"}, or {\"$series\": {\"column\": \"telemetry column\", \"scale\": \"formula\", \"offset\": \"formula\"}} for the segments of a Logic.Time:timeline driven by a measured column, or {\"$first\": \"telemetry column\"}";
+const PARAM_DOC = "a number, or {\"$expr\": \"formula over the variables\"}, or {\"$series\": {\"column\": \"telemetry column\", \"scale\": \"formula\", \"offset\": \"formula\"}} for the segments of a Logic.Time:timeline driven by a measured column, or {\"$first\": \"telemetry column\"}, or {\"$initialMasses\": {\"co2Ppm\": ..., \"volume\": \"V\", \"temperatureK\": 295.15}} for a Physics.Scene:atmosphere's _initialMassKg";
 
 export const EVALUATE_SCHEMA = {
     type: "object",
     properties: {
         label: { type: "string", minLength: 1, description: "What this candidate is, in a few words (its topology and hypothesis)." },
+        graph: { type: "string", description: "A graph of the library to instantiate on the twin (its id, from library.graphs), instead of a spec: its template is resolved with the settings given, the variables you do not name are taken at the graph's defaults (a known constant is held and cannot be fitted; a bounded variable is searched within its bounds), and its own probes are compared with their columns unless compare says otherwise." },
+        settings: { type: "object", additionalProperties: { type: "number" }, description: "The settings of the library graph (who is on board: labOccupants, habOccupants); its defaults when absent." },
         spec: {
             type: "object",
             properties: {
@@ -85,23 +87,23 @@ export const EVALUATE_SCHEMA = {
                 connections: { type: "array", items: { type: "object", properties: { from: { type: "array", items: { type: "string" }, minItems: 2, maxItems: 2 }, to: { type: "array", items: { type: "string" }, minItems: 2, maxItems: 2 } }, required: ["from", "to"] } },
             },
             required: ["nodes", "connections"],
-            description: "The candidate graph: nodes of the catalogue and their connections [node, port].",
+            description: "The candidate graph: nodes of the catalogue and their connections [node, port]. Not with graph.",
         },
-        compare: { type: "array", minItems: 1, items: COMPARE, description: "Which probe of the graph (node, property) is judged against which telemetry column." },
+        compare: { type: "array", minItems: 1, items: COMPARE, description: "Which probe of the graph (node, property) is judged against which telemetry column. A library graph brings its own when absent." },
         variables: { type: "object", additionalProperties: { type: "number" }, description: "Variables held fixed for this evaluation." },
         fit: { type: "object", additionalProperties: { type: "object", properties: { min: { type: "number" }, max: { type: "number" } }, required: ["min", "max"] }, description: "The bounds of each variable nobody knows: the harness searches them with an optimiser (a few dozen runs). A constant the documentation gives goes in variables, not here." },
         estimator: { type: "string", enum: ["nelder-mead", "grid"], description: "How the bounds are searched: nelder-mead (default; a simplex search, about 10 to 20 runs per parameter, local) or grid (every combination of evenly spaced levels; levels ^ parameters runs; shows the shape of the cost)." },
         levels: { type: "number", description: "For the grid: levels per parameter (5 when absent)." },
         maxRuns: { type: "number", description: "Sandbox runs the estimator may spend on this candidate (40 when absent, 80 at most)." },
     },
-    required: ["label", "spec", "compare"],
+    required: ["label"],
 } as const;
 
 function evaluateCapability(context: TopicContext): LocalCapability {
     const { broker, taskId, task, progress } = context;
     return {
         id: "graph.evaluate",
-        description: "Build a candidate twin from a parametric graph, estimate its unknown variables within their bounds (fit, with the estimator chosen), run every trial in the twin's sandbox over the telemetry, and measure the residual against the columns named. The best is kept as candidate-<n>.spikypanda in the workshop. Answers whether the task's residual threshold is held, the residual per column and where the gap is worst, the prediction against the measurement every five minutes, and the best trials.",
+        description: "Build a candidate twin from a parametric graph, or instantiate a graph of the library on the twin (graph: its id), estimate its unknown variables within their bounds (fit, with the estimator chosen), run every trial in the twin's sandbox over the telemetry, and measure the residual against the columns named. The best is kept as candidate-<n>.spikypanda in the workshop. Answers whether the task's residual threshold is held, the residual per column and where the gap is worst, the prediction against the measurement every five minutes, and the best trials.",
         inputSchema: EVALUATE_SCHEMA as unknown as JsonValue,
         async execute(input: JsonValue): Promise<CapabilityResult> {
             const state = stateOf(progress);
@@ -148,20 +150,20 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
     const known = knownOf(task);
     // The documented constants, said at every stage: held in variables under their symbol, never fitted.
     const held = known.length ? ` Known, from the documentation, held in variables under these names and never fitted: ${known.map((k) => `${k.symbol} = ${k.value}${k.unit ? ` ${k.unit}` : ""}${typeof k.min === "number" && typeof k.max === "number" ? ` (band ${k.min} to ${k.max}: may be fitted within it)` : ""} (${k.name ?? ""}${k.source ? `, ${k.source}` : ""})`).join("; ")}. Watch their units against the nodes' (a flow in m3/min enters a node as flow / V).` : "";
-    if (!progress.reads["workspace.read"] && !progress.reads["library.read"] && progress.phase === "plan") return `Stage 1 of 5, what to reproduce. Read the task (workspace.read task.json: the requirements, the observations, the hypotheses) and its telemetry (the data file), the library's card on building a twin graph (library.read method-twin-graph), and the documentation of the devices and of the station (library.list: a device's datasheet, the station's topology and metrics): what the documentation gives is known, and is not fitted. The twin must produce ${outputs} within a residual of ${String(threshold)} ppm of the telemetry.${held}`;
-    if (progress.phase === "plan") return `Stage 2 of 5, the plan. Choose the node types of the catalogue (twin.registry_search, twin.registry_describe_node) and submit them with task.plan; declare missing only what no node can express.`;
+    if (!progress.reads["workspace.read"] && !progress.reads["library.read"] && progress.phase === "plan") return `Stage 1 of 5, what to reproduce. Read the task (workspace.read task.json: the requirements, the observations, the hypotheses) and its telemetry (the data file), the graphs on the library's shelf (library.graphs: the station's reference graphs, each with its variables, its settings and its probes; a twin of this station starts from one), the library's card on building a twin graph (library.read method-twin-graph), and the documentation of the devices and of the station (library.list: a device's datasheet, the station's topology and metrics): what the documentation gives is known, and is not fitted. The twin must produce ${outputs} within a residual of ${String(threshold)} ppm of the telemetry.${held}`;
+    if (progress.phase === "plan") return `Stage 2 of 5, the plan. Choose the node types of the catalogue (twin.registry_search, twin.registry_describe_node; a library graph's types are listed by library.graphs) and submit them with task.plan; declare missing only what no node can express.`;
     const last = candidates.at(-1);
     // An evaluation the harness could not run says why, here, until one runs: the builder reads it at every step, not only in the answer it may have skimmed.
     const call = progress.lastCall;
     const refused = call?.id === "graph.evaluate" && !call.result.ok ? ` Your last evaluation was not run: ${String(call.result.error ?? call.result.outcome).slice(0, 600)}. Change what that names; the same call gets the same answer.` : "";
-    // What already runs: the station's twin, its wiring by types and ports, read from its document by code.
+    // What already exists: the station's reference graph on the library's shelf, its wiring by types and ports, read from its template by code.
     const station = stationReference();
-    const start = station ? ` The station already runs a twin of the cabin (graphs/cabin.spikypanda: one room, its rates folded on a volume nobody measured, never fitted to telemetry); start from its structure and extend it. It is wired: ${wiringLines(station)}. A measured input is a Logic.Time:timeline whose segments are the $series, its value port wired into the input.` : "";
-    if (!last) return `Stage 3 of 5, a first candidate.${start} Write the graph with the physics as formulas over a few variables, give the bounds of the variables nobody knows (fit), and evaluate it (graph.evaluate). Threshold: ${String(threshold)} ppm.${held}${refused}`;
+    const start = station ? ` The library holds the station's reference graph (library.graphs, graph "${STATION_GRAPH_ID}": two volumes in mass, the persons by name, the scrubber in its datasheet's units, the ventilation through its filter, the sensors); do not rebuild it: instantiate it (graph.evaluate with graph: "${STATION_GRAPH_ID}", settings for who is on board, variables for what you hold, fit for the bounds of what only the installation knows) and adapt its numbers. Its known constants are held at their defaults; what is fitted is the volumes and the filter's loading, the operators' rate within its band. It is wired: ${wiringLines(station)}. A spec of your own is accepted instead, with a measured input as a Logic.Time:timeline whose segments are the $series, its value port wired into the input.` : "";
+    if (!last) return `Stage 3 of 5, a first candidate.${start} Give the bounds of the variables nobody knows (fit), and evaluate the candidate (graph.evaluate). Threshold: ${String(threshold)} ppm.${held}${refused}`;
     if (last.pass) return `Stage 5 of 5, hand over. Candidate ${last.n} (${last.path}) holds the threshold: residual ${Math.max(...last.residuals.map((r) => r.rmse))} ppm. End with task.done, the graph as the artifact: {"kind": "graph", "path": "${last.path}"}.`;
     const where = last.residuals.map((r) => `${r.column}: ${r.rmse} ppm, worst ${r.worst} at minute ${r.worstMinute}`).join("; ");
     const warned = last.warnings?.length ? ` First, ${last.warnings.join(" ")}` : "";
-    return `Stage 4 of 5, the gap. Candidate ${last.n} (${last.label}) misses the threshold of ${last.threshold} ppm: ${where}, with ${JSON.stringify(last.variables)} its best fit over ${last.combinations} runs. ${candidates.length} candidate(s) so far.${warned} Look at where the curves part: if a wider range of the same variables cannot close the gap, the topology is missing something the task's hypotheses may name. ${last.reference && last.reference.missingWires.length ? `Against the station's twin, candidate ${last.n} lacks: ${last.reference.missingWires.join("; ")}. ` : ""}A term added must name its physical hypothesis (an exchange, a source); a constant term with no physics behind it closes a gap for the wrong reason.${held} Evaluate the next candidate.${refused}`;
+    return `Stage 4 of 5, the gap. Candidate ${last.n} (${last.label}) misses the threshold of ${last.threshold} ppm: ${where}, with ${JSON.stringify(last.variables)} its best fit over ${last.combinations} runs. ${candidates.length} candidate(s) so far.${warned} Look at where the curves part: if a wider range of the same variables cannot close the gap, the topology is missing something the task's hypotheses may name. ${last.reference && last.reference.missingWires.length ? `Against the station's reference graph, candidate ${last.n} lacks: ${last.reference.missingWires.join("; ")}. ` : ""}A term added must name its physical hypothesis (an exchange, a source); a constant term with no physics behind it closes a gap for the wrong reason.${held} Evaluate the next candidate.${refused}`;
 }
 
 function intentionOf(task: TaskFile["task"], generic: Intention): Intention {

@@ -12,8 +12,12 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { ATMOSPHERE_CO2_INPUTS, ATMOSPHERE_CO2_OUTPUTS, ATMOSPHERE_TYPE, buildRegistry } from "../lib/registry.js";
+import { loadFactory } from "../lib/factory.js";
 import { buildHabitatDocument, DEFAULT_SPEED_STEPS, initialMassesKg, readHabitatParameters, runHabitat } from "../lib/habitat.js";
-import { HABITAT_NODE_TYPES, HabitatCrewNode, HabitatFanNode, HabitatFilterNode, HabitatScrubberNode } from "../plugins/habitat/index.js";
+import { HABITAT_NODE_TYPES, HabitatCrewNode, HabitatFanNode, HabitatFilterNode, HabitatPersonNode, HabitatScrubberNode } from "../plugins/habitat/index.js";
+import { activityOf } from "../plugins/habitat/activity.js";
+import { instantiateTemplate, loadGraphLibrary, wordsOf } from "../lib/graph-library.js";
+import { resolveSpec } from "../harness/topics/graph/params.js";
 import { co2MassPerM3 } from "../plugins/habitat/signals.js";
 import { LAB_WORLD, twoZoneTelemetry } from "../harness/stand-in/two-zone-world.js";
 
@@ -21,9 +25,12 @@ const registry = buildRegistry();
 const parameters = readHabitatParameters();
 
 describe("the habitat plugin in the registry", () => {
-    it("registers its four types with a signature, a documentation card and the class's own ports", () => {
+    it("registers its five types with a signature, a documentation card and the class's own ports; the crew's person pool is variadic", () => {
         const reg = registry as unknown as { meta: (type: string) => { label: string; signature?: { purpose: string; inputs: Record<string, unknown>; outputs: Record<string, unknown>; capabilities: string[] }; docPath?: string; inputPorts: Array<{ slot: string }>; outputPorts: Array<{ slot: string }> } | undefined };
-        assert.equal(HABITAT_NODE_TYPES.length, 4, "the atmosphere, the gates (the ventilation loop, the hatch) and the dust are the substrate's, not the plugin's");
+        assert.equal(HABITAT_NODE_TYPES.length, 5, "the atmosphere, the gates (the ventilation loop, the hatch) and the dust are the substrate's, not the plugin's");
+        const crew = reg.meta("Physics.Habitat:crew") as unknown as { variadicInput?: Array<{ prefix: string; type: string }>; inputPorts: Array<{ slot: string }> };
+        assert.deepEqual(crew.variadicInput, [{ prefix: "person_", type: "float" }], "the persons' pool grows as persons are wired");
+        assert.ok(crew.inputPorts.some((p) => p.slot === "person_0"), "its first input declared");
         for (const type of HABITAT_NODE_TYPES) {
             const meta = reg.meta(type);
             assert.ok(meta, `${type} is registered`);
@@ -92,6 +99,22 @@ describe("each node on its own numbers", () => {
         assert.equal(filter.clogging, 0.5);
     });
 
+    it("a person produces at their own activity, named by a word or a rung; the activity ladder reads both", () => {
+        const who = new HabitatPersonNode();
+        who.name = "M. Chen";
+        who.callsign = "FE-2";
+        who.activity = "light_work";
+        who.lightWorkLitresPerMinute = 0.42;
+        assert.equal(who.rateOf("light_work"), 0.42);
+        assert.equal(who.rateOf("sleep"), 0.24, "the reference crewmember's rate asleep");
+        assert.equal(activityOf(2, "rest"), "light_work", "a rung is an activity");
+        assert.equal(activityOf(2.6, "rest"), "heavy_work", "rounded to the nearest rung");
+        assert.equal(activityOf("nap", "rest"), "rest", "an unknown word is the fallback");
+        assert.equal(activityOf("sleep", "rest"), "sleep");
+        who.activity = "nap" as never;
+        assert.equal(who.activity, "light_work", "an unknown word does not change the editable");
+    });
+
     it("the crew's mass flow is the litres per minute at the density of CO2; the scrubber removes efficiency times flow times the CO2 in a cubic metre", () => {
         const crew = new HabitatCrewNode();
         crew.count = 2;
@@ -119,6 +142,56 @@ describe("the habitat reference as a document", () => {
         assert.ok(Math.abs(fouled.fan_m3_per_min - 2.0) < 0.02, `fouled: ${fouled.fan_m3_per_min} m3/min`);
         assert.ok(Math.abs(clean.fan_m3_per_min - 3.0) < 0.02, `clean: ${clean.fan_m3_per_min} m3/min`);
         assert.ok(fouled.filter_clogging > 0.6 && clean.filter_clogging < 0.01);
+    });
+
+    it("wires the four persons of the roster into the crews of their modules, and their sum is what the crews give the air", () => {
+        const { json, spec } = buildHabitatDocument({}, parameters, registry);
+        const persons = spec.nodes.filter((n) => n.typeId === "Physics.Habitat:person");
+        assert.equal(persons.length, 4, "the roster: two operators in the Lab, two people in Hab-B");
+        assert.deepEqual(spec.connections.filter((c) => c.to[0] === "crew-lab" && c.to[1].startsWith("person_")).map((c) => c.to[1]), ["person_0", "person_1"], "the pool's second input is the variadic one, accepted by the builder");
+        assert.deepEqual(spec.connections.filter((c) => c.to[0] === "crew-habb" && c.to[1].startsWith("person_")).map((c) => c.to[1]), ["person_0", "person_1"]);
+        const rows = runHabitat(json, 2, DEFAULT_SPEED_STEPS, registry);
+        // Two operators at 0.42 L/min: 2.545e-5 kg/s; two at rest at 0.30: 1.818e-5 kg/s. The crews count nobody unnamed.
+        assert.ok(Math.abs(rows[1].crew_lab_kgps - 2.545e-5) < 1e-8, `the Lab's crew gives ${rows[1].crew_lab_kgps} kg/s`);
+        assert.ok(Math.abs(rows[1].crew_habb_kgps - 1.818e-5) < 1e-8, `Hab-B's crew gives ${rows[1].crew_habb_kgps} kg/s`);
+        // One person fewer in the Lab, at their own activity: the crew follows the persons wired in.
+        const fewer = buildHabitatDocument({ persons: [{ id: "fe-1", callsign: "FE-1", name: "A. Pelletier", module: "lab", activity: "heavy_work" }] }, parameters, registry);
+        const one = runHabitat(fewer.json, 1, DEFAULT_SPEED_STEPS, registry);
+        assert.ok(Math.abs(one[1].crew_lab_kgps - (1.0 * 1e-3 * 1.8176) / 60) < 1e-8, "one person at heavy work");
+        assert.equal(one[1].crew_habb_kgps, 0, "nobody in Hab-B");
+    });
+
+    it("is on the library's shelf as a template with its words, and the template at the reference's numbers reproduces the reference", () => {
+        const entry = loadGraphLibrary().find((g) => g.template.id === "habitat");
+        assert.ok(entry, "graphs/habitat.template.json");
+        assert.deepEqual(entry!.problems, [], "the words match the template's variables, settings and probes");
+        assert.ok(entry!.grammars.has("default:en") && entry!.grammars.has("default:fr"));
+        const fr = wordsOf(entry!, "claude:fr");
+        assert.equal(fr.key, "default:fr", "no claude file: the default of the locale");
+        assert.match(fr.properties.L, /la charge du filtre/);
+        assert.match(wordsOf(entry!, null).properties.L, /the filter's loading/);
+        assert.match(fr.probes["co2-1.lastMeasured"].name, /capteur/);
+        const t = entry!.template;
+        assert.equal(t.variables.Qe.status, "known");
+        assert.equal(t.variables.g.status, "band");
+        assert.deepEqual(Object.keys(t.settings), ["labOccupants", "habOccupants"]);
+        // Instantiated at the reference's own numbers, resolved on the reference's own rows, it runs to the same ppm.
+        const reference = runHabitat(buildHabitatDocument({}, parameters, registry).json, 60, DEFAULT_SPEED_STEPS, registry);
+        const inst = instantiateTemplate(t, { variables: { V: 30, Vh: 400, L: 0.127, g: 0.42 } });
+        assert.deepEqual(inst.defaulted.sort(), ["Qe", "eta", "gRest", "lag"], "the known constants at their defaults");
+        assert.deepEqual(inst.compare.map((c) => c.column), ["co2_lab_ppm", "co2_habb_ppm"]);
+        const resolved = resolveSpec(inst.spec as never, inst.variables, reference as unknown as Array<Record<string, unknown>>);
+        const json = loadFactory().buildDocumentJson(registry as never, resolved.nodes as never, resolved.connections as never);
+        const twin = runHabitat(json, 60, DEFAULT_SPEED_STEPS, registry);
+        let worst = 0;
+        for (let m = 0; m <= 60; m++) worst = Math.max(worst, Math.abs(twin[m].co2_lab_ppm - reference[m].co2_lab_ppm), Math.abs(twin[m].co2_habb_ppm - reference[m].co2_habb_ppm));
+        assert.ok(worst <= 2, `the template parts from the reference by ${worst} ppm at worst`);
+        // Who is on board is a setting: one more in the Lab is an unnamed person at light work on the crew.
+        const three = instantiateTemplate(t, { settings: { labOccupants: 3, habOccupants: 1 } });
+        assert.equal(three.spec.nodes.filter((n) => n.typeId === "Physics.Habitat:person").length, 3);
+        assert.equal(three.spec.nodes.find((n) => n.id === "crew-lab")!.params!.count, 1);
+        assert.equal(three.spec.nodes.find((n) => n.id === "crew-habb")!.params!.count, 0);
+        assert.throws(() => instantiateTemplate(t, { settings: { cats: 1 } }), /no setting "cats"/);
     });
 
     it("agrees with the stand-in world to a few ppm over the two-step test, and Hab-B follows the Lab", () => {

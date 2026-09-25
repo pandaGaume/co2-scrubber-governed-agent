@@ -41,7 +41,17 @@ place.
 `docs/library/*.md` : ce que le modèle lit avec `library.list`,
 `library.search`, `library.read`, `library.methods` (les fiches de méthode
 portent une ligne `**Measures:**`). Ajouter un document = déposer un `.md`
-avec un titre, un premier paragraphe de résumé, et ses sources. Y sont
+avec un titre, un premier paragraphe de résumé, et ses sources.
+
+Les graphes de référence y sont aussi (`library.graphs`, `library.graph`),
+depuis `graphs/` : un document `.spikypanda`, son gabarit
+`.template.json` (le graphe en formules sur des variables, ses réglages,
+ses sondes) et sa grammaire `<id>.grammars/<famille>/<langue>.json` dans
+la forme mcp-core (le graphe décrit comme un serveur, son instanciation
+comme un outil dont les propriétés sont les variables, ses sondes comme
+des ressources). Un graphe sans grammaire est signalé au démarrage. Le
+harnais en instancie un sur le jumeau avec `graph.evaluate {graph, settings,
+variables, fit}` (`plugin-habitat.fr.md`, section 5). Y sont
 aujourd'hui : la physique du CO2 et des épurateurs, la méthode de
 décroissance (ASTM E741), la méthode du graphe de jumeau, la fiche
 technique de l'épurateur, la topologie et les métriques de la station, les
@@ -103,11 +113,15 @@ Le premier est le jumeau qu'interroge l'agent de la nuit 9. Le second est
 la référence physique de la base construite le 24 septembre et reprise le
 25 (`plugin-habitat.fr.md`) : les atmosphères, les deux portes (la
 ventilation en mode `exchange`, le sas fermé), la poussière et les capteurs
-sont les nœuds du substrat ; le plugin `plugins/habitat` ajoute l'équipage,
-l'épurateur en masse, le ventilateur et le filtre encrassé ; 115 tests dont
-9 sur lui. Il faut le substrat corrigé le 25 septembre (`core` 1.0.2,
-`plugin-physics` 0.1.2, `factory` 0.1.2, dans `vendor/`) : avec les
-versions d'avant, `npm run habitat:build` ne rend pas la main.
+sont les nœuds du substrat ; le plugin `plugins/habitat` ajoute les
+personnes par leur nom (le roster de `biomed`, chacune à son activité,
+branchées sur l'équipage de leur module, dont la réserve d'entrées grandit
+à mesure), l'équipage, l'épurateur en masse, le ventilateur et le filtre
+encrassé ; 12 tests sur lui. Le script écrit aussi le gabarit du graphe
+pour la bibliothèque et vérifie sa grammaire. Il faut le substrat corrigé
+le 25 septembre (`core` 1.0.3, `plugin-physics` 0.1.2, `factory` 0.1.3,
+dans `vendor/`) : avec les versions d'avant, `npm run habitat:build` ne
+rend pas la main, ou le jumeau refuse `person_1`.
 
 ## 7. Lire un journal, diagnostiquer un échec
 
@@ -127,9 +141,9 @@ versions d'avant, `npm run habitat:build` ne rend pas la main.
   sujets valides, et rien ne consomme la déclaration. Les nœuds de
   l'habitat ont été écrits à la main ; `journal-noeuds-habitat.fr.md` dit
   ce qu'une usine de code aurait à faire.
-- La référence de l'habitat n'est pas encore celle de l'usine de graphes
-  (elle lit `graphs/cabin.spikypanda`), et l'exemple tire encore sa
-  télémétrie du monde de test en TypeScript.
+- L'exemple tire encore sa télémétrie du monde de test en TypeScript
+  (la référence de l'habitat est celle de l'usine de graphes depuis le 25
+  septembre, par la bibliothèque).
 - Nemotron sur Nebius n'a pas été essayé ; la recherche sur le web n'est
   pas branchée ; le conteneur de l'usine n'a pas le plugin local.
 - La page du jumeau (l'agent de la nuit 9 dans le studio) tourne sur le

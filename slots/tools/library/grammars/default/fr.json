@@ -1,6 +1,6 @@
 {
     "server": {
-        "description": "La bibliothèque de l'usine : des documents choisis sur les épurateurs, l'air, les méthodes de mesure, le CO2 et les personnes, et l'installation, pour vérifier un chiffre ou une méthode plutôt que le deviner",
+        "description": "La bibliothèque de l'usine : des documents choisis sur les épurateurs, l'air, les méthodes de mesure, le CO2 et les personnes, et l'installation, pour vérifier un chiffre ou une méthode plutôt que le deviner ; et les graphes de référence de la station, chacun avec ses mots, qu'un harnais instancie sur le jumeau",
         "instructions": "Lister le catalogue, y chercher avec quelques mots, lire un document en entier. Chaque document est un fichier du dépôt avec son sha256 ; ce qui est lu est dans la trace du broker."
     },
     "tools": {
@@ -29,12 +29,31 @@
             "properties": {
                 "id": "l'identifiant du document, donné par list ou search"
             }
+        },
+        "graphs": {
+            "title": "Les graphes du rayon",
+            "description": "Les graphes de référence qu'un harnais peut instancier sur le jumeau, chacun avec ses mots : ce qu'il est et comment s'en servir, ses variables (valeur par défaut, bornes, statut : connue et tenue, ajustée, ou une bande) et ses réglages (qui est à bord), ses sondes et les colonnes de télémétrie contre lesquelles on les juge, le document et le gabarit avec leur sha256. En instancier un avec graph.evaluate {graph: id, variables, fit, settings}.",
+            "properties": {
+                "grammar": "la clé de formulation de votre session (_meta.grammar de votre initialize, par exemple claude:en ou default:fr) ; la référence en son absence"
+            }
+        },
+        "graph": {
+            "title": "Un graphe du rayon",
+            "description": "Un graphe de référence en entier : ses mots, ses variables, réglages et sondes, et son gabarit (le spec paramétrique que le harnais résout : les paramètres des nœuds en formules sur les variables, les entrées mesurées comme colonnes de télémétrie, les personnes du roster par module).",
+            "properties": {
+                "id": "l'identifiant du graphe, depuis graphs",
+                "grammar": "la clé de formulation de votre session ; la référence en son absence"
+            }
         }
     },
     "resources": {
         "library://catalogue": {
             "name": "Catalogue",
             "description": "Les documents de la bibliothèque, avec leur sha256"
+        },
+        "library://graphs": {
+            "name": "Graphes",
+            "description": "Les graphes de référence du rayon, avec leurs mots de référence"
         }
     }
 }

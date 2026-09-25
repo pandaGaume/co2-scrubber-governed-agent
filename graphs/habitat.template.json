@@ -1,0 +1,704 @@
+{
+  "id": "habitat",
+  "title": "The habitat reference: two modules, a centralised scrubber, the inter-module ventilation through its filter, the crew by name",
+  "document": "graphs/habitat.spikypanda",
+  "parameters": "specs/habitat-parameters.json",
+  "variables": {
+    "V": {
+      "default": 30,
+      "min": 10,
+      "max": 200,
+      "unit": "m3",
+      "status": "fitted",
+      "source": "the commissioning: the volume the scrubber serves; the design drawing gives 32"
+    },
+    "Vh": {
+      "default": 400,
+      "min": 50,
+      "max": 1000,
+      "unit": "m3",
+      "status": "fitted",
+      "source": "not documented as built (library station-topology)"
+    },
+    "L": {
+      "default": 0.127,
+      "min": 0,
+      "max": 0.2,
+      "unit": "kg",
+      "status": "fitted",
+      "source": "what the ventilation delivers, through the filter's loading: 0 is a clean filter at the design flow"
+    },
+    "g": {
+      "default": 0.38,
+      "min": 0.26,
+      "max": 0.45,
+      "unit": "L/min",
+      "status": "band",
+      "source": "nasa-crew-metabolic-loads: a crewmember awake, 5th to 95th percentile, reference 0.38"
+    },
+    "gRest": {
+      "default": 0.3,
+      "unit": "L/min",
+      "status": "known",
+      "source": "nasa-crew-metabolic-loads: between asleep and awake"
+    },
+    "Qe": {
+      "default": 1,
+      "unit": "m3/min",
+      "status": "known",
+      "source": "scrubber-1-datasheet: effective flow at full command"
+    },
+    "eta": {
+      "default": 0.30303,
+      "status": "known",
+      "source": "scrubber-1-datasheet: single-pass efficiency"
+    },
+    "lag": {
+      "default": 3.33,
+      "unit": "min",
+      "status": "known",
+      "source": "scrubber-1-datasheet: first-order response"
+    }
+  },
+  "settings": {
+    "labOccupants": {
+      "default": 2,
+      "min": 0,
+      "max": 8
+    },
+    "habOccupants": {
+      "default": 2,
+      "min": 0,
+      "max": 8
+    }
+  },
+  "probes": [
+    {
+      "node": "co2-1",
+      "property": "lastMeasured",
+      "unit": "ppm",
+      "column": "co2_lab_ppm"
+    },
+    {
+      "node": "co2-2",
+      "property": "lastMeasured",
+      "unit": "ppm",
+      "column": "co2_habb_ppm"
+    },
+    {
+      "node": "lab",
+      "property": "ppm_CO2",
+      "unit": "ppm"
+    },
+    {
+      "node": "habb",
+      "property": "ppm_CO2",
+      "unit": "ppm"
+    },
+    {
+      "node": "fan",
+      "property": "flowM3PerMinute",
+      "unit": "m3/min"
+    },
+    {
+      "node": "filter",
+      "property": "clogging"
+    },
+    {
+      "node": "scrubber",
+      "property": "flowM3ps",
+      "unit": "m3/s"
+    },
+    {
+      "node": "scrubber",
+      "property": "removalKgps",
+      "unit": "kg/s"
+    },
+    {
+      "node": "hvac",
+      "property": "lastVolumetricFlow",
+      "unit": "m3/s"
+    },
+    {
+      "node": "crew-lab",
+      "property": "co2Delta",
+      "unit": "kg/s"
+    },
+    {
+      "node": "crew-habb",
+      "property": "co2Delta",
+      "unit": "kg/s"
+    }
+  ],
+  "spec": {
+    "nodes": [
+      {
+        "id": "person-fe-1",
+        "typeId": "Physics.Habitat:person",
+        "x": -820,
+        "y": -40,
+        "label": "FE-1 A. Pelletier",
+        "params": {
+          "name": "A. Pelletier",
+          "callsign": "FE-1",
+          "activity": "light_work",
+          "sleepLitresPerMinute": 0.24,
+          "restLitresPerMinute": 0.3,
+          "lightWorkLitresPerMinute": {
+            "$expr": "g"
+          },
+          "heavyWorkLitresPerMinute": 1,
+          "co2DensityKgPerM3": 1.8176
+        },
+        "$person": {
+          "setting": "labOccupants",
+          "index": 0
+        }
+      },
+      {
+        "id": "person-fe-2",
+        "typeId": "Physics.Habitat:person",
+        "x": -820,
+        "y": 70,
+        "label": "FE-2 M. Chen",
+        "params": {
+          "name": "M. Chen",
+          "callsign": "FE-2",
+          "activity": "light_work",
+          "sleepLitresPerMinute": 0.24,
+          "restLitresPerMinute": 0.3,
+          "lightWorkLitresPerMinute": {
+            "$expr": "g"
+          },
+          "heavyWorkLitresPerMinute": 1,
+          "co2DensityKgPerM3": 1.8176
+        },
+        "$person": {
+          "setting": "labOccupants",
+          "index": 1
+        }
+      },
+      {
+        "id": "person-cdr",
+        "typeId": "Physics.Habitat:person",
+        "x": -820,
+        "y": 380,
+        "label": "CDR J. Picard",
+        "params": {
+          "name": "J. Picard",
+          "callsign": "CDR",
+          "activity": "rest",
+          "sleepLitresPerMinute": 0.24,
+          "restLitresPerMinute": {
+            "$expr": "gRest"
+          },
+          "lightWorkLitresPerMinute": 0.42,
+          "heavyWorkLitresPerMinute": 1,
+          "co2DensityKgPerM3": 1.8176
+        },
+        "$person": {
+          "setting": "habOccupants",
+          "index": 0
+        }
+      },
+      {
+        "id": "person-fe-3",
+        "typeId": "Physics.Habitat:person",
+        "x": -820,
+        "y": 490,
+        "label": "FE-3 G. La Forge",
+        "params": {
+          "name": "G. La Forge",
+          "callsign": "FE-3",
+          "activity": "rest",
+          "sleepLitresPerMinute": 0.24,
+          "restLitresPerMinute": {
+            "$expr": "gRest"
+          },
+          "lightWorkLitresPerMinute": 0.42,
+          "heavyWorkLitresPerMinute": 1,
+          "co2DensityKgPerM3": 1.8176
+        },
+        "$person": {
+          "setting": "habOccupants",
+          "index": 1
+        }
+      },
+      {
+        "id": "scene",
+        "typeId": "Physics.Scene:moon",
+        "x": -520,
+        "y": -160,
+        "label": "Lunar habitat"
+      },
+      {
+        "id": "solver",
+        "typeId": "Control.Sim:rk4-solver",
+        "x": -820,
+        "y": -160,
+        "label": "Solver",
+        "params": {
+          "tolerance": 0.000001,
+          "maxStep": 6
+        }
+      },
+      {
+        "id": "lab",
+        "typeId": "Physics.Scene:atmosphere",
+        "x": 0,
+        "y": 0,
+        "label": "Lab air",
+        "params": {
+          "volume": {
+            "$expr": "V"
+          },
+          "temperature_k": 295.15,
+          "initial_atmosphere_preset": "earthHumidAirSeaLevel",
+          "_initialMassKg": {
+            "$initialMasses": {
+              "co2Ppm": {
+                "$first": "co2_lab_ppm"
+              },
+              "volume": "V",
+              "temperatureK": 295.15,
+              "preset": "earthHumidAirSeaLevel",
+              "pressurePa": 101325
+            }
+          }
+        }
+      },
+      {
+        "id": "habb",
+        "typeId": "Physics.Scene:atmosphere",
+        "x": 0,
+        "y": 420,
+        "label": "Hab-B air",
+        "params": {
+          "volume": {
+            "$expr": "Vh"
+          },
+          "temperature_k": 295.15,
+          "initial_atmosphere_preset": "earthHumidAirSeaLevel",
+          "_initialMassKg": {
+            "$initialMasses": {
+              "co2Ppm": {
+                "$first": "co2_habb_ppm"
+              },
+              "volume": "Vh",
+              "temperatureK": 295.15,
+              "preset": "earthHumidAirSeaLevel",
+              "pressurePa": 101325
+            }
+          }
+        }
+      },
+      {
+        "id": "co2-1",
+        "typeId": "DSP.Sensor:transducer",
+        "x": 300,
+        "y": 0,
+        "label": "CO2 sensor co2-1 (Lab)",
+        "params": {
+          "cutoffHz": 1000000,
+          "noiseStdev": 0,
+          "quantizationStep": 1,
+          "driftPerSec": 0
+        }
+      },
+      {
+        "id": "co2-2",
+        "typeId": "DSP.Sensor:transducer",
+        "x": 300,
+        "y": 420,
+        "label": "CO2 sensor co2-2 (Hab-B)",
+        "params": {
+          "cutoffHz": 1000000,
+          "noiseStdev": 0,
+          "quantizationStep": 1,
+          "driftPerSec": 0
+        }
+      },
+      {
+        "id": "crew-lab",
+        "typeId": "Physics.Habitat:crew",
+        "x": -520,
+        "y": 40,
+        "label": "Crew in the Lab",
+        "params": {
+          "count": 0,
+          "activity": "light_work",
+          "sleepLitresPerMinute": 0.24,
+          "restLitresPerMinute": 0.3,
+          "lightWorkLitresPerMinute": {
+            "$expr": "g"
+          },
+          "heavyWorkLitresPerMinute": 1,
+          "co2DensityKgPerM3": 1.8176
+        },
+        "$unnamed": {
+          "setting": "labOccupants",
+          "roster": 2
+        }
+      },
+      {
+        "id": "crew-habb",
+        "typeId": "Physics.Habitat:crew",
+        "x": -520,
+        "y": 460,
+        "label": "Crew in Hab-B",
+        "params": {
+          "count": 0,
+          "activity": "rest",
+          "sleepLitresPerMinute": 0.24,
+          "restLitresPerMinute": {
+            "$expr": "gRest"
+          },
+          "lightWorkLitresPerMinute": 0.42,
+          "heavyWorkLitresPerMinute": 1,
+          "co2DensityKgPerM3": 1.8176
+        },
+        "$unnamed": {
+          "setting": "habOccupants",
+          "roster": 2
+        }
+      },
+      {
+        "id": "speed",
+        "typeId": "Logic.Time:timeline",
+        "x": -820,
+        "y": 200,
+        "label": "Scrubber command",
+        "params": {
+          "segments": {
+            "$series": {
+              "column": "speed_percent",
+              "scale": "0.01"
+            }
+          },
+          "defaultValue": 0
+        }
+      },
+      {
+        "id": "scrubber",
+        "typeId": "Physics.Habitat:scrubber",
+        "x": -520,
+        "y": 200,
+        "label": "CO2 scrubber",
+        "params": {
+          "flowAtFullM3ps": {
+            "$expr": "Qe / eta / 60"
+          },
+          "efficiency": {
+            "$expr": "eta"
+          },
+          "lagTimeConstantMinutes": {
+            "$expr": "lag"
+          },
+          "initialFlowM3ps": 0,
+          "supplyVolts": 6,
+          "interceptAmps": 0.0879,
+          "slopeAmps": 0.1611,
+          "habitatScale": 300,
+          "defaultPressurePa": 101325,
+          "defaultTemperatureK": 295.15
+        }
+      },
+      {
+        "id": "fan-command",
+        "typeId": "Logic.Time:timeline",
+        "x": 300,
+        "y": -160,
+        "label": "Fan command",
+        "params": {
+          "segments": "[{\"from\":0,\"to\":1000000000,\"value\":1}]",
+          "defaultValue": 1
+        }
+      },
+      {
+        "id": "fan",
+        "typeId": "Physics.Habitat:fan",
+        "x": 560,
+        "y": -160,
+        "label": "HVAC fan",
+        "params": {
+          "shutoffPressurePa": 250,
+          "freeDeliveryM3ps": 0.09,
+          "ductResistance": 20000,
+          "spinUpSeconds": 5,
+          "fanEfficiency": 0.5,
+          "standbyPowerW": 2,
+          "capacityFactor": 1,
+          "initialSpeedRatio": 1
+        }
+      },
+      {
+        "id": "filter",
+        "typeId": "Physics.Habitat:filter",
+        "x": 820,
+        "y": -160,
+        "label": "HVAC filter",
+        "params": {
+          "cleanResistance": 49136,
+          "loadingDoublingKg": 0.05,
+          "captureEfficiency": 0.9,
+          "ambientDustKgPerM3": 0.000001,
+          "endOfLifeLoadingKg": 0.2,
+          "initialLoadingKg": {
+            "$expr": "L"
+          },
+          "particulateId": "lunar_dust"
+        }
+      },
+      {
+        "id": "dust",
+        "typeId": "Physics.Particulate:lunar_dust",
+        "x": 1080,
+        "y": -160,
+        "label": "The dust the filter captures"
+      },
+      {
+        "id": "hvac",
+        "typeId": "Physics.Scene:atmosphere-gate",
+        "x": 560,
+        "y": 200,
+        "label": "Inter-module ventilation",
+        "params": {
+          "mode": "exchange",
+          "trackThroughput": true
+        }
+      },
+      {
+        "id": "hatch",
+        "typeId": "Physics.Scene:atmosphere-gate",
+        "x": 560,
+        "y": 420,
+        "label": "Hatch Lab / Hab-B",
+        "params": {
+          "mode": "closed"
+        }
+      }
+    ],
+    "connections": [
+      {
+        "from": [
+          "person-fe-1",
+          "co2Delta"
+        ],
+        "to": [
+          "crew-lab",
+          "person_0"
+        ]
+      },
+      {
+        "from": [
+          "person-fe-2",
+          "co2Delta"
+        ],
+        "to": [
+          "crew-lab",
+          "person_1"
+        ]
+      },
+      {
+        "from": [
+          "person-cdr",
+          "co2Delta"
+        ],
+        "to": [
+          "crew-habb",
+          "person_0"
+        ]
+      },
+      {
+        "from": [
+          "person-fe-3",
+          "co2Delta"
+        ],
+        "to": [
+          "crew-habb",
+          "person_1"
+        ]
+      },
+      {
+        "from": [
+          "solver",
+          "solver_out"
+        ],
+        "to": [
+          "scene",
+          "solver_in_0"
+        ]
+      },
+      {
+        "from": [
+          "lab",
+          "atmosphere_out"
+        ],
+        "to": [
+          "scene",
+          "atmosphere_in"
+        ]
+      },
+      {
+        "from": [
+          "crew-lab",
+          "co2Delta"
+        ],
+        "to": [
+          "lab",
+          "delta_CO2_0"
+        ]
+      },
+      {
+        "from": [
+          "scrubber",
+          "co2Delta"
+        ],
+        "to": [
+          "lab",
+          "delta_CO2_1"
+        ]
+      },
+      {
+        "from": [
+          "crew-habb",
+          "co2Delta"
+        ],
+        "to": [
+          "habb",
+          "delta_CO2_0"
+        ]
+      },
+      {
+        "from": [
+          "lab",
+          "ppm_CO2"
+        ],
+        "to": [
+          "co2-1",
+          "value"
+        ]
+      },
+      {
+        "from": [
+          "habb",
+          "ppm_CO2"
+        ],
+        "to": [
+          "co2-2",
+          "value"
+        ]
+      },
+      {
+        "from": [
+          "speed",
+          "value"
+        ],
+        "to": [
+          "scrubber",
+          "command"
+        ]
+      },
+      {
+        "from": [
+          "lab",
+          "ppm_CO2"
+        ],
+        "to": [
+          "scrubber",
+          "ppm"
+        ]
+      },
+      {
+        "from": [
+          "fan-command",
+          "value"
+        ],
+        "to": [
+          "fan",
+          "command"
+        ]
+      },
+      {
+        "from": [
+          "fan",
+          "flow"
+        ],
+        "to": [
+          "filter",
+          "flow"
+        ]
+      },
+      {
+        "from": [
+          "filter",
+          "resistance"
+        ],
+        "to": [
+          "fan",
+          "resistance"
+        ]
+      },
+      {
+        "from": [
+          "dust",
+          "particulate_out"
+        ],
+        "to": [
+          "filter",
+          "particulate_in"
+        ]
+      },
+      {
+        "from": [
+          "fan",
+          "flow"
+        ],
+        "to": [
+          "hvac",
+          "flow"
+        ]
+      },
+      {
+        "from": [
+          "lab",
+          "atmosphere_out"
+        ],
+        "to": [
+          "hvac",
+          "atmosphere_A_in"
+        ]
+      },
+      {
+        "from": [
+          "habb",
+          "atmosphere_out"
+        ],
+        "to": [
+          "hvac",
+          "atmosphere_B_in"
+        ]
+      },
+      {
+        "from": [
+          "lab",
+          "atmosphere_out"
+        ],
+        "to": [
+          "hatch",
+          "atmosphere_A_in"
+        ]
+      },
+      {
+        "from": [
+          "habb",
+          "atmosphere_out"
+        ],
+        "to": [
+          "hatch",
+          "atmosphere_B_in"
+        ]
+      }
+    ]
+  }
+}

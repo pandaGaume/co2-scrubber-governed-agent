@@ -21,7 +21,8 @@
         "states": "the mass of each species of each volume (the atmosphere, ideal gas), the scrubber's flow (a lag), the fan's speed (a spin-up), the filter's loading",
         "equations": [
             "atmosphere   dm_CO2/dt = sum of the delta_CO2_k inputs                                  [kg/s]; ppm = n_CO2 / n_total * 1e6 (the substrate's node, its CO2 ports declared by lib/registry.ts)",
-            "crew         co2Delta = count * litresPerMinute(activity) * 1e-3 / 60 * co2Density      [kg/s]",
+            "person       co2Delta = litresPerMinute(activity) * 1e-3 / 60 * co2Density              [kg/s]; one node per person of the roster, at their own activity (a word, or a rung 0 to 3 a timeline schedules)",
+            "crew         co2Delta = sum_k person_k + count * litresPerMinute(activity) * 1e-3 / 60 * co2Density   [kg/s]; the persons wired into its person_<k> pool (one input each, the pool growing as persons are added) plus a head count for the unnamed (0 in the reference)",
             "scrubber     d(flow)/dt = (flowAtFull * command - flow) / lag; removal = efficiency * flow * co2MassPerM3(ppm)   [kg/s]",
             "fan          Q = s * sqrt(k / (R + k / Qfree^2)), k = capacityFactor * shutoffPressure, R = ductResistance + filter.resistance; d(s)/dt = (command - s) / spinUp",
             "filter       resistance = clean * (1 + loading / loadingDoubling); d(loading)/dt = captureEfficiency * dust * Q",
@@ -88,33 +89,40 @@
             }
         },
         "crew": {
-            "lab": {
-                "count": {
-                    "value": 2,
-                    "unit": "person",
-                    "source": "biomed.presence during the test",
-                    "status": "measured"
-                },
-                "activity": {
-                    "value": "light_work",
-                    "unit": "",
-                    "source": "two operators at work in the Lab",
-                    "status": "measured"
-                }
-            },
-            "habB": {
-                "count": {
-                    "value": 2,
-                    "unit": "person",
-                    "source": "biomed.presence",
-                    "status": "measured"
-                },
-                "activity": {
-                    "value": "rest",
-                    "unit": "",
-                    "source": "the two others at rest in Hab-B",
-                    "status": "measured"
-                }
+            "persons": {
+                "value": [
+                    {
+                        "id": "fe-1",
+                        "callsign": "FE-1",
+                        "name": "A. Pelletier",
+                        "module": "lab",
+                        "activity": "light_work"
+                    },
+                    {
+                        "id": "fe-2",
+                        "callsign": "FE-2",
+                        "name": "M. Chen",
+                        "module": "lab",
+                        "activity": "light_work"
+                    },
+                    {
+                        "id": "cdr",
+                        "callsign": "CDR",
+                        "name": "J. Picard",
+                        "module": "habB",
+                        "activity": "rest"
+                    },
+                    {
+                        "id": "fe-3",
+                        "callsign": "FE-3",
+                        "name": "G. La Forge",
+                        "module": "habB",
+                        "activity": "rest"
+                    }
+                ],
+                "unit": "one entry per person: id and callsign as the medical monitor's roster (profiles/biomed.json), the module they are in, their activity",
+                "source": "biomed.presence during the test: two operators at work in the Lab, the commander and FE-3 at rest in Hab-B; each is a Physics.Habitat:person of the graph, wired into the crew of their module (its person_<k> pool)",
+                "status": "measured (who is where); the activities as observed, one per person"
             },
             "litresPerMinute": {
                 "sleep": {

@@ -3,10 +3,11 @@
  * section 5): the parametric graph (formulas, measured inputs, the variables
  * the harness fits), the residual measured by code, and the loop through the
  * broker on the telemetry of a stand-in world of two zones whose truth the
- * test keeps: the first candidate, the Lab alone, is refused by its residual
- * whatever its volume; the second, with the exchange through the hatch and
- * the neighbour's measured CO2 as an input, holds the threshold and finds the
- * world's volume and exchange flow; a claim on the refused candidate is
+ * test keeps: the first candidate, the library's habitat graph with a clean
+ * filter (the ventilation at its design flow), is refused by its residual
+ * whatever the volumes; the second, the same graph with the filter's
+ * loading fitted (what the ventilation delivers), holds the threshold and
+ * finds the world's volume and flow; a claim on the refused candidate is
  * refused; Mother says both verdicts. The builder is the test's script; the
  * demo's is the model behind the reasoner slot.
  *
@@ -29,8 +30,9 @@ import { earlySlopeOf, evaluateCandidate, inflowsOf, plausibilityOf, residualsOf
 import { validateGraph } from "../harness/topics/graph/index.js";
 import { estimatorFor } from "../harness/topics/graph/fit.js";
 import { compareStructure, referenceOfSpec } from "../harness/topics/graph/reference.js";
-import { stationReference } from "../harness/topics/graph/evaluate.js";
+import { cabinReference, stationReference } from "../harness/topics/graph/evaluate.js";
 import { labCandidate } from "../harness/scripted/graph.js";
+import { deliveredFlowM3PerMinute, readHabitatParameters } from "../lib/habitat.js";
 import { ScriptedGraphBuilder } from "../harness/scripted/graph.js";
 import { LAB_WORLD, twoZoneTelemetry } from "../harness/stand-in/two-zone-world.js";
 import type { MotherLine } from "../slots/station/provider.js";
@@ -127,16 +129,21 @@ describe("the parametric graph and its residual", () => {
         assert.ok(calls > 0);
     });
 
-    it("the station's twin is read as a reference by types and ports, and a candidate is compared with it", () => {
+    it("the station's reference graph is read from the library's shelf by types and ports, and a candidate is compared with it; the cabin twin stays readable", () => {
         const station = stationReference();
-        assert.ok(station, "graphs/cabin.spikypanda is readable");
+        assert.ok(station, "the library's habitat graph is readable");
         const wires = station!.wires.map((w) => `${w.from} -> ${w.to}`);
-        assert.ok(wires.includes("Logic.Time:timeline.value -> Physics.LifeSupport:scrubber.command"));
-        assert.ok(wires.includes("Physics.LifeSupport:scrubber.effectiveRate -> Physics.LifeSupport:cabin-air.scrubberRate"));
-        assert.ok(!station!.types.some((t) => /Scene|Sim|Electric/.test(t)), "the frame and the battery are not the twin's physics");
+        assert.ok(wires.includes("Logic.Time:timeline.value -> Physics.Habitat:scrubber.command"));
+        assert.ok(wires.includes("Physics.Habitat:scrubber.co2Delta -> Physics.Scene:atmosphere.delta_CO2_1"));
+        assert.ok(wires.includes("Physics.Habitat:person.co2Delta -> Physics.Habitat:crew.person_0"), "the persons into their crew");
+        assert.ok(wires.includes("Physics.Scene:atmosphere.atmosphere_out -> Physics.Scene:atmosphere-gate.atmosphere_A_in"), "the gates bound to the airs");
+        assert.ok(!station!.types.some((t) => /Scene:moon|Control\.Sim/.test(t)), "the scene preset and the solver are the frame, not the physics");
+        assert.ok(station!.types.includes("Physics.Scene:atmosphere") && station!.types.includes("DSP.Sensor:transducer"));
         const hand = compareStructure(labCandidate(true) as never, station!);
-        assert.deepEqual(hand.missingWires, ["Logic.Time:timeline.value -> Physics.LifeSupport:crew.count", "Logic.Time:timeline.value -> Physics.LifeSupport:crew.activity", "Physics.LifeSupport:crew.co2Emission -> Physics.LifeSupport:cabin-air.emissionB"], "the hand graph sets its one crew as parameters; the station twin has a second crew group");
-        assert.ok(hand.extraWires.includes("Logic.Time:timeline.value -> Physics.LifeSupport:cabin-air.emissionB"), "and adds the neighbour as an input");
+        assert.equal(hand.sharedWires.length, 0, "the life-support form shares no typed wire with the reference");
+        assert.equal(hand.wiringMatch, 0);
+        const cabin = cabinReference();
+        assert.ok(cabin && cabin.wires.map((w) => `${w.from} -> ${w.to}`).includes("Logic.Time:timeline.value -> Physics.LifeSupport:scrubber.command"), "graphs/cabin.spikypanda, still read for comparison");
         assert.equal(referenceOfSpec(labCandidate(false) as never, "x").wires.length, 3);
     });
 
@@ -196,7 +203,33 @@ describe("the graph factory's loop on the gap, through the broker", () => {
         if (recipesDir) rmSync(recipesDir, { recursive: true, force: true });
     });
 
-    it("the ventilation at its design flow is refused by its residual, the same structure with the delivered flow fitted holds and finds the world's volume and flow", async () => {
+    it("the library lists the habitat graph with its words in the caller's language, and refuses to fit its known constants", async () => {
+        const en = await broker.call("library", "graphs", {});
+        assert.ok(en.ok, en.error);
+        const graphs = (en.output as { graphs: Array<{ id: string; wording: string; description: string; variables: Record<string, { status: string; description: string }>; settings: Record<string, unknown>; probes: Array<{ node: string; column?: string; name?: string }> }> }).graphs;
+        const habitat = graphs.find((g) => g.id === "habitat");
+        assert.ok(habitat, "the habitat graph is on the shelf");
+        assert.equal(habitat!.wording, "default:en");
+        assert.match(habitat!.description, /two-module lunar habitat/);
+        assert.equal(habitat!.variables.Qe.status, "known");
+        assert.match(habitat!.variables.L.description, /filter's loading/);
+        assert.ok(habitat!.probes.some((p) => p.node === "co2-1" && p.column === "co2_lab_ppm" && /sensor/.test(String(p.name))));
+        const fr = await broker.call("library", "graphs", { grammar: "claude:fr" });
+        const habitatFr = (fr.output as { graphs: Array<{ wording: string; variables: Record<string, { description: string }> }> }).graphs[0];
+        assert.equal(habitatFr.wording, "default:fr", "no wording for the claude family in French: the default of the locale");
+        assert.match(habitatFr.variables.L.description, /la charge du filtre/);
+        const one = await broker.call("library", "graph", { id: "habitat" });
+        assert.ok(one.ok && (one.output as { template: { spec: { nodes: unknown[] } } }).template.spec.nodes.length >= 20, "the template comes whole");
+        const missing = await broker.call("library", "graph", { id: "cabin" });
+        assert.ok(!missing.ok && /no graph "cabin"/.test(missing.error ?? ""));
+        // The harness holds a library graph's known constants: a fit on one is refused before any run.
+        const task = { objective: { required_outputs: [], constraints: { residualPpmMax: 10 } }, observations: {}, requirements: {} } as unknown as TaskFile["task"];
+        await assert.rejects(evaluateCandidate({ label: "x", graph: "habitat", fit: { Qe: { min: 0.5, max: 2 } } }, { broker, taskId: "t", task, rows: TELEMETRY as never, remaining: 40, n: 1 }), /"Qe" is a known constant of graph "habitat"/);
+        await assert.rejects(evaluateCandidate({ label: "x", graph: "habitat", fit: { V: { min: 1, max: 5000 } } }, { broker, taskId: "t", task, rows: TELEMETRY as never, remaining: 40, n: 1 }), /"V" searched over 1 to 5000, but graph "habitat" bounds it/);
+        await assert.rejects(evaluateCandidate({ label: "x", spec: labCandidate(false) as never, graph: "habitat", compare: [] }, { broker, taskId: "t", task, rows: TELEMETRY as never, remaining: 40, n: 1 }), /a spec or a library graph, not both/);
+    });
+
+    it("the ventilation at its design flow is refused by its residual, the same graph with the filter's loading fitted holds and finds the world's volume and flow", async () => {
         const r = await broker.call("factory", "request", {
             // 10 ppm, a few times the sensors' noise: at 25 the design flow passes too (about 19 ppm, the volume compensating).
             objective: { required_outputs: [{ name: "predicted_co2", quantity: "Concentration", unit: "ppm" }], constraints: { residualPpmMax: 10 } },
@@ -218,19 +251,24 @@ describe("the graph factory's loop on the gap, through the broker", () => {
         assert.equal(candidates.length, 2, result.manifest.steps.map((s) => `${s.n} ${s.capability} ${s.outcome} ${String(s.reason).slice(0, 300)}`).join("\n"));
         const [nominal, coupled] = candidates;
         const alone = nominal;
+        assert.equal(alone.graph, "habitat", "the library's graph, instantiated");
+        assert.deepEqual(alone.settings, { labOccupants: 2, habOccupants: 2 });
+        assert.deepEqual([...(alone.defaulted ?? [])].sort(), ["Qe", "eta", "gRest", "lag"], "the known constants at the graph's defaults");
         assert.equal(alone.pass, false);
         assert.ok(alone.residuals[0].rmse > 10, `the design flow: ${alone.residuals[0].rmse} ppm at V ${alone.variables.V}`);
         assert.equal(coupled.pass, true);
-        assert.ok(coupled.residuals[0].rmse < 10, `with the exchange: ${coupled.residuals[0].rmse} ppm`);
+        assert.ok(coupled.residuals.every((r) => r.rmse < 10), `with the delivered flow: ${coupled.residuals.map((r) => `${r.column} ${r.rmse}`).join(", ")} ppm`);
         assert.ok(Math.abs(coupled.variables.V - LAB_WORLD.VLab) / LAB_WORLD.VLab < 0.1, `V ${coupled.variables.V} for ${LAB_WORLD.VLab}`);
-        assert.ok(Math.abs(coupled.variables.q - LAB_WORLD.q) / LAB_WORLD.q < 0.15, `q ${coupled.variables.q} for ${LAB_WORLD.q}`);
+        const delivered = deliveredFlowM3PerMinute(readHabitatParameters(), coupled.variables.L);
+        assert.ok(Math.abs(delivered - LAB_WORLD.q) / LAB_WORLD.q < 0.15, `the loading ${coupled.variables.L} kg delivers ${delivered.toFixed(2)} m3/min for ${LAB_WORLD.q}`);
         assert.equal(coupled.estimator, "nelder-mead");
-        assert.ok(coupled.combinations <= 41, `${coupled.combinations} runs`);
-        assert.ok(coupled.nodes === alone.nodes && coupled.fitted.includes("q") && !alone.fitted.includes("q"), "the structure is the design's in both; what changed is that the flow is measured");
+        assert.ok(coupled.combinations <= 61, `${coupled.combinations} runs`);
+        assert.ok(coupled.nodes === alone.nodes && coupled.fitted.includes("L") && !alone.fitted.includes("L"), "the structure is the reference's in both; what changed is that the flow is measured");
         assert.ok(result.manifest.artifacts.some((a) => a.kind === "graph" && a.path === coupled.path && a.sha256 === coupled.sha256));
         assert.ok(result.manifest.artifacts.some((a) => a.kind === "graph" && a.path === alone.path), "the refused candidate stays, as evidence");
         const said = JSON.parse((await (await broker.session("station")).request<{ contents: Array<{ text: string }> }>("resources/read", { uri: "station://mother" })).contents[0].text) as MotherLine[];
         const lines = said.filter((l) => l.key.startsWith("mother.candidate")).map((l) => l.text.en);
-        assert.deepEqual(lines, [`Simulator 1. 5 nodes. Residual ${Math.round(alone.residuals[0].rmse)} ppm, above the threshold of 10. Rejected.`, `Simulator 2. 5 nodes. Residual ${Math.round(coupled.residuals[0].rmse)} ppm, under the threshold of 10. Accepted.`]);
+        const worst = (c: Candidate) => Math.round(Math.max(...c.residuals.map((r) => r.rmse)));
+        assert.deepEqual(lines, [`Simulator 1. ${alone.nodes} nodes. Residual ${worst(alone)} ppm, above the threshold of 10. Rejected.`, `Simulator 2. ${coupled.nodes} nodes. Residual ${worst(coupled)} ppm, under the threshold of 10. Accepted.`]);
     });
 });

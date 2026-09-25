@@ -3,6 +3,126 @@
   "layout": {
     "nodes": [
       {
+        "id": "person-fe-1",
+        "x": -820,
+        "y": -40,
+        "typeId": "Physics.Habitat:person",
+        "inputs": [
+          {
+            "name": "activity",
+            "type": "any",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "co2Delta",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "litresPerMinute",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "activityLevel",
+            "type": "float",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "person-fe-2",
+        "x": -820,
+        "y": 70,
+        "typeId": "Physics.Habitat:person",
+        "inputs": [
+          {
+            "name": "activity",
+            "type": "any",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "co2Delta",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "litresPerMinute",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "activityLevel",
+            "type": "float",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "person-cdr",
+        "x": -820,
+        "y": 380,
+        "typeId": "Physics.Habitat:person",
+        "inputs": [
+          {
+            "name": "activity",
+            "type": "any",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "co2Delta",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "litresPerMinute",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "activityLevel",
+            "type": "float",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "person-fe-3",
+        "x": -820,
+        "y": 490,
+        "typeId": "Physics.Habitat:person",
+        "inputs": [
+          {
+            "name": "activity",
+            "type": "any",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "co2Delta",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "litresPerMinute",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "activityLevel",
+            "type": "float",
+            "direction": "output"
+          }
+        ]
+      },
+      {
         "id": "scene",
         "x": -520,
         "y": -160,
@@ -486,6 +606,16 @@
             "name": "activity",
             "type": "any",
             "direction": "input"
+          },
+          {
+            "name": "person_0",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "person_1",
+            "type": "float",
+            "direction": "input"
           }
         ],
         "outputs": [
@@ -496,6 +626,11 @@
           },
           {
             "name": "litresPerMinute",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "headcount",
             "type": "float",
             "direction": "output"
           }
@@ -516,6 +651,16 @@
             "name": "activity",
             "type": "any",
             "direction": "input"
+          },
+          {
+            "name": "person_0",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "person_1",
+            "type": "float",
+            "direction": "input"
           }
         ],
         "outputs": [
@@ -526,6 +671,11 @@
           },
           {
             "name": "litresPerMinute",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "headcount",
             "type": "float",
             "direction": "output"
           }
@@ -771,6 +921,34 @@
     ],
     "connections": [
       {
+        "id": "person-fe-1:co2Delta->crew-lab:person_0",
+        "fromNodeId": "person-fe-1",
+        "fromPortIndex": 0,
+        "toNodeId": "crew-lab",
+        "toPortIndex": 2
+      },
+      {
+        "id": "person-fe-2:co2Delta->crew-lab:person_1",
+        "fromNodeId": "person-fe-2",
+        "fromPortIndex": 0,
+        "toNodeId": "crew-lab",
+        "toPortIndex": 3
+      },
+      {
+        "id": "person-cdr:co2Delta->crew-habb:person_0",
+        "fromNodeId": "person-cdr",
+        "fromPortIndex": 0,
+        "toNodeId": "crew-habb",
+        "toPortIndex": 2
+      },
+      {
+        "id": "person-fe-3:co2Delta->crew-habb:person_1",
+        "fromNodeId": "person-fe-3",
+        "fromPortIndex": 0,
+        "toNodeId": "crew-habb",
+        "toPortIndex": 3
+      },
+      {
         "id": "solver:solver_out->scene:solver_in_0",
         "fromNodeId": "solver",
         "fromPortIndex": 0,
@@ -900,6 +1078,82 @@
   },
   "model": {
     "nodes": [
+      {
+        "id": "person-fe-1",
+        "label": "FE-1 A. Pelletier",
+        "typeId": "Physics.Habitat:person",
+        "data": {
+          "enabled": true,
+          "_name": "A. Pelletier",
+          "_callsign": "FE-1",
+          "_activity": "light_work",
+          "_sleep": 0.24,
+          "_rest": 0.3,
+          "_lightWork": 0.42,
+          "_heavyWork": 1,
+          "_co2Density": 1.8176,
+          "_co2Delta": 0,
+          "_litresPerMinute": 0,
+          "_current": "rest"
+        }
+      },
+      {
+        "id": "person-fe-2",
+        "label": "FE-2 M. Chen",
+        "typeId": "Physics.Habitat:person",
+        "data": {
+          "enabled": true,
+          "_name": "M. Chen",
+          "_callsign": "FE-2",
+          "_activity": "light_work",
+          "_sleep": 0.24,
+          "_rest": 0.3,
+          "_lightWork": 0.42,
+          "_heavyWork": 1,
+          "_co2Density": 1.8176,
+          "_co2Delta": 0,
+          "_litresPerMinute": 0,
+          "_current": "rest"
+        }
+      },
+      {
+        "id": "person-cdr",
+        "label": "CDR J. Picard",
+        "typeId": "Physics.Habitat:person",
+        "data": {
+          "enabled": true,
+          "_name": "J. Picard",
+          "_callsign": "CDR",
+          "_activity": "rest",
+          "_sleep": 0.24,
+          "_rest": 0.3,
+          "_lightWork": 0.42,
+          "_heavyWork": 1,
+          "_co2Density": 1.8176,
+          "_co2Delta": 0,
+          "_litresPerMinute": 0,
+          "_current": "rest"
+        }
+      },
+      {
+        "id": "person-fe-3",
+        "label": "FE-3 G. La Forge",
+        "typeId": "Physics.Habitat:person",
+        "data": {
+          "enabled": true,
+          "_name": "G. La Forge",
+          "_callsign": "FE-3",
+          "_activity": "rest",
+          "_sleep": 0.24,
+          "_rest": 0.3,
+          "_lightWork": 0.42,
+          "_heavyWork": 1,
+          "_co2Density": 1.8176,
+          "_co2Delta": 0,
+          "_litresPerMinute": 0,
+          "_current": "rest"
+        }
+      },
       {
         "id": "scene",
         "label": "Lunar habitat",
@@ -1044,7 +1298,7 @@
         "typeId": "Physics.Habitat:crew",
         "data": {
           "enabled": true,
-          "_count": 2,
+          "_count": 0,
           "_activity": "light_work",
           "_sleep": 0.24,
           "_rest": 0.3,
@@ -1052,7 +1306,9 @@
           "_heavyWork": 1,
           "_co2Density": 1.8176,
           "_co2Delta": 0,
-          "_litresPerMinute": 0
+          "_litresPerMinute": 0,
+          "_headcount": 0,
+          "_persons": 0
         }
       },
       {
@@ -1061,7 +1317,7 @@
         "typeId": "Physics.Habitat:crew",
         "data": {
           "enabled": true,
-          "_count": 2,
+          "_count": 0,
           "_activity": "rest",
           "_sleep": 0.24,
           "_rest": 0.3,
@@ -1069,7 +1325,9 @@
           "_heavyWork": 1,
           "_co2Density": 1.8176,
           "_co2Delta": 0,
-          "_litresPerMinute": 0
+          "_litresPerMinute": 0,
+          "_headcount": 0,
+          "_persons": 0
         }
       },
       {
@@ -1211,6 +1469,50 @@
       }
     ],
     "connections": [
+      {
+        "id": "person-fe-1:co2Delta->crew-lab:person_0",
+        "from": {
+          "node": "person-fe-1",
+          "port": "co2Delta"
+        },
+        "to": {
+          "node": "crew-lab",
+          "port": "person_0"
+        }
+      },
+      {
+        "id": "person-fe-2:co2Delta->crew-lab:person_1",
+        "from": {
+          "node": "person-fe-2",
+          "port": "co2Delta"
+        },
+        "to": {
+          "node": "crew-lab",
+          "port": "person_1"
+        }
+      },
+      {
+        "id": "person-cdr:co2Delta->crew-habb:person_0",
+        "from": {
+          "node": "person-cdr",
+          "port": "co2Delta"
+        },
+        "to": {
+          "node": "crew-habb",
+          "port": "person_0"
+        }
+      },
+      {
+        "id": "person-fe-3:co2Delta->crew-habb:person_1",
+        "from": {
+          "node": "person-fe-3",
+          "port": "co2Delta"
+        },
+        "to": {
+          "node": "crew-habb",
+          "port": "person_1"
+        }
+      },
       {
         "id": "solver:solver_out->scene:solver_in_0",
         "from": {

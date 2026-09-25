@@ -36,7 +36,8 @@ import { factoryContractOf } from "../harness/observer/request.js";
 import { LAB_WORLD, TwoZoneWorldSim, type TelemetryRow } from "../harness/stand-in/two-zone-world.js";
 import { runProcedure } from "../tier3/procedure.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
-import { evaluateCandidate, stationReference, type Candidate } from "../harness/topics/graph/evaluate.js";
+import { evaluateCandidate, STATION_GRAPH_ID, stationReference, type Candidate } from "../harness/topics/graph/evaluate.js";
+import { deliveredFlowM3PerMinute, readHabitatParameters } from "../lib/habitat.js";
 import { compareGraphs, compareParameters, referenceOfSpec } from "../harness/topics/graph/reference.js";
 import { labCandidate } from "../harness/scripted/graph.js";
 import type { Spec } from "../harness/topics/graph/params.js";
@@ -271,14 +272,17 @@ async function main(): Promise<void> {
             t0,
         );
 
-        // ── 8b. the references: the graphs written by hand, run on the same telemetry with what the model was given, and every candidate compared with them.
+        // ── 8b. the references: the library's habitat graph and the graph written by hand, run on the same telemetry with what the model was given, and every candidate compared with them.
         t0 = Date.now();
         const task = (JSON.parse(readFileSync(path.join(taskDir(reqG.taskId), "task.json"), "utf8")) as TaskFile).task;
         const rows = telemetry as unknown as Array<Record<string, number>>;
         // What the documentation gives, and nothing the world alone knows: the crew's rate is NASA's band, not the world's value.
         const given = { N: 2, Qe: 1.0, lag: 3.33 };
         const compare = [{ node: "lab", property: "co2Ppm", column: "co2_lab_ppm" }];
-        const byHand: Array<{ name: string; spec: Spec; fit: Record<string, { min: number; max: number }>; held?: Record<string, number> }> = [
+        const byHand: Array<{ name: string; spec?: Spec; graph?: string; fit: Record<string, { min: number; max: number }>; held?: Record<string, number> }> = [
+            // The library's reference graph: its known constants at their defaults, the volumes fitted; then the filter's loading as well.
+            { name: "library graph habitat: a clean filter, the ventilation at its design flow", graph: STATION_GRAPH_ID, fit: { V: { min: 10, max: 200 }, Vh: { min: 50, max: 1000 }, g: { min: 0.26, max: 0.45 } }, held: { L: 0 } },
+            { name: "library graph habitat: the filter's loading fitted, what the ventilation delivers", graph: STATION_GRAPH_ID, fit: { V: { min: 10, max: 200 }, Vh: { min: 50, max: 1000 }, g: { min: 0.26, max: 0.45 }, L: { min: 0, max: 0.2 } } },
             { name: "by hand: the ventilation at its design flow (3 m3/min)", spec: labCandidate(true) as unknown as Spec, fit: { V: { min: 10, max: 200 }, g: { min: 0.26, max: 0.45 } }, held: { q: 3.0 } },
             { name: "by hand: the ventilation's delivered flow measured", spec: labCandidate(true) as unknown as Spec, fit: { V: { min: 10, max: 200 }, g: { min: 0.26, max: 0.45 }, q: { min: 0, max: 6 } } },
         ];
@@ -286,9 +290,10 @@ async function main(): Promise<void> {
         let handFit: Record<string, number> | null = null;
         for (const [i, h] of byHand.entries()) {
             try {
-                const r = await evaluateCandidate({ label: h.name, spec: h.spec, compare, variables: { ...given, ...h.held }, fit: h.fit, maxRuns: 60 }, { broker: operator, taskId: reqG.taskId, task: { ...task, requirements: undefined }, rows, remaining: 200, n: 100 + i });
-                references.push({ name: h.name, rmse: Math.max(...r.candidate.residuals.map((x) => x.rmse)), variables: r.candidate.variables });
-                if (i === 1) handFit = r.candidate.variables;
+                const r = await evaluateCandidate(h.graph ? { label: h.name, graph: h.graph, variables: h.held, fit: h.fit, maxRuns: 80 } : { label: h.name, spec: h.spec, compare, variables: { ...given, ...h.held }, fit: h.fit, maxRuns: 60 }, { broker: operator, taskId: reqG.taskId, task: { ...task, requirements: undefined }, rows, remaining: 400, n: 100 + i });
+                const variables = h.graph && typeof r.candidate.variables.L === "number" ? { ...r.candidate.variables, deliveredM3PerMinute: Number(deliveredFlowM3PerMinute(readHabitatParameters(), r.candidate.variables.L).toFixed(3)) } : r.candidate.variables;
+                references.push({ name: h.name, rmse: Math.max(...r.candidate.residuals.map((x) => x.rmse)), variables });
+                if (h.spec && !handFit && h.fit.q) handFit = r.candidate.variables;
             } catch (e) {
                 references.push({ name: h.name, rmse: null, variables: null, error: errorMessage(e) });
             }

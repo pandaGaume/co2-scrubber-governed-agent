@@ -1,6 +1,6 @@
 {
     "server": {
-        "description": "The factory's library: chosen documents on scrubbers, air, measurement methods, CO2 and people, and the installation, to look a number or a method up rather than guess it",
+        "description": "The factory's library: chosen documents on scrubbers, air, measurement methods, CO2 and people, and the installation, to look a number or a method up rather than guess it; and the reference graphs of the station, each with its words, for a harness to instantiate on the twin",
         "instructions": "List the catalogue, search it with a few words, read a document whole. Every document is a file of the repository with its sha256; what is read is in the broker's trace."
     },
     "tools": {
@@ -29,12 +29,31 @@
             "properties": {
                 "id": "the document's id, from list or search"
             }
+        },
+        "graphs": {
+            "title": "The graphs on the shelf",
+            "description": "The reference graphs a harness may instantiate on the twin, each with its words: what it is and how to use it, its variables (default, bounds, status: known and held, fitted, or a band) and its settings (who is on board), its probes and the telemetry columns they are judged against, the document and the template with their sha256. Instantiate one with graph.evaluate {graph: id, variables, fit, settings}.",
+            "properties": {
+                "grammar": "the wording key of your session (_meta.grammar of your initialize, such as claude:en or default:fr); the baseline when absent"
+            }
+        },
+        "graph": {
+            "title": "One graph of the shelf",
+            "description": "One reference graph whole: its words, its variables, settings and probes, and its template (the parametric spec the harness resolves: node parameters as formulas over the variables, the measured inputs as telemetry columns, the persons of the roster by module).",
+            "properties": {
+                "id": "the graph's id, from graphs",
+                "grammar": "the wording key of your session; the baseline when absent"
+            }
         }
     },
     "resources": {
         "library://catalogue": {
             "name": "Catalogue",
             "description": "The documents of the library, with their sha256"
+        },
+        "library://graphs": {
+            "name": "Graphs",
+            "description": "The reference graphs on the shelf, with their baseline words"
         }
     }
 }

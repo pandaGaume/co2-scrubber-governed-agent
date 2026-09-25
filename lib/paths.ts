@@ -31,6 +31,8 @@ export const ROOT = findRoot(path.dirname(fileURLToPath(import.meta.url)));
 export const PARAMETERS_FILE = path.join(ROOT, "specs", "cabin-parameters.json");
 export const DEFAULT_SCENARIO_FILE = path.join(ROOT, "specs", "scenario-night-9.json");
 export const CABIN_DOCUMENT_FILE = path.join(ROOT, "graphs", "cabin.spikypanda");
+/** The physical reference of the habitat (`lib/habitat.ts`): what the graph factory starts from. */
+export const HABITAT_DOCUMENT_FILE = path.join(ROOT, "graphs", "habitat.spikypanda");
 export const SYSTEM_PROMPT_FILE = path.join(ROOT, "tier3", "prompts", "system.md");
 
 /** An absolute path under the repository. */

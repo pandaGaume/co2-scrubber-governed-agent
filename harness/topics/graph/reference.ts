@@ -1,13 +1,13 @@
 /**
  * A reference graph, and a candidate compared with it.
  *
- * The station already has a twin: `graphs/cabin.spikypanda`, the cabin the
- * twin slot runs, written by hand from the equations of the co2-mpc sample
- * (its parameters are the sample's, folded on a volume nobody measured, and
- * were never fitted to telemetry: `specs/cabin-parameters.json` says
- * "draft, not yet reviewed"). Its structure is still the right start: a
- * measured command through a timeline into the scrubber, the scrubber's
- * rate into the cabin, the crew's emission into the cabin.
+ * The station's reference is the habitat graph of the library
+ * (`graphs/habitat.spikypanda`, its template `habitat.template.json`, its
+ * words in `habitat.grammars/`): two volumes in mass, the persons by name,
+ * the scrubber in its datasheet's units, the ventilation through its
+ * filter, the sensors. Before it, the cabin twin (`graphs/cabin.spikypanda`,
+ * one room, its rates folded on a volume nobody measured) was the
+ * reference; it is still read, for comparison.
  *
  * Two uses, both by code:
  *
@@ -35,8 +35,8 @@ export interface ReferenceGraph {
     wires: Wire[];
 }
 
-/** Node types that frame a saved document (the scene, the solver) and are not part of a twin's physics. */
-const FRAME = /^(Physics\.Scene|Control\.Sim):/;
+/** Node types that frame a saved document (the scene preset, the solver) and are not part of a twin's physics; the atmosphere and its gate are physics. */
+const FRAME = /^Control\.Sim:|^Physics\.Scene:(?!atmosphere)/;
 /** Node types outside the CO2 balance a commissioning twin is about (the battery the cabin twin also feeds). */
 const OUTSIDE = /^Physics\.Electric:/;
 
@@ -55,11 +55,12 @@ export function referenceOfDocument(file: string, name: string): ReferenceGraph 
     return { name, types: [...new Set(nodes.map((n) => n.typeId))].sort(), wires: dedupe(wires) };
 }
 
-/** A spec (the form `graph.evaluate` takes) as a reference. */
+/** A spec (the form `graph.evaluate` takes) as a reference: the same frame left out as for a document. */
 export function referenceOfSpec(spec: Spec, name: string): ReferenceGraph {
-    const typeOf = (id: string) => spec.nodes.find((n) => n.id === id)?.typeId;
+    const nodes = spec.nodes.filter((n) => !FRAME.test(n.typeId) && !OUTSIDE.test(n.typeId));
+    const typeOf = (id: string) => nodes.find((n) => n.id === id)?.typeId;
     const wires = spec.connections.map((c) => typeWire(typeOf, c.from, c.to)).filter((w): w is Wire => w !== null);
-    return { name, types: [...new Set(spec.nodes.map((n) => n.typeId))].sort(), wires: dedupe(wires) };
+    return { name, types: [...new Set(nodes.map((n) => n.typeId))].sort(), wires: dedupe(wires) };
 }
 
 const key = (w: Wire) => `${w.from} -> ${w.to}`;

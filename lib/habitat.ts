@@ -16,8 +16,9 @@
  * at the flow the fan wires into it; the hatch, closed), a particulate for
  * the dust, the DSP transducer for the two CO2 sensors (the station's
  * resolution as its quantisation). The habitat plugin adds what the
- * catalogue lacked: the crew and the scrubber in mass, the fan, the filter
- * and its fouling (`plugins/habitat`).
+ * catalogue lacked: the persons by name (the medical monitor's roster, each
+ * at their own activity) wired into the crew of their module, the scrubber
+ * in mass, the fan, the filter and its fouling (`plugins/habitat`).
  *
  * Nothing is typed here: every constant goes through the node's editable
  * setters from the parameter file; the graph's structure is the one
@@ -26,15 +27,28 @@
  * within a few ppm.
  */
 import type { DocumentConnectionSpec, DocumentNodeSpec } from "@spiky-panda/factory";
-import { ATMOSPHERE_PRESETS, CHEMICAL_SPECIES_V1, GAS_CONSTANT_R, V1_SPECIES_ORDER } from "@spiky-panda/core";
 import { readJson } from "./files.js";
 import { loadFactory, param, type CabinParameters } from "./factory.js";
-import { fromRoot } from "./paths.js";
+import { fromRoot, HABITAT_DOCUMENT_FILE, relativeToRoot } from "./paths.js";
+import type { GraphTemplate, TemplateNode, TemplateProbe, TemplateSetting, TemplateVariable } from "./graph-library.js";
 import { buildRegistry, type Registry } from "./registry.js";
+import { initialMassesKg } from "./air.js";
+import { HabitatFanNode } from "../plugins/habitat/fan.node.js";
+
+export { initialMassesKg, HABITAT_DOCUMENT_FILE };
 
 export const HABITAT_PARAMETERS_FILE = fromRoot("specs", "habitat-parameters.json");
-export const HABITAT_DOCUMENT_FILE = fromRoot("graphs", "habitat.spikypanda");
 export const HABITAT_MANIFEST_FILE = fromRoot("graphs", "habitat.manifest.json");
+
+/** One person of the station, as the parameter file lists them (the medical monitor's roster). */
+export interface HabitatPerson {
+    id: string;
+    callsign: string;
+    name: string;
+    /** `lab` or `habB`. */
+    module: string;
+    activity: string;
+}
 
 const MINUTE = 60;
 
@@ -56,6 +70,8 @@ export interface HabitatOptions {
     filterLoadingKg?: number;
     /** The scrubber's flow at the start, m3/s (0 when absent: it starts from rest, as the stand-in world does). */
     scrubberInitialFlowM3ps?: number;
+    /** Who is on board and what they do (the parameter file's persons when absent). */
+    persons?: HabitatPerson[];
 }
 
 export const DEFAULT_SPEED_STEPS: CommandStep[] = [
@@ -69,23 +85,24 @@ export interface HabitatDocumentSpec {
     minutes: number;
 }
 
+/** The crew node of a module, by the module's name in the parameter file. */
+export const crewNodeOf = (module: string): string => (module === "lab" ? "crew-lab" : "crew-habb");
+
 /**
- * The initial mass of each species of a volume of air, kg, in the
- * atmosphere's own species order: the core's composition preset with its
- * CO2 replaced by what the sensor read, the other fractions scaled so the
- * whole still sums to one, the ideal gas for the moles. This is what the
- * atmosphere derives itself from a bound composition at reset; written
- * into the document it holds in every path, the studio's binding included.
+ * The flow the ventilation delivers at full command with the filter at a
+ * loading, m3/min: the fan's operating point against the duct and the
+ * filter, as the nodes compute it (the fan's curve, the filter's
+ * resistance growing with its loading). What a fitted loading means as a
+ * flow, for a reader who thinks in m3/min.
  */
-export function initialMassesKg(co2Ppm: number, volumeM3: number, temperatureK: number, preset = "earthHumidAirSeaLevel", pressurePa = 101325): number[] {
-    const fractions = { ...(ATMOSPHERE_PRESETS as Record<string, { moleFractions: Record<string, number> }>)[preset].moleFractions } as Record<string, number>;
-    const co2 = Math.max(0, co2Ppm) * 1e-6;
-    const others = Object.entries(fractions).filter(([s]) => s !== "CO2");
-    const sum = others.reduce((a, [, x]) => a + x, 0);
-    for (const [s, x] of others) fractions[s] = (x * (1 - co2)) / sum;
-    fractions.CO2 = co2;
-    const moles = (pressurePa * volumeM3) / (GAS_CONSTANT_R * temperatureK);
-    return (V1_SPECIES_ORDER as ReadonlyArray<string>).map((s) => (fractions[s] ?? 0) * moles * (CHEMICAL_SPECIES_V1 as Record<string, { molarMass: number }>)[s].molarMass);
+export function deliveredFlowM3PerMinute(parameters: CabinParameters, loadingKg: number): number {
+    const p = (dotted: string) => param<number>(parameters, dotted);
+    const fan = new HabitatFanNode();
+    fan.shutoffPressurePa = p("ventilation.fan.shutoffPressurePa");
+    fan.freeDeliveryM3ps = p("ventilation.fan.freeDeliveryM3ps");
+    fan.capacityFactor = p("ventilation.fan.capacityFactor");
+    const filter = p("ventilation.filter.cleanResistance") * (1 + Math.max(0, loadingKg) / p("ventilation.filter.loadingDoublingKg"));
+    return fan.flowAt(p("ventilation.fan.command"), p("ventilation.fan.ductResistance") + filter) * 60;
 }
 
 /** The document's spec: type ids, parameters from the file, the wiring of the habitat. */
@@ -107,15 +124,33 @@ export function habitatDocumentSpec(parameters: CabinParameters, options: Habita
         heavyWorkLitresPerMinute: litres("heavy_work"),
         co2DensityKgPerM3: p("crew.co2DensityKgPerM3"),
     };
+    // The persons by name, each a node at their own activity, wired into the crew of their module: the crews count nobody unnamed.
+    const persons = options.persons ?? p<HabitatPerson[]>("crew.persons");
+    const personNodes: DocumentNodeSpec[] = persons.map((who, k) => ({
+        id: `person-${who.id}`,
+        typeId: "Physics.Habitat:person",
+        x: -820,
+        y: (who.module === "lab" ? -40 : 380) + 110 * persons.filter((o, j) => j < k && o.module === who.module).length,
+        label: `${who.callsign} ${who.name}`,
+        params: { name: who.name, callsign: who.callsign, activity: who.activity, ...crewParams },
+    }));
+    const personLinks: DocumentConnectionSpec[] = [];
+    const wired: Record<string, number> = {};
+    for (const who of persons) {
+        const crew = crewNodeOf(who.module);
+        personLinks.push({ from: [`person-${who.id}`, "co2Delta"], to: [crew, `person_${wired[crew] ?? 0}`] });
+        wired[crew] = (wired[crew] ?? 0) + 1;
+    }
     const nodes: DocumentNodeSpec[] = [
+        ...personNodes,
         { id: "scene", typeId: p<string>("scene.preset"), x: -520, y: -160, label: "Lunar habitat" },
         { id: "solver", typeId: "Control.Sim:rk4-solver", x: -820, y: -160, label: "Solver", params: { tolerance: 1e-6, maxStep: p("time.solverStepSeconds") } },
         { id: "lab", typeId: "Physics.Scene:atmosphere", x: 0, y: 0, label: "Lab air", params: air(p("lab.volumeM3"), p("lab.temperatureK"), p("lab.initialCo2Ppm")) },
         { id: "habb", typeId: "Physics.Scene:atmosphere", x: 0, y: 420, label: "Hab-B air", params: air(p("habB.volumeM3"), p("habB.temperatureK"), p("habB.initialCo2Ppm")) },
         { id: "co2-1", typeId: "DSP.Sensor:transducer", x: 300, y: 0, label: "CO2 sensor co2-1 (Lab)", params: sensor },
         { id: "co2-2", typeId: "DSP.Sensor:transducer", x: 300, y: 420, label: "CO2 sensor co2-2 (Hab-B)", params: sensor },
-        { id: "crew-lab", typeId: "Physics.Habitat:crew", x: -520, y: 40, label: "Crew in the Lab", params: { count: p("crew.lab.count"), activity: p<string>("crew.lab.activity"), ...crewParams } },
-        { id: "crew-habb", typeId: "Physics.Habitat:crew", x: -520, y: 460, label: "Crew in Hab-B", params: { count: p("crew.habB.count"), activity: p<string>("crew.habB.activity"), ...crewParams } },
+        { id: "crew-lab", typeId: "Physics.Habitat:crew", x: -520, y: 40, label: "Crew in the Lab", params: { count: 0, activity: "light_work", ...crewParams } },
+        { id: "crew-habb", typeId: "Physics.Habitat:crew", x: -520, y: 460, label: "Crew in Hab-B", params: { count: 0, activity: "rest", ...crewParams } },
         { id: "speed", typeId: "Logic.Time:timeline", x: -820, y: 200, label: "Scrubber command", params: { segments: segments(steps), defaultValue: steps[steps.length - 1]?.value ?? 0 } },
         {
             id: "scrubber",
@@ -176,6 +211,8 @@ export function habitatDocumentSpec(parameters: CabinParameters, options: Habita
         { id: "hatch", typeId: "Physics.Scene:atmosphere-gate", x: 560, y: 420, label: "Hatch Lab / Hab-B", params: { mode: p<string>("ventilation.hatch.mode") } },
     ];
     const connections: DocumentConnectionSpec[] = [
+        // Each person into the crew of their module (its person pool, one input per person).
+        ...personLinks,
         // The scene: its solver, and the Lab's air as its ambient conditions (configuration links: bound in the studio, skipped headless).
         { from: ["solver", "solver_out"], to: ["scene", "solver_in_0"] },
         { from: ["lab", "atmosphere_out"], to: ["scene", "atmosphere_in"] },
@@ -206,6 +243,108 @@ export function habitatDocumentSpec(parameters: CabinParameters, options: Habita
 }
 
 export const readHabitatParameters = (file = HABITAT_PARAMETERS_FILE): CabinParameters => readJson<CabinParameters>(file);
+
+export const HABITAT_TEMPLATE_FILE = fromRoot("graphs", "habitat.template.json");
+export const HABITAT_GRAPH_ID = "habitat";
+
+/**
+ * The reference as a library graph (`lib/graph-library.ts`): the same
+ * structure as the document, the numbers that only the installation knows
+ * or that the documentation gives as bands written as variables, the
+ * measured inputs as the logger's columns, the persons of the roster marked
+ * by module so a setting says who is on board. The graph factory
+ * instantiates it on the twin and fits the variables; the words that
+ * describe it to a model are in `graphs/habitat.grammars/`.
+ */
+export function habitatTemplate(parameters: CabinParameters = readHabitatParameters()): GraphTemplate {
+    const p = <T = number>(dotted: string) => param<T>(parameters, dotted);
+    const base = habitatDocumentSpec(parameters, { minutes: 1 });
+    const persons = p<HabitatPerson[]>("crew.persons");
+    const settingOf = (module: string) => (module === "lab" ? "labOccupants" : "habOccupants");
+    const seen: Record<string, number> = {};
+    const preset = p<string>("atmosphere.preset");
+    const pressure = p("atmosphere.pressurePa");
+    const air = (volume: string, column: string, temperatureK: number) => ({ volume: { $expr: volume }, temperature_k: temperatureK, initial_atmosphere_preset: preset, _initialMassKg: { $initialMasses: { co2Ppm: { $first: column }, volume, temperatureK, preset, pressurePa: pressure } } });
+    const nodes: TemplateNode[] = base.nodes.map((n) => {
+        const node: TemplateNode = { ...(n as TemplateNode) };
+        const person = persons.find((who) => `person-${who.id}` === n.id);
+        if (person) {
+            const setting = settingOf(person.module);
+            node.$person = { setting, index: seen[setting] ?? 0 };
+            seen[setting] = (seen[setting] ?? 0) + 1;
+            // The operators' rate is the band's variable; the resting rate the documented one.
+            node.params = { ...node.params, ...(person.module === "lab" ? { lightWorkLitresPerMinute: { $expr: "g" } } : { restLitresPerMinute: { $expr: "gRest" } }) };
+        }
+        switch (n.id) {
+            case "crew-lab":
+                node.$unnamed = { setting: "labOccupants", roster: persons.filter((who) => who.module === "lab").length };
+                node.params = { ...node.params, lightWorkLitresPerMinute: { $expr: "g" } };
+                break;
+            case "crew-habb":
+                node.$unnamed = { setting: "habOccupants", roster: persons.filter((who) => who.module !== "lab").length };
+                node.params = { ...node.params, restLitresPerMinute: { $expr: "gRest" } };
+                break;
+            case "lab":
+                node.params = { ...node.params, ...air("V", "co2_lab_ppm", p("lab.temperatureK")) };
+                break;
+            case "habb":
+                node.params = { ...node.params, ...air("Vh", "co2_habb_ppm", p("habB.temperatureK")) };
+                break;
+            case "speed":
+                node.params = { ...node.params, segments: { $series: { column: "speed_percent", scale: "0.01" } }, defaultValue: 0 };
+                break;
+            case "fan-command":
+                node.params = { ...node.params, segments: JSON.stringify([{ from: 0, to: 1e9, value: p("ventilation.fan.command") }]) };
+                break;
+            case "scrubber":
+                node.params = { ...node.params, flowAtFullM3ps: { $expr: "Qe / eta / 60" }, efficiency: { $expr: "eta" }, lagTimeConstantMinutes: { $expr: "lag" }, initialFlowM3ps: 0 };
+                break;
+            case "filter":
+                node.params = { ...node.params, initialLoadingKg: { $expr: "L" } };
+                break;
+            default:
+                break;
+        }
+        return node;
+    });
+    const variables: Record<string, TemplateVariable> = {
+        V: { default: p("lab.volumeM3"), min: 10, max: 200, unit: "m3", status: "fitted", source: "the commissioning: the volume the scrubber serves; the design drawing gives 32" },
+        Vh: { default: p("habB.volumeM3"), min: 50, max: 1000, unit: "m3", status: "fitted", source: "not documented as built (library station-topology)" },
+        L: { default: p("ventilation.filter.initialLoadingKg"), min: 0, max: p("ventilation.filter.endOfLifeLoadingKg"), unit: "kg", status: "fitted", source: "what the ventilation delivers, through the filter's loading: 0 is a clean filter at the design flow" },
+        g: { default: 0.38, min: 0.26, max: 0.45, unit: "L/min", status: "band", source: "nasa-crew-metabolic-loads: a crewmember awake, 5th to 95th percentile, reference 0.38" },
+        gRest: { default: p("crew.litresPerMinute.rest"), unit: "L/min", status: "known", source: "nasa-crew-metabolic-loads: between asleep and awake" },
+        Qe: { default: Number((p("scrubber.flowAtFullM3ps") * p("scrubber.efficiency") * 60).toFixed(4)), unit: "m3/min", status: "known", source: "scrubber-1-datasheet: effective flow at full command" },
+        eta: { default: p("scrubber.efficiency"), status: "known", source: "scrubber-1-datasheet: single-pass efficiency" },
+        lag: { default: p("scrubber.lagTimeConstantMinutes"), unit: "min", status: "known", source: "scrubber-1-datasheet: first-order response" },
+    };
+    const settings: Record<string, TemplateSetting> = {
+        labOccupants: { default: persons.filter((who) => who.module === "lab").length, min: 0, max: 8 },
+        habOccupants: { default: persons.filter((who) => who.module !== "lab").length, min: 0, max: 8 },
+    };
+    const probes: TemplateProbe[] = [
+        { node: "co2-1", property: "lastMeasured", unit: "ppm", column: "co2_lab_ppm" },
+        { node: "co2-2", property: "lastMeasured", unit: "ppm", column: "co2_habb_ppm" },
+        { node: "lab", property: "ppm_CO2", unit: "ppm" },
+        { node: "habb", property: "ppm_CO2", unit: "ppm" },
+        { node: "fan", property: "flowM3PerMinute", unit: "m3/min" },
+        { node: "filter", property: "clogging" },
+        { node: "scrubber", property: "flowM3ps", unit: "m3/s" },
+        { node: "scrubber", property: "removalKgps", unit: "kg/s" },
+        { node: "hvac", property: "lastVolumetricFlow", unit: "m3/s" },
+        { node: "crew-lab", property: "co2Delta", unit: "kg/s" },
+        { node: "crew-habb", property: "co2Delta", unit: "kg/s" },
+    ];
+    return {
+        id: HABITAT_GRAPH_ID,
+        title: "The habitat reference: two modules, a centralised scrubber, the inter-module ventilation through its filter, the crew by name",
+        document: relativeToRoot(HABITAT_DOCUMENT_FILE),
+        parameters: relativeToRoot(HABITAT_PARAMETERS_FILE),
+        variables,
+        settings,
+        probes,
+        spec: { nodes, connections: base.connections.map((c) => ({ from: [...c.from] as [string, string], to: [...c.to] as [string, string] })) },
+    };
+}
 
 /** The document as the text of a `.spikypanda` file, built through the real registry. */
 export function buildHabitatDocument(options: HabitatOptions = {}, parameters = readHabitatParameters(), registry: Registry = buildRegistry()): { json: string; spec: HabitatDocumentSpec } {

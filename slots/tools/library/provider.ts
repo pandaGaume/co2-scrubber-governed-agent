@@ -6,6 +6,13 @@
  * it finds the method from what it lacks, and the card carries the rules
  * of application), `search` (the documents a query's words appear in, with
  * the lines they appear on), `read` (one document whole, with its sha256).
+ * Since 25 September, the graphs too: `graphs` (the reference graphs a
+ * harness may instantiate on the twin, each with its words: what it is,
+ * its variables and settings, its probes) and `graph` (one whole, its
+ * template included). A graph's words are an mcp-core grammar of its own
+ * (`graphs/<id>.grammars/<family>/<locale>.json`, `lib/graph-library.ts`),
+ * resolved for the caller's wording key (`grammar`, the key the caller's
+ * own session got in `_meta.grammar`), the baseline when none.
  *
  * Why a library and not the web, first: the documents are chosen, they are
  * files of this repository (`docs/library/*.md`), each read is a call in the
@@ -25,6 +32,7 @@ import * as path from "node:path";
 import { fromRoot } from "../../../lib/paths.js";
 import { objectSchema, publishSlot, type PublishedSlot, type SlotTool } from "../../lib/slot-server.js";
 import { sha256Of } from "../lib/workshop.js";
+import { describeGraph, loadGraphLibrary, type GraphLibraryEntry } from "../../../lib/graph-library.js";
 
 export interface LibraryDocument {
     id: string;
@@ -40,6 +48,8 @@ export interface LibraryDocument {
 export interface LibraryState {
     dir: string;
     documents: LibraryDocument[];
+    /** The reference graphs on the shelf, with their grammars. */
+    graphs: GraphLibraryEntry[];
     reads: Array<{ id: string; sha256: string; at: string }>;
 }
 
@@ -87,7 +97,9 @@ export function searchLibrary(documents: LibraryDocument[], query: string, limit
 }
 
 export function librarySlot(wsBase: string, log: (line: string) => void): PublishedSlot<LibraryState> {
-    const state: LibraryState = { dir: LIBRARY_DIR, documents: loadLibrary(), reads: [] };
+    const state: LibraryState = { dir: LIBRARY_DIR, documents: loadLibrary(), graphs: loadGraphLibrary(), reads: [] };
+    for (const g of state.graphs) for (const problem of g.problems) log(`[library] graph ${g.template.id}: ${problem}`);
+    const wordingOf = (args: Record<string, unknown>) => (typeof args.grammar === "string" && args.grammar.trim() ? args.grammar.trim() : null);
     const tools: SlotTool<LibraryState>[] = [
         {
             name: "list",
@@ -108,6 +120,21 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
             handle: (args, s) => ({ query: String(args.query), results: searchLibrary(s.documents, String(args.query ?? ""), typeof args.limit === "number" ? args.limit : 5) }),
         },
         {
+            name: "graphs",
+            inputSchema: objectSchema({ grammar: { type: "string" } }),
+            handle: (args, s) => ({ graphs: s.graphs.map((g) => describeGraph(g, wordingOf(args))) }),
+        },
+        {
+            name: "graph",
+            inputSchema: objectSchema({ id: { type: "string" }, grammar: { type: "string" } }, ["id"]),
+            handle: (args, s) => {
+                const g = s.graphs.find((x) => x.template.id === args.id);
+                if (!g) throw new Error(`no graph "${String(args.id)}" in the library (${s.graphs.map((x) => x.template.id).join(", ") || "none"})`);
+                s.reads.push({ id: `graph:${g.template.id}`, sha256: g.templateSha256, at: new Date().toISOString() });
+                return { ...describeGraph(g, wordingOf(args)), template: g.template };
+            },
+        },
+        {
             name: "read",
             inputSchema: objectSchema({ id: { type: "string" } }, ["id"]),
             handle: (args, s) => {
@@ -121,7 +148,10 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
     return publishSlot<LibraryState>({
         slot: "library",
         tools,
-        resources: [{ uri: "library://catalogue", read: (s) => s.documents.map(({ id, title, summary, sha256 }) => ({ id, title, summary, sha256 })) }],
+        resources: [
+            { uri: "library://catalogue", read: (s) => s.documents.map(({ id, title, summary, sha256 }) => ({ id, title, summary, sha256 })) },
+            { uri: "library://graphs", read: (s) => s.graphs.map((g) => describeGraph(g, null)) },
+        ],
         state,
         wsBase,
         log,

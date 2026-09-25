@@ -1,0 +1,70 @@
+{
+    "server": {
+        "description": "La référence physique de l'habitat lunaire à deux modules : le Lab et Hab-B comme deux volumes d'air en masse (l'atmosphère du substrat, gaz parfait), quatre personnes nommées, chacune à son activité, branchées sur l'équipage de leur module, l'épurateur de CO2 centralisé dans le Lab dans les unités de sa fiche technique (un débit, un rendement, un retard) qui aspire l'air du Lab à la commande mesurée, la ventilation inter-modules comme un ventilateur sur sa courbe à travers un filtre dont l'encrassement fixe ce qu'elle délivre, la boucle qui échange les deux airs à ce débit, le sas fermé, et les deux capteurs de CO2 à la résolution de la station. Construite depuis specs/habitat-parameters.json, chaque constante avec sa source.",
+        "instructions": "Partir de ce graphe, ne pas le reconstruire : l'instancier et adapter ses nombres. Ce que la documentation donne est connu et tenu à sa valeur par défaut (Qe, eta et lag de l'épurateur depuis sa fiche ; le débit au repos). Ce que seule l'installation connaît est ajusté : le volume du Lab V, le volume de Hab-B Vh, et la charge du filtre L, qui est ce que la ventilation délivre (0 est un filtre propre au débit de conception). Le débit g des opérateurs est une bande : l'ajuster dedans. Dire qui est à bord avec labOccupants et habOccupants (les personnes du roster d'abord, des anonymes au-delà). Le juger sur les deux capteurs contre les colonnes de l'enregistreur."
+    },
+    "tools": {
+        "instantiate": {
+            "title": "Instancier la référence de l'habitat",
+            "description": "La référence de l'habitat comme jumeau de cette station : les variables ci-dessous en formules dans ses nœuds, les réglages qui disent qui est à bord, la commande de l'épurateur depuis la colonne de vitesse de la télémétrie, les deux volumes semés depuis la première lecture de leur capteur.",
+            "properties": {
+                "V": "le volume du Lab, m3 : le volume que dessert l'épurateur, ce que la mise en service mesure ; ajusté (le plan de conception dit 32, les baies en prennent)",
+                "Vh": "le volume de Hab-B, m3 : les quartiers de vie et le reste du volume pressurisé, non documenté tel que construit ; ajusté",
+                "L": "la charge du filtre, kg de poussière : ce que la ventilation inter-modules délivre, par la courbe du ventilateur contre la résistance du filtre ; 0 est un filtre propre au débit de conception (3 m3/min), 0,127 environ les deux tiers ; ajusté",
+                "g": "le CO2 que produit un opérateur en travail léger, L/min : la bande de la NASA pour un membre d'équipage éveillé, 0,26 à 0,45, référence 0,38 ; placé dans la bande",
+                "gRest": "le CO2 que produit une personne au repos, L/min : entre le sommeil et l'éveil, 0,30 pour le membre d'équipage de référence ; connu",
+                "Qe": "le débit efficace de l'épurateur à pleine commande, m3/min : son débit d'air fois son rendement en un passage, 1,0 au banc ; connu, de la fiche technique",
+                "eta": "le rendement de retrait en un passage de l'épurateur, 0,30 à la température nominale des lits ; connu, de la fiche technique",
+                "lag": "la constante de temps de la réponse de l'épurateur à un changement de commande, minutes ; connue, de la fiche technique",
+                "labOccupants": "combien de personnes sont dans le Lab : les opérateurs du roster d'abord (FE-1, FE-2 en travail léger), des anonymes en travail léger au-delà",
+                "habOccupants": "combien de personnes sont dans Hab-B : ceux du roster d'abord (CDR, FE-3 au repos), des anonymes au repos au-delà"
+            }
+        }
+    },
+    "resources": {
+        "probe://co2-1.lastMeasured": {
+            "name": "Le CO2 du Lab tel que son capteur le lit",
+            "description": "ppm, à la résolution de la station : ce que la colonne co2_lab_ppm de l'enregistreur note ; le jumeau est jugé dessus"
+        },
+        "probe://co2-2.lastMeasured": {
+            "name": "Le CO2 de Hab-B tel que son capteur le lit",
+            "description": "ppm, à la résolution de la station : ce que la colonne co2_habb_ppm de l'enregistreur note ; le jumeau est jugé dessus"
+        },
+        "probe://lab.ppm_CO2": {
+            "name": "Le CO2 du Lab",
+            "description": "ppm, la fraction molaire du volume lui-même, avant le capteur"
+        },
+        "probe://habb.ppm_CO2": {
+            "name": "Le CO2 de Hab-B",
+            "description": "ppm, la fraction molaire du volume lui-même, avant le capteur"
+        },
+        "probe://fan.flowM3PerMinute": {
+            "name": "Ce que la ventilation délivre",
+            "description": "m3/min, le point de fonctionnement du ventilateur contre le conduit et le filtre : le nombre que cherche la mise en service"
+        },
+        "probe://filter.clogging": {
+            "name": "L'encrassement du filtre",
+            "description": "0 propre à 1 en fin de vie"
+        },
+        "probe://scrubber.flowM3ps": {
+            "name": "Le débit d'air de l'épurateur",
+            "description": "m3/s à travers les lits, après le retard"
+        },
+        "probe://scrubber.removalKgps": {
+            "name": "Ce que l'épurateur retire",
+            "description": "kg de CO2 par seconde"
+        },
+        "probe://hvac.lastVolumetricFlow": {
+            "name": "L'air échangé entre les modules",
+            "description": "m3/s dans chaque sens par la boucle de ventilation, tel que la porte l'a délivré"
+        },
+        "probe://crew-lab.co2Delta": {
+            "name": "L'équipage du Lab",
+            "description": "kg de CO2 par seconde, les personnes du Lab ensemble"
+        },
+        "probe://crew-habb.co2Delta": {
+            "name": "L'équipage de Hab-B",
+            "description": "kg de CO2 par seconde, les personnes de Hab-B ensemble"
+        }
+    }
+}

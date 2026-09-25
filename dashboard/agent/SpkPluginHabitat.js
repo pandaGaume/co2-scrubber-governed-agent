@@ -53,8 +53,32 @@ var SpkPluginHabitat = (() => {
     default: () => studio_default
   });
 
-  // plugins/habitat/crew.node.ts
+  // plugins/habitat/person.node.ts
   var import_core3 = __toESM(require_core(), 1);
+
+  // plugins/habitat/activity.ts
+  var HABITAT_ACTIVITIES = ["sleep", "rest", "light_work", "heavy_work"];
+  var REFERENCE_RATES = { sleep: 0.24, rest: 0.3, lightWork: 0.38, heavyWork: 1 };
+  function activityOf(value, fallback) {
+    if (typeof value === "number" && Number.isFinite(value)) return HABITAT_ACTIVITIES[Math.max(0, Math.min(HABITAT_ACTIVITIES.length - 1, Math.round(value)))];
+    if (typeof value === "string" && HABITAT_ACTIVITIES.includes(value)) return value;
+    return fallback;
+  }
+  var activityLevel = (activity) => HABITAT_ACTIVITIES.indexOf(activity);
+  function rateOf(rates, activity) {
+    switch (activity) {
+      case "sleep":
+        return rates.sleep;
+      case "rest":
+        return rates.rest;
+      case "heavy_work":
+        return rates.heavyWork;
+      default:
+        return rates.lightWork;
+    }
+  }
+  var litresPerMinuteToKgps = (litres, co2DensityKgPerM3) => litres * 1e-3 * co2DensityKgPerM3 / 60;
+  var kgpsToLitresPerMinute = (kgps, co2DensityKgPerM3) => co2DensityKgPerM3 > 0 ? kgps * 60 * 1e3 / co2DensityKgPerM3 : 0;
 
   // plugins/habitat/signals.ts
   var import_core = __toESM(require_core(), 1);
@@ -89,41 +113,45 @@ var SpkPluginHabitat = (() => {
     return Math.max(0, ppm) * 1e-6 * co2Density(pressurePa, temperatureK);
   }
 
-  // plugins/habitat/crew.node.ts
-  var HABITAT_ACTIVITIES = ["sleep", "rest", "light_work", "heavy_work"];
-  var HabitatCrewNode = class extends import_core3.RuntimeNode {
-    _count = 2;
-    _activity = "light_work";
-    _sleep = 0.24;
-    _rest = 0.3;
-    _lightWork = 0.38;
-    _heavyWork = 1;
+  // plugins/habitat/person.node.ts
+  var HabitatPersonNode = class extends import_core3.RuntimeNode {
+    _name = "";
+    _callsign = "";
+    _activity = "rest";
+    _sleep = REFERENCE_RATES.sleep;
+    _rest = REFERENCE_RATES.rest;
+    _lightWork = REFERENCE_RATES.lightWork;
+    _heavyWork = REFERENCE_RATES.heavyWork;
     _co2Density = 1.8176;
     _co2Delta = 0;
     _litresPerMinute = 0;
-    inputPorts = [
-      { slot: "count", optional: true, type: "float", kind: "signal" },
-      { slot: "activity", optional: true, type: "any", kind: "signal" }
-    ];
+    _current = "rest";
+    inputPorts = [{ slot: "activity", optional: true, type: "any", kind: "signal" }];
     outputPorts = [
       { slot: "co2Delta", optional: false, type: "float", kind: "signal" },
-      { slot: "litresPerMinute", optional: false, type: "float", kind: "signal" }
+      { slot: "litresPerMinute", optional: false, type: "float", kind: "signal" },
+      { slot: "activityLevel", optional: false, type: "float", kind: "signal" }
     ];
     constructor(onsc = null, opsc = null, position) {
       super(onsc, opsc, position);
     }
-    get count() {
-      return this._count;
+    get name() {
+      return this._name;
     }
-    set count(v) {
-      this.setField("count", this._count, Math.max(0, v), (n) => this._count = n);
+    set name(v) {
+      this.setField("name", this._name, String(v ?? ""), (n) => this._name = n);
+    }
+    get callsign() {
+      return this._callsign;
+    }
+    set callsign(v) {
+      this.setField("callsign", this._callsign, String(v ?? ""), (n) => this._callsign = n);
     }
     get activity() {
       return this._activity;
     }
     set activity(v) {
-      const next = HABITAT_ACTIVITIES.includes(v) ? v : this._activity;
-      this.setField("activity", this._activity, next, (n) => this._activity = n);
+      this.setField("activity", this._activity, activityOf(v, this._activity), (n) => this._activity = n);
     }
     get sleepLitresPerMinute() {
       return this._sleep;
@@ -161,95 +189,299 @@ var SpkPluginHabitat = (() => {
     get litresPerMinute() {
       return this._litresPerMinute;
     }
-    /** The per-person rate of an activity, L/min. */
+    get currentActivity() {
+      return this._current;
+    }
+    get activityLevel() {
+      return activityLevel(this._current);
+    }
+    get rates() {
+      return { sleep: this._sleep, rest: this._rest, lightWork: this._lightWork, heavyWork: this._heavyWork };
+    }
+    /** Their rate at an activity, L/min. */
     rateOf(activity) {
-      switch (activity) {
-        case "sleep":
-          return this._sleep;
-        case "rest":
-          return this._rest;
-        case "heavy_work":
-          return this._heavyWork;
-        default:
-          return this._lightWork;
-      }
+      return rateOf(this.rates, activity);
     }
     reset(_session) {
       this._co2Delta = 0;
       this._litresPerMinute = 0;
+      this._current = this._activity;
     }
     fire(session, _t) {
       const inputs = readInputs(this, session);
-      const count = Math.max(0, numberOr(inputs.get("count"), this._count));
-      const activity = inputs.has("activity") ? String(inputs.get("activity")) : this._activity;
-      const litres = count * this.rateOf(activity);
-      const delta = litres * 1e-3 * this._co2Density / 60;
+      const activity = inputs.has("activity") ? activityOf(inputs.get("activity"), this._activity) : this._activity;
+      const litres = this.rateOf(activity);
+      const delta = litresPerMinuteToKgps(litres, this._co2Density);
+      this._current = activity;
       this.setField("litresPerMinute", this._litresPerMinute, litres, (n) => this._litresPerMinute = n);
       this.setField("co2Delta", this._co2Delta, delta, (n) => this._co2Delta = n);
-      publishOutputs(this, session, { co2Delta: delta, litresPerMinute: litres });
+      publishOutputs(this, session, { co2Delta: delta, litresPerMinute: litres, activityLevel: activityLevel(activity) });
     }
   };
   __decorateClass([
     import_core3.cloneable
-  ], HabitatCrewNode.prototype, "_count", 2);
+  ], HabitatPersonNode.prototype, "_name", 2);
   __decorateClass([
     import_core3.cloneable
-  ], HabitatCrewNode.prototype, "_activity", 2);
+  ], HabitatPersonNode.prototype, "_callsign", 2);
   __decorateClass([
     import_core3.cloneable
-  ], HabitatCrewNode.prototype, "_sleep", 2);
+  ], HabitatPersonNode.prototype, "_activity", 2);
   __decorateClass([
     import_core3.cloneable
-  ], HabitatCrewNode.prototype, "_rest", 2);
+  ], HabitatPersonNode.prototype, "_sleep", 2);
   __decorateClass([
     import_core3.cloneable
-  ], HabitatCrewNode.prototype, "_lightWork", 2);
+  ], HabitatPersonNode.prototype, "_rest", 2);
   __decorateClass([
     import_core3.cloneable
-  ], HabitatCrewNode.prototype, "_heavyWork", 2);
+  ], HabitatPersonNode.prototype, "_lightWork", 2);
   __decorateClass([
     import_core3.cloneable
-  ], HabitatCrewNode.prototype, "_co2Density", 2);
+  ], HabitatPersonNode.prototype, "_heavyWork", 2);
   __decorateClass([
     import_core3.cloneable
-  ], HabitatCrewNode.prototype, "_co2Delta", 2);
+  ], HabitatPersonNode.prototype, "_co2Density", 2);
   __decorateClass([
     import_core3.cloneable
-  ], HabitatCrewNode.prototype, "_litresPerMinute", 2);
+  ], HabitatPersonNode.prototype, "_co2Delta", 2);
   __decorateClass([
-    (0, import_core3.editable)("number")
-  ], HabitatCrewNode.prototype, "count", 1);
+    import_core3.cloneable
+  ], HabitatPersonNode.prototype, "_litresPerMinute", 2);
+  __decorateClass([
+    import_core3.cloneable
+  ], HabitatPersonNode.prototype, "_current", 2);
   __decorateClass([
     (0, import_core3.editable)("string")
+  ], HabitatPersonNode.prototype, "name", 1);
+  __decorateClass([
+    (0, import_core3.editable)("string")
+  ], HabitatPersonNode.prototype, "callsign", 1);
+  __decorateClass([
+    (0, import_core3.editable)("string")
+  ], HabitatPersonNode.prototype, "activity", 1);
+  __decorateClass([
+    (0, import_core3.editable)("number")
+  ], HabitatPersonNode.prototype, "sleepLitresPerMinute", 1);
+  __decorateClass([
+    (0, import_core3.editable)("number")
+  ], HabitatPersonNode.prototype, "restLitresPerMinute", 1);
+  __decorateClass([
+    (0, import_core3.editable)("number")
+  ], HabitatPersonNode.prototype, "lightWorkLitresPerMinute", 1);
+  __decorateClass([
+    (0, import_core3.editable)("number")
+  ], HabitatPersonNode.prototype, "heavyWorkLitresPerMinute", 1);
+  __decorateClass([
+    (0, import_core3.editable)("number")
+  ], HabitatPersonNode.prototype, "co2DensityKgPerM3", 1);
+  __decorateClass([
+    (0, import_core3.viewable)("number")
+  ], HabitatPersonNode.prototype, "co2Delta", 1);
+  __decorateClass([
+    (0, import_core3.viewable)("number")
+  ], HabitatPersonNode.prototype, "litresPerMinute", 1);
+  __decorateClass([
+    (0, import_core3.viewable)("string")
+  ], HabitatPersonNode.prototype, "currentActivity", 1);
+  __decorateClass([
+    (0, import_core3.viewable)("number")
+  ], HabitatPersonNode.prototype, "activityLevel", 1);
+  function createHabitatPersonNode() {
+    return new HabitatPersonNode();
+  }
+
+  // plugins/habitat/crew.node.ts
+  var import_core4 = __toESM(require_core(), 1);
+  var CREW_PERSON_PREFIX = "person_";
+  var HabitatCrewNode = class extends import_core4.RuntimeNode {
+    _count = 2;
+    _activity = "light_work";
+    _sleep = REFERENCE_RATES.sleep;
+    _rest = REFERENCE_RATES.rest;
+    _lightWork = REFERENCE_RATES.lightWork;
+    _heavyWork = REFERENCE_RATES.heavyWork;
+    _co2Density = 1.8176;
+    _co2Delta = 0;
+    _litresPerMinute = 0;
+    _headcount = 0;
+    _persons = 0;
+    inputPorts = [
+      { slot: "count", optional: true, type: "float", kind: "signal" },
+      { slot: "activity", optional: true, type: "any", kind: "signal" },
+      // The first of the persons' pool; the others (`person_1`, ...) are the variadic group the registration declares.
+      { slot: `${CREW_PERSON_PREFIX}0`, optional: true, type: "float", kind: "signal" }
+    ];
+    outputPorts = [
+      { slot: "co2Delta", optional: false, type: "float", kind: "signal" },
+      { slot: "litresPerMinute", optional: false, type: "float", kind: "signal" },
+      { slot: "headcount", optional: false, type: "float", kind: "signal" }
+    ];
+    constructor(onsc = null, opsc = null, position) {
+      super(onsc, opsc, position);
+    }
+    get count() {
+      return this._count;
+    }
+    set count(v) {
+      this.setField("count", this._count, Math.max(0, v), (n) => this._count = n);
+    }
+    get activity() {
+      return this._activity;
+    }
+    set activity(v) {
+      this.setField("activity", this._activity, activityOf(v, this._activity), (n) => this._activity = n);
+    }
+    get sleepLitresPerMinute() {
+      return this._sleep;
+    }
+    set sleepLitresPerMinute(v) {
+      this.setField("sleepLitresPerMinute", this._sleep, Math.max(0, v), (n) => this._sleep = n);
+    }
+    get restLitresPerMinute() {
+      return this._rest;
+    }
+    set restLitresPerMinute(v) {
+      this.setField("restLitresPerMinute", this._rest, Math.max(0, v), (n) => this._rest = n);
+    }
+    get lightWorkLitresPerMinute() {
+      return this._lightWork;
+    }
+    set lightWorkLitresPerMinute(v) {
+      this.setField("lightWorkLitresPerMinute", this._lightWork, Math.max(0, v), (n) => this._lightWork = n);
+    }
+    get heavyWorkLitresPerMinute() {
+      return this._heavyWork;
+    }
+    set heavyWorkLitresPerMinute(v) {
+      this.setField("heavyWorkLitresPerMinute", this._heavyWork, Math.max(0, v), (n) => this._heavyWork = n);
+    }
+    get co2DensityKgPerM3() {
+      return this._co2Density;
+    }
+    set co2DensityKgPerM3(v) {
+      this.setField("co2DensityKgPerM3", this._co2Density, Math.max(0, v), (n) => this._co2Density = n);
+    }
+    get co2Delta() {
+      return this._co2Delta;
+    }
+    get litresPerMinute() {
+      return this._litresPerMinute;
+    }
+    get headcount() {
+      return this._headcount;
+    }
+    get personsWired() {
+      return this._persons;
+    }
+    get rates() {
+      return { sleep: this._sleep, rest: this._rest, lightWork: this._lightWork, heavyWork: this._heavyWork };
+    }
+    /** The per-person rate of an activity, L/min. */
+    rateOf(activity) {
+      return rateOf(this.rates, activity);
+    }
+    reset(_session) {
+      this._co2Delta = 0;
+      this._litresPerMinute = 0;
+      this._headcount = 0;
+      this._persons = 0;
+    }
+    fire(session, _t) {
+      const inputs = readInputs(this, session);
+      const count = Math.max(0, numberOr(inputs.get("count"), this._count));
+      const activity = inputs.has("activity") ? activityOf(inputs.get("activity"), this._activity) : this._activity;
+      let persons = 0;
+      let fromPersons = 0;
+      for (const [slot, value] of inputs) {
+        if (!slot.startsWith(CREW_PERSON_PREFIX)) continue;
+        persons++;
+        fromPersons += Math.max(0, numberOr(value, 0));
+      }
+      const unnamed = litresPerMinuteToKgps(count * this.rateOf(activity), this._co2Density);
+      const delta = fromPersons + unnamed;
+      const litres = kgpsToLitresPerMinute(delta, this._co2Density);
+      const headcount = persons + count;
+      this._persons = persons;
+      this.setField("headcount", this._headcount, headcount, (n) => this._headcount = n);
+      this.setField("litresPerMinute", this._litresPerMinute, litres, (n) => this._litresPerMinute = n);
+      this.setField("co2Delta", this._co2Delta, delta, (n) => this._co2Delta = n);
+      publishOutputs(this, session, { co2Delta: delta, litresPerMinute: litres, headcount });
+    }
+  };
+  __decorateClass([
+    import_core4.cloneable
+  ], HabitatCrewNode.prototype, "_count", 2);
+  __decorateClass([
+    import_core4.cloneable
+  ], HabitatCrewNode.prototype, "_activity", 2);
+  __decorateClass([
+    import_core4.cloneable
+  ], HabitatCrewNode.prototype, "_sleep", 2);
+  __decorateClass([
+    import_core4.cloneable
+  ], HabitatCrewNode.prototype, "_rest", 2);
+  __decorateClass([
+    import_core4.cloneable
+  ], HabitatCrewNode.prototype, "_lightWork", 2);
+  __decorateClass([
+    import_core4.cloneable
+  ], HabitatCrewNode.prototype, "_heavyWork", 2);
+  __decorateClass([
+    import_core4.cloneable
+  ], HabitatCrewNode.prototype, "_co2Density", 2);
+  __decorateClass([
+    import_core4.cloneable
+  ], HabitatCrewNode.prototype, "_co2Delta", 2);
+  __decorateClass([
+    import_core4.cloneable
+  ], HabitatCrewNode.prototype, "_litresPerMinute", 2);
+  __decorateClass([
+    import_core4.cloneable
+  ], HabitatCrewNode.prototype, "_headcount", 2);
+  __decorateClass([
+    import_core4.cloneable
+  ], HabitatCrewNode.prototype, "_persons", 2);
+  __decorateClass([
+    (0, import_core4.editable)("number")
+  ], HabitatCrewNode.prototype, "count", 1);
+  __decorateClass([
+    (0, import_core4.editable)("string")
   ], HabitatCrewNode.prototype, "activity", 1);
   __decorateClass([
-    (0, import_core3.editable)("number")
+    (0, import_core4.editable)("number")
   ], HabitatCrewNode.prototype, "sleepLitresPerMinute", 1);
   __decorateClass([
-    (0, import_core3.editable)("number")
+    (0, import_core4.editable)("number")
   ], HabitatCrewNode.prototype, "restLitresPerMinute", 1);
   __decorateClass([
-    (0, import_core3.editable)("number")
+    (0, import_core4.editable)("number")
   ], HabitatCrewNode.prototype, "lightWorkLitresPerMinute", 1);
   __decorateClass([
-    (0, import_core3.editable)("number")
+    (0, import_core4.editable)("number")
   ], HabitatCrewNode.prototype, "heavyWorkLitresPerMinute", 1);
   __decorateClass([
-    (0, import_core3.editable)("number")
+    (0, import_core4.editable)("number")
   ], HabitatCrewNode.prototype, "co2DensityKgPerM3", 1);
   __decorateClass([
-    (0, import_core3.viewable)("number")
+    (0, import_core4.viewable)("number")
   ], HabitatCrewNode.prototype, "co2Delta", 1);
   __decorateClass([
-    (0, import_core3.viewable)("number")
+    (0, import_core4.viewable)("number")
   ], HabitatCrewNode.prototype, "litresPerMinute", 1);
+  __decorateClass([
+    (0, import_core4.viewable)("number")
+  ], HabitatCrewNode.prototype, "headcount", 1);
+  __decorateClass([
+    (0, import_core4.viewable)("number")
+  ], HabitatCrewNode.prototype, "personsWired", 1);
   function createHabitatCrewNode() {
     return new HabitatCrewNode();
   }
 
   // plugins/habitat/scrubber.node.ts
-  var import_core4 = __toESM(require_core(), 1);
-  var HabitatScrubberNode = class extends import_core4.IntegrableRuntimeNode {
+  var import_core5 = __toESM(require_core(), 1);
+  var HabitatScrubberNode = class extends import_core5.IntegrableRuntimeNode {
     stateSize = 1;
     stateNames = ["flowM3ps"];
     _flowAtFull = 0.055;
@@ -409,105 +641,105 @@ var SpkPluginHabitat = (() => {
     }
   };
   __decorateClass([
-    import_core4.cloneable
+    import_core5.cloneable
   ], HabitatScrubberNode.prototype, "_flowAtFull", 2);
   __decorateClass([
-    import_core4.cloneable
+    import_core5.cloneable
   ], HabitatScrubberNode.prototype, "_efficiency", 2);
   __decorateClass([
-    import_core4.cloneable
+    import_core5.cloneable
   ], HabitatScrubberNode.prototype, "_lagMinutes", 2);
   __decorateClass([
-    import_core4.cloneable
+    import_core5.cloneable
   ], HabitatScrubberNode.prototype, "_initialFlow", 2);
   __decorateClass([
-    import_core4.cloneable
+    import_core5.cloneable
   ], HabitatScrubberNode.prototype, "_supplyVolts", 2);
   __decorateClass([
-    import_core4.cloneable
+    import_core5.cloneable
   ], HabitatScrubberNode.prototype, "_interceptAmps", 2);
   __decorateClass([
-    import_core4.cloneable
+    import_core5.cloneable
   ], HabitatScrubberNode.prototype, "_slopeAmps", 2);
   __decorateClass([
-    import_core4.cloneable
+    import_core5.cloneable
   ], HabitatScrubberNode.prototype, "_habitatScale", 2);
   __decorateClass([
-    import_core4.cloneable
+    import_core5.cloneable
   ], HabitatScrubberNode.prototype, "_defaultPressurePa", 2);
   __decorateClass([
-    import_core4.cloneable
+    import_core5.cloneable
   ], HabitatScrubberNode.prototype, "_defaultTemperatureK", 2);
   __decorateClass([
-    import_core4.cloneable
+    import_core5.cloneable
   ], HabitatScrubberNode.prototype, "_flow", 2);
   __decorateClass([
-    import_core4.cloneable
+    import_core5.cloneable
   ], HabitatScrubberNode.prototype, "_command", 2);
   __decorateClass([
-    import_core4.cloneable
+    import_core5.cloneable
   ], HabitatScrubberNode.prototype, "_removal", 2);
   __decorateClass([
-    import_core4.cloneable
+    import_core5.cloneable
   ], HabitatScrubberNode.prototype, "_power", 2);
   __decorateClass([
-    import_core4.cloneable
+    import_core5.cloneable
   ], HabitatScrubberNode.prototype, "_inletPpm", 2);
   __decorateClass([
-    (0, import_core4.editable)("number", { unit: { quantity: "VolumetricFlow", unit: "m3ps" } })
+    (0, import_core5.editable)("number", { unit: { quantity: "VolumetricFlow", unit: "m3ps" } })
   ], HabitatScrubberNode.prototype, "flowAtFullM3ps", 1);
   __decorateClass([
-    (0, import_core4.editable)("number")
+    (0, import_core5.editable)("number")
   ], HabitatScrubberNode.prototype, "efficiency", 1);
   __decorateClass([
-    (0, import_core4.editable)("number")
+    (0, import_core5.editable)("number")
   ], HabitatScrubberNode.prototype, "lagTimeConstantMinutes", 1);
   __decorateClass([
-    (0, import_core4.editable)("number")
+    (0, import_core5.editable)("number")
   ], HabitatScrubberNode.prototype, "initialFlowM3ps", 1);
   __decorateClass([
-    (0, import_core4.editable)("number", { unit: { quantity: "Voltage", unit: "V" } })
+    (0, import_core5.editable)("number", { unit: { quantity: "Voltage", unit: "V" } })
   ], HabitatScrubberNode.prototype, "supplyVolts", 1);
   __decorateClass([
-    (0, import_core4.editable)("number", { unit: { quantity: "Current", unit: "A" } })
+    (0, import_core5.editable)("number", { unit: { quantity: "Current", unit: "A" } })
   ], HabitatScrubberNode.prototype, "interceptAmps", 1);
   __decorateClass([
-    (0, import_core4.editable)("number", { unit: { quantity: "Current", unit: "A" } })
+    (0, import_core5.editable)("number", { unit: { quantity: "Current", unit: "A" } })
   ], HabitatScrubberNode.prototype, "slopeAmps", 1);
   __decorateClass([
-    (0, import_core4.editable)("number")
+    (0, import_core5.editable)("number")
   ], HabitatScrubberNode.prototype, "habitatScale", 1);
   __decorateClass([
-    (0, import_core4.editable)("number")
+    (0, import_core5.editable)("number")
   ], HabitatScrubberNode.prototype, "defaultPressurePa", 1);
   __decorateClass([
-    (0, import_core4.editable)("number")
+    (0, import_core5.editable)("number")
   ], HabitatScrubberNode.prototype, "defaultTemperatureK", 1);
   __decorateClass([
-    (0, import_core4.viewable)("number", { unit: { quantity: "VolumetricFlow", unit: "m3ps" } })
+    (0, import_core5.viewable)("number", { unit: { quantity: "VolumetricFlow", unit: "m3ps" } })
   ], HabitatScrubberNode.prototype, "flowM3ps", 1);
   __decorateClass([
-    (0, import_core4.viewable)("number", { unit: { quantity: "VolumetricFlow", unit: "m3ps" } })
+    (0, import_core5.viewable)("number", { unit: { quantity: "VolumetricFlow", unit: "m3ps" } })
   ], HabitatScrubberNode.prototype, "effectiveFlowM3ps", 1);
   __decorateClass([
-    (0, import_core4.viewable)("number")
+    (0, import_core5.viewable)("number")
   ], HabitatScrubberNode.prototype, "removalKgps", 1);
   __decorateClass([
-    (0, import_core4.viewable)("number", { unit: { quantity: "Power", unit: "watt" } })
+    (0, import_core5.viewable)("number", { unit: { quantity: "Power", unit: "watt" } })
   ], HabitatScrubberNode.prototype, "power", 1);
   __decorateClass([
-    (0, import_core4.viewable)("number")
+    (0, import_core5.viewable)("number")
   ], HabitatScrubberNode.prototype, "command", 1);
   __decorateClass([
-    (0, import_core4.viewable)("number")
+    (0, import_core5.viewable)("number")
   ], HabitatScrubberNode.prototype, "inletPpm", 1);
   function createHabitatScrubberNode() {
     return new HabitatScrubberNode();
   }
 
   // plugins/habitat/fan.node.ts
-  var import_core5 = __toESM(require_core(), 1);
-  var HabitatFanNode = class extends import_core5.IntegrableRuntimeNode {
+  var import_core6 = __toESM(require_core(), 1);
+  var HabitatFanNode = class extends import_core6.IntegrableRuntimeNode {
     stateSize = 1;
     stateNames = ["speedRatio"];
     _shutoffPressurePa = 250;
@@ -658,99 +890,99 @@ var SpkPluginHabitat = (() => {
     }
   };
   __decorateClass([
-    import_core5.cloneable
+    import_core6.cloneable
   ], HabitatFanNode.prototype, "_shutoffPressurePa", 2);
   __decorateClass([
-    import_core5.cloneable
+    import_core6.cloneable
   ], HabitatFanNode.prototype, "_freeDeliveryM3ps", 2);
   __decorateClass([
-    import_core5.cloneable
+    import_core6.cloneable
   ], HabitatFanNode.prototype, "_ductResistance", 2);
   __decorateClass([
-    import_core5.cloneable
+    import_core6.cloneable
   ], HabitatFanNode.prototype, "_spinUpSeconds", 2);
   __decorateClass([
-    import_core5.cloneable
+    import_core6.cloneable
   ], HabitatFanNode.prototype, "_fanEfficiency", 2);
   __decorateClass([
-    import_core5.cloneable
+    import_core6.cloneable
   ], HabitatFanNode.prototype, "_standbyPowerW", 2);
   __decorateClass([
-    import_core5.cloneable
+    import_core6.cloneable
   ], HabitatFanNode.prototype, "_capacityFactor", 2);
   __decorateClass([
-    import_core5.cloneable
+    import_core6.cloneable
   ], HabitatFanNode.prototype, "_initialSpeedRatio", 2);
   __decorateClass([
-    import_core5.cloneable
+    import_core6.cloneable
   ], HabitatFanNode.prototype, "_speed", 2);
   __decorateClass([
-    import_core5.cloneable
+    import_core6.cloneable
   ], HabitatFanNode.prototype, "_flow", 2);
   __decorateClass([
-    import_core5.cloneable
+    import_core6.cloneable
   ], HabitatFanNode.prototype, "_pressureRise", 2);
   __decorateClass([
-    import_core5.cloneable
+    import_core6.cloneable
   ], HabitatFanNode.prototype, "_power", 2);
   __decorateClass([
-    import_core5.cloneable
+    import_core6.cloneable
   ], HabitatFanNode.prototype, "_command", 2);
   __decorateClass([
-    import_core5.cloneable
+    import_core6.cloneable
   ], HabitatFanNode.prototype, "_systemResistance", 2);
   __decorateClass([
-    (0, import_core5.editable)("number")
+    (0, import_core6.editable)("number")
   ], HabitatFanNode.prototype, "shutoffPressurePa", 1);
   __decorateClass([
-    (0, import_core5.editable)("number", { unit: { quantity: "VolumetricFlow", unit: "m3ps" } })
+    (0, import_core6.editable)("number", { unit: { quantity: "VolumetricFlow", unit: "m3ps" } })
   ], HabitatFanNode.prototype, "freeDeliveryM3ps", 1);
   __decorateClass([
-    (0, import_core5.editable)("number")
+    (0, import_core6.editable)("number")
   ], HabitatFanNode.prototype, "ductResistance", 1);
   __decorateClass([
-    (0, import_core5.editable)("number")
+    (0, import_core6.editable)("number")
   ], HabitatFanNode.prototype, "spinUpSeconds", 1);
   __decorateClass([
-    (0, import_core5.editable)("number")
+    (0, import_core6.editable)("number")
   ], HabitatFanNode.prototype, "fanEfficiency", 1);
   __decorateClass([
-    (0, import_core5.editable)("number", { unit: { quantity: "Power", unit: "watt" } })
+    (0, import_core6.editable)("number", { unit: { quantity: "Power", unit: "watt" } })
   ], HabitatFanNode.prototype, "standbyPowerW", 1);
   __decorateClass([
-    (0, import_core5.editable)("number")
+    (0, import_core6.editable)("number")
   ], HabitatFanNode.prototype, "capacityFactor", 1);
   __decorateClass([
-    (0, import_core5.editable)("number")
+    (0, import_core6.editable)("number")
   ], HabitatFanNode.prototype, "initialSpeedRatio", 1);
   __decorateClass([
-    (0, import_core5.viewable)("number", { unit: { quantity: "VolumetricFlow", unit: "m3ps" } })
+    (0, import_core6.viewable)("number", { unit: { quantity: "VolumetricFlow", unit: "m3ps" } })
   ], HabitatFanNode.prototype, "flowM3ps", 1);
   __decorateClass([
-    (0, import_core5.viewable)("number")
+    (0, import_core6.viewable)("number")
   ], HabitatFanNode.prototype, "flowM3PerMinute", 1);
   __decorateClass([
-    (0, import_core5.viewable)("number")
+    (0, import_core6.viewable)("number")
   ], HabitatFanNode.prototype, "pressureRisePa", 1);
   __decorateClass([
-    (0, import_core5.viewable)("number", { unit: { quantity: "Power", unit: "watt" } })
+    (0, import_core6.viewable)("number", { unit: { quantity: "Power", unit: "watt" } })
   ], HabitatFanNode.prototype, "power", 1);
   __decorateClass([
-    (0, import_core5.viewable)("number")
+    (0, import_core6.viewable)("number")
   ], HabitatFanNode.prototype, "speedRatio", 1);
   __decorateClass([
-    (0, import_core5.viewable)("number")
+    (0, import_core6.viewable)("number")
   ], HabitatFanNode.prototype, "command", 1);
   __decorateClass([
-    (0, import_core5.viewable)("number")
+    (0, import_core6.viewable)("number")
   ], HabitatFanNode.prototype, "systemResistance", 1);
   function createHabitatFanNode() {
     return new HabitatFanNode();
   }
 
   // plugins/habitat/filter.node.ts
-  var import_core6 = __toESM(require_core(), 1);
-  var HabitatFilterNode = class extends import_core6.IntegrableRuntimeNode {
+  var import_core7 = __toESM(require_core(), 1);
+  var HabitatFilterNode = class extends import_core7.IntegrableRuntimeNode {
     stateSize = 1;
     stateNames = ["loadingKg"];
     _cleanResistance = 49e3;
@@ -882,79 +1114,79 @@ var SpkPluginHabitat = (() => {
     }
   };
   __decorateClass([
-    import_core6.cloneable
+    import_core7.cloneable
   ], HabitatFilterNode.prototype, "_cleanResistance", 2);
   __decorateClass([
-    import_core6.cloneable
+    import_core7.cloneable
   ], HabitatFilterNode.prototype, "_loadingDoublingKg", 2);
   __decorateClass([
-    import_core6.cloneable
+    import_core7.cloneable
   ], HabitatFilterNode.prototype, "_captureEfficiency", 2);
   __decorateClass([
-    import_core6.cloneable
+    import_core7.cloneable
   ], HabitatFilterNode.prototype, "_ambientDust", 2);
   __decorateClass([
-    import_core6.cloneable
+    import_core7.cloneable
   ], HabitatFilterNode.prototype, "_initialLoadingKg", 2);
   __decorateClass([
-    import_core6.cloneable
+    import_core7.cloneable
   ], HabitatFilterNode.prototype, "_endOfLifeLoadingKg", 2);
   __decorateClass([
-    import_core6.cloneable
+    import_core7.cloneable
   ], HabitatFilterNode.prototype, "_particulateId", 2);
   __decorateClass([
-    import_core6.cloneable
+    import_core7.cloneable
   ], HabitatFilterNode.prototype, "_loading", 2);
   __decorateClass([
-    import_core6.cloneable
+    import_core7.cloneable
   ], HabitatFilterNode.prototype, "_flow", 2);
   __decorateClass([
-    import_core6.cloneable
+    import_core7.cloneable
   ], HabitatFilterNode.prototype, "_resistance", 2);
   __decorateClass([
-    import_core6.cloneable
+    import_core7.cloneable
   ], HabitatFilterNode.prototype, "_pressureDrop", 2);
   __decorateClass([
-    import_core6.cloneable
+    import_core7.cloneable
   ], HabitatFilterNode.prototype, "_captureRate", 2);
   __decorateClass([
-    (0, import_core6.editable)("number")
+    (0, import_core7.editable)("number")
   ], HabitatFilterNode.prototype, "cleanResistance", 1);
   __decorateClass([
-    (0, import_core6.editable)("number")
+    (0, import_core7.editable)("number")
   ], HabitatFilterNode.prototype, "loadingDoublingKg", 1);
   __decorateClass([
-    (0, import_core6.editable)("number")
+    (0, import_core7.editable)("number")
   ], HabitatFilterNode.prototype, "captureEfficiency", 1);
   __decorateClass([
-    (0, import_core6.editable)("number")
+    (0, import_core7.editable)("number")
   ], HabitatFilterNode.prototype, "ambientDustKgPerM3", 1);
   __decorateClass([
-    (0, import_core6.editable)("number")
+    (0, import_core7.editable)("number")
   ], HabitatFilterNode.prototype, "initialLoadingKg", 1);
   __decorateClass([
-    (0, import_core6.editable)("string")
+    (0, import_core7.editable)("string")
   ], HabitatFilterNode.prototype, "particulateId", 1);
   __decorateClass([
-    (0, import_core6.editable)("number")
+    (0, import_core7.editable)("number")
   ], HabitatFilterNode.prototype, "endOfLifeLoadingKg", 1);
   __decorateClass([
-    (0, import_core6.viewable)("number")
+    (0, import_core7.viewable)("number")
   ], HabitatFilterNode.prototype, "loadingKg", 1);
   __decorateClass([
-    (0, import_core6.viewable)("number")
+    (0, import_core7.viewable)("number")
   ], HabitatFilterNode.prototype, "resistance", 1);
   __decorateClass([
-    (0, import_core6.viewable)("number")
+    (0, import_core7.viewable)("number")
   ], HabitatFilterNode.prototype, "pressureDropPa", 1);
   __decorateClass([
-    (0, import_core6.viewable)("number")
+    (0, import_core7.viewable)("number")
   ], HabitatFilterNode.prototype, "clogging", 1);
   __decorateClass([
-    (0, import_core6.viewable)("number")
+    (0, import_core7.viewable)("number")
   ], HabitatFilterNode.prototype, "captureRateKgps", 1);
   __decorateClass([
-    (0, import_core6.viewable)("number")
+    (0, import_core7.viewable)("number")
   ], HabitatFilterNode.prototype, "flowM3ps", 1);
   function createHabitatFilterNode() {
     return new HabitatFilterNode();
@@ -972,20 +1204,42 @@ var SpkPluginHabitat = (() => {
   function registerHabitatNodes(registry, doc = (file) => `plugins/habitat/docs/${file}`) {
     const reg = registry;
     const ports = (node) => ({ inputPorts: [...node.inputPorts], outputPorts: [...node.outputPorts] });
+    reg.register("Physics.Habitat:person", () => createHabitatPersonNode(), {
+      label: "Person (CO2 source)",
+      category: "Physics.Habitat",
+      docPath: doc("person.md"),
+      ...ports(new HabitatPersonNode()),
+      signature: {
+        purpose: "one person by name as a CO2 source in kg/s, at an activity of their own (sleep, rest, light_work, heavy_work) at NASA's rate per activity in litres per minute, their own rates editable; wired into a crew's person pool or straight into an atmosphere",
+        inputs: {
+          activity: { quantity: "Category", description: "what they do: a word (sleep, rest, light_work, heavy_work) or a rung of that ladder as a number (0 to 3), so a timeline can schedule their day; the editable when unwired" }
+        },
+        outputs: {
+          co2Delta: { ...KGPS, description: "their CO2, for a crew's person_<k> input or an atmosphere's delta_CO2 input" },
+          litresPerMinute: { quantity: "VolumetricFlow", unit: "L/min", description: "the same, as a volume of CO2 per minute" },
+          activityLevel: { ...RATIO, description: "what they are doing, as the rung of the ladder (0 asleep to 3 at heavy work)" }
+        },
+        capabilities: ["source", "co2", "crew", "person", "air_quality"]
+      }
+    });
     reg.register("Physics.Habitat:crew", () => createHabitatCrewNode(), {
       label: "Crew (CO2 source)",
       category: "Physics.Habitat",
       docPath: doc("crew.md"),
       ...ports(new HabitatCrewNode()),
+      // The persons' pool: one input per person wired in, the next appearing as the last is taken.
+      variadicInput: [{ prefix: CREW_PERSON_PREFIX, type: "float" }],
       signature: {
-        purpose: "people as a CO2 source in kg/s: a head count at one activity, each person at the activity's rate in litres per minute (NASA's bands), no volume folded in",
+        purpose: "people as a CO2 source in kg/s: the persons wired into its pool (one person_<k> input each, the pool growing as persons are added), plus a head count at one activity for the people nobody names, each at the activity's rate in litres per minute (NASA's bands), no volume folded in",
         inputs: {
-          count: { quantity: "Count", unit: "person", description: "head count of the group; the editable when unwired" },
-          activity: { quantity: "Category", description: "sleep, rest, light_work or heavy_work; the editable when unwired" }
+          [`${CREW_PERSON_PREFIX}0`]: { ...KGPS, description: "a person's co2Delta (Physics.Habitat:person); the pool grows (person_1, person_2, ...) as persons are wired" },
+          count: { quantity: "Count", unit: "person", description: "head count of the unnamed people, on top of the persons wired; the editable when unwired" },
+          activity: { quantity: "Category", description: "the unnamed people's activity: sleep, rest, light_work or heavy_work; the editable when unwired" }
         },
         outputs: {
-          co2Delta: { ...KGPS, description: "the group's CO2, for an atmosphere's delta_CO2 input" },
-          litresPerMinute: { quantity: "VolumetricFlow", unit: "L/min", description: "the same, as a volume of CO2 per minute" }
+          co2Delta: { ...KGPS, description: "the crew's CO2, persons and count together, for an atmosphere's delta_CO2 input" },
+          litresPerMinute: { quantity: "VolumetricFlow", unit: "L/min", description: "the same, as a volume of CO2 per minute" },
+          headcount: { quantity: "Count", unit: "person", description: "the persons wired plus the count" }
         },
         capabilities: ["source", "co2", "crew", "air_quality"]
       }

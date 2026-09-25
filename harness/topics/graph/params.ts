@@ -14,13 +14,20 @@
  *                                          row (a measured input: the scrubber's
  *                                          command, a neighbour's CO2);
  *   { "$first": "c" }                      the first value of a telemetry column (an
- *                                          initial state).
+ *                                          initial state);
+ *   { "$initialMasses": { "co2Ppm": ..., "volume": "V", "temperatureK": 295.15 } }
+ *                                          the substrate atmosphere's `_initialMassKg`:
+ *                                          the air of a volume seeded from a CO2 reading
+ *                                          (each field a number, a formula or one of the
+ *                                          forms above; `preset` and `pressurePa` optional).
  *
  * The harness resolves them for every combination of the variables it
  * tries, so the builder writes the physics once and never types a fitted
  * number. The evaluator here is a small recursive-descent parser: no
  * `eval`, no names but the variables.
  */
+
+import { initialMassesKg } from "../../../lib/air.js";
 
 export type Variables = Record<string, number>;
 export type Row = Record<string, unknown>;
@@ -85,6 +92,21 @@ export function resolveParam(value: unknown, vars: Variables, rows: Row[]): unkn
         const first = rows.map((r) => num(r[v.$first as string])).find((x) => x !== null);
         if (first === undefined || first === null) throw new Error(`$first: the telemetry has no number in column "${String(v.$first)}"`);
         return first;
+    }
+    if (v.$initialMasses && typeof v.$initialMasses === "object") {
+        const m = v.$initialMasses as Record<string, unknown>;
+        const numberOf = (field: string, fallback?: number): number => {
+            const raw = m[field];
+            if (raw === undefined) {
+                if (fallback === undefined) throw new Error(`$initialMasses: "${field}" is missing (co2Ppm, volume and temperatureK are needed)`);
+                return fallback;
+            }
+            const resolved = typeof raw === "string" && !Object.prototype.hasOwnProperty.call(vars, raw) ? evaluateExpression(raw, vars) : resolveParam(raw, vars, rows);
+            if (typeof resolved !== "number" || !Number.isFinite(resolved)) throw new Error(`$initialMasses: "${field}" is not a number`);
+            return resolved;
+        };
+        const preset = typeof m.preset === "string" ? m.preset : undefined;
+        return initialMassesKg(numberOf("co2Ppm"), numberOf("volume"), numberOf("temperatureK"), preset, numberOf("pressurePa", 101325));
     }
     if (v.$series && typeof v.$series === "object") {
         const s = v.$series as { column?: unknown; scale?: unknown; offset?: unknown };

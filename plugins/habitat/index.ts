@@ -15,7 +15,13 @@
  * (`DSP.Sensor:transducer`, the CO2 sensors). What it lacked, and this
  * plugin adds:
  *
- *   Physics.Habitat:crew       people as a CO2 source in kg/s, no volume folded in
+ *   Physics.Habitat:person     one person by name, at an activity of their own
+ *                              (a word or a rung a timeline schedules), a CO2
+ *                              source in kg/s from NASA's rate per activity
+ *   Physics.Habitat:crew       people as a CO2 source in kg/s, no volume folded
+ *                              in: the persons wired into its pool (`person_<k>`,
+ *                              one input per person, the pool growing as they are
+ *                              added) plus a head count for the unnamed
  *   Physics.Habitat:scrubber   the scrubber in the datasheet's units (m3/s, an
  *                              efficiency, a lag), removing mass from an atmosphere
  *   Physics.Habitat:fan        a fan on a duct: command to flow through a fan
@@ -34,17 +40,18 @@
  * and unit, capabilities) for the planner, and a documentation card.
  */
 import type { NodeRegistry } from "@spiky-panda/core";
-import { createHabitatCrewNode, HabitatCrewNode, HABITAT_ACTIVITIES } from "./crew.node.js";
+import { createHabitatPersonNode, HabitatPersonNode } from "./person.node.js";
+import { CREW_PERSON_PREFIX, createHabitatCrewNode, HabitatCrewNode, HABITAT_ACTIVITIES } from "./crew.node.js";
 import { createHabitatScrubberNode, HabitatScrubberNode } from "./scrubber.node.js";
 import { createHabitatFanNode, HabitatFanNode } from "./fan.node.js";
 import { createHabitatFilterNode, HabitatFilterNode } from "./filter.node.js";
 
-export { HabitatCrewNode, HabitatScrubberNode, HabitatFanNode, HabitatFilterNode, HABITAT_ACTIVITIES };
+export { HabitatPersonNode, HabitatCrewNode, HabitatScrubberNode, HabitatFanNode, HabitatFilterNode, HABITAT_ACTIVITIES, CREW_PERSON_PREFIX };
 
 export const HABITAT_PLUGIN_ID = "local.habitat";
 
 /** The node types this plugin registers, in registration order. */
-export const HABITAT_NODE_TYPES = ["Physics.Habitat:crew", "Physics.Habitat:scrubber", "Physics.Habitat:fan", "Physics.Habitat:filter"] as const;
+export const HABITAT_NODE_TYPES = ["Physics.Habitat:person", "Physics.Habitat:crew", "Physics.Habitat:scrubber", "Physics.Habitat:fan", "Physics.Habitat:filter"] as const;
 
 const KGPS = { quantity: "MassFlow", unit: "kg/s" } as const;
 const M3PS = { quantity: "VolumetricFlow", unit: "m3ps" } as const;
@@ -61,20 +68,43 @@ export function registerHabitatNodes(registry: NodeRegistry, doc: (file: string)
     // The ports of each type are the class's own declarations, read off one instance: never retyped here.
     const ports = (node: { inputPorts: ReadonlyArray<unknown>; outputPorts: ReadonlyArray<unknown> }) => ({ inputPorts: [...node.inputPorts], outputPorts: [...node.outputPorts] });
 
+    reg.register("Physics.Habitat:person", () => createHabitatPersonNode(), {
+        label: "Person (CO2 source)",
+        category: "Physics.Habitat",
+        docPath: doc("person.md"),
+        ...ports(new HabitatPersonNode()),
+        signature: {
+            purpose: "one person by name as a CO2 source in kg/s, at an activity of their own (sleep, rest, light_work, heavy_work) at NASA's rate per activity in litres per minute, their own rates editable; wired into a crew's person pool or straight into an atmosphere",
+            inputs: {
+                activity: { quantity: "Category", description: "what they do: a word (sleep, rest, light_work, heavy_work) or a rung of that ladder as a number (0 to 3), so a timeline can schedule their day; the editable when unwired" },
+            },
+            outputs: {
+                co2Delta: { ...KGPS, description: "their CO2, for a crew's person_<k> input or an atmosphere's delta_CO2 input" },
+                litresPerMinute: { quantity: "VolumetricFlow", unit: "L/min", description: "the same, as a volume of CO2 per minute" },
+                activityLevel: { ...RATIO, description: "what they are doing, as the rung of the ladder (0 asleep to 3 at heavy work)" },
+            },
+            capabilities: ["source", "co2", "crew", "person", "air_quality"],
+        },
+    });
+
     reg.register("Physics.Habitat:crew", () => createHabitatCrewNode(), {
         label: "Crew (CO2 source)",
         category: "Physics.Habitat",
         docPath: doc("crew.md"),
         ...ports(new HabitatCrewNode()),
+        // The persons' pool: one input per person wired in, the next appearing as the last is taken.
+        variadicInput: [{ prefix: CREW_PERSON_PREFIX, type: "float" }],
         signature: {
-            purpose: "people as a CO2 source in kg/s: a head count at one activity, each person at the activity's rate in litres per minute (NASA's bands), no volume folded in",
+            purpose: "people as a CO2 source in kg/s: the persons wired into its pool (one person_<k> input each, the pool growing as persons are added), plus a head count at one activity for the people nobody names, each at the activity's rate in litres per minute (NASA's bands), no volume folded in",
             inputs: {
-                count: { quantity: "Count", unit: "person", description: "head count of the group; the editable when unwired" },
-                activity: { quantity: "Category", description: "sleep, rest, light_work or heavy_work; the editable when unwired" },
+                [`${CREW_PERSON_PREFIX}0`]: { ...KGPS, description: "a person's co2Delta (Physics.Habitat:person); the pool grows (person_1, person_2, ...) as persons are wired" },
+                count: { quantity: "Count", unit: "person", description: "head count of the unnamed people, on top of the persons wired; the editable when unwired" },
+                activity: { quantity: "Category", description: "the unnamed people's activity: sleep, rest, light_work or heavy_work; the editable when unwired" },
             },
             outputs: {
-                co2Delta: { ...KGPS, description: "the group's CO2, for an atmosphere's delta_CO2 input" },
+                co2Delta: { ...KGPS, description: "the crew's CO2, persons and count together, for an atmosphere's delta_CO2 input" },
                 litresPerMinute: { quantity: "VolumetricFlow", unit: "L/min", description: "the same, as a volume of CO2 per minute" },
+                headcount: { quantity: "Count", unit: "person", description: "the persons wired plus the count" },
             },
             capabilities: ["source", "co2", "crew", "air_quality"],
         },
