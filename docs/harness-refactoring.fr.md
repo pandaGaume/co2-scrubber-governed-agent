@@ -333,3 +333,120 @@ document dit (le passage 13 avait écrit le débit d'un membre d'équipage
 éveillé `0.0115 kg/s` là où la fiche NASA dit `0.69 g/min`, mille fois
 moins). La garde de la procédure refuse une grandeur dans une unité que le
 système ne connaît pas. 136 tests.
+
+## 15. La couche des contrats : des faits typés, une hiérarchie des sources, les conflits
+
+La relecture du passage 14 disait le vrai défaut : les unités seules ne
+protègent pas le sens. La fiche technique contient 0,30 (l'efficacité),
+40 % (le plancher de vitesse) et 100 % (la pleine vitesse) ; pour un moteur
+d'unités ce sont trois ratios, et le garde a poussé l'Observateur vers
+`eta = 40 %`. Le graphe de référence a sauvé le résultat en prenant la
+valeur de l'appareil (0,303), ce qui masquait l'erreur au lieu de la
+montrer. D'où une couche à part, générique, qui ne connaît ni épurateur ni
+sas (`harness/core/contracts.ts`) :
+
+| notion | ce que c'est |
+|---|---|
+| `Fact` | un id (`scrubber.singlePassEfficiency`), une sémantique (`SinglePassRemovalEfficiency`, pas `Ratio`), une grandeur, une unité, une valeur, une bande quand la source en donne une, un statut, une source, un producteur |
+| la hiérarchie | `measured > device > documented > library > derived > assumed` |
+| `conflictsOf` | par id, chaque valeur convertie dans l'unité de la plus autoritaire (par le service des unités) ; une bande compte de quel côté qu'elle soit ; ce qui ne concorde pas est un conflit, et le producteur de plus basse autorité qui ne concorde pas est celui qui révise |
+| `reviewContracts` | `CONSISTENT`, `CONFLICT` (les conflits, avec qui révise), `MISSING` (un fait requis que personne n'énonce) |
+| `taskFacts` | les faits d'une tâche : les constantes connues de la demande (par id de fait quand elle en cite un), les propriétés des appareils du registre (nommées par les fiches de faits de la bibliothèque : une propriété qu'aucune fiche ne nomme n'est la revendication de personne), les faits de la bibliothèque |
+
+**Le domaine entre par les faits, pas par le code.** Un document de la
+bibliothèque énonce ses faits dans un fichier à côté de lui
+(`docs/library/<id>.facts.json`) : la fiche de l'épurateur en a cinq (le
+débit d'air, l'efficacité, le débit effectif, la constante de temps, le
+plancher de vitesse, chacun avec la propriété du registre qui porte le
+même fait), la topologie quatre (la ventilation inter-modules sas fermé,
+3 m³/min de conception, les seuils, l'équipage), les charges NASA trois
+(les débits éveillé et endormi avec leurs bandes). `library.facts` les
+donne, `library.read` les joint au document, la liste les compte.
+
+**Ce que le harnais en fait.**
+
+- L'Observateur cite un fait (`known[].factId`) dès que le document énonce
+  les siens ; la garde juge la constante contre ce fait seul (une
+  efficacité n'est plus comparée à une vitesse parce que les deux sont des
+  ratios) : la valeur, l'unité convertie, la bande. Le passage 14 aurait
+  été refusé ainsi : « 40 percent is 0.4 ratio; the fact
+  scrubber.singlePassEfficiency (SinglePassRemovalEfficiency) is 0.3
+  ratio ». Elle refuse aussi une hypothèse de modules isolés sas fermé,
+  parce que la topologie documente le contraire (le fait
+  `habitat.interModuleVentilation.designFlow.hatchClosed`) ; ce que la
+  ventilation livre est inconnu, pas nul. Les outils des unités
+  (`physics.units_convert`, `units_validate_connection`,
+  `units_normalize`) sont dans sa main, hors comptage des lectures.
+- Le runner relit une fois, au départ d'une tâche, les faits de la
+  demande, du registre et de la bibliothèque, et en fait le rapport
+  (`invariants.contracts` de l'état). L'usine de graphes exige
+  `sourcesConsistent` avant le plan : un `SOURCE_CONFLICT` (la demande dit
+  `eta = 40 %`, le registre 0,303) refuse le plan en nommant le fait et
+  qui révise, et demande `task.fail` avec `REQUIRE_RESOLUTION` ; le graphe
+  de référence ne prend plus silencieusement la valeur de l'appareil.
+- Les deux usines ont les outils des unités et `library.facts` dans
+  leurs listes.
+
+**Le superviseur des contrats, l'étape suivante.** Ce que cette couche
+produit (des faits, des rapports de quelques centaines de caractères) est
+ce qu'un raisonneur de supervision lirait, et rien d'autre : pas les
+transcriptions. Il ne construirait rien et ne corrigerait rien lui-même ;
+il dirait `CONTRACT_VIOLATION`, le producteur, le fait, la raison, et le
+harnais renverrait ce producteur dans sa boucle (`REVISE`), la provenance
+restant propre. Ses états seraient ceux du rapport (`CONSISTENT`,
+`CONFLICT`, `MISSING`, `AMBIGUOUS`, `UNSUPPORTED`) et ses règles ne
+parleraient jamais de CO2 : même fait et valeurs incompatibles, fait
+requis absent, hypothèse contredite par une preuve, paramètre déclaré
+connu en amont et ajusté en aval, deux symboles pour un concept. Le
+déterministe (les unités, les schémas, la couverture) répond à ce qui est
+objectivement faux, le superviseur à ce qui est incohérent entre sources,
+le raisonneur scientifique (l'usine de graphes) à ce que la physique
+explique. Pour changer de domaine on change les faits, le catalogue, les
+graphes de référence et la bibliothèque, pas le harnais. Ce qui est
+construit ce soir est la couche déterministe de ce superviseur ; le
+raisonneur qui la lit n'est pas écrit.
+
+**Le passage 17, avec les faits** (même modèle, même exemple ;
+`docs/exemples/2026-09-25-mise-en-service-8-haiku-faits/`) :
+
+| boucle | pas | entrée | sortie | ce qui s'est passé |
+|---|---|---|---|---|
+| Procedure Factory | 14 | 54 495 | 5 335 | une lecture répétée refusée par la garde, un refus de la procédure (plancher, bornes, durée), acceptée |
+| Observateur | 7 | 53 804 | 4 892 | trois lectures, `library.facts`, un refus (une constante citant un document non lu), acceptée |
+| Graph Factory | 3 | 9 603 | 954 | `contracts: CONSISTENT`, un candidat, tenu |
+
+Pour la première fois la demande de l'Observateur est juste sur toutes ses
+constantes, chacune citant son fait : `eta = 0.3 ratio`
+(`scrubber.singlePassEfficiency`), `Qe_full = 1 m3/min`, `Q_full = 3.3
+m3/min`, `tau_lag = 3.33 min`, les débits de l'équipage `0.38` et `0.24
+L/min` avec leurs bandes ; le rapport des contrats de l'usine de graphes
+est `CONSISTENT`, sans que le graphe de référence ait rien à masquer. Ce
+qui a été trouvé et corrigé sur le chemin (passage 15) : après un refus,
+la procédure refusée disparaissait de l'état dès que le modèle lisait
+autre chose (`lastRefusal` ne tient que le dernier refus), et le modèle
+inventait une poignée pour la relire, seize fois ; le progrès garde
+maintenant le dernier refus de chaque capacité jusqu'à ce qu'elle
+aboutisse (`refusals`), et l'état du sujet `procedure` montre la
+procédure refusée sous `evaluation.procedure` quoi que le modèle lise
+entre-temps.
+
+**Le passage 20, la boucle scientifique sur le vrai modèle**
+(`EXAMPLE_WORLD=hidden-occupant`, une troisième personne au travail dans
+le Lab que le moniteur ne liste pas ;
+`docs/exemples/2026-09-25-mise-en-service-9-haiku-occupant-cache/`).
+L'usine de graphes, 6 pas, 23 243 jetons d'entrée : le premier candidat
+(les quatre personnes observées, V, Vh, L et g ajustés) manque de 118 ppm
+sur le Lab avec g en butée de sa bande (0,45), `PARAMETER_MISMATCH` ; le
+brief dit que la courbe du Lab reste sous-prédite avec un débit au haut de
+sa bande, donc qu'il s'y produit plus de CO2 que les personnes observées
+n'en font, et nomme le levier (une personne de plus dans ce module) ; le
+modèle évalue le même graphe avec un troisième occupant du Lab : 6,5 et
+8,3 ppm, V 28,2 pour 30, tenu et remis. La boucle candidat, échec,
+diagnostic, hypothèse, candidat révisé est donc démontrée sur Haiku, pas
+seulement sur le script. Deux passages avant, sans les leviers dans le
+brief, le même modèle avait relu le gabarit huit fois et épuisé ses trente
+pas sans second candidat ; un passage avant, la Procedure Factory avait
+relu vingt-deux fois une fiche que le brief ne reconnaissait pas comme
+fiche de méthode (`nasa-scrubber-test-protocols`, listée par
+`library.methods` mais sans le préfixe `method-`) : le brief nomme
+maintenant les fiches listées et en accepte une des deux.

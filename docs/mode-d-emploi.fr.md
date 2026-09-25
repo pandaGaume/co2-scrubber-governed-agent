@@ -46,7 +46,12 @@ place.
 portent une ligne `**Measures:**`). Ajouter un document = déposer un `.md`
 avec un titre, un premier paragraphe de résumé, et ses sources.
 
-Les graphes de référence y sont aussi (`library.graphs`, `library.graph`),
+Un document peut énoncer ses faits typés dans un fichier à côté de lui
+(`<id>.facts.json` : id, sémantique, grandeur, unité, valeur, bande, la
+propriété du registre qui porte le même fait) ; `library.facts` les donne
+et l'Observateur cite un fait par son id (`known[].factId`), ce qui
+distingue une efficacité d'une vitesse quand les deux sont des ratios
+(`docs/harness-refactoring.fr.md`, section 15). Les graphes de référence y sont aussi (`library.graphs`, `library.graph`),
 depuis `graphs/` : un document `.spikypanda`, son gabarit
 `.template.json` (le graphe en formules sur des variables, ses réglages,
 ses sondes) et sa grammaire `<id>.grammars/<famille>/<langue>.json` dans
@@ -134,6 +139,12 @@ le 25 septembre (`core` 1.0.5, `plugin-physics` 0.1.2, `factory` 0.1.3,
 `nodeeditor` 0.1.2, dans `vendor/`) : avec les versions d'avant, `npm run
 habitat:build` ne rend pas la main, ou le jumeau refuse `person_1`, ou le
 service des unités ne connaît ni `m3/min` ni `kg/s`.
+
+`EXAMPLE_WORLD=hidden-occupant npm run example:commissioning` fait tourner
+la même chaîne sur un monde que le graphe de référence ne peut pas
+ajuster tel qu'observé (une troisième personne au travail dans le Lab que
+le moniteur ne liste pas) : la boucle scientifique de l'usine de graphes,
+un candidat qui manque, le diagnostic, un candidat révisé.
 
 ## 7. Lire un journal, diagnostiquer un échec
 

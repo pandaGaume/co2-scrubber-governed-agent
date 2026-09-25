@@ -22,6 +22,7 @@ import type { JsonValue, State, StateObserver } from "@spiky-panda/harness";
 import type { Broker } from "../lib/broker.js";
 import type { CapabilityCall } from "./capabilities.js";
 import type { ReasoningState } from "./reasoning-state.js";
+import type { ContractReport } from "./contracts.js";
 
 export type Phase = "plan" | "build" | "done" | "failed";
 
@@ -64,6 +65,8 @@ export interface Progress {
     lastArtifact: string | null;
     /** The last step the harness stopped (the guard, the schema, a capability outside the list): the call as proposed, whole, and why. In the state mode the model reads its own proposal here and corrects it, instead of writing it again with the same fault. */
     lastRefusal: { capability: string; reason: string; input?: JsonValue } | null;
+    /** The last refusal of each capability, kept until that capability completes: a refused submission stays readable after the model read something else (the fifteenth passage lost it and invented a handle for it). */
+    refusals: Record<string, { reason: string; input: JsonValue; at: string }>;
     /** sha256 of the models whose contract check passed in this task (`model.contract` ok). */
     checkedModels: string[];
     /** The summary of the last sandbox run (`session_run`), for the proposal's claims. */
@@ -77,11 +80,16 @@ export interface Progress {
     /** What the task read so far, each answer compact, by capability and argument (`evidence:` in the state); the oldest dropped past the cap. */
     evidence: Record<string, { at: string; summary: JsonValue }>;
     /** What the runner read once at the start, for the state and the topics' requirements: the library's shelf, the telemetry's shape. */
-    context: { shelf: Array<{ id: string; description: string; types: string[]; variables: Record<string, string>; settings: string[]; probes: string[] }>; telemetry: { file: string; rows: number; columns: string[]; minutes: number | null } | null };
+    context: {
+        shelf: Array<{ id: string; description: string; types: string[]; variables: Record<string, string>; settings: string[]; probes: string[] }>;
+        telemetry: { file: string; rows: number; columns: string[]; minutes: number | null } | null;
+        /** The contract report of the task's facts (the request's known constants, the register's devices, the library), read once at the start (`contracts.ts`). */
+        contracts?: ContractReport;
+    };
 }
 
 export function newProgress(): Progress {
-    return { phase: "plan", iteration: 0, plan: null, done: null, lastCall: null, repeats: 0, lastSummary: null, lastArtifact: null, lastRefusal: null, checkedModels: [], sandbox: null, failure: null, reads: {}, topic: {}, evidence: {}, context: { shelf: [], telemetry: null } };
+    return { phase: "plan", iteration: 0, plan: null, done: null, lastCall: null, repeats: 0, lastSummary: null, lastArtifact: null, lastRefusal: null, refusals: {}, checkedModels: [], sandbox: null, failure: null, reads: {}, topic: {}, evidence: {}, context: { shelf: [], telemetry: null } };
 }
 
 export interface WorkshopFeatures extends Record<string, JsonValue> {

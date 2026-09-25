@@ -44,6 +44,7 @@ import type { JsonValue, PolicyFallbackInput } from "@spiky-panda/harness";
 import type { Broker } from "../lib/broker.js";
 import type { Provider } from "../lib/provider.js";
 import { checkTwinRequest, TWIN_REQUEST_SCHEMA, type TwinFactoryRequest, type VocabularyEntry } from "./request.js";
+import type { LibraryFact } from "../core/contracts.js";
 import { summarizeTelemetry, type TelemetrySummary } from "./telemetry.js";
 
 export const OBSERVER_PROMPT = "harness/observer/prompt.md";
@@ -106,7 +107,9 @@ async function catalogueOf(broker: Broker | undefined, slot: string): Promise<{ 
 }
 
 /** The library: the documentation of the devices and of the station, where the Observer checks what the description leaves open. Read-only, never the catalogue. */
-const LIBRARY_TOOLS = ["list", "search", "read"] as const;
+const LIBRARY_TOOLS = ["list", "search", "read", "facts"] as const;
+/** The units, deterministic: a conversion the model must not do in its head. Not a read, not an attempt. */
+const UNITS_TOOLS = ["units_convert", "units_validate_connection", "units_normalize"] as const;
 export const OBSERVER_MAX_READS = 6;
 /** Characters of the last document read kept whole in the state; the earlier ones keep only their numeric lines. */
 const READ_WHOLE_CHARS = 8000;
@@ -147,6 +150,26 @@ async function libraryCapabilities(broker: Broker | undefined): Promise<Array<{ 
     }
 }
 
+async function unitsCapabilities(broker: Broker | undefined): Promise<Array<{ id: string; description: string; inputSchema: never; replayPolicy: "automatic" }>> {
+    if (!broker) return [];
+    try {
+        const tools = await broker.tools("physics");
+        return tools.filter((t) => (UNITS_TOOLS as readonly string[]).includes(t.name)).map((t) => ({ id: `physics.${t.name}`, description: t.description ?? `physics.${t.name}`, inputSchema: t.inputSchema as never, replayPolicy: "automatic" as const }));
+    } catch {
+        return [];
+    }
+}
+
+/** The library's typed facts, by document: what the guard judges a known constant against. */
+async function libraryFacts(broker: Broker | undefined): Promise<Record<string, LibraryFact[]>> {
+    if (!broker) return {};
+    const r = await broker.call("library", "facts", {});
+    const facts = r.ok ? (r.output as { facts?: Array<LibraryFact & { source: string }> }).facts : undefined;
+    const out: Record<string, LibraryFact[]> = {};
+    for (const f of Array.isArray(facts) ? facts : []) out[f.source] = [...(out[f.source] ?? []), f];
+    return out;
+}
+
 /** The library's documents in one line each: id, title, what it says. */
 async function libraryShelf(broker: Broker): Promise<string> {
     const r = await broker.call("library", "list", {});
@@ -168,10 +191,13 @@ export async function observe({ provider, broker, runtimeSlot = "twin", descript
     const columns = summary ? summary.columns.map((c) => c.column) : [];
     const { types, vocabulary } = await catalogueOf(broker, runtimeSlot);
     const library = await libraryCapabilities(broker);
+    const units = await unitsCapabilities(broker);
+    const facts = library.length ? await libraryFacts(broker) : {};
     // What the library holds, given up front: the model knows a datasheet exists before it thinks of searching for one.
     const shelf = library.length && broker ? await libraryShelf(broker) : "";
     const intention = { id: "observe", description: "Formulate the TWIN_FACTORY_REQUEST for the system described in the observation." };
     const allowed = [{ id: OBSERVER_CAPABILITY, description: "Hand over the TWIN_FACTORY_REQUEST: what the twin must represent, receive, simulate, expose, and how it will be judged. It is checked before it reaches the factory; a refused request comes back with its reasons.", inputSchema: TWIN_REQUEST_SCHEMA as never, replayPolicy: "automatic" as const }, ...library];
+    const withUnits = (list: typeof allowed) => [...list, ...units];
     const done: ObserveAttempt[] = [];
     const reads: string[] = [];
     const documentsRead: string[] = [];
@@ -198,7 +224,7 @@ export async function observe({ provider, broker, runtimeSlot = "twin", descript
                       evidence: Object.fromEntries(evidence.map((e, i) => [e.key, e.ok ? evidenceOf(e.key.split(" ")[0], e.output, i === evidence.length - 1) : `refused: ${String(e.output)}`])),
                       lastAttempt: last ? { n: last.n, problems: last.problems, proposed: lastProposal } : null,
                       earlierAttempts: done.slice(0, -1).map((a) => ({ n: a.n, problems: a.problems })),
-                      nextActions: (readsLeft > 0 ? allowed : allowed.slice(0, 1)).map((c) => c.id),
+                      nextActions: withUnits(readsLeft > 0 ? allowed : allowed.slice(0, 1)).map((c) => c.id),
                   },
               }
             : {
@@ -215,12 +241,20 @@ export async function observe({ provider, broker, runtimeSlot = "twin", descript
             intention,
             // The variable part: the system, its telemetry as computed facts, the shared vocabulary, what the library answered, why the last attempt was refused.
             state: { id: `observe:${step}`, features },
-            allowedCapabilities: readsLeft > 0 ? allowed : allowed.slice(0, 1),
+            allowedCapabilities: withUnits(readsLeft > 0 ? allowed : allowed.slice(0, 1)),
             candidates: [],
             recentFailures: [],
         } as unknown as PolicyFallbackInput;
         const decision = await provider.resolve(input);
         const id = decision.invocation.capabilityId;
+        if (id.startsWith("physics.") && broker) {
+            // A conversion is not a read and not an attempt: the answer goes into the evidence, the model writes the number it gave back.
+            const r = await broker.call("physics", id.slice("physics.".length), (decision.invocation.input ?? {}) as Record<string, unknown>);
+            const key = `${id} ${JSON.stringify(decision.invocation.input ?? {}).slice(0, 80)}`;
+            lastRead = { id, ok: r.ok, text: (r.ok ? JSON.stringify(r.output) : String(r.error ?? r.outcome)).slice(0, 2000) };
+            evidence.push({ key, output: r.ok ? r.output : (r.error ?? r.outcome), ok: r.ok });
+            continue;
+        }
         if (id.startsWith("library.") && readsLeft > 0 && broker) {
             // A read is not an attempt: the model checks the documentation, then writes.
             const r = await broker.call("library", id.slice("library.".length), (decision.invocation.input ?? {}) as Record<string, unknown>);
@@ -242,7 +276,7 @@ export async function observe({ provider, broker, runtimeSlot = "twin", descript
             done.push({ n: n++, ok: false, problems: [`the answer was not a call to ${OBSERVER_CAPABILITY} (${id})`], proposed: JSON.stringify(decision.invocation.input).slice(0, 2000) });
             continue;
         }
-        const check = checkTwinRequest(decision.invocation.input, { catalogueTypes: types, telemetryColumns: summary ? columns : undefined, vocabulary, description, ...(library.length ? { documentsRead, documents } : {}) });
+        const check = checkTwinRequest(decision.invocation.input, { catalogueTypes: types, telemetryColumns: summary ? columns : undefined, vocabulary, description, ...(library.length ? { documentsRead, documents, facts } : {}) });
         done.push({ n: n++, ok: check.ok, problems: check.problems, proposed: JSON.stringify(decision.invocation.input).slice(0, 2000) });
         if (check.ok) return { ok: true, request: decision.invocation.input as unknown as TwinFactoryRequest, attempts: done, reads, telemetry: summary, provider: { name: provider.name, model: provider.model, family: provider.family } };
     }

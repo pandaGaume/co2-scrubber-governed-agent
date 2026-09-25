@@ -35,6 +35,7 @@ import { taskCapabilities } from "./task-capabilities.js";
 import { DEFAULT_BUDGET, topicFor, type TaskFile, type TaskState, type Topic } from "./task.js";
 import type { TopicDefinition } from "./topic.js";
 import { createWorkspaceObserver, isArtifact, listWorkshop, newProgress, type Progress } from "./workspace-observer.js";
+import { reviewContracts, taskFacts, type ContractReport, type LibraryFact } from "./contracts.js";
 import { ONNX_TOPIC } from "../topics/onnx/index.js";
 import { PROCEDURE_TOPIC } from "../topics/procedure/index.js";
 import { GRAPH_TOPIC } from "../topics/graph/index.js";
@@ -128,6 +129,13 @@ async function shelfOf(broker: Broker): Promise<Progress["context"]["shelf"]> {
     }));
 }
 
+/** The facts of the task against one another (the request's, the register's, the library's), reviewed once at the start: a conflict is visible before any plan. */
+async function contractsOf(broker: Broker, task: TaskFile["task"]): Promise<ContractReport> {
+    const r = await broker.call("library", "facts", {});
+    const facts = r.ok ? (r.output as { facts?: Array<LibraryFact & { source: string }> }).facts : undefined;
+    return reviewContracts(taskFacts(task, Array.isArray(facts) ? facts : []));
+}
+
 /** The telemetry's shape, read once for the state: the first data file whose rows carry a minute column. */
 async function telemetryShapeOf(broker: Broker, taskId: string, task: TaskFile["task"]): Promise<Progress["context"]["telemetry"]> {
     for (const d of task.data ?? []) {
@@ -170,7 +178,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
     const promptPath = promptFile ? fromRoot(promptFile) : null;
 
     // What the state carries so the model need not read it: the shelf and the telemetry's shape.
-    progress.context = { shelf: await shelfOf(broker), telemetry: await telemetryShapeOf(broker, taskId, task) };
+    progress.context = { shelf: await shelfOf(broker), telemetry: await telemetryShapeOf(broker, taskId, task), contracts: await contractsOf(broker, task) };
     const contextMode: "conversation" | "state" = (provider as { contextMode?: unknown }).contextMode === "state" ? "state" : "conversation";
     // The proposals in a row: the same capability with the same input twice is counted (`progress.repeats`), whether it ran or was refused.
     let previousProposal = "";
@@ -227,7 +235,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             taskId,
             progress,
             () => topic.brief?.(progress, task) ?? "",
-            () => reasoningStateOf({ task, progress, budget, nextActions: capabilities.catalogue.map((c) => c.id), shelf: progress.context.shelf, telemetry: progress.context.telemetry, runsSpent: topic.runsSpent?.(progress), topic: topic.state?.(progress, task) }),
+            () => reasoningStateOf({ task, progress, budget, nextActions: capabilities.catalogue.map((c) => c.id), shelf: progress.context.shelf, telemetry: progress.context.telemetry, contracts: progress.context.contracts, runsSpent: topic.runsSpent?.(progress), topic: topic.state?.(progress, task) }),
             () => topic.key?.(progress) ?? "",
             contextMode,
         ),
@@ -321,6 +329,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         progress.iteration = n;
         if (trace) {
             progress.lastRefusal = null;
+            if (trace.result.ok) delete progress.refusals[trace.decision.invocation.capabilityId];
             const outcome = ((trace.result.output as { outcome?: string } | undefined)?.outcome ?? (trace.result.ok ? "completed" : "error")) as string;
             manifest.steps.push({
                 n,
@@ -344,6 +353,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         if (exchange) {
             // The harness stopped the step (the guard, the schema, a capability outside the list, a timeout): the model reads the reason at the next step.
             progress.lastRefusal = { capability: exchange.proposedCapabilityId, reason: failed ?? "refused", input: (exchange.proposedInput ?? null) as JsonValue };
+            progress.refusals[exchange.proposedCapabilityId] = { reason: failed ?? "refused", input: (exchange.proposedInput ?? null) as JsonValue, at: new Date().toISOString() };
             noteProposal(exchange.proposedCapabilityId, exchange.proposedInput);
             manifest.steps.push({ n, decisionId: exchange.decisionId ?? null, source: "refused", capability: exchange.proposedCapabilityId, input: exchange.proposedInput, outcome: "refused", summary: failed, reward: null, reason: failed, ms, tokens: exchange.tokens });
             lines.push({ n, decisionId: exchange.decisionId ?? null, source: "refused", trace: null, failed, exchange, call: null, ms });

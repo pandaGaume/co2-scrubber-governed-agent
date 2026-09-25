@@ -1,0 +1,49 @@
+{
+    "document": "scrubber-1-datasheet",
+    "facts": [
+        {
+            "id": "scrubber.flowAtFull",
+            "semantic": "AirFlowAtFullSpeed",
+            "quantity": "VolumetricFlow",
+            "unit": "m3/min",
+            "value": 3.3,
+            "device": { "type": "Scrubber", "property": "flowAtFull" },
+            "says": "air flow at full speed, anemometer at the outlet: 0.055 m3/s, 3.3 m3/min"
+        },
+        {
+            "id": "scrubber.singlePassEfficiency",
+            "semantic": "SinglePassRemovalEfficiency",
+            "quantity": "Dimensionless",
+            "unit": "ratio",
+            "value": 0.3,
+            "device": { "type": "Scrubber", "property": "singlePassEfficiency" },
+            "says": "single-pass removal efficiency, inlet and outlet CO2 at nominal bed temperature: 0.30 (a ratio, not a speed)"
+        },
+        {
+            "id": "scrubber.effectiveFlowAtFull",
+            "semantic": "EffectiveRemovalFlowAtFullSpeed",
+            "quantity": "VolumetricFlow",
+            "unit": "m3/min",
+            "value": 1.0,
+            "device": { "type": "Scrubber", "property": "effectiveFlowAtFull" },
+            "says": "effective flow at full speed, Qe = flow x efficiency: 1.0 m3/min"
+        },
+        {
+            "id": "scrubber.lagTimeConstant",
+            "semantic": "ResponseTimeConstant",
+            "quantity": "Timespan",
+            "unit": "min",
+            "value": 3.33,
+            "device": { "type": "Scrubber", "property": "lagTimeConstant" },
+            "says": "response to a change of command: first order, time constant 3.33 min"
+        },
+        {
+            "id": "scrubber.minimumSpeedElevated",
+            "semantic": "SpeedCommandFloor",
+            "quantity": "Dimensionless",
+            "unit": "percent",
+            "value": 40,
+            "says": "while the cabin CO2 is ELEVATED, no speed below the minimum flow: 40 % by default (a speed command, not an efficiency)"
+        }
+    ]
+}

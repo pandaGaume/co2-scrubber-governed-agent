@@ -34,7 +34,7 @@ import { wiringLines } from "./reference.js";
 import type { Row } from "./params.js";
 import type { TopicState } from "../../core/reasoning-state.js";
 
-export const GRAPH_TOOLS: ReadonlyArray<RegExp> = [/^workspace\.(list|read)$/, /^library\.(list|methods|search|read|graphs|graph)$/, /^twin\.registry_(search|describe_node|list_nodes)$/, /^twin\.document_validate$/, /^graph\.evaluate$/, /^task\.(plan|done|fail)$/];
+export const GRAPH_TOOLS: ReadonlyArray<RegExp> = [/^workspace\.(list|read)$/, /^library\.(list|methods|search|read|graphs|graph|facts)$/, /^physics\.units_(normalize|convert|compatible|validate_connection)$/, /^twin\.registry_(search|describe_node|list_nodes)$/, /^twin\.document_validate$/, /^graph\.evaluate$/, /^task\.(plan|done|fail)$/];
 export const GRAPH_PROMPT = "harness/topics/graph/prompt.md";
 
 interface GraphTopicState {
@@ -161,6 +161,8 @@ export function requirementsOf(progress: Progress, task: TaskFile["task"]): Reco
         // The documented constants are resolved when the task carries them, when a document was read, or when the shelf holds a reference graph: its template carries them with their sources.
         knownConstantsResolved: knownOf(task).length > 0 || progress.reads["library.read"] !== undefined || progress.context.shelf.length > 0,
         referenceGraphsKnown: progress.context.shelf.length > 0 || progress.reads["library.graphs"] !== undefined,
+        // The task's sources agree on every fact they share (the request's known constants, the register's devices, the library): a SOURCE_CONFLICT is resolved upstream, not papered over by the reference graph.
+        sourcesConsistent: progress.context.contracts?.status !== "CONFLICT",
         planAccepted: progress.plan !== null,
         candidateEvaluated: candidates.length > 0,
         candidateHeld: last?.pass === true,
@@ -169,6 +171,7 @@ export function requirementsOf(progress: Progress, task: TaskFile["task"]): Reco
 
 /** What would satisfy an unmet requirement of the context phase. */
 const HOW: Record<string, string> = {
+    sourcesConsistent: "SOURCE_CONFLICT: the task's sources disagree on a fact (the state's invariants.contracts names it, and who must revise); the reference graph would take the device's value and hide the error: end with task.fail naming the conflict and REQUIRE_RESOLUTION, so the request is revised upstream",
     telemetryAvailable: "the task carries no telemetry table: nothing to judge a twin against (task.fail with that reason)",
     knownConstantsResolved: "no known constant in the task and nothing read from the library: read the device's datasheet (library.read) so the documented constants are held",
     referenceGraphsKnown: "the shelf is not known: library.graphs lists the reference graphs",
@@ -262,11 +265,16 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
     if (last.diagnosis === "PASS") return `Hand over. Candidate ${last.n} (${last.path}) holds the threshold: ${where}. The harness hands the numbers over itself, from the evaluation (the state's evaluation.parameters: for each variable its value, unit, name and how it was set); the summary says in words what was found and does not give a variable a meaning of its own. Its calibration passed on this telemetry; its validation on another profile, hatch state or occupancy was not performed, and the identifiability of the fitted parameters is not assessed: say both. End with task.done, the graph as the artifact: {"kind": "graph", "path": "${last.path}"}.`;
     if (last.diagnosis === "INVALID_EVALUATION") return `The evaluation of candidate ${last.n} is invalid, no residual was trusted: ${(last.diagnostics ?? []).map((d) => `${d.reason}${d.column ? ` on ${d.column}` : ""}${d.minute !== undefined ? ` at minute ${d.minute}` : ""}${d.detail ? ` (${d.detail})` : ""}`).join("; ")}. Fix what that names (a probe that exists, a run that covers the telemetry) and evaluate again.${refused}`;
     const warned = last.warnings?.length ? ` ${last.warnings.map((w) => w.slice(0, 400)).join(" ")}` : "";
+    // On a library graph the levers of the next candidate are its interface, nothing to read: the bounds (fit), who is on board (persons: one more person where the curve parts, another activity), the settings; or a spec of one's own.
+    const worst = [...last.residuals].sort((a, b) => b.rmse - a.rmse)[0];
+    const levers = last.graph
+        ? ` The next candidate is the same graph "${last.graph}" with its levers, which the state already holds (do not read the template again): fit (the bounds of V, Vh, L, g within the graph's), persons (who is on board: the observed persons plus one more in the module whose column parts most, ${worst ? `${worst.column}, ${worst.rmse} ppm` : "the worst column"}, or an activity changed: a CO2 source the observation missed is one more person at work there), settings; or a spec of your own from the catalogue. A rate at the top of its band with that column still under-predicted means more CO2 is produced there than the observed persons make: add a person there.`
+        : "";
     if (last.diagnosis === "PARAMETER_MISMATCH") {
         const why = last.heldFitted?.length ? `it held ${last.heldFitted.join(", ")} at a value (${JSON.stringify(Object.fromEntries(last.heldFitted.map((k) => [k, last.variables[k]])))}), and the graph says only the installation knows ${last.heldFitted.length > 1 ? "them" : "it"}: fit ${last.heldFitted.length > 1 ? "them" : "it"} within the graph's bounds` : `its best fit sits at the edge of the range for ${(last.atBounds ?? []).join(", ")} (${JSON.stringify(last.variables)} over ${last.combinations} runs): the range decided, not the physics. Widen that range only if the physics allows the value beyond it (the graph's bounds are the template's; a documented band is never left); otherwise the structure is in question`;
-        return `The gap is a parameter's. Candidate ${last.n} (${last.label}) misses the threshold of ${last.threshold} ppm: ${where}; ${why}.${warned} ${candidates.length} candidate(s) so far. Evaluate the next.${held}${refused}`;
+        return `The gap is a parameter's. Candidate ${last.n} (${last.label}) misses the threshold of ${last.threshold} ppm: ${where}; ${why}.${warned} ${candidates.length} candidate(s) so far.${levers} Evaluate the next (graph.evaluate).${held}${refused}`;
     }
-    return `The gap is structural. Candidate ${last.n} (${last.label}) misses the threshold of ${last.threshold} ppm: ${where}, with ${JSON.stringify(last.variables)} its best fit over ${last.combinations} runs, and no admissible parameter set of this structure closes it (${candidates.length} candidate(s) so far).${warned} Do not widen the bounds again: revise the topology where the curves part, guided by the task's hypotheses. ${last.reference && last.reference.missingWires.length ? `Against the station's reference graph, candidate ${last.n} lacks: ${last.reference.missingWires.join("; ")}. ` : ""}A term added must name its physical hypothesis (an exchange, a source); a constant term with no physics behind it closes a gap for the wrong reason.${held} Evaluate the next candidate.${refused}`;
+    return `The gap is structural. Candidate ${last.n} (${last.label}) misses the threshold of ${last.threshold} ppm: ${where}, with ${JSON.stringify(last.variables)} its best fit over ${last.combinations} runs, and no admissible parameter set of this structure closes it (${candidates.length} candidate(s) so far).${warned} Do not widen the bounds again: revise the topology where the curves part, guided by the task's hypotheses.${levers} ${last.reference && last.reference.missingWires.length ? `Against the station's reference graph, candidate ${last.n} lacks: ${last.reference.missingWires.join("; ")}. ` : ""}A term added must name its physical hypothesis (an exchange, a source); a constant term with no physics behind it closes a gap for the wrong reason.${held} Evaluate the next candidate (graph.evaluate).${refused}`;
 }
 
 function intentionOf(task: TaskFile["task"], generic: Intention): Intention {

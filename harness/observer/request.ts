@@ -34,6 +34,7 @@
  */
 
 import { checkAgainstDocument } from "../lib/units.js";
+import { checkKnownAgainstFact, type LibraryFact } from "../core/contracts.js";
 
 export interface Quantity {
     name: string;
@@ -52,6 +53,8 @@ export interface KnownConstant {
     quantity?: string;
     /** The id of the library document that states it. */
     source: string;
+    /** The fact's id in the library's typed facts (`library.facts`), when the document states its facts by id: what tells an efficiency from a speed. */
+    factId?: string;
     /** The band the documentation gives, when it gives one (a crew's metabolic rate, 5th to 95th percentile): the factory may place the value within it, never outside. */
     min?: number;
     max?: number;
@@ -93,7 +96,7 @@ export const TWIN_REQUEST_SCHEMA = {
         assumptions: { type: "array", items: { type: "string" }, description: "What is assumed in its place, said as assumed." },
         known: {
             type: "array",
-            items: { type: "object", properties: { symbol: { type: "string", description: "a short symbol, the variable's name in the twin (Qe, tau)" }, name: { type: "string" }, value: { type: "number" }, unit: { type: "string" }, source: { type: "string", description: "the id of the library document that states it, one you read" }, min: { type: "number", description: "the low end of the band the documentation gives, when it gives one" }, max: { type: "number", description: "the high end of that band" } }, required: ["symbol", "name", "value", "unit", "source"] },
+            items: { type: "object", properties: { symbol: { type: "string", description: "a short symbol, the variable's name in the twin (Qe, tau)" }, name: { type: "string" }, value: { type: "number" }, unit: { type: "string" }, factId: { type: "string", description: "the fact's id in the library's typed facts (library.facts, or the facts a read document lists), when the document states them: scrubber.singlePassEfficiency, never a symbol of your own" }, source: { type: "string", description: "the id of the library document that states it, one you read" }, min: { type: "number", description: "the low end of the band the documentation gives, when it gives one" }, max: { type: "number", description: "the high end of that band" } }, required: ["symbol", "name", "value", "unit", "source"] },
             description: "The constants the documentation gives (a device's datasheet, the station's metrics), each with its source: the factory holds them and never fits them.",
         },
         validation: {
@@ -129,6 +132,8 @@ export interface CheckContext {
     documentsRead?: string[];
     /** The text of the documents read, by id: a known constant is checked against what its source states, by the unit system (2026-09-25). */
     documents?: Record<string, string>;
+    /** The library's typed facts, by document id: where a document states its facts, a known constant cites one (factId) and is judged against it. */
+    facts?: Record<string, LibraryFact[]>;
     /** The description it was given, where a number stated under an assumption is found. */
     description?: string;
 }
@@ -192,11 +197,33 @@ export function checkTwinRequest(input: unknown, context: CheckContext = {}): Re
         if (!k?.symbol || !k?.source || typeof k.value !== "number" || !k.unit) problems.push(`provenance: known constant "${String(k?.name ?? k?.symbol)}" needs its symbol, value, unit and source`);
         else if ((k.min !== undefined || k.max !== undefined) && !(typeof k.min === "number" && typeof k.max === "number" && k.min <= k.value && k.value <= k.max)) problems.push(`provenance: known constant "${k.symbol}" gives a band that does not hold its value (${k.min} to ${k.max} around ${k.value}); a band is a min and a max around the documented value`);
         else if (context.documentsRead && !context.documentsRead.includes(k.source)) problems.push(`provenance: known constant "${k.symbol}" cites "${k.source}", a document you did not read (${context.documentsRead.join(", ") || "none read"}); read it, or put the constant under missing information`);
-        else if (context.documents?.[k.source] !== undefined) {
-            // The value against the document, by the unit system: a constant copied in another unit must agree once converted; one that does not was converted wrongly.
+        else if (context.facts?.[k.source]?.length) {
+            // The document states its facts by id: the constant cites one, and is judged against that fact alone (an efficiency is never compared with a speed because both are ratios).
+            const facts = context.facts[k.source];
+            const fact = k.factId ? facts.find((f) => f.id === k.factId) : undefined;
+            if (!k.factId) problems.push(`facts: known constant "${k.symbol}" cites "${k.source}", which states its facts by id: give factId, one of ${facts.map((f) => `${f.id} (${f.semantic}, ${f.value} ${f.unit})`).join(", ")}`);
+            else if (!fact) problems.push(`facts: known constant "${k.symbol}" cites fact "${k.factId}", which "${k.source}" does not state; its facts are ${facts.map((f) => f.id).join(", ")}`);
+            else {
+                const verdict = checkKnownAgainstFact({ value: k.value, unit: k.unit, ...(k.quantity ? { quantity: k.quantity } : {}) }, fact);
+                if (verdict.verdict === "CONFLICT") problems.push(`facts: known constant "${k.symbol}" = ${k.value} ${k.unit} conflicts with the fact it cites: ${verdict.reason}; copy the fact's value in its unit, or convert it with physics.units_convert`);
+                else if (verdict.verdict === "UNKNOWN_UNIT") problems.push(`units: known constant "${k.symbol}" is written in "${k.unit}", a unit the unit system does not know (${verdict.reason}); write it in a UCUM unit of its quantity`);
+            }
+        } else if (context.documents?.[k.source] !== undefined) {
+            // A document without typed facts: the value against what the document states, by the unit system; a constant copied in another unit must agree once converted.
             const verdict = checkAgainstDocument({ value: k.value, unit: k.unit, ...(k.quantity ? { quantity: k.quantity } : {}) }, context.documents[k.source]);
             if (verdict.verdict === "INVALID_CONVERSION") problems.push(`units: known constant "${k.symbol}" = ${k.value} ${k.unit} is an INVALID_CONVERSION of what "${k.source}" states: ${verdict.reason}; copy the document's value in the document's unit, or convert it with physics.units_convert`);
             else if (verdict.verdict === "UNKNOWN_UNIT") problems.push(`units: known constant "${k.symbol}" is written in "${k.unit}", a unit the unit system does not know (${verdict.reason}); write it in a UCUM unit of its quantity`);
+        }
+    }
+    // Semantics the documentation settles: an assumption that the modules do not exchange air with the hatch closed contradicts the station's ventilation, documented as running through the ducts alone.
+    const ventilation = Object.entries(context.facts ?? {}).flatMap(([doc, facts]) => facts.filter((f) => /InterModuleVentilation/.test(f.semantic)).map((f) => ({ doc, f })))[0];
+    if (ventilation) {
+        const isolated = /\b(no|zero|without|negligible)\b[^.;]{0,50}\b(air )?(exchange|coupling|ventilation|mixing|transfer)\b[^.;]{0,80}\b(between|modules?|lab|hab)\b/i;
+        for (const [section, items] of [["assumptions", list(r.assumptions)], ["required_behaviors", list(r.required_behaviors)], ["constraints", list(r.constraints)]] as const) {
+            for (const text of items) {
+                const t = String(text);
+                if (isolated.test(t) && !/through the hatch(way)?\b/i.test(t)) problems.push(`facts: ${section} "${t.slice(0, 120)}" treats the modules as isolated with the hatch closed; the station documents the opposite (${ventilation.doc}, ${ventilation.f.id}: ${ventilation.f.says ?? `${ventilation.f.value} ${ventilation.f.unit}`}); say what the ventilation delivers is unknown, not that it is zero`);
+            }
         }
     }
     // And the result of an assumption is not a constraint.

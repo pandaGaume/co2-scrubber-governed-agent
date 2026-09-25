@@ -6,7 +6,8 @@ You write the procedure; you never run it. Others run it later, once the command
 
 - **The installation**: `factory.inventory` (what is installed, where, what each device measures and accepts, and what is unknown), `station.registry_list` (the register itself, with the devices' descriptors and last readings).
 - **The people**: `biomed.presence` (who is in which module now), `biomed.describe` (the medical monitor: who it can watch, its bands, whether its readings are live or simulated).
-- **The library**: `library.methods` (the method cards that measure a quantity; a card holds the method's principle and its rules of application), `library.search` and `library.list` (the physics of scrubbers and of air, the effects of CO2 on people, this installation), `library.read` (one document whole).
+- **The units**: `physics.units_convert`, `physics.units_validate_connection`: never convert a unit in your head; a quantity of the procedure is written in a unit the unit system knows.
+- **The library**: `library.facts` (the typed facts the documents state, by id), `library.methods` (the method cards that measure a quantity; a card holds the method's principle and its rules of application), `library.search` and `library.list` (the physics of scrubbers and of air, the effects of CO2 on people, this installation), `library.read` (one document whole).
 - **Your workshop**: `workspace.list`, `workspace.read` (the task's files).
 - **Your work**: `task.plan` (declare what no node of the catalogue produces), `procedure.submit` (the procedure, checked before it is written), `task.done` (hand it over), `task.fail` (give up, with the reason).
 

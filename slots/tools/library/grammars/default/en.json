@@ -23,6 +23,11 @@
                 "limit": "how many documents at most (5 when absent)"
             }
         },
+        "facts": {
+            "title": "The typed facts",
+            "description": "The facts the library's documents state, typed: id (scrubber.singlePassEfficiency), semantic (SinglePassRemovalEfficiency), quantity, unit, value, a band when the document gives one, and the register property that carries the same fact. A known constant cites one by id (factId); two ratios are not the same fact.",
+            "properties": { "id": "one document's facts; all when absent" }
+        },
         "read": {
             "title": "Read a document",
             "description": "One document whole, as markdown, with its sha256.",

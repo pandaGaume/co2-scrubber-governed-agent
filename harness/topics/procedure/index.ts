@@ -50,7 +50,7 @@ import { checkProcedure, problemLines, type PresenceRead, type ProcedureCheck } 
 import { PROCEDURE_SCHEMA, totalMinutes, type Procedure } from "./procedure.js";
 import { resolveUnitRef } from "../../lib/units.js";
 
-export const PROCEDURE_TOOLS: ReadonlyArray<RegExp> = [/^factory\.inventory$/, /^station\.registry_list$/, /^biomed\.(describe|presence)$/, /^library\.(list|methods|search|read)$/, /^workspace\.(list|read)$/, /^procedure\.submit$/, /^task\.(plan|done|fail)$/];
+export const PROCEDURE_TOOLS: ReadonlyArray<RegExp> = [/^factory\.inventory$/, /^station\.registry_list$/, /^biomed\.(describe|presence)$/, /^library\.(list|methods|search|read|facts)$/, /^physics\.units_(normalize|convert|compatible|validate_connection)$/, /^workspace\.(list|read)$/, /^procedure\.submit$/, /^task\.(plan|done|fail)$/];
 
 export const PROCEDURE_PROMPT = "harness/topics/procedure/prompt.md";
 
@@ -94,10 +94,16 @@ function stateOf(progress: Progress): ProcedureTopicState {
 }
 
 /** The method card the builder read, noted once: the last `library.read` on a `method-` document, its text kept whole. */
+/** The method cards the library listed for the missing quantity (`library.methods`), by id; a card is one of them or a `method-` document. */
+function methodsListed(progress: Progress): string[] {
+    const listed = (progress.reads["library.methods"]?.value as { methods?: Array<{ id?: string }> } | undefined)?.methods;
+    return Array.isArray(listed) ? listed.map((m) => String(m.id ?? "")).filter(Boolean) : [];
+}
+
 function noteMethod(progress: Progress): ProcedureTopicState {
     const state = stateOf(progress);
     const lastRead = progress.reads["library.read"]?.value as { id?: string; text?: string } | undefined;
-    if (!state.method && typeof lastRead?.id === "string" && lastRead.id.startsWith("method-")) {
+    if (!state.method && typeof lastRead?.id === "string" && (lastRead.id.startsWith("method-") || methodsListed(progress).includes(lastRead.id))) {
         state.method = lastRead.id;
         if (typeof lastRead.text === "string") state.methodCard = lastRead.text;
     }
@@ -269,7 +275,8 @@ export function stateOfTopic(progress: Progress, task: TaskFile["task"]): TopicS
             method: state.method ? { id: state.method, card: state.methodCard ?? "(read it: library.read)" } : null,
             accepted: state.accepted,
         } as JsonValue,
-        evaluation: last ? ({ submission: last.n, procedureId: last.procedureId, ok: last.ok, problems: last.problems } as JsonValue) : null,
+        // The last refused submission stays whole in the evaluation until one is accepted: the model corrects it, whatever it read in between.
+        evaluation: last ? ({ submission: last.n, procedureId: last.procedureId, ok: last.ok, problems: last.problems, ...(!last.ok && progress.refusals["procedure.submit"] ? { procedure: progress.refusals["procedure.submit"].input } : {}) } as JsonValue) : progress.refusals["procedure.submit"] ? ({ submission: 0, ok: false, problems: [progress.refusals["procedure.submit"].reason], procedure: progress.refusals["procedure.submit"].input } as JsonValue) : null,
         openQuestions,
         requirements,
     };
@@ -314,14 +321,18 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
     const unknowns = (inventory.unknowns ?? []).map((u) => `${u.what} (${u.quantity}, ${u.unit}): ${u.how}`).join("; ");
     if (!state.method) {
         const quantities = [...new Set((inventory.unknowns ?? []).filter((u) => u.how === "measured").map((u) => u.quantity))].join(", ") || task.objective.required_outputs.map((o) => o.quantity).join(", ");
-        return `Stage 2 of 5, the method. The inventory says what is unknown: ${unknowns || "nothing"}. Find the methods that measure ${quantities} (library.methods), and read the card of the one you choose (library.read): it holds the method's rules of application. The library also holds the physics, the effects of CO2 on people and this installation (library.search, library.list).`;
+        const listed = methodsListed(progress);
+        const lastRead = progress.reads["library.read"]?.value as { id?: string } | undefined;
+        const chosen = listed.length ? ` The library listed ${listed.map((id) => `"${id}"`).join(" and ")}: read the card of the one you choose (library.read, its id exactly).` : " Find the methods that measure them (library.methods), and read the card of the one you choose (library.read): it holds the method's rules of application.";
+        const notACard = typeof lastRead?.id === "string" && !listed.includes(lastRead.id) && !lastRead.id.startsWith("method-") ? ` You read "${lastRead.id}", which is not one of the method cards; read one of them, once.` : "";
+        return `Stage 2 of 5, the method. The inventory says what is unknown: ${unknowns || "nothing"}. The quantity to measure: ${quantities}.${chosen}${notACard} The library also holds the physics, the effects of CO2 on people and this installation (library.search, library.list).`;
     }
     const names = task.objective.required_outputs.map((o) => `required_output "${o.name}" (quantity "${o.quantity}"${o.unit ? `, unit "${o.unit}"` : ""})`).join("; ");
     if (progress.phase === "plan") return `Stage 3 of 5, the plan. You read the method card ${state.method} (the state holds it whole, under hypothesis, field "method"; nothing to read again). Declare with task.plan what no node of the catalogue produces: selected_nodes empty (this topic builds no graph), and one entry per required output in missing_capabilities, ${names}, with its reason and the topic "procedure"; required_output is the name exactly, nothing added to it.`;
     // The refusal as the runner recorded it after the step, never the guard's own record: the guard writes while a decision
     // is checked, and an observation that moved between the decision and its execution makes the decision stale.
-    const refusal = progress.lastRefusal?.capability === "procedure.submit" ? progress.lastRefusal.reason : null;
-    const refused = refusal ? ` Your last submission was refused: ${refusal}. The procedure exactly as you submitted it is in the state under lastRefusal (field "input"; it is not a file, nothing to read): change in it only what these reasons name and submit it again with procedure.submit; the same procedure submitted again gets the same refusal.` : "";
+    const refusal = progress.refusals["procedure.submit"]?.reason ?? null;
+    const refused = refusal ? ` Your last submission was refused: ${refusal}. The procedure exactly as you submitted it is in the state under evaluation (field "procedure"; it is not a file, nothing to read): change in it only what these reasons name and submit it again with procedure.submit; the same procedure submitted again gets the same refusal.` : "";
     const presence = presenceOf(progress) ? "who is in each module (field \"presence\")" : "not yet who is in the volume: read biomed.presence before submitting";
     return `Stage 4 of 5, the procedure. Write it by the rules of application of ${state.method} (the card is in the state, under hypothesis, field "method"), for this installation (in the state under hypothesis, field "installation": its volumes, openings, unknowns and the device under commissioning) and ${presence}; the medical monitor is there too (field "monitor") once read with biomed.describe. These are fields of the state, not files: read nothing the state already gives. Submit with procedure.submit.${refused}`;
 }

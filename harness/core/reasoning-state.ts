@@ -37,6 +37,7 @@
  */
 import type { JsonValue } from "@spiky-panda/harness";
 import { thresholdsOf, type TaskFile } from "./task.js";
+import type { ContractReport } from "./contracts.js";
 import type { Progress } from "./workspace-observer.js";
 
 export interface KnownInvariant {
@@ -46,6 +47,7 @@ export interface KnownInvariant {
     /** measured, device, documented, known, band, fitted, assumed, derived: the epistemic status, never reduced to "constant". */
     status: string;
     source?: string;
+    factId?: string;
     min?: number;
     max?: number;
 }
@@ -60,6 +62,8 @@ export interface StateInvariants {
     telemetry: { file: string; rows: number; columns: string[]; minutes: number | null } | null;
     /** The reference graphs of the library, as the harness read them once at the start: id, one line, the variables with their status. */
     shelf: Array<{ id: string; description: string; types: string[]; variables: Record<string, string>; settings: string[]; probes: string[] }>;
+    /** The contract report of the task's facts: CONSISTENT, or the conflicts by fact id with who must revise. */
+    contracts: { status: string; conflicts: Array<{ id: string; reason: string; revise: string }>; missing: string[] } | null;
 }
 
 export interface ReasoningState extends Record<string, JsonValue> {
@@ -95,6 +99,8 @@ export interface StateInputs {
     shelf: StateInvariants["shelf"];
     /** The telemetry's shape, read once by the runner. */
     telemetry: StateInvariants["telemetry"];
+    /** The contract report, read once by the runner. */
+    contracts?: ContractReport;
     /** The runs already spent by the topic, when it counts them. */
     runsSpent?: number;
     topic?: TopicState;
@@ -117,14 +123,14 @@ export function knownInvariants(task: TaskFile["task"]): KnownInvariant[] {
     return raw
         .filter((k) => k && typeof k === "object" && typeof (k as { symbol?: unknown }).symbol === "string" && typeof (k as { value?: unknown }).value === "number")
         .map((k) => {
-            const x = k as { symbol: string; value: number; unit?: string; source?: string; min?: number; max?: number; name?: string };
+            const x = k as { symbol: string; value: number; unit?: string; source?: string; min?: number; max?: number; name?: string; factId?: string };
             const band = typeof x.min === "number" && typeof x.max === "number" && x.min < x.max;
-            return { symbol: x.symbol, value: x.value, ...(x.unit ? { unit: x.unit } : {}), status: band ? "band" : "documented", ...(x.source ? { source: x.source } : {}), ...(band ? { min: x.min, max: x.max } : {}) };
+            return { symbol: x.symbol, value: x.value, ...(x.unit ? { unit: x.unit } : {}), status: band ? "band" : "documented", ...(x.source ? { source: x.source } : {}), ...(x.factId ? { factId: x.factId } : {}), ...(band ? { min: x.min, max: x.max } : {}) };
         });
 }
 
 /** The invariants of a task: what the model needs of the task file without reading it. */
-export function invariantsOf(task: TaskFile["task"], shelf: StateInvariants["shelf"], telemetry: StateInvariants["telemetry"]): StateInvariants {
+export function invariantsOf(task: TaskFile["task"], shelf: StateInvariants["shelf"], telemetry: StateInvariants["telemetry"], contracts?: ContractReport): StateInvariants {
     const req = (task.requirements ?? {}) as Record<string, unknown>;
     const obs = (task.observations ?? {}) as Record<string, unknown>;
     const persons = Array.isArray(obs.persons) ? (obs.persons as Array<Record<string, unknown>>).map((p) => `${str(p.callsign) || str(p.id) || "someone"} in ${str(p.module)} at ${str(p.activity)}`) : [];
@@ -145,6 +151,7 @@ export function invariantsOf(task: TaskFile["task"], shelf: StateInvariants["she
         observed: { persons, devices, other },
         telemetry,
         shelf,
+        contracts: contracts ? { status: contracts.status, conflicts: contracts.conflicts.map((c) => ({ id: c.id, reason: c.reason, revise: c.revise })), missing: contracts.missing } : null,
     };
 }
 
@@ -158,7 +165,7 @@ export function reasoningStateOf(inputs: StateInputs): ReasoningState {
             iterationsLeft: Math.max(0, budget.iterations - progress.iteration),
             runsLeft: typeof budget.twinPoints === "number" ? Math.max(0, budget.twinPoints - (inputs.runsSpent ?? 0)) : null,
         },
-        invariants: invariantsOf(task, shelf, telemetry) as StateInvariants & Record<string, JsonValue>,
+        invariants: invariantsOf(task, shelf, telemetry, inputs.contracts) as StateInvariants & Record<string, JsonValue>,
         evidence: Object.fromEntries(Object.entries(progress.evidence).map(([k, e]) => [k, e.summary])),
         hypothesis: topic.hypothesis ?? null,
         lastAction: last ? { capability: last.id, outcome: last.result.outcome, summary: (progress.lastSummary ?? null) as JsonValue, artifact: progress.lastArtifact ?? null } : null,

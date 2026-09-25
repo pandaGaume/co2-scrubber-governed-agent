@@ -22,7 +22,9 @@ Before writing, read in the library what the description leaves open (the observ
 
 Name every quantity the twin must expose with the shared vocabulary of quantities given in the observation (`quantities`), in one of its units: the factories match an output by that name.
 
-An assumption is not a requirement. What you assume (no exchange between two volumes, a device that responds at once) goes under assumptions, never under required behaviours or constraints: the factory must stay free to find it false against the telemetry. The same holds for a number obtained under an assumption (an apparent volume, computed as if there were one room): it is an assumption too, not a constraint and not a known constant.
+A document that states its facts by id (the observation's `library.facts`, and a read document's `facts`) is cited by fact: `known[].factId`, one of its ids, so that an efficiency is never taken for a speed because both are ratios; the constant's value is the fact's, in the fact's unit or converted with `physics.units_convert` (never in your head; `physics.units_validate_connection` checks a value you restated). What the documentation settles is not an assumption: the station's ventilation keeps coupling the modules with the hatch closed (through the ducts alone; what it delivers is unknown, not zero).
+
+An assumption is not a requirement. What you assume (the flow the ventilation delivers, a device that responds at once) goes under assumptions, never under required behaviours or constraints: the factory must stay free to find it false against the telemetry. The same holds for a number obtained under an assumption (an apparent volume, computed as if there were one room): it is an assumption too, not a constraint and not a known constant.
 
 Stay with the facts you were given. Name a telemetry column only if the summary lists it; a column that does not vary says nothing about dynamics. Every quantity has its unit. Where the description is silent, write it under missing information rather than fill it in.
 

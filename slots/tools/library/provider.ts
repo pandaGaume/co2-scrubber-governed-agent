@@ -33,6 +33,7 @@ import { fromRoot } from "../../../lib/paths.js";
 import { objectSchema, publishSlot, type PublishedSlot, type SlotTool } from "../../lib/slot-server.js";
 import { sha256Of } from "../lib/workshop.js";
 import { describeGraph, loadGraphLibrary, type GraphLibraryEntry } from "../../../lib/graph-library.js";
+import type { LibraryFact } from "../../../harness/core/contracts.js";
 
 export interface LibraryDocument {
     id: string;
@@ -43,6 +44,8 @@ export interface LibraryDocument {
     sha256: string;
     bytes: number;
     text: string;
+    /** The facts the document states, typed (`<id>.facts.json` beside it): id, semantic, quantity, unit, value, the register property that carries the same fact. */
+    facts: LibraryFact[];
 }
 
 export interface LibraryState {
@@ -73,8 +76,21 @@ export function loadLibrary(dir: string = LIBRARY_DIR): LibraryDocument[] {
                 .split(",")
                 .map((q) => q.trim())
                 .filter(Boolean);
-            return { id: file.replace(/\.md$/, ""), title, summary, measures, sha256: sha256Of(bytes), bytes: bytes.length, text };
+            const id = file.replace(/\.md$/, "");
+            return { id, title, summary, measures, sha256: sha256Of(bytes), bytes: bytes.length, text, facts: loadFacts(dir, id) };
         });
+}
+
+/** The typed facts of a document, from its sidecar; none when it has none. A sidecar that does not parse is a startup problem, said once. */
+export function loadFacts(dir: string, id: string): LibraryFact[] {
+    const file = path.join(dir, `${id}.facts.json`);
+    if (!existsSync(file)) return [];
+    try {
+        const parsed = JSON.parse(readFileSync(file, "utf8")) as { facts?: LibraryFact[] };
+        return Array.isArray(parsed.facts) ? parsed.facts.filter((f) => f && typeof f.id === "string" && typeof f.value === "number" && typeof f.unit === "string") : [];
+    } catch (e) {
+        throw new Error(`${file}: ${e instanceof Error ? e.message : String(e)}`);
+    }
 }
 
 /** The documents a query's words appear in, the most matched first, with the lines they appear on. */
@@ -104,7 +120,7 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
         {
             name: "list",
             inputSchema: objectSchema({}),
-            handle: (_args, s) => ({ documents: s.documents.map(({ id, title, summary, measures, sha256, bytes }) => ({ id, title, summary, measures, sha256, bytes })) }),
+            handle: (_args, s) => ({ documents: s.documents.map(({ id, title, summary, measures, sha256, bytes, facts }) => ({ id, title, summary, measures, sha256, bytes, facts: facts.length })) }),
         },
         {
             name: "methods",
@@ -135,13 +151,23 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
             },
         },
         {
+            // The typed facts of the library: what a request cites by id (known[].factId), what the register's properties correspond to, what a conflict is judged on.
+            name: "facts",
+            inputSchema: objectSchema({ id: { type: "string" } }),
+            handle: (args, s) => {
+                const docs = typeof args.id === "string" && args.id ? s.documents.filter((d) => d.id === args.id) : s.documents;
+                if (typeof args.id === "string" && args.id && !docs.length) throw new Error(`no document "${String(args.id)}" in the library`);
+                return { facts: docs.flatMap((d) => d.facts.map((f) => ({ ...f, source: d.id }))) };
+            },
+        },
+        {
             name: "read",
             inputSchema: objectSchema({ id: { type: "string" } }, ["id"]),
             handle: (args, s) => {
                 const d = s.documents.find((x) => x.id === args.id);
                 if (!d) throw new Error(`no document "${String(args.id)}" in the library (${s.documents.map((x) => x.id).join(", ")})`);
                 s.reads.push({ id: d.id, sha256: d.sha256, at: new Date().toISOString() });
-                return { id: d.id, title: d.title, sha256: d.sha256, text: d.text };
+                return { id: d.id, title: d.title, sha256: d.sha256, text: d.text, facts: d.facts };
             },
         },
     ];

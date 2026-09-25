@@ -198,7 +198,8 @@ async function main(): Promise<void> {
 
         // ── 5. the agent executes, the stand-in world answering the commands the board took.
         t0 = Date.now();
-        const world = new TwoZoneWorldSim(LAB_WORLD);
+        // EXAMPLE_WORLD=hidden-occupant: a third person at work in the Lab the monitor does not list, a world the reference graph cannot fit as observed (the loop through STRUCTURAL_MISMATCH).
+        const world = new TwoZoneWorldSim(process.env.EXAMPLE_WORLD === "hidden-occupant" ? { ...LAB_WORLD, labOccupants: 3 } : LAB_WORLD);
         const speedNow = async () => (await call<{ speedPercent: number }>(operator, "scrubber", "motor.state")).speedPercent;
         await call(operator, "scrubber", "debug.set_co2", { state: "NOMINAL", ppm: Math.round(world.labPpm) });
         telemetry.push(world.row(await speedNow()));
@@ -228,7 +229,7 @@ async function main(): Promise<void> {
             "SYSTEM DESCRIPTION",
             "Asset: the CO2 scrubber of the Lab module of a lunar habitat, just installed and commissioned.",
             "Purpose: keep the CO2 of the air the crew breathes within limits; its twin will be asked what if questions about scrubber speed strategies at night.",
-            "Physical components: the Lab module (a volume of air); the scrubber, variable speed; a CO2 sensor in the Lab; a hatch between the Lab and Hab-B, closed during the test; a CO2 sensor in Hab-B; the crew (two operators in the Lab, two people in Hab-B).",
+            "Physical components: the Lab module (a volume of air); the scrubber, variable speed, centralised: it serves Hab-B through the inter-module ventilation, which keeps running with the hatch closed (through the ducts alone; what it delivers as installed is not documented); a CO2 sensor in the Lab; a hatch between the Lab and Hab-B, closed during the test; a CO2 sensor in Hab-B; the crew (two operators in the Lab, two people in Hab-B).",
             `Test just run: ${report?.steps.map((s) => `${s.speedPercent} % for ${s.minutes} min`).join(", then ")}, hatch closed. Apparent volume from the decay, one room assumed: ${report?.result.value ?? "not computed"} m3 (${report?.result.why ?? ""}).`,
             "Available telemetry: see the summary.",
             "Controllable: scrubber speed.",

@@ -77,6 +77,7 @@ const COMPACTORS: Record<string, (v: unknown, input: JsonValue) => JsonValue> = 
         const text = typeof o.text === "string" ? o.text : "";
         return { id: o.id, title: o.title, sha256: o.sha256, bytes: text.length, text: head(text, 1400), note: "the document whole is at the handle; its numbers with their units are what to keep" } as JsonValue;
     },
+    "library.facts": (v) => ({ facts: list(obj(v).facts).map((f) => `${String(f.id)} = ${String(f.value)} ${String(f.unit)}${f.min !== undefined ? ` (${String(f.min)} to ${String(f.max)})` : ""} [${String(f.semantic)}, ${String(f.source)}]`) }) as JsonValue,
     "library.graphs": (v) => ({
         graphs: list(obj(v).graphs).map((g) => ({
             id: g.id,

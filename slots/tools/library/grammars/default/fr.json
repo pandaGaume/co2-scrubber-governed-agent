@@ -23,6 +23,11 @@
                 "limit": "combien de documents au plus (5 si absent)"
             }
         },
+        "facts": {
+            "title": "Les faits typés",
+            "description": "Les faits que les documents de la bibliothèque énoncent, typés : id (scrubber.singlePassEfficiency), sémantique (SinglePassRemovalEfficiency), grandeur, unité, valeur, une bande quand le document en donne une, et la propriété du registre qui porte le même fait. Une constante connue en cite un par son id (factId) ; deux ratios ne sont pas le même fait.",
+            "properties": { "id": "les faits d'un document ; tous quand absent" }
+        },
         "read": {
             "title": "Lire un document",
             "description": "Un document en entier, en markdown, avec son sha256.",

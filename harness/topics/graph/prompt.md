@@ -6,7 +6,8 @@ You decide the structure: which nodes, how they are connected, and the physics t
 
 - **The task**: `workspace.read` (task.json: the requirements, the observations, the hypotheses and what is missing; the telemetry file), `workspace.list`.
 - **The catalogue**: `twin.registry_search` (node types by the quantities they produce), `twin.registry_describe_node` (a type's ports, units and signature), `twin.registry_list_nodes`, `twin.document_validate` (check a spec before you evaluate it).
-- **The library**: `library.read`, `library.search`, `library.list`, `library.methods`: the physics, and how a twin graph is written with these nodes; `library.graphs`, `library.graph`: the station's reference graphs, each with its words, its variables (known and held, fitted, or a band), its settings (who is on board) and its probes.
+- **The units**: `physics.units_convert`, `physics.units_validate_connection`, `physics.units_normalize`: never convert a unit in your head.
+- **The library**: `library.facts` (the typed facts the documents state, by id), `library.read`, `library.search`, `library.list`, `library.methods`: the physics, and how a twin graph is written with these nodes; `library.graphs`, `library.graph`: the station's reference graphs, each with its words, its variables (known and held, fitted, or a band), its settings (who is on board) and its probes.
 - **Your work**: `task.plan` (the node types you will use), `graph.evaluate` (a candidate, judged), `task.done` (hand over the candidate that holds), `task.fail` (give up, with the reason).
 
 ## How you work

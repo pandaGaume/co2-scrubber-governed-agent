@@ -1,0 +1,35 @@
+{
+    "document": "nasa-crew-metabolic-loads",
+    "facts": [
+        {
+            "id": "crew.co2Rate.awake",
+            "semantic": "CrewmemberCO2ProductionAwake",
+            "quantity": "VolumetricFlow",
+            "unit": "L/min",
+            "value": 0.38,
+            "min": 0.26,
+            "max": 0.45,
+            "says": "a crewmember awake, nominal activity in the cabin (BVAD Rev2, Table 3-26): 0.69 g/min, about 0.38 L/min; 5th to 95th percentile 0.26 to 0.45 L/min"
+        },
+        {
+            "id": "crew.co2Rate.asleep",
+            "semantic": "CrewmemberCO2ProductionAsleep",
+            "quantity": "VolumetricFlow",
+            "unit": "L/min",
+            "value": 0.24,
+            "min": 0.17,
+            "max": 0.28,
+            "says": "a crewmember asleep (BVAD Rev2, Table 3-26): 0.44 g/min, about 0.24 L/min; 5th to 95th percentile 0.17 to 0.28 L/min"
+        },
+        {
+            "id": "crew.co2Rate.awake.mass",
+            "semantic": "CrewmemberCO2ProductionAwake",
+            "quantity": "MassFlow",
+            "unit": "g/min",
+            "value": 0.69,
+            "min": 0.48,
+            "max": 0.81,
+            "says": "the same awake rate in mass: 0.69 g/min reference, 0.48 to 0.81 g/min"
+        }
+    ]
+}

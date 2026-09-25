@@ -170,7 +170,7 @@ describe("the register, the inventory, the decay", () => {
         const progress = newProgress();
         assert.match(briefOf(progress, task), /^Stage 1 of 5, the situation.*biomed\.presence/);
         progress.reads["factory.inventory"] = { at: "t", value: { unknowns: [{ what: "served volume of lab", quantity: "Volume", unit: "m3", how: "measured" }] } };
-        assert.match(briefOf(progress, task), /^Stage 2 of 5, the method.*measure Volume \(library\.methods\)/);
+        assert.match(briefOf(progress, task), /^Stage 2 of 5, the method.*The quantity to measure: Volume\. Find the methods that measure them \(library\.methods\)/);
         progress.reads["library.read"] = { at: "t", value: { id: "method-concentration-decay" } };
         assert.match(briefOf(progress, task), /^Stage 3 of 5, the plan/);
         progress.phase = "build";
@@ -205,6 +205,13 @@ describe("the register, the inventory, the decay", () => {
         assert.equal(h.presence[0].module, "lab");
         assert.match(h.method.card, /Rules of application/);
         assert.deepEqual(s.openQuestions, ["served volume of lab (Volume, m3): measured by the procedure"]);
+        // A refused submission stays whole in the evaluation until one is accepted, whatever the model reads in between (the schema's refusals included).
+        progress.refusals["procedure.submit"] = { reason: "Invalid capability arguments: data/abort/1/threshold must be number", input: { id: "decay-1", abort: [{ id: "co2", threshold: null }] }, at: "t" };
+        const e = stateOfTopic(progress, task).evaluation as { ok: boolean; problems: string[]; procedure: { id: string } };
+        assert.equal(e.ok, false);
+        assert.equal(e.procedure.id, "decay-1");
+        assert.match(briefOf({ ...progress, phase: "build" }, task), /under evaluation \(field "procedure"; it is not a file/);
+        delete progress.refusals["procedure.submit"];
         assert.equal(requirementsOf(progress).methodRead, true);
         // The brief points into the state, and still names no rule of a good procedure.
         progress.phase = "build";

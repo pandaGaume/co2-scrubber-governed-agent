@@ -1,0 +1,37 @@
+{
+    "document": "station-topology",
+    "facts": [
+        {
+            "id": "habitat.interModuleVentilation.designFlow.hatchClosed",
+            "semantic": "InterModuleVentilationDesignFlow",
+            "quantity": "VolumetricFlow",
+            "unit": "m3/min",
+            "value": 3.0,
+            "says": "the inter-module ventilation between the Lab and Hab-B keeps running with the hatch closed, through the ducts alone: design flow 3 m3/min; what it delivers as installed is measured, not documented"
+        },
+        {
+            "id": "habitat.co2.elevatedPpm",
+            "semantic": "CO2ElevatedLevel",
+            "quantity": "Concentration",
+            "unit": "ppm",
+            "value": 3500,
+            "says": "ELEVATED from 3,500 ppm"
+        },
+        {
+            "id": "habitat.co2.criticalPpm",
+            "semantic": "CO2CriticalLevel",
+            "quantity": "Concentration",
+            "unit": "ppm",
+            "value": 4000,
+            "says": "CRITICAL from 4,000 ppm"
+        },
+        {
+            "id": "habitat.crew.count",
+            "semantic": "CrewCount",
+            "quantity": "Count",
+            "unit": "person",
+            "value": 4,
+            "says": "four people on the base; who is in which module is the medical monitor's"
+        }
+    ]
+}
