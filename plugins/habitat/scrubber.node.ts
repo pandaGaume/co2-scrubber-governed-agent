@@ -158,6 +158,11 @@ export class HabitatScrubberNode extends IntegrableRuntimeNode implements IDecla
     @viewable("number") public get command(): number {
         return this._command;
     }
+    /** The studio's live binder writes a connected source's value here when the cable is drawn; the tick reads the wire itself. */
+    public set command(v: number) {
+        const n = Number(v);
+        if (Number.isFinite(n)) this._command = Math.max(0, Math.min(1, n));
+    }
     /** The concentration of the air drawn on the last tick, ppm. */
     @viewable("number") public get inletPpm(): number {
         return this._inletPpm;

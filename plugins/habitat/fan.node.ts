@@ -143,6 +143,11 @@ export class HabitatFanNode extends IntegrableRuntimeNode implements IDeclaresPo
     @viewable("number") public get command(): number {
         return this._command;
     }
+    /** The studio's live binder writes a connected source's value here when the cable is drawn; the tick reads the wire itself. */
+    public set command(v: number) {
+        const n = Number(v);
+        if (Number.isFinite(n)) this._command = Math.max(0, Math.min(1, n));
+    }
     /** The resistance the fan worked against on the last tick, Pa per (m3/s)^2. */
     @viewable("number") public get systemResistance(): number {
         return this._systemResistance;

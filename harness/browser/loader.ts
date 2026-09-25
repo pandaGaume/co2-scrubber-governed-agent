@@ -22,26 +22,30 @@ export interface LoaderStudio {
 }
 
 export interface LoopExtension {
-    /** The harness studio plugin, next to the extension file; none for a graph the studio's own plugins draw (the cabin's). */
+    /** The studio plugin the graph needs, next to the extension file; none for a graph the studio's own plugins draw (the cabin's). */
     pluginUrl?: string;
+    /** The global the plugin bundle publishes itself under, and its id in the studio; the harness plugin's when unsaid. */
+    pluginGlobal?: string;
+    pluginId?: string;
     /** The document the page runs on, when the URL names none. */
     defaultGraph: string;
-    /** The page module, next to the extension file. */
-    pageUrl: string;
+    /** The page module, next to the extension file; none when the extension only opens the document to inspect it. */
+    pageUrl?: string;
     /** What the page adds to the document before the studio draws it (the twin's tiles), in the browser only. */
     prepare?: (json: string) => string;
 }
 
-export async function loadLoopExtension(studio: LoaderStudio, { pluginUrl, defaultGraph, pageUrl, prepare }: LoopExtension): Promise<void> {
+export async function loadLoopExtension(studio: LoaderStudio, { pluginUrl, pluginGlobal, pluginId, defaultGraph, pageUrl, prepare }: LoopExtension): Promise<void> {
     // The skin first: every loop page is the same studio page, and it wears the Control Board's skin before anything is fetched.
     applyRoomSkin(studio.getViewer());
-    if (pluginUrl) await studio.loadPlugin({ url: pluginUrl, globalName: "SpkPluginHarness", id: "harness" });
+    if (pluginUrl) await studio.loadPlugin({ url: pluginUrl, globalName: pluginGlobal ?? "SpkPluginHarness", id: pluginId ?? "harness" });
     const graphUrl = new URLSearchParams(location.search).get("graph") ?? defaultGraph;
     const res = await fetch(graphUrl);
     if (!res.ok) throw new Error(`could not open ${graphUrl}: HTTP ${res.status}`);
     const json = await res.text();
     studio.openDocument(prepare ? prepare(json) : json);
     roomMonitor(studio.getViewer());
+    if (!pageUrl) return;
     const page = (await import(/* webpackIgnore: true */ pageUrl)) as { default: (studio: unknown) => Promise<void> };
     await page.default(studio);
 }

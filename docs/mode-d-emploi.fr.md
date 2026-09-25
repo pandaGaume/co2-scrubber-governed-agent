@@ -132,5 +132,7 @@ versions d'avant, `npm run habitat:build` ne rend pas la main.
   télémétrie du monde de test en TypeScript.
 - Nemotron sur Nebius n'a pas été essayé ; la recherche sur le web n'est
   pas branchée ; le conteneur de l'usine n'a pas le plugin local.
-- La page du jumeau (le studio dans le navigateur) n'a pas de bundle du
-  plugin : elle affiche le graphe de la cabine, pas celui de l'habitat.
+- La page du jumeau (l'agent de la nuit 9 dans le studio) tourne sur le
+  graphe de la cabine, pas sur l'habitat ; l'habitat s'ouvre à part, pour
+  l'inspecter : `?mcp=0&ext=/agent/habitat.js` (`plugin-habitat.fr.md`,
+  section 3).

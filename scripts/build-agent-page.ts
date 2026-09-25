@@ -14,6 +14,11 @@
  * - `twin.js` and `twin-page.js`, the twin's extension and page
  *   (`harness/browser/twin-loader.ts`, `twin-page.ts`): the cabin's graph,
  *   and the twin's answers replayed on it;
+ * - `habitat.js`, the habitat reference's extension (`?ext=/agent/habitat.js`,
+ *   `harness/browser/habitat-loader.ts`): the habitat plugin, then the
+ *   reference graph, to inspect; `SpkPluginHabitat.js`, that plugin for the
+ *   studio (`plugins/habitat/studio.ts`, the studio's core as its core),
+ *   with the nodes' cards under `habitat-docs/`;
  * - `pushes.js`, what a slot pushes to a page (`harness/browser/pushes.ts`),
  *   for the control room;
  * - `SpkPluginHarness.js`, the harness studio plugin, copied from
@@ -29,8 +34,8 @@
  *
  *     node dist/scripts/build-agent-page.js
  */
-import { build } from "esbuild";
-import { copyFile } from "node:fs/promises";
+import { build, type Plugin } from "esbuild";
+import { copyFile, mkdir, readdir } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fromRoot, isMain, relativeToRoot } from "../lib/paths.js";
@@ -45,6 +50,7 @@ export async function buildAgentPage(outDir = fromRoot("dashboard", "agent")): P
         [fromRoot("harness", "browser", "factory-page.ts"), "factory-page.js"],
         [fromRoot("harness", "browser", "twin-loader.ts"), "twin.js"],
         [fromRoot("harness", "browser", "twin-page.ts"), "twin-page.js"],
+        [fromRoot("harness", "browser", "habitat-loader.ts"), "habitat.js"],
         // What a slot pushes, alone, for the control room (plain JS): the same code as the studio pages'.
         [fromRoot("harness", "browser", "pushes.ts"), "pushes.js"],
     ] as const) {
@@ -58,6 +64,21 @@ export async function buildAgentPage(outDir = fromRoot("dashboard", "agent")): P
             logLevel: "warning",
         });
     }
+    // The habitat plugin for the studio: a global the studio's plugin loader reads, on the studio's core.
+    await build({
+        entryPoints: [fromRoot("plugins", "habitat", "studio.ts")],
+        outfile: join(outDir, "SpkPluginHabitat.js"),
+        bundle: true,
+        format: "iife",
+        globalName: "SpkPluginHabitat",
+        target: "es2022",
+        sourcemap: true,
+        logLevel: "warning",
+        plugins: [studioCore()],
+    });
+    const cards = fromRoot("plugins", "habitat", "docs");
+    await mkdir(join(outDir, "habitat-docs"), { recursive: true });
+    for (const file of await readdir(cards)) if (file.endsWith(".md")) await copyFile(join(cards, file), join(outDir, "habitat-docs", file));
     // The plugin's package root, wherever npm put it (a tarball today).
     const pluginPackage = dirname(createRequire(import.meta.url).resolve("@spiky-panda/plugin-harness/package.json"));
     for (const suffix of ["", ".map"]) {
@@ -83,15 +104,11 @@ export async function buildAgentPage(outDir = fromRoot("dashboard", "agent")): P
         sourcemap: true,
         logLevel: "warning",
         plugins: [
+            studioCore(),
             {
-                name: "studio-globals",
+                name: "studio-harness",
                 setup(b) {
-                    b.onResolve({ filter: /^@spiky-panda\/core$/ }, () => ({ path: "core", namespace: "studio" }));
                     b.onResolve({ filter: /^@spiky-panda\/harness$/ }, () => ({ path: "harness", namespace: "studio" }));
-                    b.onLoad({ filter: /^core$/, namespace: "studio" }, () => ({
-                        contents: 'if (!globalThis.SpikypandaCore) throw new Error("the studio did not load spikypanda-core.js"); module.exports = globalThis.SpikypandaCore;',
-                        loader: "js",
-                    }));
                     b.onLoad({ filter: /^harness$/, namespace: "studio" }, () => ({
                         contents: 'if (!globalThis.SpkPluginHarness?.harness) throw new Error("the studio did not load SpkPluginHarness.js"); module.exports = globalThis.SpkPluginHarness.harness;',
                         loader: "js",
@@ -100,7 +117,21 @@ export async function buildAgentPage(outDir = fromRoot("dashboard", "agent")): P
             },
         ],
     });
-    console.log(`${relativeToRoot(outDir)}: tier3.js, SpkPluginHarness.js (from @spiky-panda/plugin-harness), page.js, audio-output.js built`);
+    console.log(`${relativeToRoot(outDir)}: tier3.js, SpkPluginHarness.js (from @spiky-panda/plugin-harness), habitat.js, SpkPluginHabitat.js, page.js, audio-output.js built`);
+}
+
+/** `@spiky-panda/core` is the studio's own copy (`globalThis.SpikypandaCore`), never bundled a second time. */
+function studioCore(): Plugin {
+    return {
+        name: "studio-core",
+        setup(b) {
+            b.onResolve({ filter: /^@spiky-panda\/core$/ }, () => ({ path: "core", namespace: "studio" }));
+            b.onLoad({ filter: /^core$/, namespace: "studio" }, () => ({
+                contents: 'if (!globalThis.SpikypandaCore) throw new Error("the studio did not load spikypanda-core.js"); module.exports = globalThis.SpikypandaCore;',
+                loader: "js",
+            }));
+        },
+    };
 }
 
 if (isMain(import.meta.url)) {

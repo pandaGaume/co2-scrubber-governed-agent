@@ -209,15 +209,16 @@ function roomMonitor(viewer) {
 }
 
 // harness/browser/loader.ts
-async function loadLoopExtension(studio, { pluginUrl, defaultGraph, pageUrl, prepare }) {
+async function loadLoopExtension(studio, { pluginUrl, pluginGlobal, pluginId, defaultGraph, pageUrl, prepare }) {
   applyRoomSkin(studio.getViewer());
-  if (pluginUrl) await studio.loadPlugin({ url: pluginUrl, globalName: "SpkPluginHarness", id: "harness" });
+  if (pluginUrl) await studio.loadPlugin({ url: pluginUrl, globalName: pluginGlobal ?? "SpkPluginHarness", id: pluginId ?? "harness" });
   const graphUrl = new URLSearchParams(location.search).get("graph") ?? defaultGraph;
   const res = await fetch(graphUrl);
   if (!res.ok) throw new Error(`could not open ${graphUrl}: HTTP ${res.status}`);
   const json = await res.text();
   studio.openDocument(prepare ? prepare(json) : json);
   roomMonitor(studio.getViewer());
+  if (!pageUrl) return;
   const page = await import(
     /* webpackIgnore: true */
     pageUrl

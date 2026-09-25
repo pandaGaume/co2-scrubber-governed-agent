@@ -123,10 +123,23 @@ Avec les versions d'avant, la construction du graphe **bloque** (un lien
 vers un port non déclaré de l'atmosphère fait tourner l'ordonnanceur sans
 fin) : c'est le premier des trois bugs du journal.
 
+Dans le studio (le serveur lancé par `npm run server`), pour ouvrir et
+inspecter le graphe avec ses nœuds dessinés :
+
+```
+http://localhost:3001/studio/node-editor-v2/index.html?mcp=0&ext=/agent/habitat.js
+```
+
+L'extension `habitat.js` charge le plugin bundlé pour le navigateur
+(`dashboard/agent/SpkPluginHabitat.js`, construit par `npm run build` sur
+le core du studio, les fiches à côté sous `habitat-docs/`), puis le
+document ; aucune page ne tourne dessus. `&graph=<url>` ouvre un autre
+document dessiné avec le même plugin. Le studio est servi depuis le dépôt
+spikypanda voisin (`.mcp-broker/config.json`), dont les bundles doivent
+être ceux du substrat corrigé (`node scripts/deploy-bundles.mjs` là-bas
+après `npm run bundle`).
+
 Limites connues :
-- la page du jumeau (le studio dans le navigateur) ne connaît pas le
-  plugin : elle affiche le graphe de la cabine, pas celui-ci, tant que le
-  plugin n'a pas de bundle pour le navigateur ;
 - le conteneur de l'usine (`spikypanda-job`) construit son propre registre ;
   le plugin local n'y est pas.
 
