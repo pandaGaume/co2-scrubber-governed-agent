@@ -27,6 +27,8 @@ var AudioOutput = class {
   played = /* @__PURE__ */ new Set();
   busy = false;
   lastPending = 0;
+  /** The last poll failure reported, so the same one is not repeated every tick. */
+  pollFailure = null;
   get enabled() {
     return this.stopClock !== null;
   }
@@ -115,6 +117,10 @@ var AudioOutput = class {
       const session = await this.broker.session("speech");
       const r = await session.request("resources/read", { uri: "speech://queue" });
       const q = JSON.parse(r.contents[0]?.text ?? "{}");
+      if (this.pollFailure !== null) {
+        this.pollFailure = null;
+        this.events.onRecovered?.();
+      }
       this.lastPending = q.pending.filter((p) => p.seq > q.stopMark && !this.played.has(p.utteranceId)).length;
       if (this.playing && this.playing.seq <= q.stopMark) this.cut();
       if (this.playing) return;
@@ -122,7 +128,11 @@ var AudioOutput = class {
       const next = q.pending.find((p) => p.seq > q.stopMark && !this.played.has(p.utteranceId));
       if (next) await this.play(next, session);
     } catch (e) {
-      this.events.onError?.(e instanceof Error ? e.message : String(e));
+      const message = e instanceof Error ? e.message : String(e);
+      if (message !== this.pollFailure) {
+        this.pollFailure = message;
+        this.events.onError?.(message);
+      }
     } finally {
       this.busy = false;
     }

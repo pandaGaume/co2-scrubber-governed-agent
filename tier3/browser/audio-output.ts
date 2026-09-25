@@ -35,7 +35,10 @@ export interface AudioOutputEvents {
     /** An utterance starts playing (or is shown as text when the engine is silent). */
     onPlay?: (item: QueueItem) => void;
     onDone?: (item: QueueItem, durationMs: number) => void;
+    /** A poll or a playback failed. Said once per failure, not once per tick: a server that is down for a minute is one line, and `onRecovered` closes it. */
     onError?: (message: string) => void;
+    /** The speech slot answers again after a run of failed polls. */
+    onRecovered?: () => void;
     /** Another output took the utterance first: another page is the speaker. */
     onTakenElsewhere?: (item: QueueItem) => void;
 }
@@ -70,6 +73,8 @@ export class AudioOutput {
     private readonly played = new Set<string>();
     private busy = false;
     private lastPending = 0;
+    /** The last poll failure reported, so the same one is not repeated every tick. */
+    private pollFailure: string | null = null;
 
     constructor(
         private readonly broker: Broker,
@@ -173,6 +178,10 @@ export class AudioOutput {
             const session = await this.broker.session("speech");
             const r = await session.request<{ contents: Array<{ text?: string }> }>("resources/read", { uri: "speech://queue" });
             const q = JSON.parse(r.contents[0]?.text ?? "{}") as Queue;
+            if (this.pollFailure !== null) {
+                this.pollFailure = null;
+                this.events.onRecovered?.();
+            }
             this.lastPending = q.pending.filter((p) => p.seq > q.stopMark && !this.played.has(p.utteranceId)).length;
             if (this.playing && this.playing.seq <= q.stopMark) this.cut();
             if (this.playing) return;
@@ -181,7 +190,12 @@ export class AudioOutput {
             const next = q.pending.find((p) => p.seq > q.stopMark && !this.played.has(p.utteranceId));
             if (next) await this.play(next, session);
         } catch (e) {
-            this.events.onError?.(e instanceof Error ? e.message : String(e));
+            // The same failure, tick after tick (the server down, the network gone), is said once, then once more when it changes.
+            const message = e instanceof Error ? e.message : String(e);
+            if (message !== this.pollFailure) {
+                this.pollFailure = message;
+                this.events.onError?.(message);
+            }
         } finally {
             this.busy = false;
         }
