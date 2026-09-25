@@ -38,7 +38,7 @@ import { ScriptedProcedureBuilder, type ScriptedProcedureOptions } from "../harn
 import { checkProcedure, type PresenceRead } from "../harness/topics/procedure/check.js";
 import type { Procedure } from "../harness/topics/procedure/procedure.js";
 import { decayVolume } from "../harness/topics/procedure/report.js";
-import { needsCommissioning, type Device } from "../slots/station/registry.js";
+import { commandsOf, descriptorProblems, needsCommissioning, type Device } from "../slots/station/registry.js";
 import { inventoryOf, type Inventory } from "../slots/factory/inventory.js";
 import type { Commissioning, MotherLine } from "../slots/station/provider.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
@@ -138,6 +138,27 @@ describe("the register, the inventory, the decay", () => {
         assert.equal(needsCommissioning(scrubber), true);
         assert.equal(needsCommissioning(co2), false);
         assert.equal(needsCommissioning({ ...scrubber, simulator: { sha256: "a".repeat(64), reportId: "b".repeat(64) } }), false);
+    });
+
+    it("the register says what can be acted upon: a commandable property names the action that sets it and its range; a hatch is operated, a sensor only published", () => {
+        const [scrubber, co2, hatch] = SCENE.devices.map(deviceOf);
+        assert.deepEqual(commandsOf(scrubber), [{ property: "speed", action: "set_speed", quantity: "Ratio", unit: "percent", min: 0, max: 100 }]);
+        assert.deepEqual(commandsOf(co2), []);
+        assert.deepEqual(commandsOf(hatch), []);
+        // The register keeps itself consistent: a command through an action the device does not declare, a read-only command, a range upside down.
+        const d = scrubber.descriptor;
+        const withSpeed = (speed: Record<string, unknown>) => ({ ...d, properties: { ...d.properties, speed } });
+        assert.deepEqual(descriptorProblems(scrubber.path, d), []);
+        assert.deepEqual(descriptorProblems(scrubber.path, withSpeed({ quantity: "Ratio", unit: "percent", commandable: { action: "set_rpm" } })), ['property "speed" is commandable through "set_rpm", which is not among the actions the device declares (set_speed, power, set_min_flow)']);
+        assert.deepEqual(descriptorProblems(scrubber.path, withSpeed({ quantity: "Ratio", unit: "percent", readOnly: true, commandable: { action: "set_speed" } })), ['property "speed" is commandable and read-only at once']);
+        assert.deepEqual(descriptorProblems(scrubber.path, withSpeed({ quantity: "Ratio", unit: "percent", commandable: { action: "set_speed", min: 100, max: 0 } })), ['property "speed" is commandable in a range whose min 100 is above its max 0']);
+        assert.deepEqual(descriptorProblems(scrubber.path, withSpeed({ quantity: "Ratio", unit: "percent", commandable: {} })), ['property "speed" is commandable but names no action that sets it']);
+        // The inventory turns it into the interventions the installation allows: one command, one opening a person operates.
+        const inv = inventoryOf(SCENE.devices.map(deviceOf));
+        assert.deepEqual(inv.interventions, [
+            { device: "/habitat/lab/eclss/scrubber-1", property: "speed", quantity: "Ratio", unit: "percent", how: "commanded", action: "set_speed", min: 0, max: 100 },
+            { device: "/habitat/lab/hatch-1", property: "state", quantity: "State", unit: "open|closed", how: "operated", states: ["open", "closed"] },
+        ]);
     });
 
     it("the inventory of the five lines: two volumes, one opening, the served volume to measure and the exchange a hypothesis", () => {

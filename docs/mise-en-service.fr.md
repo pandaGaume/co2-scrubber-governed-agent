@@ -131,8 +131,18 @@ pièces, un épurateur dans l'une, un capteur de CO2 dans chaque, une ouverture
 entre les deux. Chaque appareil dit aussi ce qu'il est et ce qu'il mesure,
 dans quelle unité. C'est une norme du web industriel, pas une invention.
 
-**La machine sait donc ce qu'elle est et ce qui l'entoure. Elle ne sait pas
-où elle est.**
+Chaque appareil dit aussi ce qu'on peut lui commander : l'épurateur déclare
+que sa vitesse se règle par `set_speed`, de 0 à 100 %. C'est la seule
+propriété commandable des cinq lignes ; l'état du sas se lit, c'est une
+personne qui le bouge ; un capteur ne fait que publier. Cette mention est
+courte mais elle change la nature de l'agent : un système qui ne peut que
+lire est un observateur ; un système dont le registre dit ce qu'il peut
+changer dans le monde physique est incarné. Le registre dit ce qui est
+commandable ; qui a le droit de commander reste au commandant et à la
+politique.
+
+**La machine sait donc ce qu'elle est, ce qui l'entoure et ce qu'on peut lui
+commander. Elle ne sait pas où elle est.**
 
 ## 6. Les deux chiffres qui manquent
 

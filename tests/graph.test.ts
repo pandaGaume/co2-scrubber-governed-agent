@@ -412,7 +412,8 @@ describe("the graph factory's loop on the gap, through the broker", () => {
         // Test A and F on the loop: the model's context is the state, bounded, not a transcript that grows; the long answers are in results/ with their handle.
         const traceLines = readFileSync(path.join(taskDir(taskId), "trace.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l) as TraceLine);
         const sizes = traceLines.map((l) => JSON.stringify(l.trace?.stateBefore.features ?? {}).length);
-        assert.ok(sizes.every((s) => s > 0 && s < 14000), `the observation weighs ${sizes.join(", ")} characters per step`);
+        // 14 000 until 2026-09-25 night; the register's devices now say what they let one command (the scrubber's speed through set_speed, 0 to 100 percent), 44 characters more.
+        assert.ok(sizes.every((s) => s > 0 && s < 14500), `the observation weighs ${sizes.join(", ")} characters per step`);
         // The state grows from nothing read to the evidence and the evaluation it holds, then stays: the last step is no heavier than the one before by more than a third.
         assert.ok(sizes[sizes.length - 1] < 1.34 * sizes[sizes.length - 2], `the observation does not grow with the steps: ${sizes.join(", ")}`);
         const states = traceLines.map((l) => (l.trace?.stateBefore.features as { state?: { lastAction?: { artifact?: string | null }; requirements?: Record<string, boolean>; evaluation?: { diagnosis?: string } } }).state);

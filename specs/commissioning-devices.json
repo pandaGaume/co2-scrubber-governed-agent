@@ -1,5 +1,5 @@
 {
- "_comment": "The five lines of the commissioning scene (docs/mise-en-service.fr.md, section 5): what registers on Mother's register when the Lab's scrubber is plugged in. Descriptors in the shape of a W3C Thing Description reduced to what the demo reads. The scrubber's air flow at full speed (0.055 m3/s) and its effective flow (air flow times the single-pass efficiency of 0.30: 1.0 m3/min) are the datasheet's (docs/library/scrubber-1-datasheet.md), until the board publishes its own. Read by the tests and by whoever rehearses the scene; the real board will register itself. Since 2026-09-25 the scrubber's descriptor also carries its single-pass efficiency and its lag: the numbers a twin of this device takes from the register, not from the datasheet's default (lib/graph-library.ts, a variable bound to a device).",
+ "_comment": "The five lines of the commissioning scene (docs/mise-en-service.fr.md, section 5): what registers on Mother's register when the Lab's scrubber is plugged in. Descriptors in the shape of a W3C Thing Description reduced to what the demo reads. The scrubber's air flow at full speed (0.055 m3/s) and its effective flow (air flow times the single-pass efficiency of 0.30: 1.0 m3/min) are the datasheet's (docs/library/scrubber-1-datasheet.md), until the board publishes its own. Read by the tests and by whoever rehearses the scene; the real board will register itself. Since 2026-09-25 the scrubber's descriptor also carries its single-pass efficiency and its lag: the numbers a twin of this device takes from the register, not from the datasheet's default (lib/graph-library.ts, a variable bound to a device). Its speed says it is commandable (the action set_speed, 0 to 100 percent): the register's own word for what can be acted upon; the hatch's state is read-only, a person moves it.",
  "devices": [
   {
    "path": "/habitat/lab/eclss/scrubber-1",
@@ -9,7 +9,12 @@
     "properties": {
      "speed": {
       "quantity": "Ratio",
-      "unit": "percent"
+      "unit": "percent",
+      "commandable": {
+       "action": "set_speed",
+       "min": 0,
+       "max": 100
+      }
      },
      "current": {
       "quantity": "Current",

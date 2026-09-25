@@ -529,3 +529,45 @@ place : il n'est utile qu'avec une garde qui tient le déterministe hors de
 sa portée (les nombres, les noms), sinon il rouvre ce qui est réglé et
 coûte des boucles ; et une garde qui refuse trop littéralement (le
 vocabulaire par chaîne d'unité) coûte plus cher que lui.
+
+## 17. Le commandable sur le registre (la même nuit)
+
+Une relecture du document a nommé ce qui reste : `INSUFFICIENT_INFORMATION`
+avec une demande d'expérience n'est pas construit, et l'identifiabilité
+reste `NOT_ASSESSED`. Les deux n'en font qu'un : sans sensibilité le harness
+ne sait pas ce que les données ne distinguent pas ; sans le savoir il ne
+peut pas proposer l'expérience qui tranche. Le passage 7 (l'occupant caché)
+en est la démonstration involontaire : deux hypothèses tenaient la courbe
+(le débit en haut de sa bande, une personne de plus dans le Lab), la boucle
+a gardé la première qui passait. La chaîne à construire est presque
+entièrement déterministe : la sensibilité au point ajusté (différences
+finies, Fisher, corrélations), le critère d'insuffisance (deux structures
+qui passent, ou un paramètre non identifiable qui porte la conclusion), et
+l'expérience discriminante : simuler les deux hypothèses sur chaque
+intervention possible et retenir celle qui maximise l'écart de prédiction.
+
+Le « presque » tenait à trois endroits, et l'un d'eux vient d'être fermé.
+Nommer les hypothèses concurrentes reste au modèle ; formuler la demande à
+l'opérateur aussi. Mais **l'espace des interventions possibles** était une
+lecture (la procédure, la fiche de poste), et il est maintenant un fait du
+registre : une propriété d'un appareil peut se dire `commandable`, avec
+l'action qui la règle et la plage acceptée (`slots/station/registry.ts`,
+`Command`, `commandsOf`). La garde du descripteur tient le registre
+cohérent : une propriété commandable nomme une action que l'appareil
+déclare, n'est pas en lecture seule, sa plage est dans le bon sens.
+L'inventaire en tire les **interventions** de l'installation
+(`slots/factory/inventory.ts`, `Intervention`) : une commande sur un
+appareil (`commanded`, que l'agent peut proposer et que le commandant
+autorise), une ouverture qu'une personne manœuvre (`operated`). L'état de
+raisonnement montre chaque appareil du registre avec ce qu'il laisse
+commander ; la ligne « contrôlable » de l'observation de l'exemple vient du
+registre et non plus de l'auteur.
+
+C'est la notion qui fait d'un agent de cette station un agent incarné : il
+ne lit pas seulement le monde, son registre dit ce qu'il peut y changer.
+Ce que le registre ne dit pas, et ne dira pas : qui a le droit. La
+politique du courtier et l'autorisation du commandant restent en place ;
+le commandable est l'espace où l'expérience est choisie, pas une licence
+d'agir. L'ordre convenu s'en trouve déplacé : la forge d'abord, puis cette
+chaîne (identifiabilité, insuffisance, expérience choisie parmi les
+interventions) avant le onnx sur l'état.

@@ -134,7 +134,16 @@ export function invariantsOf(task: TaskFile["task"], shelf: StateInvariants["she
     const req = (task.requirements ?? {}) as Record<string, unknown>;
     const obs = (task.observations ?? {}) as Record<string, unknown>;
     const persons = Array.isArray(obs.persons) ? (obs.persons as Array<Record<string, unknown>>).map((p) => `${str(p.callsign) || str(p.id) || "someone"} in ${str(p.module)} at ${str(p.activity)}`) : [];
-    const devices = Array.isArray(obs.devices) ? (obs.devices as Array<Record<string, unknown>>).map((d) => `${str(d.path)} (${str((d.descriptor as Record<string, unknown> | undefined)?.["@type"])})`) : [];
+    // A device of the register, with what it lets one command (the embodied side of the state: what can be acted upon, not only read).
+    const devices = Array.isArray(obs.devices)
+        ? (obs.devices as Array<Record<string, unknown>>).map((d) => {
+              const descriptor = (d.descriptor ?? {}) as Record<string, unknown>;
+              const commands = Object.entries((descriptor.properties ?? {}) as Record<string, { commandable?: { action?: string; min?: number; max?: number }; unit?: string }>)
+                  .filter(([, p]) => p?.commandable)
+                  .map(([name, p]) => `${name} via ${str(p.commandable?.action)}${typeof p.commandable?.min === "number" && typeof p.commandable?.max === "number" ? ` ${p.commandable.min} to ${p.commandable.max} ${str(p.unit)}` : ""}`);
+              return `${str(d.path)} (${str(descriptor["@type"])}${commands.length ? `; commands: ${commands.join(", ")}` : ""})`;
+          })
+        : [];
     const other: Record<string, JsonValue> = {};
     for (const [k, v] of Object.entries(obs)) if (k !== "persons" && k !== "devices") other[k] = v as JsonValue;
     const thresholds = thresholdsOf(task);

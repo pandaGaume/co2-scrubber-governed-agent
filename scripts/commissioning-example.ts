@@ -52,6 +52,8 @@ import { labCandidate } from "../harness/scripted/graph.js";
 import type { Spec } from "../harness/topics/graph/params.js";
 import type { TaskFile } from "../harness/core/task.js";
 import type { MotherLine } from "../slots/station/provider.js";
+import { inventoryOf } from "../slots/factory/inventory.js";
+import type { Device } from "../slots/station/registry.js";
 
 /** A client of the broker that counts what it calls: the tools of a loop, read off the wire. */
 class CountingBroker extends Broker {
@@ -235,7 +237,8 @@ async function main(): Promise<void> {
             "Physical components: the Lab module (a volume of air); the scrubber, variable speed, centralised: it serves Hab-B through the inter-module ventilation, which keeps running with the hatch closed (through the ducts alone; what it delivers as installed is not documented); a CO2 sensor in the Lab; a hatch between the Lab and Hab-B, closed during the test; a CO2 sensor in Hab-B; the crew (two operators in the Lab, two people in Hab-B).",
             `Test just run: ${report?.steps.map((s) => `${s.speedPercent} % for ${s.minutes} min`).join(", then ")}, hatch closed. Apparent volume from the decay, one room assumed: ${report?.result.value ?? "not computed"} m3 (${report?.result.why ?? ""}).`,
             "Available telemetry: see the summary.",
-            "Controllable: scrubber speed.",
+            // What can be acted upon, from the register's own word (commandable properties, openings a person operates), not from the author.
+            `Controllable, as the register says: ${inventoryOf(scene.devices as unknown as Device[]).interventions.map((i) => `${i.device} ${i.property}${i.how === "commanded" ? ` (commanded through ${i.action}${typeof i.min === "number" ? `, ${i.min} to ${i.max} ${i.unit}` : ""})` : ` (operated by a person${i.states ? `: ${i.states.join(" or ")}` : ""})`}`).join("; ")}.`,
             "Objective: the twin must reproduce the CO2 of the Lab well enough to evaluate scrubber speed strategies.",
         ].join("\n");
         const model = await ReasonerProvider.connect(operator);

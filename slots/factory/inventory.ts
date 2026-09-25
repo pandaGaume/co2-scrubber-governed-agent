@@ -13,10 +13,16 @@
  * second, since 2026-09-23, is a hypothesis the candidate simulators
  * decide.
  *
+ * And what can be acted upon, from the register alone (2026-09-25): each
+ * commandable property is an intervention an agent may propose (commanded,
+ * through whoever authorises); each opening is one a person operates. It is
+ * the space an experiment is chosen in, when two hypotheses fit the same
+ * data: which intervention parts them most.
+ *
  * A pure function: the factory slot's `inventory` tool reads the register
  * and hands it here.
  */
-import { levelsOf, needsCommissioning, type Device } from "../station/registry.js";
+import { commandsOf, levelsOf, needsCommissioning, type Device } from "../station/registry.js";
 
 export interface InventoryLine {
     path: string;
@@ -26,7 +32,23 @@ export interface InventoryLine {
     area: string;
     measures: Array<{ property: string; quantity: string; unit: string }>;
     acts: string[];
+    /** What can be commanded on it: the property, the action that sets it, its range. */
+    commands: ReturnType<typeof commandsOf>;
     commissioning: boolean;
+}
+
+/** An intervention on the physical world the installation allows: a command on a device (an agent may propose it, the commander authorises) or an opening a person operates. */
+export interface Intervention {
+    device: string;
+    property: string;
+    quantity: string;
+    unit: string;
+    how: "commanded" | "operated";
+    /** The action that sets it, for a command. */
+    action?: string;
+    min?: number;
+    max?: number;
+    states?: string[];
 }
 
 export interface Inventory {
@@ -39,6 +61,8 @@ export interface Inventory {
     openings: Array<{ device: string; between: string[] }>;
     /** What the register does not say and the factory must not guess. */
     unknowns: Array<{ what: string; quantity: string; unit: string; volume: string; how: "measured" | "hypothesis" }>;
+    /** What can be acted upon: the commands of the devices, then the openings a person operates. */
+    interventions: Intervention[];
 }
 
 export function inventoryOf(devices: Device[]): Inventory {
@@ -54,6 +78,7 @@ export function inventoryOf(devices: Device[]): Inventory {
                 area,
                 measures: Object.entries(d.descriptor.properties).map(([property, p]) => ({ property, quantity: p.quantity, unit: p.unit })),
                 acts: d.descriptor.actions ?? [],
+                commands: commandsOf(d),
                 commissioning: needsCommissioning(d),
             };
         });
@@ -74,5 +99,12 @@ export function inventoryOf(devices: Device[]): Inventory {
             for (const other of o.between.filter((b) => b !== volume.name)) unknowns.push({ what: `exchange between ${volume.name} and ${other} through ${o.device}`, quantity: "VolumetricFlow", unit: "m3ps", volume: volume.path, how: "hypothesis" });
         }
     }
-    return { lines: lines.map((l) => `${l.path.padEnd(34)} ${l.title}`), devices: lines, volumes, openings, unknowns };
+    const interventions: Intervention[] = [
+        ...lines.flatMap((l) => l.commands.map((c) => ({ device: l.path, property: c.property, quantity: c.quantity, unit: c.unit, how: "commanded" as const, action: c.action, ...(typeof c.min === "number" ? { min: c.min } : {}), ...(typeof c.max === "number" ? { max: c.max } : {}), ...(c.states ? { states: c.states } : {}) }))),
+        ...openings.flatMap((o) => {
+            const device = devices.find((d) => d.path === o.device);
+            return Object.entries(device?.descriptor.properties ?? {}).filter(([, p]) => !p.commandable).map(([property, p]) => ({ device: o.device, property, quantity: p.quantity, unit: p.unit, how: "operated" as const, ...(p.unit.includes("|") ? { states: p.unit.split("|") } : {}) }));
+        }),
+    ];
+    return { lines: lines.map((l) => `${l.path.padEnd(34)} ${l.title}`), devices: lines, volumes, openings, unknowns, interventions };
 }
