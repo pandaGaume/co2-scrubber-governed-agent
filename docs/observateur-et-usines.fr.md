@@ -171,6 +171,66 @@ nouveau dans un plugin à part, `generated`. Ce qu'il faudra tenir, et qu'on
 - l'usine de graphes repart ensuite avec le catalogue enrichi, et la même
   demande.
 
+### 6.1 Le bac à sable du code est un slot : `forge` (décidé le 25 septembre au soir, pour la reprise)
+
+Après la journée du 25 septembre (l'état de raisonnement, les briefs par
+étape, les exigences, les refus gardés, la couche des contrats, le journal
+des états ; `harness-refactoring.fr.md`), presque toute la boucle de
+l'usine de code existe déjà, indépendante du sujet. Ce qui est neuf, c'est
+qu'un artefact du modèle s'exécute comme code et non comme données ; et
+dans cette architecture, un bac à sable est un slot de plus sur le broker,
+avec ses outils, sa grammaire, ses ressources, sa garde et sa trace, comme
+`twin` ou `library`. Rien n'entre dans le processus du jumeau tant que ce
+n'est pas sorti de là.
+
+**Le slot `forge`.**
+
+- Son propre processus et son propre runtime spikypanda, avec un catalogue
+  à lui : ce que le modèle compile et charge ne vit que là ; le twin ne le
+  voit pas.
+- Ses outils : `plugin_write` (les fichiers d'un plugin dans l'atelier de
+  la tâche : le nœud, sa signature, sa documentation, ses tests, écrits
+  avant le nœud) ; `plugin_build` (la compilation dans un processus séparé,
+  imports sur liste blanche, `@spiky-panda/core` et rien d'autre, un budget
+  de temps, les erreurs rendues telles quelles) ; `plugin_test` (les tests
+  du nœud, et les vérifications déterministes : la signature contre le
+  vocabulaire des grandeurs par le service des unités et la vérification de
+  signature du substrat, la conservation sur un pas de simulation) ;
+  `plugin_load` (dans le runtime de la forge, le nœud versionné par
+  sha256) ; `registry_search` et `registry_describe_node` (le catalogue de
+  la forge, chaque nœud dit généré) ; `session_run` (un graphe candidat avec
+  le nœud, comme le twin : `graph.evaluate` vise `runtimeSlot: "forge"` au
+  lieu de `twin`, le paramètre existe déjà).
+- La promotion : `plugin_promote` ne fait qu'un artefact signé (le plugin,
+  son sha256, ses tests passés, l'évaluation) proposé à la station ; Mother
+  le dit, le commandant l'autorise, et c'est le twin qui, sur cette
+  autorisation, charge le plugin `generated` chez lui. La forge ne pousse
+  jamais rien.
+- Ses ressources : `forge://plugins` (ce qui est chargé, sha256 et
+  provenance), `forge://builds` (les compilations, réussies ou non).
+
+**Ce que l'usine de graphes n'a pas à apprendre.** Le sujet `code` écrit le
+nœud, la forge le juge, et la même demande est rejouée sur le catalogue de
+la forge par l'évaluateur existant (couverture, seuils nommés, diagnostic).
+Un `STRUCTURAL_MISMATCH` sur le catalogue du twin est l'entrée du sujet
+`code` ; un `PASS` sur celui de la forge devient la proposition. Le sujet
+`code` reçoit les crochets que `procedure` a reçus (`state`, `brief`,
+`key`, `claims`), et la couche des contrats refuse un port mal typé avant
+tout chargement. Le superviseur des contrats, quand il existera, est ce qui
+empêchera l'usine de code de « réparer » un graphe en inventant une
+physique qui contredit un fait documenté.
+
+**Le point d'attention** : l'isolation réelle de la compilation et de
+l'exécution, un `child_process` sans réseau ni accès au reste du dépôt, un
+répertoire de travail par tâche, un temps maximal. Le reste est du harnais
+qu'on a déjà.
+
+**L'ordre proposé** : le slot `forge` et le validateur du nœud d'abord
+(déterministes, testables sans clé), la boucle du sujet `code` ensuite, le
+superviseur quand deux usines se parlent vraiment. Le sujet `onnx` sur
+l'état (le dernier en conversation) vient après : il sort des données du
+graphe et n'est pas sur le chemin de la mise en service.
+
 ## 7. Le cache du prompt
 
 Le prompt d'un rôle (l'Observateur, une usine) est fixe : les mêmes octets
@@ -197,4 +257,4 @@ fait ; la conception est la même.
 | le cache du prompt côté Anthropic | construit ; inactif sous le seuil de Haiku 4.5 |
 | l'aiguillage vers les usines | à construire (section 4) |
 | l'usine de graphes, et la boucle écart puis correction | construite le 24 septembre (`usine-de-graphes.fr.md`, exemple complet dans `exemple-mise-en-service.fr.md`) |
-| l'usine de code et le plugin `generated` | en réserve (section 6) |
+| l'usine de code et le plugin `generated` | en réserve (section 6) ; le bac à sable est un slot, `forge` (section 6.1, décidé le 25 septembre au soir, à construire en premier à la reprise) |
