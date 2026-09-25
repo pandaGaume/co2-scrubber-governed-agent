@@ -347,7 +347,7 @@ npm run chain        # sweep the twin, fit the health model, judge it against th
 
 The substrate packages (`@spiky-panda/*`) are not on npm yet. Until they
 are, the repository carries them as archives in `vendor/` and `package.json`
-points at those files (`"@spiky-panda/core": "file:vendor/spiky-panda-core-1.0.1.tgz"`),
+points at those files (`"@spiky-panda/core": "file:vendor/spiky-panda-core-1.0.2.tgz"`),
 so `npm install` and `npm ci` install them like any other dependency, from
 a clone, with no registry access. The lockfile records the path of each
 archive and its checksum. When the packages are published, each `file:`

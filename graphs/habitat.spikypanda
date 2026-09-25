@@ -100,16 +100,21 @@
         "id": "lab",
         "x": 0,
         "y": 0,
-        "typeId": "Physics.Habitat:atmosphere",
+        "typeId": "Physics.Scene:atmosphere",
         "inputs": [
-          {
-            "name": "composition_in",
-            "type": "composition",
-            "direction": "input"
-          },
           {
             "name": "layer_in_0",
             "type": "layer",
+            "direction": "input"
+          },
+          {
+            "name": "delta_N2_0",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "delta_O2_0",
+            "type": "float",
             "direction": "input"
           },
           {
@@ -118,17 +123,17 @@
             "direction": "input"
           },
           {
+            "name": "delta_H2O_0",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "delta_Ar_0",
+            "type": "float",
+            "direction": "input"
+          },
+          {
             "name": "delta_CO2_1",
-            "type": "float",
-            "direction": "input"
-          },
-          {
-            "name": "delta_CO2_2",
-            "type": "float",
-            "direction": "input"
-          },
-          {
-            "name": "delta_CO2_3",
             "type": "float",
             "direction": "input"
           }
@@ -155,7 +160,42 @@
             "direction": "output"
           },
           {
-            "name": "ppm_CO2",
+            "name": "mass_N2",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "mole_fraction_N2",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "partial_pressure_N2",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "ppm_N2",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "mass_O2",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "mole_fraction_O2",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "partial_pressure_O2",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "ppm_O2",
             "type": "float",
             "direction": "output"
           },
@@ -165,7 +205,57 @@
             "direction": "output"
           },
           {
+            "name": "mole_fraction_CO2",
+            "type": "float",
+            "direction": "output"
+          },
+          {
             "name": "partial_pressure_CO2",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "ppm_CO2",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "mass_H2O",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "mole_fraction_H2O",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "partial_pressure_H2O",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "ppm_H2O",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "mass_Ar",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "mole_fraction_Ar",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "partial_pressure_Ar",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "ppm_Ar",
             "type": "float",
             "direction": "output"
           }
@@ -175,16 +265,21 @@
         "id": "habb",
         "x": 0,
         "y": 420,
-        "typeId": "Physics.Habitat:atmosphere",
+        "typeId": "Physics.Scene:atmosphere",
         "inputs": [
-          {
-            "name": "composition_in",
-            "type": "composition",
-            "direction": "input"
-          },
           {
             "name": "layer_in_0",
             "type": "layer",
+            "direction": "input"
+          },
+          {
+            "name": "delta_N2_0",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "delta_O2_0",
+            "type": "float",
             "direction": "input"
           },
           {
@@ -193,17 +288,12 @@
             "direction": "input"
           },
           {
-            "name": "delta_CO2_1",
+            "name": "delta_H2O_0",
             "type": "float",
             "direction": "input"
           },
           {
-            "name": "delta_CO2_2",
-            "type": "float",
-            "direction": "input"
-          },
-          {
-            "name": "delta_CO2_3",
+            "name": "delta_Ar_0",
             "type": "float",
             "direction": "input"
           }
@@ -230,7 +320,42 @@
             "direction": "output"
           },
           {
-            "name": "ppm_CO2",
+            "name": "mass_N2",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "mole_fraction_N2",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "partial_pressure_N2",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "ppm_N2",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "mass_O2",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "mole_fraction_O2",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "partial_pressure_O2",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "ppm_O2",
             "type": "float",
             "direction": "output"
           },
@@ -240,7 +365,107 @@
             "direction": "output"
           },
           {
+            "name": "mole_fraction_CO2",
+            "type": "float",
+            "direction": "output"
+          },
+          {
             "name": "partial_pressure_CO2",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "ppm_CO2",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "mass_H2O",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "mole_fraction_H2O",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "partial_pressure_H2O",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "ppm_H2O",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "mass_Ar",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "mole_fraction_Ar",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "partial_pressure_Ar",
+            "type": "float",
+            "direction": "output"
+          },
+          {
+            "name": "ppm_Ar",
+            "type": "float",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "co2-1",
+        "x": 300,
+        "y": 0,
+        "typeId": "DSP.Sensor:transducer",
+        "inputs": [
+          {
+            "name": "value",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "t",
+            "type": "float",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "measured",
+            "type": "float",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "co2-2",
+        "x": 300,
+        "y": 420,
+        "typeId": "DSP.Sensor:transducer",
+        "inputs": [
+          {
+            "name": "value",
+            "type": "float",
+            "direction": "input"
+          },
+          {
+            "name": "t",
+            "type": "float",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "measured",
             "type": "float",
             "direction": "output"
           }
@@ -439,6 +664,11 @@
             "name": "dustConcentration",
             "type": "float",
             "direction": "input"
+          },
+          {
+            "name": "particulate_in",
+            "type": "particulate",
+            "direction": "input"
           }
         ],
         "outputs": [
@@ -465,50 +695,44 @@
         ]
       },
       {
+        "id": "dust",
+        "x": 1080,
+        "y": -160,
+        "typeId": "Physics.Particulate:lunar_dust",
+        "inputs": [],
+        "outputs": [
+          {
+            "name": "particulate_out",
+            "type": "particulate",
+            "direction": "output"
+          }
+        ]
+      },
+      {
         "id": "hvac",
         "x": 560,
         "y": 200,
-        "typeId": "Physics.Habitat:duct",
+        "typeId": "Physics.Scene:atmosphere-gate",
         "inputs": [
           {
+            "name": "atmosphere_A_in",
+            "type": "atmosphere",
+            "direction": "input"
+          },
+          {
+            "name": "atmosphere_B_in",
+            "type": "atmosphere",
+            "direction": "input"
+          },
+          {
             "name": "flow",
-            "type": "float",
-            "direction": "input"
-          },
-          {
-            "name": "ppmA",
-            "type": "float",
-            "direction": "input"
-          },
-          {
-            "name": "ppmB",
-            "type": "float",
-            "direction": "input"
-          },
-          {
-            "name": "pressure",
-            "type": "float",
-            "direction": "input"
-          },
-          {
-            "name": "temperature",
             "type": "float",
             "direction": "input"
           }
         ],
         "outputs": [
           {
-            "name": "co2DeltaA",
-            "type": "float",
-            "direction": "output"
-          },
-          {
-            "name": "co2DeltaB",
-            "type": "float",
-            "direction": "output"
-          },
-          {
-            "name": "exchangeFlow",
+            "name": "flow_rate",
             "type": "float",
             "direction": "output"
           }
@@ -518,47 +742,27 @@
         "id": "hatch",
         "x": 560,
         "y": 420,
-        "typeId": "Physics.Habitat:hatch",
+        "typeId": "Physics.Scene:atmosphere-gate",
         "inputs": [
           {
-            "name": "open",
-            "type": "float",
+            "name": "atmosphere_A_in",
+            "type": "atmosphere",
             "direction": "input"
           },
           {
-            "name": "ppmA",
-            "type": "float",
+            "name": "atmosphere_B_in",
+            "type": "atmosphere",
             "direction": "input"
           },
           {
-            "name": "ppmB",
-            "type": "float",
-            "direction": "input"
-          },
-          {
-            "name": "pressure",
-            "type": "float",
-            "direction": "input"
-          },
-          {
-            "name": "temperature",
+            "name": "flow",
             "type": "float",
             "direction": "input"
           }
         ],
         "outputs": [
           {
-            "name": "co2DeltaA",
-            "type": "float",
-            "direction": "output"
-          },
-          {
-            "name": "co2DeltaB",
-            "type": "float",
-            "direction": "output"
-          },
-          {
-            "name": "exchangeFlow",
+            "name": "flow_rate",
             "type": "float",
             "direction": "output"
           }
@@ -574,53 +778,46 @@
         "toPortIndex": 1
       },
       {
-        "id": "crew-lab:co2Delta->lab:delta_CO2_0",
-        "fromNodeId": "crew-lab",
-        "fromPortIndex": 0,
-        "toNodeId": "lab",
-        "toPortIndex": 2
+        "id": "lab:atmosphere_out->scene:atmosphere_in",
+        "fromNodeId": "lab",
+        "fromPortIndex": 3,
+        "toNodeId": "scene",
+        "toPortIndex": 0
       },
       {
-        "id": "hvac:co2DeltaA->lab:delta_CO2_1",
-        "fromNodeId": "hvac",
+        "id": "crew-lab:co2Delta->lab:delta_CO2_0",
+        "fromNodeId": "crew-lab",
         "fromPortIndex": 0,
         "toNodeId": "lab",
         "toPortIndex": 3
       },
       {
-        "id": "hatch:co2DeltaA->lab:delta_CO2_2",
-        "fromNodeId": "hatch",
-        "fromPortIndex": 0,
-        "toNodeId": "lab",
-        "toPortIndex": 4
-      },
-      {
-        "id": "scrubber:co2Delta->lab:delta_CO2_3",
+        "id": "scrubber:co2Delta->lab:delta_CO2_1",
         "fromNodeId": "scrubber",
         "fromPortIndex": 0,
         "toNodeId": "lab",
-        "toPortIndex": 5
+        "toPortIndex": 6
       },
       {
         "id": "crew-habb:co2Delta->habb:delta_CO2_0",
         "fromNodeId": "crew-habb",
         "fromPortIndex": 0,
         "toNodeId": "habb",
-        "toPortIndex": 2
-      },
-      {
-        "id": "hvac:co2DeltaB->habb:delta_CO2_1",
-        "fromNodeId": "hvac",
-        "fromPortIndex": 1,
-        "toNodeId": "habb",
         "toPortIndex": 3
       },
       {
-        "id": "hatch:co2DeltaB->habb:delta_CO2_2",
-        "fromNodeId": "hatch",
-        "fromPortIndex": 1,
-        "toNodeId": "habb",
-        "toPortIndex": 4
+        "id": "lab:ppm_CO2->co2-1:value",
+        "fromNodeId": "lab",
+        "fromPortIndex": 15,
+        "toNodeId": "co2-1",
+        "toPortIndex": 0
+      },
+      {
+        "id": "habb:ppm_CO2->co2-2:value",
+        "fromNodeId": "habb",
+        "fromPortIndex": 15,
+        "toNodeId": "co2-2",
+        "toPortIndex": 0
       },
       {
         "id": "speed:value->scrubber:command",
@@ -632,7 +829,7 @@
       {
         "id": "lab:ppm_CO2->scrubber:ppm",
         "fromNodeId": "lab",
-        "fromPortIndex": 4,
+        "fromPortIndex": 15,
         "toNodeId": "scrubber",
         "toPortIndex": 1
       },
@@ -658,39 +855,46 @@
         "toPortIndex": 1
       },
       {
+        "id": "dust:particulate_out->filter:particulate_in",
+        "fromNodeId": "dust",
+        "fromPortIndex": 0,
+        "toNodeId": "filter",
+        "toPortIndex": 2
+      },
+      {
         "id": "fan:flow->hvac:flow",
         "fromNodeId": "fan",
         "fromPortIndex": 0,
         "toNodeId": "hvac",
+        "toPortIndex": 2
+      },
+      {
+        "id": "lab:atmosphere_out->hvac:atmosphere_A_in",
+        "fromNodeId": "lab",
+        "fromPortIndex": 3,
+        "toNodeId": "hvac",
         "toPortIndex": 0
       },
       {
-        "id": "lab:ppm_CO2->hvac:ppmA",
-        "fromNodeId": "lab",
-        "fromPortIndex": 4,
+        "id": "habb:atmosphere_out->hvac:atmosphere_B_in",
+        "fromNodeId": "habb",
+        "fromPortIndex": 3,
         "toNodeId": "hvac",
         "toPortIndex": 1
       },
       {
-        "id": "habb:ppm_CO2->hvac:ppmB",
-        "fromNodeId": "habb",
-        "fromPortIndex": 4,
-        "toNodeId": "hvac",
-        "toPortIndex": 2
+        "id": "lab:atmosphere_out->hatch:atmosphere_A_in",
+        "fromNodeId": "lab",
+        "fromPortIndex": 3,
+        "toNodeId": "hatch",
+        "toPortIndex": 0
       },
       {
-        "id": "lab:ppm_CO2->hatch:ppmA",
-        "fromNodeId": "lab",
-        "fromPortIndex": 4,
+        "id": "habb:atmosphere_out->hatch:atmosphere_B_in",
+        "fromNodeId": "habb",
+        "fromPortIndex": 3,
         "toNodeId": "hatch",
         "toPortIndex": 1
-      },
-      {
-        "id": "habb:ppm_CO2->hatch:ppmB",
-        "fromNodeId": "habb",
-        "fromPortIndex": 4,
-        "toNodeId": "hatch",
-        "toPortIndex": 2
       }
     ]
   },
@@ -759,7 +963,7 @@
       {
         "id": "lab",
         "label": "Lab air",
-        "typeId": "Physics.Habitat:atmosphere",
+        "typeId": "Physics.Scene:atmosphere",
         "data": {
           "enabled": true,
           "_requiredHzValue": 0,
@@ -767,21 +971,26 @@
           "_volumeM3": 30,
           "_temperatureK": 295.15,
           "_initialAtmosphere": "earthHumidAirSeaLevel",
-          "_initialMassKg": [],
+          "_initialMassKg": [
+            26.74249095156684,
+            8.203960253255458,
+            0.08068058608982515,
+            0.2585824882928025,
+            0.4587151903193678
+          ],
           "_mass": [
             26.770880007778697,
             8.21266934057314,
-            0.08076623427038761,
+            0.022895841998463895,
             0.2588569919958734,
             0.4592021491201314
-          ],
-          "_initialCo2Ppm": 1480
+          ]
         }
       },
       {
         "id": "habb",
         "label": "Hab-B air",
-        "typeId": "Physics.Habitat:atmosphere",
+        "typeId": "Physics.Scene:atmosphere",
         "data": {
           "enabled": true,
           "_requiredHzValue": 0,
@@ -789,15 +998,44 @@
           "_volumeM3": 400,
           "_temperatureK": 295.15,
           "_initialAtmosphere": "earthHumidAirSeaLevel",
-          "_initialMassKg": [],
+          "_initialMassKg": [
+            356.5594041199575,
+            109.38394574470986,
+            1.0902781904030427,
+            3.447697453035338,
+            6.116080032232889
+          ],
           "_mass": [
             356.94506677038265,
             109.50225787430854,
-            1.0914574597527027,
+            0.305277893312852,
             3.45142655994498,
             6.122695321601753
-          ],
-          "_initialCo2Ppm": 1500
+          ]
+        }
+      },
+      {
+        "id": "co2-1",
+        "label": "CO2 sensor co2-1 (Lab)",
+        "typeId": "DSP.Sensor:transducer",
+        "data": {
+          "enabled": true,
+          "_cutoffHz": 1000000,
+          "_noiseStdev": 0,
+          "_quantizationStep": 1,
+          "_driftPerSec": 0
+        }
+      },
+      {
+        "id": "co2-2",
+        "label": "CO2 sensor co2-2 (Hab-B)",
+        "typeId": "DSP.Sensor:transducer",
+        "data": {
+          "enabled": true,
+          "_cutoffHz": 1000000,
+          "_noiseStdev": 0,
+          "_quantizationStep": 1,
+          "_driftPerSec": 0
         }
       },
       {
@@ -919,6 +1157,7 @@
           "_ambientDust": 0.000001,
           "_initialLoadingKg": 0.127,
           "_endOfLifeLoadingKg": 0.2,
+          "_particulateId": "lunar_dust",
           "_loading": 0,
           "_flow": 0,
           "_resistance": 0,
@@ -927,30 +1166,47 @@
         }
       },
       {
+        "id": "dust",
+        "label": "The dust the filter captures",
+        "typeId": "Physics.Particulate:lunar_dust",
+        "data": {
+          "_particulateId": "lunar_dust",
+          "_displayName": "Lunar dust",
+          "_characteristicDiameterM": 0.0000049999999999999996,
+          "_materialDensityKgPerM3": 3100,
+          "_pmClass": "dust"
+        }
+      },
+      {
         "id": "hvac",
         "label": "Inter-module ventilation",
-        "typeId": "Physics.Habitat:duct",
+        "typeId": "Physics.Scene:atmosphere-gate",
         "data": {
           "enabled": true,
-          "_defaultPressurePa": 101325,
-          "_defaultTemperatureK": 295.15,
-          "_exchangeFlow": 0,
-          "_flux": 0
+          "_requiredHzValue": 0,
+          "_requiredHzUserDefined": false,
+          "_mode": "exchange",
+          "_areaM2": 1,
+          "_leakCoeff": 0.00001,
+          "_forcedFlowM3ps": 0,
+          "_bidirectional": true,
+          "_trackThroughput": true
         }
       },
       {
         "id": "hatch",
         "label": "Hatch Lab / Hab-B",
-        "typeId": "Physics.Habitat:hatch",
+        "typeId": "Physics.Scene:atmosphere-gate",
         "data": {
           "enabled": true,
-          "_defaultPressurePa": 101325,
-          "_defaultTemperatureK": 295.15,
-          "_exchangeFlow": 0,
-          "_flux": 0,
-          "_openExchangeM3ps": 0.066,
-          "_closedLeakM3ps": 0,
-          "_open": false
+          "_requiredHzValue": 0,
+          "_requiredHzUserDefined": false,
+          "_mode": "closed",
+          "_areaM2": 1,
+          "_leakCoeff": 0.00001,
+          "_forcedFlowM3ps": 0,
+          "_bidirectional": true,
+          "_trackThroughput": false
         }
       }
     ],
@@ -967,6 +1223,17 @@
         }
       },
       {
+        "id": "lab:atmosphere_out->scene:atmosphere_in",
+        "from": {
+          "node": "lab",
+          "port": "atmosphere_out"
+        },
+        "to": {
+          "node": "scene",
+          "port": "atmosphere_in"
+        }
+      },
+      {
         "id": "crew-lab:co2Delta->lab:delta_CO2_0",
         "from": {
           "node": "crew-lab",
@@ -978,36 +1245,14 @@
         }
       },
       {
-        "id": "hvac:co2DeltaA->lab:delta_CO2_1",
-        "from": {
-          "node": "hvac",
-          "port": "co2DeltaA"
-        },
-        "to": {
-          "node": "lab",
-          "port": "delta_CO2_1"
-        }
-      },
-      {
-        "id": "hatch:co2DeltaA->lab:delta_CO2_2",
-        "from": {
-          "node": "hatch",
-          "port": "co2DeltaA"
-        },
-        "to": {
-          "node": "lab",
-          "port": "delta_CO2_2"
-        }
-      },
-      {
-        "id": "scrubber:co2Delta->lab:delta_CO2_3",
+        "id": "scrubber:co2Delta->lab:delta_CO2_1",
         "from": {
           "node": "scrubber",
           "port": "co2Delta"
         },
         "to": {
           "node": "lab",
-          "port": "delta_CO2_3"
+          "port": "delta_CO2_1"
         }
       },
       {
@@ -1022,25 +1267,25 @@
         }
       },
       {
-        "id": "hvac:co2DeltaB->habb:delta_CO2_1",
+        "id": "lab:ppm_CO2->co2-1:value",
         "from": {
-          "node": "hvac",
-          "port": "co2DeltaB"
+          "node": "lab",
+          "port": "ppm_CO2"
         },
         "to": {
-          "node": "habb",
-          "port": "delta_CO2_1"
+          "node": "co2-1",
+          "port": "value"
         }
       },
       {
-        "id": "hatch:co2DeltaB->habb:delta_CO2_2",
+        "id": "habb:ppm_CO2->co2-2:value",
         "from": {
-          "node": "hatch",
-          "port": "co2DeltaB"
+          "node": "habb",
+          "port": "ppm_CO2"
         },
         "to": {
-          "node": "habb",
-          "port": "delta_CO2_2"
+          "node": "co2-2",
+          "port": "value"
         }
       },
       {
@@ -1099,6 +1344,17 @@
         }
       },
       {
+        "id": "dust:particulate_out->filter:particulate_in",
+        "from": {
+          "node": "dust",
+          "port": "particulate_out"
+        },
+        "to": {
+          "node": "filter",
+          "port": "particulate_in"
+        }
+      },
+      {
         "id": "fan:flow->hvac:flow",
         "from": {
           "node": "fan",
@@ -1110,47 +1366,47 @@
         }
       },
       {
-        "id": "lab:ppm_CO2->hvac:ppmA",
+        "id": "lab:atmosphere_out->hvac:atmosphere_A_in",
         "from": {
           "node": "lab",
-          "port": "ppm_CO2"
+          "port": "atmosphere_out"
         },
         "to": {
           "node": "hvac",
-          "port": "ppmA"
+          "port": "atmosphere_A_in"
         }
       },
       {
-        "id": "habb:ppm_CO2->hvac:ppmB",
+        "id": "habb:atmosphere_out->hvac:atmosphere_B_in",
         "from": {
           "node": "habb",
-          "port": "ppm_CO2"
+          "port": "atmosphere_out"
         },
         "to": {
           "node": "hvac",
-          "port": "ppmB"
+          "port": "atmosphere_B_in"
         }
       },
       {
-        "id": "lab:ppm_CO2->hatch:ppmA",
+        "id": "lab:atmosphere_out->hatch:atmosphere_A_in",
         "from": {
           "node": "lab",
-          "port": "ppm_CO2"
+          "port": "atmosphere_out"
         },
         "to": {
           "node": "hatch",
-          "port": "ppmA"
+          "port": "atmosphere_A_in"
         }
       },
       {
-        "id": "habb:ppm_CO2->hatch:ppmB",
+        "id": "habb:atmosphere_out->hatch:atmosphere_B_in",
         "from": {
           "node": "habb",
-          "port": "ppm_CO2"
+          "port": "atmosphere_out"
         },
         "to": {
           "node": "hatch",
-          "port": "ppmB"
+          "port": "atmosphere_B_in"
         }
       }
     ]

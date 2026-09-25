@@ -100,10 +100,14 @@ npm run habitat:build   # graphs/habitat.spikypanda depuis specs/habitat-paramet
 ```
 
 Le premier est le jumeau qu'interroge l'agent de la nuit 9. Le second est
-la référence physique de la base construite le 24 septembre avec le plugin
-`plugins/habitat` (`plugin-habitat.fr.md`) : deux atmosphères, l'équipage,
-l'épurateur en masse, un ventilateur, un filtre encrassé, le conduit et le
-sas ; 114 tests dont 8 sur lui.
+la référence physique de la base construite le 24 septembre et reprise le
+25 (`plugin-habitat.fr.md`) : les atmosphères, les deux portes (la
+ventilation en mode `exchange`, le sas fermé), la poussière et les capteurs
+sont les nœuds du substrat ; le plugin `plugins/habitat` ajoute l'équipage,
+l'épurateur en masse, le ventilateur et le filtre encrassé ; 115 tests dont
+9 sur lui. Il faut le substrat corrigé le 25 septembre (`core` 1.0.2,
+`plugin-physics` 0.1.2, `factory` 0.1.2, dans `vendor/`) : avec les
+versions d'avant, `npm run habitat:build` ne rend pas la main.
 
 ## 7. Lire un journal, diagnostiquer un échec
 
@@ -128,3 +132,5 @@ sas ; 114 tests dont 8 sur lui.
   télémétrie du monde de test en TypeScript.
 - Nemotron sur Nebius n'a pas été essayé ; la recherche sur le web n'est
   pas branchée ; le conteneur de l'usine n'a pas le plugin local.
+- La page du jumeau (le studio dans le navigateur) n'a pas de bundle du
+  plugin : elle affiche le graphe de la cabine, pas celui de l'habitat.

@@ -35,6 +35,7 @@ export class HabitatFilterNode extends IntegrableRuntimeNode implements IDeclare
     @cloneable private _ambientDust: number = 1e-6;
     @cloneable private _initialLoadingKg: number = 0;
     @cloneable private _endOfLifeLoadingKg: number = 0.2;
+    @cloneable private _particulateId: string = "lunar_dust";
 
     @cloneable private _loading: number = 0;
     @cloneable private _flow: number = 0;
@@ -45,6 +46,8 @@ export class HabitatFilterNode extends IntegrableRuntimeNode implements IDeclare
     public readonly inputPorts: ReadonlyArray<IPortDescriptor> = [
         { slot: "flow", optional: true, type: "float", kind: "signal" },
         { slot: "dustConcentration", optional: true, type: "float", kind: "signal" },
+        // The dust it captures, a Physics.Particulate descriptor (a configuration link, the substrate's dashed cable): declarative in V1, the substrate's particulates carry no dynamics yet.
+        { slot: "particulate_in", optional: true, type: "particulate" },
     ];
     public readonly outputPorts: ReadonlyArray<IPortDescriptor> = [
         { slot: "resistance", optional: false, type: "float", kind: "signal" },
@@ -96,6 +99,13 @@ export class HabitatFilterNode extends IntegrableRuntimeNode implements IDeclare
     }
     public set initialLoadingKg(v: number) {
         this.setField("initialLoadingKg", this._initialLoadingKg, Math.max(0, v), (n) => (this._initialLoadingKg = n));
+    }
+    /** The particulate the filter captures, by its id (`lunar_dust`, `pm10`, `pm2_5`): the Physics.Particulate node wired to `particulate_in` names it in the studio. */
+    @editable("string") public get particulateId(): string {
+        return this._particulateId;
+    }
+    public set particulateId(v: string) {
+        this.setField("particulateId", this._particulateId, String(v || this._particulateId), (n) => (this._particulateId = n));
     }
     /** Loading at which the filter is to be replaced, kg. */
     @editable("number") public get endOfLifeLoadingKg(): number {

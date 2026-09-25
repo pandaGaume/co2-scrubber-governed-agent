@@ -15,6 +15,7 @@ An air filter on a duct, and its fouling: a resistance to the flow that grows wi
 |---|---|---|---|
 | flow | in | m3/s | the fan's flow |
 | dustConcentration | in | kg/m3 | the editable ambient value when unwired |
+| particulate_in | in | particulate | the dust the filter captures, a `Physics.Particulate:*` descriptor of the substrate (`lunar_dust` in the reference); a configuration link, the descriptor names the particle |
 | resistance | out | Pa/(m3/s)^2 | for the fan's resistance input |
 | pressureDrop | out | Pa | |
 | loading | out | kg | |

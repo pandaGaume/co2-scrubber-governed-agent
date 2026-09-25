@@ -1,17 +1,19 @@
 /**
- * The habitat plugin and the habitat reference, headless: the seven node
- * types in the registry with their signatures, each node's physics on its
- * own numbers, and the whole graph against the stand-in world that solved
- * the same balance in TypeScript (the two must agree to a few ppm, or one
- * of them is wrong). The fault of the commissioning is checked as a
- * number: with the parameter file's filter the fan delivers two thirds of
- * the design flow; with a clean one, the design flow.
+ * The habitat plugin and the habitat reference, headless: the four node
+ * types in the registry with their signatures, the substrate's atmosphere
+ * with its CO2 ports declared and its gate bound to two atmospheres in a
+ * document, each node's physics on its own numbers,
+ * and the whole graph against the stand-in world that solved the same
+ * balance in TypeScript (the two must agree to a few ppm, or one of them
+ * is wrong). The fault of the commissioning is checked as a number: with
+ * the parameter file's filter the fan delivers two thirds of the design
+ * flow; with a clean one, the design flow.
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { buildRegistry } from "../lib/registry.js";
-import { buildHabitatDocument, DEFAULT_SPEED_STEPS, readHabitatParameters, runHabitat } from "../lib/habitat.js";
-import { HABITAT_NODE_TYPES, HabitatCrewNode, HabitatDuctNode, HabitatFanNode, HabitatFilterNode, HabitatScrubberNode } from "../plugins/habitat/index.js";
+import { ATMOSPHERE_CO2_INPUTS, ATMOSPHERE_CO2_OUTPUTS, ATMOSPHERE_TYPE, buildRegistry } from "../lib/registry.js";
+import { buildHabitatDocument, DEFAULT_SPEED_STEPS, initialMassesKg, readHabitatParameters, runHabitat } from "../lib/habitat.js";
+import { HABITAT_NODE_TYPES, HabitatCrewNode, HabitatFanNode, HabitatFilterNode, HabitatScrubberNode } from "../plugins/habitat/index.js";
 import { co2MassPerM3 } from "../plugins/habitat/signals.js";
 import { LAB_WORLD, twoZoneTelemetry } from "../harness/stand-in/two-zone-world.js";
 
@@ -19,8 +21,9 @@ const registry = buildRegistry();
 const parameters = readHabitatParameters();
 
 describe("the habitat plugin in the registry", () => {
-    it("registers its seven types with a signature, a documentation card and the class's own ports", () => {
+    it("registers its four types with a signature, a documentation card and the class's own ports", () => {
         const reg = registry as unknown as { meta: (type: string) => { label: string; signature?: { purpose: string; inputs: Record<string, unknown>; outputs: Record<string, unknown>; capabilities: string[] }; docPath?: string; inputPorts: Array<{ slot: string }>; outputPorts: Array<{ slot: string }> } | undefined };
+        assert.equal(HABITAT_NODE_TYPES.length, 4, "the atmosphere, the gates (the ventilation loop, the hatch) and the dust are the substrate's, not the plugin's");
         for (const type of HABITAT_NODE_TYPES) {
             const meta = reg.meta(type);
             assert.ok(meta, `${type} is registered`);
@@ -29,9 +32,33 @@ describe("the habitat plugin in the registry", () => {
             const ports = new Set([...meta!.inputPorts, ...meta!.outputPorts].map((p) => p.slot));
             for (const name of [...Object.keys(meta!.signature!.inputs), ...Object.keys(meta!.signature!.outputs)]) assert.ok(ports.has(name), `${type}: signature port ${name} is a declared port`);
         }
-        const atmosphere = reg.meta("Physics.Habitat:atmosphere")!;
-        assert.deepEqual(atmosphere.inputPorts.map((p) => p.slot).filter((s) => s.startsWith("delta_")), ["delta_CO2_0", "delta_CO2_1", "delta_CO2_2", "delta_CO2_3"]);
-        assert.ok(atmosphere.outputPorts.some((p) => p.slot === "ppm_CO2"));
+        for (const gone of ["Physics.Habitat:atmosphere", "Physics.Habitat:hatch", "Physics.Habitat:duct"]) assert.equal(reg.meta(gone), undefined, `${gone}: no duplicate of the substrate's atmosphere or gate`);
+    });
+
+    it("finds the substrate's atmosphere with its CO2 ports declared, and the other substrate types the reference uses", () => {
+        const reg = registry as unknown as { meta: (type: string) => { inputPorts: Array<{ slot: string }>; outputPorts: Array<{ slot: string }>; variadicInput?: unknown; signature?: { inputs: Record<string, unknown>; outputs: Record<string, unknown> } } | undefined; create: (type: string) => unknown };
+        const atmosphere = reg.meta(ATMOSPHERE_TYPE)!;
+        // One declared port per species (`delta_<sp>_0`); the higher indices this demo wires are the variadic pool's, accepted by the document builder.
+        assert.deepEqual(atmosphere.inputPorts.map((p) => p.slot).filter((s) => s.startsWith("delta_")), ["delta_N2_0", "delta_O2_0", "delta_CO2_0", "delta_H2O_0", "delta_Ar_0"]);
+        assert.equal(ATMOSPHERE_CO2_INPUTS[0], "delta_CO2_0");
+        for (const slot of ATMOSPHERE_CO2_INPUTS) assert.ok(/^delta_CO2_\d+$/.test(slot), `${slot} belongs to the CO2 pool`);
+        for (const slot of ATMOSPHERE_CO2_OUTPUTS) assert.ok(atmosphere.outputPorts.some((p) => p.slot === slot), `${slot} declared`);
+        assert.ok(atmosphere.inputPorts.some((p) => p.slot === "layer_in_0") && atmosphere.outputPorts.some((p) => p.slot === "atmosphere_out"), "the substrate's own ports are kept");
+        assert.ok(Array.isArray(atmosphere.variadicInput) && (atmosphere.variadicInput as Array<{ prefix: string }>).some((v) => v.prefix === "delta_CO2_"), "the delta pool is variadic");
+        assert.ok("delta_CO2_0" in atmosphere.signature!.inputs && "ppm_CO2" in atmosphere.signature!.outputs, "the signature says them for the planner");
+        const instance = reg.create(ATMOSPHERE_TYPE) as { getMassKg: (s: string) => number; applyMassDelta: (s: string, kg: number) => void; activeSpecies: ReadonlyArray<string> };
+        assert.deepEqual([...instance.activeSpecies], ["N2", "O2", "CO2", "H2O", "Ar"], "the substrate's node, with the core's species");
+        for (const type of ["Physics.Scene:atmosphere-gate", "Physics.Particulate:lunar_dust", "DSP.Sensor:transducer", "Physics.Scene:moon"]) assert.ok(reg.meta(type), `${type} is in the catalogue for the reference`);
+    });
+
+    it("seeds a volume at the sensor's ppm from the core's composition preset, the pressure kept", () => {
+        const masses = initialMassesKg(1480, 30, 295.15);
+        assert.equal(masses.length, 5);
+        const M = { N2: 28.0134e-3, O2: 31.9988e-3, CO2: 44.0095e-3, H2O: 18.01528e-3, Ar: 39.948e-3 };
+        const moles = ["N2", "O2", "CO2", "H2O", "Ar"].map((s, i) => masses[i] / M[s as keyof typeof M]);
+        const total = moles.reduce((a, b) => a + b, 0);
+        assert.ok(Math.abs((moles[2] / total) * 1e6 - 1480) < 0.01, "the CO2 mole fraction is the sensor's ppm");
+        assert.ok(Math.abs((total * 8.314462618 * 295.15) / 30 - 101325) < 1, "the ideal gas gives the habitat's pressure back");
     });
 });
 
@@ -82,15 +109,6 @@ describe("each node on its own numbers", () => {
         assert.ok(Math.abs(perM3 - 2.69e-3) < 0.02e-3, `${perM3} kg/m3`);
         assert.ok(Math.abs(scrubber.effectiveFlowM3ps - 0) < 1e-12, "the flow starts at rest");
     });
-
-    it("the duct conserves CO2: what leaves A enters B, and nothing moves when both sides are alike", () => {
-        const duct = new HabitatDuctNode();
-        assert.equal(duct.co2FluxKgps, 0);
-        // The flux for a flow and two concentrations, by the same formula the node applies.
-        const flux = (q: number, a: number, b: number) => q * (co2MassPerM3(a, 101325, 295.15) - co2MassPerM3(b, 101325, 295.15));
-        assert.equal(flux(0.05, 1500, 1500), 0);
-        assert.ok(flux(0.05, 1600, 1500) > 0 && Math.abs(flux(0.05, 1600, 1500) + flux(0.05, 1500, 1600)) < 1e-15);
-    });
 });
 
 describe("the habitat reference as a document", () => {
@@ -120,6 +138,7 @@ describe("the habitat reference as a document", () => {
         assert.ok(rows[30].co2_lab_ppm > rows[0].co2_lab_ppm + 150, "the rise at 30 %");
         assert.ok(rows[60].co2_lab_ppm < rows[30].co2_lab_ppm - 250, "the decay at 100 %");
         assert.ok(rows[60].co2_habb_ppm > rows[0].co2_habb_ppm + 50, "Hab-B moves: the ventilation carries the Lab's CO2 to it");
+        assert.ok(Math.abs(rows[30].hvac_flow_m3ps * 60 - rows[30].fan_m3_per_min) < 1e-6, "the gate exchanges what the fan delivers");
         assert.ok(Math.abs(rows[60].scrubber_flow_m3ps - 0.055) < 1e-3, "the scrubber reaches full flow");
     });
 
