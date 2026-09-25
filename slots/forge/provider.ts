@@ -13,6 +13,8 @@
  * as the twin's, so `graph.evaluate` targets `runtimeSlot: "forge"` and
  * nothing else changes). Its own tools, in the order a plugin goes through:
  *
+ *   plugin_template  a complete minimal plugin exactly as the substrate
+ *                    accepts it (a gain), to write one on its shape
  *   plugin_write     the files of a plugin into the task's workshop
  *                    (outputs/factory/<task>/forge/<plugin>/): sources under
  *                    src/, cards under docs/; the layout and the imports
@@ -55,6 +57,7 @@ import { objectSchema, publishSlot, type PublishedSlot, type SlotTool } from "..
 import { runtimeEvents } from "../lib/events.js";
 import { checkPath, checkSources, checkTypes, type PluginFile, type Problem, type TypeCheck } from "./plugin-check.js";
 import { sha256Of, taskDir, WorkshopDocumentStore } from "../tools/lib/workshop.js";
+import { TEMPLATE_FILES, TEMPLATE_NOTE } from "./template.js";
 
 const VERSION = "0.1.0";
 export const PLUGINS_URI = "forge://plugins";
@@ -239,6 +242,11 @@ export function forgeSlot(wsBase: string, log: (line: string) => void, options: 
 
     const tools: SlotTool<ForgeState>[] = [
         {
+            name: "plugin_template",
+            inputSchema: objectSchema({}),
+            handle: () => ({ note: TEMPLATE_NOTE, plugin: "gain-template", files: TEMPLATE_FILES }),
+        },
+        {
             name: "plugin_write",
             inputSchema: objectSchema(
                 {
@@ -276,7 +284,8 @@ export function forgeSlot(wsBase: string, log: (line: string) => void, options: 
                 // The layout and the imports, judged on the whole plugin as it now stands: a refusal here is a refusal before any compilation.
                 const all = readPluginFiles(dir);
                 const layout = checkSources(all);
-                return { ok: layout.length === 0, plugin, written, files: all.map((f) => f.path), sha256: pluginSha256(all), problems: layout };
+                // The sources whole, as the plugin now stands: a builder on the reasoning state corrects what it reads here, not what it remembers.
+                return { ok: layout.length === 0, plugin, written, files: all.map((f) => f.path), sources: all, sha256: pluginSha256(all), problems: layout };
             },
         },
         {

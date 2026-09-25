@@ -1,9 +1,13 @@
 {
     "server": {
         "description": "La forge : le bac à sable du code, un runtime à part où un plugin généré est écrit, compilé sur une liste blanche d'imports, testé, vérifié par le code (des types sous Generated., une signature que le substrat valide et que le service des unités résout, une fiche), chargé par sha256 et exécuté comme sur le jumeau ; un artefact signé est proposé à la station, jamais poussé",
-        "instructions": "Dans l'ordre : plugin_write (src/index.ts qui exporte register(registry, doc), src/<nom>.node.ts, src/<nom>.test.ts, docs/<nom>.md), plugin_build, plugin_test, plugin_load ; ensuite registry_search, document_build et session_run voient les nouveaux types, et graph.evaluate peut viser ce slot. plugin_promote propose l'artefact à la station avec le rapport d'évaluation qui l'a jugé. Imports : @spiky-panda/core et les fichiers du plugin ; les tests peuvent importer node:test et node:assert. Un type généré est nommé sous Generated. et ne remplace jamais un type que le registre tient."
+        "instructions": "Dans l'ordre : plugin_template (à lire une fois), plugin_write (src/index.ts qui exporte register(registry, doc), src/<nom>.node.ts, src/<nom>.test.ts, docs/<nom>.md), plugin_build, plugin_test, plugin_load ; ensuite registry_search, document_build et session_run voient les nouveaux types, et graph.evaluate peut viser ce slot. plugin_promote propose l'artefact à la station avec le rapport d'évaluation qui l'a jugé. Imports : @spiky-panda/core et les fichiers du plugin ; les tests peuvent importer node:test et node:assert. Un type généré est nommé sous Generated. et ne remplace jamais un type que le registre tient."
     },
     "tools": {
+        "plugin_template": {
+            "title": "Modèle de plugin",
+            "description": "Un plugin minimal complet exactement comme le substrat l'accepte (un gain : l'entrée avec register(registry, doc), la classe du nœud sur RuntimeNode avec ses ports, un éditable, un observable, fire qui lit les signaux de la session et publie, le test, la fiche). Le lire avant d'écrire un plugin, et écrire le sien sur sa forme."
+        },
         "plugin_write": {
             "title": "Écrire un plugin",
             "description": "Les fichiers d'un plugin généré dans l'atelier de la tâche : les sources sous src/ (l'entrée index.ts qui exporte register(registry, doc), les nœuds, les tests), les fiches sous docs/. La disposition et les imports sont vérifiés à l'écriture ; un refus nomme le fichier et la règle."
@@ -26,8 +30,14 @@
         }
     },
     "resources": {
-        "forge://plugins": { "description": "Les plugins chargés dans la forge : id, sha256, types, fichiers, provenance (tâche et nom du plugin)." },
-        "forge://builds": { "description": "Chaque compilation, réussie ou refusée, avec ses diagnostics ; les tests et vérifications passés dessus." },
-        "forge://proposals": { "description": "Chaque artefact proposé à la station, avec l'id de proposition de la station." }
+        "forge://plugins": {
+            "description": "Les plugins chargés dans la forge : id, sha256, types, fichiers, provenance (tâche et nom du plugin)."
+        },
+        "forge://builds": {
+            "description": "Chaque compilation, réussie ou refusée, avec ses diagnostics ; les tests et vérifications passés dessus."
+        },
+        "forge://proposals": {
+            "description": "Chaque artefact proposé à la station, avec l'id de proposition de la station."
+        }
     }
 }

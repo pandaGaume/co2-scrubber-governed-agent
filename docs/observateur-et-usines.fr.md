@@ -327,8 +327,25 @@ Le constructeur scripté (`harness/scripted/code.ts`, la fixture
 la tâche avec son manifeste), le catalogue du jumeau ne voit rien. Avec un
 mauvais nom de type d'abord, la garde refuse l'écriture, nomme la règle, le
 script corrige, une seule compilation est dépensée (`tests/code.test.ts`).
-Le prompt du sujet pour un modèle est écrit (`harness/topics/code/prompt.md`) ;
-il n'a pas encore été passé sur Haiku.
+**Trois passages sur Haiku** (`scripts/code-example.ts`, la même demande :
+une fuite de CO2 qu'aucun nœud du catalogue ne produit ; les journaux, les
+traces et les plugins écrits sous `docs/exemples/2026-09-26-forge-<n>-haiku-code/`).
+Ce que chacun a montré, et ce qui en est sorti :
+
+| passage | ce qui s'est passé | ce qui a changé |
+|---|---|---|
+| 1 | le plan corrigé en un refus (le nom de la sortie écrit avec sa grandeur) ; le plugin écrit sur une API inventée (`registerNodeType`, `factory:`, `ports:`, des imports sans extension) ; `plugin_build` appelé avec `taskId: "build"` et refusé par la forge dix-sept fois de suite, la même entrée à chaque fois ; budget épuisé, 70 k jetons | l'id de la tâche lié pour les outils `forge.plugin_*` comme pour l'atelier (le modèle ne l'écrit plus) ; la garde des répétitions refuse aussi l'appel identique à un appel qui a échoué ; `forge.plugin_template`, un plugin minimal complet exactement comme le substrat l'accepte (un gain), exigé avant l'écriture ; le brief du plan nomme les sorties exactement |
+| 2 | le plan encore corrigé en un refus (le brief n'était pas encore corrigé) ; le modèle lit le modèle de plugin, écrit un `index.ts` juste et un nœud à côté (`InputPort`, `OutputPort`, `@editable()` sans argument) ; cinq diagnostics ; puis il tente de relire son fichier à un mauvais chemin, sept fois le modèle, huit fois la liste : sur l'état de raisonnement il n'a plus ce qu'il a écrit ; budget épuisé, 80 k jetons | la forge répond à une écriture avec les sources entières telles qu'elles sont ; l'état porte le plugin entier (`hypothesis.plugin.sources`) et le modèle de plugin entier tant que rien n'est compilé ; le brief d'une compilation échouée dit de corriger là, contre le modèle, et de ne renvoyer que les fichiers qui changent |
+| 3 | 14 pas, aucun refus, 76 k jetons, 67 s : le catalogue, le plan, le modèle lu, le plugin écrit sur sa forme (`Generated.Physics:leak-co2`, une commande bornée, un débit éditable, un observable), compilé du premier coup, testé, chargé, un document construit quatre fois (les mêmes clés dans un autre ordre, la garde des répétitions ne l'a pas vu), exécuté, proposé, remis ; la tâche `proposed`, l'artefact signé au manifeste | la garde des répétitions compare en JSON canonique (clés triées) |
+
+Ce que ces passages disent : sur l'état de raisonnement, tout ce que le
+modèle doit corriger doit être dans l'état entier, ses propres fichiers
+compris ; et une API se lit sur un exemple qui compile, jamais de mémoire.
+Le plugin du troisième passage est celui de la fixture à quelques noms près,
+écrit par le modèle sur le modèle de plugin. Ce qui reste : le document que
+le modèle a construit ne câblait pas la commande (la fuite y vaut zéro), et
+l'exigence « exécuté » s'en contente ; une vérification sur ce que la sonde
+a montré est à écrire.
 
 ## 7. Le cache du prompt
 
@@ -356,5 +373,5 @@ fait ; la conception est la même.
 | le cache du prompt côté Anthropic | construit ; inactif sous le seuil de Haiku 4.5 |
 | l'aiguillage vers les usines | à construire (section 4) |
 | l'usine de graphes, et la boucle écart puis correction | construite le 24 septembre (`usine-de-graphes.fr.md`, exemple complet dans `exemple-mise-en-service.fr.md`) |
-| l'usine de code et le plugin `generated` | construits : le slot `forge` (section 6.2) et le sujet `code` sur lui (section 6.3), la nuit du 25 septembre, branche `forge` ; scriptés et testés sans clé ; pas encore passés sur un modèle ; le branchement automatique d'une capacité manquante de l'usine de graphes sur une tâche `code` reste à faire |
+| l'usine de code et le plugin `generated` | construits : le slot `forge` (section 6.2) et le sujet `code` sur lui (section 6.3), la nuit du 25 septembre, branche `forge` ; scriptés et testés sans clé ; passés sur Haiku, la chaîne entière tenue au troisième passage (14 pas, 76 k jetons) ; le branchement automatique d'une capacité manquante de l'usine de graphes sur une tâche `code` reste à faire |
 | le superviseur des contrats | construit la nuit du 25 septembre (`harness-refactoring.fr.md`, section 16) : un rôle sur le slot `reasoner`, un verdict typé gardé par code, l'Observateur renvoyé dans sa boucle, l'usine de graphes qui lit le verdict |

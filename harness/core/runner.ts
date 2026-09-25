@@ -215,7 +215,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         profile: {
             included: topic.tools,
             bindings: [
-                { match: /^(workspace|model)\./, constants: { taskId } },
+                { match: /^(workspace|model)\.|^forge\.plugin_(write|build|test|load|promote)$/, constants: { taskId } },
                 { match: new RegExp(`^${runtimeSlot}\\.(document_build|document_instantiate|session_run)$`), rewrite: (input) => (typeof input.name === "string" ? { ...input, name: `${taskId}/${input.name}` } : input) },
             ],
             local: [...taskCapabilities(broker, taskId, progress), ...(topic.local?.({ broker, taskId, task, progress }) ?? [])],

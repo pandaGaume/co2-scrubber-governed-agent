@@ -50,7 +50,7 @@ import { candidatesOf, evaluateCapability } from "../graph/index.js";
 
 export const CODE_TOOLS: ReadonlyArray<RegExp> = [
     /^forge\.registry_(search|describe_node|list_nodes)$/,
-    /^forge\.plugin_(write|build|test|load|promote)$/,
+    /^forge\.plugin_(template|write|build|test|load|promote)$/,
     /^forge\.document_(validate|build)$/,
     /^forge\.session_run$/,
     /^library\.(list|methods|search|read|facts)$/,
@@ -74,8 +74,15 @@ interface WriteAnswer {
     ok?: boolean;
     plugin?: string;
     files?: string[];
+    /** The plugin's files whole, as they stand after the write: the state carries them, the model corrects them there. */
+    sources?: Array<{ path: string; content: string }>;
     sha256?: string;
     problems?: Array<{ where: string; what: string }>;
+}
+interface TemplateAnswer {
+    plugin?: string;
+    files?: Array<{ path: string; content: string }>;
+    note?: string;
 }
 interface BuildAnswer {
     id?: string;
@@ -124,6 +131,7 @@ const read = <T>(progress: Progress, capability: string): T | undefined => progr
 /** What the forge answered at each stage of this task, from the runner's reads (the last successful answer of each capability). */
 function stagesOf(progress: Progress) {
     return {
+        template: read<TemplateAnswer>(progress, "forge.plugin_template"),
         written: read<WriteAnswer>(progress, "forge.plugin_write"),
         build: read<BuildAnswer>(progress, "forge.plugin_build"),
         tests: read<TestAnswer>(progress, "forge.plugin_test"),
@@ -166,6 +174,7 @@ export function requirementsOf(progress: Progress, task: TaskFile["task"]): Reco
     return {
         catalogueSearched: progress.reads["forge.registry_search"] !== undefined,
         planAccepted: progress.plan !== null,
+        templateRead: progress.reads["forge.plugin_template"] !== undefined,
         written: s.written?.ok === true,
         built: s.build?.ok === true && s.build.sha256 === s.written?.sha256,
         tested: s.tests?.ok === true && s.build?.ok === true && s.tests.build === s.build.id,
@@ -178,6 +187,7 @@ export function requirementsOf(progress: Progress, task: TaskFile["task"]): Reco
 
 const HOW: Record<string, string> = {
     catalogueSearched: "search the forge's catalogue first (forge.registry_search, the required outputs' quantities): a node is written only for what nothing produces",
+    templateRead: "read the forge's template (forge.plugin_template): a complete minimal plugin exactly as the substrate accepts it",
     written: "write the plugin (forge.plugin_write)",
     built: "compile it (forge.plugin_build); a build older than the files does not count",
     tested: "test it (forge.plugin_test) on the last build; the tests and the checks must pass",
@@ -200,10 +210,10 @@ async function guardCode(capabilityId: string, input: JsonValue, context: TopicC
     }
     if (capabilityId === "forge.plugin_write") {
         const problems: string[] = [];
-        const w = (input ?? {}) as { plugin?: unknown; files?: unknown; taskId?: unknown };
+        const w = (input ?? {}) as { plugin?: unknown; files?: unknown };
         const plugin = String(w.plugin ?? "");
         if (state.plugin && plugin && plugin !== state.plugin) problems.push(`one plugin per task: this task's is "${state.plugin}" (write into it, with replace: true to start it over)`);
-        if (w.taskId !== undefined && String(w.taskId) !== context.taskId) problems.push(`taskId is this task's: "${context.taskId}"`);
+        if (!requirements.templateRead) problems.push("read the forge's template first (forge.plugin_template): a complete minimal plugin exactly as the substrate accepts it; the first passage guessed the registry's API and the compiler would have refused every file");
         const files = Array.isArray(w.files) ? (w.files as Array<{ path?: unknown; content?: unknown }>) : [];
         for (const type of typesWritten(files)) if (!type.startsWith(GENERATED_PREFIX)) problems.push(`the type "${type}" is not named under "${GENERATED_PREFIX}" (as in "${GENERATED_PREFIX}Habitat:leak"): every catalogue must say a node is generated; the forge refuses it at its checks, so name it now`);
         return problems;
@@ -247,7 +257,9 @@ export function stateOfTopic(progress: Progress, task: TaskFile["task"]): TopicS
             gap: task.objective.required_outputs.map((o) => `${o.name} (${o.quantity}${o.unit ? `, ${o.unit}` : ""})`),
             missing: progress.plan?.missing_capabilities.map((m) => ({ output: m.required_output, reason: m.reason })) ?? null,
             catalogue: catalogue ? (catalogue.matches ?? []).slice(0, 12).map((m) => `${m.type}: ${m.signature?.purpose ?? ""}`.slice(0, 160)) : null,
-            plugin: state.plugin ? { name: state.plugin, files: s.written?.files ?? [], sha256: s.written?.sha256 ?? null, build: s.build ? { id: s.build.id ?? null, ok: s.build.ok === true, current: s.build.sha256 === s.written?.sha256 } : null, tests: s.tests ? { ok: s.tests.ok === true, pass: s.tests.pass ?? 0, fail: s.tests.fail ?? 0, types: (s.tests.types ?? []).map((t) => `${t.type}: ${t.ok ? "ok" : t.problems.join("; ")}`) } : null, loaded: s.loaded?.types ?? null, ran: ran.ran ? ran.how : null, proposal: s.promoted ? { id: s.promoted.id ?? null, path: s.promoted.path ?? null, artifactSha256: s.promoted.artifactSha256 ?? null, station: s.promoted.stationProposalId ?? null } : null } : null,
+            // The template whole until the plugin compiles (the shape to write on), the plugin's sources whole from the first write (what is corrected): the state carries what the model needs whole.
+            template: s.template && !requirements.built ? (s.template.files ?? []) : null,
+            plugin: state.plugin ? { name: state.plugin, files: s.written?.files ?? [], sources: s.written?.sources ?? [], sha256: s.written?.sha256 ?? null, build: s.build ? { id: s.build.id ?? null, ok: s.build.ok === true, current: s.build.sha256 === s.written?.sha256 } : null, tests: s.tests ? { ok: s.tests.ok === true, pass: s.tests.pass ?? 0, fail: s.tests.fail ?? 0, types: (s.tests.types ?? []).map((t) => `${t.type}: ${t.ok ? "ok" : t.problems.join("; ")}`) } : null, loaded: s.loaded?.types ?? null, ran: ran.ran ? ran.how : null, proposal: s.promoted ? { id: s.promoted.id ?? null, path: s.promoted.path ?? null, artifactSha256: s.promoted.artifactSha256 ?? null, station: s.promoted.stationProposalId ?? null } : null } : null,
         } as JsonValue,
         evaluation: lastRefusal && (!evaluation || lastRefusal[1].at > (progress.reads[Object.keys(progress.reads).at(-1) ?? ""]?.at ?? "")) ? ({ refused: lastRefusal[0], reason: lastRefusal[1].reason, ...(evaluation && typeof evaluation === "object" ? { last: evaluation } : {}) } as JsonValue) : evaluation,
         openQuestions,
@@ -284,10 +296,12 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
     const refused = (cap: string) => (progress.refusals[cap] ? ` Your last ${cap} was refused: ${progress.refusals[cap].reason}. What you sent is in the state (lastRefusal); change what the reasons name.` : "");
     if (r.promoted) return `Stage 6 of 6, hand over. The forge signed ${s.promoted?.path ?? "the artifact"} (proposal ${s.promoted?.id ?? "?"}${s.promoted?.stationProposalId ? `, the station's ${s.promoted.stationProposalId}` : ""}). End with task.done, the artifact of kind "plugin" at that path.${refused("task.done")}`;
     if (!r.catalogueSearched) return `Stage 1 of 6, the gap. Required and produced by no node: ${outputs}. Search the forge's catalogue for these quantities first (forge.registry_search with requiredOutputs, then registry_describe_node on the closest types: their ports say how this catalogue names quantities and units). The library holds the physics (library.search, library.read).`;
-    if (!r.planAccepted) return `Stage 2 of 6, the plan. Declare with task.plan: selected_nodes empty, one entry per required output in missing_capabilities (required_output is the name exactly), its reason, topic "code".${refused("task.plan")}`;
-    if (!r.written) return `Stage 3 of 6, the plugin. Write it with forge.plugin_write (taskId "${task.id}"): src/index.ts exporting register(registry, doc) that registers each type under "${GENERATED_PREFIX}" with its label, category, docPath (doc("<card>.md")), inputPorts and outputPorts read off one instance, and a signature (purpose, inputs and outputs with quantity and unit as the catalogue names them, capabilities); src/<name>.node.ts, a class on the substrate's RuntimeNode (or IntegrableRuntimeNode for a state), reading its inputs from the session's signals and publishing its outputs; src/<name>.test.ts on node:test; docs/<name>.md. Imports: "@spiky-panda/core" and the plugin's own files, nothing else.${refused("forge.plugin_write")}`;
-    if (!r.built) return `Stage 4 of 6, compiled. ${s.build && !s.build.ok ? `The build failed: the diagnostics are in the state under evaluation (file, line, code, message). Correct the files they name with forge.plugin_write (the same plugin "${stateOf(progress).plugin}", only the files that change), then forge.plugin_build again.` : `The plugin is written (${(s.written?.files ?? []).join(", ")}). Compile it: forge.plugin_build.`}${refused("forge.plugin_build")}`;
-    if (!r.tested) return `Stage 4 of 6, tested. ${s.tests && !s.tests.ok && s.tests.build === s.build?.id ? "The tests or the checks refused: the reasons are in the state under evaluation (the failing checks name the type, the port, the rule; the tests' output is there). Correct the files, compile again, test again." : "Compiled. Test it: forge.plugin_test (the plugin's tests, then the forge's checks)."}${refused("forge.plugin_test")}`;
+    const names = task.objective.required_outputs.map((o) => `required_output "${o.name}" (quantity "${o.quantity}"${o.unit ? `, unit "${o.unit}"` : ""})`).join("; ");
+    if (!r.planAccepted) return `Stage 2 of 6, the plan. Declare with task.plan: selected_nodes empty, and in missing_capabilities one entry per required output, ${names}, with its reason and the topic "code"; required_output is the name exactly, nothing added to it.${refused("task.plan")}`;
+    if (!r.templateRead) return `Stage 3 of 6, the plugin. Read the forge's template first (forge.plugin_template): a complete minimal plugin exactly as the substrate accepts it, its entry, its node class, its test, its card. You will write yours on its shape.`;
+    if (!r.written) return `Stage 3 of 6, the plugin. Write it with forge.plugin_write, on the template's shape (the template's files are in the state under hypothesis, field "template", whole; nothing to read again): src/index.ts exporting register(registry, doc) that calls reg.register(type, factory, meta) for each type named under "${GENERATED_PREFIX}", the meta with label, category, docPath (doc("<card>.md")), inputPorts and outputPorts read off one instance, and a signature (purpose, inputs and outputs with quantity and unit as the catalogue names them, each one a declared port, at least one capability); src/<name>.node.ts, a class on RuntimeNode (IntegrableRuntimeNode for a state integrated over time) with its ports on the instance, @editable parameters, @viewable values, fire() reading the session's signals and publishing; src/<name>.test.ts on node:test; docs/<name>.md. Imports: "@spiky-panda/core" and the plugin's own files with the .js extension, nothing else.${refused("forge.plugin_write")}`;
+    if (!r.built) return `Stage 4 of 6, compiled. ${s.build && !s.build.ok ? `The build failed: the diagnostics are in the state under evaluation (file, line, code, message). Your files are in the state under hypothesis, field "plugin.sources" (path and content, whole; they are not files of the workshop root, nothing to read): correct them there, against the template (field "template": its imports, its ports as IPortDescriptor objects, its decorators with their argument, its override modifiers), and send with forge.plugin_write only the files that change (plugin "${stateOf(progress).plugin}"; the others stay); then forge.plugin_build again.` : `The plugin is written (${(s.written?.files ?? []).join(", ")}). Compile it: forge.plugin_build.`}${refused("forge.plugin_build")}`;
+    if (!r.tested) return `Stage 4 of 6, tested. ${s.tests && !s.tests.ok && s.tests.build === s.build?.id ? `The tests or the checks refused: the reasons are in the state under evaluation (the failing checks name the type, the port, the rule; the tests' output is there). Your files are in the state under hypothesis, field "plugin.sources": correct them there, send with forge.plugin_write only the files that change (plugin "${stateOf(progress).plugin}"), compile again, test again.` : "Compiled. Test it: forge.plugin_test (the plugin's tests, then the forge's checks)."}${refused("forge.plugin_test")}`;
     if (!r.loaded) return `Stage 4 of 6, loaded. Tests and checks passed (${s.tests?.pass ?? 0} test(s), types ${(s.tests?.types ?? []).map((t) => t.type).join(", ")}). Load it: forge.plugin_load.${refused("forge.plugin_load")}`;
     if (!r.ran) {
         if (telemetry) return `Stage 5 of 6, judged. The plugin is loaded in the forge (${(s.loaded?.types ?? []).join(", ")}). Build the candidate that answers the request with it and judge it against the telemetry: graph.evaluate (it runs on the forge's catalogue; the same thresholds and diagnosis as the graph factory's).${ran.how === "evaluate" && ran.held === false ? " The last candidate did not hold: its residuals are under evaluation; revise the node (write, build, test, load again) or the candidate." : ""}${refused("graph.evaluate")}`;
@@ -339,7 +353,7 @@ export const CODE_TOPIC: TopicDefinition = {
     },
     key: (progress) => {
         const r = requirementsOf(progress, { objective: { required_outputs: [], constraints: {} }, data: [] } as unknown as TaskFile["task"]);
-        return ["written", "built", "tested", "loaded", "ran", "promoted"].filter((k) => r[k]).join(",");
+        return ["templateRead", "written", "built", "tested", "loaded", "ran", "promoted"].filter((k) => r[k]).join(",");
     },
     intention: intentionOf,
     prompt: CODE_PROMPT,

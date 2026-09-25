@@ -1,0 +1,46 @@
+{
+  "kind": "plugin",
+  "plugin": "leak-co2",
+  "taskId": "t-2026-09-25-0045",
+  "sha256": "0d8708806fad778daed69f5b18d5df7f438d4c5efa195c8f1db7ea3b848b82cf",
+  "files": [
+    {
+      "path": "docs/leak-co2.md",
+      "sha256": "f43df0897df21836ecb012a404ffcc6ab8560cd853423462e113f6a2e76023e9"
+    },
+    {
+      "path": "src/index.ts",
+      "sha256": "acb5ac48f118fde73937f7b79f92f32ec4c4c0b7df5d95a5649be83d00186232"
+    },
+    {
+      "path": "src/leak-co2.node.ts",
+      "sha256": "0e36a683e5ccfdcd0ba2e047f51c040783aa8d36780d42268b37dca3b921e9a6"
+    },
+    {
+      "path": "src/leak-co2.test.ts",
+      "sha256": "8b329157356f684195acacc4e22b0c5a78d00ab1b7f7761c785ca9f685a60917"
+    }
+  ],
+  "types": [
+    "Generated.Physics:leak-co2"
+  ],
+  "build": {
+    "id": "b0001-0d870880",
+    "at": "2026-09-25T21:28:17.484Z",
+    "ms": 731
+  },
+  "tests": {
+    "at": "2026-09-25T21:28:19.718Z",
+    "pass": 2,
+    "fail": 0,
+    "checks": [
+      {
+        "type": "Generated.Physics:leak-co2",
+        "ok": true,
+        "problems": []
+      }
+    ]
+  },
+  "evaluation": null,
+  "proposedAt": "2026-09-25T21:28:41.172Z"
+}

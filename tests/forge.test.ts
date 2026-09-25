@@ -127,6 +127,18 @@ describe("a generated plugin through the forge", () => {
         assert.equal(state.builds.filter((b) => b.plugin === "leak").length, 1);
     });
 
+    it("the forge's template compiles, passes its test and the checks: what it hands out is what it accepts", async () => {
+        const template = await call<{ plugin: string; files: Array<{ path: string; content: string }>; note: string }>("plugin_template", {});
+        assert.deepEqual(template.files.map((f) => f.path), ["src/index.ts", "src/gain.node.ts", "src/gain.test.ts", "docs/gain.md"]);
+        const w = await call<{ ok: boolean; problems: unknown[] }>("plugin_write", { taskId, plugin: template.plugin, files: template.files });
+        assert.equal(w.ok, true, JSON.stringify(w.problems));
+        const build = await call<Build>("plugin_build", { taskId, plugin: template.plugin });
+        assert.equal(build.ok, true, JSON.stringify(build.diagnostics));
+        const tests = await call<TestRun>("plugin_test", { taskId, plugin: template.plugin });
+        assert.equal(tests.ok, true, JSON.stringify({ output: tests.output, types: tests.types }));
+        assert.deepEqual(tests.types.map((t) => t.type), ["Generated.Example:gain"]);
+    });
+
     it("refused by the checks: a type not named under Generated. and a unit the units service does not know; refused by the compiler: a type error named", async () => {
         const w = await call<{ ok: boolean }>("plugin_write", { taskId, plugin: "leak-bad", files: fixture("Physics.Habitat:leak", "kg/fortnight") });
         assert.equal(w.ok, true);

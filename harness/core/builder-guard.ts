@@ -106,8 +106,12 @@ export function createBuilderGuard(options: BuilderGuardOptions): SafetyGuard {
             const last = options.progress?.lastCall;
             // The executed call carries what the profile bound (the task's id, the sandbox's name): compared without them.
             const unbound = (v: unknown): unknown => (v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v as Record<string, unknown>).filter(([k]) => k !== "taskId")) : v);
-            if (last && last.result.ok && last.id === id && !/^task\./.test(id) && JSON.stringify(unbound(last.input ?? null)) === JSON.stringify(unbound(decision.invocation.input ?? null))) {
-                return { allowed: false, reason: `${id} with the same input was the previous step, and completed: its answer is in the state (lastAction, and evidence for a read); calling it again gives the same answer. Decide from what the state holds, or call something else.` };
+            // Compared as canonical JSON, the keys sorted at every level: the same call with its keys in another order is the same call (the third passage of the code topic built the same document four times, {spec, name} then {name, spec}).
+            const canonical = (v: unknown): string => JSON.stringify(v, (_k, x) => (x && typeof x === "object" && !Array.isArray(x) ? Object.fromEntries(Object.entries(x as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b))) : x));
+            if (last && last.id === id && !/^task\./.test(id) && canonical(unbound(last.input ?? null)) === canonical(unbound(decision.invocation.input ?? null))) {
+                if (last.result.ok) return { allowed: false, reason: `${id} with the same input was the previous step, and completed: its answer is in the state (lastAction, and evidence for a read); calling it again gives the same answer. Decide from what the state holds, or call something else.` };
+                // A failed call repeated as it was fails as it did (2026-09-26, the first passage of the code topic: the same plugin_build refused seventeen times): its error is in the state; what it names is what changes.
+                return { allowed: false, reason: `${id} with the same input was the previous step, and failed: ${String(last.result.error ?? last.result.outcome).slice(0, 300)}. The same call fails the same way: change what the error names, or call something else.` };
             }
             if (id === "task.plan") {
                 const problems = await planProblems(decision.invocation.input as unknown as Plan, options);

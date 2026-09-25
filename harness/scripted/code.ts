@@ -54,29 +54,31 @@ export class ScriptedCodeBuilder implements Provider {
         const taskId = task.id;
         if (last && !last.result.ok) return decide("task.fail", { reason: (last.result.error ?? last.result.outcome).replace(/^(device refused|error):\s*/i, "") }, `${last.id} failed: nothing else to try`);
         // A refused write: the guard named the naming rule; the script corrects the type.
-        if (/is not named under "Generated\."/.test(refusal)) return decide("forge.plugin_write", { taskId, plugin, files: leakFixture(LEAK_TYPE) as unknown as JsonValue }, "corrected: the type named under Generated.");
+        if (/is not named under "Generated\."/.test(refusal)) return decide("forge.plugin_write", { plugin, files: leakFixture(LEAK_TYPE) as unknown as JsonValue }, "corrected: the type named under Generated.");
         switch (after) {
             case "plan:":
                 return decide("forge.registry_search", { requiredOutputs: task.objective.required_outputs.map((o) => ({ quantity: o.quantity, ...(o.unit ? { unit: o.unit } : {}) })) }, "what the forge's catalogue produces for the required outputs");
             case "plan:forge.registry_search":
                 return decide("task.plan", { selected_nodes: [], missing_capabilities: task.objective.required_outputs.map((o) => ({ required_output: o.name, quantity: o.quantity, ...(o.unit ? { unit: o.unit } : {}), reason: "no node of the catalogue produces it: a leak out of a volume", topic: "code" })) }, "nothing produces it: the node is written");
             case "build:task.plan":
-                return decide("forge.plugin_write", { taskId, plugin, files: leakFixture(firstType) as unknown as JsonValue }, "the leak plugin: its entry, its node, its test, its card");
+                return decide("forge.plugin_template", {}, "the shape of a plugin the substrate accepts");
+            case "build:forge.plugin_template":
+                return decide("forge.plugin_write", { plugin, files: leakFixture(firstType) as unknown as JsonValue }, "the leak plugin: its entry, its node, its test, its card");
             case "build:forge.plugin_write": {
                 const written = valueOf(last) as { ok?: boolean };
-                if (written.ok === false) return decide("forge.plugin_write", { taskId, plugin, files: leakFixture(LEAK_TYPE) as unknown as JsonValue, replace: true }, "the forge refused the files: written again, whole");
-                return decide("forge.plugin_build", { taskId, plugin }, "compile it");
+                if (written.ok === false) return decide("forge.plugin_write", { plugin, files: leakFixture(LEAK_TYPE) as unknown as JsonValue, replace: true }, "the forge refused the files: written again, whole");
+                return decide("forge.plugin_build", { plugin }, "compile it");
             }
             case "build:forge.plugin_build":
-                return decide("forge.plugin_test", { taskId, plugin }, "its tests, then the forge's checks");
+                return decide("forge.plugin_test", { plugin }, "its tests, then the forge's checks");
             case "build:forge.plugin_test":
-                return decide("forge.plugin_load", { taskId, plugin }, "into the forge's catalogue");
+                return decide("forge.plugin_load", { plugin }, "into the forge's catalogue");
             case "build:forge.plugin_load":
                 return decide("forge.document_build", { spec: leakSpec() as unknown as JsonValue, name: `${taskId}/leak-run` }, "a document that wires the node");
             case "build:forge.document_build":
                 return decide("forge.session_run", { name: `${taskId}/leak-run`, dt: 60, duration: 180, probes: [{ node: "leak", property: "co2DeltaKgps" }] }, "run it three minutes");
             case "build:forge.session_run":
-                return decide("forge.plugin_promote", { taskId, plugin }, "propose the signed artifact to the station");
+                return decide("forge.plugin_promote", { plugin }, "propose the signed artifact to the station");
             default: {
                 const promoted = valueOf(last) as { path?: string };
                 return decide("task.done", { summary: "the leak node, generated: compiled, tested, checked, loaded and run in the forge; proposed to the station", artifacts: [{ kind: "plugin", path: promoted.path ?? `forge/${plugin}/artifact.json` }] }, "the artifact the forge signed");
