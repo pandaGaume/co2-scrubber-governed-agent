@@ -120,7 +120,7 @@ export class OpenAiCompatibleProvider implements Provider {
         this.exchanges.push({
             decisionId: input.decisionId,
             model: this.model,
-            request: compactRequest(this.messages.slice(0, -1), tools.map((t) => t.function.name)),
+            request: compactRequest(this.messages.slice(0, -1), tools.map((t) => ({ name: t.function.name, description: t.function.description })), this.options.systemPrompt),
             response: completion,
             decision,
             proposedCapabilityId: call ? fromApiName(call.function.name) : "crew.report",

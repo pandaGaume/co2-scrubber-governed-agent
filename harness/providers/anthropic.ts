@@ -86,7 +86,9 @@ export class AnthropicProvider implements Provider {
         // The system prompt is a role's fixed text (the agent's, a topic's, the Observer's): marked for the provider's cache, so
         // the tools and the prompt, which come first and do not change, are not billed again at every step; what varies follows.
         const system = [{ type: "text", text: this.options.systemPrompt, cache_control: { type: "ephemeral" } }];
-        const body = { model: this.model, system, messages: this.messages, tools, tool_choice: { type: "auto", disable_parallel_tool_use: true }, max_tokens: this.maxTokens, temperature: this.options.temperature ?? 0.2 };
+        // A Claude 5 model (Opus 5.5, Sonnet 5, Fable) always thinks, and a fixed temperature is refused with it: the sampling is the model's there.
+        const thinksAlways = /^claude-(opus-5|sonnet-5|fable|mythos)/.test(this.model);
+        const body = { model: this.model, system, messages: this.messages, tools, tool_choice: { type: "auto", disable_parallel_tool_use: true }, max_tokens: this.maxTokens, ...(thinksAlways ? {} : { temperature: this.options.temperature ?? 0.2 }) };
         const started = Date.now();
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), this.options.timeoutMs ?? 60000);
@@ -122,7 +124,7 @@ export class AnthropicProvider implements Provider {
         this.exchanges.push({
             decisionId: input.decisionId,
             model: this.model,
-            request: compactRequest(this.messages.slice(0, -1), tools.map((t) => t.name)),
+            request: compactRequest(this.messages.slice(0, -1), tools.map((t) => ({ name: t.name, description: t.description })), this.options.systemPrompt),
             response: result,
             decision,
             proposedCapabilityId: toolUse ? fromApiName(toolUse.name) : "crew.report",

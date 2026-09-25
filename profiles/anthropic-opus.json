@@ -1,0 +1,21 @@
+{
+    "_comment": "The same provider as profiles/anthropic.json with Claude Opus 5.5 behind the reasoner slot, to compare a passage of the example against Haiku 4.5 (result and cost): REASONER_PROFILE=profiles/anthropic-opus.json npm run example:commissioning.",
+    "name": "anthropic-opus",
+    "tier3": {
+        "wire": "anthropic-messages",
+        "model": "claude-opus-5-5",
+        "apiKey": {
+            "env": "ANTHROPIC_API_KEY"
+        },
+        "capabilities": [
+            "tools",
+            "json"
+        ]
+    },
+    "gateway": {
+        "host": "laptop"
+    },
+    "factory": {
+        "runner": "local"
+    }
+}

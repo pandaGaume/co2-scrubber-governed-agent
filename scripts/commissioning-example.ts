@@ -19,8 +19,12 @@
  * the truth the graph factory has to find; the journal keeps them to compare.
  *
  * The journal is written as JSON and as markdown under
- * `outputs/examples/<stamp>/`. It needs the reasoner's key (`.env`); without
- * it the model loops fail and say why.
+ * `outputs/examples/<stamp>/`, and the whole trace of every loop that asked
+ * the model under `trace/`: per step the node, the call with its input and
+ * its output, the prompt added since the previous call and the raw answer
+ * (`scripts/render-trace.ts`; the factory tasks' own `trace.jsonl`, the
+ * Observer's exchanges written the same way). It needs the reasoner's key
+ * (`.env`); without it the model loops fail and say why.
  *
  *     node --env-file=.env dist/scripts/commissioning-example.js
  */
@@ -36,6 +40,8 @@ import { factoryContractOf } from "../harness/observer/request.js";
 import { LAB_WORLD, TwoZoneWorldSim, type TelemetryRow } from "../harness/stand-in/two-zone-world.js";
 import { runProcedure } from "../tier3/procedure.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
+import { renderTrace, renderTraceFile, type RenderableLine } from "./render-trace.js";
+import { GRAPH_PROMPT } from "../harness/topics/graph/index.js";
 import { evaluateCandidate, STATION_GRAPH_ID, stationReference, type Candidate } from "../harness/topics/graph/evaluate.js";
 import { deliveredFlowM3PerMinute, readHabitatParameters } from "../lib/habitat.js";
 import { compareGraphs, compareParameters, referenceOfSpec } from "../harness/topics/graph/reference.js";
@@ -112,6 +118,16 @@ async function main(): Promise<void> {
         console.log(`loop ${loop.n} ${loop.name}: ${loop.decisions ?? "-"} decision(s), ${Object.values(loop.tools).reduce((a, b) => a + b, 0)} call(s), ${Math.round(loop.ms / 1000)} s`);
         return loop;
     };
+    const traceDir = path.join(outDir, "trace");
+    mkdirSync(traceDir, { recursive: true });
+    /** The whole trace of a factory task, rendered next to the journal: every step, every prompt, every raw answer. */
+    const traceOfTask = (n: number, name: string, taskId: string, promptFile: string) => {
+        const file = path.join(taskDir(taskId), "trace.jsonl");
+        if (!existsSync(file)) return null;
+        const stem = `${String(n).padStart(2, "0")}-${name.replace(/\s+/g, "-")}`;
+        writeFileSync(path.join(traceDir, `${stem}.jsonl`), readFileSync(file));
+        return relativeToRoot(renderTraceFile(file, path.join(traceDir, `${stem}.md`), { title: `Loop ${n}, ${name}: task ${taskId}`, promptFile }));
+    };
     /** A factory task, run by the model, read back from its manifest: the steps, the refusals, the tokens. */
     const factoryLoop = async (taskId: string) => {
         const t0 = Date.now();
@@ -148,8 +164,10 @@ async function main(): Promise<void> {
         });
         operator.take();
         const p = await factoryLoop(reqP.taskId);
+        const procedureTrace = traceOfTask(2, "procedure-factory", reqP.taskId, "harness/topics/procedure/prompt.md");
         operator.take(); // the polling of the task is the script's, not the loop's
         const scorecard = JSON.parse(readFileSync(path.join(taskDir(reqP.taskId), "scorecard.json"), "utf8"));
+        void procedureTrace;
         await record(
             {
                 name: "procedure factory",
@@ -236,6 +254,21 @@ async function main(): Promise<void> {
             },
             t0,
         );
+        // The Observer's trace, in the same shape as a task's: one line per model call, the request it proposed and the guard's answer.
+        const observerLines: RenderableLine[] = model.exchanges.map((x, i) => {
+            const attempt = obs.attempts.find((a) => a.n === i + 1);
+            const isRequest = x.proposedCapabilityId === "observer.request";
+            return {
+                n: i + 1,
+                source: "model",
+                trace: { stateBefore: { features: { phase: "observe", lastCapability: i > 0 ? model.exchanges[i - 1].proposedCapabilityId : null } }, decision: { rationale: x.decision?.rationale } },
+                call: { id: x.proposedCapabilityId, input: x.proposedInput, result: isRequest && attempt ? { ok: attempt.ok, outcome: attempt.ok ? "accepted" : "refused", ...(attempt.ok ? {} : { error: attempt.problems.join("; ") }), output: attempt.ok ? { accepted: true } : { problems: attempt.problems } } : { ok: true, outcome: "completed", output: obs.reads.includes(`${x.proposedCapabilityId} ${String((x.proposedInput as { id?: unknown })?.id ?? "")}`.trim()) ? { read: true } : null } },
+                exchange: { model: x.model, request: x.request, response: x.response, latencyMs: x.latencyMs, tokens: x.tokens, proposedCapabilityId: x.proposedCapabilityId, proposedInput: x.proposedInput },
+                ms: x.latencyMs,
+            };
+        });
+        writeFileSync(path.join(traceDir, "07-observer.jsonl"), observerLines.map((l) => JSON.stringify(l)).join("\n") + "\n");
+        writeFileSync(path.join(traceDir, "07-observer.md"), renderTrace(observerLines, { title: "Loop 7, the Observer", promptFile: OBSERVER_PROMPT }));
         if (!obs.ok || !obs.request) throw new Error("the Observer's request was not accepted");
 
         // ── 8. the graph factory: candidates, residuals, the loop on the gap. The threshold is the operator's.
@@ -256,6 +289,7 @@ async function main(): Promise<void> {
         });
         operator.take();
         const g = await factoryLoop(reqG.taskId);
+        traceOfTask(8, "graph-factory", reqG.taskId, GRAPH_PROMPT);
         operator.take();
         // No candidate file when no evaluation ran: the journal says so rather than stopping.
         const candidatesFile = path.join(taskDir(reqG.taskId), "candidates.json");
@@ -343,7 +377,7 @@ async function main(): Promise<void> {
         const journal = { stamp, world: LAB_WORLD, loops, telemetry };
         writeFileSync(path.join(outDir, "journal.json"), JSON.stringify(journal, null, 2));
         writeFileSync(path.join(outDir, "journal.md"), markdownOf(journal));
-        console.log(`journal: ${relativeToRoot(path.join(outDir, "journal.md"))}`);
+        console.log(`journal: ${relativeToRoot(path.join(outDir, "journal.md"))}; the whole trace of the model loops under ${relativeToRoot(traceDir)}/`);
         await operator.close();
         await agent.close();
         await started.stop();

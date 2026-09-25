@@ -137,7 +137,13 @@ rend pas la main, ou le jumeau refuse `person_1`.
   ajustées, son résidu, la pente initiale, ce qui entre dans le nœud comparé,
   sa structure comparée au jumeau existant.
 - `trace.jsonl` : la décision complète, l'état que le modèle a vu (le brief
-  en premier), la réponse brute du modèle.
+  en premier), le prompt envoyé (le prompt système, toute la conversation,
+  les outils et leurs descriptions) et la réponse brute du modèle.
+- `npm run trace -- outputs/factory/<tâche>` en fait un `trace.md` lisible :
+  une section par pas (le nœud du harnais, l'appel avec son entrée et sa
+  sortie, ce qui a été ajouté à la conversation du modèle depuis l'appel
+  précédent, sa réponse brute) ; l'exemple l'écrit lui-même sous
+  `outputs/examples/<horodatage>/trace/`, l'Observateur compris.
 
 ## 8. Ce qui n'existe pas
 

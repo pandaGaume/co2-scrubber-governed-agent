@@ -84,8 +84,15 @@ export function report(message: string): PolicyDecision {
 }
 
 /** Compact JSON for the trace: the request without the schemas repeated at every step. */
-export function compactRequest(messages: unknown[], toolNames: string[]): unknown {
-    return { messages, tools: toolNames };
+/**
+ * What was sent to the model, kept whole in the exchange: the system prompt,
+ * every message of the conversation so far, the tools by name and, since
+ * 2026-09-25, their descriptions (what the model reads to choose one). A
+ * trace rendered from it shows the prompt as the model saw it.
+ */
+export function compactRequest(messages: unknown[], tools: Array<string | { name: string; description?: string }>, system?: string): unknown {
+    const named = tools.map((t) => (typeof t === "string" ? { name: t } : t));
+    return { ...(system !== undefined ? { system } : {}), messages, tools: named.map((t) => t.name), toolDescriptions: named };
 }
 
 export function parseJsonArgs(raw: unknown): JsonValue {

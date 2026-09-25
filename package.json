@@ -32,7 +32,8 @@
         "agent:build": "node dist/scripts/build-agent-graph.js",
         "agent:page": "node dist/scripts/build-agent-page.js",
         "substrate:vendor": "node scripts/vendor-substrate.mjs",
-        "example:commissioning": "node --env-file-if-exists=.env dist/scripts/commissioning-example.js"
+        "example:commissioning": "node --env-file-if-exists=.env dist/scripts/commissioning-example.js",
+        "trace": "node dist/scripts/render-trace.js"
     },
     "dependencies": {
         "@cyanmycelium/mcp-broker": "^1.3.4",
