@@ -154,6 +154,12 @@ un candidat qui manque, le diagnostic, un candidat révisé.
 - Un candidat de l'usine de graphes : `candidates.json` donne ses variables
   ajustées, son résidu, la pente initiale, ce qui entre dans le nœud comparé,
   sa structure comparée au jumeau existant.
+- en tête de chaque trace rendue (`npm run trace`), le journal des états :
+  une ligne par pas, l'état que le modèle a lu avant de décider (la phase,
+  ce qui reste du budget, les exigences non tenues, le rapport des
+  contrats, l'hypothèse, le diagnostic de la dernière évaluation, le refus
+  à répondre, les questions ouvertes, le poids de l'état), puis ce que le
+  pas en a fait ; l'état entier est sous chaque pas.
 - `trace.jsonl` : la décision complète, l'état que le modèle a vu (le brief
   en premier), le prompt envoyé (le prompt système, toute la conversation,
   les outils et leurs descriptions) et la réponse brute du modèle.

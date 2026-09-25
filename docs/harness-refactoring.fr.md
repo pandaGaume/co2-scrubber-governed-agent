@@ -450,3 +450,13 @@ relu vingt-deux fois une fiche que le brief ne reconnaissait pas comme
 fiche de méthode (`nasa-scrubber-test-protocols`, listée par
 `library.methods` mais sans le préfixe `method-`) : le brief nomme
 maintenant les fiches listées et en accepte une des deux.
+
+**Le journal des états.** Chaque trace rendue commence depuis par un
+journal des états : une ligne par pas, ce que l'état disait avant la
+décision (la phase, le budget restant, les exigences non tenues, le
+rapport des contrats, l'hypothèse, le diagnostic et les résidus de la
+dernière évaluation, le refus à répondre, les questions ouvertes, le poids
+de l'état en caractères), puis l'appel et son issue ; l'état entier reste
+sous chaque pas. Pour l'Observateur, dont l'état a une autre forme : les
+documents lus et la tentative refusée. Les traces des passages 17 et 20
+sont rendues avec.

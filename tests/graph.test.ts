@@ -37,6 +37,7 @@ import { cabinReference, stationReference } from "../harness/topics/graph/evalua
 import { labCandidate } from "../harness/scripted/graph.js";
 import { deliveredFlowM3PerMinute, readHabitatParameters } from "../lib/habitat.js";
 import { ScriptedGraphBuilder } from "../harness/scripted/graph.js";
+import { renderTrace } from "../scripts/render-trace.js";
 import { LAB_WORLD, twoZoneTelemetry } from "../harness/stand-in/two-zone-world.js";
 import { fromRoot } from "../lib/paths.js";
 import type { MotherLine } from "../slots/station/provider.js";
@@ -470,6 +471,15 @@ describe("the graph factory's loop on the gap, through the broker", () => {
         assert.ok(briefs.some((b) => b.startsWith("The gap is a parameter's.")), briefs.join("\n"));
         assert.ok(briefs.some((b) => b.startsWith("The gap is structural.") && /revise the topology where the curves part, guided by the task's hypotheses/.test(b)), briefs.join("\n"));
         assert.ok(briefs.some((b) => b.startsWith("Hand over.")));
+        // The state journal: one line per step at the top of the rendered trace, the diagnoses and the unmet requirements readable without opening a step.
+        const rendered = renderTrace(traceLines as never, { title: "loop" });
+        const journal = rendered.slice(rendered.indexOf("## State journal"), rendered.indexOf("## Step 1:"));
+        const journalRows = journal.split("\n").filter((r) => /^\| \d+ \|/.test(r));
+        assert.equal(journalRows.length, traceLines.length, journal);
+        assert.ok(journalRows.some((r) => /PARAMETER_MISMATCH \(co2_lab_ppm [\d.]+, co2_habb_ppm [\d.]+ ppm\)/.test(r)), journal);
+        assert.ok(journalRows.some((r) => /STRUCTURAL_MISMATCH/.test(r)) && journalRows.some((r) => /candidate 3 \(habitat\), 5 persons/.test(r)), journal);
+        assert.ok(journalRows.some((r) => /\| CONSISTENT \|/.test(r)), journal);
+        assert.match(journalRows[0], /\| plan \| \d+ steps, \d+ runs \| library\.graphs -> completed \| planAccepted, candidateEvaluated, candidateHeld \|/);
         const said = JSON.parse((await (await broker.session("station")).request<{ contents: Array<{ text: string }> }>("resources/read", { uri: "station://mother" })).contents[0].text) as MotherLine[];
         assert.deepEqual(said.filter((l) => l.key.startsWith("mother.candidate")).slice(-3).map((l) => /Rejected|Accepted/.exec(l.text.en)?.[0]), ["Rejected", "Rejected", "Accepted"]);
     });

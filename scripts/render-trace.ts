@@ -56,6 +56,62 @@ function block(label: string, text: string, lang: string, foldAbove: number): st
     return [`<details><summary><strong>${label}</strong> (${text.length.toLocaleString("en-US")} characters, folded)</summary>`, "", ...fence, "", "</details>", ""];
 }
 
+type Rec = Record<string, unknown>;
+const rec = (v: unknown): Rec => (v && typeof v === "object" && !Array.isArray(v) ? (v as Rec) : {});
+const cell = (s: string): string => s.replace(/\|/g, "\\|").replace(/\r?\n/g, " ");
+
+/**
+ * The state journal (2026-09-25): one line per step, what the reasoning
+ * state said before the model decided, and what the step did with it. The
+ * whole state is under each step; this is its evolution at a glance: the
+ * phase and the budget, the requirements still unmet, the contract report,
+ * the hypothesis and the last evaluation's diagnosis, the refusal the model
+ * had to answer, the open questions, the weight of the state. The
+ * Observer's state has another shape (the documents read, the attempts):
+ * its columns follow.
+ */
+function stateJournal(lines: RenderableLine[]): string[] {
+    const states = lines.map((l) => rec(rec(l.trace?.stateBefore?.features).state));
+    if (!states.some((s) => Object.keys(s).length)) return [];
+    const out: string[] = ["## State journal", "", "One line per step: the state the model read before deciding (whole under each step below), then what the step did."];
+    const observer = states.some((s) => "lastAttempt" in s || "earlierAttempts" in s);
+    if (observer) {
+        out.push("", "| step | call -> outcome | documents read | attempt refused for | state chars |", "|---|---|---|---|---|");
+        for (const [i, l] of lines.entries()) {
+            const s = states[i];
+            const call = `${l.call?.id ?? l.exchange?.proposedCapabilityId ?? "?"} -> ${l.call?.result?.outcome ?? (l.failed ? "refused" : "?")}`;
+            const evidence = Object.keys(rec(s.evidence)).map((k) => k.replace(/^library\.read /, "")).join(", ") || "none";
+            const last = rec(s.lastAttempt);
+            const problems = Array.isArray(last.problems) ? (last.problems as unknown[]).map((p) => String(p).split(":")[0]).join(", ") : "";
+            out.push(`| ${l.n} | ${cell(call)} | ${cell(evidence)} | ${last.n !== undefined ? `${String(last.n)}: ${cell(problems)}` : ""} | ${JSON.stringify(s).length.toLocaleString("en-US")} |`);
+        }
+        return [...out, ""];
+    }
+    out.push("", "| step | phase | left | call -> outcome | unmet requirements | contracts | hypothesis | diagnosis | refusal to answer | open questions | state chars |", "|---|---|---|---|---|---|---|---|---|---|---|");
+    for (const [i, l] of lines.entries()) {
+        const s = states[i];
+        const budget = rec(s.budget);
+        const left = `${String(budget.iterationsLeft ?? "?")} steps${budget.runsLeft !== undefined && budget.runsLeft !== null ? `, ${String(budget.runsLeft)} runs` : ""}`;
+        const call = `${l.call?.id ?? l.exchange?.proposedCapabilityId ?? "?"} -> ${l.call?.result?.outcome ?? (l.failed ? "refused" : "?")}`;
+        const unmet = Object.entries(rec(s.requirements)).filter(([, v]) => v === false).map(([k]) => k).join(", ") || "none";
+        const contracts = rec(rec(s.invariants).contracts);
+        const report = contracts.status ? `${String(contracts.status)}${Array.isArray(contracts.conflicts) && contracts.conflicts.length ? ` (${(contracts.conflicts as Array<{ id?: string; revise?: string }>).map((c) => `${String(c.id)}: ${String(c.revise)} to revise`).join("; ")})` : ""}` : "";
+        const h = rec(s.hypothesis);
+        const hypothesis = h.candidate !== undefined ? `candidate ${String(h.candidate)}${h.graph ? ` (${String(h.graph)})` : ""}${Array.isArray(h.persons) ? `, ${(h.persons as unknown[]).length} persons` : ""}` : h.method ? `method ${String(rec(h.method).id ?? "")}${h.accepted ? ", accepted" : ""}` : h.plannedTypes ? `plan, ${(h.plannedTypes as unknown[]).length} types` : Object.keys(h).length ? "(see step)" : "";
+        const e = rec(s.evaluation);
+        const diagnosis = e.diagnosis ? `${String(e.diagnosis)}${Array.isArray(e.residuals) ? ` (${(e.residuals as Array<{ column?: string; rmse?: number }>).map((r) => `${String(r.column)} ${String(r.rmse)}`).join(", ")} ppm)` : ""}` : e.submission !== undefined ? `submission ${String(e.submission)} ${e.ok ? "accepted" : `refused: ${(Array.isArray(e.problems) ? (e.problems as unknown[]) : []).map((p) => String(p).split(":")[0]).join(", ")}`}` : "";
+        // The harness's refusal (the guard, the schema), or a capability's own (an evaluation refused before any run): both are what the model had to answer.
+        const refusal = rec(s.lastRefusal);
+        const action = rec(s.lastAction);
+        const actionError = String(rec(action.summary).error ?? "");
+        const notRun = /was not run: (.{0,80})/.exec(String(rec(l.trace?.stateBefore?.features).brief ?? ""))?.[1] ?? "";
+        const toAnswer = refusal.capability ? `${String(refusal.capability)}: ${String(refusal.reason ?? "").slice(0, 80)}` : action.outcome === "refused" || action.outcome === "error" ? `${String(action.capability)}: ${(actionError || notRun).slice(0, 80)}` : "";
+        const open = Array.isArray(s.openQuestions) ? String((s.openQuestions as unknown[]).length) : "";
+        out.push(`| ${l.n} | ${cell(String(s.phase ?? ""))} | ${cell(left)} | ${cell(call)} | ${cell(unmet)} | ${cell(report)} | ${cell(hypothesis)} | ${cell(diagnosis)} | ${cell(toAnswer)} | ${open} | ${JSON.stringify(s).length.toLocaleString("en-US")} |`);
+    }
+    return [...out, ""];
+}
+
 interface Message {
     role: string;
     content: unknown;
@@ -118,6 +174,8 @@ export function renderTrace(lines: RenderableLine[], options: RenderOptions = {}
     const descriptions = firstRequest?.toolDescriptions;
     if (Array.isArray(descriptions) && descriptions.length) out.push(...block("Tools offered to the model (name: description)", (descriptions as Array<{ name: string; description?: string }>).map((t) => `${t.name}: ${t.description ?? ""}`).join("\n\n"), "text", fold));
     else if (Array.isArray(firstRequest?.tools)) out.push(`**Tools offered to the model**: ${(firstRequest!.tools as string[]).join(", ")}`, "");
+
+    out.push(...stateJournal(lines));
 
     let shown = 0; // messages of the conversation already printed
     for (const l of lines) {

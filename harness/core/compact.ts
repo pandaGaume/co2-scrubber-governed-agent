@@ -148,6 +148,9 @@ const COMPACTORS: Record<string, (v: unknown, input: JsonValue) => JsonValue> = 
 /** The answer as the model reads it, and whether it was reduced. */
 export function compactOutput(capabilityId: string, input: JsonValue, output: unknown): CompactResult {
     const bytes = size(output);
+    // A call that failed is its error and its outcome, whole: a compactor made for the answer would lose the reason (a refused evaluation came back empty, 2026-09-25).
+    const o = obj(output);
+    if (o.error !== undefined && o.value === undefined) return { summary: { error: head(String(o.error), 1200), outcome: o.outcome ?? "error" } as unknown as JsonValue, bytes, reduced: false };
     const inner = value(output);
     const compactor = COMPACTORS[capabilityId];
     if (compactor) {

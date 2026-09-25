@@ -80,6 +80,16 @@ graph__evaluate: Build a candidate twin from a parametric graph, or instantiate 
 
 </details>
 
+## State journal
+
+One line per step: the state the model read before deciding (whole under each step below), then what the step did.
+
+| step | phase | left | call -> outcome | unmet requirements | contracts | hypothesis | diagnosis | refusal to answer | open questions | state chars |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | plan | 30 steps, 600 runs | task.plan -> completed | planAccepted, candidateEvaluated, candidateHeld | CONSISTENT |  |  |  | 0 | 5,015 |
+| 2 | build | 29 steps, 600 runs | graph.evaluate -> completed | candidateEvaluated, candidateHeld | CONSISTENT | plan, 12 types |  |  | 0 | 5,494 |
+| 3 | build | 28 steps, 559 runs | task.done -> completed | none | CONSISTENT | candidate 1 (habitat), 4 persons | PASS (co2_lab_ppm 7.1, co2_habb_ppm 5.4 ppm) |  | 2 | 11,926 |
+
 ## Step 1: task.plan (fallback) -> completed
 
 - node: phase plan -> phase build; last capability before: ; 2498 ms

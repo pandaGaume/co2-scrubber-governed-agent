@@ -75,6 +75,24 @@ procedure__submit: Submit the test procedure: the file the test will be run from
 
 </details>
 
+## State journal
+
+One line per step: the state the model read before deciding (whole under each step below), then what the step did.
+
+| step | phase | left | call -> outcome | unmet requirements | contracts | hypothesis | diagnosis | refusal to answer | open questions | state chars |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | plan | 25 steps, 40 runs | factory.inventory -> completed | installationRead, presenceRead, methodRead, planDeclared, procedureAccepted | CONSISTENT | (see step) |  |  | 3 | 2,625 |
+| 2 | plan | 24 steps, 40 runs | library.methods -> completed | presenceRead, methodRead, planDeclared, procedureAccepted | CONSISTENT | (see step) |  |  | 3 | 4,732 |
+| 3 | plan | 23 steps, 40 runs | library.read -> completed | presenceRead, methodRead, planDeclared, procedureAccepted | CONSISTENT | (see step) |  |  | 3 | 4,814 |
+| 4 | plan | 22 steps, 40 runs | task.plan -> completed | presenceRead, planDeclared, procedureAccepted | CONSISTENT | method method-concentration-decay |  |  | 2 | 11,176 |
+| 5 | build | 21 steps, 40 runs | biomed.presence -> completed | presenceRead, procedureAccepted | CONSISTENT | method method-concentration-decay |  |  | 2 | 9,439 |
+| 6 | build | 20 steps, 40 runs | workspace.list -> completed | procedureAccepted | CONSISTENT | method method-concentration-decay |  |  | 1 | 10,180 |
+| 7 | build | 19 steps, 40 runs | workspace.read -> completed | procedureAccepted | CONSISTENT | method method-concentration-decay |  |  | 1 | 10,415 |
+| 8 | build | 18 steps, 40 runs | library.facts -> completed | procedureAccepted | CONSISTENT | method method-concentration-decay |  |  | 1 | 10,905 |
+| 9 |  | ? steps | procedure.submit -> refused | none |  |  |  |  |  | 2 |
+| 10 | build | 16 steps, 40 runs | procedure.submit -> completed | procedureAccepted | CONSISTENT | method method-concentration-decay | submission 1 refused: bounds, duration, duration | procedure.submit: procedure refused: bounds: the CO2 abort limit 3500 ppm is above the ceiling of  | 1 | 19,702 |
+| 11 | build | 15 steps, 40 runs | task.done -> completed | none | CONSISTENT | method method-concentration-decay, accepted | submission 2 accepted |  | 1 | 12,305 |
+
 ## Step 1: factory.inventory (fallback) -> completed
 
 - node: phase plan; last capability before: ; 1420 ms

@@ -75,6 +75,27 @@ procedure__submit: Submit the test procedure: the file the test will be run from
 
 </details>
 
+## State journal
+
+One line per step: the state the model read before deciding (whole under each step below), then what the step did.
+
+| step | phase | left | call -> outcome | unmet requirements | contracts | hypothesis | diagnosis | refusal to answer | open questions | state chars |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | plan | 25 steps, 40 runs | factory.inventory -> completed | installationRead, presenceRead, methodRead, planDeclared, procedureAccepted | CONSISTENT | (see step) |  |  | 3 | 2,625 |
+| 2 | plan | 24 steps, 40 runs | library.methods -> completed | presenceRead, methodRead, planDeclared, procedureAccepted | CONSISTENT | (see step) |  |  | 3 | 4,732 |
+| 3 |  | ? steps | library.methods -> refused | none |  |  |  |  |  | 2 |
+| 4 | plan | 22 steps, 40 runs | library.read -> completed | presenceRead, methodRead, planDeclared, procedureAccepted | CONSISTENT | (see step) |  | library.methods: library.methods with the same input was the previous step, and completed: its an | 3 | 5,121 |
+| 5 | plan | 21 steps, 40 runs | task.plan -> completed | presenceRead, planDeclared, procedureAccepted | CONSISTENT | method method-concentration-decay |  |  | 2 | 11,176 |
+| 6 | build | 20 steps, 40 runs | biomed.presence -> completed | presenceRead, procedureAccepted | CONSISTENT | method method-concentration-decay |  |  | 2 | 9,439 |
+| 7 | build | 19 steps, 40 runs | library.read -> completed | procedureAccepted | CONSISTENT | method method-concentration-decay |  |  | 1 | 10,180 |
+| 8 | build | 18 steps, 40 runs | station.registry_list -> completed | procedureAccepted | CONSISTENT | method method-concentration-decay |  |  | 1 | 11,677 |
+| 9 | build | 17 steps, 40 runs | library.search -> completed | procedureAccepted | CONSISTENT | method method-concentration-decay |  |  | 1 | 12,820 |
+| 10 | build | 16 steps, 40 runs | library.read -> completed | procedureAccepted | CONSISTENT | method method-concentration-decay |  |  | 1 | 14,588 |
+| 11 |  | ? steps | procedure.submit -> refused | none |  |  |  |  |  | 2 |
+| 12 | build | 14 steps, 40 runs | procedure.submit -> completed | procedureAccepted | CONSISTENT | method method-concentration-decay | submission 1 refused: floor, floor, bounds, duration | procedure.submit: procedure refused: floor: the procedure sets its own minimum speed at 20 %, belo | 1 | 23,411 |
+| 13 | build | 13 steps, 40 runs | workspace.read -> completed | none | CONSISTENT | method method-concentration-decay, accepted | submission 2 accepted |  | 1 | 15,456 |
+| 14 | build | 12 steps, 40 runs | task.done -> completed | none | CONSISTENT | method method-concentration-decay, accepted | submission 2 accepted |  | 1 | 16,375 |
+
 ## Step 1: factory.inventory (fallback) -> completed
 
 - node: phase plan; last capability before: ; 1180 ms

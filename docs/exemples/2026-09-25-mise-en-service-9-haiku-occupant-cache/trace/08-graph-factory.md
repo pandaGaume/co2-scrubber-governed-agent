@@ -80,6 +80,19 @@ graph__evaluate: Build a candidate twin from a parametric graph, or instantiate 
 
 </details>
 
+## State journal
+
+One line per step: the state the model read before deciding (whole under each step below), then what the step did.
+
+| step | phase | left | call -> outcome | unmet requirements | contracts | hypothesis | diagnosis | refusal to answer | open questions | state chars |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | plan | 30 steps, 600 runs | library.graph -> completed | planAccepted, candidateEvaluated, candidateHeld | CONSISTENT |  |  |  | 0 | 5,617 |
+| 2 | plan | 29 steps, 600 runs | task.plan -> completed | planAccepted, candidateEvaluated, candidateHeld | CONSISTENT |  |  |  | 0 | 8,289 |
+| 3 | build | 28 steps, 600 runs | graph.evaluate -> refused | candidateEvaluated, candidateHeld | CONSISTENT | plan, 12 types |  |  | 0 | 7,390 |
+| 4 | build | 27 steps, 600 runs | graph.evaluate -> completed | candidateEvaluated, candidateHeld | CONSISTENT | plan, 12 types |  | graph.evaluate: graph "habitat" has no variable "Qe_full", "Q_full", "tau_scrubber", "G_awake",  | 0 | 7,412 |
+| 5 | build | 26 steps, 559 runs | graph.evaluate -> completed | candidateHeld | CONSISTENT | candidate 1 (habitat), 4 persons | PARAMETER_MISMATCH (co2_lab_ppm 118.3, co2_habb_ppm 37.6 ppm) |  | 1 | 13,623 |
+| 6 | build | 25 steps, 518 runs | task.done -> completed | none | CONSISTENT | candidate 2 (habitat), 5 persons | PASS (co2_lab_ppm 6.5, co2_habb_ppm 8.3 ppm) |  | 2 | 13,843 |
+
 ## Step 1: library.graph (fallback) -> completed
 
 - node: phase plan; last capability before: ; 1362 ms
