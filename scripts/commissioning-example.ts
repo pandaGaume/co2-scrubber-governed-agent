@@ -36,6 +36,9 @@ import { startAll } from "../slots/run-all.js";
 import { Broker, type CallResult } from "../harness/lib/broker.js";
 import { ReasonerProvider } from "../harness/providers/reasoner.js";
 import { observe, OBSERVER_PROMPT } from "../harness/observer/observer.js";
+import { findingsFor, supervise, supervisionOfRequest, SUPERVISOR_PROMPT } from "../harness/supervisor/supervisor.js";
+import type { LibraryFact } from "../harness/core/contracts.js";
+import type { TwinFactoryRequest } from "../harness/observer/request.js";
 import { factoryContractOf } from "../harness/observer/request.js";
 import { LAB_WORLD, TwoZoneWorldSim, type TelemetryRow } from "../harness/stand-in/two-zone-world.js";
 import { runProcedure } from "../tier3/procedure.js";
@@ -238,7 +241,20 @@ async function main(): Promise<void> {
         const model = await ReasonerProvider.connect(operator);
         model.usePrompt(OBSERVER_PROMPT);
         model.useContext("state");
-        const obs = await observe({ provider: model, broker: operator, description, telemetry: telemetry as unknown as Array<Record<string, unknown>> });
+        // The Contract Supervisor reviews each request the guard accepts: its findings for the Observer send it back into its loop.
+        const supervisorModel = await ReasonerProvider.connect(operator);
+        supervisorModel.usePrompt(SUPERVISOR_PROMPT);
+        supervisorModel.useContext("state");
+        const libraryFacts = ((await call<{ facts: Array<LibraryFact & { source: string }> }>(operator, "library", "facts", {})).facts ?? []);
+        const verdicts: Array<{ status: string; findings: number; attempts: number; report: string }> = [];
+        const review = async (request: TwinFactoryRequest): Promise<string[]> => {
+            const input = supervisionOfRequest(request, scene.devices, libraryFacts);
+            const r = await supervise({ provider: supervisorModel, input });
+            verdicts.push({ status: r.verdict?.status ?? `no verdict (${input.report.status} by the rules)`, findings: r.verdict?.findings.length ?? 0, attempts: r.attempts.length, report: input.report.status });
+            return findingsFor(r.verdict, "observer");
+        };
+        // Four attempts: the deterministic guard and the supervisor each may refuse once on the way to a request that holds.
+        const obs = await observe({ provider: model, broker: operator, description, telemetry: telemetry as unknown as Array<Record<string, unknown>>, review, attempts: 4 });
         const obsTokens = model.exchanges.reduce((a, x) => ({ input: a.input + (x.tokens?.prompt ?? 0), output: a.output + (x.tokens?.completion ?? 0) }), { input: 0, output: 0 });
         await record(
             {
@@ -252,7 +268,7 @@ async function main(): Promise<void> {
                 tokens: obsTokens,
                 refusals: obs.attempts.filter((a) => !a.ok).map((a) => ({ step: a.n, what: "observer.request", why: short(a.problems.join("; "), 400) })),
                 steps: obs.attempts.map((a) => ({ n: a.n, source: "model", capability: "observer.request", outcome: a.ok ? "accepted" : "refused", note: short(a.problems.join("; ")) })),
-                output: { accepted: obs.ok, libraryReads: obs.reads, request: obs.request, description },
+                output: { accepted: obs.ok, libraryReads: obs.reads, request: obs.request, description, supervisor: { verdicts, model: supervisorModel.name, calls: supervisorModel.exchanges.length, tokens: supervisorModel.exchanges.reduce((a, x) => ({ input: a.input + (x.tokens?.prompt ?? 0), output: a.output + (x.tokens?.completion ?? 0) }), { input: 0, output: 0 }) } },
             },
             t0,
         );
@@ -271,6 +287,19 @@ async function main(): Promise<void> {
         });
         writeFileSync(path.join(traceDir, "07-observer.jsonl"), observerLines.map((l) => JSON.stringify(l)).join("\n") + "\n");
         writeFileSync(path.join(traceDir, "07-observer.md"), renderTrace(observerLines, { title: "Loop 7, the Observer", promptFile: OBSERVER_PROMPT }));
+        // The supervisor's trace beside the Observer's: each verdict proposed, and the guard's answer.
+        const supervisorLines: RenderableLine[] = supervisorModel.exchanges.map((x, i) => ({
+            n: i + 1,
+            source: "model",
+            trace: { stateBefore: { features: { phase: "supervise", lastCapability: i > 0 ? supervisorModel.exchanges[i - 1].proposedCapabilityId : null } }, decision: { rationale: x.decision?.rationale } },
+            call: { id: x.proposedCapabilityId, input: x.proposedInput, result: { ok: true, outcome: "proposed", output: x.proposedInput }, latencyMs: x.latencyMs },
+            exchange: { model: x.model, request: x.request, response: x.response, latencyMs: x.latencyMs, tokens: x.tokens, proposedCapabilityId: x.proposedCapabilityId, proposedInput: x.proposedInput },
+            ms: x.latencyMs,
+        }));
+        if (supervisorLines.length) {
+            writeFileSync(path.join(traceDir, "07-supervisor.jsonl"), supervisorLines.map((l) => JSON.stringify(l)).join("\n") + "\n");
+            writeFileSync(path.join(traceDir, "07-supervisor.md"), renderTrace(supervisorLines, { title: "Loop 7, the Contract Supervisor", promptFile: SUPERVISOR_PROMPT }));
+        }
         if (!obs.ok || !obs.request) throw new Error("the Observer's request was not accepted");
 
         // ── 8. the graph factory: candidates, residuals, the loop on the gap. The threshold is the operator's.

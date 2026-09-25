@@ -59,6 +59,12 @@ export interface ObserveOptions {
     description: string;
     telemetry?: Array<Record<string, unknown>>;
     attempts?: number;
+    /**
+     * A review after the guard (2026-09-25, night): the Contract Supervisor, asked once the deterministic
+     * guard accepted a request; its findings for the Observer refuse the request like the guard's problems,
+     * and the model corrects. Nothing when absent.
+     */
+    review?: (request: TwinFactoryRequest) => Promise<string[]>;
 }
 
 export interface ObserveAttempt {
@@ -186,7 +192,7 @@ export function observerBrief(x: { step: number; attemptsLeft: number; readsLeft
     return `Step ${x.step}. Read in the library what the description leaves open (the datasheets, the topology, the metabolic loads), then hand over the request with ${OBSERVER_CAPABILITY}; ${x.attemptsLeft} attempt(s). ${read} ${reads}`;
 }
 
-export async function observe({ provider, broker, runtimeSlot = "twin", description, telemetry, attempts = 3 }: ObserveOptions): Promise<ObserveResult> {
+export async function observe({ provider, broker, runtimeSlot = "twin", description, telemetry, attempts = 3, review }: ObserveOptions): Promise<ObserveResult> {
     const summary = telemetry?.length ? summarizeTelemetry(telemetry) : null;
     const columns = summary ? summary.columns.map((c) => c.column) : [];
     const { types, vocabulary } = await catalogueOf(broker, runtimeSlot);
@@ -277,6 +283,12 @@ export async function observe({ provider, broker, runtimeSlot = "twin", descript
             continue;
         }
         const check = checkTwinRequest(decision.invocation.input, { catalogueTypes: types, telemetryColumns: summary ? columns : undefined, vocabulary, description, ...(library.length ? { documentsRead, documents, facts } : {}) });
+        // The supervisor's review, only on a request the deterministic guard accepted: what the rules on numbers cannot see.
+        const reviewed = check.ok && review ? await review(decision.invocation.input as unknown as TwinFactoryRequest) : [];
+        if (reviewed.length) {
+            check.ok = false;
+            check.problems = reviewed;
+        }
         done.push({ n: n++, ok: check.ok, problems: check.problems, proposed: JSON.stringify(decision.invocation.input).slice(0, 2000) });
         if (check.ok) return { ok: true, request: decision.invocation.input as unknown as TwinFactoryRequest, attempts: done, reads, telemetry: summary, provider: { name: provider.name, model: provider.model, family: provider.family } };
     }

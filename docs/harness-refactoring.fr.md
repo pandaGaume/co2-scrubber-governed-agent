@@ -460,3 +460,72 @@ de l'état en caractères), puis l'appel et son issue ; l'état entier reste
 sous chaque pas. Pour l'Observateur, dont l'état a une autre forme : les
 documents lus et la tentative refusée. Les traces des passages 17 et 20
 sont rendues avec.
+
+## 16. Le superviseur des contrats (la même nuit)
+
+Le raisonneur que la section 15 annonçait : `harness/supervisor/`, un rôle
+de plus sur le slot `reasoner`, avec son prompt fixe
+(`harness/supervisor/prompt.md`, générique : aucune physique dedans), qui
+lit les faits typés d'une tâche, le rapport déterministe, les hypothèses et
+les symboles de la demande, et rien d'autre (jamais une transcription ;
+quelques milliers de caractères), et répond une seule capacité,
+`supervisor.verdict`, typée :
+
+| champ | ce que c'est |
+|---|---|
+| `status` | `CONSISTENT`, `CONFLICT`, `MISSING`, `AMBIGUOUS`, `UNSUPPORTED` |
+| `findings[]` | `kind`, `fact` (un id de fait de la liste, `assumption:<n>`, `symbol:<s>`), `producer` (parmi ceux de la liste), `reason`, `required_action` (`REVISE`, `COMPLETE`, `INSPECT`, `REJECT`) |
+
+**La garde du verdict** (`checkVerdict`, en code) : les noms parmi ceux de
+l'entrée, et surtout les conflits que la couche déterministe a calculés
+portés dans les constats, jamais abandonnés ; un verdict `CONSISTENT`
+par-dessus un conflit calculé est refusé et revient au modèle avec la
+raison, deux tentatives. Le superviseur ajoute ce que les règles sur les
+nombres ne voient pas (une hypothèse contre un fait, un symbole pour la
+mauvaise chose, une affirmation sans appui) ; il ne corrige rien lui-même.
+
+**Où il agit.**
+
+- L'Observateur : `observe({ review })`, une revue demandée seulement sur une
+  demande que la garde déterministe a acceptée ; les constats qui nomment
+  `observer` avec `REVISE`, `COMPLETE` ou `REJECT` refusent la demande comme
+  les problèmes de la garde, et le modèle corrige dans sa boucle
+  (`findingsFor`). La provenance reste propre : personne n'a réécrit sa
+  demande à sa place.
+- L'usine de graphes : `runTask({ supervisor })` ; le runner demande le
+  verdict une fois au départ sur les faits de la tâche, l'applique au
+  rapport que l'état porte (`applyVerdict` : le pire des deux statuts, un
+  conflit calculé n'est jamais adouci), et `sourcesConsistent` lit les deux.
+  Le slot `factory` le donne quand un modèle est prêt ; un constructeur
+  scripté tourne sans.
+- Le slot `supervisor` (`review`, `review_request`, `supervisor://verdicts`),
+  pour l'appeler par le broker ; sans clé il dit qu'aucun modèle n'est prêt
+  et le rapport déterministe tient.
+- L'exemple : le superviseur relit chaque demande de l'Observateur et sa
+  trace est rendue à côté (`trace/07-supervisor.md`, avec le journal des
+  états) ; le journal de la boucle 7 dit ses verdicts et ses jetons.
+
+Ce qui reste domaine-spécifique après lui : rien dans le superviseur ; la
+règle par expression régulière « modules isolés sas fermé » de la garde de
+l'Observateur reste en place comme filet déterministe, le superviseur
+attrape les formulations qu'elle manque.
+
+**Six passages pour le régler** (le même soir ; les traces du dernier dans
+`docs/exemples/2026-09-25-mise-en-service-10-haiku-superviseur/`). Ce que
+chacun a montré, et ce qui en est sorti :
+
+| passage | ce qui s'est passé | ce qui a changé |
+|---|---|---|
+| 21 | le slot `reasoner` refuse le prompt du superviseur (ni un sujet ni l'Observateur) | le prompt du superviseur admis parmi les rôles |
+| 22 | le superviseur rouvre un écart numérique que la couche déterministe avait pesé (0,3 contre 0,303) et nomme le fait `fact:2` ; deux refus de la garde, le rapport déterministe tient ; à l'usine de graphes le même verdict passe (l'ancienne garde), `CONFLICT`, et le modèle relit `task.json` trente fois (la garde des répétitions comparait avec l'id de tâche lié) | un constat numérique sur un fait que les règles ont trouvé cohérent est refusé ; l'état donne `factIds` ; la garde des répétitions compare sans ce que le profil lie ; un `SOURCE_CONFLICT` termine la tâche avant tout pas, `REQUIRE_RESOLUTION` et le producteur nommé |
+| 23 | l'Observateur épuise ses trois tentatives sur le vocabulaire : `m3/min` refusé là où le catalogue écrit `m3ps` | la règle du vocabulaire passe par le service des unités et accepte ce qui convertit |
+| 24 | l'Observateur cite le fait en volume avec la valeur en masse (0,69 g/min pour `crew.co2Rate.awake` en L/min) | la garde nomme le fait jumeau à citer (`crew.co2Rate.awake.mass`) ; quatre tentatives dans l'exemple |
+| 25 | le superviseur attrape une vraie contradiction (une proportionnalité de 0 à 100 % là où la fiche dit 20 à 100 %) puis demande de « compléter » une hypothèse qu'aucun fait ne contredit (un facteur ppm vers mg/m³) ; l'Observateur épuise ses tentatives | un constat sur une hypothèse nomme le fait ou le document qui la contredit, ou n'est pas un constat |
+| 26 | Procedure 11 pas, 42 k ; Observateur 8 pas, 61 k, un refus (une valeur donnée sous hypothèse) ; superviseur un appel, 3 025 jetons, `CONSISTENT` sans constat ; usine de graphes 4 pas, 12,7 k, `contracts: CONSISTENT`, un candidat tenu (7,3 et 5,2 ppm) | |
+
+Le superviseur coûte une fraction de l'Observateur (3 k contre 61 k) parce
+qu'il ne lit que des faits et un rapport. Ce que ces passages disent de sa
+place : il n'est utile qu'avec une garde qui tient le déterministe hors de
+sa portée (les nombres, les noms), sinon il rouvre ce qui est réglé et
+coûte des boucles ; et une garde qui refuse trop littéralement (le
+vocabulaire par chaîne d'unité) coûte plus cher que lui.

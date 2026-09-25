@@ -35,7 +35,8 @@ import { taskCapabilities } from "./task-capabilities.js";
 import { DEFAULT_BUDGET, topicFor, type TaskFile, type TaskState, type Topic } from "./task.js";
 import type { TopicDefinition } from "./topic.js";
 import { createWorkspaceObserver, isArtifact, listWorkshop, newProgress, type Progress } from "./workspace-observer.js";
-import { reviewContracts, taskFacts, type ContractReport, type LibraryFact } from "./contracts.js";
+import { type ContractReport, type LibraryFact } from "./contracts.js";
+import { applyVerdict, supervisionOfRequest, type SupervisionInput, type Verdict } from "../supervisor/supervisor.js";
 import { ONNX_TOPIC } from "../topics/onnx/index.js";
 import { PROCEDURE_TOPIC } from "../topics/procedure/index.js";
 import { GRAPH_TOPIC } from "../topics/graph/index.js";
@@ -68,6 +69,12 @@ export interface RunTaskOptions {
     onStage?: (event: StageEvent) => void;
     /** The manifest as it stands, once it is opened and after every step: it reaches the disk only at the start and the end, and a reader following the task (the factory slot's push) needs the steps as they come. */
     onProgress?: (manifest: Readonly<Manifest>) => void;
+    /**
+     * The Contract Supervisor (2026-09-25, night), asked once at the start on the task's facts and the deterministic
+     * report; its verdict is applied to the report the state carries (`invariants.contracts`), so a topic's requirement
+     * (`sourcesConsistent`) reads both. Nothing when absent: the deterministic report stands alone.
+     */
+    supervisor?: (input: SupervisionInput) => Promise<Verdict | null>;
     log?: (line: string) => void;
 }
 
@@ -129,11 +136,23 @@ async function shelfOf(broker: Broker): Promise<Progress["context"]["shelf"]> {
     }));
 }
 
-/** The facts of the task against one another (the request's, the register's, the library's), reviewed once at the start: a conflict is visible before any plan. */
-async function contractsOf(broker: Broker, task: TaskFile["task"]): Promise<ContractReport> {
+/** The facts of the task against one another (the request's, the register's, the library's), reviewed once at the start: a conflict is visible before any plan; the supervisor's verdict on top when one is given. */
+async function contractsOf(broker: Broker, task: TaskFile["task"], supervisor: RunTaskOptions["supervisor"], log: (line: string) => void): Promise<ContractReport> {
     const r = await broker.call("library", "facts", {});
-    const facts = r.ok ? (r.output as { facts?: Array<LibraryFact & { source: string }> }).facts : undefined;
-    return reviewContracts(taskFacts(task, Array.isArray(facts) ? facts : []));
+    const libraryFacts = r.ok ? ((r.output as { facts?: Array<LibraryFact & { source: string }> }).facts ?? []) : [];
+    const req = (task.requirements ?? {}) as { assumptions?: string[]; hypotheses?: Array<string | { statement?: string }>; known?: Array<{ symbol?: string; factId?: string }> };
+    const input = supervisionOfRequest(req, Array.isArray((task.observations as { devices?: unknown[] } | undefined)?.devices) ? ((task.observations as { devices: unknown[] }).devices) : [], libraryFacts);
+    if (!supervisor) return input.report;
+    try {
+        const verdict = await supervisor(input);
+        if (!verdict) return input.report;
+        log(`[factory] supervisor: ${verdict.status}${verdict.findings.length ? ` (${verdict.findings.map((f) => `${f.fact}: ${f.producer} to ${f.required_action.toLowerCase()}`).join("; ")})` : ""}`);
+        return applyVerdict(input.report, verdict);
+    } catch (e) {
+        // A supervisor that cannot answer (no model, a timeout) leaves the deterministic report alone, and says so.
+        log(`[factory] supervisor not answering: ${e instanceof Error ? e.message : String(e)}; the deterministic report stands`);
+        return input.report;
+    }
 }
 
 /** The telemetry's shape, read once for the state: the first data file whose rows carry a minute column. */
@@ -159,7 +178,7 @@ async function writeText(broker: Broker, taskId: string, file: string, text: str
     return (r.output as { sha256: string }).sha256;
 }
 
-export async function runTask({ broker, provider: providerOrBuild, taskId, topic: topicName, recipesDir = path.join(WORKSHOP_ROOT, "_recipes"), runtimeSlot = "twin", promptFile = null, timeoutMs = 60000, onStage, onProgress, log = () => undefined }: RunTaskOptions): Promise<RunTaskResult> {
+export async function runTask({ broker, provider: providerOrBuild, taskId, topic: topicName, supervisor, recipesDir = path.join(WORKSHOP_ROOT, "_recipes"), runtimeSlot = "twin", promptFile = null, timeoutMs = 60000, onStage, onProgress, log = () => undefined }: RunTaskOptions): Promise<RunTaskResult> {
     const startedAt = new Date();
     const { task: file, sha256: taskSha256 } = await readTask(broker, taskId);
     const task = file.task;
@@ -178,7 +197,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
     const promptPath = promptFile ? fromRoot(promptFile) : null;
 
     // What the state carries so the model need not read it: the shelf and the telemetry's shape.
-    progress.context = { shelf: await shelfOf(broker), telemetry: await telemetryShapeOf(broker, taskId, task), contracts: await contractsOf(broker, task) };
+    progress.context = { shelf: await shelfOf(broker), telemetry: await telemetryShapeOf(broker, taskId, task), contracts: await contractsOf(broker, task, supervisor, log) };
     const contextMode: "conversation" | "state" = (provider as { contextMode?: unknown }).contextMode === "state" ? "state" : "conversation";
     // The proposals in a row: the same capability with the same input twice is counted (`progress.repeats`), whether it ran or was refused.
     let previousProposal = "";
@@ -278,6 +297,16 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
     provider.begin?.(intention.id);
     let ended: string | null = null;
     let reported = 0;
+    // A SOURCE_CONFLICT among the task's facts ends the task before any step (2026-09-25, night): the producer named revises upstream; a
+    // model asked to plan over it read the task file thirty times instead of failing. Visible, cheap, and the reference graph hides nothing.
+    const contracts = progress.context.contracts;
+    if (contracts && contracts.status === "CONFLICT" && contracts.conflicts.length) {
+        const c = contracts.conflicts[0];
+        ended = `SOURCE_CONFLICT: ${contracts.conflicts.map((x) => x.reason).join(" | ")}; REQUIRE_RESOLUTION: ${[...new Set(contracts.conflicts.map((x) => x.revise))].join(", ")} to revise, upstream of this task${c.id ? ` (first fact ${c.id})` : ""}`;
+        progress.failure = ended;
+        progress.phase = "failed";
+        log(`[factory] task ${taskId}: ${ended}`);
+    }
     while (progress.phase !== "done" && progress.phase !== "failed") {
         // The step just recorded, said before the next one starts (every branch below ends in `continue`).
         if (manifest.steps.length > reported) onProgress?.(manifest);

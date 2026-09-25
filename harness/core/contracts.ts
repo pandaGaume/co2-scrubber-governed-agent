@@ -83,8 +83,11 @@ export interface Conflict {
     reason: string;
 }
 
+/** The states of a report: the deterministic layer says the first three; a supervisor may say the last two (`supervisor.ts`). */
+export type ContractStatus = "CONSISTENT" | "CONFLICT" | "MISSING" | "AMBIGUOUS" | "UNSUPPORTED";
+
 export interface ContractReport {
-    status: "CONSISTENT" | "CONFLICT" | "MISSING";
+    status: ContractStatus;
     conflicts: Conflict[];
     /** The required fact ids nobody states. */
     missing: string[];

@@ -33,7 +33,7 @@
  *                it false.
  */
 
-import { checkAgainstDocument } from "../lib/units.js";
+import { checkAgainstDocument, compatibleUnits } from "../lib/units.js";
 import { checkKnownAgainstFact, type LibraryFact } from "../core/contracts.js";
 
 export interface Quantity {
@@ -188,7 +188,11 @@ export function checkTwinRequest(input: unknown, context: CheckContext = {}): Re
             if (!o?.quantity) continue;
             const entry = vocabulary.find((v) => v.quantity.toLowerCase() === String(o.quantity).toLowerCase());
             if (!entry) problems.push(`vocabulary: output "${String(o.name)}" is a "${o.quantity}", which is not a quantity of the shared vocabulary; name it with one of: ${names}`);
-            else if (entry.units.length && o.unit && !entry.units.includes(o.unit)) problems.push(`vocabulary: output "${String(o.name)}" is a ${entry.quantity} in "${o.unit}"; the shared vocabulary writes it in ${entry.units.join(" or ")}`);
+            else if (entry.units.length && o.unit && !entry.units.includes(o.unit)) {
+                // Another unit of the same quantity converts (the units service, 2026-09-25): a flow in m3/min where the catalogue writes m3ps is the factory's to convert; a unit of another quantity is not.
+                const c = compatibleUnits({ quantity: entry.quantity, unit: o.unit }, { quantity: entry.quantity, unit: entry.units[0] });
+                if (!c.ok || !c.compatible) problems.push(`vocabulary: output "${String(o.name)}" is a ${entry.quantity} in "${o.unit}", which is not a unit of that quantity${c.ok ? "" : ` (${c.reason})`}; the shared vocabulary writes it in ${entry.units.join(" or ")}, or any unit that converts to them`);
+            }
         }
     }
 
@@ -205,7 +209,9 @@ export function checkTwinRequest(input: unknown, context: CheckContext = {}): Re
             else if (!fact) problems.push(`facts: known constant "${k.symbol}" cites fact "${k.factId}", which "${k.source}" does not state; its facts are ${facts.map((f) => f.id).join(", ")}`);
             else {
                 const verdict = checkKnownAgainstFact({ value: k.value, unit: k.unit, ...(k.quantity ? { quantity: k.quantity } : {}) }, fact);
-                if (verdict.verdict === "CONFLICT") problems.push(`facts: known constant "${k.symbol}" = ${k.value} ${k.unit} conflicts with the fact it cites: ${verdict.reason}; copy the fact's value in its unit, or convert it with physics.units_convert`);
+                // The same fact stated by the document in another quantity (a crew rate in mass beside the one in volume): the id to cite instead, when the unit written is that one's.
+                const twin = /does not convert/.test(verdict.reason) ? facts.find((f) => f.id !== fact.id && f.semantic === fact.semantic && checkKnownAgainstFact({ value: k.value, unit: k.unit }, f).verdict === "OK") : undefined;
+                if (verdict.verdict === "CONFLICT") problems.push(`facts: known constant "${k.symbol}" = ${k.value} ${k.unit} conflicts with the fact it cites: ${verdict.reason}; ${twin ? `the document states that fact in ${k.unit} as "${twin.id}" (${twin.value} ${twin.unit}): cite that id` : "copy the fact's value in its unit, or convert it with physics.units_convert"}`);
                 else if (verdict.verdict === "UNKNOWN_UNIT") problems.push(`units: known constant "${k.symbol}" is written in "${k.unit}", a unit the unit system does not know (${verdict.reason}); write it in a UCUM unit of its quantity`);
             }
         } else if (context.documents?.[k.source] !== undefined) {

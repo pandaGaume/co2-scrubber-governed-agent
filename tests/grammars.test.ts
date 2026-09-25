@@ -59,7 +59,7 @@ describe("slot grammars through the broker", () => {
     });
 
     it("every habitat slot loaded the same five families in English and the French default; the workshop tools carry the English and French defaults", () => {
-        const workshop = ["workspace", "model", "library", "observer", "physics"];
+        const workshop = ["workspace", "model", "library", "observer", "physics", "supervisor"];
         // `reasoner` and `agent` carry no per-family wording, and should not:
         // the families exist so a model reads a tool's description in its own
         // dialect, and neither of these is a tool any model may call. Both are

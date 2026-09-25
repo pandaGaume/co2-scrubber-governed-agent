@@ -21,6 +21,12 @@ import { requirementsOf } from "../harness/topics/graph/index.js";
 import { GRAPH_TOPIC } from "../harness/topics/graph/index.js";
 import type { TaskFile } from "../harness/core/task.js";
 import { fromRoot } from "../lib/paths.js";
+import { existsSync, rmSync, mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import * as path from "node:path";
+import { runTask, type BuilderContext } from "../harness/core/runner.js";
+import { ScriptedGraphBuilder } from "../harness/scripted/graph.js";
+import { taskDir } from "../slots/tools/lib/workshop.js";
 
 const PORT = 3128;
 const DEVICES = (JSON.parse(readFileSync(fromRoot("specs", "commissioning-devices.json"), "utf8")) as { devices: unknown[] }).devices;
@@ -99,6 +105,10 @@ describe("the contract layer, generic: facts, authority, conflicts", () => {
         assert.match(forty.problems.join("; "), /^facts: known constant "eta" = 40 percent conflicts with the fact it cites: 40 percent is 0.4 ratio; the fact scrubber.singlePassEfficiency \(SinglePassRemovalEfficiency\) is 0.3 ratio \(single-pass removal efficiency/);
         assert.equal(check([{ symbol: "eta", name: "efficiency", value: 30, unit: "percent", source: "scrubber-1-datasheet", factId: "scrubber.singlePassEfficiency" }]).ok, true);
         assert.equal(check([{ symbol: "Qe", name: "effective flow", value: 1000, unit: "L/min", source: "scrubber-1-datasheet", factId: "scrubber.effectiveFlowAtFull" }]).ok, true);
+        // The fourth passage: the awake rate written in mass while citing the volume fact; the guard names the mass fact to cite.
+        const nasa = { ...facts, "nasa-crew-metabolic-loads": loadFacts(LIBRARY_DIR, "nasa-crew-metabolic-loads") };
+        const mass = checkTwinRequest({ ...base, known: [{ symbol: "G", name: "awake rate", value: 0.69, unit: "g/min", source: "nasa-crew-metabolic-loads", factId: "crew.co2Rate.awake" }] } as unknown as Partial<TwinFactoryRequest>, { ...context, documentsRead: [...context.documentsRead, "nasa-crew-metabolic-loads"], facts: nasa });
+        assert.match(mass.problems.join("; "), /does not convert into the fact's unit L\/min.*the document states that fact in g\/min as "crew.co2Rate.awake.mass" \(0.69 g\/min\): cite that id/);
         // The hatch: an assumption of isolated modules contradicts the documented ventilation; one about the hatchway alone does not.
         const isolated = check([], { assumptions: ["no air exchange between the Lab and Hab-B with the hatch closed"] });
         assert.match(isolated.problems.join("; "), /^facts: assumptions "no air exchange between the Lab and Hab-B with the hatch closed" treats the modules as isolated with the hatch closed; the station documents the opposite \(station-topology, habitat.interModuleVentilation.designFlow.hatchClosed/);
@@ -125,9 +135,12 @@ describe("the library's typed facts, through the broker", () => {
     let local: LocalBroker;
     let slots: PublishedSlot<object>[];
     let broker: Broker;
+    let recipesDir = "";
+    const tasks: string[] = [];
 
     before(async () => {
         process.env.SPEECH_PROVIDER = "silent";
+        recipesDir = mkdtempSync(path.join(tmpdir(), "recipes-"));
         ({ broker: local, slots } = await startAllOrFail(PORT));
         broker = new Broker(local.httpBase, { name: "contracts-test", version: "0", locale: "en" });
     });
@@ -136,6 +149,28 @@ describe("the library's typed facts, through the broker", () => {
         await broker?.close();
         for (const s of slots ?? []) await s.close().catch(() => undefined);
         await local?.stop();
+        for (const t of tasks) if (existsSync(taskDir(t))) rmSync(taskDir(t), { recursive: true, force: true });
+        if (recipesDir) rmSync(recipesDir, { recursive: true, force: true });
+    });
+
+    it("a task whose sources conflict ends before any step: SOURCE_CONFLICT, REQUIRE_RESOLUTION, the producer to revise named", async () => {
+        const r = await broker.call("factory", "request", {
+            objective: { required_outputs: [{ name: "predicted_co2", quantity: "Concentration", unit: "ppm" }], constraints: { rmsePpmMax: 10 } },
+            observations: { devices: DEVICES },
+            data: [{ file: "telemetry.json", rows: [{ minute: 0, co2_lab_ppm: 1000, co2_habb_ppm: 1000, speed_percent: 30 }, { minute: 1, co2_lab_ppm: 1010, co2_habb_ppm: 1000, speed_percent: 30 }] }],
+            requirements: { objective: "reproduce the Lab CO2", known: [{ symbol: "eta", name: "efficiency", value: 40, unit: "percent", source: "scrubber-1-datasheet", factId: "scrubber.singlePassEfficiency" }] },
+            budget: { iterations: 6, twinPoints: 20 },
+            builder: "scripted",
+            requestedBy: "contracts-test",
+            run: false,
+        });
+        assert.ok(r.ok, r.error);
+        const taskId = (r.output as { taskId: string }).taskId;
+        tasks.push(taskId);
+        const result = await runTask({ broker, taskId, recipesDir, provider: (ctx: BuilderContext) => new ScriptedGraphBuilder(ctx) });
+        assert.equal(result.state, "failed");
+        assert.equal(result.manifest.steps.length, 0, "no step: the conflict is settled upstream, not planned over");
+        assert.match(String(result.manifest.ended), /^SOURCE_CONFLICT: scrubber\.singlePassEfficiency: observer \(documented, scrubber-1-datasheet\) says 40 percent against register \(device, \/habitat\/lab\/eclss\/scrubber-1\) 0\.30303 ratio: REQUIRE_RESOLUTION, observer to revise; REQUIRE_RESOLUTION: observer to revise, upstream of this task/);
     });
 
     it("library.facts lists every fact with its document; library.read carries a document's facts; the catalogue counts them", async () => {

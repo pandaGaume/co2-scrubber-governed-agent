@@ -104,7 +104,9 @@ export function createBuilderGuard(options: BuilderGuardOptions): SafetyGuard {
             if (p) return { allowed: false, reason: p };
             // The same call as the step before, with the same input, which completed: its answer is already in the state; asking again gives the same answer.
             const last = options.progress?.lastCall;
-            if (last && last.result.ok && last.id === id && !/^task\./.test(id) && JSON.stringify(last.input ?? null) === JSON.stringify(decision.invocation.input ?? null)) {
+            // The executed call carries what the profile bound (the task's id, the sandbox's name): compared without them.
+            const unbound = (v: unknown): unknown => (v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v as Record<string, unknown>).filter(([k]) => k !== "taskId")) : v);
+            if (last && last.result.ok && last.id === id && !/^task\./.test(id) && JSON.stringify(unbound(last.input ?? null)) === JSON.stringify(unbound(decision.invocation.input ?? null))) {
                 return { allowed: false, reason: `${id} with the same input was the previous step, and completed: its answer is in the state (lastAction, and evidence for a read); calling it again gives the same answer. Decide from what the state holds, or call something else.` };
             }
             if (id === "task.plan") {

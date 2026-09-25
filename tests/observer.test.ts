@@ -73,7 +73,10 @@ describe("the Observer's guard and its telemetry", () => {
         const own = { ...REQUEST, outputs: [{ name: "predicted_co2", quantity: "CO2 mole fraction", unit: "ppm" }] };
         assert.match(checkTwinRequest(own, { vocabulary }).problems.join(), /^vocabulary: output "predicted_co2" is a "CO2 mole fraction", which is not a quantity of the shared vocabulary; name it with one of: Concentration \(ppm\); Volume \(m3\)/);
         const unit = { ...REQUEST, outputs: [{ name: "predicted_co2", quantity: "Concentration", unit: "percent" }] };
-        assert.match(checkTwinRequest(unit, { vocabulary }).problems.join(), /is a Concentration in "percent"; the shared vocabulary writes it in ppm/);
+        // Another unit of the same quantity converts, and passes; a unit of another quantity does not.
+        assert.equal(checkTwinRequest(unit, { vocabulary }).ok, true, "percent converts to ppm: the factory's to convert");
+        const foreign = { ...REQUEST, outputs: [{ name: "predicted_co2", quantity: "Concentration", unit: "kg" }] };
+        assert.match(checkTwinRequest(foreign, { vocabulary }).problems.join(), /is a Concentration in "kg", which is not a unit of that quantity.*the shared vocabulary writes it in ppm, or any unit that converts to them/);
     });
 
     it("provenance: a known constant names a document the Observer read; a number obtained under an assumption is not a constraint", () => {

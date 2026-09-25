@@ -30,6 +30,7 @@ import { ScriptedBuilder } from "../../harness/scripted/onnx.js";
 import { ScriptedProcedureBuilder } from "../../harness/scripted/procedure.js";
 import { ScriptedGraphBuilder } from "../../harness/scripted/graph.js";
 import { ReasonerProvider } from "../../harness/providers/reasoner.js";
+import { supervise, SUPERVISOR_PROMPT } from "../../harness/supervisor/supervisor.js";
 import { Broker } from "../../harness/lib/broker.js";
 import type { Device } from "../station/registry.js";
 import { inventoryOf } from "./inventory.js";
@@ -146,12 +147,22 @@ function launch(httpBase: string, taskId: string, topic: Topic, builder: Builder
             provider = reasoner;
             promptFile = prompt;
         }
+        // The Contract Supervisor beside the builder, when a model is ready: the same reasoner slot, its own prompt, the state mode; a scripted builder runs without it.
+        const supervisor: RunTaskOptions["supervisor"] = builder === "scripted" ? undefined : async (input) => {
+            const model = await ReasonerProvider.connect(broker);
+            if (!model.description.ready) return null;
+            model.usePrompt(SUPERVISOR_PROMPT);
+            model.useContext("state");
+            const r = await supervise({ provider: model, input });
+            return r.verdict;
+        };
         return runTask({
             broker,
             taskId,
             provider,
             topic,
             promptFile,
+            ...(supervisor ? { supervisor } : {}),
             // The recipes of the topics: `_recipes/` next to the workshops unless the host says where (the tests keep their own).
             ...(process.env.FACTORY_RECIPES_DIR ? { recipesDir: path.resolve(process.env.FACTORY_RECIPES_DIR) } : {}),
             log,

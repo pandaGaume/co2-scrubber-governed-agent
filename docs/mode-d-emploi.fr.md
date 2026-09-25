@@ -19,7 +19,14 @@ Les clés vont dans `.env` (copie de `.env.example`, jamais dans le dépôt) :
 `ANTHROPIC_API_KEY` pour le profil par défaut ; `NEBIUS_API_KEY` pour
 `profiles/nvidia-nebius.json` (l'identifiant du modèle Nemotron est encore
 à remplir dans ce profil) ; `ELEVENLABS_API_KEY` pour la voix. Le modèle du
-raisonneur se choisit par `REASONER_PROFILE=profiles/<nom>.json`.
+raisonneur se choisit par `REASONER_PROFILE=profiles/<nom>.json`. Le slot
+de recherche web utilise `BRAVE_SEARCH_API_KEY` par défaut et rend les
+résultats bruts sans second modèle. Pour obtenir une synthèse citée par un
+fournisseur hébergé, définir
+`WEB_SEARCH_PROFILE=profiles/web-search-openai.json` ou
+`WEB_SEARCH_PROFILE=profiles/web-search-anthropic.json`. Le profil legacy
+`profiles/web-search-google.json` exige `GOOGLE_SEARCH_API_KEY` et
+`GOOGLE_SEARCH_ENGINE_ID` pour un compte Google Custom Search existant.
 
 ## 2. Les slots, le broker, les pages
 
@@ -32,12 +39,20 @@ Les slots publiés : `scrubber` (la carte, ou son simulateur), `twin` (le
 jumeau de la cabine et le runtime : catalogue, documents, bacs à sable),
 `station` (Mother : registre, mises en service, journal), `factory`,
 `reasoner`, `agent`, `scenario`, `qr`, `speech`, `biomed`, `workspace`,
-`model`, `library`, `observer`, `screens`, `physics` (les unités :
+`model`, `library`, `observer`, `screens`, `supervisor` (le superviseur des
+contrats : `review`, `review_request`, un verdict typé sur les faits d'une
+tâche), `physics` (les unités :
 `units_normalize`, `units_convert`, `units_compatible`,
 `units_validate_connection`, une façade déterministe sur le système
-d'unités du substrat, codes UCUM). Sans clé, `reasoner` et
+d'unités du substrat, codes UCUM), `web` (`search`, avec résultats classés,
+extraits et sources, et une réponse citée facultative avec les profils
+hébergés ; `describe`, sans appel payant). Sans clé,
+`reasoner` et
 `observer` répondent qu'aucun modèle n'est prêt au lieu de répondre à sa
-place.
+place ; `web.search` refuse en nommant la variable d'environnement absente.
+Le harnais des trois topics voit `web.search`. L'agent cabine Tier 3 ne le
+voit pas : le web est une source de preuves non fiables, pas une source
+d'instructions opérationnelles.
 
 ## 3. La bibliothèque
 
@@ -183,8 +198,8 @@ un candidat qui manque, le diagnostic, un candidat révisé.
 - L'exemple tire encore sa télémétrie du monde de test en TypeScript
   (la référence de l'habitat est celle de l'usine de graphes depuis le 25
   septembre, par la bibliothèque).
-- Nemotron sur Nebius n'a pas été essayé ; la recherche sur le web n'est
-  pas branchée ; le conteneur de l'usine n'a pas le plugin local.
+- Nemotron sur Nebius n'a pas été essayé ; le conteneur de l'usine n'a pas
+  le plugin local.
 - La page du jumeau (l'agent de la nuit 9 dans le studio) tourne sur le
   graphe de la cabine, pas sur l'habitat ; l'habitat s'ouvre à part, pour
   l'inspecter : `?mcp=0&ext=/agent/habitat.js` (`plugin-habitat.fr.md`,

@@ -1,0 +1,19 @@
+{
+    "server": {
+        "description": "Le superviseur des contrats : un modèle qui lit les faits typés d'une tâche, le rapport déterministe des contrats, les hypothèses et les symboles, jamais une transcription, et dit si l'ensemble est cohérent entre ses producteurs et qui doit réviser quoi ; son verdict est typé et vérifié par du code avant de compter",
+        "instructions": "Donnez-lui des faits (id, sémantique, unité, valeur, statut, source, producteur) ou une TWIN_FACTORY_REQUEST avec les appareils du registre ; il calcule d'abord le rapport déterministe, puis demande au modèle ce que les règles sur les nombres ne voient pas. Sans clé il dit qu'aucun modèle n'est prêt et le rapport déterministe tient."
+    },
+    "tools": {
+        "review": {
+            "title": "Réviser des faits",
+            "description": "Les faits tels que donnés, avec les hypothèses, les symboles et les variables ajustées en aval : le rapport déterministe (CONSISTENT, CONFLICT, MISSING), puis le verdict du modèle avec ses constats (un fait ou une hypothèse, un producteur, une raison, REVISE, COMPLETE, INSPECT ou REJECT)."
+        },
+        "review_request": {
+            "title": "Réviser une demande",
+            "description": "Une TWIN_FACTORY_REQUEST contre les appareils du registre et les faits typés de la bibliothèque : les constantes connues de la demande par id de fait, les propriétés des appareils nommées par les fiches de la bibliothèque, les faits de la bibliothèque ; puis le verdict."
+        }
+    },
+    "resources": {
+        "supervisor://verdicts": { "description": "Chaque verdict rendu, avec son rapport déterministe et ses tentatives." }
+    }
+}

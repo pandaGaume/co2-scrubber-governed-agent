@@ -258,3 +258,4 @@ fait ; la conception est la même.
 | l'aiguillage vers les usines | à construire (section 4) |
 | l'usine de graphes, et la boucle écart puis correction | construite le 24 septembre (`usine-de-graphes.fr.md`, exemple complet dans `exemple-mise-en-service.fr.md`) |
 | l'usine de code et le plugin `generated` | en réserve (section 6) ; le bac à sable est un slot, `forge` (section 6.1, décidé le 25 septembre au soir, à construire en premier à la reprise) |
+| le superviseur des contrats | construit la nuit du 25 septembre (`harness-refactoring.fr.md`, section 16) : un rôle sur le slot `reasoner`, un verdict typé gardé par code, l'Observateur renvoyé dans sa boucle, l'usine de graphes qui lit le verdict |

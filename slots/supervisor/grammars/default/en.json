@@ -1,0 +1,19 @@
+{
+    "server": {
+        "description": "The Contract Supervisor: a model that reads the typed facts of a task, the deterministic contract report, the assumptions and the symbols, never a transcript, and says whether the whole is consistent across its producers and who must revise what; its verdict is typed and checked by code before it counts",
+        "instructions": "Give it facts (id, semantic, unit, value, status, source, producer) or a TWIN_FACTORY_REQUEST with the register's devices; it computes the deterministic report first, then asks the model for what rules on numbers cannot see. Without a key it says no model is ready and the deterministic report stands."
+    },
+    "tools": {
+        "review": {
+            "title": "Review facts",
+            "description": "The facts as given, with the assumptions, the hypotheses, the symbols and the variables fitted downstream: the deterministic report (CONSISTENT, CONFLICT, MISSING), then the model's verdict with its findings (a fact or an assumption, a producer, a reason, REVISE, COMPLETE, INSPECT or REJECT)."
+        },
+        "review_request": {
+            "title": "Review a request",
+            "description": "A TWIN_FACTORY_REQUEST against the register's devices and the library's typed facts: the request's known constants by fact id, the devices' properties named through the library's sidecars, the library's own facts; then the verdict."
+        }
+    },
+    "resources": {
+        "supervisor://verdicts": { "description": "Every verdict given, with its deterministic report and its attempts." }
+    }
+}

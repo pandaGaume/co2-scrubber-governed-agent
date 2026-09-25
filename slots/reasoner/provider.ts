@@ -62,13 +62,14 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
     /**
      * The system prompt of a conversation: the agent's, or a role's prompt
      * file when a caller names one (a factory builder: a topic's prompt; the
-     * Observer: its own). Only a file under `harness/topics/<topic>/prompt.md`
-     * or `harness/observer/prompt.md` is read: a caller names what the model
+     * Observer: its own; the Contract Supervisor: its own). Only a file under
+     * `harness/topics/<topic>/prompt.md`, `harness/observer/prompt.md` or
+     * `harness/supervisor/prompt.md` is read: a caller names what the model
      * is told, it does not write it.
      */
     function promptOf(file: string | undefined): string {
         if (!file) return systemPrompt;
-        if (!/^harness\/(topics\/[a-z0-9-]+|observer)\/prompt\.md$/.test(file)) throw new Error(`prompt "${file}" is not a role's prompt file (harness/topics/<topic>/prompt.md, harness/observer/prompt.md)`);
+        if (!/^harness\/(topics\/[a-z0-9-]+|observer|supervisor)\/prompt\.md$/.test(file)) throw new Error(`prompt "${file}" is not a role's prompt file (harness/topics/<topic>/prompt.md, harness/observer/prompt.md, harness/supervisor/prompt.md)`);
         const full = fromRoot(file);
         if (!existsSync(full)) throw new Error(`prompt "${file}" does not exist`);
         return readFileSync(full, "utf8");
