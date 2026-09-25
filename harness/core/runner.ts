@@ -26,7 +26,9 @@ import type { Provider, ProviderExchange } from "../lib/provider.js";
 import { createAgent } from "./agent.js";
 import { createBuilderGuard } from "./builder-guard.js";
 import { buildCapabilities, type CapabilityCall } from "./capabilities.js";
-import { manifestText, sha256Text, summarize, toolsOf, type Manifest, type ManifestArtifact, type ManifestStep } from "./manifest.js";
+import { manifestText, newTelemetry, sha256Text, summarize, toolsOf, type Manifest, type ManifestArtifact, type ManifestStep } from "./manifest.js";
+import { compactOutput } from "./compact.js";
+import { reasoningStateOf } from "./reasoning-state.js";
 import { intentionFor, loadRecipes, saveRecipes, taskSignature } from "./recipes.js";
 import { createTaskEvaluator } from "./task-evaluator.js";
 import { taskCapabilities } from "./task-capabilities.js";
@@ -109,6 +111,38 @@ async function readTask(broker: Broker, taskId: string): Promise<{ task: TaskFil
     return { task, sha256 };
 }
 
+/** The library's shelf, read once for the state: each graph with its variables' status, so the model knows what exists without a call. */
+async function shelfOf(broker: Broker): Promise<Progress["context"]["shelf"]> {
+    const r = await broker.call("library", "graphs", {});
+    if (!r.ok) return [];
+    const graphs = ((r.output as { graphs?: unknown[] })?.graphs ?? []) as Array<Record<string, unknown>>;
+    const rec = (v: unknown): Record<string, Record<string, unknown>> => (v && typeof v === "object" ? (v as Record<string, Record<string, unknown>>) : {});
+    return graphs.map((g) => ({
+        id: String(g.id),
+        description: String(g.description ?? "").slice(0, 400),
+        variables: Object.fromEntries(Object.entries(rec(g.variables)).map(([k, x]) => [k, `${String(x.status)}${x.default !== undefined ? `, default ${String(x.default)}` : ""}${x.min !== undefined ? `, ${String(x.min)} to ${String(x.max)}` : ""}${x.unit ? ` ${String(x.unit)}` : ""}`])),
+        settings: Object.entries(rec(g.settings)).map(([k, x]) => `${k}: default ${String(x.default)}${x.module ? ` (${String(x.module)})` : ""}`),
+        probes: (Array.isArray(g.probes) ? (g.probes as Array<Record<string, unknown>>) : []).filter((p) => p.column).map((p) => `${String(p.node)}.${String(p.property)} against ${String(p.column)}`),
+    }));
+}
+
+/** The telemetry's shape, read once for the state: the first data file whose rows carry a minute column. */
+async function telemetryShapeOf(broker: Broker, taskId: string, task: TaskFile["task"]): Promise<Progress["context"]["telemetry"]> {
+    for (const d of task.data ?? []) {
+        const r = await broker.call("workspace", "read", { taskId, path: d.file });
+        if (!r.ok) continue;
+        try {
+            const rows = JSON.parse((r.output as { text: string }).text) as Array<Record<string, unknown>>;
+            if (!Array.isArray(rows) || !rows.length || !rows.every((x) => x && typeof x === "object")) continue;
+            const minutes = rows.map((x) => Number(x.minute)).filter(Number.isFinite);
+            return { file: d.file, rows: rows.length, columns: [...new Set(rows.flatMap((x) => Object.keys(x)))], minutes: minutes.length ? Math.max(...minutes) : null };
+        } catch {
+            // not a table
+        }
+    }
+    return null;
+}
+
 async function writeText(broker: Broker, taskId: string, file: string, text: string): Promise<string> {
     const r = await broker.call("workspace", "write", { taskId, path: file, text });
     if (!r.ok) throw new Error(`cannot write ${file} in task ${taskId}: ${r.error ?? r.outcome}`);
@@ -133,6 +167,11 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
     const profileFile = fromRoot(file.profile ?? "");
     const promptPath = promptFile ? fromRoot(promptFile) : null;
 
+    // What the state carries so the model need not read it: the shelf and the telemetry's shape.
+    progress.context = { shelf: await shelfOf(broker), telemetry: await telemetryShapeOf(broker, taskId, task) };
+    const telemetry = newTelemetry("contextMode" in provider ? String((provider as { contextMode?: unknown }).contextMode) : "unknown");
+    // A long answer goes whole to the workshop and the model reads its summary and its handle; written right after the step.
+    let pendingArtifact: { path: string; text: string } | null = null;
     const capabilities = await buildCapabilities(broker, {
         profile: {
             included: topic.tools,
@@ -146,13 +185,30 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             progress.lastCall = call;
             calls.push(call);
             if (call.result.ok) progress.reads[call.id] = { at: new Date().toISOString(), value: (call.result.output ?? null) as JsonValue };
+            const whole = call.result.ok ? (call.result.output ?? null) : { error: call.result.error ?? null, outcome: call.result.outcome };
+            const compact = compactOutput(call.id, call.input, whole);
+            progress.lastSummary = compact.summary;
+            telemetry.toolResultBytes += compact.bytes;
+            telemetry.compactedContextBytes += JSON.stringify(compact.summary)?.length ?? 0;
+            if (compact.reduced) {
+                const file = `results/step-${String(calls.length).padStart(3, "0")}-${call.id.replace(/[^a-z0-9]+/gi, "-")}.json`;
+                progress.lastArtifact = file;
+                pendingArtifact = { path: file, text: JSON.stringify(whole, null, 2) + "\n" };
+            } else progress.lastArtifact = null;
         },
     });
     const agent = createAgent({
         broker,
         provider,
         capabilities,
-        observer: createWorkspaceObserver(broker, taskId, progress, () => topic.brief?.(progress, task) ?? ""),
+        observer: createWorkspaceObserver(
+            broker,
+            taskId,
+            progress,
+            () => topic.brief?.(progress, task) ?? "",
+            () => reasoningStateOf({ task, progress, budget, startedAt, nextActions: capabilities.catalogue.map((c) => c.id), shelf: progress.context.shelf, telemetry: progress.context.telemetry, runsSpent: topic.runsSpent?.(progress), topic: topic.state?.(progress, task) }),
+            () => topic.key?.(progress) ?? "",
+        ),
         evaluator: createTaskEvaluator({ broker, taskId, task, topic, progress }),
         guard: createBuilderGuard({ broker, task, topic, runtimeSlot, taskId, progress }),
         policy: recipes.policy,
@@ -181,6 +237,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         proposal: null,
         verdict: null,
         ended: null,
+        telemetry,
     };
     await writeText(broker, taskId, "manifest.json", manifestText(manifest));
     onProgress?.(manifest);
@@ -216,6 +273,28 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         const ms = Date.now() - stepStarted;
         const exchange = trace ? (provider.exchanges.find((x) => x.decisionId === trace.decisionId) ?? null) : (provider.exchanges.filter((x) => !attached.has(x.decisionId)).at(-1) ?? null);
         if (exchange) attached.add(exchange.decisionId);
+        // The whole answer of a long call, written now so the model can read it at the next step by its handle.
+        if (pendingArtifact) {
+            const artifact: { path: string; text: string } = pendingArtifact;
+            pendingArtifact = null;
+            try {
+                await writeText(broker, taskId, artifact.path, artifact.text);
+            } catch (e) {
+                log(`[factory] step ${n}: could not keep ${artifact.path}: ${errorMessage(e)}`);
+                progress.lastArtifact = null;
+            }
+        }
+        // Where the tokens went: the model's usage, cache included, and the characters of each part of the context.
+        if (exchange) {
+            telemetry.modelCalls++;
+            const usage = ((exchange.response as { usage?: Record<string, number> } | null)?.usage ?? {}) as Record<string, number>;
+            telemetry.modelInputTokens += usage.input_tokens ?? usage.prompt_tokens ?? 0;
+            telemetry.modelOutputTokens += usage.output_tokens ?? usage.completion_tokens ?? 0;
+            telemetry.cacheReadTokens += usage.cache_read_input_tokens ?? 0;
+            telemetry.cacheWriteTokens += usage.cache_creation_input_tokens ?? 0;
+            for (const [k, v] of Object.entries(exchange.context ?? {})) if (typeof v === "number") telemetry.contextCharsByCategory[k] = (telemetry.contextCharsByCategory[k] ?? 0) + v;
+            if (typeof exchange.context?.mode === "string") telemetry.contextMode = exchange.context.mode;
+        }
         const call = calls.at(-1)?.decisionId === trace?.decisionId ? (calls.at(-1) ?? null) : null;
         progress.iteration = n;
         if (trace) {

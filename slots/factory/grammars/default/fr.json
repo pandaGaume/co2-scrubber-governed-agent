@@ -118,6 +118,19 @@
         "step.task.fail": "L'usine renonce.",
         "end.failed.gaveUp": "La tâche finit en échec ; rien n'est proposé.",
         "page.lastTask": "Dernière tâche {taskId} : {state}, {steps} pas. En attente de la suivante ; choisissez-la dans la liste pour la rejouer.",
-        "page.lastTask.now": "Dernière tâche {taskId} : {state} ; en attente de la suivante"
+        "page.lastTask.now": "Dernière tâche {taskId} : {state} ; en attente de la suivante",
+        "loop.observe": "Observer : {capability} lit ce que la tâche tient",
+        "loop.hypothesize": "Hypothèse : le plan nomme la structure et ce qui s'ajuste",
+        "loop.build": "Construire : le graphe est instancié",
+        "loop.execute": "Exécuter : les variables sont ajustées et le bac à sable tourne",
+        "loop.evaluate": "Évaluer : couverture, résidu, identifiabilité",
+        "loop.pass": "Réussi : la calibration tient le seuil",
+        "loop.diagnose": "Diagnostiquer : pourquoi ça ne tient pas",
+        "loop.parameter": "Écart de paramètre : une valeur ajustée est au bord de sa plage",
+        "loop.structural": "Écart de structure : aucun jeu de paramètres admissible ne suit la courbe",
+        "loop.invalid": "Évaluation invalide : une prédiction manque ou n'est pas finie",
+        "loop.revise": "Réviser : les bornes si la physique le permet, sinon la topologie",
+        "loop.experiment": "Information insuffisante : il faut une expérience",
+        "loop.done": "Terminé : remis comme calibré, validation en attente"
     }
 }

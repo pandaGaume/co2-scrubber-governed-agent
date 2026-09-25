@@ -45,6 +45,8 @@ export interface DecideResult {
     latencyMs: number;
     tokens: { prompt: number; completion: number; total: number } | null;
     exchange: { request: unknown; response: unknown };
+    /** Where the characters of the request went, and the context mode (the adapter's `context`). */
+    context?: Record<string, number | string> | null;
 }
 
 const MAX_CONVERSATIONS = 16;
@@ -73,18 +75,20 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
     }
 
     /** A provider instance per conversation: the adapters keep one conversation each. */
-    async function providerFor(conversationId: string, intentionId: string, promptFile?: string): Promise<Provider> {
+    async function providerFor(conversationId: string, intentionId: string, promptFile?: string, contextMode?: string): Promise<Provider> {
         const existing = conversations.get(conversationId);
         if (existing) return existing;
         let provider: Provider;
         const prompt = promptOf(promptFile);
+        // The context mode is the conversation's: `state` for a loop whose harness rebuilds the reasoning state at every step, the transcript replayed otherwise.
+        const mode = contextMode === "state" ? "state" : "conversation";
         try {
             if (wire === "anthropic-messages") {
                 const { AnthropicProvider } = await import("../../harness/providers/anthropic.js");
-                provider = new AnthropicProvider(profile, { systemPrompt: prompt });
+                provider = new AnthropicProvider(profile, { systemPrompt: prompt, contextMode: mode });
             } else {
                 const { OpenAiCompatibleProvider } = await import("../../harness/providers/openai-compatible.js");
-                provider = new OpenAiCompatibleProvider(profile, { systemPrompt: prompt });
+                provider = new OpenAiCompatibleProvider(profile, { systemPrompt: prompt, contextMode: mode });
             }
         } catch (e) {
             notReady = errorMessage(e);
@@ -173,6 +177,7 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
                         candidates: { type: "array", description: "learned decisions the harness considered" },
                         recentFailures: { type: "array", description: "recent experiences that failed" },
                         prompt: { type: "string", description: "a topic's prompt file (harness/topics/<topic>/prompt.md) the model reads instead of the agent's, for a factory builder; read once, when the conversation opens" },
+                        contextMode: { type: "string", enum: ["conversation", "state"], description: "conversation (default): the transcript of the event is replayed at every step; state: each step is the intention and the harness's reasoning state alone, nothing replayed" },
                     },
                     required: ["conversationId", "intention", "state", "allowedCapabilities"],
                 },
@@ -180,7 +185,7 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
                     const conversationId = String(args.conversationId);
                     const intention = args.intention as Intention;
                     if (!intention?.id) throw new Error("intention.id is required");
-                    const provider = await providerFor(conversationId, intention.id, typeof args.prompt === "string" ? args.prompt : undefined);
+                    const provider = await providerFor(conversationId, intention.id, typeof args.prompt === "string" ? args.prompt : undefined, typeof args.contextMode === "string" ? args.contextMode : undefined);
                     const input: PolicyFallbackInput = {
                         decisionId: typeof args.decisionId === "string" ? args.decisionId : undefined,
                         intention,
@@ -213,6 +218,7 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
                         latencyMs: x?.latencyMs ?? 0,
                         tokens: x?.tokens ?? null,
                         exchange: { request: x?.request ?? null, response: x?.response ?? null },
+                        context: x?.context ?? null,
                     };
                     // What the model proposed against what the harness will run.
                     // When the two differ the governance overrode the model, and

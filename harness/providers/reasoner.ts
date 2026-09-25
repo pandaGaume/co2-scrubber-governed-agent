@@ -33,6 +33,7 @@ interface DecideAnswer {
     latencyMs: number;
     tokens: ProviderExchange["tokens"];
     exchange: { request: unknown; response: unknown };
+    context?: ProviderExchange["context"] | null;
 }
 
 export class ReasonerProvider implements Provider {
@@ -71,6 +72,12 @@ export class ReasonerProvider implements Provider {
     }
     private prompt: string | null = null;
 
+    /** The context mode of the conversations this provider opens on the slot: `state` for a harness that rebuilds the reasoning state at every step. */
+    useContext(mode: "conversation" | "state"): void {
+        this.contextMode = mode;
+    }
+    private contextMode: "conversation" | "state" = "conversation";
+
     get name(): string {
         return `reasoner:${this.family}`;
     }
@@ -92,6 +99,7 @@ export class ReasonerProvider implements Provider {
             candidates: input.candidates,
             recentFailures: input.recentFailures,
             ...(this.prompt ? { prompt: this.prompt } : {}),
+            contextMode: this.contextMode,
         });
         if (!r.ok) throw new Error(r.error ?? "reasoner.decide failed");
         const a = r.output as DecideAnswer;
@@ -100,6 +108,7 @@ export class ReasonerProvider implements Provider {
             model: a.model,
             request: a.exchange?.request ?? null,
             response: a.exchange?.response ?? null,
+            ...(a.context ? { context: a.context } : {}),
             decision: a.decision,
             proposedCapabilityId: a.proposedCapabilityId,
             proposedInput: a.proposedInput,

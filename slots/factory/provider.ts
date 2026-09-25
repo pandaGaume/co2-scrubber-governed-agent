@@ -140,6 +140,8 @@ function launch(httpBase: string, taskId: string, topic: Topic, builder: Builder
             const reasoner = await ReasonerProvider.connect(broker);
             if (!reasoner.description.ready) throw new Error(`the reasoner is not ready: ${reasoner.description.reason ?? "no reason given"}`);
             reasoner.usePrompt(prompt);
+            // A factory task runs on the reasoning state: the model reads the state the harness rebuilds at every step, never the transcript.
+            reasoner.useContext("state");
             run.builder = reasoner.name;
             provider = reasoner;
             promptFile = prompt;

@@ -31,6 +31,7 @@ import type { DoneClaim, Progress, WorkshopFile } from "../../core/workspace-obs
 import { evaluateCandidate, evaluationOutput, knownOf, STATION_GRAPH_ID, stationReference, type Candidate, type EvaluateInput } from "./evaluate.js";
 import { wiringLines } from "./reference.js";
 import type { Row } from "./params.js";
+import type { TopicState } from "../../core/reasoning-state.js";
 
 export const GRAPH_TOOLS: ReadonlyArray<RegExp> = [/^workspace\.(list|read)$/, /^library\.(list|methods|search|read|graphs|graph)$/, /^twin\.registry_(search|describe_node|list_nodes)$/, /^twin\.document_validate$/, /^graph\.evaluate$/, /^task\.(plan|done|fail)$/];
 export const GRAPH_PROMPT = "harness/topics/graph/prompt.md";
@@ -111,7 +112,7 @@ function evaluateCapability(context: TopicContext): LocalCapability {
             try {
                 const rows = await telemetryOf(context);
                 const budget = task.budget?.twinPoints ?? 40;
-                const result = await evaluateCandidate(input as unknown as EvaluateInput, { broker, taskId, task, rows, remaining: budget - state.runs, n: state.candidates.length + 1 });
+                const result = await evaluateCandidate(input as unknown as EvaluateInput, { broker, taskId, task, rows, remaining: budget - state.runs, n: state.candidates.length + 1, previous: state.candidates });
                 state.runs += result.candidate.combinations;
                 state.candidates.push(result.candidate);
                 await broker.call("workspace", "write", { taskId, path: "candidates.json", text: JSON.stringify(state.candidates, null, 2) + "\n" });
@@ -143,6 +144,93 @@ export function validateGraph(claim: DoneClaim, files: WorkshopFile[], progress:
     return { ok: problems.length === 0, problems };
 }
 
+/**
+ * The evidence each phase needs (2026-09-25): a phase moves on facts the
+ * harness can check, not on a reasonable-looking call. The context phase
+ * needs the telemetry, the known constants and the shelf; they are in the
+ * state when the runner read them, so nothing has to be read again; when
+ * one is missing, the guard refuses the plan and says what would satisfy
+ * it.
+ */
+export function requirementsOf(progress: Progress, task: TaskFile["task"]): Record<string, boolean> {
+    const { candidates } = stateOf(progress);
+    const last = candidates.at(-1);
+    return {
+        telemetryAvailable: progress.context.telemetry !== null || (task.data ?? []).length > 0,
+        // The documented constants are resolved when the task carries them, when a document was read, or when the shelf holds a reference graph: its template carries them with their sources.
+        knownConstantsResolved: knownOf(task).length > 0 || progress.reads["library.read"] !== undefined || progress.context.shelf.length > 0,
+        referenceGraphsKnown: progress.context.shelf.length > 0 || progress.reads["library.graphs"] !== undefined,
+        planAccepted: progress.plan !== null,
+        candidateEvaluated: candidates.length > 0,
+        candidateHeld: last?.pass === true,
+    };
+}
+
+/** What would satisfy an unmet requirement of the context phase. */
+const HOW: Record<string, string> = {
+    telemetryAvailable: "the task carries no telemetry table: nothing to judge a twin against (task.fail with that reason)",
+    knownConstantsResolved: "no known constant in the task and nothing read from the library: read the device's datasheet (library.read) so the documented constants are held",
+    referenceGraphsKnown: "the shelf is not known: library.graphs lists the reference graphs",
+};
+
+/** The topic's part of the reasoning state: the hypothesis under test, the last evaluation made compact, the open questions, the evidence. */
+export function stateOfTopic(progress: Progress, task: TaskFile["task"]): TopicState {
+    const { candidates } = stateOf(progress);
+    const last = candidates.at(-1);
+    const requirements = requirementsOf(progress, task);
+    const openQuestions: string[] = [];
+    let hypothesis: TopicState["hypothesis"] = progress.plan ? { plannedTypes: progress.plan.selected_nodes, missing: progress.plan.missing_capabilities.map((m) => m.required_output) } : null;
+    let evaluation: TopicState["evaluation"] = null;
+    if (last) {
+        const status = (k: string) => (last.fitted.includes(k) ? "fitted" : last.fromDevice?.[k] ? "device" : last.defaulted?.includes(k) ? "documented, the graph's default" : "given");
+        hypothesis = {
+            candidate: last.n,
+            path: last.path,
+            graph: last.graph ?? null,
+            label: last.label,
+            types: last.types,
+            variables: Object.fromEntries(Object.entries(last.variables).map(([k, v]) => [k, { value: v, status: status(k) }])),
+            ...(last.settings ? { settings: last.settings } : {}),
+            ...(last.persons ? { persons: last.persons.map((p) => `${p.callsign || p.id || "someone"} in ${p.module} at ${p.activity}`) } : {}),
+        };
+        evaluation = {
+            candidate: last.n,
+            status: last.status,
+            diagnosis: last.diagnosis,
+            calibration: last.calibration,
+            validation: last.validation,
+            pass: last.pass,
+            threshold: last.threshold,
+            residuals: last.residuals.map((r) => ({ column: r.column, rmse: r.rmse, worst: r.worst, worstMinute: r.worstMinute })),
+            ...(last.atBounds?.length ? { atBounds: last.atBounds } : {}),
+            ...(last.identifiability ? { identifiable: last.identifiable ?? true, identifiability: last.identifiability } : {}),
+            ...(last.diagnostics ? { diagnostics: last.diagnostics } : {}),
+            ...(last.early ? { firstSlope: { predicted: last.early.predicted, measured: last.early.measured } } : {}),
+            warnings: last.warnings.map((w) => w.slice(0, 300)),
+            runs: last.combinations,
+            candidatesSoFar: candidates.length,
+        };
+        const worst = [...last.residuals].sort((a, b) => b.rmse - a.rmse)[0];
+        switch (last.diagnosis) {
+            case "INVALID_EVALUATION":
+                openQuestions.push(`the evaluation of candidate ${last.n} is invalid (${(last.diagnostics ?? []).map((d) => d.reason).join(", ")}): fix what the diagnostics name before any residual is read`);
+                break;
+            case "PARAMETER_MISMATCH":
+                if (last.heldFitted?.length) openQuestions.push(`candidate ${last.n} held ${last.heldFitted.join(", ")} at a value, and the graph says only the installation knows ${last.heldFitted.length > 1 ? "them" : "it"}: fit ${last.heldFitted.length > 1 ? "them" : "it"} within the graph's bounds before doubting the structure`);
+                else openQuestions.push(`candidate ${last.n} ends at the edge of the range for ${(last.atBounds ?? []).join(", ")}: the range decided, not the physics; widen it only if the physics allows the value beyond, else the structure is in question`);
+                break;
+            case "STRUCTURAL_MISMATCH":
+                openQuestions.push(`no admissible parameter set of this structure follows ${worst?.column ?? "the telemetry"} (worst ${worst?.worst ?? "?"} ppm at minute ${worst?.worstMinute ?? "?"}): a term is missing or wrong; revise the topology, do not widen the bounds again`);
+                break;
+            default:
+                break;
+        }
+        if (last.identifiable === false) openQuestions.push(`the fit passes but ${Object.entries(last.identifiability ?? {}).filter(([, i]) => i.spread > 0.2).map(([k]) => k).join(", ")} are not pinned by this telemetry: several combinations fit alike; say so when handing over, the twin is calibrated, its parameters are not established`);
+        if (last.pass) openQuestions.push("calibration passed on this telemetry; validation on another profile, hatch state or occupancy has not been performed: hand over as calibrated, not validated");
+    }
+    return { hypothesis, evaluation, openQuestions, requirements };
+}
+
 /** The harness's brief, stage by stage: what the task holds, the plan, the candidates and what the last one showed. */
 export function briefOf(progress: Progress, task: TaskFile["task"]): string {
     const { candidates } = stateOf(progress);
@@ -151,8 +239,12 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
     const known = knownOf(task);
     // The documented constants, said at every stage: held in variables under their symbol, never fitted.
     const held = known.length ? ` Known, from the documentation, held in variables under these names and never fitted: ${known.map((k) => `${k.symbol} = ${k.value}${k.unit ? ` ${k.unit}` : ""}${typeof k.min === "number" && typeof k.max === "number" ? ` (band ${k.min} to ${k.max}: may be fitted within it)` : ""} (${k.name ?? ""}${k.source ? `, ${k.source}` : ""})`).join("; ")}. Watch their units against the nodes' (a flow in m3/min enters a node as flow / V).` : "";
-    if (!progress.reads["workspace.read"] && !progress.reads["library.read"] && progress.phase === "plan") return `Stage 1 of 5, what to reproduce. Read the task (workspace.read task.json: the requirements, the observations, the hypotheses) and its telemetry (the data file), the graphs on the library's shelf (library.graphs: the station's reference graphs, each with its variables, its settings and its probes; a twin of this station starts from one), the library's card on building a twin graph (library.read method-twin-graph), and the documentation of the devices and of the station (library.list: a device's datasheet, the station's topology and metrics): what the documentation gives is known, and is not fitted. The twin must produce ${outputs} within a residual of ${String(threshold)} ppm of the telemetry.${held}`;
-    if (progress.phase === "plan") return `Stage 2 of 5, the plan. Choose the node types of the catalogue (twin.registry_search, twin.registry_describe_node; a library graph's types are listed by library.graphs) and submit them with task.plan; declare missing only what no node can express.`;
+    const requirements = requirementsOf(progress, task);
+    const unmet = Object.entries(requirements).filter(([k, v]) => !v && k in HOW).map(([k]) => `${k}: ${HOW[k]}`);
+    if (progress.phase === "plan") {
+        if (unmet.length) return `Plan, not yet: the evidence the plan needs is incomplete. ${unmet.join(". ")}. The state (the observation) holds what the harness already read: the task's invariants, the telemetry's shape, the shelf; read nothing it already gives. The twin must produce ${outputs} within a residual of ${String(threshold)} ppm.${held}`;
+        return `Plan. The state holds the task's invariants (objective, outputs, threshold, the known constants with their status), the telemetry's shape and the library's shelf (the reference graph "${STATION_GRAPH_ID}" with its variables and their status): nothing needs reading first. Submit task.plan with the node types you will use: the reference graph's (its types are in the state's shelf, or in library.graphs), or a structure of your own from the catalogue (twin.registry_search); declare missing only what no node can express. The twin must produce ${outputs} within a residual of ${String(threshold)} ppm.${held}`;
+    }
     const last = candidates.at(-1);
     // An evaluation the harness could not run says why, here, until one runs: the builder reads it at every step, not only in the answer it may have skimmed.
     const call = progress.lastCall;
@@ -162,11 +254,16 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
     const devices = Array.isArray((task.observations as { devices?: unknown }).devices) ? ((task.observations as { devices: Array<{ path: string }> }).devices.map((d) => d.path).join(", ")) : "";
     const persons = Array.isArray((task.observations as { persons?: unknown }).persons) ? ((task.observations as { persons: Array<{ module: string; activity: string; callsign?: string }> }).persons.map((p) => `${p.callsign ?? "someone"} in ${p.module} at ${p.activity}`).join(", ")) : "";
     const start = station ? ` The library holds the station's reference graph (library.graphs, graph "${STATION_GRAPH_ID}": two volumes in mass, the persons by name, the scrubber in its datasheet's units, the ventilation through its filter, the sensors); do not rebuild it: instantiate it (graph.evaluate with graph: "${STATION_GRAPH_ID}", persons or settings for who is on board, variables for what you hold, fit for the bounds of what only the installation knows) and adapt its numbers. The scrubber's own numbers come from the registered device (${devices ? `the task carries the register: ${devices}` : "the datasheet's defaults when the task carries no device"}) and are held; what is fitted is the volumes and the filter's loading, the operators' rate within its band.${persons ? ` On board, as observed: ${persons}: give them as persons.` : ""} It is wired: ${wiringLines(station)}. A spec of your own is accepted instead, with a measured input as a Logic.Time:timeline whose segments are the $series, its value port wired into the input.` : "";
-    if (!last) return `Stage 3 of 5, a first candidate.${start} Give the bounds of the variables nobody knows (fit), and evaluate the candidate (graph.evaluate). Threshold: ${String(threshold)} ppm.${held}${refused}`;
-    if (last.pass) return `Stage 5 of 5, hand over. Candidate ${last.n} (${last.path}) holds the threshold: residual ${Math.max(...last.residuals.map((r) => r.rmse))} ppm. End with task.done, the graph as the artifact: {"kind": "graph", "path": "${last.path}"}.`;
+    if (!last) return `Evaluate a first candidate.${start} Give the bounds of the variables nobody knows (fit), and evaluate the candidate (graph.evaluate); its answer is compact, the whole is at the handle the state names. Threshold: ${String(threshold)} ppm.${held}${refused}`;
     const where = last.residuals.map((r) => `${r.column}: ${r.rmse} ppm, worst ${r.worst} at minute ${r.worstMinute}`).join("; ");
-    const warned = last.warnings?.length ? ` First, ${last.warnings.join(" ")}` : "";
-    return `Stage 4 of 5, the gap. Candidate ${last.n} (${last.label}) misses the threshold of ${last.threshold} ppm: ${where}, with ${JSON.stringify(last.variables)} its best fit over ${last.combinations} runs. ${candidates.length} candidate(s) so far.${warned} Look at where the curves part: if a wider range of the same variables cannot close the gap, the topology is missing something the task's hypotheses may name. ${last.reference && last.reference.missingWires.length ? `Against the station's reference graph, candidate ${last.n} lacks: ${last.reference.missingWires.join("; ")}. ` : ""}A term added must name its physical hypothesis (an exchange, a source); a constant term with no physics behind it closes a gap for the wrong reason.${held} Evaluate the next candidate.${refused}`;
+    if (last.diagnosis === "PASS") return `Hand over. Candidate ${last.n} (${last.path}) holds the threshold: ${where}. Its calibration passed on this telemetry; its validation on another profile, hatch state or occupancy was not performed: say so in the summary, with the numbers${last.identifiable === false ? ", and that the fitted parameters are not pinned by this telemetry (the state's evaluation.identifiability says which)" : ""}. End with task.done, the graph as the artifact: {"kind": "graph", "path": "${last.path}"}.`;
+    if (last.diagnosis === "INVALID_EVALUATION") return `The evaluation of candidate ${last.n} is invalid, no residual was trusted: ${(last.diagnostics ?? []).map((d) => `${d.reason}${d.column ? ` on ${d.column}` : ""}${d.minute !== undefined ? ` at minute ${d.minute}` : ""}${d.detail ? ` (${d.detail})` : ""}`).join("; ")}. Fix what that names (a probe that exists, a run that covers the telemetry) and evaluate again.${refused}`;
+    const warned = last.warnings?.length ? ` ${last.warnings.map((w) => w.slice(0, 400)).join(" ")}` : "";
+    if (last.diagnosis === "PARAMETER_MISMATCH") {
+        const why = last.heldFitted?.length ? `it held ${last.heldFitted.join(", ")} at a value (${JSON.stringify(Object.fromEntries(last.heldFitted.map((k) => [k, last.variables[k]])))}), and the graph says only the installation knows ${last.heldFitted.length > 1 ? "them" : "it"}: fit ${last.heldFitted.length > 1 ? "them" : "it"} within the graph's bounds` : `its best fit sits at the edge of the range for ${(last.atBounds ?? []).join(", ")} (${JSON.stringify(last.variables)} over ${last.combinations} runs): the range decided, not the physics. Widen that range only if the physics allows the value beyond it (the graph's bounds are the template's; a documented band is never left); otherwise the structure is in question`;
+        return `The gap is a parameter's. Candidate ${last.n} (${last.label}) misses the threshold of ${last.threshold} ppm: ${where}; ${why}.${warned} ${candidates.length} candidate(s) so far. Evaluate the next.${held}${refused}`;
+    }
+    return `The gap is structural. Candidate ${last.n} (${last.label}) misses the threshold of ${last.threshold} ppm: ${where}, with ${JSON.stringify(last.variables)} its best fit over ${last.combinations} runs, and no admissible parameter set of this structure closes it (${candidates.length} candidate(s) so far).${warned} Do not widen the bounds again: revise the topology where the curves part, guided by the task's hypotheses. ${last.reference && last.reference.missingWires.length ? `Against the station's reference graph, candidate ${last.n} lacks: ${last.reference.missingWires.join("; ")}. ` : ""}A term added must name its physical hypothesis (an exchange, a source); a constant term with no physics behind it closes a gap for the wrong reason.${held} Evaluate the next candidate.${refused}`;
 }
 
 function intentionOf(task: TaskFile["task"], generic: Intention): Intention {
@@ -174,11 +271,25 @@ function intentionOf(task: TaskFile["task"], generic: Intention): Intention {
     return { ...generic, description: `Build the twin graph that produces ${outputs} and reproduces the task's telemetry within its residual threshold, from the node catalogue; evaluate each candidate (graph.evaluate) and revise it by its gap until it holds.` };
 }
 
+/** The topic's own refusals: a plan before its evidence is in (the phase moves on facts, not on a call). */
+function guardGraph(capabilityId: string, _input: JsonValue, context: TopicContext): string[] {
+    if (capabilityId !== "task.plan") return [];
+    const requirements = requirementsOf(context.progress, context.task);
+    return Object.entries(requirements)
+        .filter(([k, v]) => !v && k in HOW)
+        .map(([k]) => `the plan needs ${k}: ${HOW[k]}`);
+}
+
 export const GRAPH_TOPIC: TopicDefinition = {
     name: "graph",
     tools: GRAPH_TOOLS,
     validate: (claim, files, progress) => validateGraph(claim, files, progress),
     local: (context) => [evaluateCapability(context)],
+    guard: guardGraph,
+    state: stateOfTopic,
+    runsSpent: (progress) => stateOf(progress).runs,
+    // The last candidate's diagnosis tells the steps apart: a step learned after a failed candidate does not replay after one that held.
+    key: (progress) => stateOf(progress).candidates.at(-1)?.diagnosis ?? "",
     intention: intentionOf,
     prompt: GRAPH_PROMPT,
     brief: briefOf,

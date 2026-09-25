@@ -589,6 +589,11 @@ var ReasonerProvider = class _ReasonerProvider {
     this.prompt = file;
   }
   prompt = null;
+  /** The context mode of the conversations this provider opens on the slot: `state` for a harness that rebuilds the reasoning state at every step. */
+  useContext(mode) {
+    this.contextMode = mode;
+  }
+  contextMode = "conversation";
   get name() {
     return `reasoner:${this.family}`;
   }
@@ -606,7 +611,8 @@ var ReasonerProvider = class _ReasonerProvider {
       allowedCapabilities: input.allowedCapabilities,
       candidates: input.candidates,
       recentFailures: input.recentFailures,
-      ...this.prompt ? { prompt: this.prompt } : {}
+      ...this.prompt ? { prompt: this.prompt } : {},
+      contextMode: this.contextMode
     });
     if (!r.ok) throw new Error(r.error ?? "reasoner.decide failed");
     const a = r.output;
@@ -615,6 +621,7 @@ var ReasonerProvider = class _ReasonerProvider {
       model: a.model,
       request: a.exchange?.request ?? null,
       response: a.exchange?.response ?? null,
+      ...a.context ? { context: a.context } : {},
       decision: a.decision,
       proposedCapabilityId: a.proposedCapabilityId,
       proposedInput: a.proposedInput,

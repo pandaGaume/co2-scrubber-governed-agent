@@ -12,7 +12,7 @@
  */
 import type { PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
 import type { Provider, ProviderExchange, ProviderProfile } from "../lib/provider.js";
-import { apiKeyFor, compactRequest, decisionFrom, familyOf, fromApiName, intentionText, observationText, parseJsonArgs, toApiName, TRUNCATED_RESULT, truncatedDecision } from "../lib/llm-common.js";
+import { apiKeyFor, compactRequest, contextSizes, decisionFrom, familyOf, fromApiName, intentionText, observationText, parseJsonArgs, toApiName, TRUNCATED_RESULT, truncatedDecision, type ContextMode } from "../lib/llm-common.js";
 
 interface ToolCall {
     id: string;
@@ -35,6 +35,8 @@ export interface OpenAiCompatibleOptions {
     systemPrompt: string;
     temperature?: number;
     timeoutMs?: number;
+    /** `conversation` (the default) replays the transcript; `state` sends the intention and the reasoning state alone at every step. */
+    contextMode?: ContextMode;
 }
 
 export class OpenAiCompatibleProvider implements Provider {
@@ -74,8 +76,16 @@ export class OpenAiCompatibleProvider implements Provider {
         this.pendingCalls = [];
     }
 
+    get contextMode(): ContextMode {
+        return this.options.contextMode ?? "conversation";
+    }
+
     async resolve(input: PolicyFallbackInput): Promise<PolicyDecision> {
         this.calls++;
+        if (this.contextMode === "state") {
+            this.messages = [{ role: "system", content: this.options.systemPrompt }];
+            this.pendingCalls = [];
+        }
         // Every tool call of the previous answer needs a tool message now, or the API refuses the conversation; only the first was executed.
         const f = input.state.features;
         for (const call of this.pendingCalls) {
@@ -121,6 +131,7 @@ export class OpenAiCompatibleProvider implements Provider {
             decisionId: input.decisionId,
             model: this.model,
             request: compactRequest(this.messages.slice(0, -1), tools.map((t) => ({ name: t.function.name, description: t.function.description })), this.options.systemPrompt),
+            context: { mode: this.contextMode, ...contextSizes(this.options.systemPrompt, tools.map((t) => t.function), this.messages.slice(1, -1) as Array<{ role: string; content: unknown }>, this.contextMode) },
             response: completion,
             decision,
             proposedCapabilityId: call ? fromApiName(call.function.name) : "crew.report",

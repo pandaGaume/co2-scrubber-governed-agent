@@ -11,6 +11,8 @@ import type { JsonValue, PolicyDecision, PolicyFallback } from "@spiky-panda/har
 export interface ProviderExchange {
     decisionId: string | undefined;
     model: string;
+    /** Where the characters of the request went (the system prompt, the tools, the observation, the tool results, the history), and the context mode (2026-09-25). */
+    context?: Record<string, number | string>;
     /** What was sent: the messages or the scripted input; raw, for the video's one look. */
     request: unknown;
     /** What came back: the raw completion, and the decision made of it. */

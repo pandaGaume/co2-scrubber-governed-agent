@@ -11,7 +11,7 @@
  */
 import type { PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
 import type { Provider, ProviderExchange, ProviderProfile } from "../lib/provider.js";
-import { apiKeyFor, compactRequest, decisionFrom, familyOf, fromApiName, intentionText, observationText, parseJsonArgs, toApiName, TRUNCATED_RESULT, truncatedDecision } from "../lib/llm-common.js";
+import { apiKeyFor, compactRequest, contextSizes, decisionFrom, familyOf, fromApiName, intentionText, observationText, parseJsonArgs, toApiName, TRUNCATED_RESULT, truncatedDecision, type ContextMode } from "../lib/llm-common.js";
 
 type ContentBlock = { type: "text"; text: string } | { type: "tool_use"; id: string; name: string; input: unknown } | { type: "tool_result"; tool_use_id: string; content: string };
 interface Message {
@@ -30,6 +30,12 @@ export interface AnthropicOptions {
     maxTokens?: number;
     temperature?: number;
     timeoutMs?: number;
+    /**
+     * `conversation` (the default): the transcript of the event is replayed at every step, tool results included.
+     * `state`: each step is one message, the intention and the harness's reasoning state, nothing before it; the
+     * previous answer and the tools' results reach the model through the state (2026-09-25).
+     */
+    contextMode?: ContextMode;
 }
 
 export class AnthropicProvider implements Provider {
@@ -68,9 +74,18 @@ export class AnthropicProvider implements Provider {
         this.pendingToolUses = [];
     }
 
+    get contextMode(): ContextMode {
+        return this.options.contextMode ?? "conversation";
+    }
+
     async resolve(input: PolicyFallbackInput): Promise<PolicyDecision> {
         this.calls++;
         const blocks: ContentBlock[] = [];
+        // In the state mode nothing is replayed: the conversation starts again at every step, from the state.
+        if (this.contextMode === "state") {
+            this.messages = [];
+            this.pendingToolUses = [];
+        }
         // Every tool_use of the previous answer needs a tool_result in this message, or the API refuses the conversation.
         const f = input.state.features;
         for (const use of this.pendingToolUses) {
@@ -125,6 +140,7 @@ export class AnthropicProvider implements Provider {
             decisionId: input.decisionId,
             model: this.model,
             request: compactRequest(this.messages.slice(0, -1), tools.map((t) => ({ name: t.name, description: t.description })), this.options.systemPrompt),
+            context: { mode: this.contextMode, ...contextSizes(this.options.systemPrompt, tools, this.messages.slice(0, -1), this.contextMode) },
             response: result,
             decision,
             proposedCapabilityId: toolUse ? fromApiName(toolUse.name) : "crew.report",

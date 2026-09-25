@@ -243,10 +243,270 @@
       {
         "id": "monitor",
         "x": 0,
-        "y": 460,
+        "y": 700,
         "typeId": "Harness.Monitor:trace",
         "inputs": [],
         "outputs": []
+      },
+      {
+        "id": "loop-observe",
+        "x": -280,
+        "y": 260,
+        "typeId": "Logic.Flow:gate",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "loop-hypothesize",
+        "x": 20,
+        "y": 260,
+        "typeId": "Logic.Flow:gate",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "loop-build",
+        "x": 340,
+        "y": 260,
+        "typeId": "Logic.Flow:gate",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "loop-execute",
+        "x": 620,
+        "y": 260,
+        "typeId": "Logic.Flow:gate",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "loop-evaluate",
+        "x": 900,
+        "y": 260,
+        "typeId": "Logic.Flow:gate",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "loop-pass",
+        "x": 1240,
+        "y": 260,
+        "typeId": "Logic.Flow:gate",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "loop-done",
+        "x": 1520,
+        "y": 260,
+        "typeId": "Logic.Flow:gate",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "loop-diagnose",
+        "x": 900,
+        "y": 420,
+        "typeId": "Logic.Flow:gate",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "loop-parameter",
+        "x": 620,
+        "y": 420,
+        "typeId": "Logic.Flow:gate",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "loop-structural",
+        "x": 1240,
+        "y": 420,
+        "typeId": "Logic.Flow:gate",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "loop-invalid",
+        "x": 900,
+        "y": 560,
+        "typeId": "Logic.Flow:gate",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "loop-revise",
+        "x": 340,
+        "y": 420,
+        "typeId": "Logic.Flow:gate",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "loop-experiment",
+        "x": 1520,
+        "y": 420,
+        "typeId": "Logic.Flow:gate",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
       }
     ],
     "connections": [
@@ -332,6 +592,111 @@
         "fromNodeId": "evaluate",
         "fromPortIndex": 0,
         "toNodeId": "record",
+        "toPortIndex": 0
+      },
+      {
+        "id": "loop-observe:then->loop-hypothesize:in",
+        "fromNodeId": "loop-observe",
+        "fromPortIndex": 0,
+        "toNodeId": "loop-hypothesize",
+        "toPortIndex": 0
+      },
+      {
+        "id": "loop-hypothesize:then->loop-build:in",
+        "fromNodeId": "loop-hypothesize",
+        "fromPortIndex": 0,
+        "toNodeId": "loop-build",
+        "toPortIndex": 0
+      },
+      {
+        "id": "loop-build:then->loop-execute:in",
+        "fromNodeId": "loop-build",
+        "fromPortIndex": 0,
+        "toNodeId": "loop-execute",
+        "toPortIndex": 0
+      },
+      {
+        "id": "loop-execute:then->loop-evaluate:in",
+        "fromNodeId": "loop-execute",
+        "fromPortIndex": 0,
+        "toNodeId": "loop-evaluate",
+        "toPortIndex": 0
+      },
+      {
+        "id": "loop-evaluate:then->loop-pass:in",
+        "fromNodeId": "loop-evaluate",
+        "fromPortIndex": 0,
+        "toNodeId": "loop-pass",
+        "toPortIndex": 0
+      },
+      {
+        "id": "loop-pass:then->loop-done:in",
+        "fromNodeId": "loop-pass",
+        "fromPortIndex": 0,
+        "toNodeId": "loop-done",
+        "toPortIndex": 0
+      },
+      {
+        "id": "loop-evaluate:then->loop-diagnose:in",
+        "fromNodeId": "loop-evaluate",
+        "fromPortIndex": 0,
+        "toNodeId": "loop-diagnose",
+        "toPortIndex": 0
+      },
+      {
+        "id": "loop-diagnose:then->loop-parameter:in",
+        "fromNodeId": "loop-diagnose",
+        "fromPortIndex": 0,
+        "toNodeId": "loop-parameter",
+        "toPortIndex": 0
+      },
+      {
+        "id": "loop-diagnose:then->loop-structural:in",
+        "fromNodeId": "loop-diagnose",
+        "fromPortIndex": 0,
+        "toNodeId": "loop-structural",
+        "toPortIndex": 0
+      },
+      {
+        "id": "loop-diagnose:then->loop-invalid:in",
+        "fromNodeId": "loop-diagnose",
+        "fromPortIndex": 0,
+        "toNodeId": "loop-invalid",
+        "toPortIndex": 0
+      },
+      {
+        "id": "loop-diagnose:then->loop-experiment:in",
+        "fromNodeId": "loop-diagnose",
+        "fromPortIndex": 0,
+        "toNodeId": "loop-experiment",
+        "toPortIndex": 0
+      },
+      {
+        "id": "loop-parameter:then->loop-revise:in",
+        "fromNodeId": "loop-parameter",
+        "fromPortIndex": 0,
+        "toNodeId": "loop-revise",
+        "toPortIndex": 0
+      },
+      {
+        "id": "loop-structural:then->loop-revise:in",
+        "fromNodeId": "loop-structural",
+        "fromPortIndex": 0,
+        "toNodeId": "loop-revise",
+        "toPortIndex": 0
+      },
+      {
+        "id": "loop-invalid:then->loop-revise:in",
+        "fromNodeId": "loop-invalid",
+        "fromPortIndex": 0,
+        "toNodeId": "loop-revise",
+        "toPortIndex": 0
+      },
+      {
+        "id": "loop-revise:then->loop-execute:in",
+        "fromNodeId": "loop-revise",
+        "fromPortIndex": 0,
+        "toNodeId": "loop-execute",
         "toPortIndex": 0
       }
     ]
@@ -451,6 +816,123 @@
         "label": "Run monitor",
         "typeId": "Harness.Monitor:trace",
         "data": {}
+      },
+      {
+        "id": "loop-observe",
+        "label": "OBSERVE  the task, the shelf, the telemetry",
+        "typeId": "Logic.Flow:gate",
+        "data": {
+          "enabled": true,
+          "_startClosed": false
+        }
+      },
+      {
+        "id": "loop-hypothesize",
+        "label": "HYPOTHESIZE  the structure and what is fitted",
+        "typeId": "Logic.Flow:gate",
+        "data": {
+          "enabled": true,
+          "_startClosed": false
+        }
+      },
+      {
+        "id": "loop-build",
+        "label": "BUILD  instantiate the graph",
+        "typeId": "Logic.Flow:gate",
+        "data": {
+          "enabled": true,
+          "_startClosed": false
+        }
+      },
+      {
+        "id": "loop-execute",
+        "label": "EXECUTE  fit and run in the sandbox",
+        "typeId": "Logic.Flow:gate",
+        "data": {
+          "enabled": true,
+          "_startClosed": false
+        }
+      },
+      {
+        "id": "loop-evaluate",
+        "label": "EVALUATE  coverage, residual, identifiability",
+        "typeId": "Logic.Flow:gate",
+        "data": {
+          "enabled": true,
+          "_startClosed": false
+        }
+      },
+      {
+        "id": "loop-pass",
+        "label": "PASS  calibration held",
+        "typeId": "Logic.Flow:gate",
+        "data": {
+          "enabled": true,
+          "_startClosed": false
+        }
+      },
+      {
+        "id": "loop-done",
+        "label": "DONE  handed over, validation pending",
+        "typeId": "Logic.Flow:gate",
+        "data": {
+          "enabled": true,
+          "_startClosed": false
+        }
+      },
+      {
+        "id": "loop-diagnose",
+        "label": "DIAGNOSE  why it does not hold",
+        "typeId": "Logic.Flow:gate",
+        "data": {
+          "enabled": true,
+          "_startClosed": false
+        }
+      },
+      {
+        "id": "loop-parameter",
+        "label": "PARAMETER MISMATCH  a fitted value at the edge of its range",
+        "typeId": "Logic.Flow:gate",
+        "data": {
+          "enabled": true,
+          "_startClosed": false
+        }
+      },
+      {
+        "id": "loop-structural",
+        "label": "STRUCTURAL MISMATCH  no admissible set follows the curve",
+        "typeId": "Logic.Flow:gate",
+        "data": {
+          "enabled": true,
+          "_startClosed": false
+        }
+      },
+      {
+        "id": "loop-invalid",
+        "label": "INVALID EVALUATION  a prediction missing, not finite",
+        "typeId": "Logic.Flow:gate",
+        "data": {
+          "enabled": true,
+          "_startClosed": false
+        }
+      },
+      {
+        "id": "loop-revise",
+        "label": "REVISE  the bounds if the physics allows, else the topology",
+        "typeId": "Logic.Flow:gate",
+        "data": {
+          "enabled": true,
+          "_startClosed": false
+        }
+      },
+      {
+        "id": "loop-experiment",
+        "label": "INSUFFICIENT INFORMATION  plan an experiment",
+        "typeId": "Logic.Flow:gate",
+        "data": {
+          "enabled": true,
+          "_startClosed": false
+        }
       }
     ],
     "connections": [
@@ -584,6 +1066,171 @@
         "to": {
           "node": "record",
           "port": "experience"
+        }
+      },
+      {
+        "id": "loop-observe:then->loop-hypothesize:in",
+        "from": {
+          "node": "loop-observe",
+          "port": "then"
+        },
+        "to": {
+          "node": "loop-hypothesize",
+          "port": "in"
+        }
+      },
+      {
+        "id": "loop-hypothesize:then->loop-build:in",
+        "from": {
+          "node": "loop-hypothesize",
+          "port": "then"
+        },
+        "to": {
+          "node": "loop-build",
+          "port": "in"
+        }
+      },
+      {
+        "id": "loop-build:then->loop-execute:in",
+        "from": {
+          "node": "loop-build",
+          "port": "then"
+        },
+        "to": {
+          "node": "loop-execute",
+          "port": "in"
+        }
+      },
+      {
+        "id": "loop-execute:then->loop-evaluate:in",
+        "from": {
+          "node": "loop-execute",
+          "port": "then"
+        },
+        "to": {
+          "node": "loop-evaluate",
+          "port": "in"
+        }
+      },
+      {
+        "id": "loop-evaluate:then->loop-pass:in",
+        "from": {
+          "node": "loop-evaluate",
+          "port": "then"
+        },
+        "to": {
+          "node": "loop-pass",
+          "port": "in"
+        }
+      },
+      {
+        "id": "loop-pass:then->loop-done:in",
+        "from": {
+          "node": "loop-pass",
+          "port": "then"
+        },
+        "to": {
+          "node": "loop-done",
+          "port": "in"
+        }
+      },
+      {
+        "id": "loop-evaluate:then->loop-diagnose:in",
+        "from": {
+          "node": "loop-evaluate",
+          "port": "then"
+        },
+        "to": {
+          "node": "loop-diagnose",
+          "port": "in"
+        }
+      },
+      {
+        "id": "loop-diagnose:then->loop-parameter:in",
+        "from": {
+          "node": "loop-diagnose",
+          "port": "then"
+        },
+        "to": {
+          "node": "loop-parameter",
+          "port": "in"
+        }
+      },
+      {
+        "id": "loop-diagnose:then->loop-structural:in",
+        "from": {
+          "node": "loop-diagnose",
+          "port": "then"
+        },
+        "to": {
+          "node": "loop-structural",
+          "port": "in"
+        }
+      },
+      {
+        "id": "loop-diagnose:then->loop-invalid:in",
+        "from": {
+          "node": "loop-diagnose",
+          "port": "then"
+        },
+        "to": {
+          "node": "loop-invalid",
+          "port": "in"
+        }
+      },
+      {
+        "id": "loop-diagnose:then->loop-experiment:in",
+        "from": {
+          "node": "loop-diagnose",
+          "port": "then"
+        },
+        "to": {
+          "node": "loop-experiment",
+          "port": "in"
+        }
+      },
+      {
+        "id": "loop-parameter:then->loop-revise:in",
+        "from": {
+          "node": "loop-parameter",
+          "port": "then"
+        },
+        "to": {
+          "node": "loop-revise",
+          "port": "in"
+        }
+      },
+      {
+        "id": "loop-structural:then->loop-revise:in",
+        "from": {
+          "node": "loop-structural",
+          "port": "then"
+        },
+        "to": {
+          "node": "loop-revise",
+          "port": "in"
+        }
+      },
+      {
+        "id": "loop-invalid:then->loop-revise:in",
+        "from": {
+          "node": "loop-invalid",
+          "port": "then"
+        },
+        "to": {
+          "node": "loop-revise",
+          "port": "in"
+        }
+      },
+      {
+        "id": "loop-revise:then->loop-execute:in",
+        "from": {
+          "node": "loop-revise",
+          "port": "then"
+        },
+        "to": {
+          "node": "loop-execute",
+          "port": "in"
         }
       }
     ]

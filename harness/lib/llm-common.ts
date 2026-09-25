@@ -38,7 +38,8 @@ export function apiKeyFor(profile: ProviderProfile | null, fallbackEnvs: string[
 /** The text the model reads at each step: the intention (once), then the observation. */
 export function observationText(input: PolicyFallbackInput): string {
     const f = input.state.features;
-    const lines = [`Observation at this step (state ${input.state.id}):`, JSON.stringify(f, null, 0)];
+    // A loop that carries a reasoning state hands it whole and nothing else of the features: the state is what to read.
+    const lines = f.state && typeof f.state === "object" ? [`Observation at this step (state ${input.state.id}). The harness's brief: ${String(f.brief ?? "")}`, "Reasoning state (the harness's, rebuilt every step; the conversation is not replayed):", JSON.stringify(f.state, null, 0)] : [`Observation at this step (state ${input.state.id}):`, JSON.stringify(f, null, 0)];
     if (input.candidates.length) lines.push(`Learned decisions the harness considered but did not trust enough: ${input.candidates.map((c) => c.action.id).join(", ")}.`);
     if (input.recentFailures.length) lines.push(`Recent failures: ${input.recentFailures.map((e) => `${e.decision.invocation.capabilityId} -> ${e.result.error ?? "failed"}`).join("; ")}.`);
     lines.push("Choose exactly one tool call now. To speak to the crew, call crew__report; to hand back, call crew__ask.");
@@ -93,6 +94,26 @@ export function report(message: string): PolicyDecision {
 export function compactRequest(messages: unknown[], tools: Array<string | { name: string; description?: string }>, system?: string): unknown {
     const named = tools.map((t) => (typeof t === "string" ? { name: t } : t));
     return { ...(system !== undefined ? { system } : {}), messages, tools: named.map((t) => t.name), toolDescriptions: named };
+}
+
+export type ContextMode = "conversation" | "state";
+
+/** Where the characters of a request go: the system prompt, the tools, and each kind of message block. */
+export function contextSizes(system: string, tools: Array<{ name: string; description?: string; input_schema?: unknown; parameters?: unknown }>, messages: Array<{ role: string; content: unknown }>, mode: ContextMode): Record<string, number> {
+    const sizes: Record<string, number> = { system: system.length, tools: JSON.stringify(tools).length, intention: 0, observation: 0, toolResults: 0, history: 0, messages: messages.length };
+    messages.forEach((m, i) => {
+        const last = i === messages.length - 1;
+        const blocks = typeof m.content === "string" ? [{ type: m.role === "tool" ? "tool_result" : "text", text: m.content }] : Array.isArray(m.content) ? (m.content as Array<Record<string, unknown>>) : [];
+        for (const b of blocks) {
+            const text = typeof b.text === "string" ? b.text : typeof b.content === "string" ? b.content : JSON.stringify(b.input ?? b.content ?? b);
+            if (b.type === "tool_result" || m.role === "tool") sizes.toolResults += text.length;
+            else if (m.role === "assistant") sizes.history += text.length;
+            else if (text.startsWith("Situation ")) sizes.intention += text.length;
+            else if (last || mode === "state") sizes.observation += text.length;
+            else sizes.history += text.length;
+        }
+    });
+    return sizes;
 }
 
 export function parseJsonArgs(raw: unknown): JsonValue {

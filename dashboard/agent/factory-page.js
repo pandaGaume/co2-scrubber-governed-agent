@@ -1226,6 +1226,76 @@ function stageSentence(words, stage, values, next) {
   return [words.phrase(key, values), words.phrase(`${key}.now`, values)];
 }
 
+// harness/browser/factory-loop.ts
+var BY_WORD = { OBSERVE: "observe", HYPOTHESIZE: "hypothesize", BUILD: "build", EXECUTE: "execute", EVALUATE: "evaluate", PASS: "pass", DONE: "done", DIAGNOSE: "diagnose", PARAMETER: "parameter", STRUCTURAL: "structural", INVALID: "invalid", REVISE: "revise", INSUFFICIENT: "experiment" };
+function loopNodes(viewer) {
+  const out = /* @__PURE__ */ new Map();
+  for (const n of viewer.nodes) {
+    const word = String(n.label ?? "").trim().split(/\s+/)[0];
+    const state = BY_WORD[word];
+    if (state && !out.has(state)) out.set(state, n);
+  }
+  return out;
+}
+var diagnosisOf = (step) => {
+  const s = step.summary && typeof step.summary === "object" ? step.summary.value ?? step.summary : null;
+  const d = s && typeof s === "object" ? s.diagnosis : void 0;
+  return typeof d === "string" ? d : null;
+};
+function loopStatesOf(step) {
+  const id = step.capability ?? "";
+  const refused = step.source === "refused" || step.source === "failed" || step.outcome === "refused" || step.reward === -1;
+  const error = refused ? String(step.outcome ?? step.source ?? "refused") : void 0;
+  const last = (states) => states.map((state, i) => error && i === states.length - 1 ? { state, error } : { state });
+  if (/^(workspace|library|twin\.registry|factory\.inventory|station\.registry)/.test(id)) return last(["observe"]);
+  if (id === "task.plan") return last(["hypothesize"]);
+  if (id === "graph.evaluate") {
+    if (refused) return last(["build", "execute", "evaluate"]);
+    switch (diagnosisOf(step)) {
+      case "PASS":
+        return last(["build", "execute", "evaluate", "pass"]);
+      case "INVALID_EVALUATION":
+        return last(["build", "execute", "evaluate", "diagnose", "invalid", "revise"]);
+      case "PARAMETER_MISMATCH":
+        return last(["build", "execute", "evaluate", "diagnose", "parameter", "revise"]);
+      case "STRUCTURAL_MISMATCH":
+        return last(["build", "execute", "evaluate", "diagnose", "structural", "revise"]);
+      case "INSUFFICIENT_INFORMATION":
+        return last(["build", "execute", "evaluate", "diagnose", "experiment"]);
+      default:
+        return last(["build", "execute", "evaluate"]);
+    }
+  }
+  if (id === "task.done") return last(["done"]);
+  if (id === "task.fail") return [{ state: "diagnose", error: error ?? "the builder gave up" }];
+  return [];
+}
+function createLoopLights(byState) {
+  let lit = null;
+  const settle = (n) => {
+    n.el.classList.remove("hx-lit");
+    n.el.classList.add("hx-done");
+  };
+  return {
+    mark(state, error) {
+      const n = byState().get(state);
+      if (!n) return;
+      if (lit && lit !== n) settle(lit);
+      n.el.classList.remove("hx-done", "hx-failed", "hx-lit");
+      n.el.classList.add(error ? "hx-failed" : "hx-lit");
+      lit = error ? null : n;
+    },
+    reset() {
+      if (lit) settle(lit);
+      lit = null;
+    },
+    clear() {
+      for (const n of byState().values()) n.el.classList.remove("hx-lit", "hx-done", "hx-failed");
+      lit = null;
+    }
+  };
+}
+
 // harness/browser/factory-page.ts
 var TASKS_URI = "factory://tasks";
 var META_TASK = "spikypanda/task";
@@ -1265,6 +1335,8 @@ async function activate(studio) {
   studio.setLayout({ palette: false, properties: false, console: false, dashboardHeight: 300 });
   disableStudioPlayer("This graph is the factory's loop: it is run by the factory slot on its tasks, not by the studio's player.");
   const byStage = stageNodes(viewer);
+  const byLoopState = loopNodes(viewer);
+  const loop = createLoopLights(() => byLoopState);
   const monitor = findMonitor(viewer);
   hideMonitorNode(viewer);
   if (monitor) monitor.series = [
@@ -1331,6 +1403,13 @@ async function activate(studio) {
       }
     }
     await lights.settled();
+    for (const { state, error } of loopStatesOf(s)) {
+      loop.mark(state, error);
+      const text = p(`loop.${state}`, { capability: s.capability ?? "?", reason: error ?? "" });
+      narrate(`loop.${state}`, text, text, error ? "warn" : "info");
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    if (s.capability === "task.done" || s.capability === "task.fail") loop.reset();
     const sentence = stepSentence(words, s);
     const refused = s.source === "refused" || s.source === "failed" || s.reward === -1;
     monitor?.push({ kind: "outcome", outcome: s.outcome ?? s.source ?? "?", error: refused ? s.reason ?? void 0 : void 0, reward: typeof s.reward === "number" ? s.reward : void 0 });
@@ -1351,6 +1430,11 @@ async function activate(studio) {
     return r.ok ? r.output : null;
   };
   let followed = null;
+  let loopTask = null;
+  const loopFor = (taskId) => {
+    if (loopTask !== taskId) loop.clear();
+    loopTask = taskId;
+  };
   let shown = 0;
   let finished = false;
   let busy = false;
@@ -1363,6 +1447,7 @@ async function activate(studio) {
     const quiet = firstLook && !pinned && taskSel.value === "latest" && ended(t.state);
     firstLook = false;
     followed = t.taskId;
+    loopFor(t.taskId);
     shown = 0;
     finished = false;
     lights.clear();

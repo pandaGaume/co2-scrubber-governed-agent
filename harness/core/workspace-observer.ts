@@ -21,6 +21,7 @@ import { createHash } from "node:crypto";
 import type { JsonValue, State, StateObserver } from "@spiky-panda/harness";
 import type { Broker } from "../lib/broker.js";
 import type { CapabilityCall } from "./capabilities.js";
+import type { ReasoningState } from "./reasoning-state.js";
 
 export type Phase = "plan" | "build" | "done" | "failed";
 
@@ -56,6 +57,9 @@ export interface Progress {
     plan: Plan | null;
     done: DoneClaim | null;
     lastCall: CapabilityCall | null;
+    /** The last call's answer as the model reads it (`compact.ts`), and the handle of the whole answer in the workshop when it was long. */
+    lastSummary: JsonValue | null;
+    lastArtifact: string | null;
     lastRefusal: { capability: string; reason: string } | null;
     /** sha256 of the models whose contract check passed in this task (`model.contract` ok). */
     checkedModels: string[];
@@ -67,10 +71,12 @@ export interface Progress {
     reads: Record<string, { at: string; value: JsonValue }>;
     /** What a topic keeps across the steps of one task (the procedure topic: its submissions). */
     topic: Record<string, JsonValue>;
+    /** What the runner read once at the start, for the state and the topics' requirements: the library's shelf, the telemetry's shape. */
+    context: { shelf: Array<{ id: string; description: string; variables: Record<string, string>; settings: string[]; probes: string[] }>; telemetry: { file: string; rows: number; columns: string[]; minutes: number | null } | null };
 }
 
 export function newProgress(): Progress {
-    return { phase: "plan", iteration: 0, plan: null, done: null, lastCall: null, lastRefusal: null, checkedModels: [], sandbox: null, failure: null, reads: {}, topic: {} };
+    return { phase: "plan", iteration: 0, plan: null, done: null, lastCall: null, lastSummary: null, lastArtifact: null, lastRefusal: null, checkedModels: [], sandbox: null, failure: null, reads: {}, topic: {}, context: { shelf: [], telemetry: null } };
 }
 
 export interface WorkshopFeatures extends Record<string, JsonValue> {
@@ -87,8 +93,11 @@ export interface WorkshopFeatures extends Record<string, JsonValue> {
     planMissing: number;
     lastCapability: string;
     lastOutcome: string;
+    /** The last answer as the model reads it: compact, with the handle of the whole (`compact.ts`); the adapters give it back as the tool's result. */
     lastOutput: string;
     lastRefusal: string;
+    /** The reasoning state (`reasoning-state.ts`): what the model reads instead of the transcript. Absent for a loop that has none (the agent's). */
+    state: ReasoningState | null;
 }
 
 export interface WorkshopState extends State {
@@ -106,7 +115,7 @@ export async function listWorkshop(broker: Broker, taskId: string): Promise<Work
     return files.map(({ path, bytes, sha256 }) => ({ path, bytes, sha256 }));
 }
 
-export function createWorkspaceObserver(broker: Broker, taskId: string, progress: Progress, brief: () => string = () => ""): StateObserver {
+export function createWorkspaceObserver(broker: Broker, taskId: string, progress: Progress, brief: () => string = () => "", state?: () => ReasoningState, key: () => string = () => ""): StateObserver {
     return {
         async observe(): Promise<WorkshopState> {
             const files = await listWorkshop(broker, taskId);
@@ -126,10 +135,13 @@ export function createWorkspaceObserver(broker: Broker, taskId: string, progress
                 planMissing: progress.plan?.missing_capabilities.length ?? 0,
                 lastCapability: last?.id ?? "",
                 lastOutcome: last?.result.outcome ?? "",
-                lastOutput: last ? JSON.stringify(last.result.output ?? last.result.error ?? null).slice(0, 8000) : "",
+                lastOutput: last ? (progress.lastSummary !== null ? JSON.stringify({ ...(progress.lastArtifact ? { artifact: progress.lastArtifact } : {}), summary: progress.lastSummary }) : JSON.stringify(last.result.output ?? last.result.error ?? null).slice(0, 8000)) : "",
                 lastRefusal: progress.lastRefusal ? `${progress.lastRefusal.capability}: ${progress.lastRefusal.reason}` : "",
+                state: state ? state() : null,
             };
-            return { id: `workshop:${progress.phase}:${last?.id ?? "start"}:${last?.result.outcome ?? ""}`, features };
+            // The id the recipes are stored under: the phase, the last capability and its outcome, and what the topic adds (the last diagnosis), so a learned step replays only after the same evidence.
+            const extra = key();
+            return { id: `workshop:${progress.phase}:${last?.id ?? "start"}:${last?.result.outcome ?? ""}${extra ? `:${extra}` : ""}`, features };
         },
     };
 }

@@ -243,7 +243,7 @@
       {
         "id": "monitor",
         "x": 0,
-        "y": 460,
+        "y": 700,
         "typeId": "Harness.Monitor:trace",
         "inputs": [],
         "outputs": []

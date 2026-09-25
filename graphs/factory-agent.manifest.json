@@ -1,6 +1,6 @@
 {
   "document": "graphs/factory-agent.spikypanda",
-  "builtOn": "2026-09-21T11:03:59.927Z",
+  "builtOn": "2026-09-25T14:38:24.216Z",
   "harness": {
     "nodes": [
       {
@@ -54,10 +54,77 @@
       {
         "id": "monitor",
         "typeId": "Harness.Monitor:trace"
+      },
+      {
+        "id": "loop-observe",
+        "typeId": "Logic.Flow:gate"
+      },
+      {
+        "id": "loop-hypothesize",
+        "typeId": "Logic.Flow:gate"
+      },
+      {
+        "id": "loop-build",
+        "typeId": "Logic.Flow:gate"
+      },
+      {
+        "id": "loop-execute",
+        "typeId": "Logic.Flow:gate"
+      },
+      {
+        "id": "loop-evaluate",
+        "typeId": "Logic.Flow:gate"
+      },
+      {
+        "id": "loop-pass",
+        "typeId": "Logic.Flow:gate"
+      },
+      {
+        "id": "loop-done",
+        "typeId": "Logic.Flow:gate"
+      },
+      {
+        "id": "loop-diagnose",
+        "typeId": "Logic.Flow:gate"
+      },
+      {
+        "id": "loop-parameter",
+        "typeId": "Logic.Flow:gate"
+      },
+      {
+        "id": "loop-structural",
+        "typeId": "Logic.Flow:gate"
+      },
+      {
+        "id": "loop-invalid",
+        "typeId": "Logic.Flow:gate"
+      },
+      {
+        "id": "loop-revise",
+        "typeId": "Logic.Flow:gate"
+      },
+      {
+        "id": "loop-experiment",
+        "typeId": "Logic.Flow:gate"
       }
     ],
-    "edges": 12,
-    "tiles": 1
+    "edges": 27,
+    "tiles": 1,
+    "loop": [
+      "observe",
+      "hypothesize",
+      "build",
+      "execute",
+      "evaluate",
+      "pass",
+      "done",
+      "diagnose",
+      "parameter",
+      "structural",
+      "invalid",
+      "revise",
+      "experiment"
+    ]
   },
-  "sha256": "de0a651c3f87a7e9e634940e1babff16be44cba4b768e463ac446668215d8ee4"
+  "sha256": "dbbf11c9af40f0cf0fae5547d61f3c21565a1b8cf40cf00aa3a1e5c625389c0e"
 }

@@ -34,6 +34,7 @@ import { watchSlot } from "./pushes.js";
 const TASKS_URI = "factory://tasks";
 const META_TASK = "spikypanda/task";
 import { endSentence, loadWords, stageSentence, stepSentence, type ManifestStepLike, type TaskStatusLike } from "./factory-voice.js";
+import { createLoopLights, loopNodes, loopStatesOf } from "./factory-loop.js";
 
 const SOURCE = "factory";
 
@@ -98,6 +99,9 @@ export default async function activate(studio: Studio): Promise<void> {
     studio.setLayout({ palette: false, properties: false, console: false, dashboardHeight: 300 });
     disableStudioPlayer("This graph is the factory's loop: it is run by the factory slot on its tasks, not by the studio's player.");
     const byStage = stageNodes(viewer);
+    // The scientific loop under the stages (`factory-loop.ts`): lit from the harness's diagnosis of each step.
+    const byLoopState = loopNodes(viewer);
+    const loop = createLoopLights(() => byLoopState);
     const monitor: MonitorTile | null = findMonitor(viewer);
     hideMonitorNode(viewer);
     // The strip draws what this page observes of each step (`showStep`), not the agent's cabin.
@@ -173,6 +177,14 @@ export default async function activate(studio: Studio): Promise<void> {
             }
         }
         await lights.settled();
+        // The loop: where this step took the factory's reasoning, from what the harness decided of it.
+        for (const { state, error } of loopStatesOf(s)) {
+            loop.mark(state, error);
+            const text = p(`loop.${state}`, { capability: s.capability ?? "?", reason: error ?? "" });
+            narrate(`loop.${state}`, text, text, error ? "warn" : "info");
+            await new Promise((r) => setTimeout(r, 250));
+        }
+        if (s.capability === "task.done" || s.capability === "task.fail") loop.reset();
         const sentence = stepSentence(words, s);
         const refused = s.source === "refused" || s.source === "failed" || s.reward === -1;
         monitor?.push({ kind: "outcome", outcome: s.outcome ?? s.source ?? "?", error: refused ? (s.reason ?? undefined) : undefined, reward: typeof s.reward === "number" ? s.reward : undefined });
@@ -196,6 +208,12 @@ export default async function activate(studio: Studio): Promise<void> {
     };
 
     let followed: string | null = null;
+    /** A new task: the loop starts unlit (the stages clear themselves at their first cue). */
+    let loopTask: string | null = null;
+    const loopFor = (taskId: string) => {
+        if (loopTask !== taskId) loop.clear();
+        loopTask = taskId;
+    };
     let shown = 0;
     let finished = false;
     let busy = false;
@@ -213,6 +231,7 @@ export default async function activate(studio: Studio): Promise<void> {
         const quiet = firstLook && !pinned && taskSel.value === "latest" && ended(t.state);
         firstLook = false;
         followed = t.taskId;
+        loopFor(t.taskId);
         shown = 0;
         finished = false;
         lights.clear();

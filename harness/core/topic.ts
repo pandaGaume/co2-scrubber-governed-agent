@@ -16,6 +16,7 @@ import type { Broker } from "../lib/broker.js";
 import type { LocalCapability } from "./capabilities.js";
 import type { WorkshopFile, Progress, DoneClaim } from "./workspace-observer.js";
 import type { TaskFile, Topic } from "./task.js";
+import type { TopicState } from "./reasoning-state.js";
 
 export interface Validation {
     ok: boolean;
@@ -53,4 +54,21 @@ export interface TopicDefinition {
      * Deterministic: the same progress gives the same brief.
      */
     brief?(progress: Progress, task: TaskFile["task"]): string;
+    /**
+     * The topic's part of the reasoning state (`reasoning-state.ts`): its
+     * current hypothesis, its last evaluation made compact, its open
+     * questions, and the evidence its phases need (`requirements`, each true
+     * or false). The harness refuses to leave a phase whose requirements are
+     * not met, and the model reads which ones. Deterministic.
+     */
+    state?(progress: Progress, task: TaskFile["task"]): TopicState;
+    /** How many sandbox runs the topic has spent in this task, when it counts them (the graph topic's `twinPoints`). */
+    runsSpent?(progress: Progress): number;
+    /**
+     * What of the topic's state tells two steps apart for the recipes (2026-09-25): the
+     * observation's id carries it, so a learned step replays only after the same
+     * evidence. The graph topic gives the last candidate's diagnosis: "evaluate
+     * again" learned after a failed candidate must not replay after one that held.
+     */
+    key?(progress: Progress): string;
 }

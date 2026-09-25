@@ -120,6 +120,19 @@
         "step.task.fail": "The factory gives up.",
         "end.failed.gaveUp": "The task ends failed; nothing is proposed.",
         "page.lastTask": "Last task {taskId}: {state}, {steps} step(s). Waiting for the next one; pick it in the list to replay it.",
-        "page.lastTask.now": "Last task {taskId}: {state}; waiting for the next"
+        "page.lastTask.now": "Last task {taskId}: {state}; waiting for the next",
+        "loop.observe": "Observe: {capability} reads what the task holds",
+        "loop.hypothesize": "Hypothesize: the plan names the structure and what is fitted",
+        "loop.build": "Build: the graph is instantiated",
+        "loop.execute": "Execute: the variables are fitted and the sandbox runs",
+        "loop.evaluate": "Evaluate: coverage, residual, identifiability",
+        "loop.pass": "Pass: the calibration holds the threshold",
+        "loop.diagnose": "Diagnose: why it does not hold",
+        "loop.parameter": "Parameter mismatch: a fitted value sits at the edge of its range",
+        "loop.structural": "Structural mismatch: no admissible parameter set follows the curve",
+        "loop.invalid": "Invalid evaluation: a prediction is missing or not finite",
+        "loop.revise": "Revise: the bounds if the physics allows, else the topology",
+        "loop.experiment": "Insufficient information: an experiment is needed",
+        "loop.done": "Done: handed over as calibrated, validation pending"
     }
 }

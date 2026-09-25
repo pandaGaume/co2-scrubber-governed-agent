@@ -175,7 +175,7 @@ describe("the parametric graph and its residual", () => {
 
     it("the validator accepts only a candidate the harness built and found under the threshold", () => {
         const progress = newProgress();
-        const c = (n: number, pass: boolean): Candidate => ({ n, label: "", path: `candidate-${n}.spikypanda`, sha256: String(n).repeat(64), nodes: 4, types: [], connections: 3, variables: {}, residuals: [{ column: "c", probe: "lab.co2Ppm", rmse: pass ? 3 : 45, worst: 0, worstMinute: 0 }], threshold: 25, pass, combinations: 1, fitted: [], estimator: "given", warnings: [], at: "" });
+        const c = (n: number, pass: boolean): Candidate => ({ n, label: "", path: `candidate-${n}.spikypanda`, sha256: String(n).repeat(64), nodes: 4, types: [], connections: 3, variables: {}, status: pass ? "calibration_pass" : "calibration_fail", calibration: pass ? "PASS" : "FAIL", validation: "NOT_PERFORMED", diagnosis: pass ? "PASS" : "STRUCTURAL_MISMATCH", residuals: [{ column: "c", probe: "lab.co2Ppm", rmse: pass ? 3 : 45, worst: 0, worstMinute: 0 }], threshold: 25, pass, combinations: 1, fitted: [], estimator: "given", warnings: [], at: "" });
         progress.topic.graph = { candidates: [c(1, false), c(2, true)], runs: 2 } as never;
         const files = [1, 2].map((n) => ({ path: `candidate-${n}.spikypanda`, bytes: 1, sha256: String(n).repeat(64) }));
         assert.match(validateGraph({ summary: "", artifacts: [{ kind: "graph", path: "candidate-1.spikypanda" }] }, files, progress).problems.join(), /residual of 45 ppm, above the threshold of 25/);

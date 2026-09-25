@@ -60,6 +60,27 @@ export interface Manifest {
     verdict: JsonValue | null;
     /** Why the task ended the way it did, in one sentence. */
     ended: string | null;
+    /** Where the tokens went (2026-09-25): the model's usage, cache included, and the characters of each part of the context, so the cost of every part is known. */
+    telemetry?: Telemetry;
+}
+
+export interface Telemetry {
+    modelCalls: number;
+    modelInputTokens: number;
+    modelOutputTokens: number;
+    cacheReadTokens: number;
+    cacheWriteTokens: number;
+    /** Characters of the context by category, summed over the calls: the system prompt, the intention, the observation (the state), the tool results, the history replayed. */
+    contextCharsByCategory: Record<string, number>;
+    /** Characters of the tools' whole answers, and of what the model read of them. */
+    toolResultBytes: number;
+    compactedContextBytes: number;
+    /** The context mode the model ran with: `state` (the reasoning state alone) or `conversation` (the transcript replayed). */
+    contextMode: string;
+}
+
+export function newTelemetry(contextMode = "unknown"): Telemetry {
+    return { modelCalls: 0, modelInputTokens: 0, modelOutputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, contextCharsByCategory: {}, toolResultBytes: 0, compactedContextBytes: 0, contextMode };
 }
 
 export const sha256Text = (text: string): string => createHash("sha256").update(text).digest("hex");
