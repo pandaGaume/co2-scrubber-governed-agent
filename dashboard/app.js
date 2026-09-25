@@ -44,7 +44,7 @@ const base = `${location.protocol}//${location.host}`;
 const nf = new Intl.NumberFormat("en-US");
 
 /** Where each slot sits in the architecture; shown on its card. */
-const TIER = { scrubber: "Tier 1", twin: "Tier 0", station: "Tier 2", factory: "offline", speech: "the voice", reasoner: "the model" };
+const TIER = { scrubber: "Tier 1", twin: "Tier 0", station: "Tier 2", factory: "the factory", speech: "the voice", reasoner: "the model", agent: "the harness", scenario: "the night", biomed: "the crew monitor", qr: "the codes", screens: "the screens", workspace: "the factory's files", model: "the factory's fit", library: "the library", observer: "the Observer" };
 
 /** Full scales, and the two marks the firmware and the monitor carry. The
     residual threshold is the monitor's contract (specs/scrubber-health-twin.json);

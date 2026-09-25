@@ -28,8 +28,25 @@ import { endSentence, loadWords, NO_WORDS, stepSentence } from "./agent/factory-
 
 const $ = (id) => document.getElementById(id);
 const base = `${location.protocol}//${location.host}`;
-const EXPECTED = ["scrubber", "twin", "station", "factory", "reasoner", "speech"];
-const TIER = { scrubber: "Tier 1, the board", twin: "Tier 0, the oracle", station: "Tier 2", factory: "the factory", reasoner: "the model", speech: "the voice", agent: "the harness" };
+/* Every slot the server publishes (slots/run-all.ts), in the order the boot waits for them: the tiers first, then the voice and the night, then the factory's workshop. A slot missing here would answer the broker and never be named on this screen. */
+const EXPECTED = ["scrubber", "twin", "station", "factory", "reasoner", "speech", "agent", "scenario", "biomed", "qr", "screens", "workspace", "model", "library", "observer"];
+const TIER = {
+    scrubber: "Tier 1, the board",
+    twin: "Tier 0, the oracle",
+    station: "Tier 2, Mother",
+    factory: "the factory",
+    reasoner: "the model",
+    speech: "the voice",
+    agent: "the harness",
+    scenario: "the night",
+    biomed: "the crew monitor",
+    qr: "the codes",
+    screens: "the room's screens",
+    workspace: "the factory's files",
+    model: "the factory's fit",
+    library: "the library: documents and graphs",
+    observer: "the Observer",
+};
 /* The slots that serve a page of their own, and what it is. A page is how a
    slot reaches a hand that is not at this keyboard: the night's events are
    played from a phone, the medical module is read on one, the factory is
