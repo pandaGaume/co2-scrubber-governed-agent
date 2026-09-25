@@ -1,0 +1,33 @@
+{
+    "server": {
+        "description": "La forge : le bac à sable du code, un runtime à part où un plugin généré est écrit, compilé sur une liste blanche d'imports, testé, vérifié par le code (des types sous Generated., une signature que le substrat valide et que le service des unités résout, une fiche), chargé par sha256 et exécuté comme sur le jumeau ; un artefact signé est proposé à la station, jamais poussé",
+        "instructions": "Dans l'ordre : plugin_write (src/index.ts qui exporte register(registry, doc), src/<nom>.node.ts, src/<nom>.test.ts, docs/<nom>.md), plugin_build, plugin_test, plugin_load ; ensuite registry_search, document_build et session_run voient les nouveaux types, et graph.evaluate peut viser ce slot. plugin_promote propose l'artefact à la station avec le rapport d'évaluation qui l'a jugé. Imports : @spiky-panda/core et les fichiers du plugin ; les tests peuvent importer node:test et node:assert. Un type généré est nommé sous Generated. et ne remplace jamais un type que le registre tient."
+    },
+    "tools": {
+        "plugin_write": {
+            "title": "Écrire un plugin",
+            "description": "Les fichiers d'un plugin généré dans l'atelier de la tâche : les sources sous src/ (l'entrée index.ts qui exporte register(registry, doc), les nœuds, les tests), les fiches sous docs/. La disposition et les imports sont vérifiés à l'écriture ; un refus nomme le fichier et la règle."
+        },
+        "plugin_build": {
+            "title": "Compiler un plugin",
+            "description": "Compile le plugin dans un processus enfant avec un budget de temps, après la liste blanche des imports (@spiky-panda/core et les fichiers du plugin ; node:test et node:assert dans les tests). Les diagnostics reviennent entiers : fichier, ligne, code, message."
+        },
+        "plugin_test": {
+            "title": "Tester un plugin",
+            "description": "Les tests du plugin (le lanceur de node, un processus enfant, un budget de temps) et les vérifications déterministes sur un registre à blanc : chaque type sous Generated., une signature présente et valide pour le substrat, chaque unité résolue par le service des unités contre sa grandeur, la fiche sur le disque. Les deux doivent passer avant le chargement."
+        },
+        "plugin_load": {
+            "title": "Charger un plugin",
+            "description": "Charge le plugin compilé et testé dans le registre de la forge, par son sha256. Refusé avant un plugin_test positif ; un type que le registre tient déjà n'est jamais remplacé. Dès lors registry_search, document_build et session_run voient ses types."
+        },
+        "plugin_promote": {
+            "title": "Proposer un plugin",
+            "description": "Écrit l'artefact signé d'un plugin chargé (fichiers et sha256, types, tests et vérifications, le rapport d'évaluation nommé) et le propose à la station, et nulle part ailleurs : Mother le garde, le commandant autorise, le jumeau charge le plugin généré. La forge ne pousse jamais."
+        }
+    },
+    "resources": {
+        "forge://plugins": { "description": "Les plugins chargés dans la forge : id, sha256, types, fichiers, provenance (tâche et nom du plugin)." },
+        "forge://builds": { "description": "Chaque compilation, réussie ou refusée, avec ses diagnostics ; les tests et vérifications passés dessus." },
+        "forge://proposals": { "description": "Chaque artefact proposé à la station, avec l'id de proposition de la station." }
+    }
+}

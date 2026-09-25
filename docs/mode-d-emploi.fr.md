@@ -41,7 +41,10 @@ jumeau de la cabine et le runtime : catalogue, documents, bacs à sable),
 `reasoner`, `agent`, `scenario`, `qr`, `speech`, `biomed`, `workspace`,
 `model`, `library`, `observer`, `screens`, `supervisor` (le superviseur des
 contrats : `review`, `review_request`, un verdict typé sur les faits d'une
-tâche), `physics` (les unités :
+tâche), `forge` (le bac à sable du code : `plugin_write`, `plugin_build`,
+`plugin_test`, `plugin_load`, `plugin_promote`, et la surface runtime du
+substrat sur son propre registre ; `npm run forge` le lance dans son
+propre processus, la démo avec `--no-forge`), `physics` (les unités :
 `units_normalize`, `units_convert`, `units_compatible`,
 `units_validate_connection`, une façade déterministe sur le système
 d'unités du substrat, codes UCUM), `web` (`search`, avec résultats classés,

@@ -231,6 +231,60 @@ superviseur quand deux usines se parlent vraiment. Le sujet `onnx` sur
 l'état (le dernier en conversation) vient après : il sort des données du
 graphe et n'est pas sur le chemin de la mise en service.
 
+### 6.2 La forge, construite (la nuit du 25 septembre, branche `forge`)
+
+Le slot existe (`slots/forge/provider.ts`, sa garde dans
+`slots/forge/plugin-check.ts`, ses mots dans `slots/forge/grammars/`), sans
+modèle et sans clé, et un plugin généré le traverse entier dans le test
+(`tests/forge.test.ts`, une fuite de CO2 : `Generated.Habitat:leak`).
+
+Ce qui est fait, dans l'ordre où un plugin passe :
+
+- **son propre runtime** : un registre à lui (les plugins du substrat, le
+  plugin `habitat` écrit à la main, les plugins générés par-dessus) avec la
+  surface runtime du substrat montée dessus (`registry_search`,
+  `registry_describe_node`, `document_build`, `session_run` : les mêmes
+  outils que le jumeau, donc `graph.evaluate` vise `runtimeSlot: "forge"`
+  et rien d'autre ne change). Le catalogue du jumeau ne voit pas ce que la
+  forge charge ; le test le vérifie.
+- `plugin_write` : les fichiers dans l'atelier de la tâche
+  (`outputs/factory/<tâche>/forge/<plugin>/`), les sources sous `src/`
+  (`index.ts` qui exporte `register(registry, doc)`, les nœuds, les tests),
+  les fiches sous `docs/` ; rien ailleurs, rien au-dessus. La disposition et
+  les imports sont jugés à l'écriture.
+- `plugin_build` : `tsc` dans un processus enfant, répertoire de travail
+  propre, environnement vidé, budget de temps (120 s), après la liste
+  blanche des imports (`@spiky-panda/core` et les fichiers du plugin ;
+  `node:test` et `node:assert` dans les tests ; pas d'`eval`, pas d'import
+  calculé). Les diagnostics reviennent entiers (fichier, ligne, code,
+  message).
+- `plugin_test` : les tests du plugin par le lanceur de node (processus
+  enfant, 60 s), puis les vérifications déterministes sur un registre à
+  blanc : chaque type nommé sous `Generated.` (c'est ainsi que tout
+  catalogue, tout plan et tout candidat disent qu'un nœud est généré, sans
+  métadonnée que le substrat ne porte pas), une signature présente et
+  valide pour le vérificateur du substrat (`validateSignature`), chaque
+  unité résolue par le service des unités contre sa grandeur, la fiche sur
+  le disque.
+- `plugin_load` : dans le registre vivant de la forge, par sha256 ; refusé
+  sans test positif ; un type que le registre tient déjà n'est jamais
+  remplacé.
+- `plugin_promote` : l'artefact signé (fichiers et sha256, types, tests et
+  vérifications, le rapport d'évaluation nommé) écrit dans l'atelier et
+  proposé à la station par `station.propose` (kind `plugin`), et nulle part
+  ailleurs. La forge ne pousse rien.
+- Ses ressources : `forge://plugins`, `forge://builds`, `forge://proposals`.
+- Son propre processus : `npm run forge` (`slots/forge/main.ts`) contre un
+  courtier déjà lancé, la démo démarrée avec `--no-forge`. Sans cela, la
+  démo publie la forge dans son processus, ce qui suffit aux tests.
+
+Ce qui n'est pas fait, dit tel quel : la conservation d'une grandeur sur un
+pas de simulation (une vérification à faire sur un document que le runtime
+construit) ; le chargement par le jumeau du plugin `generated` sur
+l'autorisation du commandant (la station reçoit la proposition et attend) ;
+l'isolation réseau des processus enfants ; le sujet `code` lui-même, qui est
+la suite.
+
 ## 7. Le cache du prompt
 
 Le prompt d'un rôle (l'Observateur, une usine) est fixe : les mêmes octets
@@ -257,5 +311,5 @@ fait ; la conception est la même.
 | le cache du prompt côté Anthropic | construit ; inactif sous le seuil de Haiku 4.5 |
 | l'aiguillage vers les usines | à construire (section 4) |
 | l'usine de graphes, et la boucle écart puis correction | construite le 24 septembre (`usine-de-graphes.fr.md`, exemple complet dans `exemple-mise-en-service.fr.md`) |
-| l'usine de code et le plugin `generated` | en réserve (section 6) ; le bac à sable est un slot, `forge` (section 6.1, décidé le 25 septembre au soir, à construire en premier à la reprise) |
+| l'usine de code et le plugin `generated` | le bac à sable est construit : le slot `forge` (section 6.2, la nuit du 25 septembre, branche `forge`) ; le sujet `code` reste à écrire (section 6.1) |
 | le superviseur des contrats | construit la nuit du 25 septembre (`harness-refactoring.fr.md`, section 16) : un rôle sur le slot `reasoner`, un verdict typé gardé par code, l'Observateur renvoyé dans sa boucle, l'usine de graphes qui lit le verdict |

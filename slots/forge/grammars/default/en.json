@@ -1,0 +1,33 @@
+{
+    "server": {
+        "description": "The forge: the code sandbox, a runtime of its own where a generated plugin is written, compiled on an import allow-list, tested, checked by code (types under Generated., a signature the substrate validates and the units service resolves, a card), loaded by sha256 and run like on the twin; a signed artifact is proposed to the station, never pushed",
+        "instructions": "In order: plugin_write (src/index.ts exporting register(registry, doc), src/<name>.node.ts, src/<name>.test.ts, docs/<name>.md), plugin_build, plugin_test, plugin_load; then registry_search, document_build and session_run see the new types, and graph.evaluate can target this slot. plugin_promote proposes the artifact to the station with the evaluate report that judged it. Imports: @spiky-panda/core and the plugin's own files; tests may import node:test and node:assert. A generated type is named under Generated. and never overrides one the registry holds."
+    },
+    "tools": {
+        "plugin_write": {
+            "title": "Write a plugin",
+            "description": "The files of a generated plugin into the task's workshop: sources under src/ (the entry index.ts exporting register(registry, doc), the node files, the test files), the documentation cards under docs/. The layout and the imports are checked as they are written; a refusal names the file and the rule."
+        },
+        "plugin_build": {
+            "title": "Build a plugin",
+            "description": "Compile the plugin in a child process with a time budget, after the import allow-list (@spiky-panda/core and the plugin's own files; node:test and node:assert in tests). The diagnostics come back whole: file, line, code, message."
+        },
+        "plugin_test": {
+            "title": "Test a plugin",
+            "description": "The plugin's own tests (node's runner, a child process, a time budget) and the deterministic checks on a scratch registry: every type under Generated., a signature present and valid for the substrate, every unit resolved by the units service against its quantity, the card on disk. Both must pass before the plugin is loaded."
+        },
+        "plugin_load": {
+            "title": "Load a plugin",
+            "description": "Load the built and tested plugin into the forge's registry, by its sha256. Refused before a positive plugin_test; a type the registry already holds is never overridden. From then on registry_search, document_build and session_run see its types."
+        },
+        "plugin_promote": {
+            "title": "Propose a plugin",
+            "description": "Write the signed artifact of a loaded plugin (files and sha256, types, tests and checks, the evaluate report named) and propose it to the station, and nowhere else: Mother keeps it, the commander authorises, the twin loads the generated plugin. The forge never pushes."
+        }
+    },
+    "resources": {
+        "forge://plugins": { "description": "The plugins loaded in the forge: id, sha256, types, files, provenance (task and plugin name)." },
+        "forge://builds": { "description": "Every compilation, passed or refused, with its diagnostics; the tests and checks run on it." },
+        "forge://proposals": { "description": "Every artifact proposed to the station, with the station's proposal id." }
+    }
+}

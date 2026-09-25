@@ -10,6 +10,7 @@
  *   node dist/slots/run-all.js --no-broker     slots only, against a broker already running
  *   node dist/slots/run-all.js --port 3100     another port (the broker is told through its env)
  *   node dist/slots/run-all.js --no-open       do not open the browser on the dashboard
+ *   node dist/slots/run-all.js --no-forge      the forge is started apart (`npm run forge`), in its own process
  */
 import { exec } from "node:child_process";
 import { isMain } from "../lib/paths.js";
@@ -31,6 +32,7 @@ import { observerSlot } from "./observer/provider.js";
 import { screensSlot } from "./screens/provider.js";
 import { physicsSlot } from "./physics/provider.js";
 import { supervisorSlot } from "./supervisor/provider.js";
+import { forgeSlot } from "./forge/provider.js";
 import { startDiscovery } from "./lib/discovery.js";
 import type { PublishedSlot } from "./lib/slot-server.js";
 
@@ -57,6 +59,7 @@ const SLOTS: Array<[string, (wsBase: string, logger: (line: string) => void) => 
     ["screens", screensSlot],
     ["physics", physicsSlot],
     ["supervisor", supervisorSlot],
+    ["forge", forgeSlot],
 ];
 
 /** A slot that could not be published: its name and the reason, said once at start and kept for whoever asks. */
@@ -78,10 +81,10 @@ export interface Published {
  * what an absence means to it: the server keeps going, a test that needs the
  * slot fails on `failures`.
  */
-export async function publishAll(wsBase: string, logger: (line: string) => void = log): Promise<Published> {
+export async function publishAll(wsBase: string, logger: (line: string) => void = log, skip: string[] = []): Promise<Published> {
     const slots: PublishedSlot<object>[] = [];
     const failures: SlotFailure[] = [];
-    for (const [name, make] of SLOTS) {
+    for (const [name, make] of SLOTS.filter(([name]) => !skip.includes(name))) {
         try {
             const slot = make(wsBase, logger);
             await slot.open();
@@ -131,7 +134,8 @@ async function main(): Promise<void> {
         });
     }
 
-    const { slots, failures } = await publishAll(wsBase);
+    // The forge in a process of its own (`slots/forge/main.ts`, `npm run forge`): what a generated plugin does at run time happens there, not here.
+    const { slots, failures } = await publishAll(wsBase, log, flag("--no-forge") ? ["forge"] : []);
     if (failures.length) log(`DEGRADED: ${failures.length} slot(s) not published (${failures.map((f) => f.slot).join(", ")}); the others run, the board shows the missing ones red`);
     log(`dashboard: ${httpBase}/   slots: ${slots.map((s) => s.slot).join(", ")}   introspection: ${httpBase}/_broker/mcp`);
     // The medical monitoring page is meant to be held in someone's hands, on a

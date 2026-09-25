@@ -56,6 +56,8 @@ const EXCLUDED = [
     /^physics\./,
     // The Contract Supervisor reviews the factories' facts; the night's agent has no contract to review.
     /^supervisor\./,
+    // The forge compiles and runs generated code for the factories; the night's agent writes no plugin.
+    /^forge\./,
     /^twin\.(registry_|document_|session_run)/,
     /^station\.propose$/,
     /^biomed\.(monitor_start|monitor_stop|report|move)$/,
