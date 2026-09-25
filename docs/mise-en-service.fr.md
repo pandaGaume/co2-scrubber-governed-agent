@@ -652,9 +652,11 @@ storyboard.
 | le CO2 en masse sur `atmosphere` : puits (l'épurateur) et source (l'équipage). Le nœud actuel raisonne en ppm sur une seule pièce et ne suffit plus | substrat, `plugin-physics` | 0,5 |
 | l'introduction sur la page : l'inventaire, la fiche d'essai, les deux candidats, la courbe héros, le panneau des signes vitaux qui apparaît et disparaît | `harness/browser` | 1,25 |
 
-**Tranché le 23 septembre** : Mother prend `JBFqnCBsd6RMkjVDRZzb`, l'autre
-voix déjà listée, qu'elle partage avec le jumeau et l'usine tant qu'une
-troisième n'est pas choisie. Le texte d'origine suit. Aujourd'hui,
+**Tranché le 23 septembre, défait le 25** : Mother avait pris
+`JBFqnCBsd6RMkjVDRZzb`, l'autre voix déjà listée ; Guillaume l'a entendue le
+25 au démarrage du tableau de bord et a remis la voix de l'agent sur elle
+(`eWc2pftlLqhJtXnPQknh`). Mother et l'agent partagent donc de nouveau la
+même voix ; le jumeau et l'usine gardent l'autre. Le texte d'origine suit. Aujourd'hui,
 `profiles/voice.json` donne à la station et à l'agent **la même voix**
 (`eWc2pftlLqhJtXnPQknh`). Si Mother est un personnage, il lui faut la sienne,
 et de préférence la plus neutre des quatre : elle est la seule qui ne pense

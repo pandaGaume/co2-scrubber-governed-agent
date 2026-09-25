@@ -147,8 +147,10 @@ describe("speech slot on the silent engine", () => {
         assert.equal(twin.voice, "twin");
         const agent = await result<Spoken>("say", { text: "agent voice", voice: "agent" });
         assert.notEqual(twin.voiceId, agent.voiceId);
-        // Mother no longer speaks with the agent's voice (2026-09-23): the one who does not think must not sound like the one who does.
-        assert.notEqual((await result<Spoken>("synthesize", { text: "station voice" })).voiceId, agent.voiceId);
+        // Mother speaks with the agent's voice again (Guillaume, 2026-09-25, after two days on the other one); the twin keeps the other.
+        const station = await result<Spoken>("synthesize", { text: "station voice" });
+        assert.equal(station.voiceId, agent.voiceId);
+        assert.notEqual(station.voiceId, twin.voiceId);
         await assert.rejects(result("say", { text: "hello", voice: "not a speaker at all" }), /unknown voice/);
         await assert.rejects(result("say", { text: "   " }), /text is required/);
     });
