@@ -41,7 +41,7 @@ export interface Plan {
 
 export interface DoneClaim {
     summary: string;
-    artifacts: Array<{ kind: "graph" | "model" | "twin" | "procedure"; path: string }>;
+    artifacts: Array<{ kind: "graph" | "model" | "twin" | "procedure" | "plugin"; path: string }>;
 }
 
 export interface WorkshopFile {
@@ -117,7 +117,7 @@ export interface WorkshopState extends State {
     readonly features: WorkshopFeatures;
 }
 
-const ARTIFACT = /(\.onnx|\.spikypanda|^models\/.*\.json|^procedures\/.*\.json)$/;
+const ARTIFACT = /(\.onnx|\.spikypanda|^models\/.*\.json|^procedures\/.*\.json|^forge\/[^/]+\/artifact\.json)$/;
 export const isArtifact = (path: string): boolean => ARTIFACT.test(path);
 
 /** The task's files as the workspace slot lists them. */

@@ -102,7 +102,8 @@ export const EVALUATE_SCHEMA = {
     required: ["label"],
 } as const;
 
-function evaluateCapability(context: TopicContext): LocalCapability {
+/** The evaluator as a capability; `runtimeSlot` says which sandbox runs the trials (the twin's, or the forge's for the code topic, whose catalogue holds the generated plugins). */
+export function evaluateCapability(context: TopicContext, runtimeSlot = "twin"): LocalCapability {
     const { broker, taskId, task, progress } = context;
     return {
         id: "graph.evaluate",
@@ -113,7 +114,7 @@ function evaluateCapability(context: TopicContext): LocalCapability {
             try {
                 const rows = await telemetryOf(context);
                 const budget = task.budget?.twinPoints ?? 40;
-                const result = await evaluateCandidate(input as unknown as EvaluateInput, { broker, taskId, task, rows, remaining: budget - state.runs, n: state.candidates.length + 1, previous: state.candidates });
+                const result = await evaluateCandidate(input as unknown as EvaluateInput, { broker, taskId, task, rows, runtimeSlot, remaining: budget - state.runs, n: state.candidates.length + 1, previous: state.candidates });
                 state.runs += result.candidate.combinations;
                 state.candidates.push(result.candidate);
                 await broker.call("workspace", "write", { taskId, path: "candidates.json", text: JSON.stringify(state.candidates, null, 2) + "\n" });

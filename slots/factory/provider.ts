@@ -29,6 +29,7 @@ import { runTask, TOPIC_DEFINITIONS, type RunTaskOptions } from "../../harness/c
 import { ScriptedBuilder } from "../../harness/scripted/onnx.js";
 import { ScriptedProcedureBuilder } from "../../harness/scripted/procedure.js";
 import { ScriptedGraphBuilder } from "../../harness/scripted/graph.js";
+import { ScriptedCodeBuilder } from "../../harness/scripted/code.js";
 import { ReasonerProvider } from "../../harness/providers/reasoner.js";
 import { supervise, SUPERVISOR_PROMPT } from "../../harness/supervisor/supervisor.js";
 import { Broker } from "../../harness/lib/broker.js";
@@ -134,7 +135,7 @@ function launch(httpBase: string, taskId: string, topic: Topic, builder: Builder
         // The builder: the script of the topic only when asked for by name; otherwise the model behind the reasoner slot, reading the topic's prompt.
         let provider: RunTaskOptions["provider"];
         let promptFile: string | null = null;
-        if (builder === "scripted") provider = topic === "procedure" ? (ctx) => new ScriptedProcedureBuilder(ctx) : topic === "graph" ? (ctx) => new ScriptedGraphBuilder(ctx) : (ctx) => new ScriptedBuilder(ctx);
+        if (builder === "scripted") provider = topic === "procedure" ? (ctx) => new ScriptedProcedureBuilder(ctx) : topic === "graph" ? (ctx) => new ScriptedGraphBuilder(ctx) : topic === "code" ? (ctx) => new ScriptedCodeBuilder(ctx) : (ctx) => new ScriptedBuilder(ctx);
         else {
             const prompt = TOPIC_DEFINITIONS[topic]?.prompt;
             if (!prompt) throw new Error(`topic ${topic} has no prompt for a model yet: ask for builder "scripted"`);

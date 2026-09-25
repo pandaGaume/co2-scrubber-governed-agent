@@ -43,7 +43,7 @@ export const DONE_SCHEMA: JsonValue = {
     type: "object",
     properties: {
         summary: { type: "string", minLength: 1, description: "What was built and what shows the contract is held, with the numbers read from the tools' answers." },
-        artifacts: { type: "array", minItems: 1, items: { type: "object", properties: { kind: { type: "string", enum: ["graph", "model", "twin", "procedure"] }, path: { type: "string" } }, required: ["kind", "path"], additionalProperties: false } },
+        artifacts: { type: "array", minItems: 1, items: { type: "object", properties: { kind: { type: "string", enum: ["graph", "model", "twin", "procedure", "plugin"] }, path: { type: "string" } }, required: ["kind", "path"], additionalProperties: false } },
     },
     required: ["summary", "artifacts"],
     additionalProperties: false,

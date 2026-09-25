@@ -282,8 +282,53 @@ Ce qui n'est pas fait, dit tel quel : la conservation d'une grandeur sur un
 pas de simulation (une vérification à faire sur un document que le runtime
 construit) ; le chargement par le jumeau du plugin `generated` sur
 l'autorisation du commandant (la station reçoit la proposition et attend) ;
-l'isolation réseau des processus enfants ; le sujet `code` lui-même, qui est
-la suite.
+l'isolation réseau des processus enfants.
+
+### 6.3 Le sujet `code`, sur la forge (la même nuit)
+
+Le sujet existe (`harness/topics/code/`), avec les crochets que `procedure`
+a reçus le 25 septembre : les outils, une garde à lui, sa part de l'état de
+raisonnement, le brief par étape, la clé des recettes, les revendications
+construites par le code, le validateur. Il ne fait presque rien lui-même :
+la forge tient le bac à sable et les vérifications, le constructeur tient
+la boucle. Une tâche s'ouvre avec `topics: ["code"]` (l'entrée prévue est
+la capacité manquante qu'une usine de graphes déclare avec ce sujet ; le
+branchement automatique d'une tâche sur l'autre n'est pas fait).
+
+Ses six étapes, dans l'ordre où un plugin traverse la forge :
+
+1. **l'écart et le catalogue** : `forge.registry_search` d'abord, un nœud
+   n'est écrit que pour ce que rien ne produit ; la garde refuse un plan
+   avant cette lecture ;
+2. **le plan** : `selected_nodes` vide, une capacité manquante par sortie
+   requise, sujet `code` ;
+3. **le plugin** : `forge.plugin_write` ; la garde refuse, avant toute
+   compilation, un type qui n'est pas nommé sous `Generated.` (la règle
+   nommée, avec l'exemple), et un second nom de plugin dans la même tâche ;
+4. **compilé, testé, chargé** : `forge.plugin_build`, `forge.plugin_test`,
+   `forge.plugin_load` ; les exigences se déduisent des réponses de la forge
+   (une compilation plus vieille que les fichiers ne compte plus, ni ce qui
+   l'a suivie) ; un refus revient entier dans l'état sous `evaluation`
+   (les diagnostics, les vérifications refusées, la sortie des tests) ;
+5. **exécuté** : `graph.evaluate` sur la forge quand la tâche porte une
+   télémétrie (le même évaluateur, les mêmes seuils, le même diagnostic que
+   l'usine de graphes ; `evaluateCapability(context, "forge")`), sinon un
+   document qui câble le nœud (`forge.document_build`, `forge.session_run`)
+   avec une sonde sur l'un de ses observables ; la promotion est refusée
+   avant ;
+6. **proposé, remis** : `forge.plugin_promote`, puis `task.done` avec
+   l'artefact de type `plugin` ; le validateur exige que le fichier
+   revendiqué soit celui que la forge a signé (même chemin, même sha256), et
+   le runner propose le manifeste à la station avec lui (kind `plugin`).
+
+Le constructeur scripté (`harness/scripted/code.ts`, la fixture
+`code-fixture.ts`) joue la chaîne sans clé : dix pas, la tâche finit
+`proposed`, la station tient deux propositions (celle de la forge, celle de
+la tâche avec son manifeste), le catalogue du jumeau ne voit rien. Avec un
+mauvais nom de type d'abord, la garde refuse l'écriture, nomme la règle, le
+script corrige, une seule compilation est dépensée (`tests/code.test.ts`).
+Le prompt du sujet pour un modèle est écrit (`harness/topics/code/prompt.md`) ;
+il n'a pas encore été passé sur Haiku.
 
 ## 7. Le cache du prompt
 
@@ -311,5 +356,5 @@ fait ; la conception est la même.
 | le cache du prompt côté Anthropic | construit ; inactif sous le seuil de Haiku 4.5 |
 | l'aiguillage vers les usines | à construire (section 4) |
 | l'usine de graphes, et la boucle écart puis correction | construite le 24 septembre (`usine-de-graphes.fr.md`, exemple complet dans `exemple-mise-en-service.fr.md`) |
-| l'usine de code et le plugin `generated` | le bac à sable est construit : le slot `forge` (section 6.2, la nuit du 25 septembre, branche `forge`) ; le sujet `code` reste à écrire (section 6.1) |
+| l'usine de code et le plugin `generated` | construits : le slot `forge` (section 6.2) et le sujet `code` sur lui (section 6.3), la nuit du 25 septembre, branche `forge` ; scriptés et testés sans clé ; pas encore passés sur un modèle ; le branchement automatique d'une capacité manquante de l'usine de graphes sur une tâche `code` reste à faire |
 | le superviseur des contrats | construit la nuit du 25 septembre (`harness-refactoring.fr.md`, section 16) : un rôle sur le slot `reasoner`, un verdict typé gardé par code, l'Observateur renvoyé dans sa boucle, l'usine de graphes qui lit le verdict |

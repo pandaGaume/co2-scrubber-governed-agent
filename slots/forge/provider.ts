@@ -400,11 +400,13 @@ export function forgeSlot(wsBase: string, log: (line: string) => void, options: 
             handle: async (args, s) => {
                 const taskId = str(args.taskId);
                 const plugin = str(args.plugin);
-                const loaded = [...s.plugins].reverse().find((p) => p.taskId === taskId && p.plugin === plugin);
-                if (!loaded) throw new Error(`plugin "${plugin}" is not loaded in the forge: nothing is proposed before it was built, tested and loaded here`);
+                // The plugin as its files stand now, by sha256: the same bytes loaded once (from this task or another) serve every task that writes them.
+                const dir = pluginDir(taskId, plugin);
+                const current = pluginSha256(readPluginFiles(dir));
+                const loaded = [...s.plugins].reverse().find((p) => p.sha256 === current);
+                if (!loaded) throw new Error(`plugin "${plugin}" is not loaded in the forge (its files' sha256 ${current.slice(0, 8)} was never loaded): nothing is proposed before it was built, tested and loaded here`);
                 const build = s.builds.find((b) => b.sha256 === loaded.sha256 && b.tests?.ok);
                 if (!build?.tests) throw new Error(`plugin "${plugin}": no passed test run for ${loaded.sha256.slice(0, 8)}`);
-                const dir = pluginDir(taskId, plugin);
                 const artifact = {
                     kind: "plugin",
                     plugin,
