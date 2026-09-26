@@ -196,6 +196,21 @@ const HOW: Record<string, string> = {
     promoted: "propose it (forge.plugin_promote)",
 };
 
+/**
+ * A document that runs the generated node must wire it: a node whose inputs
+ * are all unwired shows nothing of its behaviour (the third passage on Haiku
+ * ran the leak with its command unwired, at zero, and the harness took it
+ * as a run). Deterministic: the spec's connections, the loaded types.
+ */
+export function documentProblems(spec: unknown, generatedTypes: string[]): string[] {
+    const s = (spec && typeof spec === "object" ? spec : {}) as { nodes?: Array<{ id?: unknown; typeId?: unknown }>; connections?: Array<{ to?: unknown[] }> };
+    const nodes = Array.isArray(s.nodes) ? s.nodes : [];
+    const wiredInto = new Set((Array.isArray(s.connections) ? s.connections : []).map((c) => String((c?.to ?? [])[0] ?? "")));
+    const generated = nodes.filter((n) => generatedTypes.includes(String(n?.typeId)));
+    if (!generated.length) return [`the document holds no node of the plugin's types (${generatedTypes.join(", ") || "none loaded"}): the run must show the generated node`];
+    return generated.filter((n) => !wiredInto.has(String(n?.id))).map((n) => `node "${String(n?.id)}" (${String(n?.typeId)}) has no input wired: a run with every input unwired shows nothing of the node (wire a Logic.Time:timeline's value into one of its inputs so that its output is seen over time)`);
+}
+
 async function guardCode(capabilityId: string, input: JsonValue, context: TopicContext): Promise<string[]> {
     const { progress, task } = context;
     const state = stateOf(progress);
@@ -217,6 +232,10 @@ async function guardCode(capabilityId: string, input: JsonValue, context: TopicC
         const files = Array.isArray(w.files) ? (w.files as Array<{ path?: unknown; content?: unknown }>) : [];
         for (const type of typesWritten(files)) if (!type.startsWith(GENERATED_PREFIX)) problems.push(`the type "${type}" is not named under "${GENERATED_PREFIX}" (as in "${GENERATED_PREFIX}Habitat:leak"): every catalogue must say a node is generated; the forge refuses it at its checks, so name it now`);
         return problems;
+    }
+    if (capabilityId === "forge.document_build") {
+        const loaded = stagesOf(progress).loaded?.types ?? [];
+        return loaded.length ? documentProblems((input as { spec?: unknown } | null)?.spec, loaded) : ["forge.document_build needs loaded: load the plugin first (forge.plugin_load), the document runs its node"];
     }
     if (capabilityId === "forge.plugin_promote") return need(["loaded", "ran"]);
     if (capabilityId === "task.done") {
@@ -305,7 +324,7 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
     if (!r.loaded) return `Stage 4 of 6, loaded. Tests and checks passed (${s.tests?.pass ?? 0} test(s), types ${(s.tests?.types ?? []).map((t) => t.type).join(", ")}). Load it: forge.plugin_load.${refused("forge.plugin_load")}`;
     if (!r.ran) {
         if (telemetry) return `Stage 5 of 6, judged. The plugin is loaded in the forge (${(s.loaded?.types ?? []).join(", ")}). Build the candidate that answers the request with it and judge it against the telemetry: graph.evaluate (it runs on the forge's catalogue; the same thresholds and diagnosis as the graph factory's).${ran.how === "evaluate" && ran.held === false ? " The last candidate did not hold: its residuals are under evaluation; revise the node (write, build, test, load again) or the candidate." : ""}${refused("graph.evaluate")}`;
-        return `Stage 5 of 6, run. The plugin is loaded in the forge (${(s.loaded?.types ?? []).join(", ")}). The task carries no telemetry: run the node in a document (forge.document_build with a spec that wires it, a name under "${task.id}/", then forge.session_run on that name with a probe on one of its viewables) so that its outputs are seen over time.${refused("forge.session_run")}${refused("forge.document_build")}`;
+        return `Stage 5 of 6, run. The plugin is loaded in the forge (${(s.loaded?.types ?? []).join(", ")}). The task carries no telemetry: run the node in a document (forge.document_build with a spec that wires at least one of its inputs, a Logic.Time:timeline's value into it with segments that change; a name under "${task.id}/"; then forge.session_run on that name with a probe on one of its viewables) so that its outputs are seen over time; a document that leaves every input of the node unwired is refused.${refused("forge.session_run")}${refused("forge.document_build")}`;
     }
     return `Stage 6 of 6, proposed. The node ran (${ran.how}). Propose the plugin to the station: forge.plugin_promote${candidatesOf(progress).at(-1) ? " with the evaluate report's id and verdict" : ""}.${refused("forge.plugin_promote")}`;
 }

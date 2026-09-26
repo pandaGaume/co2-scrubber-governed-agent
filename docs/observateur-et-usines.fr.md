@@ -342,10 +342,13 @@ Ce que ces passages disent : sur l'état de raisonnement, tout ce que le
 modèle doit corriger doit être dans l'état entier, ses propres fichiers
 compris ; et une API se lit sur un exemple qui compile, jamais de mémoire.
 Le plugin du troisième passage est celui de la fixture à quelques noms près,
-écrit par le modèle sur le modèle de plugin. Ce qui reste : le document que
-le modèle a construit ne câblait pas la commande (la fuite y vaut zéro), et
-l'exigence « exécuté » s'en contente ; une vérification sur ce que la sonde
-a montré est à écrire.
+écrit par le modèle sur le modèle de plugin. Le nœud du troisième passage, rejoué
+dans la forge avec une commande câblée (0,25 puis 1, débit 0,002 kg/s),
+donne -0,0005 puis -0,002 kg/s à la sonde : la physique demandée. Ce que le
+modèle s'était donné comme démonstration, lui, ne câblait pas la commande
+(la fuite y valait zéro) et l'exigence « exécuté » s'en contentait : depuis,
+la garde du sujet refuse un document où le nœud généré n'a aucune entrée
+câblée (`documentProblems`), et le brief le dit.
 
 ## 7. Le cache du prompt
 

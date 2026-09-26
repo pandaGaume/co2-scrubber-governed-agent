@@ -18,7 +18,7 @@ import type { LocalBroker } from "../slots/lib/local-broker.js";
 import type { PublishedSlot } from "../slots/lib/slot-server.js";
 import { runTask, type BuilderContext } from "../harness/core/runner.js";
 import { ScriptedCodeBuilder, type ScriptedCodeOptions } from "../harness/scripted/code.js";
-import { typesWritten, requirementsOf, briefOf } from "../harness/topics/code/index.js";
+import { typesWritten, requirementsOf, briefOf, documentProblems } from "../harness/topics/code/index.js";
 import { leakFixture } from "../harness/scripted/code-fixture.js";
 import { newProgress } from "../harness/core/workspace-observer.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
@@ -32,6 +32,13 @@ describe("the code topic's rules, without a broker", () => {
         assert.deepEqual(typesWritten(leakFixture()), ["Generated.Habitat:leak"]);
         assert.deepEqual(typesWritten([{ path: "src/index.ts", content: 'reg.register("Physics.Habitat:leak", f, {});\nregistry.register(\'Generated.X:y\', g, {});' }]), ["Physics.Habitat:leak", "Generated.X:y"]);
         assert.deepEqual(typesWritten([{ path: "src/a.test.ts", content: 'reg.register("Physics.Habitat:leak", f, {});' }]), [], "a test file registers nothing");
+    });
+
+    it("a document that runs the generated node wires it: every input unwired is refused, a foreign document too", () => {
+        const wired = { nodes: [{ id: "command", typeId: "Logic.Time:timeline" }, { id: "leak", typeId: "Generated.Habitat:leak" }], connections: [{ from: ["command", "value"], to: ["leak", "command"] }] };
+        assert.deepEqual(documentProblems(wired, ["Generated.Habitat:leak"]), []);
+        assert.match(documentProblems({ nodes: [{ id: "leak", typeId: "Generated.Habitat:leak", params: { rateKgps: 0.001 } }], connections: [] }, ["Generated.Habitat:leak"])[0], /node "leak" \(Generated\.Habitat:leak\) has no input wired/);
+        assert.match(documentProblems({ nodes: [{ id: "cabin", typeId: "Physics.LifeSupport:cabin-air" }], connections: [] }, ["Generated.Habitat:leak"])[0], /holds no node of the plugin's types/);
     });
 
     it("the stages, from what the forge answered: nothing read, then each requirement in the order the forge takes them", () => {
