@@ -24,17 +24,21 @@ What it is not: it is not an autonomous agent that acts on the world. Nothing a 
 
 Everything talks through one broker (MCP over HTTP and WebSocket, `harness/lib/broker.ts`). Each participant is a slot: a server of tools and resources, with its own words (grammars per model family and per language, `slots/<slot>/grammars/`). A factory reads the register through the broker like anybody else; it has no private way into a device.
 
-| slot | what it is | what it never does |
-|---|---|---|
-| `station` (Mother) | the embodiment: the register of devices (where they are, what they are, what they measure, what can be commanded), the commissionings, the proposals, the questions to the commander, the journal; she speaks in two languages | decide; run a procedure without the commander's authorisation; push |
-| `twin` | the live sandbox: the runtime on the demo's registry (the substrate's plugins and the hand-written habitat plugin), documents built from specs, sessions run with probes | load a generated plugin on its own |
-| `forge` | the code sandbox: its own registry, where a generated plugin is compiled, tested, accepted against its contract, loaded and run; a signed artifact is proposed to the station | push; take a verdict from its caller |
-| `library` | the documents of the domain (datasheets, topology, methods, physics), with their typed facts in sidecars, and the reference graphs on the shelf | change |
-| `physics` | the units: normalise, convert, compatible, validate a connection; a facade on the substrate's unit system, UCUM codes as identities | know a domain |
-| `observer` | a model role: from a description and a telemetry summary, what a twin must be able to do, checked by code | name the catalogue |
-| `supervisor` | a model role: a typed verdict on the facts and the deterministic report of a task, checked by code | read a transcript |
-| `factory` | the loops: a task requested, launched, watched, handed off, resumed on the commander's answer | act on the world |
-| `workspace`, `model`, `biomed`, `speech`, `reasoner` | the workshop of a task; the ONNX models; the medical monitor; the voice; the model behind an API, with its prompt cache | |
+Each slot is either code, or a role of a language model, or the human's; the second column says which, and nothing in this document blurs it.
+
+| slot | nature | what it is | what it never does |
+|---|---|---|---|
+| `station` (Mother) | code | the embodiment: the register of devices (where they are, what they are, what they measure, what can be commanded), the commissionings, the proposals, the questions to the commander, the journal; she speaks in two languages from written phrases, never from a model | decide; run a procedure without the commander's authorisation; push |
+| `twin` | code | the live sandbox: the runtime on the demo's registry (the substrate's plugins and the hand-written habitat plugin), documents built from specs, sessions run with probes | load a generated plugin on its own |
+| `forge` | code | the code sandbox: its own registry, where a generated plugin is compiled, tested, accepted against its contract, loaded and run; a signed artifact is proposed to the station | push; take a verdict from its caller |
+| `library` | code (documents) | the documents of the domain (datasheets, topology, methods, physics), with their typed facts in sidecars, and the reference graphs on the shelf | change |
+| `physics` | code | the units: normalise, convert, compatible, validate a connection; a facade on the substrate's unit system, UCUM codes as identities | know a domain |
+| `observer` | a language model, behind a guard of code | from a description and a telemetry summary, what a twin must be able to do; every proposal checked by code before it counts | name the catalogue |
+| `supervisor` | a language model, behind a guard of code | a typed verdict on the facts and the deterministic report of a task; checked by code before it counts | read a transcript |
+| `reasoner` | a language model | the model behind an API (Claude Haiku in the passages kept, Nemotron on Nebius as an alternative), one conversation or one state per role, the role being the prompt; every factory builder, the Observer and the supervisor go through it | act: it only answers with one decision at a time |
+| `factory` | code | the loops: a task requested, launched, watched, handed off, resumed on the commander's answer; the builder inside a loop is the reasoner (a model) or a script (code, for the tests) | act on the world |
+| `workspace`, `model`, `biomed`, `speech` | code | the workshop of a task; the ONNX models; the medical monitor (simulated or a real strap); the voice (a text-to-speech provider reading Mother's written phrases) | |
+| the control post (`dashboard/`) | the human's | where the commander reads and answers; a page, no model | decide in the human's place |
 
 The night's agent (`tier3/`, the agent that runs the habitat's scenarios) shares the same loop with another set of services; its catalogue excludes everything a factory owns (`tier3/lib/capabilities.ts`: the forge, the supervisor, the questions' answers, the factory's resume).
 
@@ -42,12 +46,14 @@ The night's agent (`tier3/`, the agent that runs the habitat's scenarios) shares
 
 The loop is the substrate's (`@spiky-panda/harness`), stepped by an `AdaptivePolicyRuntime`; what makes it the factory's constructor rather than the habitat's agent is the six services it is given (`harness/core/agent.ts`):
 
-- **the capabilities**: the tools the model may call, built from the broker's catalogue and the task's local capabilities (`harness/core/capabilities.ts`);
-- **the reasoner**: a `Provider`, a language model behind an API (`harness/providers/`), or a scripted one for the tests (`harness/scripted/`);
-- **the observer**: what the loop reads before and after every step; at the factory, the workshop of the task and the reasoning state rebuilt from it (`harness/core/workspace-observer.ts`, `reasoning-state.ts`);
-- **the evaluator**: what a step was worth, and, at `task.done`, whether the contract is held (`harness/core/task-evaluator.ts`);
-- **the guard**: what the loop refuses before executing (`harness/core/builder-guard.ts`, then the topic's own rules);
-- **the memory**: a policy graph of learned decisions, loaded from the topic's recipes and written back (`harness/core/recipes.ts`).
+- **the capabilities** (code): the tools the model may call, built from the broker's catalogue and the task's local capabilities (`harness/core/capabilities.ts`);
+- **the reasoner** (the one language model in the loop): a `Provider`, a model behind an API (`harness/providers/`), or a scripted stand-in for the tests (`harness/scripted/`, code); it is called at one node of the twelve, `reason`, and only when the memory has nothing to replay;
+- **the observer** (code): what the loop reads before and after every step; at the factory, the workshop of the task and the reasoning state rebuilt from it (`harness/core/workspace-observer.ts`, `reasoning-state.ts`);
+- **the evaluator** (code): what a step was worth, and, at `task.done`, whether the contract is held (`harness/core/task-evaluator.ts`);
+- **the guard** (code): what the loop refuses before executing (`harness/core/builder-guard.ts`, then the topic's own rules);
+- **the memory** (code): a policy graph of learned decisions, loaded from the topic's recipes and written back (`harness/core/recipes.ts`).
+
+Five of the six services are code. The model is one service, called at one node, and everything it proposes goes through the other five before it does anything.
 
 ### 2.3 Who writes, who judges, who decides
 
@@ -61,6 +67,28 @@ The loop is the substrate's (`@spiky-panda/harness`), stepped by an `AdaptivePol
 | the answer to a question | | | the commander, or a standing order the commander set |
 
 The principle that holds the table together: the model never defines at once the code, the acceptance tests and the verdict. When a model writes a contract, another role writes the code; when a model writes code, the tests that count are derived from the contract by the forge.
+
+### 2.4 Who is a language model, and who is not
+
+Read this list before anything else in the document; every later chapter assumes it.
+
+**Language model roles**, all on the `reasoner` slot, each with its own fixed prompt, each producing one decision or one typed proposal at a time, none of them ever executing anything:
+
+| role | prompt | what it produces | what checks it |
+|---|---|---|---|
+| the Observer | `harness/observer/prompt.md` | the request of a twin | its guard (code), the supervisor (a model, checked by code) |
+| the graph factory's builder | `harness/topics/graph/prompt.md` | a plan, candidates to evaluate, a contract for a missing capability, the hand-over claim | the guard, the evaluator, the sandbox (code) |
+| the procedure factory's builder | `harness/topics/procedure/prompt.md` | a plan, a procedure | the guard of procedures (code); the commander |
+| the code factory's builder | `harness/topics/code/prompt.md` | a plan, a plugin's files, a document to run it | the compiler, the tests, the checks, the acceptance of the contract (code) |
+| the ONNX factory's builder | `harness/topics/onnx/prompt.md` | a plan, a fitted model | the model slot's contract check (code) |
+| the supervisor | `harness/supervisor/prompt.md` | a verdict on facts | its guard (code) |
+| the night's agent (`tier3/`, outside the factory) | `tier3/prompts/system.md` | one action on the habitat at a time | the broker's policy and the device (code) |
+
+**Code**, deterministic, no model anywhere inside: the broker and its policy; the station; the twin and the forge; the library and the units; the loop itself (the twelve nodes), the capabilities, the observer of the workshop, the reasoning state and its compactor, the guard, the evaluator, the memory; the contract layer; the contract's acceptance; the hand-off; the questions and the standing orders; the rendering of a trace; the scripted builders that stand in for a model in the tests.
+
+**The human**: the commander, Tier 4, at the control post, by a click or by voice. Authorises a procedure, answers a question, sets a standing order. Nothing loads into a device, the twin or the fleet without them.
+
+Two consequences. What a model says is never an outcome: a plan is not accepted until the guard accepts it, a candidate does not hold until the sandbox measured it, a plugin is not loaded until the forge proved it, a hand-over is not a hand-over until the validator matched the file. And what a model reads is never a transcript: the state it reads was written by code, from what code measured, with the model's own previous proposal in it only when code refused it.
 
 ---
 
