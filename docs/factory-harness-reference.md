@@ -14,6 +14,18 @@ Three levels, taken from the note on Chernobyl (`docs/chernobyl-and-agent-policy
 
 The thesis in one line: the model proposes, the code judges, the commander decides. Every chapter below is one place where that line is enforced.
 
+### 1.1 Three natures: code, harness, graph
+
+Everything in this document is one of three things, and the distinction matters because two of them are the same thing seen twice.
+
+- **Code** is hand-written TypeScript: the slots, the guards, the evaluator, the compactor, the contract layer, the forge's checks. It is read by a programmer, changed by a commit, and does what it says.
+- **A graph** is a document of typed nodes and channels that the substrate's runtime executes: nodes from a catalogue, each with its ports and its signature, wired by channels, stepped by a session tick by tick. A twin is a graph: an atmosphere, persons, a scrubber, a sensor, a timeline, wired, run over the telemetry's span with probes on its outputs. A generated plugin adds node types to the catalogue a graph is built from. A graph is not written as code by whoever uses it: it is declared (a spec, a library template, a document), built by the runtime, drawn and edited in the studio, and judged by running it.
+- **A harness** is a graph too, of the same substrate: the decision loop is twelve typed nodes of the catalogue (`Harness.Observation:state`, `Harness.Policy:context`, `Harness.Policy:lookup`, `Harness.Policy:confidence-gate`, `Harness.Reasoning:provider`, `Harness.Policy:merge`, `Harness.Execution:capability`, `Harness.Observation:outcome`, `Harness.Learning:evaluate`, `Harness.Learning:record`, and their kin) wired by twelve channels (`harness/lib/flow.ts`), built with the same `RuntimeGraphBuilder` as a twin, validated, and handed to a driver the runtime steps. The services (the capabilities, the reasoner, the observer, the evaluator, the guard, the memory) are what the harness's nodes are given to work with; the model is the provider one node calls. The studio draws that graph like it draws a twin, and a run lights its nodes one at a time (`harness/browser/studio-loop.ts`, `factory-loop.ts`); the loop a page draws can be handed to the run in place of the one built in code (`driver`), so what is executed is what is drawn.
+
+So: the harness is not the code around the loop; it is the loop as a graph. The code around it (the runner, the topics, the slots) gives that graph its services, its early ends and its files. And the twin the harness builds is another graph of the same runtime, carrying physics where the harness carries decisions. One substrate, one runtime, two graphs: the one that decides and the one that is judged. What a factory produces, in the end, is a graph (a twin) or a node type for graphs (a plugin); what runs a factory is a graph as well.
+
+The three natures answer three different questions. Is it wrong? For code, read it and test it. Does it hold? For a twin, run it against the measurement. Is the loop sound? For the harness, read its trace: every node's input and output of every step is recorded, and the graph itself can be inspected in the studio.
+
 What it is not: it is not an autonomous agent that acts on the world. Nothing a factory produces reaches a device, the twin or the fleet without a proposal to the station and a human decision. It is not a general problem solver: it builds artifacts whose correctness code can measure (a residual against a measurement, a behavior against a contract, a procedure against rules), and it says when it cannot measure.
 
 ---
@@ -84,7 +96,9 @@ Read this list before anything else in the document; every later chapter assumes
 | the supervisor | `harness/supervisor/prompt.md` | a verdict on facts | its guard (code) |
 | the night's agent (`tier3/`, outside the factory) | `tier3/prompts/system.md` | one action on the habitat at a time | the broker's policy and the device (code) |
 
-**Code**, deterministic, no model anywhere inside: the broker and its policy; the station; the twin and the forge; the library and the units; the loop itself (the twelve nodes), the capabilities, the observer of the workshop, the reasoning state and its compactor, the guard, the evaluator, the memory; the contract layer; the contract's acceptance; the hand-off; the questions and the standing orders; the rendering of a trace; the scripted builders that stand in for a model in the tests.
+**Code**, deterministic, no model anywhere inside: the broker and its policy; the station; the twin's and the forge's runtimes; the library and the units; the capabilities, the observer of the workshop, the reasoning state and its compactor, the guard, the evaluator, the memory; the contract layer; the contract's acceptance; the hand-off; the questions and the standing orders; the rendering of a trace; the scripted builders that stand in for a model in the tests.
+
+**Graphs**, executed by the substrate's runtime, no model inside either: the harness (the twelve-node loop, section 1.1, whose one provider node calls the model), and the twins (the candidates a graph factory builds and judges, the reference graphs of the library, the documents the forge runs a generated node in).
 
 **The human**: the commander, Tier 4, at the control post, by a click or by voice. Authorises a procedure, answers a question, sets a standing order. Nothing loads into a device, the twin or the fleet without them.
 
@@ -134,7 +148,7 @@ In passage 10, three tasks: the graph task `t-2026-09-26-0014` (3 steps, ended `
 
 ## 4. The loop, step by step
 
-The loop is a graph of twelve typed nodes (`harness/lib/flow.ts`, one channel per edge), the same graph for the habitat's agent and for the factory:
+The loop is a graph of twelve typed nodes of the substrate's harness catalogue (`harness/lib/flow.ts`, one channel per edge), built, validated and stepped exactly as a twin's graph is (section 1.1); the same graph for the habitat's agent and for the factory, what differs being the services its nodes are given:
 
 ```
 observe > context > lookup > gate
@@ -428,7 +442,8 @@ The prompt of a role is fixed, the same bytes for every task, and passes first s
 
 | piece | generic | where the domain enters |
 |---|---|---|
-| the loop, the runner, the state, the compactor, the guard, the evaluator, the memory | yes: no word of a domain | |
+| the harness (the twelve-node loop, a graph of the substrate) | yes: no word of a domain, and no word of a factory either: the habitat's agent steps the same graph | |
+| the runner, the state, the compactor, the guard, the evaluator, the memory (code around the loop) | yes: no word of a domain | |
 | the topics' loops (graph, procedure, code) | yes | their prompts name the situation the model works in; the procedure's guard knows a speed floor and a medical monitoring |
 | the contract layer, the units, the supervisor | yes | the library's fact sidecars, the register's properties |
 | the forge, the capability contract, the acceptance | yes | the quantities and units of the unit system |
@@ -485,6 +500,8 @@ What is missing, in the order the work is planned: the identifiability chain and
 - **evidence**: what a task has read, kept compact in the state.
 - **fact**: an id, a semantic, a quantity, a unit, a value, a status, a producer.
 - **forge**: the code sandbox.
+- **graph**: a document of typed nodes and channels the substrate's runtime executes; a twin is one, and so is the harness.
+- **harness**: the decision loop as a graph of twelve typed nodes, given its services by code; not the code around it.
 - **hand-off**: a graph factory's missing capability opening a code task, and the replay.
 - **manifest**: the outcome of a task, its steps, its artifacts, its claims, its cost.
 - **Mother**: the station's voice; the embodiment.
