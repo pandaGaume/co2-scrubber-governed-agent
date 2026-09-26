@@ -17,7 +17,25 @@ import type { DoneClaim, Plan, Progress } from "./workspace-observer.js";
 
 const MISSING_SCHEMA = {
     type: "object",
-    properties: { required_output: { type: "string" }, quantity: { type: "string" }, unit: { type: "string" }, reason: { type: "string" }, topic: { type: "string" } },
+    properties: {
+        required_output: { type: "string" },
+        quantity: { type: "string" },
+        unit: { type: "string" },
+        reason: { type: "string" },
+        topic: { type: "string" },
+        contract: {
+            type: "object",
+            description: 'For topic "code": the capability contract the generated node must satisfy, judged by code and run by the forge on whatever is written. inputs and outputs by port name ({quantity, unit, range: [min, max], unwired: the value the node takes when nothing is wired, sign}), parameters by name ({quantity, unit, editable: true, value: the value the acceptance runs set}), behaviors: lines "output(<input>=<number>, ...) == <formula over the parameters>" or "output(unwired) == <formula>" (a named output: "<output>(...)"; comparisons ==, ~=, <, >, <=, >=).',
+            properties: {
+                type: { type: "string" },
+                inputs: { type: "object", additionalProperties: { type: "object", properties: { quantity: { type: "string" }, unit: { type: "string" }, range: { type: "array", items: { type: "number" }, minItems: 2, maxItems: 2 }, unwired: { type: "number" }, sign: { type: "string", enum: ["negative", "positive", "nonnegative", "nonpositive"] } }, required: ["quantity"] } },
+                outputs: { type: "object", additionalProperties: { type: "object", properties: { quantity: { type: "string" }, unit: { type: "string" }, range: { type: "array", items: { type: "number" }, minItems: 2, maxItems: 2 }, sign: { type: "string", enum: ["negative", "positive", "nonnegative", "nonpositive"] } }, required: ["quantity"] } },
+                parameters: { type: "object", additionalProperties: { type: "object", properties: { quantity: { type: "string" }, unit: { type: "string" }, editable: { type: "boolean" }, value: { type: "number" } } } },
+                behaviors: { type: "array", items: { type: "string" }, minItems: 1 },
+            },
+            required: ["inputs", "outputs", "parameters", "behaviors"],
+        },
+    },
     required: ["required_output", "quantity", "reason", "topic"],
     additionalProperties: false,
 };

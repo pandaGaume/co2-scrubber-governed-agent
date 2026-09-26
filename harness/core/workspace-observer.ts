@@ -32,6 +32,8 @@ export interface MissingCapability {
     unit?: string;
     reason: string;
     topic: string;
+    /** For the code factory: the capability contract the node must satisfy (`slots/forge/contract.ts`), written by the factory that declares the gap, judged by code before the plan is accepted. */
+    contract?: Record<string, unknown>;
 }
 
 export interface Plan {

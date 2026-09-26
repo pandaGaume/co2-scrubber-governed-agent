@@ -34,7 +34,13 @@ import { wiringLines } from "./reference.js";
 import type { Row } from "./params.js";
 import type { TopicState } from "../../core/reasoning-state.js";
 
-export const GRAPH_TOOLS: ReadonlyArray<RegExp> = [/^workspace\.(list|read)$/, /^library\.(list|methods|search|read|graphs|graph|facts)$/, /^physics\.units_(normalize|convert|compatible|validate_connection)$/, /^twin\.registry_(search|describe_node|list_nodes)$/, /^twin\.document_validate$/, /^graph\.evaluate$/, /^task\.(plan|done|fail)$/];
+export const GRAPH_TOOLS: ReadonlyArray<RegExp> = [/^workspace\.(list|read)$/, /^library\.(list|methods|search|read|graphs|graph|facts)$/, /^web\.search$/, /^physics\.units_(normalize|convert|compatible|validate_connection)$/, /^(twin|forge)\.registry_(search|describe_node|list_nodes)$/, /^(twin|forge)\.document_validate$/, /^graph\.evaluate$/, /^task\.(plan|done|fail)$/];
+
+/** The generated types a replayed request may use, named in its observations by the hand-off (`slots/factory/handoff.ts`). */
+export function generatedOf(task: TaskFile["task"]): Array<{ type: string; plugin: string; sha256: string; task: string }> {
+    const g = (task.observations as { generated?: unknown } | undefined)?.generated;
+    return Array.isArray(g) ? (g as Array<{ type: string; plugin: string; sha256: string; task: string }>).filter((x) => x && typeof x.type === "string") : [];
+}
 export const GRAPH_PROMPT = "harness/topics/graph/prompt.md";
 
 interface GraphTopicState {
@@ -132,6 +138,9 @@ export function evaluateCapability(context: TopicContext, runtimeSlot = "twin"):
 
 export function validateGraph(claim: DoneClaim, files: WorkshopFile[], progress: Progress): Validation {
     const problems: string[] = [];
+    // A twin handed over with a capability declared missing would be a twin short of what was asked: the task ends with task.fail naming it, and the harness opens the code task on the contract.
+    const missing = (progress.plan?.missing_capabilities ?? []).map((m) => m.required_output);
+    if (missing.length) problems.push(`the plan declares ${missing.map((m) => `"${m}"`).join(", ")} missing: a twin is not handed over short of a required output; end with task.fail naming the missing capability, the harness opens a code task on its contract and replays this request once the node exists`);
     // A twin is a graph here: the claim may name it either way, the file is what counts.
     const graphs = claim.artifacts.filter((a) => a.kind === "graph" || a.kind === "twin" || a.path.endsWith(".spikypanda"));
     if (!graphs.length) problems.push("no graph among the claimed artifacts");
@@ -250,7 +259,10 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
     const unmet = Object.entries(requirements).filter(([k, v]) => !v && k in HOW).map(([k]) => `${k}: ${HOW[k]}`);
     if (progress.phase === "plan") {
         if (unmet.length) return `Plan, not yet: the evidence the plan needs is incomplete. ${unmet.join(". ")}. The state (the observation) holds what the harness already read: the task's invariants, the telemetry's shape, the shelf; read nothing it already gives. The twin must produce ${outputs} within ${threshold}.${held}`;
-        return `Plan. The state holds the task's invariants (objective, outputs, threshold, the known constants with their status), the telemetry's shape and the library's shelf (the reference graph "${STATION_GRAPH_ID}" with its node types, its variables and their status): nothing needs reading first. Submit task.plan with the node types you will use, copied from the shelf's "types" for the reference graph (they are the catalogue's exact ids), or a structure of your own from the catalogue (twin.registry_search); declare missing only what no node can express. The twin must produce ${outputs} within ${threshold}.${held}`;
+        const rt = task.runtime ?? "twin";
+        const generated = generatedOf(task);
+        const generatedNote = generated.length ? ` This request is replayed on the forge's catalogue, which now holds the generated type(s) ${generated.map((g) => `"${g.type}"`).join(", ")} (${rt}.registry_describe_node for their ports and signature): select them for what was missing and wire them into the candidate; nothing is missing any more.` : "";
+        return `Plan. The state holds the task's invariants (objective, outputs, threshold, the known constants with their status), the telemetry's shape and the library's shelf (the reference graph "${STATION_GRAPH_ID}" with its node types, its variables and their status): nothing needs reading first. Submit task.plan with the node types you will use, copied from the shelf's "types" for the reference graph (they are the catalogue's exact ids), or a structure of your own from the catalogue (${rt}.registry_search); declare missing only what no node can express.${generatedNote} A required output no node of the catalogue produces is declared missing with the topic "code" and its contract (inputs and outputs by port with quantity, unit, range and the value taken when nothing is wired; the parameters the node exposes as editables, with the value the acceptance runs set; behaviors as lines "output(<input>=<number>) == <formula over the parameters>", "output(unwired) == <formula>"): the code factory writes the node against it, the forge runs the contract on the node, and this request is replayed with the node in the catalogue; leave the type to the code factory (it is named under Generated.). After such a plan this task ends by itself: nothing to evaluate here, the twin is built on the replay. The twin must produce ${outputs} within ${threshold}.${held}`;
     }
     const last = candidates.at(-1);
     // An evaluation the harness could not run says why, here, until one runs: the builder reads it at every step, not only in the answer it may have skimmed.
@@ -296,7 +308,7 @@ export const GRAPH_TOPIC: TopicDefinition = {
     name: "graph",
     tools: GRAPH_TOOLS,
     validate: (claim, files, progress) => validateGraph(claim, files, progress),
-    local: (context) => [evaluateCapability(context)],
+    local: (context) => [evaluateCapability(context, context.runtimeSlot ?? "twin")],
     guard: guardGraph,
     state: stateOfTopic,
     runsSpent: (progress) => stateOf(progress).runs,

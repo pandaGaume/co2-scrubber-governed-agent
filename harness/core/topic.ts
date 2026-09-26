@@ -30,6 +30,8 @@ export interface TopicContext {
     taskId: string;
     task: TaskFile["task"];
     progress: Progress;
+    /** The runtime slot the task builds and runs on (`twin`, or `forge` for the generated plugins). */
+    runtimeSlot?: string;
 }
 
 export interface TopicDefinition {

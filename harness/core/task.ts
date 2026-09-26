@@ -32,6 +32,8 @@ export interface TaskFile {
         requestedAt: string;
         /** The Observer's TWIN_FACTORY_REQUEST, whole, when the task comes from it (`harness/observer/request.ts`). */
         requirements?: Record<string, unknown>;
+        /** The slot whose catalogue and sandbox the task builds and runs on: `twin` by default, `forge` for a code task and for a graph request replayed with generated types (2026-09-26). */
+        runtime?: string;
     };
     profile: string;
 }

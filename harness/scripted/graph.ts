@@ -83,7 +83,10 @@ export class ScriptedGraphBuilder implements Provider {
         const { task } = this.options;
         const last = this.options.lastCall();
         const after = `${String(state.features.phase)}:${String(state.features.lastCapability)}`;
-        const observed = (task.observations ?? {}) as { labOccupants?: unknown; habOccupants?: unknown; persons?: unknown };
+        const observed = (task.observations ?? {}) as { labOccupants?: unknown; habOccupants?: unknown; persons?: unknown; declareMissing?: { required_output: string; quantity: string; unit?: string; reason: string; contract: Record<string, unknown> }; generated?: Array<{ type: string }> };
+        // The test's hook for the hand-off: a capability declared missing with its contract, then the task failed on it; on the replay, the generated types are selected and nothing is missing.
+        const generatedTypes = Array.isArray(observed.generated) ? observed.generated.map((g) => g.type) : [];
+        const missing = observed.declareMissing && !generatedTypes.length ? [{ ...observed.declareMissing, topic: "code" }] : [];
         // Who is on board: the persons the task observed (module and activity each), or the counts, or the graph's roster.
         const onBoard = Array.isArray(observed.persons) && observed.persons.length ? { persons: observed.persons as JsonValue } : { settings: { labOccupants: Number(observed.labOccupants ?? 2), habOccupants: Number(observed.habOccupants ?? 2) } };
         // What the documentation gives beyond the graph's own defaults: the operators' rate as the station's page states it (inside NASA's band).
@@ -93,7 +96,7 @@ export class ScriptedGraphBuilder implements Provider {
             case "plan:":
                 return decide("library.graphs", {}, "which reference graphs the library holds");
             case "plan:library.graphs":
-                return decide("task.plan", { selected_nodes: HABITAT_GRAPH_TYPES, missing_capabilities: [] }, "the station's reference graph: its types, nothing missing");
+                return decide("task.plan", { selected_nodes: [...HABITAT_GRAPH_TYPES, ...generatedTypes], missing_capabilities: missing as unknown as JsonValue }, missing.length ? `the station's reference graph, and ${missing[0].required_output} that no node produces: declared missing with its contract` : generatedTypes.length ? `the station's reference graph and the generated ${generatedTypes.join(", ")}` : "the station's reference graph: its types, nothing missing");
             case "build:task.plan":
                 return decide("graph.evaluate", { label: "the habitat reference with a clean filter: the ventilation at its design flow", graph: STATION_GRAPH_ID, ...onBoard, variables: { ...given, L: 0 }, fit: VOLUMES } as unknown as JsonValue, "first candidate: the installation as designed, the volumes fitted");
             default: {

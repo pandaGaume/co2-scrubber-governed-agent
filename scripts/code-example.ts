@@ -79,7 +79,7 @@ async function main(): Promise<void> {
             topics: ["code"],
             builder: "reasoner",
             requestedBy: "graph-factory (the example)",
-            budget: { iterations: 24, minutes: 20, twinPoints: 10 },
+            budget: { iterations: 32, minutes: 20, twinPoints: 10 },
         };
         const req = await call<{ taskId: string; started: boolean }>("factory", "request", request);
         console.log(`task ${req.taskId} started: ${req.started}`);

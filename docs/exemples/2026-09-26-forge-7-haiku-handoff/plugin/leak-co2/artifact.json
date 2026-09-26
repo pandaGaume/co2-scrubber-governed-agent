@@ -1,0 +1,66 @@
+{
+  "kind": "plugin",
+  "plugin": "leak-co2",
+  "taskId": "t-2026-09-26-0007",
+  "sha256": "0a447ddc55f772cd84c54ff66d452705e97bbca860a3d7abbf7fadb3a15ceb35",
+  "files": [
+    {
+      "path": "docs/leak-co2.md",
+      "sha256": "56d6eae68e7e1361e91441824d5815dcf67cc92e55768ba184d8e28e24e54002"
+    },
+    {
+      "path": "src/index.ts",
+      "sha256": "a3f2f7d35600be7c94689f0b066e3fcab1b74554e15b7c871d0015dc68ec4e8e"
+    },
+    {
+      "path": "src/leak-co2.node.ts",
+      "sha256": "dcb3679f4a9ed9d21d91695682c7bd7c40c4e1ddcf8c5c3bb80db9dc051ad1a7"
+    },
+    {
+      "path": "src/leak-co2.test.ts",
+      "sha256": "e00c49b9bb5ef6f68b10174be5fd7d0ee95f891f0c9caf5156414ec8c9835d8c"
+    }
+  ],
+  "types": [
+    "Generated.Leak"
+  ],
+  "build": {
+    "id": "b0002-0a447ddc",
+    "at": "2026-09-26T08:08:54.073Z",
+    "ms": 747
+  },
+  "tests": {
+    "at": "2026-09-26T08:08:56.259Z",
+    "pass": 3,
+    "fail": 0,
+    "checks": [
+      {
+        "type": "Generated.Leak",
+        "ok": true,
+        "problems": []
+      }
+    ]
+  },
+  "acceptance": {
+    "at": "2026-09-26T08:08:57.774Z",
+    "ok": true,
+    "type": "Generated.Leak",
+    "static": [],
+    "behaviors": [
+      {
+        "behavior": "leak_co2(unwired) == leak_rate * 1.98 / 60000",
+        "expected": 0.00000165,
+        "actual": 0.00000165,
+        "ok": true
+      },
+      {
+        "behavior": "leak_co2(pressure=101325, volume=30) == leak_rate * 1.98 / 60000",
+        "expected": 0.00000165,
+        "actual": 0.00000165,
+        "ok": true
+      }
+    ],
+    "ms": 6
+  },
+  "proposedAt": "2026-09-26T08:09:13.839Z"
+}

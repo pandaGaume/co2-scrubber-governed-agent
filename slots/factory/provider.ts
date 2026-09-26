@@ -30,6 +30,8 @@ import { ScriptedBuilder } from "../../harness/scripted/onnx.js";
 import { ScriptedProcedureBuilder } from "../../harness/scripted/procedure.js";
 import { ScriptedGraphBuilder } from "../../harness/scripted/graph.js";
 import { ScriptedCodeBuilder } from "../../harness/scripted/code.js";
+import { codeTaskRequest, handoffDepthOf, MAX_HANDOFF_DEPTH, missingForCode, replayRequest, type GeneratedType } from "./handoff.js";
+import type { Plan } from "../../harness/core/workspace-observer.js";
 import { ReasonerProvider } from "../../harness/providers/reasoner.js";
 import { supervise, SUPERVISOR_PROMPT } from "../../harness/supervisor/supervisor.js";
 import { Broker } from "../../harness/lib/broker.js";
@@ -61,6 +63,8 @@ export interface TaskRun {
     builder: string;
     lastStage: string | null;
     ended: TaskState | null;
+    /** The hand-off this task opened (a graph task short of a node): the code task, then the replay of the request on the forge; or the task it was opened by. */
+    handoff?: { codeTask?: string; replayTask?: string; parent?: string; reason?: string };
 }
 
 export interface FactoryState {
@@ -126,10 +130,62 @@ function taskAnswer(taskId: string, s: FactoryState, manifest?: Readonly<Record<
     return { ...status, run: run ? { ...run, steps: Array.isArray(status.manifest?.steps) ? (status.manifest.steps as unknown[]).length : 0 } : null };
 }
 
+/** The task file of a task, as written. */
+const taskOf = (taskId: string): TaskFile => JSON.parse(readFileSync(path.join(taskDir(taskId), "task.json"), "utf8")) as TaskFile;
+
+/**
+ * The hand-off (`handoff.ts`): a graph task that ended short of a node its
+ * plan declared missing for the code factory, with a contract, opens the
+ * code task; a code task that ended proposed replays the graph request on
+ * the forge's catalogue with the generated types named. Nothing here reads
+ * a model: the plan, the artifact and the task files say what to do.
+ */
+function handOff(httpBase: string, taskId: string, topic: Topic, builder: BuilderChoice, ended: TaskState, s: FactoryState, log: (line: string) => void, announce: (taskId: string, manifest?: Readonly<Record<string, unknown>>) => void, create: (args: Record<string, unknown>) => { taskId: string; task: TaskFile; topic: Topic }): void {
+    const run = s.runs[taskId];
+    const task = taskOf(taskId).task;
+    if (topic === "graph" && ended !== "proposed") {
+        const planFile = path.join(taskDir(taskId), "plan.json");
+        const plan = existsSync(planFile) ? (JSON.parse(readFileSync(planFile, "utf8")) as Plan) : null;
+        const [missing] = missingForCode(plan);
+        if (!missing) return;
+        if (handoffDepthOf(task) >= MAX_HANDOFF_DEPTH) {
+            run.handoff = { ...(run.handoff ?? {}), reason: `"${missing.required_output}" is still missing after ${MAX_HANDOFF_DEPTH} hand-off(s): no further code task is opened` };
+            log(`[factory] task ${taskId}: ${run.handoff.reason}`);
+            return;
+        }
+        const code = create(codeTaskRequest(taskId, task, missing, builder === "scripted" ? "scripted" : "reasoner"));
+        run.handoff = { ...(run.handoff ?? {}), codeTask: code.taskId, reason: `"${missing.required_output}" is missing: ${missing.reason}` };
+        log(`[factory] task ${taskId}: "${missing.required_output}" is missing for the code factory: task ${code.taskId} opened on its contract`);
+        const codeRun = launch(httpBase, code.taskId, code.topic, builder, s, log, announce, create);
+        codeRun.handoff = { parent: taskId };
+        announce(taskId);
+        return;
+    }
+    if (topic === "code") {
+        const parentId = run.handoff?.parent;
+        if (!parentId || ended !== "proposed") return;
+        const parentRun = s.runs[parentId];
+        const parent = taskOf(parentId).task;
+        // The plugin the forge signed: its types, from the artifact the task handed over.
+        const artifacts = (JSON.parse(readFileSync(path.join(taskDir(taskId), "manifest.json"), "utf8")) as { artifacts?: Array<{ kind: string; path: string }> }).artifacts ?? [];
+        const plugin = artifacts.find((a) => a.kind === "plugin");
+        if (!plugin) return;
+        const artifact = JSON.parse(readFileSync(path.join(taskDir(taskId), ...plugin.path.split("/")), "utf8")) as { plugin: string; sha256: string; types: string[] };
+        const generated: GeneratedType[] = artifact.types.map((type) => ({ type, plugin: artifact.plugin, sha256: artifact.sha256, task: taskId }));
+        const data = (parent.data ?? []).map((d) => ({ file: d.file, text: readFileSync(path.join(taskDir(parentId), ...d.file.split("/")), "utf8"), ...(d.columns ? { columns: d.columns } : {}) }));
+        const replay = create(replayRequest(parentId, parent, taskId, generated, data, builder === "scripted" ? "scripted" : "reasoner"));
+        if (parentRun) parentRun.handoff = { ...(parentRun.handoff ?? {}), replayTask: replay.taskId };
+        log(`[factory] task ${taskId} proposed ${generated.map((g) => g.type).join(", ")}: the request of ${parentId} replayed on the forge as task ${replay.taskId}`);
+        launch(httpBase, replay.taskId, replay.topic, builder, s, log, announce, create);
+        announce(parentId);
+    }
+}
+
 /** Starts the loop on a task, in this process, on the factory's own client of the broker; the manifest carries the outcome, and `announce` tells the readers of the task list as it goes. */
-function launch(httpBase: string, taskId: string, topic: Topic, builder: BuilderChoice, s: FactoryState, log: (line: string) => void, announce: (taskId: string, manifest?: Readonly<Record<string, unknown>>) => void): TaskRun {
+function launch(httpBase: string, taskId: string, topic: Topic, builder: BuilderChoice, s: FactoryState, log: (line: string) => void, announce: (taskId: string, manifest?: Readonly<Record<string, unknown>>) => void, create: (args: Record<string, unknown>) => { taskId: string; task: TaskFile; topic: Topic }): TaskRun {
     const run: TaskRun = { startedAt: new Date().toISOString(), builder: builder === "scripted" ? `scripted:${topic}` : "reasoner", lastStage: null, ended: null };
     s.runs[taskId] = run;
+    const runtimeSlot = taskOf(taskId).task.runtime ?? (topic === "code" ? "forge" : "twin");
     const broker = new Broker(httpBase, { name: "factory", version: VERSION, locale: "en" });
     void (async () => {
         // The builder: the script of the topic only when asked for by name; otherwise the model behind the reasoner slot, reading the topic's prompt.
@@ -163,6 +219,7 @@ function launch(httpBase: string, taskId: string, topic: Topic, builder: Builder
             provider,
             topic,
             promptFile,
+            runtimeSlot,
             ...(supervisor ? { supervisor } : {}),
             // The recipes of the topics: `_recipes/` next to the workshops unless the host says where (the tests keep their own).
             ...(process.env.FACTORY_RECIPES_DIR ? { recipesDir: path.resolve(process.env.FACTORY_RECIPES_DIR) } : {}),
@@ -175,6 +232,12 @@ function launch(httpBase: string, taskId: string, topic: Topic, builder: Builder
     })()
         .then((r) => {
             run.ended = r.state;
+            // The hand-off, once the loop said how it ended: a graph task short of a node opens the code task, a code task proposed replays the request.
+            try {
+                handOff(httpBase, taskId, topic, builder, r.state, s, log, announce, create);
+            } catch (e) {
+                log(`[factory] task ${taskId}: the hand-off failed: ${errorMessage(e)}`);
+            }
         })
         .catch((e) => {
             // The loop itself failed before it could say so (the task file, the broker): the manifest says it, so `task` does.
@@ -190,6 +253,46 @@ function launch(httpBase: string, taskId: string, topic: Topic, builder: Builder
             void broker.close();
         });
     return run;
+}
+
+/** A task written into the workshop from a request: the file, the data, the status; nothing launched. */
+function createTask(args: Record<string, unknown>, s: FactoryState, log: (line: string) => void): { taskId: string; task: TaskFile; topic: Topic } {
+        const objective = args.objective as { required_outputs?: RequiredOutput[]; constraints?: Record<string, unknown> } | undefined;
+        const outputs = Array.isArray(objective?.required_outputs) ? objective.required_outputs.filter((o) => typeof o?.name === "string" && typeof o?.quantity === "string") : [];
+        if (!outputs.length) throw new Error("objective.required_outputs must name at least one output with its quantity");
+        let topics: string[] | "auto" = "auto";
+        if (Array.isArray(args.topics)) {
+            topics = (args.topics as unknown[]).map(String);
+            const unknown = topics.filter((t) => !(TOPICS as ReadonlyArray<string>).includes(t));
+            if (unknown.length) throw new Error(`unknown topics: ${unknown.join(", ")} (known: ${TOPICS.join(", ")})`);
+        }
+        const budgetArg = (args.budget ?? {}) as Partial<typeof DEFAULT_BUDGET>;
+        const taskId = newTaskId();
+        const dir = taskDir(taskId);
+        mkdirSync(dir, { recursive: true });
+        const data = Array.isArray(args.data) ? (args.data as unknown[]).filter((d): d is Record<string, unknown> => Boolean(d) && typeof d === "object").map((d) => writeData(dir, d)) : [];
+        const task: TaskFile = {
+            version: 1,
+            job: "build",
+            task: {
+                id: taskId,
+                topics,
+                objective: { required_outputs: outputs, constraints: (objective?.constraints as Record<string, unknown>) ?? {} },
+                observations: (args.observations as Record<string, unknown>) ?? {},
+                data,
+                budget: { iterations: budgetArg.iterations ?? DEFAULT_BUDGET.iterations, minutes: budgetArg.minutes ?? DEFAULT_BUDGET.minutes, twinPoints: budgetArg.twinPoints ?? DEFAULT_BUDGET.twinPoints },
+                requestedBy: typeof args.requestedBy === "string" ? args.requestedBy : "unknown",
+                requestedAt: new Date().toISOString(),
+                ...(args.requirements && typeof args.requirements === "object" ? { requirements: args.requirements as Record<string, unknown> } : {}),
+                // The runtime the task builds on: given (a replay on the forge), or the topic's (the code topic on the forge, the rest on the twin).
+                ...(typeof args.runtime === "string" ? { runtime: args.runtime } : Array.isArray(topics) && topics[0] === "code" ? { runtime: "forge" } : {}),
+            },
+            profile: typeof args.profile === "string" ? args.profile : "profiles/anthropic.json",
+        };
+        writeFileSync(path.join(dir, "task.json"), JSON.stringify(task, null, 2) + "\n");
+        s.tasks[taskId] = statusOf(taskId);
+        log(`[factory] task ${taskId}: ${outputs.map((o) => o.name).join(", ")} for ${task.task.requestedBy}, ${data.length} data file(s)`);
+        return { taskId, task, topic: topicFor(task.task) };
 }
 
 export function factorySlot(wsBase: string, log: (line: string) => void): PublishedSlot<FactoryState> {
@@ -225,49 +328,17 @@ export function factorySlot(wsBase: string, log: (line: string) => void): Publis
                     run: { type: "boolean" },
                     builder: { type: "string", enum: ["reasoner", "scripted"] },
                     requirements: { type: "object" },
+                    runtime: { type: "string", enum: ["twin", "forge"], description: "the slot the task builds and runs on; the topic's by default (code on the forge, the rest on the twin)" },
                 },
                 ["objective"],
             ),
             handle: (args, s) => {
-                const objective = args.objective as { required_outputs?: RequiredOutput[]; constraints?: Record<string, unknown> } | undefined;
-                const outputs = Array.isArray(objective?.required_outputs) ? objective.required_outputs.filter((o) => typeof o?.name === "string" && typeof o?.quantity === "string") : [];
-                if (!outputs.length) throw new Error("objective.required_outputs must name at least one output with its quantity");
-                let topics: string[] | "auto" = "auto";
-                if (Array.isArray(args.topics)) {
-                    topics = (args.topics as unknown[]).map(String);
-                    const unknown = topics.filter((t) => !(TOPICS as ReadonlyArray<string>).includes(t));
-                    if (unknown.length) throw new Error(`unknown topics: ${unknown.join(", ")} (known: ${TOPICS.join(", ")})`);
-                }
-                const budgetArg = (args.budget ?? {}) as Partial<typeof DEFAULT_BUDGET>;
-                const taskId = newTaskId();
-                const dir = taskDir(taskId);
-                mkdirSync(dir, { recursive: true });
-                const data = Array.isArray(args.data) ? (args.data as unknown[]).filter((d): d is Record<string, unknown> => Boolean(d) && typeof d === "object").map((d) => writeData(dir, d)) : [];
-                const task: TaskFile = {
-                    version: 1,
-                    job: "build",
-                    task: {
-                        id: taskId,
-                        topics,
-                        objective: { required_outputs: outputs, constraints: (objective?.constraints as Record<string, unknown>) ?? {} },
-                        observations: (args.observations as Record<string, unknown>) ?? {},
-                        data,
-                        budget: { iterations: budgetArg.iterations ?? DEFAULT_BUDGET.iterations, minutes: budgetArg.minutes ?? DEFAULT_BUDGET.minutes, twinPoints: budgetArg.twinPoints ?? DEFAULT_BUDGET.twinPoints },
-                        requestedBy: typeof args.requestedBy === "string" ? args.requestedBy : "unknown",
-                        requestedAt: new Date().toISOString(),
-                        ...(args.requirements && typeof args.requirements === "object" ? { requirements: args.requirements as Record<string, unknown> } : {}),
-                    },
-                    profile: typeof args.profile === "string" ? args.profile : "profiles/anthropic.json",
-                };
-                writeFileSync(path.join(dir, "task.json"), JSON.stringify(task, null, 2) + "\n");
+                const { taskId, task, topic } = createTask(args, s, log);
                 const status = statusOf(taskId);
-                s.tasks[taskId] = status;
-                log(`[factory] task ${taskId}: ${outputs.map((o) => o.name).join(", ")} for ${task.task.requestedBy}, ${data.length} data file(s)`);
-                const topic: Topic = topicFor(task.task);
                 const builder: BuilderChoice = args.builder === "scripted" || args.builder === "reasoner" ? args.builder : TOPIC_DEFINITIONS[topic]?.prompt ? "reasoner" : "scripted";
-                const run = args.run === false ? null : launch(httpBase, taskId, topic, builder, s, log, (id, manifest) => announce(id, manifest));
+                const run = args.run === false ? null : launch(httpBase, taskId, topic, builder, s, log, (id, manifest) => announce(id, manifest), (a) => createTask(a, s, log));
                 if (!run) announce(taskId);
-                return { taskId, state: run ? "running" : status.state, workspace: status.workspace, taskSha256: status.taskSha256, data, builder: run?.builder ?? null, started: Boolean(run) };
+                return { taskId, state: run ? "running" : status.state, workspace: status.workspace, taskSha256: status.taskSha256, data: task.task.data, builder: run?.builder ?? null, started: Boolean(run) };
             },
         },
         {

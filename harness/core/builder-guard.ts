@@ -24,6 +24,7 @@
  */
 import type { DecisionContext, JsonValue, PolicyDecision, SafetyDecision, SafetyGuard } from "@spiky-panda/harness";
 import type { Broker } from "../lib/broker.js";
+import { contractProblems } from "../../slots/forge/contract.js";
 import { TOPICS, type TaskFile } from "./task.js";
 import type { TopicDefinition } from "./topic.js";
 import type { Plan, Progress } from "./workspace-observer.js";
@@ -81,9 +82,27 @@ export async function planProblems(plan: Plan, { broker, task, runtimeSlot = "tw
         else described.push(r.output as DescribedNode);
     }
     const names = task.objective.required_outputs.map((o) => o.name);
+    // The generated types a replayed request carries (the hand-off named them in its observations): what was made for a missing output is selected, not declared missing again (the ninth passage declared it missing twice, with a new contract each time).
+    const generated = (Array.isArray((task.observations as { generated?: unknown } | undefined)?.generated) ? ((task.observations as { generated: Array<{ type?: unknown }> }).generated ?? []) : []).map((g) => String(g?.type ?? "")).filter(Boolean);
     for (const m of plan.missing_capabilities) {
+        for (const type of generated) {
+            if (plan.selected_nodes.includes(type)) continue;
+            const r = await broker.call(runtimeSlot, "registry_describe_node", { type });
+            const outputs = r.ok ? Object.entries(((r.output as DescribedNode).signature?.outputs ?? {}) as Record<string, { quantity?: string; unit?: string }>) : [];
+            const port = outputs.find(([, o]) => o.quantity === m.quantity && (!m.unit || !o.unit || o.unit === m.unit));
+            if (port) problems.push(`missing capability "${m.required_output}" is what the generated type "${type}" was made for (its output "${port[0]}" is a ${port[1].quantity}${port[1].unit ? ` in ${port[1].unit}` : ""}): select "${type}" in selected_nodes and wire it into the candidate; it is not missing`);
+        }
         if (!m.reason?.trim()) problems.push(`missing capability "${m.required_output}" has no reason`);
         if (!(TOPICS as ReadonlyArray<string>).includes(m.topic)) problems.push(`missing capability "${m.required_output}" names an unknown topic "${m.topic}" (${TOPICS.join(", ")})`);
+        // The code factory takes a capability only with its contract: what the node must satisfy, written here by the factory that found the gap, judged by code, run by the forge on whatever the code factory writes.
+        // A code task's own plan declares the capability it is making without repeating the contract: the task carries it (requirements.capability).
+        const ownContract = Boolean((task.requirements as { capability?: unknown } | undefined)?.capability);
+        if (m.topic === "code" && !ownContract) {
+            if (!m.contract || typeof m.contract !== "object") problems.push(`missing capability "${m.required_output}" is for the code factory and carries no contract: write contract {inputs, outputs, parameters, behaviors} (the schema of task.plan says its shape); the forge runs it on the generated node`);
+            else for (const p of contractProblems(m.contract)) problems.push(`missing capability "${m.required_output}", contract: ${p}`);
+            const outputs = Object.values((m.contract as { outputs?: Record<string, { quantity?: string; unit?: string }> } | undefined)?.outputs ?? {});
+            if (outputs.length && !outputs.some((o) => o.quantity === m.quantity)) problems.push(`missing capability "${m.required_output}", contract: no output carries the required quantity ${m.quantity}`);
+        }
         // A required output is named by its name alone, exactly: "V_lab", never "V_lab (Volume, m3)".
         if (!names.includes(m.required_output)) problems.push(`missing capability "${m.required_output}" is not the name of a required output: write required_output exactly as the objective names it, ${names.map((n) => `"${n}"`).join(" or ")}, nothing added`);
     }
@@ -119,7 +138,7 @@ export function createBuilderGuard(options: BuilderGuardOptions): SafetyGuard {
             }
             const { topic, progress, taskId } = options;
             if (topic.guard && progress && taskId) {
-                const problems = await topic.guard(id, decision.invocation.input, { broker: options.broker, taskId, task: options.task, progress });
+                const problems = await topic.guard(id, decision.invocation.input, { broker: options.broker, taskId, task: options.task, progress, runtimeSlot: options.runtimeSlot ?? "twin" });
                 if (problems.length) return { allowed: false, reason: problems.join("; ") };
             }
             return { allowed: true };

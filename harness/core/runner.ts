@@ -214,11 +214,12 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
     const capabilities = await buildCapabilities(broker, {
         profile: {
             included: topic.tools,
+            // A document's name is filed under the task once: a builder that gives back the name a build answered (already under the task) is not prefixed again (the sixth passage lost ten steps on t/t/t/name).
             bindings: [
                 { match: /^(workspace|model)\.|^forge\.plugin_(write|build|test|load|promote)$/, constants: { taskId } },
-                { match: new RegExp(`^${runtimeSlot}\\.(document_build|document_instantiate|session_run)$`), rewrite: (input) => (typeof input.name === "string" ? { ...input, name: `${taskId}/${input.name}` } : input) },
+                { match: new RegExp(`^${runtimeSlot}\\.(document_build|document_instantiate|session_run)$`), rewrite: (input) => (typeof input.name === "string" && !input.name.startsWith(`${taskId}/`) ? { ...input, name: `${taskId}/${input.name}` } : input) },
             ],
-            local: [...taskCapabilities(broker, taskId, progress), ...(topic.local?.({ broker, taskId, task, progress }) ?? [])],
+            local: [...taskCapabilities(broker, taskId, progress), ...(topic.local?.({ broker, taskId, task, progress, runtimeSlot }) ?? [])],
         },
         onCall: (call) => {
             progress.lastCall = call;
@@ -312,6 +313,24 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         // The step just recorded, said before the next one starts (every branch below ends in `continue`).
         if (manifest.steps.length > reported) onProgress?.(manifest);
         reported = manifest.steps.length;
+        // A plan that declares a capability for another factory ends this task here (2026-09-26): the hand-off opens that factory's task on the
+        // contract and replays this request once the node exists; a model asked to go on called task.done twelve times instead of failing.
+        // A builder that proposes the same refused call four times in a row is stuck (2026-09-26: twenty-three identical registry_search): the task ends with the reason, the budget is not spent on it.
+        if (progress.repeats >= 3 && progress.lastRefusal) {
+            ended = `STUCK: ${progress.lastRefusal.capability} proposed ${progress.repeats + 1} times with the same input, refused each time: ${progress.lastRefusal.reason.slice(0, 300)}`;
+            progress.failure = ended;
+            progress.phase = "failed";
+            log(`[factory] task ${taskId}: ${ended}`);
+            break;
+        }
+        const foreign = (progress.plan?.missing_capabilities ?? []).filter((m) => m.topic !== topicId);
+        if (foreign.length) {
+            ended = `MISSING_CAPABILITY: ${foreign.map((m) => `"${m.required_output}" for the ${m.topic} factory`).join(", ")}; this task ends here, the hand-off opens that factory's task on the contract and replays this request once the node exists`;
+            progress.failure = ended;
+            progress.phase = "failed";
+            log(`[factory] task ${taskId}: ${ended}`);
+            break;
+        }
         const n = progress.iteration + 1;
         const minutes = (Date.now() - startedAt.getTime()) / 60000;
         if (progress.iteration >= budget.iterations) {

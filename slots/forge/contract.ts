@@ -105,6 +105,8 @@ export function contractProblems(raw: unknown): string[] {
         }
     }
     if (!c.outputs || !Object.keys(c.outputs).length) problems.push("outputs: a capability produces at least one output");
+    // The type, when the contract names one, is a generated type: the code factory names it under Generated., every catalogue says it is generated (the fifth passage named "Physics.Habitat:leak" and the code factory looped on it).
+    if (c.type !== undefined && (typeof c.type !== "string" || !c.type.startsWith("Generated."))) problems.push(`type "${String(c.type)}" is not named under "Generated." (as in "Generated.Habitat:leak"): a generated node is; leave type out to let the code factory name it`);
     const parameters = (c.parameters && typeof c.parameters === "object" ? c.parameters : {}) as Record<string, Partial<ContractParameter>>;
     for (const [name, p] of Object.entries(parameters)) {
         if (!NAME.test(name)) problems.push(`parameters: "${name}" is not a parameter name`);

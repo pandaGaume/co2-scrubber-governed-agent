@@ -51,7 +51,6 @@ export class ScriptedCodeBuilder implements Provider {
         const last = this.options.lastCall();
         const refusal = String(state.features.lastRefusal ?? "");
         const after = `${String(state.features.phase)}:${String(state.features.lastCapability)}`;
-        const taskId = task.id;
         if (last && !last.result.ok) return decide("task.fail", { reason: (last.result.error ?? last.result.outcome).replace(/^(device refused|error):\s*/i, "") }, `${last.id} failed: nothing else to try`);
         // A refused write: the guard named the naming rule; the script corrects the type.
         if (/is not named under "Generated\."/.test(refusal)) return decide("forge.plugin_write", { plugin, files: leakFixture(LEAK_TYPE) as unknown as JsonValue }, "corrected: the type named under Generated.");
@@ -76,9 +75,9 @@ export class ScriptedCodeBuilder implements Provider {
             case "build:code.accept":
                 return decide("forge.plugin_load", { plugin }, "into the forge's catalogue");
             case "build:forge.plugin_load":
-                return decide("forge.document_build", { spec: leakSpec() as unknown as JsonValue, name: `${taskId}/leak-run` }, "a document that wires the node");
+                return decide("forge.document_build", { spec: leakSpec() as unknown as JsonValue, name: "leak-run" }, "a document that wires the node");
             case "build:forge.document_build":
-                return decide("forge.session_run", { name: `${taskId}/leak-run`, dt: 60, duration: 180, probes: [{ node: "leak", property: "co2DeltaKgps" }] }, "run it three minutes");
+                return decide("forge.session_run", { name: "leak-run", dt: 60, duration: 180, probes: [{ node: "leak", property: "co2DeltaKgps" }] }, "run it three minutes");
             case "build:forge.session_run":
                 return decide("forge.plugin_promote", { plugin }, "propose the signed artifact to the station");
             default: {
