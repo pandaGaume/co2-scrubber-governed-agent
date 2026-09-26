@@ -36,21 +36,24 @@ What it is not: it is not an autonomous agent that acts on the world. Nothing a 
 
 Everything talks through one broker (MCP over HTTP and WebSocket, `harness/lib/broker.ts`). Each participant is a slot: a server of tools and resources, with its own words (grammars per model family and per language, `slots/<slot>/grammars/`). A factory reads the register through the broker like anybody else; it has no private way into a device.
 
-Each slot is either code, or a role of a language model, or the human's; the second column says which, and nothing in this document blurs it.
+Each slot is code, a graph the runtime executes, a harness (the loop as a graph, section 1.1), a role of a language model, or the human's; the second column says which, and where a slot of code hosts graphs or harnesses, it says that too. Nothing in this document blurs it.
 
 | slot | nature | what it is | what it never does |
 |---|---|---|---|
 | `station` (Mother) | code | the embodiment: the register of devices (where they are, what they are, what they measure, what can be commanded), the commissionings, the proposals, the questions to the commander, the journal; she speaks in two languages from written phrases, never from a model | decide; run a procedure without the commander's authorisation; push |
-| `twin` | code | the live sandbox: the runtime on the demo's registry (the substrate's plugins and the hand-written habitat plugin), documents built from specs, sessions run with probes | load a generated plugin on its own |
-| `forge` | code | the code sandbox: its own registry, where a generated plugin is compiled, tested, accepted against its contract, loaded and run; a signed artifact is proposed to the station | push; take a verdict from its caller |
-| `library` | code (documents) | the documents of the domain (datasheets, topology, methods, physics), with their typed facts in sidecars, and the reference graphs on the shelf | change |
+| `twin` | code that hosts graphs | the live sandbox: the substrate's runtime on the demo's registry (the substrate's plugins and the hand-written habitat plugin); what it holds and runs are graphs: the cabin's twin, the documents a factory builds from specs, the sessions run with probes | load a generated plugin on its own |
+| `forge` | code that hosts graphs | the code sandbox: its own registry, where a generated plugin is compiled, tested, accepted against its contract, loaded and run; the acceptance runs the node in graphs; a signed artifact is proposed to the station | push; take a verdict from its caller |
+| `library` | code (documents), and graphs | the documents of the domain (datasheets, topology, methods, physics) with their typed facts in sidecars; and the shelf, whose reference graphs are graphs (templates with variables, settings and probes) a factory instantiates | change |
 | `physics` | code | the units: normalise, convert, compatible, validate a connection; a facade on the substrate's unit system, UCUM codes as identities | know a domain |
 | `observer` | a language model, behind a guard of code | from a description and a telemetry summary, what a twin must be able to do; every proposal checked by code before it counts | name the catalogue |
 | `supervisor` | a language model, behind a guard of code | a typed verdict on the facts and the deterministic report of a task; checked by code before it counts | read a transcript |
 | `reasoner` | a language model | the model behind an API (Claude Haiku in the passages kept, Nemotron on Nebius as an alternative), one conversation or one state per role, the role being the prompt; every factory builder, the Observer and the supervisor go through it | act: it only answers with one decision at a time |
-| `factory` | code | the loops: a task requested, launched, watched, handed off, resumed on the commander's answer; the builder inside a loop is the reasoner (a model) or a script (code, for the tests) | act on the world |
+| `factory` | code that runs harnesses | the loops: a task requested, launched, watched, handed off, resumed on the commander's answer; each task run is one harness (the twelve-node graph) stepped with the topic's services, its provider node calling the reasoner (a model) or a script (code, for the tests) | act on the world |
+| `agent` (the night's agent, `tier3/`) | a harness | the same twelve-node graph with the habitat's services (the cabin's tools, the scenario as intention, its own guard and evaluator), its provider node calling the reasoner; outside the factory | reach what a factory owns |
 | `workspace`, `model`, `biomed`, `speech` | code | the workshop of a task; the ONNX models; the medical monitor (simulated or a real strap); the voice (a text-to-speech provider reading Mother's written phrases) | |
-| the control post (`dashboard/`) | the human's | where the commander reads and answers; a page, no model | decide in the human's place |
+| the control post (`dashboard/`) | the human's | where the commander reads and answers; a page, no model; it draws the harnesses and the twins as graphs, in the studio | decide in the human's place |
+
+Read down the column: five natures. Code decides nothing on its own beyond its rules; a graph is executed and judged; a harness is a graph that decides one step at a time by asking its services; a model proposes; the human authorises.
 
 The night's agent (`tier3/`, the agent that runs the habitat's scenarios) shares the same loop with another set of services; its catalogue excludes everything a factory owns (`tier3/lib/capabilities.ts`: the forge, the supervisor, the questions' answers, the factory's resume).
 
