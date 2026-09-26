@@ -1,0 +1,15 @@
+{
+    "_comment": "Legacy Google Custom Search JSON API profile for existing customers only. Google closed the API to new customers and announced discontinuation for 2027-01-01.",
+    "name": "web-search-google-legacy",
+    "webSearch": {
+        "provider": "google-custom-search",
+        "baseUrl": "https://customsearch.googleapis.com",
+        "apiKey": {
+            "env": "GOOGLE_SEARCH_API_KEY"
+        },
+        "searchEngineId": {
+            "env": "GOOGLE_SEARCH_ENGINE_ID"
+        },
+        "timeoutMs": 30000
+    }
+}

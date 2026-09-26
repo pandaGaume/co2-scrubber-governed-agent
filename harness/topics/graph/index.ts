@@ -34,7 +34,7 @@ import { wiringLines } from "./reference.js";
 import type { Row } from "./params.js";
 import type { TopicState } from "../../core/reasoning-state.js";
 
-export const GRAPH_TOOLS: ReadonlyArray<RegExp> = [/^workspace\.(list|read)$/, /^library\.(list|methods|search|read|graphs|graph|facts)$/, /^physics\.units_(normalize|convert|compatible|validate_connection)$/, /^(twin|forge)\.registry_(search|describe_node|list_nodes)$/, /^(twin|forge)\.document_validate$/, /^graph\.evaluate$/, /^task\.(plan|done|fail|ask)$/];
+export const GRAPH_TOOLS: ReadonlyArray<RegExp> = [/^workspace\.(list|read)$/, /^library\.(list|methods|search|read|graphs|graph|facts)$/, /^web\.search$/, /^physics\.units_(normalize|convert|compatible|validate_connection)$/, /^(twin|forge)\.registry_(search|describe_node|list_nodes)$/, /^(twin|forge)\.document_validate$/, /^graph\.evaluate$/, /^task\.(plan|done|fail|ask)$/];
 
 /** The generated types a replayed request may use, named in its observations by the hand-off (`slots/factory/handoff.ts`). */
 export function generatedOf(task: TaskFile["task"]): Array<{ type: string; plugin: string; sha256: string; task: string }> {

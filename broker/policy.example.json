@@ -8,7 +8,8 @@
         "reasoner": "/habitat/cabin-1/reasoner",
         "speech": "/habitat/cabin-1/speech",
         "workspace": "/workshop/workspace",
-        "model": "/workshop/model"
+        "model": "/workshop/model",
+        "web": "/workshop/web"
     },
     "roles": {
         "operator": {
@@ -134,8 +135,11 @@
         "model.fit": "mcp.tools.build",
         "model.inspect": "mcp.tools.build",
         "model.contract": "mcp.tools.build",
+        "web.describe": "mcp.tools.read",
+        "web.search": "mcp.tools.read",
         "station.propose": "mcp.tools.propose",
         "workspace.grammar_*": "mcp.tools.grammar",
-        "model.grammar_*": "mcp.tools.grammar"
+        "model.grammar_*": "mcp.tools.grammar",
+        "web.grammar_*": "mcp.tools.grammar"
     }
 }

@@ -1,0 +1,12 @@
+{
+    "_comment": "Default direct web search profile. Brave returns ranked results and snippets without invoking a second language model. The key is read from the environment and never published.",
+    "name": "web-search-brave",
+    "webSearch": {
+        "provider": "brave-search",
+        "baseUrl": "https://api.search.brave.com/res/v1",
+        "apiKey": {
+            "env": "BRAVE_SEARCH_API_KEY"
+        },
+        "timeoutMs": 30000
+    }
+}

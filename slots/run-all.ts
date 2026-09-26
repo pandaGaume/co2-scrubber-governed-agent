@@ -33,6 +33,7 @@ import { screensSlot } from "./screens/provider.js";
 import { physicsSlot } from "./physics/provider.js";
 import { supervisorSlot } from "./supervisor/provider.js";
 import { forgeSlot } from "./forge/provider.js";
+import { webSearchSlot } from "./tools/web/provider.js";
 import { startDiscovery } from "./lib/discovery.js";
 import type { PublishedSlot } from "./lib/slot-server.js";
 
@@ -60,6 +61,7 @@ const SLOTS: Array<[string, (wsBase: string, logger: (line: string) => void) => 
     ["physics", physicsSlot],
     ["supervisor", supervisorSlot],
     ["forge", forgeSlot],
+    ["web", webSearchSlot],
 ];
 
 /** A slot that could not be published: its name and the reason, said once at start and kept for whoever asks. */

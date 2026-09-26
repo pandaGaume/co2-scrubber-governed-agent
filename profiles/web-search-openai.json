@@ -1,0 +1,15 @@
+{
+    "_comment": "Optional hosted-search profile. OpenAI Responses searches and synthesizes a cited answer. Select it with WEB_SEARCH_PROFILE=profiles/web-search-openai.json.",
+    "name": "web-search-openai",
+    "webSearch": {
+        "provider": "openai-responses",
+        "baseUrl": "https://api.openai.com/v1",
+        "model": "gpt-5.5",
+        "apiKey": {
+            "env": "OPENAI_API_KEY"
+        },
+        "maxTokens": 2048,
+        "timeoutMs": 60000,
+        "searchContextSize": "medium"
+    }
+}

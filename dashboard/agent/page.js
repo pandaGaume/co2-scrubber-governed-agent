@@ -870,6 +870,15 @@ var EXCLUDED = [
   /^screens\./,
   // The units are the factories' and the Observer's service (a number restated in another unit, checked); the night's agent reads its numbers from the twin, in the twin's units.
   /^physics\./,
+  // The Contract Supervisor reviews the factories' facts; the night's agent has no contract to review.
+  /^supervisor\./,
+  // The forge compiles and runs generated code for the factories; the night's agent writes no plugin.
+  /^forge\./,
+  // The questions to the commander are asked by the harness and the factories, answered by the commander: the night's agent neither asks nor answers, and resumes nothing.
+  /^station\.(ask|answer|questions_policy)$/,
+  /^factory\.resume$/,
+  // Live web content belongs to the governed factory harness. It is not an instruction source for the habitat agent.
+  /^web\./,
   /^twin\.(registry_|document_|session_run)/,
   /^station\.propose$/,
   /^biomed\.(monitor_start|monitor_stop|report|move)$/,

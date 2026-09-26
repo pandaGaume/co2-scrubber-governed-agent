@@ -173,7 +173,7 @@ describe("the constructor's loop (F4), through the broker", () => {
         assert.equal((plan.input as { missing_capabilities: unknown[] }).missing_capabilities.length, 1);
         // The tools the builder had: the topic's, bound to the task (no taskId in what the model sees), nothing of the board.
         const ids = result.manifest.tools.list.map((t) => t.id);
-        assert.ok(ids.includes("model.fit") && ids.includes("task.plan") && ids.includes("twin.registry_search"));
+        assert.ok(ids.includes("model.fit") && ids.includes("task.plan") && ids.includes("twin.registry_search") && ids.includes("web.search"), "the ONNX harness receives the governed web search capability");
         assert.ok(!ids.some((id) => id.startsWith("scrubber.") || id === "station.propose" || id === "twin.session_run"), ids.join(","));
         assert.ok(!JSON.stringify(result.manifest.steps[3].summary).includes(taskId), "the model's input to the fit does not carry the task id");
         // The artifacts: the model with its contract's sha256.

@@ -9,3 +9,13 @@ the firmware) is identical across profiles, and a replay test proves it by
 comparing the MCP call traces of the same scenario under two profiles.
 
 Model identifiers marked `<...>` are filled in when the accounts exist.
+
+The `web` MCP slot has its own provider profile. It defaults to
+`profiles/web-search.json`, a direct Brave Search API adapter that returns
+ranked snippets without paying for a second language model. Set
+`WEB_SEARCH_PROFILE=profiles/web-search-openai.json` or
+`WEB_SEARCH_PROFILE=profiles/web-search-anthropic.json` for a hosted search
+that also synthesizes a cited answer. Existing Google Custom Search JSON API
+customers can select the legacy `profiles/web-search-google.json` profile.
+All profiles expose the same `web.search` input and normalized `results`,
+sources, searches and usage record to the harness.
