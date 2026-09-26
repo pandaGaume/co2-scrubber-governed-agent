@@ -10,7 +10,7 @@
 import type { TopicDefinition, Validation } from "../../core/topic.js";
 import type { DoneClaim, Progress, WorkshopFile } from "../../core/workspace-observer.js";
 
-export const ONNX_TOOLS: ReadonlyArray<RegExp> = [/^workspace\.(list|read|write)$/, /^web\.search$/, /^twin\.registry_(search|describe_node|list_nodes)$/, /^model\.(fit|inspect|contract)$/, /^task\.(plan|done|fail|ask)$/];
+export const ONNX_TOOLS: ReadonlyArray<RegExp> = [/^workspace\.(list|read|write)$/, /^twin\.registry_(search|describe_node|list_nodes)$/, /^model\.(fit|inspect|contract)$/, /^task\.(plan|done|fail|ask)$/];
 
 export function validateOnnx(claim: DoneClaim, files: WorkshopFile[], progress: Progress): Validation {
     const problems: string[] = [];

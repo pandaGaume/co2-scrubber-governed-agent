@@ -50,7 +50,7 @@ import { checkProcedure, problemLines, type PresenceRead, type ProcedureCheck } 
 import { PROCEDURE_SCHEMA, totalMinutes, type Procedure } from "./procedure.js";
 import { resolveUnitRef } from "../../lib/units.js";
 
-export const PROCEDURE_TOOLS: ReadonlyArray<RegExp> = [/^factory\.inventory$/, /^station\.registry_list$/, /^biomed\.(describe|presence)$/, /^library\.(list|methods|search|read|facts)$/, /^web\.search$/, /^physics\.units_(normalize|convert|compatible|validate_connection)$/, /^workspace\.(list|read)$/, /^procedure\.submit$/, /^task\.(plan|done|fail|ask)$/];
+export const PROCEDURE_TOOLS: ReadonlyArray<RegExp> = [/^factory\.inventory$/, /^station\.registry_list$/, /^biomed\.(describe|presence)$/, /^library\.(list|methods|search|read|facts)$/, /^physics\.units_(normalize|convert|compatible|validate_connection)$/, /^workspace\.(list|read)$/, /^procedure\.submit$/, /^task\.(plan|done|fail|ask)$/];
 
 export const PROCEDURE_PROMPT = "harness/topics/procedure/prompt.md";
 
