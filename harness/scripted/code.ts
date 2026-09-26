@@ -72,6 +72,8 @@ export class ScriptedCodeBuilder implements Provider {
             case "build:forge.plugin_build":
                 return decide("forge.plugin_test", { plugin }, "its tests, then the forge's checks");
             case "build:forge.plugin_test":
+                return decide("code.accept", {}, "the task's contract, run by the forge");
+            case "build:code.accept":
                 return decide("forge.plugin_load", { plugin }, "into the forge's catalogue");
             case "build:forge.plugin_load":
                 return decide("forge.document_build", { spec: leakSpec() as unknown as JsonValue, name: `${taskId}/leak-run` }, "a document that wires the node");

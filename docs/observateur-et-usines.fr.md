@@ -350,6 +350,69 @@ modèle s'était donné comme démonstration, lui, ne câblait pas la commande
 la garde du sujet refuse un document où le nœud généré n'a aucune entrée
 câblée (`documentProblems`), et le brief le dit.
 
+### 6.4 Le contrat de capacité : le modèle n'écrit jamais à la fois le code, les tests d'acceptation et le verdict
+
+Une relecture du troisième passage a trouvé le vrai défaut, plus important
+que le document non câblé. La demande disait « 1 quand rien n'est câblé » ;
+le nœud du modèle prenait 0 ; sa signature disait 0 ; ses tests, nommés
+« the leak rate is negative and scales with command », ne testaient que le
+setter ; et le harnais a exécuté précisément ce cas (60 pas, commande non
+câblée, fuite à zéro) et l'a compté comme succès. Le compilateur et le
+lanceur de tests étaient indépendants du modèle, le contrat fonctionnel ne
+l'était pas ; et `plugin_promote` prenait un `verdict: "pass"` du modèle.
+
+Ce qui a changé (`slots/forge/contract.ts`, `plugin_acceptance`,
+`code.accept`) :
+
+- **le contrat de capacité** est écrit par la tâche
+  (`requirements.capability`), jamais par le modèle : les entrées et sorties
+  avec grandeur, unité, plage et valeur prise quand rien n'est câblé ; les
+  paramètres que le nœud doit exposer comme éditables, par ces noms, avec la
+  valeur des essais ; les comportements, une ligne chacun,
+  `output(command=0.5) == -0.5 * rateAtFullOpening`,
+  `output(unwired) == -rateAtFullOpening`. Sa forme est jugée par le code
+  (une unité par le service des unités, une formule par l'évaluateur du
+  sujet graphe) ;
+- **la forge en dérive les tests d'acceptation et les exécute elle-même** :
+  la signature contre les ports du contrat (l'unité convertible, pas la
+  chaîne), les paramètres comme setters du nœud instancié, puis chaque
+  comportement sur un runtime à blanc : le nœud dans un document, une
+  timeline par entrée câblée à sa valeur ou rien, sa sortie lue par un
+  transducteur ouvert et sans bruit, huit pas, la dernière mesure contre la
+  formule (tolérance relative 1e-6). Ce qui échoue est nommé avec la valeur
+  mesurée et la valeur dite ;
+- **le sujet `code`** porte le contrat entier dans l'état (`hypothesis.contract`),
+  ajoute `code.accept` (sans entrée : le contrat est celui de la tâche),
+  exige l'acceptation avant le chargement, et la forge refuse de charger un
+  plugin dont l'acceptation a échoué ;
+- **la promotion ne prend plus de verdict** : l'artefact porte
+  l'acceptation telle que la forge l'a exécutée (ou `null`, dit tel quel,
+  quand la tâche n'a pas de contrat) ;
+- la fixture de test porte son contrat, et un nœud qui prend 0 quand rien
+  n'est câblé passe ses propres tests et les vérifications de la forge, puis
+  est refusé par l'acceptation avec la mesure (`co2Delta(unwired) is 0, the
+  contract says == -0.002`) et n'est pas chargé (`tests/forge.test.ts`).
+
+Le même relecteur a relevé ce qui restait du domaine hors du code : le
+prompt du sujet parlait d'un habitat lunaire et de « la physique de
+l'habitat » (il parle maintenant d'un système de jumeau numérique et des
+documents du domaine) ; l'état du sujet portait le rayon entier de la
+bibliothèque (le graphe de référence, ses variables `V`, `Vh`, `eta`...)
+dont l'usine de code n'a aucun besoin (`TopicDefinition.shelf: false`, le
+runner ne le donne plus à ce sujet). Les exemples d'unités et de faits dans
+les descriptions des outils `physics` et `library` restent : ce sont les
+mots de ces slots, du domaine par construction.
+
+**Quatrième passage sur Haiku**, avec le contrat dans la demande
+(`docs/exemples/2026-09-26-forge-4-haiku-code/`) : 20 pas, 5 refus,
+108 k jetons, 81 s, la tâche `proposed`. Le modèle a écrit
+`let command = 1; // Default to 1 when unwired` ; l'acceptation a mesuré les
+quatre comportements (0 ; -0,001 ; -0,002 ; -0,002 à vide) et les a tenus ;
+le plugin chargé après. Les cinq refus : quatre `document_build` avec les
+segments de la timeline en tableau là où le substrat veut une chaîne JSON
+(le brief le dit maintenant, avec l'exemple), un `plugin_promote` avec
+`claims` en phrase (le brief dit un objet).
+
 ## 7. Le cache du prompt
 
 Le prompt d'un rôle (l'Observateur, une usine) est fixe : les mêmes octets
@@ -376,5 +439,5 @@ fait ; la conception est la même.
 | le cache du prompt côté Anthropic | construit ; inactif sous le seuil de Haiku 4.5 |
 | l'aiguillage vers les usines | à construire (section 4) |
 | l'usine de graphes, et la boucle écart puis correction | construite le 24 septembre (`usine-de-graphes.fr.md`, exemple complet dans `exemple-mise-en-service.fr.md`) |
-| l'usine de code et le plugin `generated` | construits : le slot `forge` (section 6.2) et le sujet `code` sur lui (section 6.3), la nuit du 25 septembre, branche `forge` ; scriptés et testés sans clé ; passés sur Haiku, la chaîne entière tenue au troisième passage (14 pas, 76 k jetons) ; le branchement automatique d'une capacité manquante de l'usine de graphes sur une tâche `code` reste à faire |
+| l'usine de code et le plugin `generated` | construits : le slot `forge` (section 6.2), le sujet `code` sur lui (section 6.3), le contrat de capacité et l'acceptation par la forge (section 6.4), branche `forge` ; scriptés et testés sans clé ; passés sur Haiku, la chaîne tenue au troisième passage et le contrat tenu au quatrième (20 pas, 108 k jetons) ; le branchement automatique d'une capacité manquante de l'usine de graphes sur une tâche `code` reste à faire |
 | le superviseur des contrats | construit la nuit du 25 septembre (`harness-refactoring.fr.md`, section 16) : un rôle sur le slot `reasoner`, un verdict typé gardé par code, l'Observateur renvoyé dans sa boucle, l'usine de graphes qui lit le verdict |

@@ -64,6 +64,8 @@ export interface TopicDefinition {
     state?(progress: Progress, task: TaskFile["task"]): TopicState;
     /** How many sandbox runs the topic has spent in this task, when it counts them (the graph topic's `twinPoints`). */
     runsSpent?(progress: Progress): number;
+    /** Does the state carry the library's shelf (the reference graphs, their variables); true by default. A topic that builds no graph (code) leaves it out: fewer tokens, no domain read for nothing (2026-09-26). */
+    shelf?: boolean;
     /**
      * What of the topic's state tells two steps apart for the recipes (2026-09-25): the
      * observation's id carries it, so a learned step replays only after the same

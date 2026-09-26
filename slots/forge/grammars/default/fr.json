@@ -20,13 +20,17 @@
             "title": "Tester un plugin",
             "description": "Les tests du plugin (le lanceur de node, un processus enfant, un budget de temps) et les vérifications déterministes sur un registre à blanc : chaque type sous Generated., une signature présente et valide pour le substrat, chaque unité résolue par le service des unités contre sa grandeur, la fiche sur le disque. Les deux doivent passer avant le chargement."
         },
+        "plugin_acceptance": {
+            "title": "Accepter un plugin contre son contrat",
+            "description": "Le contrat de capacité écrit par la tâche (entrées, sorties, paramètres, comportements), exécuté par la forge et jamais par le modèle : la signature contre les ports du contrat (le service des unités), les paramètres comme éditables du nœud, puis chaque comportement exécuté sur un runtime à blanc (le nœud dans un document, ses entrées câblées aux valeurs ou laissées libres, sa sortie lue par un transducteur) et comparé à la formule. Un plugin dont l'acceptation a échoué n'est pas chargé."
+        },
         "plugin_load": {
             "title": "Charger un plugin",
             "description": "Charge le plugin compilé et testé dans le registre de la forge, par son sha256. Refusé avant un plugin_test positif ; un type que le registre tient déjà n'est jamais remplacé. Dès lors registry_search, document_build et session_run voient ses types."
         },
         "plugin_promote": {
             "title": "Proposer un plugin",
-            "description": "Écrit l'artefact signé d'un plugin chargé (fichiers et sha256, types, tests et vérifications, le rapport d'évaluation nommé) et le propose à la station, et nulle part ailleurs : Mother le garde, le commandant autorise, le jumeau charge le plugin généré. La forge ne pousse jamais."
+            "description": "Écrit l'artefact signé d'un plugin chargé (fichiers et sha256, types, tests et vérifications, l'acceptation du contrat telle que la forge l'a exécutée) et le propose à la station, et nulle part ailleurs : Mother le garde, le commandant autorise, le jumeau charge le plugin généré. Aucun verdict n'est pris de l'appelant ; la forge ne pousse jamais."
         }
     },
     "resources": {

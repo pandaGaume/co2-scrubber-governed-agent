@@ -26,6 +26,14 @@
  *                    registry: types under Generated., a signature present
  *                    and valid for the substrate, every unit resolved by the
  *                    units service, the card on disk
+ *   plugin_acceptance the capability contract the task wrote (never the
+ *                    model): the signature against its inputs and outputs
+ *                    (the units service), its parameters as editables of the
+ *                    node, and every behavior run on a scratch runtime (the
+ *                    node in a document, its inputs wired at the values or
+ *                    left unwired, its output read through a transducer)
+ *                    and compared with the formula; the forge's own tests,
+ *                    derived from the contract, beside the model's
  *   plugin_load      the plugin into the forge's live registry, by its
  *                    sha256; refused before a positive test; a type the
  *                    registry already holds is never overridden
@@ -48,7 +56,7 @@ import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
-import { RuntimeBehavior } from "@spiky-panda/mcp/runtime";
+import { MemoryDocumentStore, RuntimeBehavior, RuntimeController } from "@spiky-panda/mcp/runtime";
 import type { NodeRegistry } from "@spiky-panda/core";
 import { fromRoot, ROOT } from "../../lib/paths.js";
 import { buildRegistry, type Registry } from "../../lib/registry.js";
@@ -58,6 +66,7 @@ import { runtimeEvents } from "../lib/events.js";
 import { checkPath, checkSources, checkTypes, type PluginFile, type Problem, type TypeCheck } from "./plugin-check.js";
 import { sha256Of, taskDir, WorkshopDocumentStore } from "../tools/lib/workshop.js";
 import { TEMPLATE_FILES, TEMPLATE_NOTE } from "./template.js";
+import { contractProblems, expectedOf, parameterProblems, parameterValues, parseBehavior, satisfies, signatureProblems, type Behavior, type CapabilityContract } from "./contract.js";
 
 const VERSION = "0.1.0";
 export const PLUGINS_URI = "forge://plugins";
@@ -91,6 +100,26 @@ export interface Build {
     diagnostics: Diagnostic[];
     /** The tests and checks, once plugin_test ran on this build. */
     tests?: TestRun;
+    /** The contract's acceptance, once plugin_acceptance ran on this build. */
+    acceptance?: Acceptance;
+}
+
+export interface BehaviorResult {
+    behavior: string;
+    expected: number | null;
+    actual: number | null;
+    ok: boolean;
+    reason?: string;
+}
+
+export interface Acceptance {
+    at: string;
+    ok: boolean;
+    type: string | null;
+    /** The signature and the parameters against the contract. */
+    static: string[];
+    behaviors: BehaviorResult[];
+    ms: number;
 }
 
 export interface TestRun {
@@ -367,6 +396,28 @@ export function forgeSlot(wsBase: string, log: (line: string) => void, options: 
             },
         },
         {
+            name: "plugin_acceptance",
+            inputSchema: objectSchema({ taskId: { type: "string" }, plugin: { type: "string" }, contract: { type: "object", description: "the capability contract: inputs, outputs, parameters, behaviors" } }, ["taskId", "plugin", "contract"]),
+            handle: async (args, s) => {
+                const taskId = str(args.taskId);
+                const plugin = str(args.plugin);
+                const dir = pluginDir(taskId, plugin);
+                const files = readPluginFiles(dir);
+                const sha256 = pluginSha256(files);
+                const build = lastBuild(taskId, plugin);
+                if (!build || !build.ok || build.sha256 !== sha256) throw new Error(`plugin "${plugin}" has no successful build of its current files: compile it first (plugin_build)`);
+                const shape = contractProblems(args.contract);
+                if (shape.length) throw new Error(`the contract is not one the forge can run: ${shape.join("; ")}`);
+                const contract = args.contract as unknown as CapabilityContract;
+                const t0 = Date.now();
+                const result = await acceptPlugin(dir, sha256, contract);
+                const acceptance: Acceptance = { at: new Date().toISOString(), ...result, ms: Date.now() - t0 };
+                build.acceptance = acceptance;
+                log(`[forge] ${build.id}: ${plugin} acceptance ${acceptance.ok ? "held" : "refused"} (${acceptance.behaviors.filter((b) => b.ok).length}/${acceptance.behaviors.length} behavior(s), ${acceptance.static.length} static problem(s))`);
+                return { build: build.id, sha256, ...acceptance };
+            },
+        },
+        {
             name: "plugin_load",
             inputSchema: objectSchema({ taskId: { type: "string" }, plugin: { type: "string" } }, ["taskId", "plugin"]),
             handle: async (args, s) => {
@@ -379,6 +430,7 @@ export function forgeSlot(wsBase: string, log: (line: string) => void, options: 
                 if (!build || !build.ok || build.sha256 !== sha256) throw new Error(`plugin "${plugin}" has no successful build of its current files: compile it first (plugin_build)`);
                 if (!build.tests) throw new Error(`plugin "${plugin}" was not tested: run plugin_test first`);
                 if (!build.tests.ok) throw new Error(`plugin "${plugin}" did not pass its tests and checks (build ${build.id}): nothing is loaded from a refused plugin`);
+                if (build.acceptance && !build.acceptance.ok) throw new Error(`plugin "${plugin}" did not satisfy its contract (build ${build.id}: ${[...build.acceptance.static, ...build.acceptance.behaviors.filter((b) => !b.ok).map((b) => b.reason ?? b.behavior)].join("; ")}): nothing is loaded from a refused plugin`);
                 const already = s.plugins.find((p) => p.sha256 === sha256);
                 if (already) return { ...already, alreadyLoaded: true };
                 const reg = registry();
@@ -396,13 +448,12 @@ export function forgeSlot(wsBase: string, log: (line: string) => void, options: 
         },
         {
             name: "plugin_promote",
+            // No verdict from the caller: what the artifact says of the plugin is what the forge measured (its tests, its checks, the contract's acceptance).
             inputSchema: objectSchema(
                 {
                     taskId: { type: "string" },
                     plugin: { type: "string" },
-                    reportId: { type: "string", description: "the id of the evaluate report that judged a candidate with this plugin on the forge's catalogue" },
-                    verdict: { type: "string", enum: ["pass", "fail"] },
-                    claims: { type: "object", description: "what the proposal claims, for the record" },
+                    claims: { type: "object", description: "what the proposal claims, for the record; the forge's own record (tests, checks, acceptance) is attached whatever is claimed" },
                 },
                 ["taskId", "plugin"],
             ),
@@ -425,7 +476,8 @@ export function forgeSlot(wsBase: string, log: (line: string) => void, options: 
                     types: loaded.types,
                     build: { id: build.id, at: build.at, ms: build.ms },
                     tests: { at: build.tests.at, pass: build.tests.pass, fail: build.tests.fail, checks: build.tests.types },
-                    evaluation: str(args.reportId) ? { reportId: str(args.reportId), verdict: str(args.verdict) || "unknown" } : null,
+                    // The contract's acceptance as the forge ran it, or null when no contract was given: an artifact without one says so.
+                    acceptance: build.acceptance ?? null,
                     proposedAt: new Date().toISOString(),
                 };
                 const text = JSON.stringify(artifact, null, 2);
@@ -438,7 +490,7 @@ export function forgeSlot(wsBase: string, log: (line: string) => void, options: 
                 let note = "";
                 const broker = new Broker(httpBase, { name: "forge", version: VERSION, locale: "en" });
                 try {
-                    const r = await broker.call("station", "propose", { taskId, artifacts: [{ kind: "plugin", path: rel, sha256: artifactSha256, contractSha256: loaded.sha256 }], manifestSha256: artifactSha256, claims: { ...((args.claims as Record<string, unknown> | undefined) ?? {}), plugin, types: loaded.types, evaluation: artifact.evaluation } });
+                    const r = await broker.call("station", "propose", { taskId, artifacts: [{ kind: "plugin", path: rel, sha256: artifactSha256, contractSha256: loaded.sha256 }], manifestSha256: artifactSha256, claims: { ...((args.claims as Record<string, unknown> | undefined) ?? {}), plugin, types: loaded.types, acceptance: artifact.acceptance ? { ok: artifact.acceptance.ok, behaviors: artifact.acceptance.behaviors.length } : null } });
                     if (r.ok) {
                         const out = r.output as { proposalId?: string; note?: string };
                         stationProposalId = out.proposalId ?? null;
@@ -456,6 +508,76 @@ export function forgeSlot(wsBase: string, log: (line: string) => void, options: 
             },
         },
     ];
+
+    /**
+     * The contract's acceptance, run by the forge on a scratch registry and a
+     * scratch runtime: the plugin registered beside the substrate's types, the
+     * signature and the parameters judged, then each behavior as a document
+     * (the node, a timeline per wired input at its value, a transducer on the
+     * output judged with its filter open and no noise) run a few ticks, the
+     * transducer's last measurement against the formula.
+     */
+    const acceptPlugin = async (dir: string, sha256: string, contract: CapabilityContract): Promise<Omit<Acceptance, "at" | "ms">> => {
+        const mod = await importPlugin(dir, sha256);
+        const scratch = (options.registry ?? buildRegistry)();
+        const before = new Set(scratch.types());
+        await mod.register(scratch as unknown as NodeRegistry, docOf(dir));
+        const registered = scratch.types().filter((t) => !before.has(t));
+        const type = contract.type ? (registered.includes(contract.type) ? contract.type : null) : registered.length === 1 ? registered[0] : null;
+        if (!type) return { ok: false, type: null, static: [contract.type ? `the contract names "${contract.type}" and the plugin registers ${registered.join(", ") || "nothing"}` : `the contract names no type and the plugin registers ${registered.length} (${registered.join(", ") || "none"}): name one in the contract`], behaviors: [] };
+        const meta = (scratch as unknown as NodeRegistry).meta(type);
+        const instance = (scratch as unknown as { create: (t: string) => object | undefined }).create(type);
+        const problems = [...signatureProblems(meta?.signature as never, contract), ...parameterProblems(instance, contract)];
+        const behaviors: BehaviorResult[] = [];
+        const controller = new RuntimeController(scratch as never, { documents: new MemoryDocumentStore(), maxTicks: 100_000 });
+        const params = parameterValues(contract);
+        const outputs = Object.keys(contract.outputs);
+        for (const text of contract.behaviors) {
+            const parsed = parseBehavior(text, contract);
+            if (!parsed.ok) {
+                behaviors.push({ behavior: text, expected: null, actual: null, ok: false, reason: parsed.reason });
+                continue;
+            }
+            const b: Behavior = parsed.behavior;
+            const port = b.output ?? outputs[0];
+            let expected: number | null = null;
+            try {
+                expected = expectedOf(b, contract);
+            } catch (e) {
+                behaviors.push({ behavior: text, expected: null, actual: null, ok: false, reason: e instanceof Error ? e.message : String(e) });
+                continue;
+            }
+            const nodes: unknown[] = [{ id: "unit", typeId: type, params }];
+            const connections: unknown[] = [];
+            for (const [input, value] of Object.entries(b.inputs ?? {})) {
+                nodes.push({ id: `in_${input}`, typeId: "Logic.Time:timeline", params: { segments: JSON.stringify([{ from: 0, to: 1e9, value }]), defaultValue: value } });
+                connections.push({ from: [`in_${input}`, "value"], to: ["unit", input] });
+            }
+            nodes.push({ id: "probe", typeId: "DSP.Sensor:transducer", params: { cutoffHz: 1e9, noiseStdev: 0, quantizationStep: 0, driftPerSec: 0 } });
+            connections.push({ from: ["unit", port], to: ["probe", "value"] });
+            const name = `acceptance/${behaviors.length}`;
+            const built = await controller.executeToolAsync("document_build", { spec: { nodes, connections }, name });
+            if (!built.ok) {
+                behaviors.push({ behavior: text, expected, actual: null, ok: false, reason: `the document could not be built: ${built.error}` });
+                continue;
+            }
+            const data = (built.data ?? {}) as { ok?: boolean; problems?: unknown[] };
+            if (data.ok === false) {
+                behaviors.push({ behavior: text, expected, actual: null, ok: false, reason: `the document could not be built: ${JSON.stringify(data.problems ?? [])}` });
+                continue;
+            }
+            const ran = await controller.executeToolAsync("session_run", { name, dt: 1, duration: 8, probes: [{ node: "probe", property: "lastMeasured" }] });
+            if (!ran.ok) {
+                behaviors.push({ behavior: text, expected, actual: null, ok: false, reason: `the run failed: ${ran.error}` });
+                continue;
+            }
+            const summary = ((ran.data ?? {}) as { summary?: Record<string, { last?: number }> }).summary ?? {};
+            const actual = summary["probe.lastMeasured"]?.last;
+            const ok = typeof actual === "number" && satisfies(b, actual, expected);
+            behaviors.push({ behavior: text, expected, actual: typeof actual === "number" ? actual : null, ok, ...(ok ? {} : { reason: `${port}(${b.inputs ? Object.entries(b.inputs).map(([k, v]) => `${k}=${v}`).join(", ") : "unwired"}) is ${typeof actual === "number" ? actual : "not a number"}, the contract says ${b.op} ${expected} (${b.expression})` }) });
+        }
+        return { ok: problems.length === 0 && behaviors.length > 0 && behaviors.every((x) => x.ok), type, static: problems, behaviors };
+    };
 
     const runtime = RuntimeBehavior.on(registry() as never, { documents: new WorkshopDocumentStore(), events: runtimeEvents, maxTicks: 1440 * 20 * 60 });
     return publishSlot<ForgeState>({

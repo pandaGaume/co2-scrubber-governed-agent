@@ -113,11 +113,19 @@ A leak out of a volume: a constant mass flow of CO2, in kg/s, scaled by a comman
 
 export const LEAK_TYPE = "Generated.Habitat:leak";
 
-/** The four files of the leak plugin, with the type name and the output unit asked for. */
-export function leakFixture(type = LEAK_TYPE, unit = "kg/s"): FixtureFile[] {
+/** The capability contract of the leak, as the task writes it: what the forge's acceptance runs, whatever the model wrote. */
+export const LEAK_CONTRACT = {
+    inputs: { command: { quantity: "Dimensionless", unit: "ratio", range: [0, 1] as [number, number], unwired: 1 } },
+    outputs: { co2Delta: { quantity: "MassFlow", unit: "kg/s", sign: "nonpositive" as const } },
+    parameters: { rateKgps: { quantity: "MassFlow", unit: "kg/s", editable: true, value: 0.002 } },
+    behaviors: ["output(command=0) == 0", "output(command=0.5) == -0.5 * rateKgps", "output(command=1) == -rateKgps", "output(unwired) == -rateKgps"],
+};
+
+/** The four files of the leak plugin, with the type name and the output unit asked for; `unwired` is what the node takes the command to be when nothing is wired (the contract says 1; the third passage on Haiku wrote 0). */
+export function leakFixture(type = LEAK_TYPE, unit = "kg/s", unwired = 1): FixtureFile[] {
     return [
         { path: "src/index.ts", content: INDEX.replace("TYPE_NAME", type).replace("UNIT_NAME", unit) },
-        { path: "src/leak.node.ts", content: NODE },
+        { path: "src/leak.node.ts", content: NODE.replace("let command = 1;", `let command = ${unwired};`) },
         { path: "src/leak.test.ts", content: TEST },
         { path: "docs/leak.md", content: CARD },
     ];

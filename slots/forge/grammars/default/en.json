@@ -20,13 +20,17 @@
             "title": "Test a plugin",
             "description": "The plugin's own tests (node's runner, a child process, a time budget) and the deterministic checks on a scratch registry: every type under Generated., a signature present and valid for the substrate, every unit resolved by the units service against its quantity, the card on disk. Both must pass before the plugin is loaded."
         },
+        "plugin_acceptance": {
+            "title": "Accept a plugin against its contract",
+            "description": "The capability contract the task wrote (inputs, outputs, parameters, behaviors), run by the forge and never by the model: the signature against the contract's ports (the units service), the parameters as editables of the node, then every behavior run on a scratch runtime (the node in a document, its inputs wired at the values or left unwired, its output read through a transducer) and compared with the formula. A plugin whose acceptance failed is not loaded."
+        },
         "plugin_load": {
             "title": "Load a plugin",
             "description": "Load the built and tested plugin into the forge's registry, by its sha256. Refused before a positive plugin_test; a type the registry already holds is never overridden. From then on registry_search, document_build and session_run see its types."
         },
         "plugin_promote": {
             "title": "Propose a plugin",
-            "description": "Write the signed artifact of a loaded plugin (files and sha256, types, tests and checks, the evaluate report named) and propose it to the station, and nowhere else: Mother keeps it, the commander authorises, the twin loads the generated plugin. The forge never pushes."
+            "description": "Write the signed artifact of a loaded plugin (files and sha256, types, tests and checks, the contract's acceptance as the forge ran it) and propose it to the station, and nowhere else: Mother keeps it, the commander authorises, the twin loads the generated plugin. No verdict is taken from the caller; the forge never pushes."
         }
     },
     "resources": {

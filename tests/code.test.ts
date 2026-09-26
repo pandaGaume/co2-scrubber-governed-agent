@@ -19,7 +19,7 @@ import type { PublishedSlot } from "../slots/lib/slot-server.js";
 import { runTask, type BuilderContext } from "../harness/core/runner.js";
 import { ScriptedCodeBuilder, type ScriptedCodeOptions } from "../harness/scripted/code.js";
 import { typesWritten, requirementsOf, briefOf, documentProblems } from "../harness/topics/code/index.js";
-import { leakFixture } from "../harness/scripted/code-fixture.js";
+import { leakFixture, LEAK_CONTRACT } from "../harness/scripted/code-fixture.js";
 import { newProgress } from "../harness/core/workspace-observer.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
 import type { TaskFile } from "../harness/core/task.js";
@@ -44,7 +44,7 @@ describe("the code topic's rules, without a broker", () => {
     it("the stages, from what the forge answered: nothing read, then each requirement in the order the forge takes them", () => {
         const task = { id: "t", objective: { required_outputs: [{ name: "leak", quantity: "MassFlow", unit: "kg/s" }], constraints: {} }, observations: {}, data: [] } as unknown as TaskFile["task"];
         const progress = newProgress();
-        assert.deepEqual(requirementsOf(progress, task), { catalogueSearched: false, planAccepted: false, templateRead: false, written: false, built: false, tested: false, loaded: false, ran: false, promoted: false });
+        assert.deepEqual(requirementsOf(progress, task), { catalogueSearched: false, planAccepted: false, templateRead: false, written: false, built: false, tested: false, accepted: true, loaded: false, ran: false, promoted: false });
         assert.match(briefOf(progress, task), /^Stage 1 of 6, the gap\. Required and produced by no node: leak \(MassFlow, kg\/s\)/);
         progress.reads["forge.registry_search"] = { at: "t", value: { matches: [] } };
         assert.match(briefOf(progress, task), /^Stage 2 of 6, the plan/);
@@ -58,13 +58,13 @@ describe("the code topic's rules, without a broker", () => {
         assert.match(briefOf(progress, task), /The build failed: the diagnostics are in the state under evaluation/);
         progress.reads["forge.plugin_build"] = { at: "t", value: { id: "b2", ok: true, sha256: "s1" } };
         progress.reads["forge.plugin_test"] = { at: "t", value: { build: "b2", ok: true, pass: 1, fail: 0, types: [{ type: "Generated.Habitat:leak", ok: true, problems: [] }] } };
-        assert.match(briefOf(progress, task), /^Stage 4 of 6, loaded\. Tests and checks passed \(1 test\(s\), types Generated\.Habitat:leak\)/);
+        assert.match(briefOf(progress, task), /^Stage 4 of 6, loaded\. Tests, checks and the contract's acceptance passed \(1 test\(s\), types Generated\.Habitat:leak\)/);
         progress.reads["forge.plugin_load"] = { at: "t", value: { id: "leak@s1", sha256: "s1", types: ["Generated.Habitat:leak"] } };
         assert.match(briefOf(progress, task), /^Stage 5 of 6, run\. .*The task carries no telemetry: run the node in a document/);
         progress.reads["forge.session_run"] = { at: "t", value: { ticks: 3, summary: {} } };
         assert.match(briefOf(progress, task), /^Stage 6 of 6, proposed\. The node ran \(session\)/);
         progress.reads["forge.plugin_promote"] = { at: "t", value: { id: "f0001", path: "forge/leak/artifact.json", sha256: "s1", artifactSha256: "a1", stationProposalId: "p0001" } };
-        assert.deepEqual(requirementsOf(progress, task), { catalogueSearched: true, planAccepted: true, templateRead: true, written: true, built: true, tested: true, loaded: true, ran: true, promoted: true });
+        assert.deepEqual(requirementsOf(progress, task), { catalogueSearched: true, planAccepted: true, templateRead: true, written: true, built: true, tested: true, accepted: true, loaded: true, ran: true, promoted: true });
         assert.match(briefOf(progress, task), /^Stage 6 of 6, hand over\. The forge signed forge\/leak\/artifact\.json \(proposal f0001, the station's p0001\)/);
         // A write after the build: the build no longer counts, nor what followed it.
         progress.reads["forge.plugin_write"] = { at: "t2", value: { ok: true, plugin: "leak", files: ["src/index.ts"], sha256: "s2" } };
@@ -91,6 +91,7 @@ describe("the code topic through the forge, scripted", () => {
         const req = await ok<{ taskId: string; started: boolean }>("factory", "request", {
             objective: { required_outputs: [{ name: "leak_co2", quantity: "MassFlow", unit: "kg/s" }] },
             observations: { gap: "a graph factory found no node that removes CO2 from a volume at a constant rate" },
+            requirements: { capability: LEAK_CONTRACT },
             topics: ["code"],
             builder: "scripted",
             requestedBy: "graph-factory",
@@ -121,12 +122,14 @@ describe("the code topic through the forge, scripted", () => {
     it("the leak plugin, written, compiled, tested, loaded, run and proposed: the task ends proposed with the artifact the forge signed", async () => {
         const result = await build();
         assert.equal(result.state, "proposed", JSON.stringify(result.manifest.steps.map((s) => [s.capability, s.outcome, s.reason ?? s.summary]), null, 1));
-        assert.deepEqual(result.manifest.steps.map((s) => s.capability), ["forge.registry_search", "task.plan", "forge.plugin_template", "forge.plugin_write", "forge.plugin_build", "forge.plugin_test", "forge.plugin_load", "forge.document_build", "forge.session_run", "forge.plugin_promote", "task.done"]);
+        assert.deepEqual(result.manifest.steps.map((s) => s.capability), ["forge.registry_search", "task.plan", "forge.plugin_template", "forge.plugin_write", "forge.plugin_build", "forge.plugin_test", "code.accept", "forge.plugin_load", "forge.document_build", "forge.session_run", "forge.plugin_promote", "task.done"]);
         const plugin = result.manifest.artifacts.find((a) => a.kind === "plugin");
         assert.ok(plugin, "the manifest carries the plugin artifact");
         assert.equal(plugin?.path, "forge/leak/artifact.json");
-        const artifact = JSON.parse(readFileSync(path.join(taskDir(result.taskId), "forge", "leak", "artifact.json"), "utf8")) as { types: string[]; tests: { pass: number; checks: Array<{ ok: boolean }> } };
+        const artifact = JSON.parse(readFileSync(path.join(taskDir(result.taskId), "forge", "leak", "artifact.json"), "utf8")) as { types: string[]; tests: { pass: number; checks: Array<{ ok: boolean }> }; acceptance: { ok: boolean; behaviors: Array<{ ok: boolean }> } | null };
         assert.deepEqual(artifact.types, ["Generated.Habitat:leak"]);
+        assert.equal(artifact.acceptance?.ok, true, "the artifact carries the contract's acceptance as the forge ran it");
+        assert.equal(artifact.acceptance?.behaviors.length, 4);
         assert.equal(artifact.tests.pass, 1);
         assert.ok(artifact.tests.checks.every((c) => c.ok));
         // The claims, built by code from what the forge measured, as the station received them with the manifest.
@@ -139,12 +142,13 @@ describe("the code topic through the forge, scripted", () => {
         assert.equal(claims.plugin, "leak");
         assert.deepEqual(claims.types, ["Generated.Habitat:leak"]);
         assert.deepEqual(claims.tests, { pass: 1, fail: 0, checks: true });
+        assert.deepEqual((claims as { acceptance?: unknown }).acceptance, { ok: true, behaviors: 4, held: 4 });
         assert.equal(claims.ran?.how, "session");
         assert.ok(claims.proposal?.station, "the forge's own proposal reached the station");
         // The state the script read at the last step: the plugin whole under hypothesis, every requirement met.
         const trace = readFileSync(path.join(taskDir(result.taskId), "trace.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l) as TraceLine);
         const lastState = trace.at(-1)?.trace?.stateBefore.features.state as { requirements?: Record<string, boolean>; hypothesis?: { plugin?: { loaded?: string[]; ran?: string } } } | undefined;
-        assert.deepEqual(lastState?.requirements, { catalogueSearched: true, planAccepted: true, templateRead: true, written: true, built: true, tested: true, loaded: true, ran: true, promoted: true });
+        assert.deepEqual(lastState?.requirements, { catalogueSearched: true, planAccepted: true, templateRead: true, written: true, built: true, tested: true, accepted: true, loaded: true, ran: true, promoted: true });
         assert.deepEqual(lastState?.hypothesis?.plugin?.loaded, ["Generated.Habitat:leak"]);
         assert.deepEqual((lastState?.hypothesis?.plugin as { sources?: Array<{ path: string; content: string }> } | undefined)?.sources?.map((f) => f.path), ["docs/leak.md", "src/index.ts", "src/leak.node.ts", "src/leak.test.ts"], "the plugin's files whole in the state");
         // The twin's catalogue is untouched.

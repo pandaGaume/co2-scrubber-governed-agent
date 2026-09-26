@@ -1,0 +1,78 @@
+{
+  "kind": "plugin",
+  "plugin": "leak-co2",
+  "taskId": "t-2026-09-26-0001",
+  "sha256": "cb95abc127942cb27a608625d1c49c6605ebc81208c559a22d8ef5896af452af",
+  "files": [
+    {
+      "path": "docs/leak-co2.md",
+      "sha256": "d93ad245e35f01b12e3d1851a367de0be25578472d053ffe646c4fed09e840a7"
+    },
+    {
+      "path": "src/index.ts",
+      "sha256": "a381732f71b4342473fb59e2dd9a9225f26957cbb85840ca7b8d7dafc5f5846c"
+    },
+    {
+      "path": "src/leak-co2.node.ts",
+      "sha256": "f66f42735a1e48c56cf57b7fe23a68f4663450ea9de06bdfd909f9a882d1ca0a"
+    },
+    {
+      "path": "src/leak-co2.test.ts",
+      "sha256": "7b02243db31a94cecf6558d34c2feea55051974c22f6679e38ed14c89bb0d180"
+    }
+  ],
+  "types": [
+    "Generated.Habitat:leak_co2"
+  ],
+  "build": {
+    "id": "b0001-cb95abc1",
+    "at": "2026-09-26T07:05:55.720Z",
+    "ms": 875
+  },
+  "tests": {
+    "at": "2026-09-26T07:05:57.855Z",
+    "pass": 2,
+    "fail": 0,
+    "checks": [
+      {
+        "type": "Generated.Habitat:leak_co2",
+        "ok": true,
+        "problems": []
+      }
+    ]
+  },
+  "acceptance": {
+    "at": "2026-09-26T07:05:59.446Z",
+    "ok": true,
+    "type": "Generated.Habitat:leak_co2",
+    "static": [],
+    "behaviors": [
+      {
+        "behavior": "output(command=0) == 0",
+        "expected": 0,
+        "actual": 0,
+        "ok": true
+      },
+      {
+        "behavior": "output(command=0.5) == -0.5 * rateAtFullOpening",
+        "expected": -0.001,
+        "actual": -0.001,
+        "ok": true
+      },
+      {
+        "behavior": "output(command=1) == -rateAtFullOpening",
+        "expected": -0.002,
+        "actual": -0.002,
+        "ok": true
+      },
+      {
+        "behavior": "output(unwired) == -rateAtFullOpening",
+        "expected": -0.002,
+        "actual": -0.002,
+        "ok": true
+      }
+    ],
+    "ms": 12
+  },
+  "proposedAt": "2026-09-26T07:06:35.662Z"
+}

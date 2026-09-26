@@ -15,11 +15,12 @@ import type { PublishedSlot } from "../slots/lib/slot-server.js";
 import { checkSources, checkImports, importsOf } from "../slots/forge/plugin-check.js";
 import { parseDiagnostics, pluginDir, type Build, type ForgeState, type LoadedPlugin, type TestRun } from "../slots/forge/provider.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
-import { leakFixture, leakSpec, LEAK_TYPE } from "../harness/scripted/code-fixture.js";
+import { leakFixture, leakSpec, LEAK_CONTRACT, LEAK_TYPE } from "../harness/scripted/code-fixture.js";
+import { contractProblems, parseBehavior, satisfies } from "../slots/forge/contract.js";
 
 const PORT = 3130;
 
-const fixture = (type = LEAK_TYPE, unit = "kg/s") => leakFixture(type, unit);
+const fixture = (type = LEAK_TYPE, unit = "kg/s", unwired = 1) => leakFixture(type, unit, unwired);
 
 describe("the forge's guard on the sources", () => {
     it("reads the imports as written, and refuses what is not the substrate's core or the plugin's own files", () => {
@@ -39,6 +40,27 @@ describe("the forge's guard on the sources", () => {
         const missing = checkSources([{ path: "src/index.ts", content: "export const x = 1;" }, { path: "lib/other.ts", content: "" }]);
         assert.deepEqual(missing.map((p) => p.where), ["lib/other.ts", "src/index.ts", "src/", "src/", "docs/"]);
         assert.match(missing[1].what, /does not export register\(registry, doc\)/);
+    });
+
+    it("a capability contract: its shape judged, its behaviors parsed, a comparison with a tolerance", () => {
+        assert.deepEqual(contractProblems(LEAK_CONTRACT), []);
+        const bad = contractProblems({ inputs: { command: { quantity: "Dimensionless", unit: "fortnight" } }, outputs: {}, parameters: {}, behaviors: ["output(x=1) == 2", "nonsense"] });
+        assert.equal(bad.length, 4, bad.join(" | "));
+        assert.match(bad[0], /inputs "command": /);
+        assert.equal(bad[1], "outputs: a capability produces at least one output");
+        assert.match(bad[2], /"output" names the contract's one output, and the contract has 0/);
+        assert.match(bad[3], /"nonsense" is not a behavior/);
+        const p = parseBehavior("output(command=0.5) == -0.5 * rateKgps", LEAK_CONTRACT);
+        assert.ok(p.ok);
+        if (p.ok) {
+            assert.deepEqual(p.behavior.inputs, { command: 0.5 });
+            assert.equal(p.behavior.output, null);
+            assert.equal(satisfies(p.behavior, -0.001, -0.001), true);
+            assert.equal(satisfies(p.behavior, -0.0010000001, -0.001), true);
+            assert.equal(satisfies(p.behavior, 0, -0.001), false);
+        }
+        const u = parseBehavior("co2Delta(unwired) >= -rateKgps", LEAK_CONTRACT);
+        assert.ok(u.ok && u.behavior.inputs === null && u.behavior.output === "co2Delta");
     });
 
     it("tsc's diagnostics are read whole: file, line, column, code, message", () => {
@@ -101,6 +123,17 @@ describe("a generated plugin through the forge", () => {
         assert.deepEqual(tests.types.map((t) => [t.type, t.ok, t.problems]), [["Generated.Habitat:leak", true, []]]);
         assert.equal(tests.ok, true);
 
+        // Accepted against the task's contract, run by the forge: the signature, the parameter, the four behaviors measured.
+        const accepted = await call<{ ok: boolean; type: string; static: string[]; behaviors: Array<{ behavior: string; expected: number; actual: number; ok: boolean; reason?: string }> }>("plugin_acceptance", { taskId, plugin: "leak", contract: LEAK_CONTRACT });
+        assert.equal(accepted.ok, true, JSON.stringify({ static: accepted.static, behaviors: accepted.behaviors }));
+        assert.equal(accepted.type, "Generated.Habitat:leak");
+        assert.deepEqual(accepted.behaviors.map((b) => [b.behavior, b.expected, b.actual, b.ok]), [
+            ["output(command=0) == 0", 0, 0, true],
+            ["output(command=0.5) == -0.5 * rateKgps", -0.001, -0.001, true],
+            ["output(command=1) == -rateKgps", -0.002, -0.002, true],
+            ["output(unwired) == -rateKgps", -0.002, -0.002, true],
+        ]);
+
         // Loaded, by sha256; the runtime on the forge sees it.
         const loaded = await call<LoadedPlugin>("plugin_load", { taskId, plugin: "leak" });
         assert.deepEqual(loaded.types, ["Generated.Habitat:leak"]);
@@ -125,6 +158,27 @@ describe("a generated plugin through the forge", () => {
         assert.deepEqual(state.plugins.map((p) => p.id), [loaded.id]);
         assert.equal(state.proposals.length, 1);
         assert.equal(state.builds.filter((b) => b.plugin === "leak").length, 1);
+    });
+
+    it("the contract catches what the model's own tests do not: a node that takes an unwired command as 0 where the contract says 1, refused with the value measured, and not loaded", async () => {
+        const w = await call<{ ok: boolean }>("plugin_write", { taskId, plugin: "leak-unwired", files: fixture("Generated.Habitat:leak_unwired", "kg/s", 0) });
+        assert.equal(w.ok, true);
+        const build = await call<Build>("plugin_build", { taskId, plugin: "leak-unwired" });
+        assert.equal(build.ok, true, JSON.stringify(build.diagnostics));
+        const tests = await call<TestRun>("plugin_test", { taskId, plugin: "leak-unwired" });
+        assert.equal(tests.ok, true, "the plugin's own tests and the checks pass: they say nothing of the unwired case");
+        const accepted = await call<{ ok: boolean; behaviors: Array<{ behavior: string; expected: number; actual: number; ok: boolean; reason?: string }> }>("plugin_acceptance", { taskId, plugin: "leak-unwired", contract: LEAK_CONTRACT });
+        assert.equal(accepted.ok, false);
+        const failed = accepted.behaviors.filter((b) => !b.ok);
+        assert.deepEqual(failed.map((b) => [b.behavior, b.expected, b.actual]), [["output(unwired) == -rateKgps", -0.002, 0]]);
+        assert.match(failed[0].reason ?? "", /co2Delta\(unwired\) is 0, the contract says == -0\.002 \(-rateKgps\)/);
+        const load = await broker.call("forge", "plugin_load", { taskId, plugin: "leak-unwired" });
+        assert.equal(load.ok, false);
+        assert.match(load.error ?? "", /did not satisfy its contract/);
+        // A signature short of a contract port, and a parameter the node lacks, are named without a run.
+        const other = await call<{ ok: boolean; static: string[] }>("plugin_acceptance", { taskId, plugin: "leak-unwired", contract: { ...LEAK_CONTRACT, inputs: { ...LEAK_CONTRACT.inputs, pressure: { quantity: "Pressure", unit: "Pa" } }, parameters: { rateKgps: LEAK_CONTRACT.parameters.rateKgps, lagSeconds: { quantity: "Time", unit: "s", editable: true } } } });
+        assert.equal(other.ok, false);
+        assert.deepEqual(other.static, ['inputs "pressure" (Pressure, Pa) is required by the contract and not declared by the signature', 'parameter "lagSeconds" is required by the contract and the node has no setter by that name (an @editable getter and setter)']);
     });
 
     it("the forge's template compiles, passes its test and the checks: what it hands out is what it accepts", async () => {

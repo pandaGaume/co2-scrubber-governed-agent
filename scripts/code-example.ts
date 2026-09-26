@@ -67,6 +67,15 @@ async function main(): Promise<void> {
                 gap: "the graph factory found no node of the catalogue that takes CO2 out of a volume at a constant mass flow scaled by a command (a leak through a seal, a vent held open): the atmosphere's delta_CO2 inputs take a mass flow in kg/s from any source, but every source of the catalogue is a person, a crew or a scrubber",
                 wanted: "one node: an input command (Dimensionless, ratio, 0 to 1, 1 when unwired), an editable rate in kg/s at full opening, an output co2Delta (MassFlow, kg/s, negative: what leaves) for an atmosphere's delta_CO2 input, and a viewable of what left on the last tick",
             },
+            // The capability contract, the task's and never the model's: the forge runs it on whatever the model writes (the third passage wrote "0 when unwired" where the prose said 1, and nothing had checked it).
+            requirements: {
+                capability: {
+                    inputs: { command: { quantity: "Dimensionless", unit: "ratio", range: [0, 1], unwired: 1 } },
+                    outputs: { co2Delta: { quantity: "MassFlow", unit: "kg/s", sign: "nonpositive" } },
+                    parameters: { rateAtFullOpening: { quantity: "MassFlow", unit: "kg/s", editable: true, value: 0.002 } },
+                    behaviors: ["output(command=0) == 0", "output(command=0.5) == -0.5 * rateAtFullOpening", "output(command=1) == -rateAtFullOpening", "output(unwired) == -rateAtFullOpening"],
+                },
+            },
             topics: ["code"],
             builder: "reasoner",
             requestedBy: "graph-factory (the example)",
