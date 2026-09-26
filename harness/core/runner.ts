@@ -219,7 +219,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
                 { match: /^(workspace|model)\.|^forge\.plugin_(write|build|test|load|promote)$/, constants: { taskId } },
                 { match: new RegExp(`^${runtimeSlot}\\.(document_build|document_instantiate|session_run)$`), rewrite: (input) => (typeof input.name === "string" && !input.name.startsWith(`${taskId}/`) ? { ...input, name: `${taskId}/${input.name}` } : input) },
             ],
-            local: [...taskCapabilities(broker, taskId, progress), ...(topic.local?.({ broker, taskId, task, progress, runtimeSlot }) ?? [])],
+            local: [...taskCapabilities(broker, taskId, progress, topicId), ...(topic.local?.({ broker, taskId, task, progress, runtimeSlot }) ?? [])],
         },
         onCall: (call) => {
             progress.lastCall = call;
@@ -309,7 +309,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         progress.phase = "failed";
         log(`[factory] task ${taskId}: ${ended}`);
     }
-    while (progress.phase !== "done" && progress.phase !== "failed") {
+    while (progress.phase !== "done" && progress.phase !== "failed" && progress.phase !== "waiting") {
         // The step just recorded, said before the next one starts (every branch below ends in `continue`).
         if (manifest.steps.length > reported) onProgress?.(manifest);
         reported = manifest.steps.length;
@@ -416,7 +416,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         break;
     }
     if (manifest.steps.length > reported) onProgress?.(manifest);
-    if (progress.phase !== "done") progress.phase = "failed";
+    if (progress.phase !== "done" && progress.phase !== "waiting") progress.phase = "failed";
 
     // What the task leaves: the artifacts with their sha256, the contract next to a model.
     const files = await listWorkshop(broker, taskId);
@@ -429,8 +429,9 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             return { kind, path: f.path, sha256: f.sha256, bytes: f.bytes, ...(contract ? { contractSha256: contract.sha256 } : {}) };
         });
     manifest.sandbox = progress.sandbox;
-    manifest.state = progress.phase === "done" ? "done" : "failed";
-    manifest.ended = ended ?? (progress.phase === "done" ? `contract held after ${progress.iteration} step(s)` : progress.failure !== null ? `the builder gave up: ${progress.failure}` : "not done");
+    const finalPhase = progress.phase as string;
+    manifest.state = finalPhase === "done" ? "done" : finalPhase === "waiting" ? "waiting" : "failed";
+    manifest.ended = ended ?? (finalPhase === "done" ? `contract held after ${progress.iteration} step(s)` : finalPhase === "waiting" ? (progress.failure ?? "waiting for the commander") : progress.failure !== null ? `the builder gave up: ${progress.failure}` : "not done");
     manifest.endedAt = new Date().toISOString();
     await writeText(broker, taskId, "trace.jsonl", lines.map((l) => JSON.stringify(l)).join("\n") + "\n");
 

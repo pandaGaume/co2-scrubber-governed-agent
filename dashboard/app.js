@@ -1161,3 +1161,97 @@ loadSlots()
         cabinUnread("no link to the broker");
         motherNote("no link to the broker: nothing is being read and nothing will be claimed");
     });
+
+
+// ── Questions to the commander (Tier 4) ──────────────────────────────────────
+// The station's questions, answered here by a click or by a spoken answer
+// (the browser's speech recognition, no server), or by a standing order set
+// here. The page decides nothing: every answer is `station.answer`, signed
+// commander, and the station calls back whoever asked.
+
+const questionsLog = $("questions-log");
+if (questionsLog) {
+    const escapeHtml = (v) => String(v ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+    const heard = new Map();
+    const optionOf = (text, options) => {
+        const t = String(text).trim().toLowerCase();
+        if (!t) return null;
+        const exact = options.find((o) => o.id.toLowerCase() === t || o.label.toLowerCase() === t);
+        if (exact) return exact;
+        const hits = options.filter((o) => t.includes(o.id.toLowerCase()) || o.label.toLowerCase().split(/\W+/).some((w) => w.length > 2 && t.includes(w)));
+        return hits.length === 1 ? hits[0] : null;
+    };
+    const readStation = async (uri) => {
+        const s = await session("station");
+        const r = await s.request("resources/read", { uri });
+        return JSON.parse(r.contents[0].text);
+    };
+    const answer = async (questionId, choice, how, note) => {
+        await call("station", "answer", { questionId, choice, by: "commander", how, ...(note ? { note } : {}) }, "commander");
+        heard.delete(questionId);
+        await refreshQuestions();
+    };
+    const render = (questions) => {
+        const open = questions.filter((q) => q.status === "open");
+        const done = questions.filter((q) => q.status !== "open").slice(-4).reverse();
+        const card = (q) => {
+            const h = heard.get(q.id);
+            const options = q.options.map((o) => `<button class="badge link" data-q="${q.id}" data-choice="${escapeHtml(o.id)}" type="button">${escapeHtml(o.label)}</button>`).join(" ");
+            const voice = `<button class="badge link" data-voice="${q.id}" type="button" title="answer by voice">voice</button>`;
+            const transcript = h ? `<div class="line dim">heard: "${escapeHtml(h.text)}" ${h.option ? `: <b>${escapeHtml(h.option.label)}</b> <button class="badge link" data-q="${q.id}" data-choice="${escapeHtml(h.option.id)}" data-how="voice" type="button">confirm</button>` : "(no option recognised: say one of them, or click)"}</div>` : "";
+            return `<div class="question"><div class="line"><span class="t">${q.id}</span> <b>${escapeHtml(q.kind)}</b> from ${escapeHtml(q.from)}${q.taskId ? ` (task ${escapeHtml(q.taskId)})` : ""}</div><div class="line">${escapeHtml(q.question)}</div><details><summary class="dim">context</summary><pre>${escapeHtml(JSON.stringify(q.context, null, 2))}</pre></details><div class="line">${options} ${voice}</div>${transcript}</div>`;
+        };
+        const past = (q) => `<div class="line dim"><span class="t">${q.id}</span> ${escapeHtml(q.kind)}: ${escapeHtml(q.answer?.choice ?? "?")} by ${escapeHtml(q.answer?.by ?? "?")} (${escapeHtml(q.answer?.how ?? "?")})</div>`;
+        questionsLog.innerHTML = (open.length ? open.map(card).join("") : `<div class="line dim">No open question.</div>`) + done.map(past).join("");
+    };
+    async function refreshQuestions() {
+        try {
+            const questions = await readStation("station://questions");
+            render(questions);
+            const policy = await readStation("station://questions-policy");
+            const select = $("questions-policy");
+            if (select && document.activeElement !== select) select.value = policy.mode === "auto" ? "auto" : "ask";
+        } catch (e) {
+            questionsLog.innerHTML = `<div class="line dim">no station: ${escapeHtml(e.message)}</div>`;
+        }
+    }
+    questionsLog.addEventListener("click", async (ev) => {
+        const b = ev.target.closest("button");
+        if (!b) return;
+        if (b.dataset.voice) {
+            const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!Recognition) {
+                heard.set(b.dataset.voice, { text: "(this browser has no speech recognition)", option: null });
+                return void refreshQuestions();
+            }
+            const questions = await readStation("station://questions");
+            const q = questions.find((x) => x.id === b.dataset.voice);
+            const rec = new Recognition();
+            rec.lang = $("questions-lang")?.value ?? "fr-FR";
+            rec.interimResults = false;
+            rec.maxAlternatives = 3;
+            rec.onresult = (e) => {
+                const alternatives = Array.from(e.results[0]).map((r) => r.transcript);
+                const text = alternatives[0] ?? "";
+                const option = alternatives.map((t) => optionOf(t, q?.options ?? [])).find(Boolean) ?? null;
+                heard.set(q.id, { text, option });
+                void refreshQuestions();
+            };
+            rec.onerror = (e) => {
+                heard.set(b.dataset.voice, { text: `(recognition error: ${e.error})`, option: null });
+                void refreshQuestions();
+            };
+            heard.set(b.dataset.voice, { text: "listening...", option: null });
+            void refreshQuestions();
+            rec.start();
+            return;
+        }
+        if (b.dataset.q && b.dataset.choice) await answer(b.dataset.q, b.dataset.choice, b.dataset.how ?? "click", heard.get(b.dataset.q)?.text);
+    });
+    $("questions-policy")?.addEventListener("change", async (ev) => {
+        await call("station", "questions_policy", { mode: ev.target.value }, "commander");
+        await refreshQuestions();
+    });
+    void refreshQuestions();
+    setInterval(() => void refreshQuestions(), 2000);
+}

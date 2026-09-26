@@ -413,6 +413,103 @@ segments de la timeline en tableau là où le substrat veut une chaîne JSON
 (le brief le dit maintenant, avec l'exemple), un `plugin_promote` avec
 `claims` en phrase (le brief dit un objet).
 
+### 6.5 Le relais entre l'usine de graphes et l'usine de code (le 26 septembre)
+
+Le branchement demandé : une capacité manquante de l'usine de graphes ouvre
+une tâche `code`, et le contrat est écrit par le modèle de l'usine de
+graphes, un autre rôle que celui qui écrira le code (le principe de 6.4
+tient : celui qui code ne définit jamais ses propres tests d'acceptation).
+
+- **Le plan** : une capacité manquante déclarée avec le sujet `code` porte
+  son `contract` (le schéma de `task.plan` dit sa forme) ; la garde du plan
+  le juge par le code (`contractProblems` : ports, unités, formules,
+  comportements ; un `type` s'il est nommé est sous `Generated.`, sinon
+  laissé à l'usine de code ; une sortie porte la grandeur requise). Une
+  tâche `code` ne répète pas dans son plan le contrat qu'elle porte.
+- **La fin de la tâche de graphes** : un plan qui déclare une capacité pour
+  une autre usine termine la tâche de lui-même (`MISSING_CAPABILITY`) : rien
+  à évaluer, le jumeau se construit au rejeu. (Le cinquième passage avait
+  vu le modèle appeler `task.done` douze fois au lieu de `task.fail`.)
+- **Le relais** (`slots/factory/handoff.ts`, `provider.ts`) : l'usine ouvre
+  la tâche `code` sur le contrat (sur la forge, `task.runtime` est un champ),
+  puis, la tâche `code` proposée, rejoue la demande de graphes sur le
+  catalogue de la forge avec les types générés nommés dans ses observations ;
+  la garde du plan refuse au rejeu de déclarer manquant ce qu'un type généré
+  a été fait pour produire ; la profondeur des relais est bornée ; la
+  signature d'une tâche porte les types générés pour que les recettes
+  apprises sans le nœud ne rejouent pas avec lui.
+- **Au passage** : le runner termine une tâche bloquée sur quatre propositions
+  identiques refusées (`STUCK`), classe le nom d'un document une seule fois
+  sous la tâche, le sujet `code` n'a plus les outils de l'atelier (tout est
+  dans l'état) et une tâche `code` ouverte par le relais a 32 pas.
+
+Six passages sur Haiku pour le régler (`docs/exemples/2026-09-26-forge-<5..10>-haiku-handoff/`) :
+le contrat du modèle avec un type étranger (5), les `task.done` répétés (5),
+les fichiers perdus, les noms doublés (6), la recherche bloquée (8), le rejeu
+qui redéclarait manquant (9) ; le dixième traverse : le contrat de l'usine de
+graphes (une commande de 0 à 1, une pression, un débit éditable, trois
+comportements), le nœud de l'usine de code accepté contre lui en 13 pas, la
+demande rejouée et tenue en 4. Ce que ces passages disent du contrat écrit
+par un modèle : sa forme est garantie par le code, sa physique est celle du
+modèle (une fois une fuite en L/min avec sa conversion, une fois une
+conductance en kg/s/Pa que le système d'unités refuse), et c'est le contrat
+qui fait loi pour l'usine de code, pas la prose de la demande.
+
+### 6.6 Le Tier 4 dans les décisions : les questions au commandant
+
+L'automatisation complète n'est pas souhaitable : à chaque relais, le
+commandant décide, et une usine peut poser une question avant de continuer.
+Le mécanisme est celui de l'autorisation d'une mise en service, généralisé
+(`slots/station/questions.ts`) :
+
+- **Une question de la station** (`station.ask`) : qui demande, de quel
+  genre (`open-code`, `replay`, `load-twin`, `ask`), la question, ses
+  options, ce qu'il faut pour décider (le contrat écrit, l'artefact signé,
+  la raison), et qui rappeler avec la réponse. Mother la dit et la garde
+  ouverte (`station://questions`).
+- **La réponse du Tier 4** (`station.answer`) : l'option choisie, qui,
+  comment (un clic, la voix, un script), une note, des amendements quand
+  l'option le permet (`amend` : le contrat amendé). Mother le dit ; la
+  station rappelle le demandeur (`factory.resume`), qui prend le pas retenu.
+  Ni `answer`, ni `questions_policy`, ni `factory.resume` ne sont au
+  catalogue de l'agent de nuit.
+- **La consigne permanente** (`station.questions_policy`) : chaque question
+  attend (`ask`), ou les questions d'un genre, ou toutes, reçoivent aussitôt
+  une option (`auto`). Réglée au poste de contrôle ; une question répondue
+  par consigne est gardée comme telle (`how: policy`).
+- **Où l'usine demande** : avant d'ouvrir l'usine de code sur le contrat
+  (options `open`, `amend`, `stop`), avant de rejouer la demande avec le
+  plugin accepté (`replay`, `stop`) ; le chargement dans le jumeau
+  (`load-twin`) est le troisième point, pas encore construit. Ce qu'une
+  réponse aura besoin de savoir est gardé sous un jeton avant que la
+  question soit posée : une consigne répond pendant la demande même.
+- **Une usine qui demande** (`task.ask`) : la question, ses options en mots
+  courts, pourquoi. Sous consigne la réponse revient dans l'appel et la
+  boucle continue ; sinon la tâche s'arrête en `waiting`, et à la réponse
+  l'usine relance la boucle avec la réponse dans les observations de la
+  tâche (`answers`), le manifeste de la boucle qui attendait gardé à côté.
+  La boucle repart de son premier pas : c'est le prix d'une question, dit
+  tel quel, et la raison de n'en poser que qui change ce qu'on va faire.
+- **Le poste de contrôle** (`dashboard/panel.html`) : le panneau des
+  questions, une option par bouton, le contexte déplié, la consigne
+  permanente en liste ; et **la réponse à la voix** par la reconnaissance
+  du navigateur (Web Speech API, français ou anglais, sans serveur) : la
+  transcription affichée, l'option reconnue par ses mots, une confirmation
+  avant l'envoi, la transcription gardée en note. Un outil `listen` du slot
+  `speech` (Whisper, Scribe) ferait la même chose hors navigateur ; noté,
+  pas construit.
+- **Les scripts d'exemple** : `handoff-example.ts` met chaque question au
+  clavier (vous êtes le commandant) ; `--auto` pose la consigne permanente.
+
+Onzième passage, sous consigne (`docs/exemples/2026-09-26-forge-11-haiku-handoff-auto/`) :
+la chaîne entière tenue (graphes 12 pas dont 10 refus du contrat : un type
+étranger, une conductance en kg/s/Pa que le système d'unités ne connaît pas,
+des formules sur des noms absents ; code 13 pas, 0 refus ; rejeu 4 pas), les
+deux questions posées et répondues par consigne. Les tests jouent le
+commandant au clavier (`tests/handoff.test.ts` : la chaîne répondue question
+par question, l'arrêt, la consigne, `task.ask` en attente puis relancée, et
+sous consigne répondue dans l'appel).
+
 ## 7. Le cache du prompt
 
 Le prompt d'un rôle (l'Observateur, une usine) est fixe : les mêmes octets
@@ -439,5 +536,5 @@ fait ; la conception est la même.
 | le cache du prompt côté Anthropic | construit ; inactif sous le seuil de Haiku 4.5 |
 | l'aiguillage vers les usines | à construire (section 4) |
 | l'usine de graphes, et la boucle écart puis correction | construite le 24 septembre (`usine-de-graphes.fr.md`, exemple complet dans `exemple-mise-en-service.fr.md`) |
-| l'usine de code et le plugin `generated` | construits : le slot `forge` (section 6.2), le sujet `code` sur lui (section 6.3), le contrat de capacité et l'acceptation par la forge (section 6.4), branche `forge` ; scriptés et testés sans clé ; passés sur Haiku, la chaîne tenue au troisième passage et le contrat tenu au quatrième (20 pas, 108 k jetons) ; le branchement automatique d'une capacité manquante de l'usine de graphes sur une tâche `code` reste à faire |
+| l'usine de code et le plugin `generated` | construits : le slot `forge` (6.2), le sujet `code` (6.3), le contrat et l'acceptation par la forge (6.4), le relais graphes vers code et retour sur la forge (6.5), les questions au commandant à chaque relais et `task.ask` (6.6), branche `forge` ; scriptés et testés sans clé ; sur Haiku la chaîne entière tient (passages 10 et 11) ; reste le chargement du plugin dans le jumeau sur la réponse du commandant (`load-twin`) |
 | le superviseur des contrats | construit la nuit du 25 septembre (`harness-refactoring.fr.md`, section 16) : un rôle sur le slot `reasoner`, un verdict typé gardé par code, l'Observateur renvoyé dans sa boucle, l'usine de graphes qui lit le verdict |

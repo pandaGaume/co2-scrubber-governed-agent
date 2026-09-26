@@ -119,6 +119,40 @@
                 "threshold": "le seuil d'écart de la tâche, en ppm",
                 "pass": "si l'écart est sous le seuil"
             }
+        },
+        "ask": {
+            "title": "Une question pour le commandant",
+            "description": "Un harnais ou une usine devant une décision qu'il ne doit pas prendre seul pose la question au commandant (Tier 4) : la question, ses options, ce qu'il faut pour décider (le contrat écrit, l'artefact signé, la raison), et qui rappeler avec la réponse. Mother la dit et la garde ouverte ; une consigne permanente (questions_policy) peut y répondre aussitôt.",
+            "properties": {
+                "taskId": "la tâche concernée",
+                "from": "qui demande",
+                "kind": "open-code, replay, load-twin, ask",
+                "question": "la question",
+                "options": "les options, id et libellé",
+                "context": "ce qu'il faut pour décider",
+                "resume": "le slot, l'outil et les arguments rappelés avec la réponse"
+            }
+        },
+        "answer": {
+            "title": "Le commandant répond",
+            "description": "La réponse du commandant à une question ouverte : l'option choisie, qui et comment (un clic, la voix, un script), une note, et ce qui a été amendé dans le contexte quand l'option le permet. Mother le dit ; le demandeur est rappelé avec la réponse. Au commandant ; jamais à l'agent.",
+            "properties": {
+                "questionId": "la question",
+                "choice": "l'id de l'option choisie",
+                "by": "qui répond",
+                "how": "click, voice ou script",
+                "note": "une note gardée avec la réponse",
+                "amendments": "ce que le commandant a changé"
+            }
+        },
+        "questions_policy": {
+            "title": "Les consignes permanentes sur les questions",
+            "description": "Réglées au poste de contrôle : chaque question attend le commandant (ask), ou les questions d'un genre, ou toutes, reçoivent aussitôt une option choisie (auto). Mother dit la consigne. Au commandant ; jamais à l'agent.",
+            "properties": {
+                "mode": "ask ou auto",
+                "kind": "un genre, ou tous quand absent",
+                "choice": "pour auto : l'id de l'option répondue, la première quand absent"
+            }
         }
     },
     "resources": {
@@ -137,6 +171,12 @@
         "station://mother": {
             "name": "Les phrases de Mother",
             "description": "Tout ce que Mother a dit, en anglais et en français, avec les données de chaque phrase ; chaque nouvelle phrase est poussée"
+        },
+        "station://questions": {
+            "description": "Les questions au commandant, ouvertes ou répondues, avec leurs options, leur contexte et la réponse."
+        },
+        "station://questions-policy": {
+            "description": "Les consignes permanentes : quelles questions attendent, lesquelles reçoivent aussitôt une réponse et laquelle."
         }
     },
     "phrases": {
@@ -263,6 +303,11 @@
         "mother.vitals.events": "{count} alertes des signes vitaux pendant l'essai.",
         "mother.aborts.none": "Aucun arrêt d'urgence.",
         "mother.candidate.rejected": "Simulateur {n}. {nodes} nœuds. Écart {rmse} ppm, au-dessus du seuil de {threshold}. Rejeté.",
-        "mother.candidate.accepted": "Simulateur {n}. {nodes} nœuds. Écart {rmse} ppm, sous le seuil de {threshold}. Accepté."
+        "mother.candidate.accepted": "Simulateur {n}. {nodes} nœuds. Écart {rmse} ppm, sous le seuil de {threshold}. Accepté.",
+        "mother.question.asked": "Question pour le commandant : {question} Options : {options}.",
+        "mother.question.answered": "Réponse enregistrée : {choice}, par {by}.",
+        "mother.question.auto": "Répondu par consigne permanente : {choice}. La question était : {question}",
+        "mother.questions.policy.auto": "Consigne permanente : les questions de {kind} reçoivent {choice}.",
+        "mother.questions.policy.ask": "Consigne levée : les questions de {kind} attendent le commandant."
     }
 }

@@ -37,7 +37,10 @@ npm run slots          # les slots seuls, contre un broker déjà lancé
 
 Les slots publiés : `scrubber` (la carte, ou son simulateur), `twin` (le
 jumeau de la cabine et le runtime : catalogue, documents, bacs à sable),
-`station` (Mother : registre, mises en service, journal), `factory`,
+`station` (Mother : registre, mises en service, journal ; les questions au
+commandant, `ask`, `answer`, `questions_policy`, `station://questions`),
+`factory` (`request`, `task`, `inventory` ; `resume`, rappelé par la station
+avec la réponse du commandant),
 `reasoner`, `agent`, `scenario`, `qr`, `speech`, `biomed`, `workspace`,
 `model`, `library`, `observer`, `screens`, `supervisor` (le superviseur des
 contrats : `review`, `review_request`, un verdict typé sur les faits d'une

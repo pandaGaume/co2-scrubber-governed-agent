@@ -29,6 +29,10 @@
         "inventory": {
             "title": "Qui est là",
             "description": "L'inventaire de l'installation, lu dans le registre de la station par le broker : chaque appareil avec son chemin ISA-95, ce qu'il est, ce qu'il mesure et dans quelle unité, ce qu'il accepte ; les volumes d'air (les lieux qui ont un capteur de CO2), les ouvertures entre eux (un appareil qui déclare relier deux lieux), quel appareil est en mise en service, et ce que le registre ne dit pas (le volume servi, mesuré ; l'échange par une ouverture, une hypothèse)."
+        },
+        "resume": {
+            "title": "La station rappelle avec la réponse du commandant",
+            "description": "Le pas qu'une question retenait est pris sur la réponse du commandant (station.answer, ou une consigne permanente) : l'usine de code ouverte sur le contrat (ou sur le contrat amendé), la demande rejouée sur la forge, une tâche en attente relancée avec la réponse dans ses observations. Appelé par la station ; jamais à l'agent."
         }
     },
     "resources": {

@@ -52,10 +52,18 @@ export class ScriptedCodeBuilder implements Provider {
         const refusal = String(state.features.lastRefusal ?? "");
         const after = `${String(state.features.phase)}:${String(state.features.lastCapability)}`;
         if (last && !last.result.ok) return decide("task.fail", { reason: (last.result.error ?? last.result.outcome).replace(/^(device refused|error):\s*/i, "") }, `${last.id} failed: nothing else to try`);
+        // The test's hook for the questions: asked once before anything, unless an answer is already in the task's observations.
+        const observed = (task.observations ?? {}) as { askFirst?: string; answers?: Array<{ choice: string }> };
+        if (observed.askFirst && !(observed.answers ?? []).length && after === "plan:") return decide("task.ask", { question: observed.askFirst, options: ["go", "stop"], why: "the test asks before writing" }, "a question for the commander first");
+        if (after === "plan:task.ask") {
+            const v = (valueOf(last) as { value?: { answered?: boolean; choice?: string } }).value ?? {};
+            if (v.answered && v.choice === "stop") return decide("task.fail", { reason: "the commander said stop" }, "stopped on the answer");
+        }
         // A refused write: the guard named the naming rule; the script corrects the type.
         if (/is not named under "Generated\."/.test(refusal)) return decide("forge.plugin_write", { plugin, files: leakFixture(LEAK_TYPE) as unknown as JsonValue }, "corrected: the type named under Generated.");
         switch (after) {
             case "plan:":
+            case "plan:task.ask":
                 return decide("forge.registry_search", { requiredOutputs: task.objective.required_outputs.map((o) => ({ quantity: o.quantity, ...(o.unit ? { unit: o.unit } : {}) })) }, "what the forge's catalogue produces for the required outputs");
             case "plan:forge.registry_search":
                 return decide("task.plan", { selected_nodes: [], missing_capabilities: task.objective.required_outputs.map((o) => ({ required_output: o.name, quantity: o.quantity, ...(o.unit ? { unit: o.unit } : {}), reason: "no node of the catalogue produces it: a leak out of a volume", topic: "code" })) }, "nothing produces it: the node is written");

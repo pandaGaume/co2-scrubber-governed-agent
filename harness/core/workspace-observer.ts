@@ -24,7 +24,7 @@ import type { CapabilityCall } from "./capabilities.js";
 import type { ReasoningState } from "./reasoning-state.js";
 import type { ContractReport } from "./contracts.js";
 
-export type Phase = "plan" | "build" | "done" | "failed";
+export type Phase = "plan" | "build" | "done" | "failed" | "waiting";
 
 export interface MissingCapability {
     required_output: string;

@@ -1,0 +1,66 @@
+{
+  "kind": "plugin",
+  "plugin": "leak-co2",
+  "taskId": "t-2026-09-26-0023",
+  "sha256": "6d3d8509260c2b9197149c45c9daefa00ef57fd676957b4eb3cf5db799c49b29",
+  "files": [
+    {
+      "path": "docs/leak-co2.md",
+      "sha256": "932b77b376f4a633176e325fc74e3e06bedb804f1caece3b19b7c36b5485feda"
+    },
+    {
+      "path": "src/index.ts",
+      "sha256": "653b8dc043c551b3c8451e51e6acafe00470bb78c906b03c614d872d01addc33"
+    },
+    {
+      "path": "src/leak-co2.node.ts",
+      "sha256": "8ede8a610b5fbcb1123d21e743cd54510e5f5821a099a551a36448e6ea4492a8"
+    },
+    {
+      "path": "src/leak-co2.test.ts",
+      "sha256": "91c541a8c76c5f160e3bacb2e595ffe6d2ea7944cf74297003d61dd152b30c58"
+    }
+  ],
+  "types": [
+    "Generated.Physics:leak-co2"
+  ],
+  "build": {
+    "id": "b0001-6d3d8509",
+    "at": "2026-09-26T08:46:19.466Z",
+    "ms": 853
+  },
+  "tests": {
+    "at": "2026-09-26T08:46:21.631Z",
+    "pass": 3,
+    "fail": 0,
+    "checks": [
+      {
+        "type": "Generated.Physics:leak-co2",
+        "ok": true,
+        "problems": []
+      }
+    ]
+  },
+  "acceptance": {
+    "at": "2026-09-26T08:46:24.040Z",
+    "ok": true,
+    "type": "Generated.Physics:leak-co2",
+    "static": [],
+    "behaviors": [
+      {
+        "behavior": "output(pressure_source=101325, pressure_sink=101000, density=1.2) == conductance * (101325 - 101000) / pressure_reference * 1.2",
+        "expected": 3.84900074019245e-14,
+        "actual": 3.84900074019245e-14,
+        "ok": true
+      },
+      {
+        "behavior": "output(unwired) == 0",
+        "expected": 0,
+        "actual": 3.84900074019245e-14,
+        "ok": true
+      }
+    ],
+    "ms": 8
+  },
+  "proposedAt": "2026-09-26T08:46:39.989Z"
+}

@@ -73,8 +73,43 @@ async function writeJson(broker: Broker, taskId: string, path: string, value: un
     return { ok: true, output: { outcome: "completed", value: r.output as JsonValue } };
 }
 
-export function taskCapabilities(broker: Broker, taskId: string, progress: Progress): LocalCapability[] {
+export const ASK_SCHEMA: JsonValue = {
+    type: "object",
+    properties: {
+        question: { type: "string", minLength: 1, description: "The question, as the commander will read it: what is at stake and what each option means." },
+        options: { type: "array", items: { type: "string" }, minItems: 2, description: "The options, short words the commander picks among (two at least)." },
+        why: { type: "string", description: "Why the task cannot decide alone: what the tools said, what is missing." },
+    },
+    required: ["question", "options"],
+    additionalProperties: false,
+};
+
+export function taskCapabilities(broker: Broker, taskId: string, progress: Progress, topic = "task"): LocalCapability[] {
     return [
+        {
+            // A question to the commander (Tier 4, 2026-09-26): the task waits for the answer, unless a standing order answers it at once; the answer comes back into the task's observations (answers) and the loop goes on from there.
+            id: "task.ask",
+            description: "Ask the commander before going on, when the task holds a decision that is not yours: the question, its options (short words), why. If a standing order answers at once, the answer is returned here and the work goes on; otherwise the task waits for the commander and resumes with the answer in its observations (answers), so ask only what changes what you will do.",
+            inputSchema: ASK_SCHEMA,
+            async execute(input: JsonValue): Promise<CapabilityResult> {
+                const q = input as { question: string; options: string[]; why?: string };
+                const r = await broker.call("station", "ask", {
+                    taskId,
+                    from: `factory:${topic}`,
+                    kind: "ask",
+                    question: q.question,
+                    options: q.options.map((o) => ({ id: String(o), label: String(o) })),
+                    context: { why: q.why ?? null, topic },
+                    resume: { slot: "factory", tool: "resume", args: { taskId, step: "answer" } },
+                });
+                if (!r.ok) return { ok: false, error: r.error ?? "the station did not take the question", output: { outcome: r.outcome } };
+                const asked = r.output as { questionId: string; status: string; answer?: { choice: string; by: string; note: string | null } | null };
+                if (asked.status === "auto" && asked.answer) return { ok: true, output: { outcome: "completed", value: { questionId: asked.questionId, answered: true, choice: asked.answer.choice, by: asked.answer.by, note: asked.answer.note } } };
+                progress.failure = `WAITING: question ${asked.questionId} for the commander: ${q.question}`;
+                progress.phase = "waiting";
+                return { ok: true, output: { outcome: "completed", value: { questionId: asked.questionId, answered: false, waiting: true } } };
+            },
+        },
         {
             id: "task.plan",
             description: "Submit the plan before building anything: the node types selected from the catalogue, and the required outputs no node produces (each with a reason and the topic that can make it). A plan the guard refuses comes back with its problems.",

@@ -60,7 +60,7 @@ export const CODE_TOOLS: ReadonlyArray<RegExp> = [
     /^physics\.units_(normalize|convert|compatible|validate_connection)$/,
     // No workshop tools: everything the topic reads is in the state (the template, the plugin's sources, the forge's answers); a model given workspace.read read state fields as files, eight steps in a row (the seventh passage).
     /^graph\.evaluate$/,
-    /^task\.(plan|done|fail)$/,
+    /^task\.(plan|done|fail|ask)$/,
 ];
 
 export const CODE_PROMPT = "harness/topics/code/prompt.md";

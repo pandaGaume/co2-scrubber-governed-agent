@@ -148,6 +148,11 @@ button.badge { font-family: var(--mono); cursor: pointer; }
    blinking thing on the page, and it blinks only while the link is up, so it
    is the link indicator and not decoration. */
 .mother-log { display: flex; flex-direction: column; gap: 7px; font-size: 11.5px; line-height: 1.45; }
+.questions-log { display: flex; flex-direction: column; gap: 7px; font-size: 11.5px; line-height: 1.45; }
+.questions-log .question { border-left: 2px solid currentColor; padding-left: 8px; display: flex; flex-direction: column; gap: 4px; }
+.questions-log pre { font-size: 10.5px; max-height: 220px; overflow: auto; margin: 0; }
+.questions-bar { display: flex; gap: 16px; flex-wrap: wrap; font-size: 11.5px; margin-bottom: 8px; }
+.questions-bar select { margin-left: 6px; }
 .mother-log .line { color: var(--teal-soft); text-wrap: pretty; }
 .mother-log .line .t { color: var(--muted-2); letter-spacing: 0.08em; margin-right: 7px; }
 .mother-log .line.warn { color: var(--amber); }

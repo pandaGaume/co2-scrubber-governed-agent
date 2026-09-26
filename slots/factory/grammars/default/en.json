@@ -31,6 +31,10 @@
         "inventory": {
             "title": "Who is there",
             "description": "The inventory of the installation, read from the station's register through the broker: every device with its ISA-95 path, what it is, what it measures and in which unit, what it accepts; the volumes of air (the places that hold a CO2 sensor), the openings between them (a device that declares it connects two places), which device is being commissioned, and what the register does not say (the served volume, measured; the exchange through an opening, a hypothesis)."
+        },
+        "resume": {
+            "title": "The station calls back with the commander's answer",
+            "description": "The step a question held is taken on the commander's answer (station.answer, or a standing order): the code factory opened on the contract (or on the contract amended), the request replayed on the forge, a waiting task started again with the answer in its observations. Called by the station; never the agent's."
         }
     },
     "resources": {

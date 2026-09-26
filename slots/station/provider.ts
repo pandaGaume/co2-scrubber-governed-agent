@@ -56,6 +56,7 @@ import { Broker } from "../../harness/lib/broker.js";
 import { checkProcedure, type PresenceRead, type ProblemKind, type ProcedureProblem } from "../../harness/topics/procedure/check.js";
 import { moduleOf, totalMinutes, type Procedure } from "../../harness/topics/procedure/procedure.js";
 import { buildReport, reportLines, type ProcedureReport, type StepRecord } from "../../harness/topics/procedure/report.js";
+import { DEFAULT_POLICY, questionProblems, standingOrder, type Question, type QuestionAnswer, type QuestionsPolicy, type Resume } from "./questions.js";
 import { descriptorProblems, levelsOf, needsCommissioning, type Device, type DeviceDescriptor } from "./registry.js";
 
 const SHA = { type: "string", pattern: "^[0-9a-f]{64}$" };
@@ -124,8 +125,14 @@ export interface StationState {
     devices: Record<string, Device>;
     commissionings: Commissioning[];
     mother: MotherLine[];
+    /** The questions to the commander (Tier 4), open or answered, and the standing orders that answer some of them (`questions.ts`). */
+    questions: Question[];
+    questionsPolicy: QuestionsPolicy;
 }
 
+export const QUESTIONS_URI = "station://questions";
+export const QUESTIONS_POLICY_URI = "station://questions-policy";
+export const META_QUESTION = "station/question";
 export const COMMISSIONINGS_URI = "station://commissionings";
 export const MOTHER_URI = "station://mother";
 export const META_COMMISSIONING = "station/commissioning";
@@ -150,10 +157,22 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
     let broker: Broker | null = null;
     /** Mother's own client of the broker: she reads the monitor and opens its sessions as the station, in the broker's trace. */
     const client = (): Broker => (broker ??= new Broker(httpBase, { name: "station", version: VERSION, locale: "en" }));
-    const state: StationState = { artifacts: {}, pushed: [], journal: [], proposals: [], devices: {}, commissionings: [], mother: [] };
+    const state: StationState = { artifacts: {}, pushed: [], journal: [], proposals: [], devices: {}, commissionings: [], mother: [], questions: [], questionsPolicy: { ...DEFAULT_POLICY, byKind: {} } };
     let notify: (uri: string, meta: Record<string, unknown>) => void = () => undefined;
 
     const announce = (c: Commissioning) => notify(COMMISSIONINGS_URI, { [META_COMMISSIONING]: c });
+
+    /** The asker called back with the answer, through the broker; what it answered, or why it could not, kept on the question. */
+    const resumeAsker = async (q: Question): Promise<void> => {
+        if (!q.resume) return;
+        try {
+            const r = await client().call(q.resume.slot, q.resume.tool, { ...q.resume.args, questionId: q.id, answer: q.answer as never });
+            q.resumed = r.ok ? ((r.output ?? { ok: true }) as never) : ({ error: r.error ?? r.outcome } as never);
+        } catch (e) {
+            q.resumed = { error: e instanceof Error ? e.message : String(e) } as never;
+        }
+        notify(QUESTIONS_URI, { [META_QUESTION]: q });
+    };
 
     /** Mother says one line: filled per language (a hole may itself be a phrase), kept, pushed, logged. */
     const say = (key: string, commissioning: Commissioning | null, params: (w: McpGrammar) => Record<string, string | number> = () => ({})) => {
@@ -473,6 +492,99 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                 },
             },
             {
+                // A question to the commander (Tier 4): kept, said by Mother, answered on the control post or by a standing order; on the answer the asker is called back.
+                name: "ask",
+                inputSchema: obj(
+                    {
+                        taskId: { type: "string" },
+                        from: { type: "string", description: "who asks: factory, graph-factory:<task>, the harness" },
+                        kind: { type: "string", description: "open-code, replay, load-twin, ask" },
+                        question: { type: "string" },
+                        options: { type: "array", items: { type: "object", properties: { id: { type: "string" }, label: { type: "string" } }, required: ["id", "label"] }, minItems: 2 },
+                        context: { type: "object", description: "what the commander needs to decide: the contract, the artifact, the reason" },
+                        resume: { type: "object", properties: { slot: { type: "string" }, tool: { type: "string" }, args: { type: "object" } }, required: ["slot", "tool"], description: "who to call back with the answer, and with what" },
+                    },
+                    ["from", "kind", "question", "options"],
+                ),
+                handle: async (args, s) => {
+                    const problems = questionProblems(args as never);
+                    if (problems.length) throw new Error(problems.join("; "));
+                    const q: Question = {
+                        id: `q${(s.questions.length + 1).toString().padStart(4, "0")}`,
+                        at: new Date().toISOString(),
+                        taskId: str(args.taskId) || null,
+                        from: str(args.from),
+                        kind: str(args.kind),
+                        question: str(args.question),
+                        options: (args.options as Array<{ id: string; label: string }>).map((o) => ({ id: String(o.id), label: String(o.label ?? o.id) })),
+                        context: (args.context ?? null) as never,
+                        resume: args.resume ? ({ slot: str((args.resume as Resume).slot), tool: str((args.resume as Resume).tool), args: (((args.resume as Resume).args ?? {}) as Record<string, never>) } as Resume) : null,
+                        status: "open",
+                        answer: null,
+                        resumed: null,
+                    };
+                    s.questions.push(q);
+                    const order = standingOrder(s.questionsPolicy, q.kind, q.options);
+                    if (order.mode === "auto") {
+                        // The standing order answers: said as such, and the asker called back at once.
+                        const choice = q.options.find((o) => o.id === order.choice)!;
+                        q.answer = { choice: choice.id, by: "standing order", at: new Date().toISOString(), note: null, how: "policy" };
+                        q.status = "auto";
+                        say("mother.question.auto", null, () => ({ question: q.question, choice: choice.label }));
+                        notify(QUESTIONS_URI, { [META_QUESTION]: q });
+                        await resumeAsker(q);
+                        return { questionId: q.id, status: q.status, answer: q.answer, resumed: q.resumed };
+                    }
+                    say("mother.question.asked", null, () => ({ question: q.question, options: q.options.map((o) => o.label).join(" / ") }));
+                    notify(QUESTIONS_URI, { [META_QUESTION]: q });
+                    return { questionId: q.id, status: q.status };
+                },
+            },
+            {
+                // The commander's answer (Tier 4): a choice among the options, who and how; then the asker is called back. Never the agent's.
+                name: "answer",
+                inputSchema: obj(
+                    {
+                        questionId: { type: "string" },
+                        choice: { type: "string", description: "the id of the option chosen" },
+                        by: { type: "string", description: "who answers: commander" },
+                        how: { type: "string", enum: ["click", "voice", "script"], description: "how the answer came" },
+                        note: { type: "string" },
+                        amendments: { type: "object", description: "what the commander changed in the context (a contract amended), when the option allows it" },
+                    },
+                    ["questionId", "choice", "by"],
+                ),
+                handle: async ({ questionId, choice, by, how, note, amendments }, s) => {
+                    const q = s.questions.find((x) => x.id === String(questionId));
+                    if (!q) throw new Error(`no question ${String(questionId)}`);
+                    if (q.status !== "open") throw new Error(`question ${q.id} is ${q.status}: nothing to answer`);
+                    const option = q.options.find((o) => o.id === String(choice));
+                    if (!option) throw new Error(`"${String(choice)}" is not an option of question ${q.id} (${q.options.map((o) => o.id).join(", ")})`);
+                    q.answer = { choice: option.id, by: String(by), at: new Date().toISOString(), note: str(note) || null, how: (how === "voice" || how === "script" ? how : "click") as QuestionAnswer["how"], ...(amendments && typeof amendments === "object" ? { amendments: amendments as never } : {}) };
+                    q.status = "answered";
+                    say("mother.question.answered", null, () => ({ choice: option.label, by: String(by) }));
+                    notify(QUESTIONS_URI, { [META_QUESTION]: q });
+                    await resumeAsker(q);
+                    return { questionId: q.id, status: q.status, answer: q.answer, resumed: q.resumed };
+                },
+            },
+            {
+                // The standing orders (Tier 4, on the control post): every question waits, or some kinds are answered by a choice set here.
+                name: "questions_policy",
+                inputSchema: obj({ mode: { type: "string", enum: ["ask", "auto"] }, kind: { type: "string", description: "one kind only; every kind when absent" }, choice: { type: "string", description: "for auto: the option id answered; the first option when absent" } }),
+                handle: ({ mode, kind, choice }, s) => {
+                    if (mode !== "ask" && mode !== "auto") throw new Error('mode is "ask" or "auto"');
+                    if (kind) s.questionsPolicy.byKind[String(kind)] = { mode, ...(choice ? { choice: String(choice) } : {}) };
+                    else {
+                        s.questionsPolicy.mode = mode;
+                        s.questionsPolicy.byKind = choice ? { "*": { mode, choice: String(choice) } } : {};
+                    }
+                    say(mode === "auto" ? "mother.questions.policy.auto" : "mother.questions.policy.ask", null, () => ({ kind: kind ? String(kind) : "every kind", choice: choice ? String(choice) : "the first option" }));
+                    notify(QUESTIONS_POLICY_URI, { policy: s.questionsPolicy as never });
+                    return { policy: s.questionsPolicy };
+                },
+            },
+            {
                 name: "procedure_run",
                 inputSchema: obj(
                     {
@@ -562,6 +674,8 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
             },
         ],
         resources: [
+            { uri: QUESTIONS_URI, read: (s) => s.questions },
+            { uri: QUESTIONS_POLICY_URI, read: (s) => s.questionsPolicy },
             { uri: "station://proposals", read: (s) => s.proposals },
             { uri: "station://artifacts", name: "Registered artifacts", description: "sha256 -> registration", read: (s) => s.artifacts },
             { uri: "station://registry", read: (s) => Object.values(s.devices) },

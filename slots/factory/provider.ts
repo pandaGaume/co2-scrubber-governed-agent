@@ -30,7 +30,7 @@ import { ScriptedBuilder } from "../../harness/scripted/onnx.js";
 import { ScriptedProcedureBuilder } from "../../harness/scripted/procedure.js";
 import { ScriptedGraphBuilder } from "../../harness/scripted/graph.js";
 import { ScriptedCodeBuilder } from "../../harness/scripted/code.js";
-import { codeTaskRequest, handoffDepthOf, MAX_HANDOFF_DEPTH, missingForCode, replayRequest, type GeneratedType } from "./handoff.js";
+import { codeTaskRequest, handoffDepthOf, MAX_HANDOFF_DEPTH, missingForCode, openCodeQuestion, replayQuestion, replayRequest, type GeneratedType, type MissingForCode } from "./handoff.js";
 import type { Plan } from "../../harness/core/workspace-observer.js";
 import { ReasonerProvider } from "../../harness/providers/reasoner.js";
 import { supervise, SUPERVISOR_PROMPT } from "../../harness/supervisor/supervisor.js";
@@ -63,8 +63,12 @@ export interface TaskRun {
     builder: string;
     lastStage: string | null;
     ended: TaskState | null;
-    /** The hand-off this task opened (a graph task short of a node): the code task, then the replay of the request on the forge; or the task it was opened by. */
-    handoff?: { codeTask?: string; replayTask?: string; parent?: string; reason?: string };
+    /** The hand-off this task opened (a graph task short of a node): the question asked, the code task, then the replay of the request on the forge; or the task it was opened by. */
+    handoff?: { question?: string; codeTask?: string; replayTask?: string; parent?: string; reason?: string; stopped?: string };
+    /** What waits for the commander's answer: the step to take and what it needs (kept in memory: a restart loses it, and says so). */
+    pending?: Record<string, { step: string; missing?: MissingForCode; generated?: GeneratedType[]; codeTask?: string }>;
+    /** The question a task.ask opened, while the task waits. */
+    waiting?: string;
 }
 
 export interface FactoryState {
@@ -143,6 +147,28 @@ const taskOf = (taskId: string): TaskFile => JSON.parse(readFileSync(path.join(t
 function handOff(httpBase: string, taskId: string, topic: Topic, builder: BuilderChoice, ended: TaskState, s: FactoryState, log: (line: string) => void, announce: (taskId: string, manifest?: Readonly<Record<string, unknown>>) => void, create: (args: Record<string, unknown>) => { taskId: string; task: TaskFile; topic: Topic }): void {
     const run = s.runs[taskId];
     const task = taskOf(taskId).task;
+    const ask = async (question: Record<string, unknown>): Promise<string | null> => {
+        const broker = new Broker(httpBase, { name: "factory", version: VERSION, locale: "en" });
+        try {
+            const r = await broker.call("station", "ask", question);
+            if (!r.ok) {
+                log(`[factory] task ${taskId}: the station did not take the question: ${r.error ?? r.outcome}`);
+                return null;
+            }
+            return (r.output as { questionId: string }).questionId;
+        } finally {
+            await broker.close();
+        }
+    };
+    if (ended === "waiting") {
+        // A task.ask: the question is on the station; the answer comes back through `resume` (step "answer").
+        const manifest = JSON.parse(readFileSync(path.join(taskDir(taskId), "manifest.json"), "utf8")) as { ended?: string };
+        run.waiting = /question (q\d+)/.exec(manifest.ended ?? "")?.[1] ?? "?";
+        run.pending = { ...(run.pending ?? {}), [run.waiting]: { step: "answer" } };
+        log(`[factory] task ${taskId}: waiting for the commander (question ${run.waiting})`);
+        announce(taskId);
+        return;
+    }
     if (topic === "graph" && ended !== "proposed") {
         const planFile = path.join(taskDir(taskId), "plan.json");
         const plan = existsSync(planFile) ? (JSON.parse(readFileSync(planFile, "utf8")) as Plan) : null;
@@ -153,32 +179,100 @@ function handOff(httpBase: string, taskId: string, topic: Topic, builder: Builde
             log(`[factory] task ${taskId}: ${run.handoff.reason}`);
             return;
         }
-        const code = create(codeTaskRequest(taskId, task, missing, builder === "scripted" ? "scripted" : "reasoner"));
-        run.handoff = { ...(run.handoff ?? {}), codeTask: code.taskId, reason: `"${missing.required_output}" is missing: ${missing.reason}` };
-        log(`[factory] task ${taskId}: "${missing.required_output}" is missing for the code factory: task ${code.taskId} opened on its contract`);
-        const codeRun = launch(httpBase, code.taskId, code.topic, builder, s, log, announce, create);
-        codeRun.handoff = { parent: taskId };
-        announce(taskId);
+        // The commander decides whether the code factory is opened on the contract the graph factory wrote; the factory waits for the answer.
+        // What the answer will need is kept under a token before the question is asked: a standing order answers during the asking.
+        const token = `h-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+        run.pending = { ...(run.pending ?? {}), [token]: { step: "open-code", missing } };
+        run.handoff = { ...(run.handoff ?? {}), reason: `"${missing.required_output}" is missing: ${missing.reason}` };
+        void ask(openCodeQuestion(taskId, missing, token)).then((questionId) => {
+            if (!questionId) return;
+            run.handoff = { ...(run.handoff ?? {}), question: questionId };
+            log(`[factory] task ${taskId}: "${missing.required_output}" is missing for the code factory: question ${questionId} to the commander`);
+            announce(taskId);
+        });
         return;
     }
     if (topic === "code") {
         const parentId = run.handoff?.parent;
         if (!parentId || ended !== "proposed") return;
         const parentRun = s.runs[parentId];
-        const parent = taskOf(parentId).task;
         // The plugin the forge signed: its types, from the artifact the task handed over.
         const artifacts = (JSON.parse(readFileSync(path.join(taskDir(taskId), "manifest.json"), "utf8")) as { artifacts?: Array<{ kind: string; path: string }> }).artifacts ?? [];
         const plugin = artifacts.find((a) => a.kind === "plugin");
         if (!plugin) return;
-        const artifact = JSON.parse(readFileSync(path.join(taskDir(taskId), ...plugin.path.split("/")), "utf8")) as { plugin: string; sha256: string; types: string[] };
+        const artifact = JSON.parse(readFileSync(path.join(taskDir(taskId), ...plugin.path.split("/")), "utf8")) as { plugin: string; sha256: string; types: string[]; acceptance?: unknown };
         const generated: GeneratedType[] = artifact.types.map((type) => ({ type, plugin: artifact.plugin, sha256: artifact.sha256, task: taskId }));
-        const data = (parent.data ?? []).map((d) => ({ file: d.file, text: readFileSync(path.join(taskDir(parentId), ...d.file.split("/")), "utf8"), ...(d.columns ? { columns: d.columns } : {}) }));
-        const replay = create(replayRequest(parentId, parent, taskId, generated, data, builder === "scripted" ? "scripted" : "reasoner"));
-        if (parentRun) parentRun.handoff = { ...(parentRun.handoff ?? {}), replayTask: replay.taskId };
-        log(`[factory] task ${taskId} proposed ${generated.map((g) => g.type).join(", ")}: the request of ${parentId} replayed on the forge as task ${replay.taskId}`);
-        launch(httpBase, replay.taskId, replay.topic, builder, s, log, announce, create);
-        announce(parentId);
+        if (!parentRun) return;
+        const token = `h-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+        parentRun.pending = { ...(parentRun.pending ?? {}), [token]: { step: "replay", generated, codeTask: taskId } };
+        void ask(replayQuestion(parentId, taskId, generated, artifact.acceptance ?? null, token)).then((questionId) => {
+            if (!questionId) return;
+            parentRun.handoff = { ...(parentRun.handoff ?? {}), question: questionId };
+            log(`[factory] task ${taskId} proposed ${generated.map((g) => g.type).join(", ")}: question ${questionId} to the commander before ${parentId} is replayed`);
+            announce(parentId);
+        });
     }
+}
+
+/**
+ * The commander answered (`station.answer`, or a standing order): the step the question held is taken, or not. Called back by the station
+ * with the question id and the answer; a step the factory no longer holds (a restart) is said so.
+ */
+function resumeOn(httpBase: string, taskId: string, questionId: string, token: string | null, answer: { choice: string; by: string; note: string | null; amendments?: { contract?: unknown } }, s: FactoryState, log: (line: string) => void, announce: (taskId: string, manifest?: Readonly<Record<string, unknown>>) => void, create: (args: Record<string, unknown>) => { taskId: string; task: TaskFile; topic: Topic }): Record<string, unknown> {
+    const run = s.runs[taskId];
+    const key = token ?? questionId;
+    const pending = run?.pending?.[key];
+    if (!run || !pending) throw new Error(`task ${taskId} holds nothing for question ${questionId} (a restart of the factory loses what waited; ask the request again)`);
+    delete run.pending![key];
+    const builder: BuilderChoice = run.builder.startsWith("scripted") ? "scripted" : "reasoner";
+    const task = taskOf(taskId).task;
+    if (pending.step === "open-code") {
+        const missing = pending.missing!;
+        if (answer.choice === "stop") {
+            run.handoff = { ...(run.handoff ?? {}), stopped: `the commander did not open the code factory on "${missing.required_output}"${answer.note ? `: ${answer.note}` : ""}` };
+            announce(taskId);
+            return { taskId, step: pending.step, taken: false };
+        }
+        const contract = answer.choice === "amend" && answer.amendments?.contract && typeof answer.amendments.contract === "object" ? (answer.amendments.contract as MissingForCode["contract"]) : missing.contract;
+        const code = create(codeTaskRequest(taskId, task, { ...missing, contract }, builder));
+        run.handoff = { ...(run.handoff ?? {}), codeTask: code.taskId };
+        log(`[factory] task ${taskId}: the commander opened the code factory on "${missing.required_output}"${answer.choice === "amend" ? " (contract amended)" : ""}: task ${code.taskId}`);
+        const codeRun = launch(httpBase, code.taskId, code.topic, builder, s, log, announce, create);
+        codeRun.handoff = { parent: taskId };
+        announce(taskId);
+        return { taskId, step: pending.step, taken: true, codeTask: code.taskId };
+    }
+    if (pending.step === "replay") {
+        if (answer.choice === "stop") {
+            run.handoff = { ...(run.handoff ?? {}), stopped: `the commander did not replay the request${answer.note ? `: ${answer.note}` : ""}` };
+            announce(taskId);
+            return { taskId, step: pending.step, taken: false };
+        }
+        const generated = pending.generated!;
+        const data = (task.data ?? []).map((d) => ({ file: d.file, text: readFileSync(path.join(taskDir(taskId), ...d.file.split("/")), "utf8"), ...(d.columns ? { columns: d.columns } : {}) }));
+        const replay = create(replayRequest(taskId, task, pending.codeTask!, generated, data, builder));
+        run.handoff = { ...(run.handoff ?? {}), replayTask: replay.taskId };
+        log(`[factory] task ${taskId}: the commander replayed the request on the forge with ${generated.map((g) => g.type).join(", ")}: task ${replay.taskId}`);
+        launch(httpBase, replay.taskId, replay.topic, builder, s, log, announce, create);
+        announce(taskId);
+        return { taskId, step: pending.step, taken: true, replayTask: replay.taskId };
+    }
+    if (pending.step === "answer") {
+        // The answer into the task's observations, the manifest of the run that waited kept, the loop started again: it reads the answer in its state.
+        const file = path.join(taskDir(taskId), "task.json");
+        const whole = JSON.parse(readFileSync(file, "utf8")) as TaskFile;
+        const answers = Array.isArray(whole.task.observations.answers) ? (whole.task.observations.answers as unknown[]) : [];
+        whole.task.observations = { ...whole.task.observations, answers: [...answers, { questionId, choice: answer.choice, by: answer.by, note: answer.note, at: new Date().toISOString() }] };
+        writeFileSync(file, JSON.stringify(whole, null, 2) + "\n");
+        const manifestFile = path.join(taskDir(taskId), "manifest.json");
+        if (existsSync(manifestFile)) writeFileSync(path.join(taskDir(taskId), `manifest.waiting-${questionId}.json`), readFileSync(manifestFile));
+        delete run.waiting;
+        log(`[factory] task ${taskId}: the commander answered ${questionId} (${answer.choice}): the loop goes on`);
+        const again = launch(httpBase, taskId, topicFor(whole.task), builder, s, log, announce, create);
+        again.handoff = run.handoff;
+        return { taskId, step: pending.step, taken: true, choice: answer.choice };
+    }
+    throw new Error(`task ${taskId}: unknown step "${pending.step}" for question ${questionId}`);
 }
 
 /** Starts the loop on a task, in this process, on the factory's own client of the broker; the manifest carries the outcome, and `announce` tells the readers of the task list as it goes. */
@@ -345,6 +439,12 @@ export function factorySlot(wsBase: string, log: (line: string) => void): Publis
             name: "task",
             inputSchema: obj({ taskId: { type: "string" } }, ["taskId"]),
             handle: (args, s) => taskAnswer(checkTaskId(args.taskId), s),
+        },
+        {
+            // The station calls back with the commander's answer (Tier 4): the step the question held is taken. Never the agent's.
+            name: "resume",
+            inputSchema: obj({ taskId: { type: "string" }, step: { type: "string" }, token: { type: "string" }, questionId: { type: "string" }, answer: { type: "object" } }, ["taskId", "questionId", "answer"]),
+            handle: (args, s) => resumeOn(httpBase, checkTaskId(args.taskId), String(args.questionId), typeof args.token === "string" ? args.token : null, args.answer as never, s, log, (id, manifest) => announce(id, manifest), (a) => createTask(a, s, log)),
         },
         {
             // Who is there: Mother's register, read through the broker as the factory reads everything, and what can be told from it.

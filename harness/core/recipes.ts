@@ -29,7 +29,9 @@ export interface TaskSignature {
 export function taskSignature(task: TaskFile["task"], topic: Topic): TaskSignature {
     const outputs = task.objective.required_outputs.map((o) => ({ quantity: o.quantity, unit: o.unit ?? null })).sort((a, b) => `${a.quantity}/${a.unit}`.localeCompare(`${b.quantity}/${b.unit}`));
     const constraints = Object.keys(task.objective.constraints ?? {}).sort();
-    const id = createHash("sha256").update(JSON.stringify({ topic, outputs, constraints })).digest("hex").slice(0, 12);
+    // A request replayed with generated types in the catalogue is another situation than the same request without them (2026-09-26): a plan learned short of the node must not replay once the node exists, nor the reverse.
+    const generated = (Array.isArray((task.observations as { generated?: unknown } | undefined)?.generated) ? ((task.observations as { generated: Array<{ type?: unknown }> }).generated ?? []) : []).map((g) => String(g?.type ?? "")).filter(Boolean).sort();
+    const id = createHash("sha256").update(JSON.stringify({ topic, outputs, constraints, ...(generated.length ? { generated } : {}) })).digest("hex").slice(0, 12);
     return { topic, outputs, constraints, id };
 }
 

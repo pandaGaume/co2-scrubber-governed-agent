@@ -97,6 +97,40 @@
                 "threshold": "the task's residual threshold, ppm",
                 "pass": "whether the residual is under the threshold"
             }
+        },
+        "ask": {
+            "title": "A question for the commander",
+            "description": "A harness or a factory at a decision it must not take alone asks the commander (Tier 4): the question, its options, what the commander needs to decide (the contract written, the artifact signed, the reason), and who to call back with the answer. Mother says it and keeps it open; a standing order (questions_policy) may answer it at once.",
+            "properties": {
+                "taskId": "the task the question is about",
+                "from": "who asks",
+                "kind": "open-code, replay, load-twin, ask",
+                "question": "the question",
+                "options": "the options, id and label",
+                "context": "what is needed to decide",
+                "resume": "the slot, tool and arguments called back with the answer"
+            }
+        },
+        "answer": {
+            "title": "The commander answers",
+            "description": "The commander's answer to an open question: the option chosen, who and how (a click, a voice, a script), a note, and what was amended in the context when the option allows it. Mother says it; the asker is called back with the answer. The commander's; never the agent's.",
+            "properties": {
+                "questionId": "the question",
+                "choice": "the id of the option chosen",
+                "by": "who answers",
+                "how": "click, voice or script",
+                "note": "a note kept with the answer",
+                "amendments": "what the commander changed"
+            }
+        },
+        "questions_policy": {
+            "title": "The standing orders on questions",
+            "description": "Set on the control post: every question waits for the commander (ask), or questions of a kind, or all of them, are answered at once with a chosen option (auto). Mother says the order. The commander's; never the agent's.",
+            "properties": {
+                "mode": "ask or auto",
+                "kind": "one kind, or every kind when absent",
+                "choice": "for auto: the option id answered, the first option when absent"
+            }
         }
     },
     "resources": {
@@ -115,6 +149,12 @@
         "station://mother": {
             "name": "Mother's lines",
             "description": "Everything Mother said, in English and French, with the data that filled each line; each new line is pushed"
+        },
+        "station://questions": {
+            "description": "The questions to the commander, open or answered, with their options, their context and the answer."
+        },
+        "station://questions-policy": {
+            "description": "The standing orders: which questions wait, which are answered at once and with what."
         }
     },
     "phrases": {
@@ -241,6 +281,11 @@
         "mother.vitals.events": "{count} vital-sign alerts during the test.",
         "mother.aborts.none": "No emergency stop.",
         "mother.candidate.rejected": "Simulator {n}. {nodes} nodes. Residual {rmse} ppm, above the threshold of {threshold}. Rejected.",
-        "mother.candidate.accepted": "Simulator {n}. {nodes} nodes. Residual {rmse} ppm, under the threshold of {threshold}. Accepted."
+        "mother.candidate.accepted": "Simulator {n}. {nodes} nodes. Residual {rmse} ppm, under the threshold of {threshold}. Accepted.",
+        "mother.question.asked": "Question for the commander: {question} Options: {options}.",
+        "mother.question.answered": "Answer recorded: {choice}, by {by}.",
+        "mother.question.auto": "Answered by standing order: {choice}. The question was: {question}",
+        "mother.questions.policy.auto": "Standing order: questions of {kind} are answered with {choice}.",
+        "mother.questions.policy.ask": "Standing order lifted: questions of {kind} wait for the commander."
     }
 }

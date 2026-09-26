@@ -39,7 +39,7 @@ export interface TaskFile {
 }
 
 /** Where a task stands; `manifest.json` carries it, `factory.task` reads it. */
-export type TaskState = "created" | "running" | "done" | "proposed" | "accepted" | "rejected" | "failed";
+export type TaskState = "created" | "running" | "waiting" | "done" | "proposed" | "accepted" | "rejected" | "failed";
 
 /**
  * The residual thresholds of a task (2026-09-25, unambiguous): `rmsePpmMax`

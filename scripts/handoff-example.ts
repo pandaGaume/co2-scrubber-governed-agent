@@ -7,7 +7,8 @@
  * the contract on it; the request is replayed on the forge's catalogue.
  * Three tasks, watched until they end, their journals and traces kept.
  *
- *   node dist/scripts/handoff-example.js --out <dir>
+ *   node dist/scripts/handoff-example.js --out <dir>          you are the commander: each question is put to you at the keyboard
+ *   node dist/scripts/handoff-example.js --out <dir> --auto   a standing order answers every question with its first option
  *
  * The request is written here whole. The telemetry is the stand-in world's
  * (the two-zone habitat during a decay test). Nothing in the request names
@@ -15,6 +16,8 @@
  * passage measures.
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import * as readline from "node:readline/promises";
+import { stdin, stdout } from "node:process";
 import * as path from "node:path";
 import { fromRoot, isMain, relativeToRoot } from "../lib/paths.js";
 import { startAll } from "../slots/run-all.js";
@@ -36,7 +39,7 @@ interface Step {
 interface Status {
     state: string;
     manifest?: { steps?: Step[]; ended?: string; artifacts?: Array<{ kind: string; path: string; sha256: string }> } | null;
-    run?: { builder?: string; ended?: string | null; handoff?: { codeTask?: string; replayTask?: string; parent?: string; reason?: string } } | null;
+    run?: { builder?: string; ended?: string | null; handoff?: { question?: string; codeTask?: string; replayTask?: string; parent?: string; reason?: string; stopped?: string } } | null;
 }
 
 async function main(): Promise<void> {
@@ -64,7 +67,29 @@ async function main(): Promise<void> {
         console.log(s);
         lines.push(s);
     };
+    type Question = { id: string; taskId: string | null; kind: string; status: string; question: string; options: Array<{ id: string; label: string }>; context: unknown };
+    const readQuestions = async (): Promise<Question[]> => JSON.parse((await (await operator.session("station")).request<{ contents: Array<{ text: string }> }>("resources/read", { uri: "station://questions" })).contents[0].text) as Question[];
+    const answered = new Set<string>();
+    const rl = args.includes("--auto") ? null : readline.createInterface({ input: stdin, output: stdout });
+    /** The open questions, put to the commander at the keyboard; each answer is station.answer, signed commander. */
+    const commander = async (): Promise<void> => {
+        for (const q of (await readQuestions()).filter((x) => x.status === "open" && !answered.has(x.id))) {
+            answered.add(q.id);
+            say(`question ${q.id} (${q.kind}, task ${q.taskId ?? "?"}): ${q.question}`);
+            console.log(`context:\n${JSON.stringify(q.context, null, 2)}`);
+            for (const o of q.options) console.log(`  ${o.id}: ${o.label}`);
+            let choice = "";
+            while (!q.options.some((o) => o.id === choice)) choice = (await rl!.question(`your answer (${q.options.map((o) => o.id).join(" / ")}): `)).trim();
+            const note = (await rl!.question("a note, or nothing: ")).trim();
+            await call("station", "answer", { questionId: q.id, choice, by: "commander", how: "script", ...(note ? { note } : {}) });
+            say(`answered ${q.id}: ${choice}${note ? ` (${note})` : ""}`);
+        }
+    };
     try {
+        if (args.includes("--auto")) {
+            await call("station", "questions_policy", { mode: "auto" });
+            say("standing order: every question answered with its first option");
+        }
         const devices = (JSON.parse(readFileSync(fromRoot("specs", "commissioning-devices.json"), "utf8")) as { devices: unknown[] }).devices;
         const persons = [
             { id: "fe-1", callsign: "FE-1", name: "A. Pelletier", module: "lab", activity: "light_work" },
@@ -96,6 +121,7 @@ async function main(): Promise<void> {
             let seen = 0;
             do {
                 await new Promise((r) => setTimeout(r, 3000));
+                if (rl) await commander();
                 status = await call<Status>("factory", "task", { taskId });
                 const steps = status.manifest?.steps ?? [];
                 for (const s of steps.slice(seen)) say(`  ${label} step ${s.n}: ${s.capability ?? "?"} -> ${s.outcome}${s.reason ? ` (${s.reason.slice(0, 200)})` : ""}`);
@@ -120,13 +146,32 @@ async function main(): Promise<void> {
         const planFile = path.join(taskDir(req.taskId), "plan.json");
         const plan = existsSync(planFile) ? (JSON.parse(readFileSync(planFile, "utf8")) as { missing_capabilities?: Array<{ required_output: string; contract?: unknown }> }) : null;
         say(`graph task ${req.taskId}: ${parent.state}${parent.manifest?.ended ? ` (${parent.manifest.ended})` : ""}; missing: ${(plan?.missing_capabilities ?? []).map((m) => `${m.required_output}${m.contract ? " with a contract" : " without a contract"}`).join(", ") || "none"}`);
-        const codeId = parent.run?.handoff?.codeTask ?? null;
+        // The commander decides whether the code factory is opened; the factory waits for the answer.
+        const until = async (read: () => Promise<string | null | undefined>, what: string): Promise<string | null> => {
+            const t1 = Date.now();
+            for (;;) {
+                if (rl) await commander();
+                const v = await read();
+                if (v) return v;
+                if (Date.now() - t1 > 10 * 60000) {
+                    say(`${what}: not decided in ten minutes`);
+                    return null;
+                }
+                await new Promise((r) => setTimeout(r, 2000));
+            }
+        };
+        const decided = (id: string) => call<Status>("factory", "task", { taskId: id }).then((s) => s.run?.handoff ?? {});
+        const codeId = await until(async () => {
+            const h = await decided(req.taskId);
+            return h.codeTask ?? (h.stopped ? "stopped" : null);
+        }, "the code factory");
+        if (codeId === "stopped") say(`the commander stopped the hand-off: ${(await decided(req.taskId)).stopped}`);
         let code: Status | null = null;
         let codeTrace: string | null = null;
         let replayId: string | null = null;
         let replay: Status | null = null;
         let replayTrace: string | null = null;
-        if (codeId) {
+        if (codeId && codeId !== "stopped") {
             say(`code task ${codeId} opened on the contract`);
             code = await watch(codeId, "code");
             codeTrace = keep(codeId, "02-code-factory", CODE_PROMPT);
@@ -149,7 +194,14 @@ async function main(): Promise<void> {
                 };
                 walk(forgeDir, "");
             }
-            replayId = (await call<Status>("factory", "task", { taskId: req.taskId })).run?.handoff?.replayTask ?? null;
+            replayId = code.state === "proposed" ? await until(async () => {
+                const h = await decided(req.taskId);
+                return h.replayTask ?? (h.stopped ? "stopped" : null);
+            }, "the replay") : null;
+            if (replayId === "stopped") {
+                say(`the commander stopped the hand-off: ${(await decided(req.taskId)).stopped}`);
+                replayId = null;
+            }
             if (replayId) {
                 say(`graph task ${replayId} replayed on the forge`);
                 replay = await watch(replayId, "replay");
@@ -162,7 +214,7 @@ async function main(): Promise<void> {
         const journal = [
             `# The hand-off on the model, ${stamp}`,
             "",
-            `- seconds: ${seconds}`,
+            `- seconds: ${seconds}; the commander: ${rl ? "at the keyboard" : "a standing order (--auto)"}`,
             `- the contract written by the graph factory's model: ${JSON.stringify((plan?.missing_capabilities ?? [])[0]?.contract ?? null, null, 2)}`,
             "",
             "| task | id | state | steps | refusals | tokens in/out | trace |",
@@ -185,6 +237,7 @@ async function main(): Promise<void> {
         writeFileSync(path.join(outDir, "journal.md"), journal);
         console.log(`journal: ${relativeToRoot(path.join(outDir, "journal.md"))}`);
     } finally {
+        rl?.close();
         await operator.close();
         await started.stop();
     }

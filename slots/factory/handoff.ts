@@ -41,6 +41,39 @@ export interface GeneratedType {
     task: string;
 }
 
+/** The question to the commander before the code factory is opened: the gap, the contract the graph factory wrote, the options. */
+export function openCodeQuestion(parentId: string, missing: MissingForCode, token: string): Record<string, unknown> {
+    return {
+        taskId: parentId,
+        from: `graph-factory:${parentId}`,
+        kind: "open-code",
+        question: `The graph factory found no node of the catalogue for "${missing.required_output}" (${missing.quantity}${missing.unit ? `, ${missing.unit}` : ""}): ${missing.reason}. It wrote the contract the node must satisfy. Open the code factory on it?`,
+        options: [
+            { id: "open", label: "open the code factory on this contract" },
+            { id: "amend", label: "open it on the contract as amended (amendments.contract)" },
+            { id: "stop", label: "do not: the twin stays short of it" },
+        ],
+        context: { missing: { required_output: missing.required_output, quantity: missing.quantity, unit: missing.unit ?? null, reason: missing.reason }, contract: missing.contract },
+        resume: { slot: "factory", tool: "resume", args: { taskId: parentId, step: "open-code", token } },
+    };
+}
+
+/** The question before the request is replayed: the plugin the forge accepted, the types it brings. */
+export function replayQuestion(parentId: string, codeTaskId: string, generated: GeneratedType[], acceptance: unknown, token: string): Record<string, unknown> {
+    return {
+        taskId: parentId,
+        from: `code-factory:${codeTaskId}`,
+        kind: "replay",
+        question: `The code factory proposed ${generated.map((g) => `"${g.type}"`).join(", ")} (task ${codeTaskId}), compiled, tested and accepted by the forge against the contract. Replay the twin request of ${parentId} on the forge's catalogue with it?`,
+        options: [
+            { id: "replay", label: "replay the request with the generated node" },
+            { id: "stop", label: "do not: the plugin stays in the forge" },
+        ],
+        context: { generated, acceptance },
+        resume: { slot: "factory", tool: "resume", args: { taskId: parentId, step: "replay", token } },
+    };
+}
+
 /** The request of the code task for one missing capability: the output, the contract, and where it comes from. */
 export function codeTaskRequest(parentId: string, parent: TaskFile["task"], missing: MissingForCode, builder: "reasoner" | "scripted"): Record<string, unknown> {
     return {

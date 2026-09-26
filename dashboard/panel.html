@@ -48,6 +48,28 @@
             <div class="panel-foot">The <code>speech</code> slot's queue (<code>speech://queue</code>), said in the <code>station</code> slot's own words (<code>grammar://phrases</code>). This page prints them and writes none of them.</div>
         </section>
 
+        <section class="panel questions">
+            <h2 class="panel-title">Questions<span class="rule"></span><span class="hint">for the commander (Tier 4)</span></h2>
+            <div class="panel-body">
+                <div class="questions-bar">
+                    <label>standing order
+                        <select id="questions-policy">
+                            <option value="ask">every question waits for me</option>
+                            <option value="auto">answer every question with its first option</option>
+                        </select>
+                    </label>
+                    <label>voice
+                        <select id="questions-lang">
+                            <option value="fr-FR">français</option>
+                            <option value="en-US">English</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="questions-log" id="questions-log"></div>
+            </div>
+            <div class="panel-foot">The <code>station</code> slot's questions (<code>station://questions</code>): a harness or a factory at a decision it must not take alone asks here; a click or a spoken answer (the browser's speech recognition) calls <code>station.answer</code> as the commander; the standing order calls <code>station.questions_policy</code>. Nothing else on this page decides.</div>
+        </section>
+
     </div>
 
     <section class="panel cabin">
