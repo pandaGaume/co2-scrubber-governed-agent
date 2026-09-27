@@ -25,6 +25,7 @@
 import type { DecisionContext, JsonValue, PolicyDecision, SafetyDecision, SafetyGuard } from "@spiky-panda/harness";
 import type { Broker } from "../lib/broker.js";
 import { contractProblems } from "../../slots/forge/contract.js";
+import { compatibleUnits } from "../lib/units.js";
 import { TOPICS, type TaskFile } from "./task.js";
 import type { TopicDefinition } from "./topic.js";
 import type { Plan, Progress } from "./workspace-observer.js";
@@ -117,7 +118,11 @@ export async function planProblems(plan: Plan, { broker, task, runtimeSlot = "tw
             const required = task.objective.required_outputs.find((o) => o.name === name);
             const port = node?.signature?.outputs?.[String(m?.port)];
             if (!port) problems.push(`produced: "${name}": "${String(m?.type)}" has no signature output "${String(m?.port)}"`);
-            else if (required && (port.quantity !== required.quantity || (required.unit && port.unit && port.unit !== required.unit))) problems.push(`produced: "${name}" (${required.quantity}${required.unit ? `, ${required.unit}` : ""}) is mapped to "${String(m?.type)}".${String(m?.port)}, a ${port.quantity ?? "?"}${port.unit ? ` in ${port.unit}` : ""}`);
+            else if (required) {
+                const sameQuantity = String(port.quantity ?? "").toLowerCase() === required.quantity.toLowerCase();
+                const units = required.unit && port.unit ? compatibleUnits({ quantity: required.quantity, unit: required.unit }, { quantity: required.quantity, unit: port.unit }) : null;
+                if (!sameQuantity || (units && (!units.ok || !units.compatible))) problems.push(`produced: "${name}" (${required.quantity}${required.unit ? `, ${required.unit}` : ""}) is mapped to "${String(m?.type)}".${String(m?.port)}, a ${port.quantity ?? "?"}${port.unit ? ` in ${port.unit}` : ""}${sameQuantity ? ", which does not convert" : ""}`);
+            }
         }
     }
     for (const required of task.objective.required_outputs) {

@@ -33,8 +33,21 @@ export type Variables = Record<string, number>;
 export type Row = Record<string, unknown>;
 
 /** Evaluates a formula over the variables; throws with the reason when it cannot. */
+/** The functions a formula may call (2026-09-27: a contract's physics has square roots and exponentials). */
+const FUNCTIONS: Record<string, (...args: number[]) => number> = {
+    sqrt: (x) => Math.sqrt(x),
+    abs: (x) => Math.abs(x),
+    exp: (x) => Math.exp(x),
+    log: (x) => Math.log(x),
+    ln: (x) => Math.log(x),
+    log10: (x) => Math.log10(x),
+    min: (...xs) => Math.min(...xs),
+    max: (...xs) => Math.max(...xs),
+    pow: (x, y) => Math.pow(x, y),
+};
+
 export function evaluateExpression(source: string, vars: Variables): number {
-    const tokens = source.match(/\d+(\.\d+)?([eE][-+]?\d+)?|\.\d+([eE][-+]?\d+)?|[A-Za-z_][A-Za-z0-9_]*|[-+*/^()]|\S/g) ?? [];
+    const tokens = source.match(/\d+(\.\d+)?([eE][-+]?\d+)?|\.\d+([eE][-+]?\d+)?|[A-Za-z_][A-Za-z0-9_]*|[-+*/^(),]|\S/g) ?? [];
     let i = 0;
     const peek = () => tokens[i];
     const take = () => tokens[i++];
@@ -50,7 +63,20 @@ export function evaluateExpression(source: string, vars: Variables): number {
         if (t === "+") return primary();
         if (/^[\d.]/.test(t)) return Number(t);
         if (/^[A-Za-z_]/.test(t)) {
-            if (!(t in vars)) throw new Error(`"${source}": no variable "${t}" (${Object.keys(vars).join(", ") || "none given"})`);
+            if (peek() === "(" && t in FUNCTIONS) {
+                take();
+                const args: number[] = [];
+                if (peek() !== ")") {
+                    args.push(sum());
+                    while (peek() === ",") {
+                        take();
+                        args.push(sum());
+                    }
+                }
+                if (take() !== ")") throw new Error(`"${source}": the call of ${t} is not closed`);
+                return FUNCTIONS[t](...args);
+            }
+            if (!(t in vars)) throw new Error(`"${source}": no variable "${t}" (${Object.keys(vars).join(", ") || "none given"}; functions: ${Object.keys(FUNCTIONS).join(", ")})`);
             return vars[t];
         }
         throw new Error(`"${source}": unexpected "${t}"`);

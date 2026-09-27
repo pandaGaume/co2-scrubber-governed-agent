@@ -112,12 +112,12 @@ export function contractProblems(raw: unknown): string[] {
         if (!NAME.test(name)) problems.push(`parameters: "${name}" is not a parameter name`);
         if (p?.unit && p.quantity) {
             const r = resolveUnitRef({ unit: p.unit, quantity: p.quantity });
-            if (!r.ok) problems.push(`parameter "${name}": ${r.reason}`);
+            if (!r.ok) problems.push(`parameter "${name}": ${r.reason}; a constant of a quantity the unit system does not know (a gas constant, a discharge coefficient) is a parameter without quantity and unit`);
         }
     }
     const behaviors = Array.isArray(c.behaviors) ? c.behaviors : [];
     if (!behaviors.length) problems.push("behaviors: at least one line says what the output is for given inputs");
-    const vars = Object.fromEntries(Object.entries(parameters).map(([k, p]) => [k, typeof p?.value === "number" ? p.value : 1]));
+    const inputs = (c.inputs && typeof c.inputs === "object" ? c.inputs : {}) as Record<string, Partial<ContractPort>>;
     for (const b of behaviors) {
         if (typeof b !== "string") {
             problems.push("behaviors: each one is a line of text");
@@ -129,9 +129,10 @@ export function contractProblems(raw: unknown): string[] {
             continue;
         }
         try {
-            evaluateExpression(parsed.behavior.expression, vars);
+            evaluateExpression(parsed.behavior.expression, formulaVariables(parsed.behavior, { inputs: inputs as Record<string, ContractPort>, outputs: {}, parameters: parameters as Record<string, ContractParameter>, behaviors: [] }));
         } catch (e) {
-            problems.push(`"${b}": ${e instanceof Error ? e.message : String(e)} (the formula is over the parameters: ${Object.keys(vars).join(", ") || "none"})`);
+            const known = Object.keys(formulaVariables(parsed.behavior, { inputs: inputs as Record<string, ContractPort>, outputs: {}, parameters: parameters as Record<string, ContractParameter>, behaviors: [] }));
+            problems.push(`"${b}": ${e instanceof Error ? e.message : String(e)} (the formula is over the parameters and the inputs of the behavior: ${known.join(", ") || "none"}; an input without a value here has none: wire it in the behavior, or give it unwired)`);
         }
     }
     return problems;
@@ -140,8 +141,16 @@ export function contractProblems(raw: unknown): string[] {
 /** The value each parameter is set to for the acceptance runs. */
 export const parameterValues = (contract: CapabilityContract): Record<string, number> => Object.fromEntries(Object.entries(contract.parameters ?? {}).map(([k, p]) => [k, typeof p.value === "number" ? p.value : 1]));
 
-/** What a behavior expects, from the parameters' values. */
-export const expectedOf = (behavior: Behavior, contract: CapabilityContract): number => evaluateExpression(behavior.expression, parameterValues(contract));
+/** What a formula may name: the parameters at their trial value, the inputs wired in this behavior at their value, the other inputs at what the node takes when nothing is wired. */
+export function formulaVariables(behavior: Pick<Behavior, "inputs">, contract: CapabilityContract): Record<string, number> {
+    const vars = parameterValues(contract);
+    for (const [name, port] of Object.entries(contract.inputs ?? {})) if (typeof port.unwired === "number") vars[name] = port.unwired;
+    for (const [name, value] of Object.entries(behavior.inputs ?? {})) vars[name] = value;
+    return vars;
+}
+
+/** What a behavior expects, from the parameters' values and the inputs'. */
+export const expectedOf = (behavior: Behavior, contract: CapabilityContract): number => evaluateExpression(behavior.expression, formulaVariables(behavior, contract));
 
 /** Does an actual value satisfy a behavior: a relative tolerance on equality, an absolute floor for values near zero. */
 export function satisfies(behavior: Behavior, actual: number, expected: number, tolerance = 1e-6): boolean {
