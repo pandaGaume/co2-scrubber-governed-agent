@@ -34,6 +34,7 @@ import { physicsSlot } from "./physics/provider.js";
 import { supervisorSlot } from "./supervisor/provider.js";
 import { forgeSlot } from "./forge/provider.js";
 import { cadSlotProbed } from "./cad/provider.js";
+import { webSearchSlot } from "./tools/web/provider.js";
 import { startDiscovery } from "./lib/discovery.js";
 import type { PublishedSlot } from "./lib/slot-server.js";
 
@@ -63,6 +64,7 @@ const SLOTS: Array<[string, (wsBase: string, logger: (line: string) => void) => 
     ["forge", forgeSlot],
     // The CAD: Fusion 360's own MCP server relayed (its address a setting, CAD_MCP_URL); probed at start so its tools are mirrored when it answers.
     ["cad", cadSlotProbed],
+    ["web", webSearchSlot],
 ];
 
 /** A slot that could not be published: its name and the reason, said once at start and kept for whoever asks. */
