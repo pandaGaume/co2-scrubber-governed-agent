@@ -151,7 +151,7 @@ export function validateGraph(claim: DoneClaim, files: WorkshopFile[], progress:
     const mapped = Object.entries(progress.plan?.produced ?? {});
     for (const g of claim.artifacts.filter((a) => a.kind === "graph" || a.kind === "twin")) {
         const candidate = candidatesOf(progress).find((c) => c.path === g.path);
-        for (const [name, m] of mapped) if (candidate && !candidate.types.includes(m.type)) problems.push(`the plan says "${m.type}" produces "${name}", and candidate ${candidate.n} holds no node of that type`);
+        for (const [name, m] of mapped) if (candidate && !candidate.types.includes(m.type)) problems.push(`the plan says "${m.type}" produces "${name}", and candidate ${candidate.n} holds no node of that type: evaluate a candidate that holds it (for a library graph, graph.evaluate with the same graph and add: {nodes: [{id: "<an id>", typeId: "${m.type}", params: {...}}], connections: [{from: ["<that id>", "${m.port}"], to: ["<a node of the graph>", "<its input>"]}]}; library.graph gives the graph's node ids and their inputs)`);
     }
     // A twin handed over with a capability declared missing would be a twin short of what was asked: the task ends with task.fail naming it, and the harness opens the code task on the contract.
     const missing = (progress.plan?.missing_capabilities ?? []).map((m) => m.required_output);

@@ -316,8 +316,10 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         // A plan that declares a capability for another factory ends this task here (2026-09-26): the hand-off opens that factory's task on the
         // contract and replays this request once the node exists; a model asked to go on called task.done twelve times instead of failing.
         // A builder that proposes the same refused call four times in a row is stuck (2026-09-26: twenty-three identical registry_search): the task ends with the reason, the budget is not spent on it.
-        if (progress.repeats >= 3 && progress.lastRefusal) {
-            ended = `STUCK: ${progress.lastRefusal.capability} proposed ${progress.repeats + 1} times with the same input, refused each time: ${progress.lastRefusal.reason.slice(0, 300)}`;
+        // Whatever refused it: the guard, or the validator at task.done (twenty-three identical task.done on the replay of the seventh page run).
+        const stuckOn = progress.repeats >= 3 ? (progress.lastRefusal ?? (progress.lastCall && !progress.lastCall.result.ok ? { capability: progress.lastCall.id, reason: String(progress.lastCall.result.error ?? progress.lastCall.result.outcome) } : progress.lastCall && progress.lastCall.id === "task.done" ? { capability: "task.done", reason: String((progress.lastSummary as { problems?: unknown } | null)?.problems ?? JSON.stringify(progress.lastSummary ?? "")) } : null)) : null;
+        if (stuckOn) {
+            ended = `STUCK: ${stuckOn.capability} proposed ${progress.repeats + 1} times with the same input, refused each time: ${stuckOn.reason.slice(0, 300)}`;
             progress.failure = ended;
             progress.phase = "failed";
             log(`[factory] task ${taskId}: ${ended}`);
