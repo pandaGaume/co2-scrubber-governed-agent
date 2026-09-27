@@ -14,7 +14,7 @@ import type { PublishedSlot } from "../slots/lib/slot-server.js";
 import { startAllOrFail } from "./lib/start.js";
 import { Broker } from "../harness/lib/broker.js";
 import type { Provider, ProviderExchange } from "../harness/lib/provider.js";
-import { applyVerdict, checkVerdict, findingsFor, supervise, supervisionOfRequest, supervisorBrief, type Verdict } from "../harness/supervisor/supervisor.js";
+import { applyVerdict, checkVerdict, findingsFor, reviewDigest, supervise, supervisionOfRequest, supervisorBrief, type Verdict } from "../harness/supervisor/supervisor.js";
 import { reviewContracts, type LibraryFact } from "../harness/core/contracts.js";
 import { loadFacts, LIBRARY_DIR } from "../slots/tools/library/provider.js";
 import { observe } from "../harness/observer/observer.js";
@@ -61,6 +61,19 @@ class TwoVerdicts implements Provider {
 }
 
 describe("the Contract Supervisor: a typed verdict over the facts, checked before it counts", () => {
+    it("a fact set against an assumption quotes the value the assumption contradicts; a request's review digest follows its facts only", () => {
+        // The seventeenth page run: "the activity level is not specified" was set against the two documented crew rates, which it denies neither of.
+        const crew = { ...REQUEST, known: [{ symbol: "G_asleep", name: "asleep rate", value: 0.24, unit: "L/min", source: "nasa-crew-metabolic-loads", factId: "crew.co2Rate.asleep" }], assumptions: ["the crew's activity level, asleep or awake, is not specified"] } as unknown as TwinFactoryRequest;
+        const input = supervisionOfRequest(crew, DEVICES, library());
+        const producer = input.facts.find((f) => f.id === "crew.co2Rate.asleep")?.producer ?? "observer";
+        const without = checkVerdict({ status: "CONFLICT", findings: [{ kind: "conflict", fact: "crew.co2Rate.asleep", producer, reason: "assumption:1 claims the activity level must be inferred, but crew.co2Rate.asleep is a known fact", required_action: "REVISE" }] }, input);
+        assert.match(without.problems.join("; "), /quotes the value the assumption contradicts \(crew\.co2Rate\.asleep = 0\.24/);
+        const withValue = checkVerdict({ status: "CONFLICT", findings: [{ kind: "conflict", fact: "crew.co2Rate.asleep", producer, reason: "assumption:1 says the rate is 0.5, the fact is 0.24 L/min", required_action: "REVISE" }] }, input);
+        assert.ok(!withValue.problems.some((p) => /quotes the value/.test(p)), withValue.problems.join("; "));
+        // The digest reads what the supervisor reads: the known constants, the assumptions, the hypotheses; not the outputs or the words around them.
+        assert.equal(reviewDigest(crew as never), reviewDigest({ ...crew, objective: "another objective" } as never));
+        assert.notEqual(reviewDigest(crew as never), reviewDigest({ ...crew, assumptions: ["another assumption"] } as never));
+    });
     it("the guard: names among the input's, the computed conflicts carried, the status true to the findings", () => {
         const input = supervisionOfRequest(REQUEST, DEVICES, library());
         assert.equal(input.report.status, "CONFLICT");

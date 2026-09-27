@@ -271,67 +271,87 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
         const report = executed.report as { result?: { value?: number | null; why?: string } } | null;
         end(6, (report ?? null) as JsonValue, report?.result?.value != null ? `apparent volume ${report.result.value} m3` : report?.result?.why);
 
-        // 7. the Observer: what the twin must do, from the document's words and the telemetry; or the request the caller gave.
-        begin(7);
-        narrate(`The test is done. The Observer now writes what the twin must do, from the description and the ${telemetry.length - 1} minutes of telemetry.`);
-        let request: TwinFactoryRequest;
-        if (run.options.builder === "scripted" && run.request) {
-            request = run.request;
-            loop(7).nature = "script";
-            end(7, { attempts: 0 } as JsonValue, "the request given by the caller stands in for the Observer");
-        } else {
-            const filled: Record<string, string> = {
-                test: (executed.report?.steps ?? []).map((s: { speedPercent: number; minutes: number }) => `${s.speedPercent} % for ${s.minutes} min`).join(", then "),
-                apparentVolume: String(report?.result?.value ?? "not computed"),
-                why: report?.result?.why ?? "",
-                controls: inventoryOf(devices as unknown as Device[]).interventions.map((i) => `${i.device} ${i.property}${i.how === "commanded" ? ` (commanded through ${i.action}${typeof i.min === "number" ? `, ${i.min} to ${i.max} ${i.unit}` : ""})` : ` (operated by a person${i.states ? `: ${i.states.join(" or ")}` : ""})`}`).join("; "),
-            };
-            const description = doc.observer.description.map((line) => line.replace(/\{(test|apparentVolume|why|controls)\}/g, (_m, k: string) => filled[k] ?? "")).join("\n");
-            // The Observer takes several model calls, longer than a broker call may wait: asked without waiting, read until done.
-            const opened = await call<{ id: string; status: string }>("observer", "observe", { description, telemetry, wait: false, attempts: doc.observer.attempts });
-            loop(7).note = `observation ${opened.id}`;
-            notify();
-            const t2 = Date.now();
-            let observed: { ok: boolean; request: TwinFactoryRequest | null; attempts: unknown[]; status: string; error?: string };
-            for (;;) {
-                observed = await call("observer", "request", { id: opened.id });
-                if (observed.status !== "running") break;
-                if (Date.now() - t2 > waitMs) throw new Error(`the Observer did not answer in ${waitMs} ms`);
-                if (Date.now() - t2 >= everyMs && (Date.now() - t2) % everyMs < 2000) narrate(`The Observer is still writing: attempt ${Math.max(1, observed.attempts?.length ?? 1)}.`);
-                await sleep(2000);
+        // 7 and 8. the Observer, then the graph factory; a request the graph factory ends on a conflict the Observer must revise goes back to the Observer once, with the reason.
+        let g!: TaskStatus;
+        let reqG!: { taskId: string; builder: string };
+        let feedback: string | null = null;
+        for (let round = 1; round <= 2; round++) {
+            // 7. the Observer: what the twin must do, from the document's words and the telemetry; or the request the caller gave.
+            begin(7);
+            narrate(feedback ? "The Observer revises its request, with the reason it was refused." : `The test is done. The Observer now writes what the twin must do, from the description and the ${telemetry.length - 1} minutes of telemetry.`);
+            let request: TwinFactoryRequest;
+            let reviewedMark: Record<string, unknown> | null = null;
+            if (run.options.builder === "scripted" && run.request) {
+                request = run.request;
+                loop(7).nature = "script";
+                end(7, { attempts: 0 } as JsonValue, "the request given by the caller stands in for the Observer");
+            } else {
+                const filled: Record<string, string> = {
+                    test: (executed.report?.steps ?? []).map((s: { speedPercent: number; minutes: number }) => `${s.speedPercent} % for ${s.minutes} min`).join(", then "),
+                    apparentVolume: String(report?.result?.value ?? "not computed"),
+                    why: report?.result?.why ?? "",
+                    controls: inventoryOf(devices as unknown as Device[]).interventions.map((i) => `${i.device} ${i.property}${i.how === "commanded" ? ` (commanded through ${i.action}${typeof i.min === "number" ? `, ${i.min} to ${i.max} ${i.unit}` : ""})` : ` (operated by a person${i.states ? `: ${i.states.join(" or ")}` : ""})`}`).join("; "),
+                };
+                const description = [...doc.observer.description.map((line) => line.replace(/\{(test|apparentVolume|why|controls)\}/g, (_m, k: string) => filled[k] ?? "")), ...(feedback ? [`Review of your previous request, to revise: ${feedback}`] : [])].join("\n");
+                // The Observer takes several model calls, longer than a broker call may wait: asked without waiting, read until done.
+                const opened = await call<{ id: string; status: string }>("observer", "observe", { description, telemetry, wait: false, attempts: doc.observer.attempts });
+                loop(7).note = `observation ${opened.id}`;
+                notify();
+                const t2 = Date.now();
+                let observed: { ok: boolean; request: TwinFactoryRequest | null; attempts: unknown[]; status: string; error?: string; reviewed?: Record<string, unknown> | null };
+                for (;;) {
+                    observed = await call("observer", "request", { id: opened.id });
+                    if (observed.status !== "running") break;
+                    if (Date.now() - t2 > waitMs) throw new Error(`the Observer did not answer in ${waitMs} ms`);
+                    if (Date.now() - t2 >= everyMs && (Date.now() - t2) % everyMs < 2000) narrate(`The Observer is still writing: attempt ${Math.max(1, observed.attempts?.length ?? 1)}.`);
+                    await sleep(2000);
+                }
+                if (observed.status === "failed") throw new Error(`the Observer failed: ${observed.error ?? "no reason"}`);
+                if (!observed.ok || !observed.request) throw new Error(`the Observer's request was not accepted after ${observed.attempts.length} attempt(s)`);
+                request = observed.request;
+                reviewedMark = observed.reviewed ?? null;
+                end(7, { attempts: observed.attempts.length, outputs: request.outputs.map((o) => `${o.name} (${o.quantity}, ${o.unit})`), known: (request.known ?? []).length } as JsonValue);
+                narrate(`The Observer's request is accepted after ${observed.attempts.length} attempt${observed.attempts.length === 1 ? "" : "s"}: the twin must give ${request.outputs.map((o) => o.name).join(", ")}.`);
             }
-            if (observed.status === "failed") throw new Error(`the Observer failed: ${observed.error ?? "no reason"}`);
-            if (!observed.ok || !observed.request) throw new Error(`the Observer's request was not accepted after ${observed.attempts.length} attempt(s)`);
-            request = observed.request;
-            end(7, { attempts: observed.attempts.length, outputs: request.outputs.map((o) => `${o.name} (${o.quantity}, ${o.unit})`), known: (request.known ?? []).length } as JsonValue);
-            narrate(`The Observer's request is accepted after ${observed.attempts.length} attempt${observed.attempts.length === 1 ? "" : "s"}: the twin must give ${request.outputs.map((o) => o.name).join(", ")}.`);
+
+            // 8. the graph factory, on the twin's catalogue; the document's threshold.
+            begin(8, builder === "scripted" ? "the script stands in for the model" : undefined);
+            loop(8).nature = builder === "scripted" ? "script" : "model";
+            const contract = factoryContractOf(request);
+            const register = (await call<{ devices: unknown[] }>("station", "registry_list")).devices;
+            const presence = (await call<{ modules: Array<{ module: string; subjects: Array<{ id: string; callsign: string; name: string | null }> }> }>("biomed", "presence")).modules;
+            const persons = presence.flatMap((m) => m.subjects.map((s) => ({ id: s.id, callsign: s.callsign, name: s.name ?? "", module: m.module, activity: m.module === "lab" ? "light_work" : "rest" })));
+            reqG = await call<{ taskId: string; builder: string }>("factory", "request", {
+                ...contract,
+                observations: { ...(contract.observations as Record<string, unknown>), devices: register, persons, ...(run.observations ?? {}) },
+                ...(reviewedMark ? { requirements: { ...(contract.requirements as unknown as Record<string, unknown>), reviewed: reviewedMark } } : {}),
+                objective: { ...(contract.objective as { required_outputs: unknown[]; constraints?: Record<string, unknown> }), constraints: { ...((contract.objective as { constraints?: Record<string, unknown> }).constraints ?? {}), rmsePpmMax: doc.graph.rmsePpmMax } },
+                data: [{ file: "telemetry.json", rows: telemetry }],
+                topics: ["graph"],
+                builder,
+                budget: doc.graph.budget,
+                requestedBy: "scenario",
+            });
+            loop(8).taskId = reqG.taskId;
+            run.tasks.push(reqG.taskId);
+            notify();
+            narrate("The graph factory is building the twin from the catalogue and fitting it to the test's telemetry. Each simulator it tries, I will tell you.");
+            g = await taskEnded(reqG.taskId, "The graph factory");
+            end(8, summary(g));
+            if (/^MISSING_CAPABILITY/.test(g.manifest?.ended ?? "")) narrate("The graph factory needs a node the catalogue does not have. It wrote the contract that node must meet; the decision is yours.");
+
+
+            const conflict = /^SOURCE_CONFLICT/.test(g.manifest?.ended ?? "") && /REQUIRE_RESOLUTION: [^;]*\bobserver\b/.test(g.manifest?.ended ?? "");
+            if (!conflict || round === 2 || (run.options.builder === "scripted" && run.request)) break;
+            feedback = String(g.manifest?.ended ?? "");
+            narrate("The graph factory found the request in conflict with the documentation. I send it back to the Observer with the reason, once.");
+            for (const n of [7, 8]) {
+                const l = loop(n);
+                l.status = "pending";
+                l.note = `round 2: ${feedback.slice(0, 120)}`;
+            }
+            notify();
         }
-
-        // 8. the graph factory, on the twin's catalogue; the document's threshold.
-        begin(8, builder === "scripted" ? "the script stands in for the model" : undefined);
-        loop(8).nature = builder === "scripted" ? "script" : "model";
-        const contract = factoryContractOf(request);
-        const register = (await call<{ devices: unknown[] }>("station", "registry_list")).devices;
-        const presence = (await call<{ modules: Array<{ module: string; subjects: Array<{ id: string; callsign: string; name: string | null }> }> }>("biomed", "presence")).modules;
-        const persons = presence.flatMap((m) => m.subjects.map((s) => ({ id: s.id, callsign: s.callsign, name: s.name ?? "", module: m.module, activity: m.module === "lab" ? "light_work" : "rest" })));
-        const reqG = await call<{ taskId: string; builder: string }>("factory", "request", {
-            ...contract,
-            observations: { ...(contract.observations as Record<string, unknown>), devices: register, persons, ...(run.observations ?? {}) },
-            objective: { ...(contract.objective as { required_outputs: unknown[]; constraints?: Record<string, unknown> }), constraints: { ...((contract.objective as { constraints?: Record<string, unknown> }).constraints ?? {}), rmsePpmMax: doc.graph.rmsePpmMax } },
-            data: [{ file: "telemetry.json", rows: telemetry }],
-            topics: ["graph"],
-            builder,
-            budget: doc.graph.budget,
-            requestedBy: "scenario",
-        });
-        loop(8).taskId = reqG.taskId;
-        run.tasks.push(reqG.taskId);
-        notify();
-        narrate("The graph factory is building the twin from the catalogue and fitting it to the test's telemetry. Each simulator it tries, I will tell you.");
-        const g = await taskEnded(reqG.taskId, "The graph factory");
-        end(8, summary(g));
-        if (/^MISSING_CAPABILITY/.test(g.manifest?.ended ?? "")) narrate("The graph factory needs a node the catalogue does not have. It wrote the contract that node must meet; the decision is yours.");
-
         // 9. the hand-off, when the graph factory found a node missing: the commander's questions, the code factory, the replay.
         let final = g;
         let finalId = reqG.taskId;

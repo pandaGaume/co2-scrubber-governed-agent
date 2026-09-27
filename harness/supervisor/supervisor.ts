@@ -26,6 +26,7 @@
  */
 import type { JsonValue, PolicyFallbackInput } from "@spiky-panda/harness";
 import type { Provider } from "../lib/provider.js";
+import { createHash } from "node:crypto";
 import { reviewContracts, taskFacts, type ContractReport, type Fact, type LibraryFact } from "../core/contracts.js";
 
 export const SUPERVISOR_PROMPT = "harness/supervisor/prompt.md";
@@ -129,6 +130,12 @@ export function checkVerdict(input: unknown, context: SupervisionInput): Verdict
                 const names = [...factIds, ...sources].some((id) => reason.includes(id));
                 if (/unsupported|missing/i.test(String(f.kind)) || f.required_action === "COMPLETE" || !names) problems.push(`${where}: an assumption is unsupported by nature; a finding on ${fact} names the fact or the document that contradicts it (one of ${[...factIds].slice(0, 8).join(", ")}, ${[...sources].join(", ")}) in its reason, with REVISE, or is not a finding`);
             }
+        } else if (/\bassumption:\d+/.test(String(f.reason ?? "")) && factIds.has(fact) && !context.report.conflicts.some((c) => c.id === fact)) {
+            // A fact set against an assumption (2026-09-27: "assumption:3 claims activity level must be inferred, but crew.co2Rate.asleep is a known fact" ended a graph task, and the assumption denied no value):
+            // the finding quotes the value the assumption contradicts, as the fact states it, or it is not a finding.
+            const reason = String(f.reason ?? "");
+            const values = context.facts.filter((x) => x.id === fact).map((x) => String(x.value));
+            if (!values.some((v) => new RegExp(`(^|[^\\d.])${v.replace(".", "\\.")}([^\\d]|$)`).test(reason))) problems.push(`${where}: a finding that sets an assumption against ${fact} quotes the value the assumption contradicts (${fact} = ${values.join(" or ")}); an assumption that states no other value and does not deny that one contradicts nothing, and is not a finding`);
         } else if (fact.startsWith("symbol:")) {
             const sym = fact.slice("symbol:".length);
             if (!symbols.includes(sym)) problems.push(`${where}: "${fact}" names no symbol (${symbols.join(", ") || "none"})`);
@@ -177,6 +184,15 @@ interface RequestLike {
     known?: Array<{ symbol?: string; factId?: string; value?: unknown; unit?: string; source?: string }>;
     assumptions?: string[];
     hypotheses?: Array<string | { statement?: string }>;
+}
+
+/**
+ * What the supervisor reads of a request, as a digest: its known constants, assumptions and hypotheses.
+ * A request the Observer's slot had reviewed carries it (`reviewed`), and a task opened on it is not reviewed by the model again when the digest still matches (2026-09-27: two reviews of the same facts gave two verdicts, and the second ended the task).
+ */
+export function reviewDigest(request: { known?: unknown; assumptions?: unknown; hypotheses?: unknown }): string {
+    const canonical = (v: unknown): string => JSON.stringify(v ?? null, (_k, x) => (x && typeof x === "object" && !Array.isArray(x) ? Object.fromEntries(Object.entries(x as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b))) : x));
+    return createHash("sha256").update(canonical({ known: request.known ?? [], assumptions: request.assumptions ?? [], hypotheses: request.hypotheses ?? [] })).digest("hex");
 }
 
 /** The supervision of a request as the Observer wrote it: its facts against the register's and the library's, its assumptions, its symbols. */

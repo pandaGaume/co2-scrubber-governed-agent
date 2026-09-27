@@ -25,7 +25,7 @@ import { ReasonerProvider } from "../../harness/providers/reasoner.js";
 import type { Provider } from "../../harness/lib/provider.js";
 import { observe, OBSERVER_PROMPT, type ObserveResult } from "../../harness/observer/observer.js";
 import { factoryContractOf, type TwinFactoryRequest } from "../../harness/observer/request.js";
-import { findingsFor, supervise, supervisionOfRequest, SUPERVISOR_PROMPT } from "../../harness/supervisor/supervisor.js";
+import { findingsFor, reviewDigest, supervise, supervisionOfRequest, SUPERVISOR_PROMPT } from "../../harness/supervisor/supervisor.js";
 import type { LibraryFact } from "../../harness/core/contracts.js";
 
 /** One observation as kept: its result once done; `status` running while the model works (an observation takes several model calls, longer than a broker call may wait), then done or failed. */
@@ -83,6 +83,8 @@ export function observerSlot(wsBase: string, log: (line: string) => void, option
                         try {
                             const attempts = typeof args.attempts === "number" && args.attempts >= 1 ? Math.min(8, Math.floor(args.attempts)) : 4;
                             // The Contract Supervisor reviews each request the guard accepts (the same reasoner slot, its own prompt): its findings for the Observer send it back into its loop, so a request is corrected here and not refused at the start of a factory task.
+                            // The digests of the requests the supervisor reviewed and found nothing to send back.
+                            const cleared = new Map<string, string>();
                             const review = async (request: TwinFactoryRequest): Promise<string[]> => {
                                 try {
                                     const model = await ReasonerProvider.connect(broker);
@@ -94,6 +96,7 @@ export function observerSlot(wsBase: string, log: (line: string) => void, option
                                     const verdict = await supervise({ provider: model, input: supervisionOfRequest(request, devices, facts) });
                                     const findings = findingsFor(verdict.verdict, "observer");
                                     if (findings.length) log(`[observer] the supervisor sends the request back: ${findings.join("; ")}`);
+                                    else if (verdict.verdict) cleared.set(reviewDigest(request as never), verdict.verdict.status);
                                     return findings;
                                 } catch (e) {
                                     log(`[observer] the supervisor could not review (${errorMessage(e)}); the guard's acceptance stands`);
@@ -109,7 +112,10 @@ export function observerSlot(wsBase: string, log: (line: string) => void, option
                                 if (!r.ok) throw new Error(`the request was accepted but the factory did not open a task: ${r.error ?? r.outcome}`);
                                 taskId = (r.output as { taskId: string }).taskId;
                             }
-                            Object.assign(entry, result, { taskId, status: "done", endedAt: new Date().toISOString() });
+                            // A request the supervisor reviewed as it was accepted carries the mark: the factory does not review the same facts by model again.
+                            const digest = result.ok && result.request ? reviewDigest(result.request as never) : null;
+                            const reviewed = digest && cleared.has(digest) ? { by: "supervisor", status: cleared.get(digest), digest, at: new Date().toISOString() } : null;
+                            Object.assign(entry, result, { taskId, reviewed, status: "done", endedAt: new Date().toISOString() });
                             log(`[observer] ${entry.id}: ${result.ok ? "request accepted" : "no request accepted"} after ${result.attempts.length} attempt(s)${taskId ? `, factory task ${taskId}` : ""}`);
                         } catch (e) {
                             Object.assign(entry, { status: "failed", error: errorMessage(e), endedAt: new Date().toISOString() });

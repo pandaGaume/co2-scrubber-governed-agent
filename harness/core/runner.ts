@@ -36,7 +36,7 @@ import { DEFAULT_BUDGET, topicFor, type TaskFile, type TaskState, type Topic } f
 import type { TopicDefinition } from "./topic.js";
 import { createWorkspaceObserver, isArtifact, listWorkshop, newProgress, type Progress } from "./workspace-observer.js";
 import { type ContractReport, type LibraryFact } from "./contracts.js";
-import { applyVerdict, supervisionOfRequest, type SupervisionInput, type Verdict } from "../supervisor/supervisor.js";
+import { applyVerdict, supervisionOfRequest, type SupervisionInput, type Verdict, reviewDigest } from "../supervisor/supervisor.js";
 import { ONNX_TOPIC } from "../topics/onnx/index.js";
 import { PROCEDURE_TOPIC } from "../topics/procedure/index.js";
 import { GRAPH_TOPIC } from "../topics/graph/index.js";
@@ -143,6 +143,12 @@ async function contractsOf(broker: Broker, task: TaskFile["task"], supervisor: R
     const libraryFacts = r.ok ? ((r.output as { facts?: Array<LibraryFact & { source: string }> }).facts ?? []) : [];
     const req = (task.requirements ?? {}) as { assumptions?: string[]; hypotheses?: Array<string | { statement?: string }>; known?: Array<{ symbol?: string; factId?: string }> };
     const input = supervisionOfRequest(req, Array.isArray((task.observations as { devices?: unknown[] } | undefined)?.devices) ? ((task.observations as { devices: unknown[] }).devices) : [], libraryFacts);
+    // A request the supervisor already reviewed upstream, unchanged since (its digest matches): the deterministic report stands, the model does not review the same facts again.
+    const upstream = (task.requirements as { reviewed?: { by?: string; digest?: string; at?: string } } | undefined)?.reviewed;
+    if (supervisor && upstream?.by === "supervisor" && upstream.digest && upstream.digest === reviewDigest(req as never)) {
+        log(`[factory] supervisor: the request was reviewed upstream (${upstream.at ?? "?"}), unchanged since; the deterministic report stands`);
+        return input.report;
+    }
     if (!supervisor) return input.report;
     try {
         const verdict = await supervisor(input);
