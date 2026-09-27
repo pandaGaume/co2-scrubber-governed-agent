@@ -30,6 +30,16 @@
             "min": 0.48,
             "max": 0.81,
             "says": "the same awake rate in mass: 0.69 g/min reference, 0.48 to 0.81 g/min"
+        },
+        {
+            "id": "crew.co2Rate.asleep.mass",
+            "semantic": "CrewmemberCO2ProductionAsleep",
+            "quantity": "MassFlow",
+            "unit": "g/min",
+            "value": 0.44,
+            "min": 0.3,
+            "max": 0.51,
+            "says": "the same asleep rate in mass: 0.44 g/min reference, 0.30 to 0.51 g/min"
         }
     ]
 }
