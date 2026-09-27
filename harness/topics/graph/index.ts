@@ -31,6 +31,7 @@ import type { DoneClaim, Progress, WorkshopFile } from "../../core/workspace-obs
 import { evaluateCandidate, evaluationOutput, knownOf, STATION_GRAPH_ID, stationReference, type Candidate, type EvaluateInput } from "./evaluate.js";
 import { thresholdsOf } from "../../core/task.js";
 import { wiringLines } from "./reference.js";
+import { loadGraphLibrary } from "../../../lib/graph-library.js";
 import type { Row } from "./params.js";
 import type { TopicState } from "../../core/reasoning-state.js";
 
@@ -288,8 +289,12 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
     const devices = Array.isArray((task.observations as { devices?: unknown }).devices) ? ((task.observations as { devices: Array<{ path: string }> }).devices.map((d) => d.path).join(", ")) : "";
     const persons = Array.isArray((task.observations as { persons?: unknown }).persons) ? ((task.observations as { persons: Array<{ module: string; activity: string; callsign?: string }> }).persons.map((p) => `${p.callsign ?? "someone"} in ${p.module} at ${p.activity}`).join(", ")) : "";
     const start = station ? ` The library holds the station's reference graph (library.graphs, graph "${STATION_GRAPH_ID}": two volumes in mass, the persons by name, the scrubber in its datasheet's units, the ventilation through its filter, the sensors); do not rebuild it: instantiate it (graph.evaluate with graph: "${STATION_GRAPH_ID}", persons for who is on board, fit for the bounds of what only the installation knows; its interface is the shelf's variables and nothing else, a name outside it is refused) and adapt its numbers. The scrubber's own numbers come from the registered device (${devices ? `the task carries the register: ${devices}` : "the datasheet's defaults when the task carries no device"}) and are held; what is fitted is the volumes and the filter's loading, the operators' rate within its band.${persons ? ` On board, as observed: ${persons}: give them as persons.` : ""} It is wired: ${wiringLines(station)}. A spec of your own is accepted instead, with a measured input as a Logic.Time:timeline whose segments are the $series, its value port wired into the input.` : "";
-    if (!last) return `Evaluate a first candidate.${start} Give the bounds of the variables nobody knows (fit), and evaluate the candidate (graph.evaluate); its answer is compact, the whole is at the handle the state names. Threshold: ${threshold}.${held}${refused}`;
+    // A type the plan maps outside the library graph (a generated node): the evaluation holds it through add, said here with the exact wiring, before the first candidate and before a hand-over.
+    const needFirst = station ? addNeededFor(progress, STATION_GRAPH_ID) : null;
+    if (!last) return `Evaluate a first candidate.${start}${needFirst ? ` Also, ${addSentence(needFirst, STATION_GRAPH_ID)}.` : ""} Give the bounds of the variables nobody knows (fit), and evaluate the candidate (graph.evaluate); its answer is compact, the whole is at the handle the state names. Threshold: ${threshold}.${held}${refused}`;
     const where = last.residuals.map((r) => `${r.column}: ${r.rmse} ppm, worst ${r.worst} at minute ${r.worstMinute}`).join("; ");
+    const needLast = last.graph ? addNeededFor(progress, last.graph, last.types) : null;
+    if (last.diagnosis === "PASS" && needLast) return `Not a hand-over yet. Candidate ${last.n} (${last.path}) holds the threshold (${where}) but not ${needLast.types.map((t) => `"${t}"`).join(", ")}, which the plan says produces a required output: a twin handed over without it is short of what was asked. Evaluate the same graph "${last.graph}" with the same levers and add wiring the node in, for instance add: ${JSON.stringify(needLast.add)} (the graph's atmospheres: ${needLast.where}; params left empty keep the values the contract set); then hand that candidate over.`;
     if (last.diagnosis === "PASS") return `Hand over. Candidate ${last.n} (${last.path}) holds the threshold: ${where}. The harness hands the numbers over itself, from the evaluation (the state's evaluation.parameters: for each variable its value, unit, name and how it was set); the summary says in words what was found and does not give a variable a meaning of its own. Its calibration passed on this telemetry; its validation on another profile, hatch state or occupancy was not performed, and the identifiability of the fitted parameters is not assessed: say both. End with task.done, the graph as the artifact: {"kind": "graph", "path": "${last.path}"}.`;
     if (last.diagnosis === "INVALID_EVALUATION") return `The evaluation of candidate ${last.n} is invalid, no residual was trusted: ${(last.diagnostics ?? []).map((d) => `${d.reason}${d.column ? ` on ${d.column}` : ""}${d.minute !== undefined ? ` at minute ${d.minute}` : ""}${d.detail ? ` (${d.detail})` : ""}`).join("; ")}. Fix what that names (a probe that exists, a run that covers the telemetry) and evaluate again.${refused}`;
     const warned = last.warnings?.length ? ` ${last.warnings.map((w) => w.slice(0, 400)).join(" ")}` : "";
@@ -310,8 +315,50 @@ function intentionOf(task: TaskFile["task"], generic: Intention): Intention {
     return { ...generic, description: `Build the twin graph that produces ${outputs} and reproduces the task's telemetry within its residual threshold, from the node catalogue; evaluate each candidate (graph.evaluate) and revise it by its gap until it holds.` };
 }
 
-/** The topic's own refusals: a plan before its evidence is in (the phase moves on facts, not on a call). */
-function guardGraph(capabilityId: string, _input: JsonValue, context: TopicContext): string[] {
+/**
+ * The `add` a library-graph evaluation needs so the candidate holds the types the plan maps outside the graph (a generated node, on the
+ * replay of a hand-off): the node and its output into an atmosphere's next free delta_CO2_<k> input, where the graph sums its sources of
+ * CO2. Computed by code from the template, said in the brief, required by the guard (2026-09-27: on two page runs the model evaluated the
+ * library graph without the node it had mapped, then reworded task.done against the validator's verdict until its budget or STUCK ended it).
+ * `present`: the types already held (the candidate's, or the call's add). Null when nothing is short.
+ */
+export function addNeededFor(progress: Progress, graphId: string, present: string[] = []): { types: string[]; add: { nodes: Array<{ id: string; typeId: string; params: Record<string, never> }>; connections: Array<{ from: [string, string]; to: [string, string] }> }; where: string } | null {
+    const mapped = Object.entries(progress.plan?.produced ?? {});
+    if (!mapped.length) return null;
+    const entry = loadGraphLibrary().find((g) => g.template.id === graphId);
+    if (!entry) return null;
+    const spec = entry.template.spec;
+    const own = new Set(spec.nodes.map((n) => n.typeId));
+    const short = mapped.filter(([, m]) => !own.has(m.type) && !present.includes(m.type));
+    if (!short.length) return null;
+    const atmospheres = spec.nodes
+        .filter((n) => n.typeId === "Physics.Scene:atmosphere")
+        .map((n) => {
+            const used = spec.connections.filter((c) => c.to[0] === n.id && /^delta_CO2_\d+$/.test(c.to[1])).map((c) => Number(c.to[1].slice("delta_CO2_".length)));
+            return { id: n.id, next: used.length ? Math.max(...used) + 1 : 0 };
+        });
+    const first = atmospheres[0];
+    const nodes = short.map(([, m], i) => ({ id: `generated-${i + 1}`, typeId: m.type, params: {} as Record<string, never> }));
+    const connections = first ? short.map(([, m], i): { from: [string, string]; to: [string, string] } => ({ from: [`generated-${i + 1}`, m.port], to: [first.id, `delta_CO2_${first.next + i}`] })) : [];
+    const where = atmospheres.map((a) => `${a.id} (its next free CO2 input: delta_CO2_${a.next})`).join(", ");
+    return { types: short.map(([, m]) => m.type), add: { nodes, connections }, where };
+}
+
+/** The sentence the brief and the guard say about a mapped type the graph does not hold. */
+function addSentence(need: NonNullable<ReturnType<typeof addNeededFor>>, graphId: string): string {
+    return `the plan says ${need.types.map((t) => `"${t}"`).join(", ")} produce(s) a required output, and graph "${graphId}" holds no node of that type: evaluate it with add wiring the node into the module the request names, for instance add: ${JSON.stringify(need.add)} (the graph's atmospheres: ${need.where}; params left empty keep the values the contract set)`;
+}
+
+/** The topic's own refusals: a plan before its evidence is in (the phase moves on facts, not on a call); a library-graph evaluation short of a type the plan maps. */
+function guardGraph(capabilityId: string, input: JsonValue, context: TopicContext): string[] {
+    if (capabilityId === "graph.evaluate") {
+        const call = input && typeof input === "object" && !Array.isArray(input) ? (input as { graph?: unknown; add?: { nodes?: Array<{ typeId?: unknown }> } }) : null;
+        if (call && typeof call.graph === "string") {
+            const need = addNeededFor(context.progress, call.graph, (call.add?.nodes ?? []).map((n) => String(n?.typeId ?? "")));
+            if (need) return [addSentence(need, call.graph)];
+        }
+        return [];
+    }
     if (capabilityId !== "task.plan") return [];
     const requirements = requirementsOf(context.progress, context.task);
     return Object.entries(requirements)

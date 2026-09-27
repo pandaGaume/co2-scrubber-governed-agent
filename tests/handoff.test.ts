@@ -24,7 +24,8 @@ import { fromRoot } from "../lib/paths.js";
 import { LAB_WORLD, twoZoneTelemetry } from "../harness/stand-in/two-zone-world.js";
 import { LEAK_CONTRACT, LEAK_TYPE } from "../harness/scripted/code-fixture.js";
 import { planProblems } from "../harness/core/builder-guard.js";
-import { GRAPH_TOPIC } from "../harness/topics/graph/index.js";
+import { addNeededFor, GRAPH_TOPIC } from "../harness/topics/graph/index.js";
+import { newProgress } from "../harness/core/workspace-observer.js";
 import { codeTaskRequest, missingForCode, replayRequest } from "../slots/factory/handoff.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
 import type { TaskFile } from "../harness/core/task.js";
@@ -44,6 +45,22 @@ const TELEMETRY = twoZoneTelemetry(LAB_WORLD, [
 const MISSING = { required_output: "leak_co2", quantity: "MassFlow", unit: "kg/s", topic: "code", reason: "no node of the catalogue takes CO2 out of a volume at a constant mass flow scaled by a command", contract: LEAK_CONTRACT };
 
 describe("the hand-off's rules, without a broker", () => {
+    it("a generated type the plan maps is wired into the library graph by an add the harness computes: the node into the Lab's next free CO2 input; nothing when the candidate holds it", () => {
+        const progress = newProgress();
+        progress.plan = { selected_nodes: [], missing_capabilities: [], produced: { leak_co2: { type: LEAK_TYPE, port: "co2Delta" } } };
+        const need = addNeededFor(progress, "habitat");
+        assert.ok(need);
+        assert.deepEqual(need.types, [LEAK_TYPE]);
+        assert.deepEqual(need.add.nodes, [{ id: "generated-1", typeId: LEAK_TYPE, params: {} }]);
+        assert.deepEqual(need.add.connections, [{ from: ["generated-1", "co2Delta"], to: ["lab", "delta_CO2_2"] }]);
+        assert.match(need.where, /habb \(its next free CO2 input: delta_CO2_1\)/);
+        assert.equal(addNeededFor(progress, "habitat", [LEAK_TYPE]), null);
+        assert.equal(addNeededFor(newProgress(), "habitat"), null);
+        const context = { progress, task: {} as never, broker: {} as never, taskId: "t", runtimeSlot: "forge" } as never;
+        const problems = GRAPH_TOPIC.guard!("graph.evaluate", { graph: "habitat", fit: {} }, context);
+        assert.match(String(problems), /holds no node of that type: evaluate it with add/);
+        assert.deepEqual(GRAPH_TOPIC.guard!("graph.evaluate", { graph: "habitat", add: { nodes: [{ id: "x", typeId: LEAK_TYPE }], connections: [] } }, context), []);
+    });
     it("a plan's missing capability for the code factory carries a contract the forge can run; the requests are built from the task", async () => {
         const task = { id: "t", objective: { required_outputs: [{ name: "leak_co2", quantity: "MassFlow", unit: "kg/s" }], constraints: {} }, observations: {}, data: [], budget: { iterations: 1, minutes: 1, twinPoints: 1 }, requestedBy: "x", requestedAt: "t" } as unknown as TaskFile["task"];
         const options = { broker: { call: async () => ({ ok: false, outcome: "refused" }) } as never, task, topic: GRAPH_TOPIC };
