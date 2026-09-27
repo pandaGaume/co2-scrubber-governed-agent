@@ -66,6 +66,7 @@ export function observerSlot(wsBase: string, log: (line: string) => void, option
                         description: { type: "string" },
                         telemetry: { type: "array", items: { type: "object" } },
                         forward: { type: "boolean" },
+                        attempts: { type: "number", description: "how many times the model may be sent back with the reasons of a refusal; four when absent (a refused request, an empty one and a unit still wrong were seen in a row)" },
                         wait: { type: "boolean", description: "false: the answer comes at once with the id and status running; the observation goes on and the entry (observer://requests, or the request tool) says when it is done" },
                     },
                     ["description"],
@@ -78,7 +79,8 @@ export function observerSlot(wsBase: string, log: (line: string) => void, option
                     const work = async (): Promise<ObserverEntry> => {
                         const broker = new Broker(httpBase, { name: "observer", version: VERSION, locale: "en" });
                         try {
-                            const result = await observe({ provider: await modelOf(broker), broker, description, telemetry: Array.isArray(args.telemetry) ? (args.telemetry as Array<Record<string, unknown>>) : undefined });
+                            const attempts = typeof args.attempts === "number" && args.attempts >= 1 ? Math.min(8, Math.floor(args.attempts)) : 4;
+                            const result = await observe({ provider: await modelOf(broker), broker, description, telemetry: Array.isArray(args.telemetry) ? (args.telemetry as Array<Record<string, unknown>>) : undefined, attempts });
                             let taskId: string | null = null;
                             if (result.ok && result.request && args.forward === true) {
                                 const contract = factoryContractOf(result.request);

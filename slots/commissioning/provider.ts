@@ -244,7 +244,7 @@ export function commissioningSlot(wsBase: string, log: (line: string) => void, o
                     ...(run.options.leak ? ["Also required: the twin must expose the CO2 that leaves the Lab through a leak in a seal, as a mass flow out of the volume at a constant rate at full opening scaled by a command between 0 and 1 (the leak fully open when nothing commands it), the rate an editable. No node of the catalogue is known to express a leak."] : []),
                 ].join("\n");
                 // The Observer takes several model calls, longer than a broker call may wait: asked without waiting, read until done.
-                const opened = await call<{ id: string; status: string }>("observer", "observe", { description, telemetry, wait: false });
+                const opened = await call<{ id: string; status: string }>("observer", "observe", { description, telemetry, wait: false, attempts: 5 });
                 loop(7).note = `observation ${opened.id}`;
                 notify();
                 const t2 = Date.now();
