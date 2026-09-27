@@ -355,7 +355,14 @@ describe("the commissioning, through the broker", () => {
         assert.equal(early.ok, false);
         assert.match(String(early.error), /only once authorised by the commander/);
         await assert.rejects(runProcedure({ broker: agent, commissioningId: "c001-lab", waitMinute: async () => undefined }), /only an authorised procedure/);
-        const a = await ok<{ status: string; monitoring: { sessionId: string; subjects: string[] } }>("station", "commissioning_authorise", { commissioningId: "c001-lab", decision: "authorise", by: "commander" });
+        // The authorisation is a question of the station's own (2026-09-27), answered in Mother's chat: the answer comes back into commissioning_authorise.
+        const questions = JSON.parse((await (await operator.session("station")).request<{ contents: Array<{ text: string }> }>("resources/read", { uri: "station://questions" })).contents[0].text) as Array<{ id: string; kind: string; status: string; context: { commissioningId: string }; options: Array<{ id: string }> }>;
+        const asked = questions.find((q) => q.kind === "authorise" && q.status === "open" && q.context.commissioningId === "c001-lab");
+        assert.ok(asked, "Mother asked the commander");
+        assert.deepEqual(asked.options.map((o) => o.id), ["authorise", "refuse"]);
+        const answered = await ok<{ status: string; resumed: { status: string; monitoring: { sessionId: string; subjects: string[] } } }>("station", "answer", { questionId: asked.id, choice: "authorise", by: "commander", how: "typed" });
+        assert.equal(answered.status, "answered");
+        const a = answered.resumed;
         assert.equal(a.status, "authorised");
         assert.deepEqual(a.monitoring.subjects, ["fe-1", "fe-2"]);
         const monitor = await ok<{ session: string | null }>("biomed", "state");

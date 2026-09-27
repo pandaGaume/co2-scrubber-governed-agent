@@ -31,7 +31,7 @@ export interface QuestionAnswer {
     /** What the commander changed in the context, when the option allows it (a contract amended). */
     amendments?: JsonValue;
     /** How the answer came: a click, a voice, a standing order. */
-    how: "click" | "voice" | "policy" | "script";
+    how: "click" | "voice" | "typed" | "policy" | "script";
 }
 
 export interface Resume {

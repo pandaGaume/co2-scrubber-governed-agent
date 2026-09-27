@@ -184,6 +184,42 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
         return line;
     };
 
+    /** A question to the commander (Tier 4): kept, said by Mother unless she just asked it in her own words, answered on the control post or by a standing order; on the answer the asker is called back. */
+    const askQuestion = async (args: Record<string, unknown>): Promise<{ questionId: string; status: Question["status"]; answer?: QuestionAnswer | null; resumed?: Question["resumed"] }> => {
+        const problems = questionProblems(args as never);
+        if (problems.length) throw new Error(problems.join("; "));
+        const q: Question = {
+            id: `q${(state.questions.length + 1).toString().padStart(4, "0")}`,
+            at: new Date().toISOString(),
+            taskId: str(args.taskId) || null,
+            from: str(args.from),
+            kind: str(args.kind),
+            question: str(args.question),
+            options: (args.options as Array<{ id: string; label: string }>).map((o) => ({ id: String(o.id), label: String(o.label ?? o.id) })),
+            context: (args.context ?? null) as never,
+            resume: args.resume ? ({ slot: str((args.resume as Resume).slot), tool: str((args.resume as Resume).tool), args: (((args.resume as Resume).args ?? {}) as Record<string, never>) } as Resume) : null,
+            status: "open",
+            answer: null,
+            resumed: null,
+        };
+        state.questions.push(q);
+        const order = standingOrder(state.questionsPolicy, q.kind, q.options);
+        if (order.mode === "auto") {
+            // The standing order answers: said as such, and the asker called back at once.
+            const choice = q.options.find((o) => o.id === order.choice)!;
+            q.answer = { choice: choice.id, by: "standing order", at: new Date().toISOString(), note: null, how: "policy" };
+            q.status = "auto";
+            say("mother.question.auto", null, () => ({ question: q.question, choice: choice.label }));
+            notify(QUESTIONS_URI, { [META_QUESTION]: q });
+            await resumeAsker(q);
+            return { questionId: q.id, status: q.status, answer: q.answer, resumed: q.resumed };
+        }
+        // The authorisation is asked in Mother's own words just before (mother.authorisation.request): not said twice.
+        if (q.kind !== "authorise") say("mother.question.asked", null, () => ({ question: q.question, options: q.options.map((o) => o.label).join(" / ") }));
+        notify(QUESTIONS_URI, { [META_QUESTION]: q });
+        return { questionId: q.id, status: q.status };
+    };
+
     const occupantsPhrase = (w: McpGrammar, count: number) => (count === 0 ? w.phrase("mother.occupants.none") : count === 1 ? w.phrase("mother.occupants.one") : w.phrase("mother.occupants.many", { count }));
     const methodPhrase = (w: McpGrammar, method: string) => (method === "concentration-decay" ? w.phrase("mother.method.concentration-decay") : w.phrase("mother.method.other", { method }));
 
@@ -272,9 +308,18 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
         c.status = "awaiting-authorisation";
         proposal.status = "relayed";
         const count = check.occupants.length;
-        if (count) say("mother.authorisation.request", c, (w) => ({ people: count === 1 ? w.phrase("mother.people.one") : w.phrase("mother.people.many", { count }) }));
-        else say("mother.authorisation.request.empty", c, () => ({ module: check.module }));
+        const asked = count ? say("mother.authorisation.request", c, (w) => ({ people: count === 1 ? w.phrase("mother.people.one") : w.phrase("mother.people.many", { count }) })) : say("mother.authorisation.request.empty", c, () => ({ module: check.module }));
         announce(c);
+        // The commander's decision is a question of the station's own (2026-09-27): answered in Mother's chat by a click, a word typed or spoken, or a standing order; the answer comes back into commissioning_authorise.
+        await askQuestion({
+            taskId: proposal.taskId,
+            from: "station",
+            kind: "authorise",
+            question: asked.text.en,
+            options: [{ id: "authorise", label: "authorise the test" }, { id: "refuse", label: "refuse it" }],
+            context: { commissioningId: c.id, procedure: { procedureId: procedure.id, module: check.module, occupants: check.occupants.map((o) => o.callsign ?? o.id), steps: procedure.steps.length } } as never,
+            resume: { slot: "station", tool: "commissioning_authorise", args: { commissioningId: c.id } },
+        });
     };
 
     const published = publishSlot<StationState>({
@@ -461,13 +506,29 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
             },
             {
                 name: "commissioning_authorise",
-                inputSchema: obj({ commissioningId: { type: "string" }, decision: { type: "string", enum: ["authorise", "refuse"] }, by: { type: "string" }, note: { type: "string" } }, ["commissioningId", "decision", "by"]),
-                handle: async ({ commissioningId, decision, by, note }) => {
+                inputSchema: obj({ commissioningId: { type: "string" }, decision: { type: "string", enum: ["authorise", "refuse"] }, by: { type: "string" }, note: { type: "string" }, questionId: { type: "string" }, answer: { type: "object" } }, ["commissioningId"]),
+                handle: async (args) => {
+                    const { commissioningId } = args;
+                    // Called directly (the page's chips, a script), or back from the authorise question with the commander's answer.
+                    const answered = args.answer && typeof args.answer === "object" ? (args.answer as { choice?: string; by?: string; note?: string | null }) : null;
+                    const decision = str(args.decision) || answered?.choice || "";
+                    const by = str(args.by) || answered?.by || "commander";
+                    const note = str(args.note) || answered?.note || "";
+                    if (decision !== "authorise" && decision !== "refuse") throw new Error(`decision is "authorise" or "refuse", not "${decision}"`);
                     const c = commissioning(commissioningId);
                     if (c.status !== "awaiting-authorisation" || !c.procedure) throw new Error(`commissioning ${c.id} is ${c.status}: there is nothing to authorise`);
                     const at = new Date().toISOString();
+                    // A direct call settles the open question of this commissioning, so nobody answers it twice.
+                    if (!args.questionId) {
+                        for (const q of state.questions) {
+                            if (q.status !== "open" || q.kind !== "authorise" || (q.context as { commissioningId?: string } | null)?.commissioningId !== c.id) continue;
+                            q.answer = { choice: decision, by, at, note: note || null, how: "script" };
+                            q.status = "answered";
+                            notify(QUESTIONS_URI, { [META_QUESTION]: q });
+                        }
+                    }
                     if (decision === "refuse") {
-                        c.authorisation = { decision: "refuse", by: String(by), at, note: str(note) || null };
+                        c.authorisation = { decision: "refuse", by, at, note: note || null };
                         c.status = "refused";
                         say("mother.authorisation.refused", c);
                         announce(c);
@@ -483,7 +544,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                         if (!r.ok) throw new Error(`the medical monitoring could not be opened, so the authorisation is not recorded: ${r.error ?? r.outcome}`);
                         c.monitoring = { sessionId: (r.output as { session: { sessionId: string } }).session.sessionId, subjects: ids };
                     }
-                    c.authorisation = { decision: "authorise", by: String(by), at, note: str(note) || null };
+                    c.authorisation = { decision: "authorise", by, at, note: note || null };
                     c.status = "authorised";
                     say("mother.authorised", c);
                     if (ids.length) say(ids.length === 1 ? "mother.monitoring.active.one" : "mother.monitoring.active.many", c, () => ({ count: ids.length }));
@@ -506,39 +567,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     },
                     ["from", "kind", "question", "options"],
                 ),
-                handle: async (args, s) => {
-                    const problems = questionProblems(args as never);
-                    if (problems.length) throw new Error(problems.join("; "));
-                    const q: Question = {
-                        id: `q${(s.questions.length + 1).toString().padStart(4, "0")}`,
-                        at: new Date().toISOString(),
-                        taskId: str(args.taskId) || null,
-                        from: str(args.from),
-                        kind: str(args.kind),
-                        question: str(args.question),
-                        options: (args.options as Array<{ id: string; label: string }>).map((o) => ({ id: String(o.id), label: String(o.label ?? o.id) })),
-                        context: (args.context ?? null) as never,
-                        resume: args.resume ? ({ slot: str((args.resume as Resume).slot), tool: str((args.resume as Resume).tool), args: (((args.resume as Resume).args ?? {}) as Record<string, never>) } as Resume) : null,
-                        status: "open",
-                        answer: null,
-                        resumed: null,
-                    };
-                    s.questions.push(q);
-                    const order = standingOrder(s.questionsPolicy, q.kind, q.options);
-                    if (order.mode === "auto") {
-                        // The standing order answers: said as such, and the asker called back at once.
-                        const choice = q.options.find((o) => o.id === order.choice)!;
-                        q.answer = { choice: choice.id, by: "standing order", at: new Date().toISOString(), note: null, how: "policy" };
-                        q.status = "auto";
-                        say("mother.question.auto", null, () => ({ question: q.question, choice: choice.label }));
-                        notify(QUESTIONS_URI, { [META_QUESTION]: q });
-                        await resumeAsker(q);
-                        return { questionId: q.id, status: q.status, answer: q.answer, resumed: q.resumed };
-                    }
-                    say("mother.question.asked", null, () => ({ question: q.question, options: q.options.map((o) => o.label).join(" / ") }));
-                    notify(QUESTIONS_URI, { [META_QUESTION]: q });
-                    return { questionId: q.id, status: q.status };
-                },
+                handle: (args) => askQuestion(args),
             },
             {
                 // The commander's answer (Tier 4): a choice among the options, who and how; then the asker is called back. Never the agent's.
@@ -548,7 +577,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                         questionId: { type: "string" },
                         choice: { type: "string", description: "the id of the option chosen" },
                         by: { type: "string", description: "who answers: the commander when absent" },
-                        how: { type: "string", enum: ["click", "voice", "script"], description: "how the answer came" },
+                        how: { type: "string", enum: ["click", "voice", "typed", "script"], description: "how the answer came" },
                         note: { type: "string" },
                         amendments: { type: "object", description: "what the commander changed in the context (a contract amended), when the option allows it" },
                     },
@@ -562,7 +591,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     if (!option) throw new Error(`"${String(choice)}" is not an option of question ${q.id} (${q.options.map((o) => o.id).join(", ")})`);
                     // Who answers is the commander unless the caller says otherwise (2026-09-27: an answer without by was recorded as "undefined").
                     const who = str(by) || "commander";
-                    q.answer = { choice: option.id, by: who, at: new Date().toISOString(), note: str(note) || null, how: (how === "voice" || how === "script" ? how : "click") as QuestionAnswer["how"], ...(amendments && typeof amendments === "object" ? { amendments: amendments as never } : {}) };
+                    q.answer = { choice: option.id, by: who, at: new Date().toISOString(), note: str(note) || null, how: (how === "voice" || how === "script" || how === "typed" ? how : "click") as QuestionAnswer["how"], ...(amendments && typeof amendments === "object" ? { amendments: amendments as never } : {}) };
                     q.status = "answered";
                     say("mother.question.answered", null, () => ({ choice: option.label, by: who }));
                     notify(QUESTIONS_URI, { [META_QUESTION]: q });

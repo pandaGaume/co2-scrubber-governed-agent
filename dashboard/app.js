@@ -641,12 +641,11 @@ async function refreshVoice() {
             const when = u.at ? new Date(u.at).toLocaleTimeString([], { hour12: false }) : "";
             return `<div class="line ${cls}"><span class="t">${escapeHtml(when)}</span>${escapeHtml(u.text ?? "")}</div>`;
         };
-        const html =
-            recent.map((u) => line(u, "")).join("") +
-            pendingSaid.map((u) => line(u, "pending")).join("") +
-            `<div class="line"><span class="t">&gt;</span><i class="caret"></i></div>`;
+        await refreshQuestions();
+        const tail = chatTail();
+        const html = recent.map((u) => line(u, "")).join("") + pendingSaid.map((u) => line(u, "pending")).join("") + tail;
         const log = $("mother-log");
-        log.innerHTML = recent.length || pendingSaid.length ? html : motherLine("Nothing said yet.", "dim") + `<div class="line"><span class="t">&gt;</span><i class="caret"></i></div>`;
+        log.innerHTML = recent.length || pendingSaid.length ? html : motherLine("Nothing said yet.", "dim") + tail;
         log.parentElement.scrollTop = log.parentElement.scrollHeight;
     } catch (e) {
         motherNote(`no voice: ${e.message}`);
@@ -1085,7 +1084,95 @@ const STEPS = [
     },
 ];
 
+    {
+        title: "Commissioning",
+        text: "A scrubber registers without a qualified simulator: Mother opens its commissioning, the procedure factory writes the test, Mother relays it and asks you (in her chat), the executor runs it, the report, the Observer writes the twin request, the graph factory builds the twin, the proposal. Ten loops: code, a model, the script, you.",
+        expect: "ok",
+        commissioning: { world: "lab" },
+    },
+    {
+        title: "Commissioning, with a leak",
+        text: "The same, and the twin must expose a leak no node of the catalogue produces: the graph factory writes the contract, Mother asks you to open the code factory (or a standing order answers), the forge accepts the node, the request is replayed with it.",
+        expect: "ok",
+        commissioning: { world: "lab", leak: true },
+    },
+    {
+        title: "Commissioning, hidden occupant",
+        text: "A third person in the Lab the monitor does not list: the twin's fit parts from the telemetry where the extra CO2 is.",
+        expect: "ok",
+        commissioning: { world: "hidden-occupant" },
+    },
+];
+
 const RANK = { ok: 0, refused: 1, deny: 2, error: 3 };
+
+/** The list items of the story, by step index: a run that was started before the page loaded attaches to its step. */
+const stepItems = [];
+
+async function readOf(slot, uri) {
+    const s = await session(slot);
+    const r = await s.request("resources/read", { uri });
+    return JSON.parse(r.contents[0].text);
+}
+
+/** A commissioning run as the story shows it under its step: the ten loops, who acts and of what nature, what each waits for. The decisions are Mother's chat's. */
+function runHtml(run) {
+    const natureOf = (l) => ({ code: "code", model: "a model", script: "the script", human: "you" })[l.nature] ?? l.nature;
+    const lines = run.loops.map((l) => {
+        const mark = { pending: "\u00b7", running: "\u25b6", waiting: "\u23f8", done: "\u2713", failed: "\u2717", skipped: "\u2013" }[l.status] ?? "?";
+        const task = l.taskId ? ` <span class="t">${escapeHtml(l.taskId)}</span>` : "";
+        const note = l.note ? ` <span class="dim">${escapeHtml(l.note)}</span>` : "";
+        const waiting = l.status === "waiting" && l.waitingFor ? `<div class="line"><b>waiting for you, in Mother's chat</b></div>` : "";
+        return `<div class="line">${mark} <b>${l.n}. ${escapeHtml(l.name)}</b> (${natureOf(l)}: ${escapeHtml(l.who)})${task}${note}</div>${waiting}`;
+    });
+    const head = `<div class="line"><span class="t">${escapeHtml(run.id)}</span> ${escapeHtml(run.status)}${run.ended ? `: ${escapeHtml(run.ended)}` : ""}</div>`;
+    return head + lines.join("");
+}
+
+const runWatchers = new Map();
+
+/** Follows the run under its step until it ends; the step's pill says how it ended. */
+function watchRun(li, step) {
+    if (runWatchers.has(li)) return;
+    let box = li.querySelector(".run-log");
+    if (!box) {
+        box = document.createElement("div");
+        box.className = "run-log";
+        li.appendChild(box);
+    }
+    const tick = async () => {
+        try {
+            const run = await readOf("commissioning", "commissioning://run");
+            if (!run) return;
+            box.innerHTML = runHtml(run);
+            if (run.status !== "running") {
+                clearInterval(runWatchers.get(li));
+                runWatchers.delete(li);
+                const pill = li.querySelector("[data-expect]");
+                const outcome = run.status === "done" ? "ok" : "error";
+                pill.className = `outcome ${outcome}`;
+                pill.textContent = outcome === step.expect ? LABEL[outcome] : `${LABEL[outcome]} (expected ${LABEL[step.expect]})`;
+                li.querySelector("button").disabled = false;
+            }
+        } catch (e) {
+            box.innerHTML = `<div class="line dim">no commissioning slot: ${escapeHtml(e.message)}</div>`;
+        }
+    };
+    runWatchers.set(li, setInterval(tick, POLL_MS));
+    void tick();
+}
+
+/** A run already playing when the page opens (another page started it) shows under its step. */
+async function attachRun() {
+    try {
+        const run = await readOf("commissioning", "commissioning://run");
+        if (!run) return;
+        const i = STEPS.findIndex((s) => s.commissioning && s.commissioning.world === run.options.world && Boolean(s.commissioning.leak) === Boolean(run.options.leak));
+        if (i >= 0 && stepItems[i]) watchRun(stepItems[i], STEPS[i]);
+    } catch {
+        // No commissioning slot: the steps stay as they are.
+    }
+}
 
 function renderStory() {
     const list = $("story-list");
@@ -1096,7 +1183,7 @@ function renderStory() {
     STEPS.forEach((step, i) => {
         const li = document.createElement("li");
         li.className = "step";
-        const disabled = !step.run;
+        const disabled = !step.run && !step.commissioning;
         const needs = step.needs ? `<p class="needs">${disabled ? "not yet: " : "note: "}${step.needs}</p>` : "";
         li.innerHTML =
             `<div class="step-head"><span class="step-n">${String(i + 1).padStart(2, "0")}</span><span class="step-title">${step.title}</span></div>` +
@@ -1108,7 +1195,10 @@ function renderStory() {
             button.addEventListener("click", async () => {
                 button.disabled = true;
                 const before = $("trace-list").children.length;
-                await step.run();
+                if (step.commissioning) {
+                    await call("commissioning", "start", step.commissioning, "commander");
+                    watchRun(li, step);
+                } else await step.run();
                 await refreshCabin();
                 // What actually happened: the worst outcome among this step's calls.
                 const added = $("trace-list").children.length - before;
@@ -1117,9 +1207,11 @@ function renderStory() {
                 const pill = li.querySelector("[data-expect]");
                 pill.className = `outcome ${worst}`;
                 pill.textContent = worst === step.expect ? LABEL[worst] : `${LABEL[worst]} (expected ${LABEL[step.expect]})`;
-                button.disabled = false;
+                // A commissioning step's button comes back when its run ends (watchRun); the pill then says how the run ended.
+                if (!step.commissioning) button.disabled = false;
             });
         }
+        stepItems[i] = li;
         list.appendChild(li);
     });
     $("story-reset")?.addEventListener("click", async (ev) => {
@@ -1146,6 +1238,7 @@ loadSlots()
         refreshCabin();
         setInterval(refreshCabin, POLL_MS);
         openVoice().then(() => setInterval(refreshVoice, POLL_MS));
+        attachRun();
         openModel().then(followEvents);
         openAgent().then(() => setInterval(refreshAgent, POLL_MS * 2));
         // Once: the machine's addresses do not change while it runs.
@@ -1163,152 +1256,127 @@ loadSlots()
     });
 
 
-// ── Questions to the commander (Tier 4) ──────────────────────────────────────
-// The station's questions, answered here by a click or by a spoken answer
-// (the browser's speech recognition, no server), or by a standing order set
-// here. The page decides nothing: every answer is `station.answer`, signed
-// commander, and the station calls back whoever asked.
 
-const questionsLog = $("questions-log");
-if (questionsLog) {
-    const escapeHtml = (v) => String(v ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-    const heard = new Map();
-    const optionOf = (text, options) => {
-        const t = String(text).trim().toLowerCase();
-        if (!t) return null;
-        const exact = options.find((o) => o.id.toLowerCase() === t || o.label.toLowerCase() === t);
-        if (exact) return exact;
-        const hits = options.filter((o) => t.includes(o.id.toLowerCase()) || o.label.toLowerCase().split(/\W+/).some((w) => w.length > 2 && t.includes(w)));
-        return hits.length === 1 ? hits[0] : null;
-    };
-    const readStation = async (uri) => {
-        const s = await session("station");
-        const r = await s.request("resources/read", { uri });
-        return JSON.parse(r.contents[0].text);
-    };
-    const answer = async (questionId, choice, how, note) => {
-        await call("station", "answer", { questionId, choice, by: "commander", how, ...(note ? { note } : {}) }, "commander");
-        heard.delete(questionId);
-        await refreshQuestions();
-    };
-    const render = (questions) => {
-        const open = questions.filter((q) => q.status === "open");
-        const done = questions.filter((q) => q.status !== "open").slice(-4).reverse();
-        const card = (q) => {
-            const h = heard.get(q.id);
-            const options = q.options.map((o) => `<button class="badge link" data-q="${q.id}" data-choice="${escapeHtml(o.id)}" type="button">${escapeHtml(o.label)}</button>`).join(" ");
-            const voice = `<button class="badge link" data-voice="${q.id}" type="button" title="answer by voice">voice</button>`;
-            const transcript = h ? `<div class="line dim">heard: "${escapeHtml(h.text)}" ${h.option ? `: <b>${escapeHtml(h.option.label)}</b> <button class="badge link" data-q="${q.id}" data-choice="${escapeHtml(h.option.id)}" data-how="voice" type="button">confirm</button>` : "(no option recognised: say one of them, or click)"}</div>` : "";
-            return `<div class="question"><div class="line"><span class="t">${q.id}</span> <b>${escapeHtml(q.kind)}</b> from ${escapeHtml(q.from)}${q.taskId ? ` (task ${escapeHtml(q.taskId)})` : ""}</div><div class="line">${escapeHtml(q.question)}</div><details><summary class="dim">context</summary><pre>${escapeHtml(JSON.stringify(q.context, null, 2))}</pre></details><div class="line">${options} ${voice}</div>${transcript}</div>`;
-        };
-        const past = (q) => `<div class="line dim"><span class="t">${q.id}</span> ${escapeHtml(q.kind)}: ${escapeHtml(q.answer?.choice ?? "?")} by ${escapeHtml(q.answer?.by ?? "?")} (${escapeHtml(q.answer?.how ?? "?")})</div>`;
-        questionsLog.innerHTML = (open.length ? open.map(card).join("") : `<div class="line dim">No open question.</div>`) + done.map(past).join("");
-    };
-    async function refreshQuestions() {
-        try {
-            const questions = await readStation("station://questions");
-            render(questions);
-            const policy = await readStation("station://questions-policy");
-            const select = $("questions-policy");
-            if (select && document.activeElement !== select) select.value = policy.mode === "auto" ? "auto" : "ask";
-        } catch (e) {
-            questionsLog.innerHTML = `<div class="line dim">no station: ${escapeHtml(e.message)}</div>`;
-        }
-    }
-    questionsLog.addEventListener("click", async (ev) => {
-        const b = ev.target.closest("button");
-        if (!b) return;
-        if (b.dataset.voice) {
-            const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!Recognition) {
-                heard.set(b.dataset.voice, { text: "(this browser has no speech recognition)", option: null });
-                return void refreshQuestions();
-            }
-            const questions = await readStation("station://questions");
-            const q = questions.find((x) => x.id === b.dataset.voice);
-            const rec = new Recognition();
-            rec.lang = $("questions-lang")?.value ?? "fr-FR";
-            rec.interimResults = false;
-            rec.maxAlternatives = 3;
-            rec.onresult = (e) => {
-                const alternatives = Array.from(e.results[0]).map((r) => r.transcript);
-                const text = alternatives[0] ?? "";
-                const option = alternatives.map((t) => optionOf(t, q?.options ?? [])).find(Boolean) ?? null;
-                heard.set(q.id, { text, option });
-                void refreshQuestions();
-            };
-            rec.onerror = (e) => {
-                heard.set(b.dataset.voice, { text: `(recognition error: ${e.error})`, option: null });
-                void refreshQuestions();
-            };
-            heard.set(b.dataset.voice, { text: "listening...", option: null });
-            void refreshQuestions();
-            rec.start();
-            return;
-        }
-        if (b.dataset.q && b.dataset.choice) await answer(b.dataset.q, b.dataset.choice, b.dataset.how ?? "click", heard.get(b.dataset.q)?.text);
-    });
-    $("questions-policy")?.addEventListener("change", async (ev) => {
-        await call("station", "questions_policy", { mode: ev.target.value }, "commander");
-        await refreshQuestions();
-    });
-    void refreshQuestions();
-    setInterval(() => void refreshQuestions(), 2000);
+// ── The commander in Mother's chat (Tier 4) ─────────────────────────────────
+// Mother's lines are the speech slot's queue. The station's open questions
+// (station://questions) hang under them as chips: the authorisation of a test,
+// the hand-off's questions, a factory's task.ask. The commander answers by a
+// click on a chip, by a word typed at the prompt, or by voice (the browser's
+// speech recognition, no server); a standing order answers in the commander's
+// stead when set. Every answer is `station.answer`, signed commander, and the
+// station calls back whoever asked. The page decides nothing.
+
+const heard = new Map();
+const chatNotes = [];
+let openQuestions = [];
+
+const optionOf = (text, options) => {
+    const t = String(text).trim().toLowerCase();
+    if (!t) return null;
+    const exact = options.find((o) => o.id.toLowerCase() === t || o.label.toLowerCase() === t);
+    if (exact) return exact;
+    const hits = options.filter((o) => t.includes(o.id.toLowerCase()) || o.label.toLowerCase().split(/\W+/).some((w) => w.length > 2 && t.includes(w)));
+    return hits.length === 1 ? hits[0] : null;
+};
+
+function noteInChat(text) {
+    chatNotes.push({ text, at: Date.now() });
+    while (chatNotes.length > 3) chatNotes.shift();
 }
 
-
-// ── The commissioning run ────────────────────────────────────────────────────
-// The chain played by the `commissioning` slot, loop by loop, with the
-// commander's authorisation here (station.commissioning_authorise) and the
-// hand-off's questions in the questions panel.
-
-const commissioningLog = $("commissioning-log");
-if (commissioningLog) {
-    const esc = (v) => String(v ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-    const readOf = async (slot, uri) => {
-        const s = await session(slot);
-        const r = await s.request("resources/read", { uri });
-        return JSON.parse(r.contents[0].text);
-    };
-    const start = async (args) => {
-        await call("commissioning", "start", args, "commander");
-        await refreshCommissioning();
-    };
-    $("commissioning-start")?.addEventListener("click", () => void start({ world: "lab" }));
-    $("commissioning-start-leak")?.addEventListener("click", () => void start({ world: "lab", leak: true }));
-    $("commissioning-start-hidden")?.addEventListener("click", () => void start({ world: "hidden-occupant" }));
-    commissioningLog.addEventListener("click", async (ev) => {
-        const b = ev.target.closest("button");
-        if (!b?.dataset.authorise) return;
-        await call("station", "commissioning_authorise", { commissioningId: b.dataset.authorise, decision: b.dataset.decision, by: "commander", note: "from the control post" }, "commander");
-        await refreshCommissioning();
-    });
-    async function refreshCommissioning() {
-        try {
-            const run = await readOf("commissioning", "commissioning://run");
-            if (!run) {
-                commissioningLog.innerHTML = `<div class="line dim">No run. Play one: a device registers and the chain begins.</div>`;
-                return;
-            }
-            const commissionings = await readOf("station", "station://commissionings");
-            const c = commissionings.find((x) => x.id === run.commissioningId);
-            const natureOf = (l) => ({ code: "code", model: "a model", script: "the script", human: "you" })[l.nature] ?? l.nature;
-            const lines = run.loops.map((l) => {
-                const mark = { pending: "\u00b7", running: "\u25b6", waiting: "\u23f8", done: "\u2713", failed: "\u2717", skipped: "\u2013" }[l.status] ?? "?";
-                const task = l.taskId ? ` <span class="t">${esc(l.taskId)}</span>` : "";
-                const note = l.note ? ` <span class="dim">${esc(l.note)}</span>` : "";
-                const waiting = l.status === "waiting" && l.waitingFor ? `<div class="line"><b>waiting for you:</b> ${esc(l.waitingFor)}</div>` : "";
-                const auth = l.status === "waiting" && l.name === "authorisation" && c && c.status === "awaiting-authorisation"
-                    ? `<div class="line">${c.procedure ? `procedure ${esc(c.procedure.procedureId)}: ${esc(c.procedure.minutes)} min, ${esc((c.procedure.occupants ?? []).length)} occupant(s)` : ""} <button class="badge link" data-authorise="${esc(c.id)}" data-decision="authorise" type="button">authorise</button> <button class="badge link" data-authorise="${esc(c.id)}" data-decision="refuse" type="button">refuse</button></div>`
-                    : "";
-                return `<div class="question"><div class="line">${mark} <b>${l.n}. ${esc(l.name)}</b> (${natureOf(l)}: ${esc(l.who)})${task}${note}</div>${waiting}${auth}</div>`;
-            });
-            const head = `<div class="line"><span class="t">${esc(run.id)}</span> ${esc(run.status)} (world ${esc(run.options.world)}, leak ${run.options.leak ? "yes" : "no"}, builder ${esc(run.options.builder)})${run.ended ? `: ${esc(run.ended)}` : ""}</div>`;
-            commissioningLog.innerHTML = head + lines.join("");
-        } catch (e) {
-            commissioningLog.innerHTML = `<div class="line dim">no commissioning slot: ${esc(e.message)}</div>`;
-        }
+async function refreshQuestions() {
+    if (!sessions.has("station")) return;
+    try {
+        const questions = await readOf("station", "station://questions");
+        openQuestions = questions.filter((q) => q.status === "open");
+        const policy = await readOf("station", "station://questions-policy");
+        const select = $("questions-policy");
+        if (select && document.activeElement !== select) select.value = policy.mode === "auto" ? "auto" : "ask";
+    } catch {
+        openQuestions = [];
     }
-    void refreshCommissioning();
-    setInterval(() => void refreshCommissioning(), 2000);
+}
+
+/** What hangs under Mother's last line: each open question's chips (and what the microphone heard), the page's own notes, the prompt. */
+function chatTail() {
+    const chips = openQuestions.map((q) => {
+        const h = heard.get(q.id);
+        const options = q.options.map((o) => `<button class="badge link" data-q="${escapeHtml(q.id)}" data-choice="${escapeHtml(o.id)}" type="button">${escapeHtml(o.label)}</button>`).join(" ");
+        const from = q.from === "station" ? "" : `<span class="dim">${escapeHtml(q.from)}${q.taskId ? `, ${escapeHtml(q.taskId)}` : ""}: </span>`;
+        const text = q.from === "station" ? "" : `<div class="line ask">${from}${escapeHtml(q.question)}</div>`;
+        const transcript = h ? `<div class="line dim">heard: "${escapeHtml(h.text)}"${h.option ? ` : ${escapeHtml(h.option.label)}` : ", no option matches: say one of the words above, or click"}</div>` : "";
+        return `${text}<div class="chips"><span class="t">${escapeHtml(q.id)}</span>${options}<button class="badge link" data-voice="${escapeHtml(q.id)}" type="button" title="answer by voice">mic</button></div>${transcript}`;
+    });
+    const notes = chatNotes.filter((n) => Date.now() - n.at < 15000).map((n) => `<div class="line dim">${escapeHtml(n.text)}</div>`);
+    return chips.join("") + notes.join("") + `<div class="line"><span class="t">&gt;</span><i class="caret"></i></div>`;
+}
+
+async function answerQuestion(questionId, choice, how, note) {
+    await call("station", "answer", { questionId, choice, by: "commander", how, ...(note ? { note } : {}) }, "commander");
+    heard.delete(questionId);
+    await refreshVoice();
+}
+
+/** A word typed or spoken: the open question it answers is the one whose options it names; none, or two, and the page says so. */
+async function answerByText(text, how) {
+    const t = String(text ?? "").trim();
+    if (!t) return;
+    await refreshQuestions();
+    if (!openQuestions.length) return void noteInChat(`nothing to answer: no question is open ("${t}")`);
+    const matched = openQuestions.map((q) => ({ q, option: optionOf(t, q.options) })).filter((m) => m.option);
+    if (matched.length !== 1) return void noteInChat(`"${t}" answers ${matched.length ? "more than one question" : "no open question"}: say one of the options' words, or click a chip`);
+    heard.set(matched[0].q.id, { text: t, option: matched[0].option });
+    await answerQuestion(matched[0].q.id, matched[0].option.id, how, t);
+}
+
+/** The browser's speech recognition, once: what it heard goes the way a typed word goes (or to one question's chips when the microphone of that question was pressed). */
+function listen(questionId = null) {
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Recognition) return void noteInChat("this browser has no speech recognition: type the answer");
+    const rec = new Recognition();
+    rec.lang = $("questions-lang")?.value ?? "fr-FR";
+    rec.interimResults = false;
+    rec.maxAlternatives = 3;
+    const q = questionId ? openQuestions.find((x) => x.id === questionId) : null;
+    rec.onresult = async (e) => {
+        const alternatives = Array.from(e.results[0]).map((r) => r.transcript);
+        if (q) {
+            const option = alternatives.map((t) => optionOf(t, q.options)).find(Boolean) ?? null;
+            heard.set(q.id, { text: alternatives[0] ?? "", option });
+            if (option) await answerQuestion(q.id, option.id, "voice", alternatives[0]);
+            else await refreshVoice();
+            return;
+        }
+        await answerByText(alternatives[0] ?? "", "voice");
+    };
+    rec.onerror = (e) => {
+        noteInChat(`recognition error: ${e.error}`);
+        void refreshVoice();
+    };
+    if (q) heard.set(q.id, { text: "listening...", option: null });
+    else noteInChat("listening...");
+    void refreshVoice();
+    rec.start();
+}
+
+const motherLogEl = $("mother-log");
+if (motherLogEl) {
+    motherLogEl.addEventListener("click", async (ev) => {
+        const b = ev.target.closest("button");
+        if (!b) return;
+        if (b.dataset.voice) return void listen(b.dataset.voice);
+        if (b.dataset.q && b.dataset.choice) await answerQuestion(b.dataset.q, b.dataset.choice, "click", heard.get(b.dataset.q)?.text);
+    });
+    $("mother-form")?.addEventListener("submit", async (ev) => {
+        ev.preventDefault();
+        const input = $("mother-input");
+        const text = input.value;
+        input.value = "";
+        await answerByText(text, "typed");
+    });
+    $("mother-mic")?.addEventListener("click", () => listen());
+    $("questions-policy")?.addEventListener("change", async (ev) => {
+        await call("station", "questions_policy", { mode: ev.target.value }, "commander");
+        await refreshVoice();
+    });
 }

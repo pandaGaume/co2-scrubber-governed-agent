@@ -101,8 +101,11 @@ describe("the commissioning chain played by the slot, the commander deciding", (
         assert.match(waiting.loops[3].waitingFor ?? "", /station\.commissioning_authorise/);
         assert.ok(waiting.loops[1].taskId, "the procedure task is named");
         tasks.push(waiting.loops[1].taskId!);
-        // The commander authorises (on the page: the same tool).
+        // The commander authorises (on the page: the same tool, or the answer to Mother's question, which the direct call settles).
         await ok("station", "commissioning_authorise", { commissioningId: waiting.commissioningId, decision: "authorise", by: "commander-test", note: "test" });
+        const settled = (JSON.parse((await (await operator.session("station")).request<{ contents: Array<{ text: string }> }>("resources/read", { uri: "station://questions" })).contents[0].text) as Array<Question & { answer: { how: string } | null }>).find((q) => q.kind === "authorise");
+        assert.equal(settled?.status, "answered", "the authorise question is settled by the direct call");
+        assert.equal(settled?.answer?.how, "script");
 
         // The execution, the report, the Observer stood in, the graph factory (the script) declaring the leak missing with its contract; then the hand-off waits for the commander.
         const handoff = await until("the hand-off's first question", (r) => r.loops[8].status === "waiting");

@@ -45,42 +45,22 @@
         <section class="panel mother">
             <h2 class="panel-title">Mother<span class="rule"></span><span class="hint">station voice</span></h2>
             <div class="panel-body"><div class="mother-log" id="mother-log"></div></div>
-            <div class="panel-foot">The <code>speech</code> slot's queue (<code>speech://queue</code>), said in the <code>station</code> slot's own words (<code>grammar://phrases</code>). This page prints them and writes none of them.</div>
-        </section>
-
-        <section class="panel commissioning">
-            <h2 class="panel-title">Commissioning<span class="rule"></span><span class="hint">a run, the commander deciding</span></h2>
-            <div class="panel-body">
-                <div class="questions-bar">
-                    <button class="badge link" id="commissioning-start" type="button" title="a device registers; the chain runs; you authorise the test">play</button>
-                    <button class="badge link" id="commissioning-start-leak" type="button" title="the same, and the twin must expose a leak no node produces: the hand-off asks you">play with a leak</button>
-                    <button class="badge link" id="commissioning-start-hidden" type="button" title="a third person in the Lab the monitor does not list">play, hidden occupant</button>
-                </div>
-                <div class="questions-log" id="commissioning-log"></div>
+            <div class="panel-foot">
+                <form class="mother-form" id="mother-form" autocomplete="off">
+                    <span class="t">&gt;</span>
+                    <input id="mother-input" type="text" placeholder="your answer to Mother: type it, or press mic and say it">
+                    <button class="badge link" id="mother-mic" type="button" title="answer by voice (the browser's speech recognition)">mic</button>
+                    <select id="questions-policy" title="standing order">
+                        <option value="ask">every question waits for me</option>
+                        <option value="auto">answer every question with its first option</option>
+                    </select>
+                    <select id="questions-lang" title="voice">
+                        <option value="fr-FR">fr</option>
+                        <option value="en-US">en</option>
+                    </select>
+                </form>
+                <span class="note">Mother's lines are the <code>speech</code> slot's queue, in the <code>station</code> slot's words. Her questions to you (<code>station://questions</code>) hang here; a click, a word typed or spoken calls <code>station.answer</code>, signed commander. The page decides nothing.</span>
             </div>
-            <div class="panel-foot">The <code>commissioning</code> slot plays the chain (<code>commissioning://run</code>); each loop says who acts and of what nature: code, a model, the script, the human. The run waits for you twice: the authorisation here, the hand-off's questions in the panel below.</div>
-        </section>
-
-        <section class="panel questions">
-            <h2 class="panel-title">Questions<span class="rule"></span><span class="hint">for the commander (Tier 4)</span></h2>
-            <div class="panel-body">
-                <div class="questions-bar">
-                    <label>standing order
-                        <select id="questions-policy">
-                            <option value="ask">every question waits for me</option>
-                            <option value="auto">answer every question with its first option</option>
-                        </select>
-                    </label>
-                    <label>voice
-                        <select id="questions-lang">
-                            <option value="fr-FR">français</option>
-                            <option value="en-US">English</option>
-                        </select>
-                    </label>
-                </div>
-                <div class="questions-log" id="questions-log"></div>
-            </div>
-            <div class="panel-foot">The <code>station</code> slot's questions (<code>station://questions</code>): a harness or a factory at a decision it must not take alone asks here; a click or a spoken answer (the browser's speech recognition) calls <code>station.answer</code> as the commander; the standing order calls <code>station.questions_policy</code>. Nothing else on this page decides.</div>
         </section>
 
     </div>
