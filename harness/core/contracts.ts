@@ -93,6 +93,8 @@ export interface ContractReport {
     missing: string[];
     /** How many facts were reviewed, by id. */
     reviewed: number;
+    /** What a supervisor added beyond the rules on numbers (an assumption against a fact, a symbol for the wrong thing), once its verdict was applied: what, who acts, why (2026-09-27: a CONFLICT with no conflict listed left a builder to give up on its own). */
+    findings?: Array<{ kind: string; fact: string; producer: string; reason: string; required_action: string }>;
 }
 
 const rank = (s: FactStatus): number => {

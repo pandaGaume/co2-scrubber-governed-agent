@@ -302,9 +302,12 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
     // A SOURCE_CONFLICT among the task's facts ends the task before any step (2026-09-25, night): the producer named revises upstream; a
     // model asked to plan over it read the task file thirty times instead of failing. Visible, cheap, and the reference graph hides nothing.
     const contracts = progress.context.contracts;
-    if (contracts && contracts.status === "CONFLICT" && contracts.conflicts.length) {
-        const c = contracts.conflicts[0];
-        ended = `SOURCE_CONFLICT: ${contracts.conflicts.map((x) => x.reason).join(" | ")}; REQUIRE_RESOLUTION: ${[...new Set(contracts.conflicts.map((x) => x.revise))].join(", ")} to revise, upstream of this task${c.id ? ` (first fact ${c.id})` : ""}`;
+    if (contracts && contracts.status === "CONFLICT" && (contracts.conflicts.length || contracts.findings?.length)) {
+        // The rules' conflicts, or the supervisor's findings when the rules saw none: either way the task ends here and names who revises.
+        const reasons = [...contracts.conflicts.map((x) => x.reason), ...(contracts.findings ?? []).map((f) => `${f.fact}: ${f.reason}`)];
+        const revisers = [...new Set([...contracts.conflicts.map((x) => x.revise), ...(contracts.findings ?? []).map((f) => f.producer)])];
+        const first = contracts.conflicts[0]?.id ?? contracts.findings?.[0]?.fact;
+        ended = `SOURCE_CONFLICT: ${reasons.join(" | ")}; REQUIRE_RESOLUTION: ${revisers.join(", ")} to revise, upstream of this task${first ? ` (first fact ${first})` : ""}`;
         progress.failure = ended;
         progress.phase = "failed";
         log(`[factory] task ${taskId}: ${ended}`);

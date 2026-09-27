@@ -154,7 +154,9 @@ const SEVERITY: Record<VerdictStatus, number> = { CONSISTENT: 0, MISSING: 1, AMB
 export function applyVerdict(report: ContractReport, verdict: Verdict): ContractReport & { verdict: Verdict } {
     const computed: VerdictStatus = report.status;
     const status = SEVERITY[verdict.status] > SEVERITY[computed] ? verdict.status : computed;
-    return { ...report, status, verdict };
+    // The findings ride with the report: a status worse than the rules computed is explained by them, and a runner ends a task on them as on a computed conflict.
+    const findings = verdict.findings.map((f) => ({ kind: f.kind, fact: f.fact, producer: f.producer, reason: f.reason, required_action: f.required_action }));
+    return { ...report, status, ...(findings.length ? { findings } : {}), verdict };
 }
 
 /** The findings a producer must answer, as the problems its guard would say. */
