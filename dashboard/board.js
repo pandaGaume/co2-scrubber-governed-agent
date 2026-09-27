@@ -837,27 +837,6 @@ async function askFactory() {
 }
 
 /**
- * The factory's own button, when there is a menu to put it in.
- *
- * There is not, on the control room: the SIMULATION panel it belonged to went
- * to the phone, and the night's events and the transport are the `agent`
- * slot's. So this does nothing here and the board's own factory order
- * (`askFactory`, which carries the telemetry this page sampled) is placed from
- * the factory's window instead. Kept because `panel.html` still builds a menu.
- */
-function addFactoryButton() {
-    const menu = $("menu");
-    if (!menu || menu.querySelector("[data-intention='factory']")) return;
-    const factory = document.createElement("button");
-    factory.className = "btn";
-    factory.dataset.intention = "factory";
-    factory.innerHTML = `FACTORY<small>ask for the scrubber's monitor: the night's telemetry, the contract, the loop</small>`;
-    factory.title = "the request of the scenario file (factory.request), with the telemetry sampled on this board";
-    factory.addEventListener("click", () => void askFactory());
-    menu.appendChild(factory);
-}
-
-/**
  * The agent's loop, in its own window, opened when the operator asks for it.
  * The control room's middle belongs to the cabin and the scrubber; the loop
  * embedded there competed with the machine for it. Until the window is opened
@@ -937,9 +916,6 @@ async function main() {
             $("btn-sound").textContent = "SOUND ON";
         }
     });
-    // `reset` is the agent's transport and lives with the rest of it in
-    // app.js; this page only adds the factory's order to the panel.
-    addFactoryButton();
 
     await hello();
 }

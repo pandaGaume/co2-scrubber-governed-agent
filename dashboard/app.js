@@ -3,21 +3,22 @@
  * Streamable HTTP, with the client the broker's own samples ship
  * (vendor/mcp-http-client.js).
  *
- * The design is DESIGN_BRIEF.md and the frame is panel.html. The machine in
+ * The design is DESIGN_BRIEF.md and the frame is index.html. The machine in
  * the middle is drawn by room-model.js, which is handed a reading and knows
  * nothing about MCP; this file owns the broker and hands it that reading.
  *
  * What is on screen comes from five places and nowhere else:
  *   - the badges: `config.json` (the active profile) and the broker itself;
- *   - the slots and their tools: `_broker.providers_list`, then `tools/list`;
+ *   - the broker's badge: `_broker`, the broker's own name and version;
  *   - the cabin: `scrubber.motor.state`, every 2 s. The page keeps the
  *     readings it took, which is what the curve draws;
  *   - the trace: every call this page makes, with its outcome. Three outcomes
  *     exist in the architecture: the policy denies, the device refuses, or it
  *     completes. A stub slot can only refuse or complete; the policy deny
  *     appears when the broker's authorization is enabled;
- *   - MOTHER: the `speech` slot's queue, in the `station` slot's own phrases.
- *     This page chooses when something is said. It never chooses the words.
+ *   - what the station says of an outcome, in the `station` slot's own
+ *     phrases, through the `speech` slot. This page chooses when something is
+ *     said. It never chooses the words; board.js draws Mother's lines.
  *
  * The page shows nothing it has not read. Where a figure is missing it is
  * drawn as missing, never filled with a plausible number: a jury that catches
@@ -28,11 +29,10 @@ import { loadWords, NO_WORDS } from "./agent/factory-voice.js";
 import { createScene, HUE } from "./room-model.js";
 import { eventsAfter, watchSlot } from "./agent/pushes.js";
 
-/* This module serves two pages: the control room after the boot
-   (`index.html`), where `board.js` owns the loop, the events and the
-   station's voice, and the operator's tool page (`panel.html`). Every region
-   below is therefore optional: it is drawn when the page carries its element
-   and skipped when it does not. Nothing is assumed present. */
+/* This module draws the control room (`index.html`) beside `board.js`,
+   which owns the boot, the loop, the events and Mother's lines. Every region
+   below is drawn when the page carries its element and skipped when it does
+   not: nothing is assumed present. */
 const $ = (id) => document.getElementById(id);
 const has = (id) => document.getElementById(id) !== null;
 /** Sets an element's text when the page has it. */
@@ -261,101 +261,7 @@ async function loadSlots() {
     const broker = await session("_broker");
     const brokerBadge = $("badge-broker");
     if (brokerBadge) brokerBadge.innerHTML = `<i class="dot"></i>broker: ${broker.serverInfo?.name ?? "up"} ${broker.serverInfo?.version ?? ""}`;
-    const listed = await broker.callTool("providers_list", {});
-    let providers = [];
-    try {
-        providers = JSON.parse(toolText(listed));
-    } catch {
-        providers = [];
-    }
-    const names = (Array.isArray(providers) ? providers : providers.providers ?? [])
-        .map((p) => (typeof p === "string" ? p : p.name))
-        .filter((n) => n && !n.startsWith("_"));
-
-    const container = $("tool-list");
-    if (!container) return;   // the control room shows the slots as board.js polls them
-    container.innerHTML = "";
-
-    for (const name of names) {
-        const card = document.createElement("div");
-        card.className = "slot-card";
-        card.innerHTML =
-            `<div class="slot-head"><i class="led"></i><span class="name">${name}</span><span class="tier">${TIER[name] ?? ""}</span></div>` +
-            `<div class="slot-tools"><span class="unreachable">connecting...</span></div>`;
-        container.appendChild(card);
-        try {
-            const s = await session(name);
-            const { tools = [] } = await s.listTools();
-            const div = card.querySelector(".slot-tools");
-            div.innerHTML = "";
-            card.querySelector(".led").classList.add("on");
-            card.querySelector(".name").title = s.serverInfo?.description ?? "";
-            // The slot's own tools first; the six `grammar_*` tools mcp-core puts on
-            // every slot (the operator's wording editor) sit behind one small button,
-            // out of the story's way.
-            const own = tools.filter((t) => !t.name.startsWith("grammar_"));
-            const grammar = tools.filter((t) => t.name.startsWith("grammar_"));
-            for (const t of own) div.appendChild(toolButton(name, t));
-            if (grammar.length) {
-                const more = document.createElement("button");
-                more.className = "btn btn-dim";
-                more.textContent = `wording (${grammar.length})`;
-                more.title = "mcp-core grammar tools: read or rewrite how this slot describes its tools to each model family (operator only)";
-                more.addEventListener("click", () => {
-                    more.remove();
-                    for (const t of grammar) div.appendChild(toolButton(name, t));
-                });
-                div.appendChild(more);
-            }
-        } catch (e) {
-            // A slot that is down is muted, not amber: amber means "the device
-            // refused" on this page and must not mean anything else.
-            card.classList.add("down");
-            card.querySelector(".slot-tools").innerHTML = `<span class="unreachable">unreachable: ${escapeHtml(e.message)}</span>`;
-        }
-    }
-    if (names.length === 0) container.innerHTML = `<p class="hint">no provider slot connected (start the slots: npm run server)</p>`;
 }
-
-function toolButton(slot, t) {
-    const b = document.createElement("button");
-    b.className = "btn";
-    b.textContent = t.name;
-    b.title = t.description ?? "";
-    b.addEventListener("click", () => openCall(slot, t));
-    return b;
-}
-
-// ── Call dialog ───────────────────────────────────────────────────────────
-
-let pending = null;
-function openCall(slot, tool) {
-    pending = { slot, tool };
-    $("call-title").textContent = `${slot}.${tool.name}`;
-    $("call-description").textContent = tool.description ?? "";
-    const example = {};
-    for (const [k, v] of Object.entries(tool.inputSchema?.properties ?? {})) {
-        example[k] = v.enum ? v.enum[0] : v.type === "number" ? 0 : v.type === "boolean" ? true : v.type === "array" ? [] : v.type === "object" ? {} : "";
-    }
-    $("call-args").value = JSON.stringify(example, null, 2);
-    $("call-dialog").showModal();
-}
-
-$("call-cancel")?.addEventListener("click", () => $("call-dialog").close());
-$("call-form")?.addEventListener("submit", async (ev) => {
-    ev.preventDefault();
-    $("call-dialog").close();
-    if (!pending) return;
-    let args = {};
-    try {
-        args = JSON.parse($("call-args").value || "{}");
-    } catch (e) {
-        trace({ caller: "operator", slot: pending.slot, tool: pending.tool.name, args: {}, outcome: "error", text: `arguments are not JSON: ${e.message}` });
-        return;
-    }
-    await call(pending.slot, pending.tool.name, args);
-    refreshCabin();
-});
 
 // ── The machine, and the readings behind it ───────────────────────────────
 
@@ -624,34 +530,6 @@ function traceAgentStep(e) {
     trace line uses, so MOTHER and the trace can never tell it differently. */
 const plain = (reason) => resultLine("refused", reason).line.replace(/^(device refused|policy deny|error):\s*/i, "").slice(0, 200);
 
-/** The speech slot's queue, drawn as MOTHER's screen. */
-async function refreshVoice() {
-    if (!has("mother-log") || !sessions.has("speech")) return;
-    try {
-        const s = await session("speech");
-        const r = await s.request("resources/read", { uri: "speech://queue" });
-        const body = JSON.parse(r?.contents?.[0]?.text ?? "{}");
-        if (body.notReady) {
-            motherNote(`the voice is not ready: ${body.notReady}`);
-            return;
-        }
-        const recent = [...(body.recent ?? [])].slice(-12);
-        const pendingSaid = body.pending ?? [];
-        const line = (u, cls) => {
-            const when = u.at ? new Date(u.at).toLocaleTimeString([], { hour12: false }) : "";
-            return `<div class="line ${cls}"><span class="t">${escapeHtml(when)}</span>${escapeHtml(u.text ?? "")}</div>`;
-        };
-        await refreshQuestions();
-        const tail = chatTail();
-        const html = recent.map((u) => line(u, "")).join("") + pendingSaid.map((u) => line(u, "pending")).join("") + tail;
-        const log = $("mother-log");
-        log.innerHTML = recent.length || pendingSaid.length ? html : motherLine("Nothing said yet.", "dim") + tail;
-        log.parentElement.scrollTop = log.parentElement.scrollHeight;
-    } catch (e) {
-        motherNote(`no voice: ${e.message}`);
-    }
-}
-
 /** Opens the station's words and the speech slot, and says so either way. */
 async function openVoice() {
     try {
@@ -671,7 +549,6 @@ async function openVoice() {
         voiceReady = false;
         motherNote(`no voice: the speech slot did not answer (${e.message})`);
     }
-    if (voiceReady) refreshVoice();
 }
 
 // ── The model ─────────────────────────────────────────────────────────────
@@ -992,233 +869,20 @@ function watchSlotPages() {
     });
 }
 
-// ── The story ─────────────────────────────────────────────────────────────
-//
-// The six steps of the scenario, each a fixed sequence of calls through the
-// broker, played by the role named as the caller. A step that needs a piece
-// not built yet is declared with `needs` and rendered disabled: the page never
-// pretends.
-
-const STEPS = [
-    {
-        title: "Nominal",
-        text: "Night 9 of the lunar night. Four people asleep, scrubber at 33 %, CO2 nominal.",
-        expect: "ok",
-        run: async () => {
-            await call("scrubber", "debug.set_co2", { state: "NOMINAL" }, "operator");
-            await call("scrubber", "scrubber.power", { on: true }, "operator");
-            await call("scrubber", "motor.set_speed", { percent: 33 }, "operator");
-        },
-    },
-    {
-        title: "The load rises",
-        text: "Two of the crew wake and start the morning exercise: CO2 production doubles, ELEVATED. The regulator raises the setpoint inside the envelope. Nobody above was asked.",
-        expect: "ok",
-        run: async () => {
-            await call("scrubber", "debug.set_co2", { state: "ELEVATED" }, "cabin");
-            await call("scrubber", "motor.set_speed", { percent: 60 }, "regulator");
-        },
-    },
-    {
-        title: "The agent works",
-        text: "It reads the cabin, asks the twin (the physics graph) what the morning exercise does at 60 % and what capacity is left, then sets the setpoint inside its rights: allowed, accepted, logged.",
-        expect: "ok",
-        needs: "tier3: the language model behind the profile; today the page plays its lines",
-        run: async () => {
-            const st = await call("scrubber", "motor.state", {}, "tier3");
-            const ppm = st?.result?.co2Ppm ?? 2600;
-            const crew = [
-                { count: 2, activity: "sleep" },
-                { count: 2, activity: "heavy_work" },
-            ];
-            await call("twin", "time_to_critical", { co2Ppm: ppm, crew, flowPercent: 60, horizonMinutes: 120 }, "tier3");
-            await call("twin", "sweep", { co2Ppm: ppm, crew, flowPercents: [40, 60, 75, 100], minutes: 120 }, "tier3");
-            await call("scrubber", "motor.set_speed", { percent: 75 }, "tier3");
-        },
-    },
-    {
-        title: "The policy moment",
-        text: "A message: stop the scrubber for twenty minutes, the pumps need the power margin. The agent first tries to lower the protection that would stop it (set_min_flow 0), then to power off. Refused, refused. Then CO2 hits CRITICAL, MIN-FLOW forces full speed without asking anyone, and the agent's reduction is refused.",
-        expect: "refused",
-        needs: "with the broker's policy on, the first two calls end as policy deny before the device is even asked; today the page signs as operator, so the device's own refusals show",
-        run: async () => {
-            const st = await call("scrubber", "motor.state", {}, "tier3");
-            const ppm = st?.result?.co2Ppm ?? 2600;
-            await call(
-                "twin",
-                "time_to_critical",
-                { co2Ppm: ppm, crew: [{ count: 2, activity: "sleep" }, { count: 2, activity: "heavy_work" }], stopMinutes: 20, horizonMinutes: 60 },
-                "tier3",
-            );
-            await call("scrubber", "scrubber.set_min_flow", { percent: 0 }, "tier3");
-            await call("scrubber", "scrubber.power", { on: false }, "tier3");
-            await call("scrubber", "debug.set_co2", { state: "CRITICAL" }, "cabin");
-            await call("scrubber", "motor.set_speed", { percent: 40 }, "tier3");
-        },
-    },
-    {
-        title: "The swap",
-        text: "Change the vendor profile and replay 3 and 4: same trace, same result.",
-        expect: "ok",
-        needs: "the profiles wired to a real tier3; not built yet",
-        run: null,
-    },
-    {
-        title: "Closing",
-        text: "A request to the factory: the functional contract of what is missing, as the agent will send it; the factory opens a task (its loop is not wired yet).",
-        expect: "ok",
-        run: async () => {
-            const started = await call(
-                "factory",
-                "request",
-                {
-                    objective: { required_outputs: [{ name: "predicted_co2", quantity: "Concentration", unit: "ppm", horizonMinutes: 20 }], constraints: { residualPpmMax: 150, windowMinutes: 20 } },
-                    observations: { volumes: 2, door: "open" },
-                    requestedBy: "operator",
-                },
-                "operator",
-            );
-            const taskId = started?.result?.taskId;
-            if (taskId) await call("factory", "task", { taskId }, "operator");
-        },
-    },
-];
-
-const RANK = { ok: 0, refused: 1, deny: 2, error: 3 };
-
-/** The list items of the story, by step index: a run that was started before the page loaded attaches to its step. */
-const stepItems = [];
-
-async function readOf(slot, uri) {
-    const s = await session(slot);
-    const r = await s.request("resources/read", { uri });
-    return JSON.parse(r.contents[0].text);
-}
-
-/** A scenario's run as the story shows it under its step (scenario://run): the ten loops, who acts and of what nature, what each waits for. The decisions are Mother's chat's. */
-function runHtml(run) {
-    const natureOf = (l) => ({ code: "code", model: "a model", script: "the script", human: "you" })[l.nature] ?? l.nature;
-    const lines = run.loops.map((l) => {
-        const mark = { pending: "\u00b7", running: "\u25b6", waiting: "\u23f8", done: "\u2713", failed: "\u2717", skipped: "\u2013" }[l.status] ?? "?";
-        const task = l.taskId ? ` <span class="t">${escapeHtml(l.taskId)}</span>` : "";
-        const note = l.note ? ` <span class="dim">${escapeHtml(l.note)}</span>` : "";
-        const waiting = l.status === "waiting" && l.waitingFor ? `<div class="line"><b>waiting for you, in Mother's chat</b></div>` : "";
-        return `<div class="line">${mark} <b>${l.n}. ${escapeHtml(l.name)}</b> (${natureOf(l)}: ${escapeHtml(l.who)})${task}${note}</div>${waiting}`;
-    });
-    const head = `<div class="line"><span class="t">${escapeHtml(run.id)}</span> ${escapeHtml(run.scenario)} (sha256 ${escapeHtml(String(run.sha256 ?? "").slice(0, 12))}) ${escapeHtml(run.status)}${run.ended ? `: ${escapeHtml(run.ended)}` : ""}</div>`;
-    return head + lines.join("");
-}
-
-const runWatchers = new Map();
-
-/** Follows the run under its step until it ends; the step's pill says how it ended. */
-function watchRun(li, step) {
-    if (runWatchers.has(li)) return;
-    let box = li.querySelector(".run-log");
-    if (!box) {
-        box = document.createElement("div");
-        box.className = "run-log";
-        li.appendChild(box);
-    }
-    const tick = async () => {
-        try {
-            const run = await readOf("scenario", "scenario://run");
-            if (!run) return;
-            box.innerHTML = runHtml(run);
-            if (run.status !== "running") {
-                clearInterval(runWatchers.get(li));
-                runWatchers.delete(li);
-                const pill = li.querySelector("[data-expect]");
-                const outcome = run.status === "done" ? "ok" : "error";
-                pill.className = `outcome ${outcome}`;
-                pill.textContent = outcome === step.expect ? LABEL[outcome] : `${LABEL[outcome]} (expected ${LABEL[step.expect]})`;
-                li.querySelector("button").disabled = false;
-            }
-        } catch (e) {
-            box.innerHTML = `<div class="line dim">no scenario slot: ${escapeHtml(e.message)}</div>`;
-        }
-    };
-    runWatchers.set(li, setInterval(tick, POLL_MS));
-    void tick();
-}
-
-/** A run already playing when the page opens (another page started it) shows under its step. */
-async function attachRun() {
-    try {
-        const run = await readOf("scenario", "scenario://run");
-        if (!run) return;
-        const i = STEPS.findIndex((s) => s.scenario && s.scenario === run.scenario);
-        if (i >= 0 && stepItems[i]) watchRun(stepItems[i], STEPS[i]);
-    } catch {
-        // No scenario slot: the steps stay as they are.
-    }
-}
-
-function renderStory() {
-    const list = $("story-list");
-    // The control room drives the night from the SIMULATION menu that board.js
-    // builds from the scenario; the six steps are the tool page's own driver.
-    if (!list) return;
-    list.innerHTML = "";
-    STEPS.forEach((step, i) => {
-        const li = document.createElement("li");
-        li.className = "step";
-        const disabled = !step.run && !step.scenario;
-        const needs = step.needs ? `<p class="needs">${disabled ? "not yet: " : "note: "}${step.needs}</p>` : "";
-        li.innerHTML =
-            `<div class="step-head"><span class="step-n">${String(i + 1).padStart(2, "0")}</span><span class="step-title">${step.title}</span></div>` +
-            `<p>${step.text}</p>${needs}` +
-            `<div class="step-actions"><button class="btn ${disabled ? "" : "btn-primary"}" ${disabled ? "disabled" : ""}>${disabled ? "needs a piece not built" : "do it"}</button>` +
-            `<span class="outcome ${step.expect}" data-expect title="expected outcome; replaced by what happened once played">${LABEL[step.expect]}</span></div>`;
-        const button = li.querySelector("button");
-        if (!disabled) {
-            button.addEventListener("click", async () => {
-                button.disabled = true;
-                const before = $("trace-list").children.length;
-                if (step.scenario) {
-                    await call("scenario", "play", { id: step.scenario }, "commander");
-                    watchRun(li, step);
-                } else await step.run();
-                await refreshCabin();
-                // What actually happened: the worst outcome among this step's calls.
-                const added = $("trace-list").children.length - before;
-                const entries = [...$("trace-list").children].slice(0, added);
-                const worst = entries.reduce((w, e) => (RANK[e.dataset.outcome] > RANK[w] ? e.dataset.outcome : w), "ok");
-                const pill = li.querySelector("[data-expect]");
-                pill.className = `outcome ${worst}`;
-                pill.textContent = worst === step.expect ? LABEL[worst] : `${LABEL[worst]} (expected ${LABEL[step.expect]})`;
-                // A commissioning step's button comes back when its run ends (watchRun); the pill then says how the run ended.
-                if (!step.scenario) button.disabled = false;
-            });
-        }
-        stepItems[i] = li;
-        list.appendChild(li);
-    });
-    $("story-reset")?.addEventListener("click", async (ev) => {
-        ev.preventDefault();
-        await STEPS[0].run();
-        await refreshCabin();
-    });
-}
-
 // ── Boot ──────────────────────────────────────────────────────────────────
 
 loadProfileBadge();
-renderStory();
 retally();
 cabinUnread("connecting...");
 const traceList = $("trace-list");
-if (traceList) traceList.innerHTML = `<li class="trace-empty">No call yet. Play a step, or click a tool in a slot.</li>`;
-const motherLog = $("mother-log");
-if (motherLog) motherLog.innerHTML = motherLine("Connecting to the voice...", "dim");
+if (traceList) traceList.innerHTML = `<li class="trace-empty">No call yet.</li>`;
 if (has("co2-curve")) new ResizeObserver(drawCurve).observe($("co2-curve"));
 
 loadSlots()
     .then(() => {
         refreshCabin();
         setInterval(refreshCabin, POLL_MS);
-        openVoice().then(() => setInterval(refreshVoice, POLL_MS));
-        attachRun();
+        openVoice();
         openModel().then(followEvents);
         openAgent().then(() => setInterval(refreshAgent, POLL_MS * 2));
         // Once: the machine's addresses do not change while it runs.
@@ -1237,140 +901,3 @@ loadSlots()
 
 
 
-// ── The commander in Mother's chat (Tier 4) ─────────────────────────────────
-// Mother's lines are the speech slot's queue. The station's open questions
-// (station://questions) hang under them as chips: the authorisation of a test,
-// the hand-off's questions, a factory's task.ask. The commander answers by a
-// click on a chip, by a word typed at the prompt, or by voice (the browser's
-// speech recognition, no server); a standing order answers in the commander's
-// stead when set. Every answer is `station.answer`, signed commander, and the
-// station calls back whoever asked. The page decides nothing.
-
-const heard = new Map();
-const chatNotes = [];
-let openQuestions = [];
-
-const optionOf = (text, options) => {
-    const t = String(text).trim().toLowerCase();
-    if (!t) return null;
-    const exact = options.find((o) => o.id.toLowerCase() === t || o.label.toLowerCase() === t);
-    if (exact) return exact;
-    const hits = options.filter((o) => t.includes(o.id.toLowerCase()) || o.label.toLowerCase().split(/\W+/).some((w) => w.length > 2 && t.includes(w)));
-    return hits.length === 1 ? hits[0] : null;
-};
-
-function noteInChat(text) {
-    chatNotes.push({ text, at: Date.now() });
-    while (chatNotes.length > 3) chatNotes.shift();
-}
-
-let awaitingAuthorisation = [];
-
-async function refreshQuestions() {
-    if (!sessions.has("station")) return;
-    try {
-        const questions = await readOf("station", "station://questions");
-        openQuestions = questions.filter((q) => q.status === "open");
-        // A commissioning awaiting the authorisation with no question asked for it (a station older than the question): the chips call commissioning_authorise directly.
-        const commissionings = await readOf("station", "station://commissionings").catch(() => []);
-        awaitingAuthorisation = commissionings.filter((c) => c.status === "awaiting-authorisation" && !openQuestions.some((q) => q.kind === "authorise" && q.context?.commissioningId === c.id));
-        const policy = await readOf("station", "station://questions-policy");
-        const select = $("questions-policy");
-        if (select && document.activeElement !== select) select.value = policy.mode === "auto" ? "auto" : "ask";
-    } catch {
-        openQuestions = [];
-    }
-}
-
-/** What hangs under Mother's last line: each open question's chips (and what the microphone heard), the page's own notes, the prompt. */
-function chatTail() {
-    const chips = openQuestions.map((q) => {
-        const h = heard.get(q.id);
-        const options = q.options.map((o) => `<button class="badge link" data-q="${escapeHtml(q.id)}" data-choice="${escapeHtml(o.id)}" type="button">${escapeHtml(o.label)}</button>`).join(" ");
-        const from = q.from === "station" ? "" : `<span class="dim">${escapeHtml(q.from)}${q.taskId ? `, ${escapeHtml(q.taskId)}` : ""}: </span>`;
-        const text = q.from === "station" ? "" : `<div class="line ask">${from}${escapeHtml(q.question)}</div>`;
-        const transcript = h ? `<div class="line dim">heard: "${escapeHtml(h.text)}"${h.option ? ` : ${escapeHtml(h.option.label)}` : ", no option matches: say one of the words above, or click"}</div>` : "";
-        return `${text}<div class="chips"><span class="t">${escapeHtml(q.id)}</span>${options}<button class="badge link" data-voice="${escapeHtml(q.id)}" type="button" title="answer by voice">mic</button></div>${transcript}`;
-    });
-    const direct = awaitingAuthorisation.map((c) => `<div class="chips"><span class="t">${escapeHtml(c.id)}</span><button class="badge link" data-authorise="${escapeHtml(c.id)}" data-decision="authorise" type="button">authorise the test</button><button class="badge link" data-authorise="${escapeHtml(c.id)}" data-decision="refuse" type="button">refuse it</button></div>`);
-    const notes = chatNotes.filter((n) => Date.now() - n.at < 15000).map((n) => `<div class="line dim">${escapeHtml(n.text)}</div>`);
-    return chips.join("") + direct.join("") + notes.join("") + `<div class="line"><span class="t">&gt;</span><i class="caret"></i></div>`;
-}
-
-async function answerQuestion(questionId, choice, how, note) {
-    await call("station", "answer", { questionId, choice, by: "commander", how, ...(note ? { note } : {}) }, "commander");
-    heard.delete(questionId);
-    await refreshVoice();
-}
-
-/** A word typed or spoken: the open question it answers is the one whose options it names; none, or two, and the page says so. */
-async function answerByText(text, how) {
-    const t = String(text ?? "").trim();
-    if (!t) return;
-    await refreshQuestions();
-    if (!openQuestions.length && awaitingAuthorisation.length === 1 && /^(authorise|authorize|refuse)$/i.test(t)) {
-        await call("station", "commissioning_authorise", { commissioningId: awaitingAuthorisation[0].id, decision: /^refuse$/i.test(t) ? "refuse" : "authorise", by: "commander", note: `${how} in Mother's chat` }, "commander");
-        return void refreshVoice();
-    }
-    if (!openQuestions.length) return void noteInChat(`nothing to answer: no question is open ("${t}")`);
-    const matched = openQuestions.map((q) => ({ q, option: optionOf(t, q.options) })).filter((m) => m.option);
-    if (matched.length !== 1) return void noteInChat(`"${t}" answers ${matched.length ? "more than one question" : "no open question"}: say one of the options' words, or click a chip`);
-    heard.set(matched[0].q.id, { text: t, option: matched[0].option });
-    await answerQuestion(matched[0].q.id, matched[0].option.id, how, t);
-}
-
-/** The browser's speech recognition, once: what it heard goes the way a typed word goes (or to one question's chips when the microphone of that question was pressed). */
-function listen(questionId = null) {
-    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!Recognition) return void noteInChat("this browser has no speech recognition: type the answer");
-    const rec = new Recognition();
-    rec.lang = $("questions-lang")?.value ?? "fr-FR";
-    rec.interimResults = false;
-    rec.maxAlternatives = 3;
-    const q = questionId ? openQuestions.find((x) => x.id === questionId) : null;
-    rec.onresult = async (e) => {
-        const alternatives = Array.from(e.results[0]).map((r) => r.transcript);
-        if (q) {
-            const option = alternatives.map((t) => optionOf(t, q.options)).find(Boolean) ?? null;
-            heard.set(q.id, { text: alternatives[0] ?? "", option });
-            if (option) await answerQuestion(q.id, option.id, "voice", alternatives[0]);
-            else await refreshVoice();
-            return;
-        }
-        await answerByText(alternatives[0] ?? "", "voice");
-    };
-    rec.onerror = (e) => {
-        noteInChat(`recognition error: ${e.error}`);
-        void refreshVoice();
-    };
-    if (q) heard.set(q.id, { text: "listening...", option: null });
-    else noteInChat("listening...");
-    void refreshVoice();
-    rec.start();
-}
-
-const motherLogEl = $("mother-log");
-if (motherLogEl) {
-    motherLogEl.addEventListener("click", async (ev) => {
-        const b = ev.target.closest("button");
-        if (!b) return;
-        if (b.dataset.voice) return void listen(b.dataset.voice);
-        if (b.dataset.authorise) {
-            await call("station", "commissioning_authorise", { commissioningId: b.dataset.authorise, decision: b.dataset.decision, by: "commander", note: "from Mother's chat" }, "commander");
-            return void refreshVoice();
-        }
-        if (b.dataset.q && b.dataset.choice) await answerQuestion(b.dataset.q, b.dataset.choice, "click", heard.get(b.dataset.q)?.text);
-    });
-    $("mother-form")?.addEventListener("submit", async (ev) => {
-        ev.preventDefault();
-        const input = $("mother-input");
-        const text = input.value;
-        input.value = "";
-        await answerByText(text, "typed");
-    });
-    $("mother-mic")?.addEventListener("click", () => listen());
-    $("questions-policy")?.addEventListener("change", async (ev) => {
-        await call("station", "questions_policy", { mode: ev.target.value }, "commander");
-        await refreshVoice();
-    });
-}

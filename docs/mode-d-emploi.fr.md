@@ -42,9 +42,9 @@ commandant, `ask`, `answer`, `questions_policy`, `station://questions`),
 `factory` (`request`, `task`, `inventory` ; `resume`, rappelé par la station
 avec la réponse du commandant), `reasoner`, `agent`, `scenario` (les scénarios relus de `specs/` listés et
 joués : `scenarios`, `play`, `runs`, `scenario://run` ; la mise en service en
-est un, `scenario-commissioning.json` et ses variantes, jouée depuis la liste
-Story de `panel.html`, vous autorisez l'essai et répondez au relais dans le
-chat de Mother), `qr`, `speech`, `biomed`, `workspace`,
+est un, `scenario-commissioning.json` et ses variantes, jouée depuis la page
+des scénarios `scenarios.html` ; vous autorisez l'essai et répondez au relais
+dans le chat de Mother, dans la salle de contrôle), `qr`, `speech`, `biomed`, `workspace`,
 `model`, `library`, `observer`, `screens`, `supervisor` (le superviseur des
 contrats : `review`, `review_request`, un verdict typé sur les faits d'une
 tâche), `forge` (le bac à sable du code : `plugin_write`, `plugin_build`,

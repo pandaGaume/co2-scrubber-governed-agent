@@ -21,9 +21,8 @@
     app.js    the cabin and the scrubber as a 3D wireframe, the CO2 curve, the
               MCP trace, and the model: which one answers and every call the
               station's harness makes to it. It owns the machine, the trace and
-              the model panel, and it skips the regions this page does not
-              carry (the six-step story and the tool buttons are the operator's
-              page, `panel.html`).
+              the model panel, and Mother's questions to the commander
+              and the answers are mother-chat.js's, under her lines.
 
   The pixel-art board this replaces is `drafts/panel-pixel-art.html` for the
   control room; `style.css` still serves `story.html`.
@@ -51,7 +50,7 @@
         <button class="badge link" id="btn-factory" type="button" title="open the factory in its own window">factory</button>
         <button class="badge link" id="btn-twin" type="button" title="open the twin's graph in its own window: every question asked to the twin, replayed on the cabin's physics">twin</button>
         <a class="badge link" href="./story.html" title="the story and the architecture">story</a>
-        <a class="badge link" href="./panel.html" title="the operator's page: every tool of every slot, one button each">tools</a>
+        <a class="badge link" href="./studio/node-editor-v2/index.html?mcp=0&amp;ext=/agent/tier3.js&amp;autoplay=1" title="The agent's decision loop as a graph in the SpikyPanda studio: watch each stage light up as it decides">watch the agent decide</a>
     </header>
 
     <div class="col-left">
