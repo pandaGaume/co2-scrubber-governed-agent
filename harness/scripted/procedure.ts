@@ -66,7 +66,9 @@ export class ScriptedProcedureBuilder implements Provider {
 
     /** The procedure the script writes: two steps, hatch closed, the rise at `speed`. */
     private procedure(speed: number, monitoring: boolean): Procedure {
-        const scrubber = this.inventory.devices?.find((d) => (this.options.device ? d.path === this.options.device : d.type === "Scrubber"));
+        // The device the task is about (its observations name it, as the station's request does), the option, or the first scrubber of the inventory.
+        const wanted = this.options.device ?? (typeof (this.options.task.observations as { device?: unknown } | undefined)?.device === "string" ? String((this.options.task.observations as { device: string }).device) : undefined);
+        const scrubber = this.inventory.devices?.find((d) => (wanted ? d.path === wanted : d.type === "Scrubber")) ?? this.inventory.devices?.find((d) => d.type === "Scrubber");
         const volume = this.inventory.volumes?.find((v) => v.name === scrubber?.area) ?? { name: "lab", path: "/habitat/lab" };
         const read = this.presence.find((m) => m.module === volume.name);
         const subjects = read?.subjects.map((s) => s.id) ?? [];

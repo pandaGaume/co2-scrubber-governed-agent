@@ -1,0 +1,23 @@
+{
+    "server": {
+        "description": "La chaîne de mise en service telle que le poste de contrôle la joue, le commandant à chaque décision : un appareil s'inscrit, l'usine de procédures écrit l'essai, Mother le relaie, le commandant autorise sur la page, l'exécuteur le joue sur le monde de substitution, l'Observateur formule le jumeau, l'usine de graphes le construit ou déclare un nœud manquant avec son contrat, le commandant répond aux questions du relais, l'usine de code écrit le nœud, la demande est rejouée, le jumeau est proposé",
+        "instructions": "start joue une répétition (monde lab ou hidden-occupant ; leak true pour le relais et ses questions ; builder reasoner ou scripted, ce dernier avec la demande que l'Observateur écrirait). La répétition attend le commandant deux fois : station.commissioning_authorise par les boutons de la page, et station.answer dans le panneau des questions. commissioning://run dit où elle en est, boucle par boucle, avec la nature de qui agit (code, un modèle, le script, l'humain) et les tâches ouvertes."
+    },
+    "tools": {
+        "start": {
+            "title": "Jouer une mise en service",
+            "description": "Lance la chaîne : l'inscription, l'usine de procédures, le relais de Mother, l'autorisation du commandant (attendue), l'exécution sur le monde de substitution, le rapport, l'Observateur, l'usine de graphes, le relais avec les questions du commandant (attendues) quand un nœud manque, la proposition. Une répétition à la fois."
+        },
+        "state": {
+            "title": "Où en est la répétition",
+            "description": "La répétition en cours, boucle par boucle (qui, de quelle nature, l'état, ce qu'elle attend, la tâche ouverte), et les répétitions d'avant."
+        },
+        "reset": {
+            "title": "Oublier le compte rendu",
+            "description": "Oublie le compte rendu de la répétition en cours sur ce slot ; une répétition qui joue encore continue. La station garde le sien."
+        }
+    },
+    "resources": {
+        "commissioning://run": { "description": "La répétition en cours : ses options, sa mise en service, ses boucles avec leur nature, leur état et ce qu'elles attendent, les tâches ouvertes, comment elle a fini." }
+    }
+}

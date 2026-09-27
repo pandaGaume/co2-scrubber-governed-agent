@@ -40,7 +40,10 @@ jumeau de la cabine et le runtime : catalogue, documents, bacs à sable),
 `station` (Mother : registre, mises en service, journal ; les questions au
 commandant, `ask`, `answer`, `questions_policy`, `station://questions`),
 `factory` (`request`, `task`, `inventory` ; `resume`, rappelé par la station
-avec la réponse du commandant),
+avec la réponse du commandant), `commissioning` (la chaîne de mise en service
+jouée depuis le poste de contrôle, `start`, `state`, `reset`,
+`commissioning://run` ; le panneau « Commissioning » de `panel.html` la lance,
+vous autorisez l'essai, vous répondez aux questions du relais),
 `reasoner`, `agent`, `scenario`, `qr`, `speech`, `biomed`, `workspace`,
 `model`, `library`, `observer`, `screens`, `supervisor` (le superviseur des
 contrats : `review`, `review_request`, un verdict typé sur les faits d'une

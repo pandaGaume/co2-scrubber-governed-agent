@@ -1,0 +1,23 @@
+{
+    "server": {
+        "description": "The commissioning chain as the control post plays it, with the commander at every decision: a device registers, the procedure factory writes the test, Mother relays it, the commander authorises on the page, the executor runs it on the stand-in world, the Observer formulates the twin, the graph factory builds it or declares a node missing with its contract, the commander answers the hand-off's questions, the code factory writes the node, the request is replayed, the twin is proposed",
+        "instructions": "start plays a run (world lab or hidden-occupant; leak true for the hand-off and its questions; builder reasoner or scripted, the latter with the request the Observer would write). The run waits for the commander twice: station.commissioning_authorise on the page's buttons, and station.answer in the questions panel. commissioning://run says where it stands, loop by loop, with the nature of who acts (code, a model, the script, the human) and the tasks opened."
+    },
+    "tools": {
+        "start": {
+            "title": "Play a commissioning",
+            "description": "Start the chain: registration, the procedure factory, Mother's relay, the commander's authorisation (waited for), the execution on the stand-in world, the report, the Observer, the graph factory, the hand-off with the commander's questions (waited for) when a node is missing, the proposal. One run at a time."
+        },
+        "state": {
+            "title": "Where the run stands",
+            "description": "The current run, loop by loop (who, of what nature, status, what it waits for, the task opened), and the runs before it."
+        },
+        "reset": {
+            "title": "Drop the record",
+            "description": "Forget the current run's record on this slot; a run still playing goes on. The station keeps its own record."
+        }
+    },
+    "resources": {
+        "commissioning://run": { "description": "The current run: its options, its commissioning, its loops with their nature, status and what they wait for, the tasks opened, how it ended." }
+    }
+}
