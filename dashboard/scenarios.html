@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="Simulation">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#04090c">
-<title>Simulation</title>
+<title>Scenarios</title>
 <!--
   The night, driven from a phone in someone's hand, on the same network as the
   machine. Made for an iPhone 16 or 17 Pro held upright: one thumb reaches the
@@ -135,6 +135,12 @@
   .event.done { opacity: 0.55; }
   .event:active { background: rgba(47, 224, 200, 0.18); }
 
+  .lists { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+  .lists .night { flex: none; overflow: visible; }
+  .label { font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted-2); padding: 10px 2px 2px; }
+  .event .loops { margin-top: 8px; display: flex; flex-direction: column; gap: 3px; font-size: 11px; line-height: 1.4; color: var(--muted); }
+  .event .loops .wait { color: var(--amber); }
+  .event .loops .bad { color: var(--red); }
   .note { font-family: var(--sans); font-size: 12.5px; line-height: 1.5; color: var(--muted-2); padding: 4px 2px; text-wrap: pretty; }
   .note.bad { color: var(--red); }
 
@@ -173,8 +179,16 @@
     <div class="sub" id="now-sub"></div>
   </div>
 
-  <div class="night" id="night">
-    <p class="note">Reading the night from the agent slot...</p>
+  <div class="lists">
+    <div class="night" id="night">
+      <p class="note">Reading the night from the agent slot...</p>
+    </div>
+
+    <!-- The other reviewed scenarios of specs/, played by the scenario slot:
+         the commissioning chain, the factories at work, the commander deciding
+         in Mother's chat on the control room. This page is the scenario
+         slot's: every scenario is here. -->
+    <div class="night" id="scenarios"></div>
   </div>
 
   <!-- Tapping an event is how a run starts, so there is no play button: it
@@ -349,6 +363,72 @@ async function refresh() {
         session = null;
     }
 }
+
+// ── The other scenarios: the commissioning chain and its factories (the scenario slot) ──
+
+let scenarioSession = null;
+async function scenarioSlot() {
+    if (!scenarioSession) scenarioSession = await connectMcp(location.origin, "scenario", { headers: {} });
+    return scenarioSession;
+}
+const esc = (v) => String(v ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const NATURE = { code: "code", model: "a model", script: "the script", human: "you" };
+const MARK = { pending: "\u00b7", running: "\u25b6", waiting: "\u23f8", done: "\u2713", failed: "\u2717", skipped: "\u2013" };
+
+async function refreshScenarios() {
+    const box = el("scenarios");
+    try {
+        const s = await scenarioSlot();
+        const read = async (uri) => JSON.parse((await s.request("resources/read", { uri })).contents[0].text);
+        const list = (await read("scenario://scenarios")).filter((x) => x.playedBy === "scenario");
+        const run = await read("scenario://run");
+        if (!list.length) {
+            box.innerHTML = "";
+            return;
+        }
+        box.innerHTML =
+            `<div class="label">the factories: commissioning</div>` +
+            list
+                .map((x) => {
+                    const mine = run && run.scenario === x.id;
+                    const playing = mine && run.status === "running";
+                    const loops = mine
+                        ? `<span class="loops">${run.loops
+                              .map((l) => {
+                                  const cls = l.status === "waiting" ? "wait" : l.status === "failed" ? "bad" : "";
+                                  const wait = l.status === "waiting" ? ": answer Mother in the control room" : "";
+                                  return `<span class="${cls}">${MARK[l.status] ?? "?"} ${l.n}. ${esc(l.name)} (${NATURE[l.nature] ?? esc(l.nature)})${l.note ? `, ${esc(l.note)}` : ""}${wait}</span>`;
+                              })
+                              .join("")}${run.ended ? `<span class="${run.status === "done" ? "" : "bad"}">${esc(run.ended)}</span>` : ""}</span>`
+                        : "";
+                    return (
+                        `<button class="event ${playing ? "playing" : ""}" data-scenario="${esc(x.id)}" type="button">` +
+                        `<span class="row"><span class="name">${esc(x.id)}</span><span class="min">${esc(x.sha256.slice(0, 8))}</span></span>` +
+                        `<span class="msg">${esc(x.title)}</span>${loops}</button>`
+                    );
+                })
+                .join("");
+        for (const b of box.querySelectorAll("[data-scenario]")) {
+            b.addEventListener("click", async () => {
+                try {
+                    const r = await (await scenarioSlot()).callTool("play", { id: b.dataset.scenario });
+                    const body = JSON.parse(toolText(r) || "{}");
+                    if (r?.isError || body.refused) say("play refused", body.refused ?? toolText(r), "refused");
+                    else say("Scenario", `${b.dataset.scenario}: ${body.result?.runId ?? "started"}`);
+                } catch (e) {
+                    say("no link", e.message, "deny");
+                    scenarioSession = null;
+                }
+                void refreshScenarios();
+            });
+        }
+    } catch (e) {
+        box.innerHTML = `<p class="note">No scenario slot: ${esc(e.message)}</p>`;
+        scenarioSession = null;
+    }
+}
+void refreshScenarios();
+setInterval(() => void refreshScenarios(), 2000);
 
 for (const [id, tool] of [["btn-pause", "pause"], ["btn-next", "next"], ["btn-reset", "reset"]]) {
     el(id).addEventListener("click", () => void drive(tool));

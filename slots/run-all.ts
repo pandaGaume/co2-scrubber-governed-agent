@@ -147,7 +147,7 @@ async function main(): Promise<void> {
     // The simulation is driven from a phone in someone's hand, beside the room.
     for (const base of broker?.lanBases ?? []) {
         log(`medical monitoring, on another device on this network: ${base}/biomed.html`);
-        log(`the night, from a phone on this network:               ${base}/simulation.html`);
+        log(`the scenarios, from a phone on this network:           ${base}/scenarios.html`);
         log(`a screen of the room (or run scripts/screen.mjs on it): ${base}/screen.html`);
     }
     // The room's other machines find this one by asking on the network (`scripts/screen.mjs`), not by an address typed in.

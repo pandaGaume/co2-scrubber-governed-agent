@@ -159,6 +159,9 @@ button.badge { font-family: var(--mono); cursor: pointer; }
 .mother-form input:focus { outline: none; border-color: var(--teal); }
 .mother-form select { flex: none; font-size: 10px; background: transparent; color: var(--muted); border: 1px solid var(--line); border-radius: 8px; padding: 3px 2px; max-width: 64px; }
 .mother-form .badge { flex: none; }
+.station .mother-form { flex-wrap: wrap; }
+.station .mother-form input { flex: 1 1 100%; order: -1; }
+.mother-questions { flex: none; max-height: 40%; overflow-y: auto; padding: 6px 15px 8px; border-top: 1px solid var(--line); }
 .run-log { display: flex; flex-direction: column; gap: 3px; margin-top: 6px; padding-left: 8px; border-left: 2px solid var(--line); font-size: 11px; line-height: 1.4; color: var(--muted); }
 .run-log .line .t { color: var(--muted-2); letter-spacing: 0.06em; margin-right: 6px; }
 .run-log .line .dim { color: var(--muted-2); }

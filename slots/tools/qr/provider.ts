@@ -51,7 +51,7 @@ const MARGIN = 4;
 /** A path under the dashboard, with nothing that could climb out of it. */
 function safePath(value: unknown): string {
     const raw = String(value ?? "").trim();
-    if (!raw) throw new Error("a page is needed, for instance simulation.html");
+    if (!raw) throw new Error("a page is needed, for instance scenarios.html");
     if (/^[a-z][a-z0-9+.-]*:/iu.test(raw)) throw new Error("a page, not a full address: the host is this machine's, and this slot is what knows it");
     const path = raw.replace(/^\/+/u, "");
     if (path.includes("..")) throw new Error(`"${raw}" climbs out of the dashboard`);
@@ -111,7 +111,7 @@ export function qrSlot(wsBase: string, log: (line: string) => void): PublishedSl
             description: "The address of a page as a phone on this network must reach it, and its QR code. This is the tool to use rather than encode: a page served at localhost cannot know the address a phone needs, and this process does.",
             inputSchema: obj(
                 {
-                    page: { type: "string", description: "a page of the dashboard, for instance simulation.html or biomed.html" },
+                    page: { type: "string", description: "a page of the dashboard, for instance scenarios.html or biomed.html" },
                     dark: { type: "string" },
                     light: { type: "string" },
                 },

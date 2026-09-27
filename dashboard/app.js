@@ -1082,24 +1082,6 @@ const STEPS = [
             if (taskId) await call("factory", "task", { taskId }, "operator");
         },
     },
-    {
-        title: "Commissioning",
-        text: "A scrubber registers without a qualified simulator: Mother opens its commissioning, the procedure factory writes the test, Mother relays it and asks you (in her chat), the executor runs it, the report, the Observer writes the twin request, the graph factory builds the twin, the proposal. Ten loops: code, a model, the script, you.",
-        expect: "ok",
-        scenario: "commissioning",
-    },
-    {
-        title: "Commissioning, with a leak",
-        text: "The same, and the twin must expose a leak no node of the catalogue produces: the graph factory writes the contract, Mother asks you to open the code factory (or a standing order answers), the forge accepts the node, the request is replayed with it.",
-        expect: "ok",
-        scenario: "commissioning-leak",
-    },
-    {
-        title: "Commissioning, hidden occupant",
-        text: "A third person in the Lab the monitor does not list: the twin's fit parts from the telemetry where the extra CO2 is.",
-        expect: "ok",
-        scenario: "commissioning-hidden-occupant",
-    },
 ];
 
 const RANK = { ok: 0, refused: 1, deny: 2, error: 3 };

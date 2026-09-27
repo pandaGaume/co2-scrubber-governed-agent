@@ -38,7 +38,7 @@ const TIER = {
     reasoner: "the model",
     speech: "the voice",
     agent: "the harness",
-    scenario: "the night",
+    scenario: "the scenarios",
     biomed: "the crew monitor",
     qr: "the codes",
     screens: "the room's screens",
@@ -59,7 +59,7 @@ const TIER = {
 const LOOP_URL = "./studio/node-editor-v2/index.html?mcp=0&ext=/agent/tier3.js&output=none";
 const TWIN_URL = "./studio/node-editor-v2/index.html?mcp=0&ext=/agent/twin.js";
 const PAGES = {
-    scenario: { page: "simulation.html", what: "The night, in hand" },
+    scenario: { page: "scenarios.html", what: "The scenarios, in hand" },
     biomed: { page: "biomed.html", what: "The medical module" },
     factory: { page: "factory.html", what: "The factory" },
     agent: { page: LOOP_URL.replace(/^\.\//u, ""), what: "The agent's loop" },

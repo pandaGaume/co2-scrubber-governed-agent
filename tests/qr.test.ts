@@ -50,8 +50,8 @@ describe("the qr slot", () => {
     };
 
     it("answers with the address a phone must reach, not the one this process sees", async () => {
-        const { url, addresses } = await result<{ url: string; addresses: string[] }>("page", { page: "simulation.html" });
-        assert.match(url, /^http:\/\/[^/]+:\d+\/simulation\.html$/u, "an address of this machine, and the page asked for");
+        const { url, addresses } = await result<{ url: string; addresses: string[] }>("page", { page: "scenarios.html" });
+        assert.match(url, /^http:\/\/[^/]+:\d+\/scenarios\.html$/u, "an address of this machine, and the page asked for");
         assert.ok(addresses.length >= 1, "at least one address");
         const loopback = addresses.filter((a) => a.includes("localhost") || a.includes("127.0.0.1"));
         // On a machine with no network card there is only loopback and nothing

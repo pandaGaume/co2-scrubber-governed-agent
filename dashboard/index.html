@@ -60,7 +60,21 @@
             <h2 class="panel-title">Mother<span class="rule"></span><span class="hint">the station's voice</span></h2>
             <canvas id="voice-meter" class="voice-meter" title="what is being said, drawn from the audio that is playing: it oscillates behind the words and is flat ahead of them"></canvas>
             <div id="voice-log" class="voice-log"></div>
+            <div id="mother-questions" class="mother-log mother-questions" hidden></div>
             <div class="panel-foot menu-foot">
+                <form class="mother-form" id="mother-form" autocomplete="off">
+                    <span class="t">&gt;</span>
+                    <input id="mother-input" type="text" placeholder="answer Mother: type it, or press mic">
+                    <button class="badge link" id="mother-mic" type="button" title="answer by voice (the browser's speech recognition)">mic</button>
+                    <select id="questions-policy" title="standing order: every question waits for you, or is answered with its first option">
+                        <option value="ask">ask me</option>
+                        <option value="auto">auto</option>
+                    </select>
+                    <select id="questions-lang" title="the voice's language">
+                        <option value="fr-FR">fr</option>
+                        <option value="en-US">en</option>
+                    </select>
+                </form>
                 <button id="btn-sound" class="btn" title="this page is the audio output of the speech slot">sound on</button>
             </div>
         </section>
@@ -163,6 +177,12 @@
 </main>
 
 <script type="module" src="./board.js"></script>
+<script type="module">
+    // Mother's questions to the commander, answered in her chat (dashboard/mother-chat.js).
+    import { mountMotherChat } from "./mother-chat.js";
+    const $ = (id) => document.getElementById(id);
+    mountMotherChat({ box: $("mother-questions"), form: $("mother-form"), input: $("mother-input"), mic: $("mother-mic"), policy: $("questions-policy"), lang: $("questions-lang") });
+</script>
 <script type="module" src="./app.js"></script>
 </body>
 </html>

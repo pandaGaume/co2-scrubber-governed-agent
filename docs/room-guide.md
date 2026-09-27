@@ -173,7 +173,7 @@ control room in the browser, and prints where the other devices can reach it:
 
 ```
 a screen of the room (or run scripts/screen.mjs on it): http://192.168.0.127:3001/screen.html
-the night, from a phone on this network:               http://192.168.0.127:3001/simulation.html
+the scenarios, from a phone on this network:           http://192.168.0.127:3001/scenarios.html
 medical monitoring, on another device on this network: http://192.168.0.127:3001/biomed.html
 ```
 
