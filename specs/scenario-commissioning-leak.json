@@ -1,0 +1,44 @@
+{
+    "title": "Commissioning of the Lab's scrubber, with a leak the catalogue cannot express: the hand-off",
+    "version": 1,
+    "status": "draft, not yet reviewed",
+    "kind": "commissioning",
+    "note": "The same chain as scenario-commissioning.json, and the twin must also expose a leak no node of the catalogue produces: the graph factory declares it missing with a contract on the library's card, Mother asks the commander to open the code factory (in her chat, or a standing order answers), the forge accepts the node, the request is replayed with it. Every word the Observer is given is here; the player fills the braces from what the test measured.",
+    "world": "lab",
+    "leak": true,
+    "devices": "specs/commissioning-devices.json",
+    "procedure": {
+        "requiredOutput": { "name": "V_lab", "quantity": "Volume", "unit": "m3" },
+        "budget": { "iterations": 25, "minutes": 15 }
+    },
+    "observer": {
+        "attempts": 5,
+        "description": [
+            "SYSTEM DESCRIPTION",
+            "Asset: the CO2 scrubber of the Lab module of a lunar habitat, just installed and commissioned.",
+            "Purpose: keep the CO2 of the air the crew breathes within limits; its twin will be asked what if questions about scrubber speed strategies at night.",
+            "Physical components: the Lab module (a volume of air); the scrubber, variable speed, centralised: it serves Hab-B through the inter-module ventilation, which keeps running with the hatch closed (through the ducts alone; what it delivers as installed is not documented); a CO2 sensor in the Lab; a hatch between the Lab and Hab-B, closed during the test; a CO2 sensor in Hab-B; the crew (two operators in the Lab, two people in Hab-B).",
+            "Test just run: {test}, hatch closed. Apparent volume from the decay, one room assumed: {apparentVolume} m3 ({why}).",
+            "Available telemetry: see the summary.",
+            "Controllable, as the register says: {controls}.",
+            "Objective: the twin must reproduce the CO2 of the Lab well enough to evaluate scrubber speed strategies.",
+            "Also required: the twin must expose the CO2 that leaves the Lab through a leak in a seal, as a mass flow out of the volume at a constant rate at full opening scaled by a command between 0 and 1 (the leak fully open when nothing commands it), the rate an editable. No node of the catalogue is known to express a leak."
+        ]
+    },
+    "graph": {
+        "rmsePpmMax": 10,
+        "budget": { "iterations": 30, "minutes": 20, "twinPoints": 600 }
+    },
+    "loops": [
+        { "name": "registration", "nature": "code", "who": "the station (Mother), a written rule" },
+        { "name": "procedure factory", "nature": "model", "who": "the procedure factory" },
+        { "name": "relay", "nature": "code", "who": "the station (Mother)" },
+        { "name": "authorisation", "nature": "human", "who": "the commander" },
+        { "name": "execution", "nature": "code", "who": "the executor, under the agent's rights" },
+        { "name": "report", "nature": "code", "who": "the station, the decay fit" },
+        { "name": "observer", "nature": "model", "who": "the Observer" },
+        { "name": "graph factory", "nature": "model", "who": "the graph factory" },
+        { "name": "hand-off", "nature": "human", "who": "the commander, then the code factory, then the graph factory replayed" },
+        { "name": "proposal", "nature": "code", "who": "the station" }
+    ]
+}

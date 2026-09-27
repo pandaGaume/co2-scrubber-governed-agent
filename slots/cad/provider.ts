@@ -1,5 +1,5 @@
 /**
- * The `fusion` slot: Autodesk Fusion 360's own MCP server (its add-in, the
+ * The `cad` slot, CAD: Autodesk Fusion 360's own MCP server (its add-in, the
  * "MCP Server Adapter" on a streamable HTTP endpoint of this machine), published
  * on the broker as one more slot, so a factory can read a 3D model, execute an
  * operation in it, or undo one, through the same broker, the same policy and
@@ -8,7 +8,7 @@
  * Where Fusion listens is a setting, never a constant: `FUSION_MCP_URL` in the
  * environment (`.env`), `http://127.0.0.1:27182/mcp` when nothing says otherwise,
  * and `connect {url}` changes it while the server runs (another machine, another
- * port, another CAD's MCP server on the same shape). `fusion://status` says
+ * port, another CAD's MCP server on the same shape). `cad://status` says
  * which address is in use and whether it answers.
  *
  * Two layers of tools:
@@ -29,10 +29,10 @@ import { connectMcpAt, toolText, type McpSession } from "../../harness/lib/mcp-h
 import { objectSchema as obj, publishSlot, type PublishedSlot, type SlotTool } from "../lib/slot-server.js";
 import { fromRoot } from "../../lib/paths.js";
 
-export const DEFAULT_FUSION_MCP_URL = "http://127.0.0.1:27182/mcp";
+export const DEFAULT_CAD_MCP_URL = "http://127.0.0.1:27182/mcp";
 
 /** How long the slot waits for Fusion at start and at `connect`: a CAD that is not running answers with a refused connection at once; one that hangs is not waited for. */
-const CONNECT_TIMEOUT_MS = Number(process.env.FUSION_MCP_TIMEOUT_MS ?? 4000);
+const CONNECT_TIMEOUT_MS = Number(process.env.CAD_MCP_TIMEOUT_MS ?? process.env.FUSION_MCP_TIMEOUT_MS ?? 4000);
 
 export interface FusionState {
     /** The endpoint in use. */
@@ -61,15 +61,15 @@ const OWN_TOOLS = new Set(["status", "connect", "tools", "call", "resources", "r
 
 /** Opens a session on the endpoint, or says why it cannot, within the timeout. */
 export async function probeFusion(url: string, timeoutMs = CONNECT_TIMEOUT_MS): Promise<{ session: McpSession; tools: McpTool[] }> {
-    const session = await connectMcpAt(url, "fusion", IDENTITY, {}, { timeoutMs });
+    const session = await connectMcpAt(url, "cad", IDENTITY, {}, { timeoutMs });
     const tools = await session.listTools();
     return { session, tools };
 }
 
 const errorText = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
-export function fusionSlot(wsBase: string, log: (line: string) => void, options: FusionSlotOptions = {}): PublishedSlot<FusionState> {
-    const state: FusionState = { url: options.url ?? process.env.FUSION_MCP_URL ?? DEFAULT_FUSION_MCP_URL, connected: false, serverInfo: null, tools: options.mirror ?? [], lastError: null, calls: [] };
+export function cadSlot(wsBase: string, log: (line: string) => void, options: FusionSlotOptions = {}): PublishedSlot<FusionState> {
+    const state: FusionState = { url: options.url ?? process.env.CAD_MCP_URL ?? process.env.FUSION_MCP_URL ?? DEFAULT_CAD_MCP_URL, connected: false, serverInfo: null, tools: options.mirror ?? [], lastError: null, calls: [] };
     let session: McpSession | null = null;
 
     /** The session in use, opened on demand; a session that fails is dropped and the next call opens another. */
@@ -85,7 +85,7 @@ export function fusionSlot(wsBase: string, log: (line: string) => void, options:
             state.serverInfo = probed.session.serverInfo ?? null;
             state.tools = probed.tools;
             state.lastError = null;
-            log(`[fusion] connected to ${url}: ${probed.session.serverInfo?.name ?? "an MCP server"} ${probed.session.serverInfo?.version ?? ""}, ${probed.tools.length} tool(s)`);
+            log(`[cad] connected to ${url}: ${probed.session.serverInfo?.name ?? "an MCP server"} ${probed.session.serverInfo?.version ?? ""}, ${probed.tools.length} tool(s)`);
             return probed.session;
         } catch (e) {
             state.connected = false;
@@ -210,17 +210,17 @@ export function fusionSlot(wsBase: string, log: (line: string) => void, options:
         }));
 
     return publishSlot<FusionState>({
-        slot: "fusion",
+        slot: "cad",
         stub: false,
         version: "0.1.0",
         wsBase,
         log,
         state,
         tools: [...own, ...mirrored],
-        grammarsDir: fromRoot("slots", "fusion", "grammars"),
+        grammarsDir: fromRoot("slots", "cad", "grammars"),
         resources: [
             {
-                uri: "fusion://status",
+                uri: "cad://status",
                 read: (s) => ({ url: s.url, connected: s.connected, serverInfo: s.serverInfo, tools: s.tools.map((t) => t.name), lastError: s.lastError, calls: s.calls }),
             },
         ],
@@ -232,15 +232,15 @@ export function fusionSlot(wsBase: string, log: (line: string) => void, options:
  * mirrored when it answers; absent, the slot is published with its own tools
  * only and says so in the log, and `connect` reaches Fusion later.
  */
-export async function fusionSlotProbed(wsBase: string, log: (line: string) => void): Promise<PublishedSlot<FusionState>> {
-    const url = process.env.FUSION_MCP_URL ?? DEFAULT_FUSION_MCP_URL;
+export async function cadSlotProbed(wsBase: string, log: (line: string) => void): Promise<PublishedSlot<FusionState>> {
+    const url = process.env.CAD_MCP_URL ?? process.env.FUSION_MCP_URL ?? DEFAULT_CAD_MCP_URL;
     try {
         const { session, tools } = await probeFusion(url);
         await session.close().catch(() => undefined);
-        log(`[fusion] ${session.serverInfo?.name ?? "an MCP server"} answers at ${url}: ${tools.length} tool(s) mirrored (${tools.map((t) => t.name).join(", ")})`);
-        return fusionSlot(wsBase, log, { url, mirror: tools });
+        log(`[cad] ${session.serverInfo?.name ?? "an MCP server"} answers at ${url}: ${tools.length} tool(s) mirrored (${tools.map((t) => t.name).join(", ")})`);
+        return cadSlot(wsBase, log, { url, mirror: tools });
     } catch (e) {
-        log(`[fusion] nothing answers at ${url} (${errorText(e)}): published with its own tools only; connect {url} when Fusion is up`);
-        return fusionSlot(wsBase, log, { url });
+        log(`[cad] nothing answers at ${url} (${errorText(e)}): published with its own tools only; connect {url} when Fusion is up`);
+        return cadSlot(wsBase, log, { url });
     }
 }

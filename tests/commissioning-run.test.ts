@@ -1,5 +1,5 @@
 /**
- * The commissioning chain as the control post plays it (`slots/commissioning`),
+ * The commissioning chain as a scenario the scenario slot plays (`specs/scenario-commissioning.json`, `slots/scenario/commissioning.ts`),
  * with the commander stood in by the test at the two places the run waits:
  * the authorisation of the procedure, and the hand-off's questions. The
  * factories are the scripts, the Observer is stood in by the request the
@@ -15,7 +15,7 @@ import { Broker } from "../harness/lib/broker.js";
 import type { LocalBroker } from "../slots/lib/local-broker.js";
 import type { PublishedSlot } from "../slots/lib/slot-server.js";
 import { LEAK_CONTRACT } from "../harness/scripted/code-fixture.js";
-import type { Run } from "../slots/commissioning/provider.js";
+import type { Run } from "../slots/scenario/commissioning.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
 
 const PORT = 3133;
@@ -44,7 +44,7 @@ describe("the commissioning chain played by the slot, the commander deciding", (
         assert.ok(r.ok, `${slot}.${tool}: ${r.error}`);
         return r.output as T;
     };
-    const readRun = async (): Promise<Run | null> => JSON.parse((await (await operator.session("commissioning")).request<{ contents: Array<{ text: string }> }>("resources/read", { uri: "commissioning://run" })).contents[0].text) as Run | null;
+    const readRun = async (): Promise<Run | null> => JSON.parse((await (await operator.session("scenario")).request<{ contents: Array<{ text: string }> }>("resources/read", { uri: "scenario://run" })).contents[0].text) as Run | null;
     /** The run once a loop reached a status (or the run ended). */
     const until = async (what: string, test: (run: Run) => boolean, ms = 240_000): Promise<Run> => {
         const t0 = Date.now();
@@ -87,11 +87,12 @@ describe("the commissioning chain played by the slot, the commander deciding", (
     });
 
     it("registration, the procedure written and relayed, the commander's authorisation waited for, the test run, the twin requested, the node missing, the commander's two answers, the code factory, the replay, the proposal", async () => {
-        const started = await ok<{ runId: string; status: string; loops: string[] }>("commissioning", "start", { builder: "scripted", world: "lab", request: REQUEST, observations: { declareMissing: MISSING } });
+        const started = await ok<{ runId: string; status: string; loops: string[] }>("scenario", "play", { id: "commissioning", builder: "scripted", request: REQUEST, observations: { declareMissing: MISSING } });
         assert.equal(started.runId, "R001");
         assert.equal(started.loops.length, 10);
         // The scripted builder cannot stand in for the Observer: the request is required.
-        assert.equal((await operator.call("commissioning", "start", { builder: "scripted" })).ok, false, "a second run while one plays, and no request");
+        assert.equal((await operator.call("scenario", "play", { id: "commissioning", builder: "scripted" })).ok, false, "a second run while one plays, and no request");
+        assert.equal((await operator.call("scenario", "play", { id: "night-9" })).ok, false, "the night is not played by this slot");
 
         // Up to the authorisation: registration, the procedure factory (the script), the relay; then the run waits for the commander.
         const waiting = await until("the authorisation", (r) => r.loops[3].status === "waiting");
@@ -134,12 +135,12 @@ describe("the commissioning chain played by the slot, the commander deciding", (
         assert.ok(last.artifacts.some((a) => a.kind === "graph"));
         assert.match(done.ended ?? "", /^the twin proposed/);
         // The state tool says the same, and a second run may start now.
-        const state = await ok<{ current: Run | null; runs: Array<{ id: string; status: string }> }>("commissioning", "state");
+        const state = await ok<{ current: Run | null; runs: Array<{ id: string; status: string }> }>("scenario", "runs");
         assert.deepEqual(state.runs.map((r) => [r.id, r.status]), [["R001", "done"]]);
     });
 
     it("a refused authorisation ends the run as failed, on the loop that waited, and the register holds the second run's devices under its own names", async () => {
-        const started = await ok<{ runId: string }>("commissioning", "start", { builder: "scripted", world: "lab", request: REQUEST });
+        const started = await ok<{ runId: string }>("scenario", "play", { id: "commissioning", builder: "scripted", request: REQUEST });
         assert.equal(started.runId, "R002");
         const waiting = await until("the authorisation", (r) => r.loops[3].status === "waiting");
         tasks.push(waiting.loops[1].taskId!);

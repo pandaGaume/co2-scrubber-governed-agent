@@ -23,14 +23,14 @@ registration; no registration, no push).
 Replacing a stub by the real thing changes nothing for the page, the policy
 or the trace: same slot name, same tools, same broker.
 
-## An external MCP server as a slot: `fusion`
+## An external MCP server as a slot: `cad`
 
-`fusion/` relays Autodesk Fusion 360's own MCP server (its add-in, a
+`cad/` (CAD: Fusion) relays Autodesk Fusion 360's own MCP server (its add-in, a
 streamable HTTP endpoint on this machine) as one more slot of the broker, so
 a factory reads a 3D model, executes an operation in it or undoes one through
 the same broker, policy and trace as every other capability. Where Fusion
-listens is a setting, never a constant: `FUSION_MCP_URL` in `.env`
-(`http://127.0.0.1:27182/mcp` by default), and `fusion.connect {url}` while
+listens is a setting, never a constant: `CAD_MCP_URL` in `.env`
+(`http://127.0.0.1:27182/mcp` by default), and `cad.connect {url}` while
 the server runs. The slot's own tools (`status`, `connect`, `tools`, `call`,
 `resources`, `resource`) are always there; Fusion's tools are mirrored under
 their own names when Fusion answered at start (`run-all` probes it), each

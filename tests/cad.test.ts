@@ -1,5 +1,5 @@
 /**
- * The `fusion` slot, through the broker, against a stand-in for Fusion 360's
+ * The `cad` slot, through the broker, against a stand-in for Fusion 360's
  * MCP server (a streamable HTTP endpoint of a few lines: initialize with a
  * session id, tools/list, tools/call, resources/list, resources/read).
  *
@@ -19,7 +19,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { startBroker, type LocalBroker } from "../slots/lib/local-broker.js";
 import type { PublishedSlot } from "../slots/lib/slot-server.js";
-import { fusionSlot, probeFusion, type FusionState } from "../slots/fusion/provider.js";
+import { cadSlot, probeFusion, type FusionState } from "../slots/cad/provider.js";
 import { connectMcp, toolText, type McpSession } from "../harness/lib/mcp-http.js";
 
 const PORT = 3144;
@@ -69,7 +69,7 @@ function fakeFusion(): Promise<{ url: string; server: Server; calls: Array<{ nam
     });
 }
 
-describe("the fusion slot, relaying an MCP server whose address is a setting", () => {
+describe("the cad slot, relaying an MCP server whose address is a setting", () => {
     let fake: Awaited<ReturnType<typeof fakeFusion>>;
     let broker: LocalBroker;
     let slot: PublishedSlot<FusionState>;
@@ -80,9 +80,9 @@ describe("the fusion slot, relaying an MCP server whose address is a setting", (
         const probed = await probeFusion(fake.url);
         await probed.session.close();
         broker = await startBroker(PORT, "ignore");
-        slot = fusionSlot(broker.wsBase, quiet, { url: fake.url, mirror: probed.tools });
+        slot = cadSlot(broker.wsBase, quiet, { url: fake.url, mirror: probed.tools });
         await slot.open();
-        fusion = await connectMcp(broker.httpBase, "fusion", { name: "fusion-test", version: "0" });
+        fusion = await connectMcp(broker.httpBase, "cad", { name: "cad-test", version: "0" });
     });
     after(async () => {
         await fusion.close().catch(quiet);
@@ -123,13 +123,13 @@ describe("the fusion slot, relaying an MCP server whose address is a setting", (
 
     it("moves to another address on connect, refuses a dead one with the reason and keeps the one that answered", async () => {
         await assert.rejects(call("connect", { url: "http://127.0.0.1:1/mcp" }), /Fusion does not answer at http:\/\/127\.0\.0\.1:1\/mcp/);
-        const down = JSON.parse((await fusion.request<{ contents: Array<{ text: string }> }>("resources/read", { uri: "fusion://status" })).contents[0].text) as FusionState;
+        const down = JSON.parse((await fusion.request<{ contents: Array<{ text: string }> }>("resources/read", { uri: "cad://status" })).contents[0].text) as FusionState;
         assert.equal(down.connected, false);
         assert.equal(down.url, fake.url, "the address that answered is kept");
         assert.ok(down.lastError);
         const back = await call<{ connected: boolean; url: string }>("connect", { url: fake.url });
         assert.equal(back.connected, true);
-        const status = JSON.parse((await fusion.request<{ contents: Array<{ text: string }> }>("resources/read", { uri: "fusion://status" })).contents[0].text) as FusionState;
+        const status = JSON.parse((await fusion.request<{ contents: Array<{ text: string }> }>("resources/read", { uri: "cad://status" })).contents[0].text) as FusionState;
         assert.ok(status.calls.some((c) => c.name === "fusion_mcp_read" && c.ok), "the relayed calls are on the status");
     });
 });

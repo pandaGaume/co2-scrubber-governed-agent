@@ -10,7 +10,7 @@
         "url": "https://github.com/pandaGaume/co2-scrubber-governed-agent.git"
     },
     "scripts": {
-        "build": "tsc -p tsconfig.json && node dist/scripts/build-agent-page.js",
+        "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.json && node dist/scripts/build-agent-page.js",
         "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
         "server": "node --env-file-if-exists=.env dist/slots/run-all.js",
         "biomed:start": "node dist/scripts/biomed-session.js start",

@@ -11,6 +11,8 @@ import type { PublishedSlot } from "../../slots/lib/slot-server.js";
 const quiet = () => undefined;
 
 export async function startAllOrFail(port: number): Promise<{ broker: LocalBroker; slots: PublishedSlot<object>[] }> {
+    // The suite never probes a real CAD: the cad slot is pointed at a closed port (refused at once) unless a test says otherwise; tests/cad.test.ts brings its own stand-in.
+    process.env.CAD_MCP_URL ??= "http://127.0.0.1:1/mcp";
     const started = await startAll(port, quiet, "ignore");
     if (started.failures.length) {
         await started.stop();

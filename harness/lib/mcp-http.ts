@@ -100,7 +100,9 @@ export async function connectMcpAt(endpoint: string, slot: string, identity: Cli
     const post = async (body: unknown, sessionId: string | null, timeoutMs?: number): Promise<Response> => {
         const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "application/json, text/event-stream", ...extraHeaders };
         if (sessionId) headers["Mcp-Session-Id"] = sessionId;
-        const response = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify(body), ...(timeoutMs ? { signal: AbortSignal.timeout(timeoutMs) } : {}) });
+        // The option's timeout bounds every request of the session (2026-09-27: a CAD add-in that stalled on tools/list hung a whole test suite for three hours).
+        const bound = timeoutMs ?? options.timeoutMs;
+        const response = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify(body), ...(bound ? { signal: AbortSignal.timeout(bound) } : {}) });
         if (!response.ok) {
             const text = await response.text().catch(() => "");
             throw new Error(`${endpoint} answered HTTP ${response.status} ${response.statusText}. ${text.slice(0, 400)}`);

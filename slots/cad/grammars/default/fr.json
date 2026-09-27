@@ -1,12 +1,12 @@
 {
     "server": {
-        "description": "Le serveur MCP d'Autodesk Fusion 360 (son add-in), relayé : lire le modèle 3D actif, y exécuter une opération, en annuler une ; son adresse est un réglage",
+        "description": "CAO : le serveur MCP d'Autodesk Fusion 360 (son add-in), relayé : lire le modèle 3D actif, y exécuter une opération, en annuler une ; son adresse est un réglage",
         "instructions": "Le serveur MCP de Fusion 360, relayé par ce slot. status dit si Fusion répond et où ; tools liste ce qu'il expose ; call en exécute un par son nom ; les outils de Fusion sont aussi repris ici sous leur nom quand Fusion répondait au démarrage. Rien n'est simulé : une opération exécutée modifie le modèle ouvert dans Fusion."
     },
     "tools": {
         "status": {
             "title": "Où est Fusion, et s'il répond",
-            "description": "Où le serveur MCP de Fusion 360 est attendu (son adresse, un réglage : FUSION_MCP_URL, ou connect {url}), s'il répond, ce qu'il dit être, et les outils qu'il a listés."
+            "description": "Où le serveur MCP de Fusion 360 est attendu (son adresse, un réglage : CAD_MCP_URL, ou connect {url}), s'il répond, ce qu'il dit être, et les outils qu'il a listés."
         },
         "connect": {
             "title": "Ouvrir la session avec Fusion, ici ou ailleurs",
@@ -40,7 +40,7 @@
         }
     },
     "resources": {
-        "fusion://status": {
+        "cad://status": {
             "name": "Le serveur MCP de Fusion, vu par ce slot",
             "description": "Le point d'entrée en usage (un réglage), s'il a répondu, ce qu'il dit être, les outils listés, les appels relayés"
         }

@@ -1086,19 +1086,19 @@ const STEPS = [
         title: "Commissioning",
         text: "A scrubber registers without a qualified simulator: Mother opens its commissioning, the procedure factory writes the test, Mother relays it and asks you (in her chat), the executor runs it, the report, the Observer writes the twin request, the graph factory builds the twin, the proposal. Ten loops: code, a model, the script, you.",
         expect: "ok",
-        commissioning: { world: "lab" },
+        scenario: "commissioning",
     },
     {
         title: "Commissioning, with a leak",
         text: "The same, and the twin must expose a leak no node of the catalogue produces: the graph factory writes the contract, Mother asks you to open the code factory (or a standing order answers), the forge accepts the node, the request is replayed with it.",
         expect: "ok",
-        commissioning: { world: "lab", leak: true },
+        scenario: "commissioning-leak",
     },
     {
         title: "Commissioning, hidden occupant",
         text: "A third person in the Lab the monitor does not list: the twin's fit parts from the telemetry where the extra CO2 is.",
         expect: "ok",
-        commissioning: { world: "hidden-occupant" },
+        scenario: "commissioning-hidden-occupant",
     },
 ];
 
@@ -1113,7 +1113,7 @@ async function readOf(slot, uri) {
     return JSON.parse(r.contents[0].text);
 }
 
-/** A commissioning run as the story shows it under its step: the ten loops, who acts and of what nature, what each waits for. The decisions are Mother's chat's. */
+/** A scenario's run as the story shows it under its step (scenario://run): the ten loops, who acts and of what nature, what each waits for. The decisions are Mother's chat's. */
 function runHtml(run) {
     const natureOf = (l) => ({ code: "code", model: "a model", script: "the script", human: "you" })[l.nature] ?? l.nature;
     const lines = run.loops.map((l) => {
@@ -1123,7 +1123,7 @@ function runHtml(run) {
         const waiting = l.status === "waiting" && l.waitingFor ? `<div class="line"><b>waiting for you, in Mother's chat</b></div>` : "";
         return `<div class="line">${mark} <b>${l.n}. ${escapeHtml(l.name)}</b> (${natureOf(l)}: ${escapeHtml(l.who)})${task}${note}</div>${waiting}`;
     });
-    const head = `<div class="line"><span class="t">${escapeHtml(run.id)}</span> ${escapeHtml(run.status)}${run.ended ? `: ${escapeHtml(run.ended)}` : ""}</div>`;
+    const head = `<div class="line"><span class="t">${escapeHtml(run.id)}</span> ${escapeHtml(run.scenario)} (sha256 ${escapeHtml(String(run.sha256 ?? "").slice(0, 12))}) ${escapeHtml(run.status)}${run.ended ? `: ${escapeHtml(run.ended)}` : ""}</div>`;
     return head + lines.join("");
 }
 
@@ -1140,7 +1140,7 @@ function watchRun(li, step) {
     }
     const tick = async () => {
         try {
-            const run = await readOf("commissioning", "commissioning://run");
+            const run = await readOf("scenario", "scenario://run");
             if (!run) return;
             box.innerHTML = runHtml(run);
             if (run.status !== "running") {
@@ -1153,7 +1153,7 @@ function watchRun(li, step) {
                 li.querySelector("button").disabled = false;
             }
         } catch (e) {
-            box.innerHTML = `<div class="line dim">no commissioning slot: ${escapeHtml(e.message)}</div>`;
+            box.innerHTML = `<div class="line dim">no scenario slot: ${escapeHtml(e.message)}</div>`;
         }
     };
     runWatchers.set(li, setInterval(tick, POLL_MS));
@@ -1163,12 +1163,12 @@ function watchRun(li, step) {
 /** A run already playing when the page opens (another page started it) shows under its step. */
 async function attachRun() {
     try {
-        const run = await readOf("commissioning", "commissioning://run");
+        const run = await readOf("scenario", "scenario://run");
         if (!run) return;
-        const i = STEPS.findIndex((s) => s.commissioning && s.commissioning.world === run.options.world && Boolean(s.commissioning.leak) === Boolean(run.options.leak));
+        const i = STEPS.findIndex((s) => s.scenario && s.scenario === run.scenario);
         if (i >= 0 && stepItems[i]) watchRun(stepItems[i], STEPS[i]);
     } catch {
-        // No commissioning slot: the steps stay as they are.
+        // No scenario slot: the steps stay as they are.
     }
 }
 
@@ -1181,7 +1181,7 @@ function renderStory() {
     STEPS.forEach((step, i) => {
         const li = document.createElement("li");
         li.className = "step";
-        const disabled = !step.run && !step.commissioning;
+        const disabled = !step.run && !step.scenario;
         const needs = step.needs ? `<p class="needs">${disabled ? "not yet: " : "note: "}${step.needs}</p>` : "";
         li.innerHTML =
             `<div class="step-head"><span class="step-n">${String(i + 1).padStart(2, "0")}</span><span class="step-title">${step.title}</span></div>` +
@@ -1193,8 +1193,8 @@ function renderStory() {
             button.addEventListener("click", async () => {
                 button.disabled = true;
                 const before = $("trace-list").children.length;
-                if (step.commissioning) {
-                    await call("commissioning", "start", step.commissioning, "commander");
+                if (step.scenario) {
+                    await call("scenario", "play", { id: step.scenario }, "commander");
                     watchRun(li, step);
                 } else await step.run();
                 await refreshCabin();
@@ -1206,7 +1206,7 @@ function renderStory() {
                 pill.className = `outcome ${worst}`;
                 pill.textContent = worst === step.expect ? LABEL[worst] : `${LABEL[worst]} (expected ${LABEL[step.expect]})`;
                 // A commissioning step's button comes back when its run ends (watchRun); the pill then says how the run ended.
-                if (!step.commissioning) button.disabled = false;
+                if (!step.scenario) button.disabled = false;
             });
         }
         stepItems[i] = li;

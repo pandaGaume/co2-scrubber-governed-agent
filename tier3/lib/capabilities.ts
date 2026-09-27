@@ -58,13 +58,11 @@ const EXCLUDED = [
     /^supervisor\./,
     // The forge compiles and runs generated code for the factories; the night's agent writes no plugin.
     /^forge\./,
-    // Fusion 360's MCP server (a CAD model, read or changed) is the factories' business; the night's agent has no model to draw.
-    /^fusion\./,
+    // The CAD (Fusion 360's MCP server: a model read or changed) is the factories' business; the night's agent has no model to draw.
+    /^cad\./,
     // The questions to the commander are asked by the harness and the factories, answered by the commander: the night's agent neither asks nor answers, and resumes nothing.
     /^station\.(ask|answer|questions_policy)$/,
     /^factory\.resume$/,
-    // The commissioning chain is the control post's to play and the commander's to decide in; the night's agent plays nothing of it.
-    /^commissioning\./,
     /^twin\.(registry_|document_|session_run)/,
     /^station\.propose$/,
     /^biomed\.(monitor_start|monitor_stop|report|move)$/,
