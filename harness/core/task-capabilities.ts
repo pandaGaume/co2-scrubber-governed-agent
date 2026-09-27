@@ -14,6 +14,8 @@ import type { CapabilityResult, JsonValue } from "@spiky-panda/harness";
 import type { Broker } from "../lib/broker.js";
 import type { LocalCapability } from "./capabilities.js";
 import type { DoneClaim, Plan, Progress } from "./workspace-observer.js";
+import { normalizePlan } from "./builder-guard.js";
+import type { TaskFile } from "./task.js";
 
 const MISSING_SCHEMA = {
     type: "object",
@@ -85,7 +87,7 @@ export const ASK_SCHEMA: JsonValue = {
     additionalProperties: false,
 };
 
-export function taskCapabilities(broker: Broker, taskId: string, progress: Progress, topic = "task"): LocalCapability[] {
+export function taskCapabilities(broker: Broker, taskId: string, progress: Progress, topic = "task", task?: TaskFile["task"]): LocalCapability[] {
     return [
         {
             // A question to the commander (Tier 4, 2026-09-26): the task waits for the answer, unless a standing order answers it at once; the answer comes back into the task's observations (answers) and the loop goes on from there.
@@ -116,7 +118,7 @@ export function taskCapabilities(broker: Broker, taskId: string, progress: Progr
             description: "Submit the plan before building anything: the node types selected from the catalogue, and the required outputs no node produces (each with a reason and the topic that can make it). A plan the guard refuses comes back with its problems.",
             inputSchema: PLAN_SCHEMA,
             async execute(input: JsonValue): Promise<CapabilityResult> {
-                const plan = input as unknown as Plan;
+                const plan = task ? normalizePlan(input as unknown as Plan, task) : (input as unknown as Plan);
                 const r = await writeJson(broker, taskId, "plan.json", plan);
                 if (!r.ok) return r;
                 progress.plan = plan;

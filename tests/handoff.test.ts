@@ -23,7 +23,7 @@ import type { PublishedSlot } from "../slots/lib/slot-server.js";
 import { fromRoot } from "../lib/paths.js";
 import { LAB_WORLD, twoZoneTelemetry } from "../harness/stand-in/two-zone-world.js";
 import { LEAK_CONTRACT, LEAK_TYPE } from "../harness/scripted/code-fixture.js";
-import { planProblems } from "../harness/core/builder-guard.js";
+import { normalizePlan, planProblems } from "../harness/core/builder-guard.js";
 import { addNeededFor, GRAPH_TOPIC } from "../harness/topics/graph/index.js";
 import { newProgress } from "../harness/core/workspace-observer.js";
 import { codeTaskRequest, missingForCode, replayRequest } from "../slots/factory/handoff.js";
@@ -45,6 +45,14 @@ const TELEMETRY = twoZoneTelemetry(LAB_WORLD, [
 const MISSING = { required_output: "leak_co2", quantity: "MassFlow", unit: "kg/s", topic: "code", reason: "no node of the catalogue takes CO2 out of a volume at a constant mass flow scaled by a command", contract: LEAK_CONTRACT };
 
 describe("the hand-off's rules, without a broker", () => {
+    it("a required output named as the brief prints it is that output, and a produced mapping for an output the plan declares missing is dropped", async () => {
+        const task = { id: "t", objective: { required_outputs: [{ name: "leak_co2", quantity: "MassFlow", unit: "kg/s" }], constraints: {} }, observations: {}, data: [], budget: { iterations: 1, minutes: 1 } } as unknown as TaskFile["task"];
+        const plan = normalizePlan({ selected_nodes: [], missing_capabilities: [{ ...MISSING, required_output: "leak_co2 (MassFlow, kg/s)", contract: LEAK_CONTRACT }], produced: { "leak_co2 (MassFlow, kg/s)": { type: "Generated.Habitat:leak", port: "co2Delta" } } }, task);
+        assert.equal(plan.missing_capabilities[0].required_output, "leak_co2");
+        assert.deepEqual(plan.produced, {});
+        const options = { broker: { call: async () => ({ ok: false, outcome: "refused" }) } as never, task, topic: GRAPH_TOPIC };
+        assert.deepEqual(await planProblems({ selected_nodes: [], missing_capabilities: [{ ...MISSING, required_output: "leak_co2 (MassFlow, kg/s)", contract: LEAK_CONTRACT }], produced: { "leak_co2 (MassFlow, kg/s)": { type: "Generated.Habitat:leak", port: "co2Delta" } } }, options), []);
+    });
     it("a generated type the plan maps is wired into the library graph by an add the harness computes: the node into the Lab's next free CO2 input; nothing when the candidate holds it", () => {
         const progress = newProgress();
         progress.plan = { selected_nodes: [], missing_capabilities: [], produced: { leak_co2: { type: LEAK_TYPE, port: "co2Delta" } } };

@@ -73,6 +73,26 @@ export interface BuilderGuardOptions {
 }
 
 /** The problems of a plan against the catalogue and the task's required outputs; empty when conformant. */
+/**
+ * A plan as the guard and the workshop read it (2026-09-27, the tenth page run): a required output named as the brief prints it, "leak (MassFlow, kg/s)",
+ * is the output "leak"; a produced mapping for an output the same plan declares missing is dropped, the replay maps it once the node exists. Words a
+ * builder copies from its own brief are not refusals.
+ */
+export function normalizePlan(plan: Plan, task: TaskFile["task"]): Plan {
+    const names = task.objective.required_outputs.map((o) => o.name);
+    const nameOf = (given: string): string => {
+        if (names.includes(given)) return given;
+        const stripped = given.replace(/\s*\([^()]*\)\s*$/, "").trim();
+        return names.includes(stripped) ? stripped : given;
+    };
+    const missing = (plan.missing_capabilities ?? []).map((m) => ({ ...m, required_output: nameOf(String(m.required_output ?? "")) }));
+    const declared = new Set(missing.map((m) => m.required_output));
+    const produced = plan.produced
+        ? Object.fromEntries(Object.entries(plan.produced).map(([k, v]) => [nameOf(k), v] as const).filter(([k]) => !declared.has(k)))
+        : undefined;
+    return { ...plan, missing_capabilities: missing, ...(plan.produced ? { produced } : {}) };
+}
+
 export async function planProblems(plan: Plan, { broker, task, runtimeSlot = "twin" }: BuilderGuardOptions): Promise<string[]> {
     const problems: string[] = [];
     if (!plan.selected_nodes.length && !plan.missing_capabilities.length) problems.push("a plan names at least one node or one missing capability");
@@ -83,6 +103,7 @@ export async function planProblems(plan: Plan, { broker, task, runtimeSlot = "tw
         else described.push(r.output as DescribedNode);
     }
     const names = task.objective.required_outputs.map((o) => o.name);
+    plan = normalizePlan(plan, task);
     // The generated types a replayed request carries (the hand-off named them in its observations): what was made for a missing output is selected, not declared missing again (the ninth passage declared it missing twice, with a new contract each time).
     const generated = (Array.isArray((task.observations as { generated?: unknown } | undefined)?.generated) ? ((task.observations as { generated: Array<{ type?: unknown }> }).generated ?? []) : []).map((g) => String(g?.type ?? "")).filter(Boolean);
     for (const m of plan.missing_capabilities) {
@@ -121,7 +142,7 @@ export async function planProblems(plan: Plan, { broker, task, runtimeSlot = "tw
             else if (required) {
                 const sameQuantity = String(port.quantity ?? "").toLowerCase() === required.quantity.toLowerCase();
                 const units = required.unit && port.unit ? compatibleUnits({ quantity: required.quantity, unit: required.unit }, { quantity: required.quantity, unit: port.unit }) : null;
-                if (!sameQuantity || (units && (!units.ok || !units.compatible))) problems.push(`produced: "${name}" (${required.quantity}${required.unit ? `, ${required.unit}` : ""}) is mapped to "${String(m?.type)}".${String(m?.port)}, a ${port.quantity ?? "?"}${port.unit ? ` in ${port.unit}` : ""}${sameQuantity ? ", which does not convert" : ""}`);
+                if (!sameQuantity || (units && (!units.ok || !units.compatible))) problems.push(`produced: "${name}" (${required.quantity}${required.unit ? `, ${required.unit}` : ""}) is mapped to "${String(m?.type)}".${String(m?.port)}, a ${port.quantity ?? "?"}${port.unit ? ` in ${port.unit}` : ""}${sameQuantity ? ", which does not convert" : ""}; when no node of the catalogue has an output of that quantity for it, declare it missing (topic "code", a contract on the library's card "capability-contract") instead of mapping it`);
             }
         }
     }
