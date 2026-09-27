@@ -1255,3 +1255,60 @@ if (questionsLog) {
     void refreshQuestions();
     setInterval(() => void refreshQuestions(), 2000);
 }
+
+
+// ── The commissioning run ────────────────────────────────────────────────────
+// The chain played by the `commissioning` slot, loop by loop, with the
+// commander's authorisation here (station.commissioning_authorise) and the
+// hand-off's questions in the questions panel.
+
+const commissioningLog = $("commissioning-log");
+if (commissioningLog) {
+    const esc = (v) => String(v ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+    const readOf = async (slot, uri) => {
+        const s = await session(slot);
+        const r = await s.request("resources/read", { uri });
+        return JSON.parse(r.contents[0].text);
+    };
+    const start = async (args) => {
+        await call("commissioning", "start", args, "commander");
+        await refreshCommissioning();
+    };
+    $("commissioning-start")?.addEventListener("click", () => void start({ world: "lab" }));
+    $("commissioning-start-leak")?.addEventListener("click", () => void start({ world: "lab", leak: true }));
+    $("commissioning-start-hidden")?.addEventListener("click", () => void start({ world: "hidden-occupant" }));
+    commissioningLog.addEventListener("click", async (ev) => {
+        const b = ev.target.closest("button");
+        if (!b?.dataset.authorise) return;
+        await call("station", "commissioning_authorise", { commissioningId: b.dataset.authorise, decision: b.dataset.decision, by: "commander", note: "from the control post" }, "commander");
+        await refreshCommissioning();
+    });
+    async function refreshCommissioning() {
+        try {
+            const run = await readOf("commissioning", "commissioning://run");
+            if (!run) {
+                commissioningLog.innerHTML = `<div class="line dim">No run. Play one: a device registers and the chain begins.</div>`;
+                return;
+            }
+            const commissionings = await readOf("station", "station://commissionings");
+            const c = commissionings.find((x) => x.id === run.commissioningId);
+            const natureOf = (l) => ({ code: "code", model: "a model", script: "the script", human: "you" })[l.nature] ?? l.nature;
+            const lines = run.loops.map((l) => {
+                const mark = { pending: "\u00b7", running: "\u25b6", waiting: "\u23f8", done: "\u2713", failed: "\u2717", skipped: "\u2013" }[l.status] ?? "?";
+                const task = l.taskId ? ` <span class="t">${esc(l.taskId)}</span>` : "";
+                const note = l.note ? ` <span class="dim">${esc(l.note)}</span>` : "";
+                const waiting = l.status === "waiting" && l.waitingFor ? `<div class="line"><b>waiting for you:</b> ${esc(l.waitingFor)}</div>` : "";
+                const auth = l.status === "waiting" && l.name === "authorisation" && c && c.status === "awaiting-authorisation"
+                    ? `<div class="line">${c.procedure ? `procedure ${esc(c.procedure.procedureId)}: ${esc(c.procedure.minutes)} min, ${esc((c.procedure.occupants ?? []).length)} occupant(s)` : ""} <button class="badge link" data-authorise="${esc(c.id)}" data-decision="authorise" type="button">authorise</button> <button class="badge link" data-authorise="${esc(c.id)}" data-decision="refuse" type="button">refuse</button></div>`
+                    : "";
+                return `<div class="question"><div class="line">${mark} <b>${l.n}. ${esc(l.name)}</b> (${natureOf(l)}: ${esc(l.who)})${task}${note}</div>${waiting}${auth}</div>`;
+            });
+            const head = `<div class="line"><span class="t">${esc(run.id)}</span> ${esc(run.status)} (world ${esc(run.options.world)}, leak ${run.options.leak ? "yes" : "no"}, builder ${esc(run.options.builder)})${run.ended ? `: ${esc(run.ended)}` : ""}</div>`;
+            commissioningLog.innerHTML = head + lines.join("");
+        } catch (e) {
+            commissioningLog.innerHTML = `<div class="line dim">no commissioning slot: ${esc(e.message)}</div>`;
+        }
+    }
+    void refreshCommissioning();
+    setInterval(() => void refreshCommissioning(), 2000);
+}
