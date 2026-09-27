@@ -58,6 +58,7 @@
     .cell .k .tier-n { margin-left: auto; color: var(--muted-2); letter-spacing: 0.1em; }
     .cell p { font-family: var(--sans); font-size: 12.5px; line-height: 1.5; color: var(--muted); margin: 0 0 6px; }
     .cell p.today { color: var(--muted-2); font-size: 11.5px; }
+    .cell code { font-family: var(--mono); font-size: 10.5px; color: var(--teal-soft); }
     .led { width: 8px; height: 8px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 8px var(--teal); flex: none; }
     .k.ok { color: var(--teal); }
     .k.warn { color: var(--amber); }
@@ -159,7 +160,7 @@
         <div class="panel-body prose">
             <div class="grid">
                 <div class="cell"><div class="k"><i class="led"></i>scrubber<span class="tier-n">Tier 1</span></div><p>The ESP32-S3 board: a real motor, a real current sensor, the cabin CO2 simulated on board, a small ONNX health model, the speed envelope and MIN-FLOW, a protection that can be raised but never weakened.</p><p class="today">Today: a stub with the three real refusals and a debug tool to set the cabin CO2 by hand.</p></div>
-                <div class="cell"><div class="k"><i class="led"></i>twin<span class="tier-n">Tier 0</span></div><p>The physics graph of the cabin, the crew, the turbine and the motor: the oracle the agent asks "how long until critical?".</p><p class="today">Today: a stub that knows the shape of the question and a fixed rate.</p></div>
+                <div class="cell"><div class="k"><i class="led"></i>twin<span class="tier-n">Tier 0</span></div><p>The physics graph of the cabin, the crew, the turbine and the motor: the oracle the agent asks "how long until critical?".</p><p class="today">Today: real. The cabin's physics graph runs headless on the substrate's runtime: <code>time_to_critical</code> for one flow or a stop, <code>sweep</code> over several flows, <code>habitat_run</code> for the two-module habitat with who is on board; every answer carries the sha256 of the files it was computed from.</p></div>
                 <div class="cell"><div class="k"><i class="led"></i>station<span class="tier-n">Tier 2</span></div><p>The validated model push (sha256, contract, double bank), the journal, and the rule: no positive evaluation report, no registration; no registration, no push.</p><p class="today">Today: a stub that enforces the rule and pushes nothing.</p></div>
                 <div class="cell"><div class="k"><i class="led"></i>factory<span class="tier-n">offline</span></div><p>The jobs that make the monitor: sweep the twin, fit the model, evaluate it against the oracle. Never in the loop.</p><p class="today">Today: a stub that mints job ids. The real jobs run from the command line and on Nebius Serverless Jobs.</p></div>
             </div>
