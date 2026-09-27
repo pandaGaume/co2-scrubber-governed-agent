@@ -128,6 +128,11 @@ function taskAnswer(taskId: string, s: FactoryState, manifest?: Readonly<Record<
     if (manifest) {
         status.manifest = manifest as Record<string, unknown>;
         status.state = (manifest.state as TaskStatus["state"] | undefined) ?? status.state;
+    } else {
+        // A task still running has its steps in memory (the runner's onProgress) before any manifest is on disk: the one that has more steps is the one that is true now (2026-09-27: a scenario told "step 0" of a factory at its eighth).
+        const kept = s.tasks[taskId]?.manifest as { steps?: unknown[] } | null | undefined;
+        const onDisk = status.manifest as { steps?: unknown[] } | null | undefined;
+        if (kept && (kept.steps?.length ?? 0) > (onDisk?.steps?.length ?? 0)) status.manifest = kept as Record<string, unknown>;
     }
     s.tasks[taskId] = status;
     const run = s.runs[taskId];

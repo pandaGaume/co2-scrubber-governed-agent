@@ -223,7 +223,6 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
         const p = await taskEnded(reqP.taskId, "The procedure factory");
         end(2, summary(p));
         if (p.state !== "proposed") throw new Error(`the procedure factory ended ${p.state}: ${p.manifest?.ended ?? ""}`);
-        narrate(`The procedure factory proposed its test in ${p.manifest?.steps?.length ?? "?"} steps. I check it before I ask you.`);
 
         // 3. the relay: Mother re-checked the proposed procedure with the occupancy she reads; the commissioning waits for the commander.
         begin(3);
