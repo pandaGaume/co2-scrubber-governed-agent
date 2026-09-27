@@ -1082,8 +1082,6 @@ const STEPS = [
             if (taskId) await call("factory", "task", { taskId }, "operator");
         },
     },
-];
-
     {
         title: "Commissioning",
         text: "A scrubber registers without a qualified simulator: Mother opens its commissioning, the procedure factory writes the test, Mother relays it and asks you (in her chat), the executor runs it, the report, the Observer writes the twin request, the graph factory builds the twin, the proposal. Ten loops: code, a model, the script, you.",
@@ -1284,11 +1282,16 @@ function noteInChat(text) {
     while (chatNotes.length > 3) chatNotes.shift();
 }
 
+let awaitingAuthorisation = [];
+
 async function refreshQuestions() {
     if (!sessions.has("station")) return;
     try {
         const questions = await readOf("station", "station://questions");
         openQuestions = questions.filter((q) => q.status === "open");
+        // A commissioning awaiting the authorisation with no question asked for it (a station older than the question): the chips call commissioning_authorise directly.
+        const commissionings = await readOf("station", "station://commissionings").catch(() => []);
+        awaitingAuthorisation = commissionings.filter((c) => c.status === "awaiting-authorisation" && !openQuestions.some((q) => q.kind === "authorise" && q.context?.commissioningId === c.id));
         const policy = await readOf("station", "station://questions-policy");
         const select = $("questions-policy");
         if (select && document.activeElement !== select) select.value = policy.mode === "auto" ? "auto" : "ask";
@@ -1307,8 +1310,9 @@ function chatTail() {
         const transcript = h ? `<div class="line dim">heard: "${escapeHtml(h.text)}"${h.option ? ` : ${escapeHtml(h.option.label)}` : ", no option matches: say one of the words above, or click"}</div>` : "";
         return `${text}<div class="chips"><span class="t">${escapeHtml(q.id)}</span>${options}<button class="badge link" data-voice="${escapeHtml(q.id)}" type="button" title="answer by voice">mic</button></div>${transcript}`;
     });
+    const direct = awaitingAuthorisation.map((c) => `<div class="chips"><span class="t">${escapeHtml(c.id)}</span><button class="badge link" data-authorise="${escapeHtml(c.id)}" data-decision="authorise" type="button">authorise the test</button><button class="badge link" data-authorise="${escapeHtml(c.id)}" data-decision="refuse" type="button">refuse it</button></div>`);
     const notes = chatNotes.filter((n) => Date.now() - n.at < 15000).map((n) => `<div class="line dim">${escapeHtml(n.text)}</div>`);
-    return chips.join("") + notes.join("") + `<div class="line"><span class="t">&gt;</span><i class="caret"></i></div>`;
+    return chips.join("") + direct.join("") + notes.join("") + `<div class="line"><span class="t">&gt;</span><i class="caret"></i></div>`;
 }
 
 async function answerQuestion(questionId, choice, how, note) {
@@ -1322,6 +1326,10 @@ async function answerByText(text, how) {
     const t = String(text ?? "").trim();
     if (!t) return;
     await refreshQuestions();
+    if (!openQuestions.length && awaitingAuthorisation.length === 1 && /^(authorise|authorize|refuse)$/i.test(t)) {
+        await call("station", "commissioning_authorise", { commissioningId: awaitingAuthorisation[0].id, decision: /^refuse$/i.test(t) ? "refuse" : "authorise", by: "commander", note: `${how} in Mother's chat` }, "commander");
+        return void refreshVoice();
+    }
     if (!openQuestions.length) return void noteInChat(`nothing to answer: no question is open ("${t}")`);
     const matched = openQuestions.map((q) => ({ q, option: optionOf(t, q.options) })).filter((m) => m.option);
     if (matched.length !== 1) return void noteInChat(`"${t}" answers ${matched.length ? "more than one question" : "no open question"}: say one of the options' words, or click a chip`);
@@ -1365,6 +1373,10 @@ if (motherLogEl) {
         const b = ev.target.closest("button");
         if (!b) return;
         if (b.dataset.voice) return void listen(b.dataset.voice);
+        if (b.dataset.authorise) {
+            await call("station", "commissioning_authorise", { commissioningId: b.dataset.authorise, decision: b.dataset.decision, by: "commander", note: "from Mother's chat" }, "commander");
+            return void refreshVoice();
+        }
         if (b.dataset.q && b.dataset.choice) await answerQuestion(b.dataset.q, b.dataset.choice, "click", heard.get(b.dataset.q)?.text);
     });
     $("mother-form")?.addEventListener("submit", async (ev) => {
