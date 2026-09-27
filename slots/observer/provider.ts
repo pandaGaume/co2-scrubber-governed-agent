@@ -24,7 +24,9 @@ import { Broker } from "../../harness/lib/broker.js";
 import { ReasonerProvider } from "../../harness/providers/reasoner.js";
 import type { Provider } from "../../harness/lib/provider.js";
 import { observe, OBSERVER_PROMPT, type ObserveResult } from "../../harness/observer/observer.js";
-import { factoryContractOf } from "../../harness/observer/request.js";
+import { factoryContractOf, type TwinFactoryRequest } from "../../harness/observer/request.js";
+import { findingsFor, supervise, supervisionOfRequest, SUPERVISOR_PROMPT } from "../../harness/supervisor/supervisor.js";
+import type { LibraryFact } from "../../harness/core/contracts.js";
 
 /** One observation as kept: its result once done; `status` running while the model works (an observation takes several model calls, longer than a broker call may wait), then done or failed. */
 export type ObserverEntry = ObserveResult & { id: string; at: string; taskId: string | null; status: "running" | "done" | "failed"; error?: string; endedAt?: string };
@@ -80,7 +82,25 @@ export function observerSlot(wsBase: string, log: (line: string) => void, option
                         const broker = new Broker(httpBase, { name: "observer", version: VERSION, locale: "en" });
                         try {
                             const attempts = typeof args.attempts === "number" && args.attempts >= 1 ? Math.min(8, Math.floor(args.attempts)) : 4;
-                            const result = await observe({ provider: await modelOf(broker), broker, description, telemetry: Array.isArray(args.telemetry) ? (args.telemetry as Array<Record<string, unknown>>) : undefined, attempts });
+                            // The Contract Supervisor reviews each request the guard accepts (the same reasoner slot, its own prompt): its findings for the Observer send it back into its loop, so a request is corrected here and not refused at the start of a factory task.
+                            const review = async (request: TwinFactoryRequest): Promise<string[]> => {
+                                try {
+                                    const model = await ReasonerProvider.connect(broker);
+                                    if (!model.description.ready) return [];
+                                    model.usePrompt(SUPERVISOR_PROMPT);
+                                    model.useContext("state");
+                                    const devices = (await broker.call("station", "registry_list", {}).then((r) => (r.ok ? ((r.output as { devices?: unknown[] }).devices ?? []) : [])).catch(() => [])) as unknown[];
+                                    const facts = (await broker.call("library", "facts", {}).then((r) => (r.ok ? ((r.output as { facts?: Array<LibraryFact & { source: string }> }).facts ?? []) : [])).catch(() => [])) as Array<LibraryFact & { source: string }>;
+                                    const verdict = await supervise({ provider: model, input: supervisionOfRequest(request, devices, facts) });
+                                    const findings = findingsFor(verdict.verdict, "observer");
+                                    if (findings.length) log(`[observer] the supervisor sends the request back: ${findings.join("; ")}`);
+                                    return findings;
+                                } catch (e) {
+                                    log(`[observer] the supervisor could not review (${errorMessage(e)}); the guard's acceptance stands`);
+                                    return [];
+                                }
+                            };
+                            const result = await observe({ provider: await modelOf(broker), broker, description, telemetry: Array.isArray(args.telemetry) ? (args.telemetry as Array<Record<string, unknown>>) : undefined, attempts, review });
                             let taskId: string | null = null;
                             if (result.ok && result.request && args.forward === true) {
                                 const contract = factoryContractOf(result.request);
