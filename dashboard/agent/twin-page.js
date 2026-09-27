@@ -28,11 +28,14 @@ async function readFrame(response) {
   return void 0;
 }
 async function connectMcp(baseUrl, slot, identity, extraHeaders = {}) {
-  const endpoint = `${baseUrl.replace(/\/$/, "")}/${slot}/mcp`;
-  const post = async (body, sessionId2) => {
+  return connectMcpAt(`${baseUrl.replace(/\/$/, "")}/${slot}/mcp`, slot, identity, extraHeaders);
+}
+async function connectMcpAt(endpoint, slot, identity, extraHeaders = {}, options = {}) {
+  const post = async (body, sessionId2, timeoutMs) => {
     const headers = { "Content-Type": "application/json", Accept: "application/json, text/event-stream", ...extraHeaders };
     if (sessionId2) headers["Mcp-Session-Id"] = sessionId2;
-    const response = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify(body) });
+    const bound = timeoutMs ?? options.timeoutMs;
+    const response = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify(body), ...bound ? { signal: AbortSignal.timeout(bound) } : {} });
     if (!response.ok) {
       const text = await response.text().catch(() => "");
       throw new Error(`${endpoint} answered HTTP ${response.status} ${response.statusText}. ${text.slice(0, 400)}`);
@@ -42,7 +45,8 @@ async function connectMcp(baseUrl, slot, identity, extraHeaders = {}) {
   const capabilities = identity.locale ? { locale: identity.locale } : {};
   const initResponse = await post(
     { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: PROTOCOL_VERSION, capabilities, clientInfo: { name: identity.name, version: identity.version } } },
-    null
+    null,
+    options.timeoutMs
   );
   const sessionId = initResponse.headers.get("mcp-session-id");
   const init = await readFrame(initResponse);
