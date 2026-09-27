@@ -34,6 +34,7 @@ import { physicsSlot } from "./physics/provider.js";
 import { supervisorSlot } from "./supervisor/provider.js";
 import { forgeSlot } from "./forge/provider.js";
 import { commissioningSlot } from "./commissioning/provider.js";
+import { fusionSlotProbed } from "./fusion/provider.js";
 import { startDiscovery } from "./lib/discovery.js";
 import type { PublishedSlot } from "./lib/slot-server.js";
 
@@ -42,7 +43,7 @@ export const DEFAULT_PORT = 3001;
 
 const log = (line: string) => console.log(`${new Date().toLocaleTimeString()}  ${line}`);
 
-const SLOTS: Array<[string, (wsBase: string, logger: (line: string) => void) => PublishedSlot<object>]> = [
+const SLOTS: Array<[string, (wsBase: string, logger: (line: string) => void) => PublishedSlot<object> | Promise<PublishedSlot<object>>]> = [
     ["scrubber", scrubberSlot],
     ["twin", twinSlot],
     ["station", stationSlot],
@@ -62,6 +63,8 @@ const SLOTS: Array<[string, (wsBase: string, logger: (line: string) => void) => 
     ["supervisor", supervisorSlot],
     ["forge", forgeSlot],
     ["commissioning", commissioningSlot],
+    // Fusion 360's own MCP server relayed (its address a setting, FUSION_MCP_URL); probed at start so its tools are mirrored when it answers.
+    ["fusion", fusionSlotProbed],
 ];
 
 /** A slot that could not be published: its name and the reason, said once at start and kept for whoever asks. */
@@ -88,7 +91,7 @@ export async function publishAll(wsBase: string, logger: (line: string) => void 
     const failures: SlotFailure[] = [];
     for (const [name, make] of SLOTS.filter(([name]) => !skip.includes(name))) {
         try {
-            const slot = make(wsBase, logger);
+            const slot = await make(wsBase, logger);
             await slot.open();
             slots.push(slot);
         } catch (e) {

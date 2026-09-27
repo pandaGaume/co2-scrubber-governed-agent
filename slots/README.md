@@ -23,6 +23,22 @@ registration; no registration, no push).
 Replacing a stub by the real thing changes nothing for the page, the policy
 or the trace: same slot name, same tools, same broker.
 
+## An external MCP server as a slot: `fusion`
+
+`fusion/` relays Autodesk Fusion 360's own MCP server (its add-in, a
+streamable HTTP endpoint on this machine) as one more slot of the broker, so
+a factory reads a 3D model, executes an operation in it or undoes one through
+the same broker, policy and trace as every other capability. Where Fusion
+listens is a setting, never a constant: `FUSION_MCP_URL` in `.env`
+(`http://127.0.0.1:27182/mcp` by default), and `fusion.connect {url}` while
+the server runs. The slot's own tools (`status`, `connect`, `tools`, `call`,
+`resources`, `resource`) are always there; Fusion's tools are mirrored under
+their own names when Fusion answered at start (`run-all` probes it), each
+with the description and schema Fusion gives. Fusion absent: the slot is
+published with its own tools and says so in the log. The night's agent does
+not see it (`tier3/lib/capabilities.ts`); the pattern is the one to copy for
+another CAD or any MCP server on the same protocol.
+
 ## Grammars: the same tools, described per audience and per language
 
 The wording a model reads for a tool is not the same for every model, and

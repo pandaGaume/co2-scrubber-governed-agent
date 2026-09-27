@@ -1,0 +1,48 @@
+{
+    "server": {
+        "description": "Le serveur MCP d'Autodesk Fusion 360 (son add-in), relayé : lire le modèle 3D actif, y exécuter une opération, en annuler une ; son adresse est un réglage",
+        "instructions": "Le serveur MCP de Fusion 360, relayé par ce slot. status dit si Fusion répond et où ; tools liste ce qu'il expose ; call en exécute un par son nom ; les outils de Fusion sont aussi repris ici sous leur nom quand Fusion répondait au démarrage. Rien n'est simulé : une opération exécutée modifie le modèle ouvert dans Fusion."
+    },
+    "tools": {
+        "status": {
+            "title": "Où est Fusion, et s'il répond",
+            "description": "Où le serveur MCP de Fusion 360 est attendu (son adresse, un réglage : FUSION_MCP_URL, ou connect {url}), s'il répond, ce qu'il dit être, et les outils qu'il a listés."
+        },
+        "connect": {
+            "title": "Ouvrir la session avec Fusion, ici ou ailleurs",
+            "description": "Ouvre (ou rouvre) la session avec le serveur MCP de Fusion ; avec url, sur une autre adresse (une autre machine, un autre port, une autre CAO sur le même protocole), gardée jusqu'au redémarrage du serveur.",
+            "properties": {
+                "url": "le point d'entrée HTTP streamable, par exemple http://127.0.0.1:27182/mcp ; l'actuel si absent"
+            }
+        },
+        "tools": {
+            "title": "Ce que Fusion expose",
+            "description": "Les outils qu'expose le serveur MCP de Fusion, avec leurs descriptions et leurs schémas d'entrée, tels qu'il les liste maintenant."
+        },
+        "call": {
+            "title": "Un outil de Fusion, par son nom",
+            "description": "Appelle un outil du serveur MCP de Fusion par son nom avec ses arguments (tools dit lesquels et avec quoi) ; la réponse est celle de Fusion, analysée quand c'est du JSON. Refusé avec les mots de Fusion quand Fusion refuse.",
+            "properties": {
+                "name": "l'outil, tel que tools le liste",
+                "arguments": "ses arguments, sur son schéma"
+            }
+        },
+        "resources": {
+            "title": "Les ressources de Fusion",
+            "description": "Les ressources qu'expose le serveur MCP de Fusion (les schémas de ses entités, champs et filtres), par URI."
+        },
+        "resource": {
+            "title": "Une ressource de Fusion",
+            "description": "Lit une ressource du serveur MCP de Fusion par son URI (resources les liste) ; le JSON est analysé.",
+            "properties": {
+                "resourceUri": "l'URI de la ressource, telle que resources la liste"
+            }
+        }
+    },
+    "resources": {
+        "fusion://status": {
+            "name": "Le serveur MCP de Fusion, vu par ce slot",
+            "description": "Le point d'entrée en usage (un réglage), s'il a répondu, ce qu'il dit être, les outils listés, les appels relayés"
+        }
+    }
+}

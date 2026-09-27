@@ -48,6 +48,13 @@ const ROWS = Array.from({ length: 25 }, (_, m) => ({ minute: m, co2_ppm: m <= 12
 describe("the Observer's guard and its telemetry", () => {
     it("accepts a request that states needs, with its quantities, against the telemetry it was given", () => {
         assert.deepEqual(checkTwinRequest(REQUEST, { catalogueTypes: ["Physics.LifeSupport:cabin-air"], telemetryColumns: COLUMNS }), { ok: true, problems: [] });
+        // Scope: an output no measurement judges quotes the description's words that ask for it; a flow nobody asked for is not required.
+        const leakDescription = "The Lab and its scrubber. Also required: the twin must expose the CO2 that leaves the Lab through a leak in a seal, as a mass flow out of the volume.";
+        const extra = (asked?: string) => ({ ...REQUEST, outputs: [...REQUEST.outputs, { name: "leak", quantity: "MassFlow", unit: "kg/s", ...(asked ? { asked } : {}) }] });
+        assert.match(checkTwinRequest(extra(), { description: leakDescription }).problems.join(), /scope: output "leak" is compared with no measurement and quotes no words of the description/);
+        assert.match(checkTwinRequest(extra("the inter-module CO2 flow"), { description: leakDescription }).problems.join(), /scope: output "leak": asked "the inter-module CO2 flow" is not in the description as written/);
+        assert.equal(checkTwinRequest(extra("expose the CO2 that leaves the Lab through a leak in a seal"), { description: leakDescription }).ok, true);
+        assert.equal(checkTwinRequest(extra(), {}).ok, true, "without the description the rule does not apply");
     });
 
     it("separation: a request that names a node of the catalogue is refused, by its id or by the id's shape", () => {

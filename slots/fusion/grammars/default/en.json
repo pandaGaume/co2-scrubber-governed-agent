@@ -1,0 +1,48 @@
+{
+    "server": {
+        "description": "Autodesk Fusion 360's MCP server (its add-in), relayed: read the active 3D model, execute an operation in it, undo one; where it listens is a setting",
+        "instructions": "Fusion 360's own MCP server, relayed through this slot. status says whether Fusion answers and where; tools lists what it exposes; call runs one of them by name; Fusion's tools are also mirrored here under their own names when Fusion answered at start. Nothing here is simulated: an operation executed changes the model open in Fusion."
+    },
+    "tools": {
+        "status": {
+            "title": "Where Fusion is, and whether it answers",
+            "description": "Where Fusion 360's MCP server is expected (its address, a setting: FUSION_MCP_URL, or connect {url}), whether it answers, what it said it is, and the tools it listed."
+        },
+        "connect": {
+            "title": "Open the session with Fusion, here or elsewhere",
+            "description": "Opens (or reopens) the session with Fusion's MCP server; with url, on another address (another machine, another port, another CAD on the same protocol), kept until the server restarts.",
+            "properties": {
+                "url": "the streamable HTTP endpoint, e.g. http://127.0.0.1:27182/mcp; the current one when absent"
+            }
+        },
+        "tools": {
+            "title": "What Fusion exposes",
+            "description": "The tools Fusion's MCP server exposes, with their descriptions and input schemas, as it lists them now."
+        },
+        "call": {
+            "title": "One of Fusion's tools, by name",
+            "description": "Calls one tool of Fusion's MCP server by name with its arguments (tools says which and with what); the answer is Fusion's, parsed when it is JSON. Refused with Fusion's words when Fusion refuses.",
+            "properties": {
+                "name": "the tool, as tools lists it",
+                "arguments": "its arguments, on its schema"
+            }
+        },
+        "resources": {
+            "title": "Fusion's resources",
+            "description": "The resources Fusion's MCP server exposes (the schemas of its entities, fields and filters), by URI."
+        },
+        "resource": {
+            "title": "One of Fusion's resources",
+            "description": "Reads one resource of Fusion's MCP server by its URI (resources lists them); JSON is parsed.",
+            "properties": {
+                "resourceUri": "the resource's URI, as resources lists it"
+            }
+        }
+    },
+    "resources": {
+        "fusion://status": {
+            "name": "Fusion's MCP server, as this slot sees it",
+            "description": "The endpoint in use (a setting), whether it answered, what it said it is, the tools it listed, the calls relayed"
+        }
+    }
+}

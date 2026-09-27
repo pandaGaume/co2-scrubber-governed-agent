@@ -88,12 +88,19 @@ export async function readFrame(response: Response): Promise<JsonRpcFrame | unde
 
 /** Opens a session on `<baseUrl>/<slot>/mcp` and returns a client bound to it. */
 export async function connectMcp(baseUrl: string, slot: string, identity: ClientIdentity, extraHeaders: Record<string, string> = {}): Promise<McpSession> {
-    const endpoint = `${baseUrl.replace(/\/$/, "")}/${slot}/mcp`;
+    return connectMcpAt(`${baseUrl.replace(/\/$/, "")}/${slot}/mcp`, slot, identity, extraHeaders);
+}
 
-    const post = async (body: unknown, sessionId: string | null): Promise<Response> => {
+/**
+ * A session on any streamable HTTP MCP endpoint, given whole (2026-09-27: Fusion 360's own server at http://127.0.0.1:27182/mcp, relayed by the
+ * `fusion` slot); `slot` names it in the errors. `timeoutMs` bounds the initialize: a server that is not there answers with a refused connection
+ * at once, one that hangs is not waited for.
+ */
+export async function connectMcpAt(endpoint: string, slot: string, identity: ClientIdentity, extraHeaders: Record<string, string> = {}, options: { timeoutMs?: number } = {}): Promise<McpSession> {
+    const post = async (body: unknown, sessionId: string | null, timeoutMs?: number): Promise<Response> => {
         const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "application/json, text/event-stream", ...extraHeaders };
         if (sessionId) headers["Mcp-Session-Id"] = sessionId;
-        const response = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify(body) });
+        const response = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify(body), ...(timeoutMs ? { signal: AbortSignal.timeout(timeoutMs) } : {}) });
         if (!response.ok) {
             const text = await response.text().catch(() => "");
             throw new Error(`${endpoint} answered HTTP ${response.status} ${response.statusText}. ${text.slice(0, 400)}`);
@@ -105,6 +112,7 @@ export async function connectMcp(baseUrl: string, slot: string, identity: Client
     const initResponse = await post(
         { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: PROTOCOL_VERSION, capabilities, clientInfo: { name: identity.name, version: identity.version } } },
         null,
+        options.timeoutMs,
     );
     const sessionId = initResponse.headers.get("mcp-session-id");
     const init = await readFrame(initResponse);

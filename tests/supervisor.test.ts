@@ -36,7 +36,7 @@ const REQUEST = {
     inputs: [{ name: "speed", quantity: "Dimensionless", unit: "percent" }],
     outputs: [{ name: "predicted_co2", quantity: "Concentration", unit: "ppm" }],
     required_behaviors: ["the CO2 decays at full speed"],
-    validation: { criteria: ["predicted_co2 against co2_lab_ppm"] },
+    validation: { criteria: ["predicted_co2 against co2_lab_ppm"], compare: [{ output: "predicted_co2", against: "co2_lab_ppm" }] },
     known: [{ symbol: "eta", name: "efficiency", value: 40, unit: "percent", source: "scrubber-1-datasheet", factId: "scrubber.singlePassEfficiency" }],
     assumptions: ["the ventilation delivers an unknown flow", "the Lab and Hab-B do not mix at all while the hatch is closed"],
 } as unknown as TwinFactoryRequest;

@@ -68,7 +68,8 @@ export interface TwinFactoryRequest {
     controls?: Array<Quantity & { column?: string; range?: [number, number] }>;
     external_influences?: Array<{ name: string; quantity?: string; unit?: string; column?: string }>;
     inputs: Array<Quantity & { column?: string }>;
-    outputs: Array<Quantity & { horizonMinutes?: number }>;
+    /** `asked`: for an output no measurement judges, the description's words that ask for it, as written (2026-09-27: a request asked for four flows the description never named, and the graph factory spent its budget on them). */
+    outputs: Array<Quantity & { horizonMinutes?: number; asked?: string }>;
     required_behaviors: string[];
     constraints?: string[];
     missing_information?: string[];
@@ -89,7 +90,7 @@ export const TWIN_REQUEST_SCHEMA = {
         controls: { type: "array", items: Q, description: "What an operator or an agent can set." },
         external_influences: { type: "array", items: { type: "object", properties: { name: { type: "string" }, quantity: { type: "string" }, unit: { type: "string" }, column: { type: "string" } }, required: ["name"] }, description: "What acts on the system from outside it." },
         inputs: { type: "array", items: Q, description: "What the twin must receive." },
-        outputs: { type: "array", items: { type: "object", properties: { name: { type: "string" }, quantity: { type: "string" }, unit: { type: "string" }, horizonMinutes: { type: "number" } }, required: ["name", "quantity", "unit"] }, description: "What the twin must expose." },
+        outputs: { type: "array", items: { type: "object", properties: { name: { type: "string" }, quantity: { type: "string" }, unit: { type: "string" }, horizonMinutes: { type: "number" }, asked: { type: "string", description: "For an output no measurement judges (not in validation.compare): the description's words that ask for it, quoted as written. An output the description does not ask for is not required." } }, required: ["name", "quantity", "unit"] }, description: "What the twin must expose: what is compared with a measurement, and what the description asks the twin to expose (each of those quoting the description in asked)." },
         required_behaviors: { type: "array", items: { type: "string" }, description: "The dynamic behaviours the twin must reproduce." },
         constraints: { type: "array", items: { type: "string" }, description: "Known limits and conditions." },
         missing_information: { type: "array", items: { type: "string" }, description: "What the description and the telemetry do not say." },
@@ -193,6 +194,19 @@ export function checkTwinRequest(input: unknown, context: CheckContext = {}): Re
                 const c = compatibleUnits({ quantity: entry.quantity, unit: o.unit }, { quantity: entry.quantity, unit: entry.units[0] });
                 if (!c.ok || !c.compatible) problems.push(`vocabulary: output "${String(o.name)}" is a ${entry.quantity} in "${o.unit}", which is not a unit of that quantity${c.ok ? "" : ` (${c.reason})`}; the shared vocabulary writes it in ${entry.units.join(" or ")}, or any unit that converts to them`);
             }
+        }
+    }
+
+    // Scope: an output no measurement judges is one the description asks for, in its own words; the request adds no output of its own (the factory would spend its budget on a flow nobody asked for).
+    if (typeof context.description === "string" && context.description.trim()) {
+        const squash = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
+        const description = squash(context.description);
+        const compared = new Set(list(r.validation?.compare).map((c) => String(c?.output ?? "")));
+        for (const o of list(r.outputs)) {
+            if (!o?.name || compared.has(o.name)) continue;
+            const asked = typeof o.asked === "string" ? squash(o.asked) : "";
+            if (!asked) problems.push(`scope: output "${o.name}" is compared with no measurement and quotes no words of the description asking for it: give asked, the description's words as written, or leave the output out (a twin exposes what was asked, the rest is the factory's)`);
+            else if (!description.includes(asked)) problems.push(`scope: output "${o.name}": asked "${o.asked}" is not in the description as written; quote it exactly, or leave the output out`);
         }
     }
 

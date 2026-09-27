@@ -12,7 +12,7 @@ Determine what the twin must represent, what it must receive, what it must simul
 - the external influences;
 - the telemetry available, by the columns the summary lists;
 - the inputs the twin must receive;
-- the outputs the twin must expose;
+- the outputs the twin must expose: those compared with a measurement, and those the description asks for, each of the latter with `asked`, the description's words that ask for it, quoted as written (an output the description does not ask for is not required);
 - the dynamic behaviours it must reproduce;
 - the known constraints;
 - the information that is missing, and what you assume in its place, said as assumed;

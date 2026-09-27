@@ -210,6 +210,8 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
     // The validator's verdicts at task.done in a row: the same verdict twice is a repeat whatever the summary's wording (2026-09-27: twenty-one task.done reworded against one verdict the model never saw).
     let previousVerdict = "";
     let verdictRepeats = 0;
+    // The refused proposals over the whole task, by capability and input: the same one four times with reads in between is as stuck as four in a row (the eleventh page run: task.plan refused six times on one mapping, a library read between each).
+    const refusedCounts = new Map<string, number>();
     const telemetry = newTelemetry(contextMode);
     const EVIDENCE_CAP = 10;
     // A long answer goes whole to the workshop and the model reads its summary and its handle; written right after the step.
@@ -423,6 +425,10 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             progress.lastRefusal = { capability: exchange.proposedCapabilityId, reason: failed ?? "refused", input: (exchange.proposedInput ?? null) as JsonValue };
             progress.refusals[exchange.proposedCapabilityId] = { reason: failed ?? "refused", input: (exchange.proposedInput ?? null) as JsonValue, at: new Date().toISOString() };
             noteProposal(exchange.proposedCapabilityId, exchange.proposedInput);
+            const refusedKey = `${exchange.proposedCapabilityId}:${JSON.stringify(exchange.proposedInput ?? null)}`;
+            const refusedTimes = (refusedCounts.get(refusedKey) ?? 0) + 1;
+            refusedCounts.set(refusedKey, refusedTimes);
+            progress.repeats = Math.max(progress.repeats, refusedTimes - 1);
             manifest.steps.push({ n, decisionId: exchange.decisionId ?? null, source: "refused", capability: exchange.proposedCapabilityId, input: exchange.proposedInput, outcome: "refused", summary: failed, reward: null, reason: failed, ms, tokens: exchange.tokens });
             lines.push({ n, decisionId: exchange.decisionId ?? null, source: "refused", trace: null, failed, exchange, call: null, ms });
             log(`[factory] step ${n}: ${exchange.proposedCapabilityId} -> stopped by the harness (${failed})`);
