@@ -99,8 +99,8 @@ export async function planProblems(plan: Plan, { broker, task, runtimeSlot = "tw
         // A code task's own plan declares the capability it is making without repeating the contract: the task carries it (requirements.capability).
         const ownContract = Boolean((task.requirements as { capability?: unknown } | undefined)?.capability);
         if (m.topic === "code" && !ownContract) {
-            if (!m.contract || typeof m.contract !== "object") problems.push(`missing capability "${m.required_output}" is for the code factory and carries no contract: write contract {inputs, outputs, parameters, behaviors} (the schema of task.plan says its shape); the forge runs it on the generated node`);
-            else for (const p of contractProblems(m.contract)) problems.push(`missing capability "${m.required_output}", contract: ${p}`);
+            if (!m.contract || typeof m.contract !== "object") problems.push(`missing capability "${m.required_output}" is for the code factory and carries no contract: write contract {inputs, outputs, parameters, behaviors} on the library's card "capability-contract" (library.read); the forge runs it on the generated node`);
+            else for (const p of contractProblems(m.contract)) problems.push(`missing capability "${m.required_output}", contract: ${p} (the library's card "capability-contract" gives the shape and examples)`);
             const outputs = Object.values((m.contract as { outputs?: Record<string, { quantity?: string; unit?: string }> } | undefined)?.outputs ?? {});
             if (outputs.length && !outputs.some((o) => o.quantity === m.quantity)) problems.push(`missing capability "${m.required_output}", contract: no output carries the required quantity ${m.quantity}`);
         }

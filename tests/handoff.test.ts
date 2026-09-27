@@ -48,7 +48,7 @@ describe("the hand-off's rules, without a broker", () => {
         const task = { id: "t", objective: { required_outputs: [{ name: "leak_co2", quantity: "MassFlow", unit: "kg/s" }], constraints: {} }, observations: {}, data: [], budget: { iterations: 1, minutes: 1, twinPoints: 1 }, requestedBy: "x", requestedAt: "t" } as unknown as TaskFile["task"];
         const options = { broker: { call: async () => ({ ok: false, outcome: "refused" }) } as never, task, topic: GRAPH_TOPIC };
         const noContract = await planProblems({ selected_nodes: [], missing_capabilities: [{ required_output: "leak_co2", quantity: "MassFlow", unit: "kg/s", reason: "nothing produces it", topic: "code" }] }, options);
-        assert.deepEqual(noContract, ['missing capability "leak_co2" is for the code factory and carries no contract: write contract {inputs, outputs, parameters, behaviors} (the schema of task.plan says its shape); the forge runs it on the generated node']);
+        assert.deepEqual(noContract, [`missing capability "leak_co2" is for the code factory and carries no contract: write contract {inputs, outputs, parameters, behaviors} on the library's card "capability-contract" (library.read); the forge runs it on the generated node`]);
         const badContract = await planProblems({ selected_nodes: [], missing_capabilities: [{ ...MISSING, contract: { ...LEAK_CONTRACT, behaviors: ["output(flow=1) == 2"] } }] }, options);
         assert.match(badContract[0], /^missing capability "leak_co2", contract: "output\(flow=1\) == 2": "flow" is not an input of the contract/);
         const wrongQuantity = await planProblems({ selected_nodes: [], missing_capabilities: [{ ...MISSING, quantity: "Volume" }] }, options);
