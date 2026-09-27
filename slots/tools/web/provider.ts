@@ -50,6 +50,7 @@ const HISTORY_LIMIT = 100;
 function keyEnvironment(settings: WebSearchProfileSettings): string {
     if (settings.apiKey?.env?.trim()) return settings.apiKey.env.trim();
     if (settings.provider === "brave-search") return "BRAVE_SEARCH_API_KEY";
+    if (settings.provider === "tavily-search") return "TAVILY_SEARCH_API_KEY";
     if (settings.provider === "google-custom-search") return "GOOGLE_SEARCH_API_KEY";
     if (settings.provider === "anthropic-messages") return "ANTHROPIC_API_KEY";
     return "OPENAI_API_KEY";
@@ -62,8 +63,8 @@ function engineEnvironment(settings: WebSearchProfileSettings): string {
 function validateProfile(profile: WebSearchProfile, file: string): WebSearchProfileSettings {
     const settings = profile.webSearch;
     if (!settings || typeof settings !== "object") throw new Error(`${file}: webSearch is required`);
-    if (!(["brave-search", "google-custom-search", "openai-responses", "anthropic-messages"] as string[]).includes(settings.provider)) {
-        throw new Error(`${file}: webSearch.provider must be brave-search, google-custom-search, openai-responses or anthropic-messages`);
+    if (!(["brave-search", "tavily-search", "google-custom-search", "openai-responses", "anthropic-messages"] as string[]).includes(settings.provider)) {
+        throw new Error(`${file}: webSearch.provider must be brave-search, tavily-search, google-custom-search, openai-responses or anthropic-messages`);
     }
     if ((settings.provider === "openai-responses" || settings.provider === "anthropic-messages") && (!settings.model || settings.model.startsWith("<"))) {
         throw new Error(`${file}: hosted web search profiles must name a model, not a placeholder`);
@@ -98,7 +99,7 @@ export function webSearchSlot(wsBase: string, log: (line: string) => void): Publ
                 const ready = missing.length === 0;
                 return {
                     provider: settings.provider,
-                    mode: settings.provider === "brave-search" || settings.provider === "google-custom-search" ? "direct-results" : "hosted-answer",
+                    mode: settings.provider === "brave-search" || settings.provider === "tavily-search" || settings.provider === "google-custom-search" ? "direct-results" : "hosted-answer",
                     model: settings.model ?? null,
                     ready,
                     reason: ready ? null : `environment variable${missing.length > 1 ? "s" : ""} ${missing.join(", ")} ${missing.length > 1 ? "are" : "is"} not set`,

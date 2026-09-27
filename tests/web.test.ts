@@ -47,6 +47,31 @@ describe("the governed web search adapters", () => {
         assert.deepEqual(result.usage, { inputTokens: 0, outputTokens: 0, totalTokens: 0, searches: 1 });
     });
 
+    it("uses Tavily directly: the key as a bearer, the domain filters as its own parameters, the content as the snippet", async () => {
+        const seen: { request: { url: string; headers: Record<string, string>; body: Record<string, unknown> } | null } = { request: null };
+        const fetchImpl: FetchLike = async (input, init) => {
+            seen.request = { url: String(input), headers: init?.headers as Record<string, string>, body: JSON.parse(String(init?.body)) as Record<string, unknown> };
+            return new Response(JSON.stringify({ query: "current scrubber standard", results: [{ title: "Current standard", url: "https://example.org/standard", content: "The current value is 42.", score: 0.9, published_date: "2026-09-20" }, { url: "https://example.net/context", content: "Background." }], response_time: 0.8 }), { status: 200, headers: { "Content-Type": "application/json" } });
+        };
+        const result = await searchWeb({ provider: "tavily-search", apiKey: "tvly-secret", baseUrl: "https://api.tavily.test" }, { query: "current scrubber standard", count: 5, allowed_domains: ["Example.org"] }, fetchImpl);
+        const request = seen.request;
+        assert.ok(request);
+        assert.equal(request.url, "https://api.tavily.test/search");
+        assert.equal(request.headers.Authorization, "Bearer tvly-secret");
+        assert.deepEqual(request.body, { query: "current scrubber standard", max_results: 5, search_depth: "basic", topic: "general", include_answer: false, include_raw_content: false, include_domains: ["example.org"] });
+        assert.equal(result.provider, "tavily-search");
+        assert.equal(result.answer, null);
+        assert.deepEqual(result.results, [
+            { title: "Current standard", url: "https://example.org/standard", snippet: "The current value is 42.", published_at: "2026-09-20" },
+            { title: "https://example.net/context", url: "https://example.net/context", snippet: "Background." },
+        ]);
+        // A refusal says the provider's own words, wherever it puts them.
+        const refused: FetchLike = async () => new Response(JSON.stringify({ detail: { error: "Unauthorized: missing or invalid API key." } }), { status: 401, headers: { "Content-Type": "application/json" } });
+        await assert.rejects(searchWeb({ provider: "tavily-search", apiKey: "tvly-bad" }, { query: "x" }, refused), /HTTP 401: Unauthorized: missing or invalid API key\./);
+        const brave: FetchLike = async () => new Response(JSON.stringify({ error: { code: "SUBSCRIPTION_TOKEN_INVALID", detail: "The provided subscription token is invalid.", status: 422 }, type: "ErrorResponse" }), { status: 422, headers: { "Content-Type": "application/json" } });
+        await assert.rejects(searchWeb({ provider: "brave-search", apiKey: "bad" }, { query: "x" }, brave), /HTTP 422: SUBSCRIPTION_TOKEN_INVALID: The provided subscription token is invalid\./);
+    });
+
     it("supports the legacy Google Custom Search JSON API for existing accounts", async () => {
         const seen: { url: URL | null; method?: string } = { url: null };
         const fetchImpl: FetchLike = async (input, init) => {

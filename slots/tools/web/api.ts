@@ -5,7 +5,7 @@
  * citations. Every provider is reduced to the same stable result shape.
  */
 
-export type WebSearchProvider = "brave-search" | "google-custom-search" | "openai-responses" | "anthropic-messages";
+export type WebSearchProvider = "brave-search" | "tavily-search" | "google-custom-search" | "openai-responses" | "anthropic-messages";
 
 export interface WebSearchLocation {
     city?: string;
@@ -174,7 +174,10 @@ async function requestJson(url: string, init: RequestInit, timeoutMs: number, fe
         throw new Error(`web search provider answered HTTP ${response.status} with invalid JSON: ${text.slice(0, 300)}`);
     }
     if (!response.ok) {
-        const detail = isRecord(parsed) && isRecord(parsed.error) ? textOf(parsed.error.message) : "";
+        // Each provider words its refusal in its own place: error.message (OpenAI, Anthropic, Google), error.detail and error.code (Brave), detail.error or detail (Tavily).
+        const error = isRecord(parsed) && isRecord(parsed.error) ? parsed.error : null;
+        const tavily = isRecord(parsed) ? parsed.detail : undefined;
+        const detail = [error ? textOf(error.message) || [textOf(error.code), textOf(error.detail)].filter(Boolean).join(": ") : "", isRecord(tavily) ? textOf(tavily.error) : textOf(tavily)].find(Boolean) ?? "";
         throw new Error(`web search provider answered HTTP ${response.status}${detail ? `: ${detail}` : ""}`);
     }
     if (!isRecord(parsed)) throw new Error("web search provider returned a non-object response");
@@ -258,6 +261,35 @@ export function parseBraveWebSearch(response: JsonRecord, request: WebSearchRequ
         searches: [searchedQuery],
         errors: [],
         provider: "brave-search",
+        model: null,
+        latencyMs,
+        usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0, searches: 1 },
+    };
+}
+
+/** Tavily's search API (https://docs.tavily.com): ranked results with their content, and no second model unless an answer is asked for, which this adapter does not. */
+export function parseTavilyWebSearch(response: JsonRecord, request: WebSearchRequest, latencyMs: number): WebSearchResult {
+    const results: WebSearchHit[] = records(response.results)
+        .map((item) => {
+            const url = textOf(item.url);
+            if (!url) return null;
+            return {
+                title: textOf(item.title) || url,
+                url,
+                snippet: textOf(item.content),
+                ...(textOf(item.published_date) ? { published_at: textOf(item.published_date) } : {}),
+            } satisfies WebSearchHit;
+        })
+        .filter((item): item is WebSearchHit => item !== null);
+    return {
+        query: request.query,
+        answer: null,
+        results,
+        citations: [],
+        sources: results.map(({ url, title }) => ({ url, title })),
+        searches: [textOf(response.query) || request.query],
+        errors: [],
+        provider: "tavily-search",
         model: null,
         latencyMs,
         usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0, searches: 1 },
@@ -442,6 +474,27 @@ export async function searchWeb(config: WebSearchConfig, requestValue: WebSearch
             fetchImpl,
         );
         return parseBraveWebSearch(response, request, searchedQuery, Date.now() - started);
+    }
+
+    if (config.provider === "tavily-search") {
+        // The domain filters are Tavily's own parameters, not site: operators in the query.
+        const response = await postJson(
+            endpoint(config.baseUrl ?? "https://api.tavily.com", "/search"),
+            { Accept: "application/json", Authorization: `Bearer ${config.apiKey}` },
+            {
+                query: request.query,
+                max_results: request.count ?? 10,
+                search_depth: "basic",
+                topic: "general",
+                include_answer: false,
+                include_raw_content: false,
+                ...(request.allowed_domains?.length ? { include_domains: request.allowed_domains } : {}),
+                ...(request.blocked_domains?.length ? { exclude_domains: request.blocked_domains } : {}),
+            },
+            timeoutMs,
+            fetchImpl,
+        );
+        return parseTavilyWebSearch(response, request, Date.now() - started);
     }
 
     if (config.provider === "google-custom-search") {
