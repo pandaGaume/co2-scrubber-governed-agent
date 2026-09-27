@@ -207,6 +207,9 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         progress.repeats = key === previousProposal ? progress.repeats + 1 : 0;
         previousProposal = key;
     };
+    // The validator's verdicts at task.done in a row: the same verdict twice is a repeat whatever the summary's wording (2026-09-27: twenty-one task.done reworded against one verdict the model never saw).
+    let previousVerdict = "";
+    let verdictRepeats = 0;
     const telemetry = newTelemetry(contextMode);
     const EVIDENCE_CAP = 10;
     // A long answer goes whole to the workshop and the model reads its summary and its handle; written right after the step.
@@ -400,6 +403,17 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             });
             if (trace.source === "policy") manifest.recipes.replayedSteps++;
             noteProposal(trace.decision.invocation.capabilityId, trace.decision.invocation.input);
+            // A task.done the validator did not hold is a refusal the model reads at the next step (the call itself completed: the claim was recorded), and the same verdict again counts as a repeat.
+            if (trace.decision.invocation.capabilityId === "task.done" && trace.result.ok && !trace.evaluation.success) {
+                const reason = trace.evaluation.reason ?? "contract not held";
+                progress.lastRefusal = { capability: "task.done", reason, input: trace.decision.invocation.input as JsonValue };
+                verdictRepeats = reason === previousVerdict ? verdictRepeats + 1 : 0;
+                previousVerdict = reason;
+                progress.repeats = Math.max(progress.repeats, verdictRepeats);
+            } else {
+                previousVerdict = "";
+                verdictRepeats = 0;
+            }
             lines.push({ n, decisionId: trace.decisionId, source: trace.source, trace, failed: null, exchange, call, ms });
             log(`[factory] step ${n}: ${trace.decision.invocation.capabilityId} -> ${outcome} (${trace.evaluation.reason ?? ""})${trace.source === "policy" ? " [replayed]" : ""}`);
             continue;

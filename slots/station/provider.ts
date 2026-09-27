@@ -547,12 +547,12 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     {
                         questionId: { type: "string" },
                         choice: { type: "string", description: "the id of the option chosen" },
-                        by: { type: "string", description: "who answers: commander" },
+                        by: { type: "string", description: "who answers: the commander when absent" },
                         how: { type: "string", enum: ["click", "voice", "script"], description: "how the answer came" },
                         note: { type: "string" },
                         amendments: { type: "object", description: "what the commander changed in the context (a contract amended), when the option allows it" },
                     },
-                    ["questionId", "choice", "by"],
+                    ["questionId", "choice"],
                 ),
                 handle: async ({ questionId, choice, by, how, note, amendments }, s) => {
                     const q = s.questions.find((x) => x.id === String(questionId));
@@ -560,9 +560,11 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     if (q.status !== "open") throw new Error(`question ${q.id} is ${q.status}: nothing to answer`);
                     const option = q.options.find((o) => o.id === String(choice));
                     if (!option) throw new Error(`"${String(choice)}" is not an option of question ${q.id} (${q.options.map((o) => o.id).join(", ")})`);
-                    q.answer = { choice: option.id, by: String(by), at: new Date().toISOString(), note: str(note) || null, how: (how === "voice" || how === "script" ? how : "click") as QuestionAnswer["how"], ...(amendments && typeof amendments === "object" ? { amendments: amendments as never } : {}) };
+                    // Who answers is the commander unless the caller says otherwise (2026-09-27: an answer without by was recorded as "undefined").
+                    const who = str(by) || "commander";
+                    q.answer = { choice: option.id, by: who, at: new Date().toISOString(), note: str(note) || null, how: (how === "voice" || how === "script" ? how : "click") as QuestionAnswer["how"], ...(amendments && typeof amendments === "object" ? { amendments: amendments as never } : {}) };
                     q.status = "answered";
-                    say("mother.question.answered", null, () => ({ choice: option.label, by: String(by) }));
+                    say("mother.question.answered", null, () => ({ choice: option.label, by: who }));
                     notify(QUESTIONS_URI, { [META_QUESTION]: q });
                     await resumeAsker(q);
                     return { questionId: q.id, status: q.status, answer: q.answer, resumed: q.resumed };
