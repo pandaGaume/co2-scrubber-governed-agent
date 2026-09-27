@@ -210,11 +210,15 @@ export function checkTwinRequest(input: unknown, context: CheckContext = {}): Re
         }
     }
 
-    // Provenance: a known constant says where it is written, and the Observer read it there.
+    // Provenance: a known constant says where it is written, and the Observer read it there; a fact of a document cited by id at its value is read by that (2026-09-27: the Observer alternated five times between citing station-topology and not reading it).
+    const citedExactly = (k: { source: string; factId?: string; value: number; unit: string; quantity?: string }): boolean => {
+        const fact = k.factId ? context.facts?.[k.source]?.find((f) => f.id === k.factId) : undefined;
+        return Boolean(fact) && checkKnownAgainstFact({ value: k.value, unit: k.unit, ...(k.quantity ? { quantity: k.quantity } : {}) }, fact!).verdict === "OK";
+    };
     for (const k of list(r.known)) {
         if (!k?.symbol || !k?.source || typeof k.value !== "number" || !k.unit) problems.push(`provenance: known constant "${String(k?.name ?? k?.symbol)}" needs its symbol, value, unit and source`);
         else if ((k.min !== undefined || k.max !== undefined) && !(typeof k.min === "number" && typeof k.max === "number" && k.min <= k.value && k.value <= k.max)) problems.push(`provenance: known constant "${k.symbol}" gives a band that does not hold its value (${k.min} to ${k.max} around ${k.value}); a band is a min and a max around the documented value`);
-        else if (context.documentsRead && !context.documentsRead.includes(k.source)) problems.push(`provenance: known constant "${k.symbol}" cites "${k.source}", a document you did not read (${context.documentsRead.join(", ") || "none read"}); read it, or put the constant under missing information`);
+        else if (context.documentsRead && !context.documentsRead.includes(k.source) && !citedExactly(k)) problems.push(`provenance: known constant "${k.symbol}" cites "${k.source}", a document you did not read (${context.documentsRead.join(", ") || "none read"}); read it, cite one of its facts by id (factId) at the fact's value, or put the constant under missing information`);
         else if (context.facts?.[k.source]?.length) {
             // The document states its facts by id: the constant cites one, and is judged against that fact alone (an efficiency is never compared with a speed because both are ratios).
             const facts = context.facts[k.source];
