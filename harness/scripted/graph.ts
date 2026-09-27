@@ -87,6 +87,12 @@ export class ScriptedGraphBuilder implements Provider {
         // The test's hook for the hand-off: a capability declared missing with its contract, then the task failed on it; on the replay, the generated types are selected and nothing is missing.
         const generatedTypes = Array.isArray(observed.generated) ? observed.generated.map((g) => g.type) : [];
         const missing = observed.declareMissing && !generatedTypes.length ? [{ ...observed.declareMissing, topic: "code" }] : [];
+        // On the replay: the generated type produces what was missing (its first contract output as the port), and is wired into the Lab's atmosphere beside the template's own sources.
+        const generatedPort = generatedTypes.length && observed.declareMissing ? Object.keys((observed.declareMissing.contract as { outputs?: Record<string, unknown> })?.outputs ?? {})[0] ?? "co2Delta" : null;
+        const produced = generatedTypes.length && observed.declareMissing && generatedPort ? { [observed.declareMissing.required_output]: { type: generatedTypes[0], port: generatedPort } } : null;
+        // The generated node's first parameter at zero: the world of the test has no leak, and the node must be in the candidate without changing what the residual judges.
+        const generatedParam = generatedTypes.length && observed.declareMissing ? Object.keys((observed.declareMissing.contract as { parameters?: Record<string, unknown> })?.parameters ?? {})[0] : undefined;
+        const add = generatedTypes.length && generatedPort ? { add: { nodes: [{ id: "generated-1", typeId: generatedTypes[0], params: generatedParam ? { [generatedParam]: 0 } : {} }], connections: [{ from: ["generated-1", generatedPort], to: ["lab", "delta_CO2_3"] }] } } : {};
         // Who is on board: the persons the task observed (module and activity each), or the counts, or the graph's roster.
         const onBoard = Array.isArray(observed.persons) && observed.persons.length ? { persons: observed.persons as JsonValue } : { settings: { labOccupants: Number(observed.labOccupants ?? 2), habOccupants: Number(observed.habOccupants ?? 2) } };
         // What the documentation gives beyond the graph's own defaults: the operators' rate as the station's page states it (inside NASA's band).
@@ -96,9 +102,9 @@ export class ScriptedGraphBuilder implements Provider {
             case "plan:":
                 return decide("library.graphs", {}, "which reference graphs the library holds");
             case "plan:library.graphs":
-                return decide("task.plan", { selected_nodes: [...HABITAT_GRAPH_TYPES, ...generatedTypes], missing_capabilities: missing as unknown as JsonValue }, missing.length ? `the station's reference graph, and ${missing[0].required_output} that no node produces: declared missing with its contract` : generatedTypes.length ? `the station's reference graph and the generated ${generatedTypes.join(", ")}` : "the station's reference graph: its types, nothing missing");
+                return decide("task.plan", { selected_nodes: [...HABITAT_GRAPH_TYPES, ...generatedTypes], missing_capabilities: missing as unknown as JsonValue, ...(produced ? { produced } : {}) } as unknown as JsonValue, missing.length ? `the station's reference graph, and ${missing[0].required_output} that no node produces: declared missing with its contract` : generatedTypes.length ? `the station's reference graph and the generated ${generatedTypes.join(", ")}, mapped to what it was made for` : "the station's reference graph: its types, nothing missing");
             case "build:task.plan":
-                return decide("graph.evaluate", { label: "the habitat reference with a clean filter: the ventilation at its design flow", graph: STATION_GRAPH_ID, ...onBoard, variables: { ...given, L: 0 }, fit: VOLUMES } as unknown as JsonValue, "first candidate: the installation as designed, the volumes fitted");
+                return decide("graph.evaluate", { label: "the habitat reference with a clean filter: the ventilation at its design flow", graph: STATION_GRAPH_ID, ...onBoard, ...add, variables: { ...given, L: 0 }, fit: VOLUMES } as unknown as JsonValue, "first candidate: the installation as designed, the volumes fitted");
             default: {
                 const value = (last?.result.output ?? {}) as { value?: { pass?: boolean; candidate?: number; path?: string; diagnosis?: string; variables?: Record<string, number> } };
                 const v = value.value ?? {};
@@ -109,9 +115,9 @@ export class ScriptedGraphBuilder implements Provider {
                     this.revised = true;
                     // The hypothesis: a CO2 source in the Lab the observation did not list (one more person at work); the observed roster stays, one is added.
                     const revised = "persons" in onBoard ? { persons: [...(onBoard.persons as Array<Record<string, JsonValue>>), { id: "unobserved-1", callsign: "someone", module: "lab", activity: "light_work" }] } : { settings: { ...onBoard.settings, labOccupants: onBoard.settings.labOccupants + 1 } };
-                    return decide("graph.evaluate", { label: "the habitat reference with one more source in the Lab: a person the observation did not list, the loading fitted", graph: STATION_GRAPH_ID, ...revised, variables: given, fit: { ...VOLUMES, L: { min: 0, max: 0.2 } } } as unknown as JsonValue, "structural: no admissible parameter set of the observed roster closes the gap where the curves part (the Lab's level); the hypothesis is a source in the Lab the observation missed");
+                    return decide("graph.evaluate", { label: "the habitat reference with one more source in the Lab: a person the observation did not list, the loading fitted", graph: STATION_GRAPH_ID, ...revised, ...add, variables: given, fit: { ...VOLUMES, L: { min: 0, max: 0.2 } } } as unknown as JsonValue, "structural: no admissible parameter set of the observed roster closes the gap where the curves part (the Lab's level); the hypothesis is a source in the Lab the observation missed");
                 }
-                return decide("graph.evaluate", { label: "the habitat reference with the filter's loading fitted: what the ventilation delivers, measured", graph: STATION_GRAPH_ID, ...onBoard, variables: given, fit: { ...VOLUMES, L: { min: 0, max: 0.2 } } } as unknown as JsonValue, "the gap the design flow cannot close: fit what the ventilation actually delivers, through the filter's loading");
+                return decide("graph.evaluate", { label: "the habitat reference with the filter's loading fitted: what the ventilation delivers, measured", graph: STATION_GRAPH_ID, ...onBoard, ...add, variables: given, fit: { ...VOLUMES, L: { min: 0, max: 0.2 } } } as unknown as JsonValue, "the gap the design flow cannot close: fit what the ventilation actually delivers, through the filter's loading");
             }
         }
     }

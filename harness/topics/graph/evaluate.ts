@@ -497,6 +497,13 @@ async function instantiateFromLibrary(input: EvaluateInput, ctx: EvaluateContext
     const outside = [...new Set([...Object.keys(given), ...searched])].filter((k) => !(k in template.variables));
     if (outside.length) throw new Error(`graph "${template.id}" has no variable ${outside.map((k) => `"${k}"`).join(", ")}: its interface is ${Object.keys(template.variables).join(", ")}; pass only fit (the bounds of what the installation alone knows) and persons, the graph carries the rest`);
     const inst = instantiateTemplate(template, { variables: given, settings: input.settings, persons: input.persons, devices: devicesOf(ctx.task) });
+    // What the builder adds to the library graph (2026-09-27): nodes and connections beside the template's, a generated node wired into the graph's own nodes.
+    const added = (input as { add?: { nodes?: unknown[]; connections?: unknown[] } }).add;
+    if (added && (added.nodes?.length || added.connections?.length)) {
+        const spec = inst.spec as { nodes: unknown[]; connections: unknown[] };
+        spec.nodes = [...spec.nodes, ...(added.nodes ?? [])];
+        spec.connections = [...spec.connections, ...(added.connections ?? [])];
+    }
     const variables: Variables = {};
     for (const [k, v] of Object.entries(inst.variables)) if (!searched.includes(k)) variables[k] = v;
     const defaulted = inst.defaulted.filter((k) => !searched.includes(k));

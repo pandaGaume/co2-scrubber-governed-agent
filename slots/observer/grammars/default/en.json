@@ -10,7 +10,15 @@
             "properties": {
                 "description": "the system: what it is, its components, what it is for, what is controllable",
                 "telemetry": "rows of measurements, one object per sample; the Observer is given a computed summary of them, not the rows",
-                "forward": "true to open a factory task from the accepted request"
+                "forward": "true to open a factory task from the accepted request",
+                "wait": "false: the answer comes at once with the id and status running; read the entry (observer://requests, or request) until it is done"
+            }
+        },
+        "request": {
+            "title": "One observation, by its id",
+            "description": "The observation as kept: running while the model works, then done with the request accepted and every attempt, or failed with the reason.",
+            "properties": {
+                "id": "the observation's id, as observe answered it"
             }
         }
     },

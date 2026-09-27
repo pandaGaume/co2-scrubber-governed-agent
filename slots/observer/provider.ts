@@ -26,8 +26,11 @@ import type { Provider } from "../../harness/lib/provider.js";
 import { observe, OBSERVER_PROMPT, type ObserveResult } from "../../harness/observer/observer.js";
 import { factoryContractOf } from "../../harness/observer/request.js";
 
+/** One observation as kept: its result once done; `status` running while the model works (an observation takes several model calls, longer than a broker call may wait), then done or failed. */
+export type ObserverEntry = ObserveResult & { id: string; at: string; taskId: string | null; status: "running" | "done" | "failed"; error?: string; endedAt?: string };
+
 export interface ObserverState {
-    requests: Array<ObserveResult & { id: string; at: string; taskId: string | null }>;
+    requests: ObserverEntry[];
 }
 
 export const REQUESTS_URI = "observer://requests";
@@ -63,31 +66,56 @@ export function observerSlot(wsBase: string, log: (line: string) => void, option
                         description: { type: "string" },
                         telemetry: { type: "array", items: { type: "object" } },
                         forward: { type: "boolean" },
+                        wait: { type: "boolean", description: "false: the answer comes at once with the id and status running; the observation goes on and the entry (observer://requests, or the request tool) says when it is done" },
                     },
                     ["description"],
                 ),
                 handle: async (args, s) => {
                     const description = String(args.description ?? "").trim();
                     if (!description) throw new Error("a description of the system is required");
-                    const broker = new Broker(httpBase, { name: "observer", version: VERSION, locale: "en" });
-                    try {
-                        const result = await observe({ provider: await modelOf(broker), broker, description, telemetry: Array.isArray(args.telemetry) ? (args.telemetry as Array<Record<string, unknown>>) : undefined });
-                        let taskId: string | null = null;
-                        if (result.ok && result.request && args.forward === true) {
-                            const contract = factoryContractOf(result.request);
-                            // No topic: the Observer does not know which factory will build (graph, model, code, 3D...); choosing is the factory side's.
-                            const r = await broker.call("factory", "request", { ...contract, requestedBy: "observer", run: false });
-                            if (!r.ok) throw new Error(`the request was accepted but the factory did not open a task: ${r.error ?? r.outcome}`);
-                            taskId = (r.output as { taskId: string }).taskId;
+                    const entry: ObserverEntry = { ok: false, request: null, attempts: [], reads: [], id: `r${(s.requests.length + 1).toString().padStart(4, "0")}`, at: new Date().toISOString(), taskId: null, status: "running" } as unknown as ObserverEntry;
+                    s.requests.push(entry);
+                    const work = async (): Promise<ObserverEntry> => {
+                        const broker = new Broker(httpBase, { name: "observer", version: VERSION, locale: "en" });
+                        try {
+                            const result = await observe({ provider: await modelOf(broker), broker, description, telemetry: Array.isArray(args.telemetry) ? (args.telemetry as Array<Record<string, unknown>>) : undefined });
+                            let taskId: string | null = null;
+                            if (result.ok && result.request && args.forward === true) {
+                                const contract = factoryContractOf(result.request);
+                                // No topic: the Observer does not know which factory will build (graph, model, code, 3D...); choosing is the factory side's.
+                                const r = await broker.call("factory", "request", { ...contract, requestedBy: "observer", run: false });
+                                if (!r.ok) throw new Error(`the request was accepted but the factory did not open a task: ${r.error ?? r.outcome}`);
+                                taskId = (r.output as { taskId: string }).taskId;
+                            }
+                            Object.assign(entry, result, { taskId, status: "done", endedAt: new Date().toISOString() });
+                            log(`[observer] ${entry.id}: ${result.ok ? "request accepted" : "no request accepted"} after ${result.attempts.length} attempt(s)${taskId ? `, factory task ${taskId}` : ""}`);
+                        } catch (e) {
+                            Object.assign(entry, { status: "failed", error: errorMessage(e), endedAt: new Date().toISOString() });
+                            log(`[observer] ${entry.id}: failed: ${errorMessage(e)}`);
+                        } finally {
+                            await broker.close();
                         }
-                        const entry = { ...result, id: `r${(s.requests.length + 1).toString().padStart(4, "0")}`, at: new Date().toISOString(), taskId };
-                        s.requests.push(entry);
-                        log(`[observer] ${entry.id}: ${result.ok ? "request accepted" : "no request accepted"} after ${result.attempts.length} attempt(s)${taskId ? `, factory task ${taskId}` : ""}`);
                         notify(entry);
                         return entry;
-                    } finally {
-                        await broker.close();
+                    };
+                    if (args.wait === false) {
+                        // Several model calls take longer than a broker call may wait: the observation goes on, the caller reads the entry.
+                        notify(entry);
+                        void work();
+                        return { id: entry.id, at: entry.at, status: entry.status };
                     }
+                    const done = await work();
+                    if (done.status === "failed") throw new Error(done.error ?? "the observation failed");
+                    return done;
+                },
+            },
+            {
+                name: "request",
+                inputSchema: obj({ id: { type: "string" } }, ["id"]),
+                handle: ({ id }, s) => {
+                    const entry = s.requests.find((r) => r.id === String(id));
+                    if (!entry) throw new Error(`no observation ${String(id)}`);
+                    return entry;
                 },
             },
         ],

@@ -106,10 +106,27 @@ export async function planProblems(plan: Plan, { broker, task, runtimeSlot = "tw
         // A required output is named by its name alone, exactly: "V_lab", never "V_lab (Volume, m3)".
         if (!names.includes(m.required_output)) problems.push(`missing capability "${m.required_output}" is not the name of a required output: write required_output exactly as the objective names it, ${names.map((n) => `"${n}"`).join(" or ")}, nothing added`);
     }
+    // The outputs the request judges against a column (the Observer's validation.compare): the rest is not judged by the residual, so a quantity in common cannot stand for it.
+    const compared = new Set((((task.requirements as { validation?: { compare?: Array<{ output?: string }> } } | undefined)?.validation?.compare) ?? []).map((c) => String(c?.output ?? "")));
+    const mapped = (plan.produced ?? {}) as Record<string, { type?: string; port?: string }>;
+    for (const [name, m] of Object.entries(mapped)) {
+        if (!names.includes(name)) problems.push(`produced: "${name}" is not the name of a required output (${names.map((n) => `"${n}"`).join(", ")})`);
+        const node = described.find((n) => (n as { type?: string }).type === m?.type) ?? (plan.selected_nodes.includes(String(m?.type)) ? described[plan.selected_nodes.indexOf(String(m?.type))] : undefined);
+        if (!plan.selected_nodes.includes(String(m?.type))) problems.push(`produced: "${name}" names "${String(m?.type)}", which is not a selected node`);
+        else {
+            const required = task.objective.required_outputs.find((o) => o.name === name);
+            const port = node?.signature?.outputs?.[String(m?.port)];
+            if (!port) problems.push(`produced: "${name}": "${String(m?.type)}" has no signature output "${String(m?.port)}"`);
+            else if (required && (port.quantity !== required.quantity || (required.unit && port.unit && port.unit !== required.unit))) problems.push(`produced: "${name}" (${required.quantity}${required.unit ? `, ${required.unit}` : ""}) is mapped to "${String(m?.type)}".${String(m?.port)}, a ${port.quantity ?? "?"}${port.unit ? ` in ${port.unit}` : ""}`);
+        }
+    }
     for (const required of task.objective.required_outputs) {
-        const produced = described.some((n) => Object.values(n.signature?.outputs ?? {}).some((o) => o.quantity === required.quantity && (!required.unit || o.unit === required.unit)));
         const declared = plan.missing_capabilities.some((m) => m.required_output === required.name);
-        if (!produced && !declared) problems.push(`required output "${required.name}" (${required.quantity}${required.unit ? `, ${required.unit}` : ""}) is neither produced by a selected node nor declared missing`);
+        if (declared) continue;
+        if (mapped[required.name]) continue;
+        const produced = described.some((n) => Object.values(n.signature?.outputs ?? {}).some((o) => o.quantity === required.quantity && (!required.unit || o.unit === required.unit)));
+        if (!produced) problems.push(`required output "${required.name}" (${required.quantity}${required.unit ? `, ${required.unit}` : ""}) is neither produced by a selected node nor declared missing`);
+        else if (compared.size && !compared.has(required.name)) problems.push(`required output "${required.name}" (${required.quantity}${required.unit ? `, ${required.unit}` : ""}) is judged against no telemetry column: say in produced which selected type and which output port produce it, or declare it missing; a quantity in common is not enough (a person's CO2 is a mass flow, and it is not a leak)`);
     }
     return problems;
 }

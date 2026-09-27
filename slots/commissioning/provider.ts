@@ -243,7 +243,19 @@ export function commissioningSlot(wsBase: string, log: (line: string) => void, o
                     "Objective: the twin must reproduce the CO2 of the Lab well enough to evaluate scrubber speed strategies.",
                     ...(run.options.leak ? ["Also required: the twin must expose the CO2 that leaves the Lab through a leak in a seal, as a mass flow out of the volume at a constant rate at full opening scaled by a command between 0 and 1 (the leak fully open when nothing commands it), the rate an editable. No node of the catalogue is known to express a leak."] : []),
                 ].join("\n");
-                const observed = await call<{ ok: boolean; request: TwinFactoryRequest | null; attempts: unknown[] }>("observer", "observe", { description, telemetry });
+                // The Observer takes several model calls, longer than a broker call may wait: asked without waiting, read until done.
+                const opened = await call<{ id: string; status: string }>("observer", "observe", { description, telemetry, wait: false });
+                loop(7).note = `observation ${opened.id}`;
+                notify();
+                const t2 = Date.now();
+                let observed: { ok: boolean; request: TwinFactoryRequest | null; attempts: unknown[]; status: string; error?: string };
+                for (;;) {
+                    observed = await call("observer", "request", { id: opened.id });
+                    if (observed.status !== "running") break;
+                    if (Date.now() - t2 > waitMs) throw new Error(`the Observer did not answer in ${waitMs} ms`);
+                    await sleep(2000);
+                }
+                if (observed.status === "failed") throw new Error(`the Observer failed: ${observed.error ?? "no reason"}`);
                 if (!observed.ok || !observed.request) throw new Error(`the Observer's request was not accepted after ${observed.attempts.length} attempt(s)`);
                 request = observed.request;
                 end(7, { attempts: observed.attempts.length, outputs: request.outputs.map((o) => `${o.name} (${o.quantity}, ${o.unit})`), known: (request.known ?? []).length } as JsonValue);

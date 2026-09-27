@@ -54,6 +54,15 @@ describe("the hand-off's rules, without a broker", () => {
         const wrongQuantity = await planProblems({ selected_nodes: [], missing_capabilities: [{ ...MISSING, quantity: "Volume" }] }, options);
         assert.ok(wrongQuantity.some((p) => /no output carries the required quantity Volume/.test(p)), wrongQuantity.join(" | "));
         assert.deepEqual(await planProblems({ selected_nodes: [], missing_capabilities: [MISSING] }, options), []);
+        // A required output no column judges is mapped to a type and a port, or declared missing: a quantity in common (a person's CO2, a mass flow too) is not enough.
+        const judged = { ...task, objective: { required_outputs: [{ name: "predicted_co2", quantity: "Concentration", unit: "ppm" }, { name: "leak_co2", quantity: "MassFlow", unit: "kg/s" }], constraints: {} }, requirements: { validation: { compare: [{ output: "predicted_co2", against: "co2_lab_ppm" }] } } } as unknown as TaskFile["task"];
+        const describe = async (_slot: string, tool: string, args: Record<string, unknown>) => (tool === "registry_describe_node" ? { ok: true, outcome: "completed", output: { type: args.type, signature: { outputs: args.type === "Physics.Habitat:person" ? { co2Delta: { quantity: "MassFlow", unit: "kg/s" } } : { ppm_CO2: { quantity: "Concentration", unit: "ppm" } } } } } : { ok: false, outcome: "refused" });
+        const judgedOptions = { broker: { call: describe } as never, task: judged, topic: GRAPH_TOPIC };
+        const unjudged = await planProblems({ selected_nodes: ["Physics.Scene:atmosphere", "Physics.Habitat:person"], missing_capabilities: [] }, judgedOptions);
+        assert.deepEqual(unjudged, ['required output "leak_co2" (MassFlow, kg/s) is judged against no telemetry column: say in produced which selected type and which output port produce it, or declare it missing; a quantity in common is not enough (a person\'s CO2 is a mass flow, and it is not a leak)']);
+        assert.deepEqual(await planProblems({ selected_nodes: ["Physics.Scene:atmosphere", "Physics.Habitat:person"], missing_capabilities: [], produced: { leak_co2: { type: "Physics.Habitat:person", port: "co2Delta" } } }, judgedOptions), [], "mapped explicitly: the model said it, and the validator will hold it to the type");
+        assert.match((await planProblems({ selected_nodes: ["Physics.Scene:atmosphere", "Physics.Habitat:person"], missing_capabilities: [], produced: { leak_co2: { type: "Physics.Scene:atmosphere", port: "ppm_CO2" } } }, judgedOptions))[0], /is mapped to "Physics\.Scene:atmosphere"\.ppm_CO2, a Concentration in ppm/);
+        assert.deepEqual(await planProblems({ selected_nodes: ["Physics.Scene:atmosphere"], missing_capabilities: [MISSING] }, judgedOptions), []);
         assert.deepEqual(missingForCode({ selected_nodes: [], missing_capabilities: [MISSING, { ...MISSING, required_output: "other", topic: "procedure" }] }).map((m) => m.required_output), ["leak_co2"]);
         const code = codeTaskRequest("t-parent", task, { ...MISSING, topic: "code" }, "scripted");
         assert.deepEqual(code.topics, ["code"]);

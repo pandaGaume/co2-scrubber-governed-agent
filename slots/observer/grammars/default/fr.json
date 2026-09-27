@@ -10,7 +10,15 @@
             "properties": {
                 "description": "le système : ce qu'il est, ses composants, à quoi il sert, ce qui se commande",
                 "telemetry": "des lignes de mesures, un objet par échantillon ; l'Observateur en reçoit un résumé calculé, pas les lignes",
-                "forward": "true pour ouvrir une tâche de l'usine à partir de la demande acceptée"
+                "forward": "true pour ouvrir une tâche de l'usine à partir de la demande acceptée",
+                "wait": "false : la réponse vient aussitôt avec l'id et l'état en cours ; lire l'entrée (observer://requests, ou request) jusqu'à ce qu'elle soit faite"
+            }
+        },
+        "request": {
+            "title": "Une observation, par son id",
+            "description": "L'observation telle que gardée : en cours tant que le modèle travaille, puis faite avec la demande acceptée et chaque tentative, ou échouée avec la raison.",
+            "properties": {
+                "id": "l'id de l'observation, tel qu'observe l'a répondu"
             }
         }
     },
