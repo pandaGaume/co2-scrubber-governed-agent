@@ -142,6 +142,13 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
         return r.output as T;
     };
     const loop = (n: number) => run.loops[n - 1];
+    /** Mother tells the room where the run stands: said, not awaited; a station that does not answer never holds the run back. */
+    const said: Array<Promise<unknown>> = [];
+    const narrate = (text: string): void => {
+        said.push(operator.call("station", "narrate", { text, from: "scenario", ...(run.commissioningId ? { commissioningId: run.commissioningId } : {}) }).catch(() => undefined));
+    };
+    /** How often a factory at work is given news of, seconds. */
+    const everyMs = Number(process.env.SCENARIO_NEWS_SECONDS ?? 30) * 1000;
     const begin = (n: number, note?: string) => {
         const l = loop(n);
         l.status = "running";
@@ -164,18 +171,30 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
         notify();
     };
     type TaskStatus = { state: string; manifest?: { ended?: string; steps?: Array<{ capability: string | null; outcome: string }>; artifacts?: Array<{ kind: string; path: string }> } | null; run?: { builder?: string; ended?: string | null; handoff?: { codeTask?: string | null; replayTask?: string | null; stopped?: string | null } } | null };
-    const taskEnded = async (taskId: string): Promise<TaskStatus> => {
+    /** A task followed to its end; with a label, Mother gives news of it every so often, from its steps as the manifest records them. */
+    const taskEnded = async (taskId: string, label?: string): Promise<TaskStatus> => {
         const t0 = Date.now();
+        let told = Date.now();
+        let steps = 0;
         for (;;) {
             const s = await call<TaskStatus>("factory", "task", { taskId });
             if (s.run?.ended) return s;
             if (Date.now() - t0 > waitMs) throw new Error(`task ${taskId} did not end in ${waitMs} ms`);
+            if (label && Date.now() - told >= everyMs) {
+                const all = s.manifest?.steps ?? [];
+                const last = all.at(-1);
+                const what = last?.capability ? `${last.capability.replace(/[._]/g, " ")}, ${last.outcome}` : "";
+                narrate(all.length > steps && last ? `${label}: step ${all.length}, ${what}.` : `${label}: still at work, step ${all.length}.`);
+                steps = all.length;
+                told = Date.now();
+            }
             await sleep(1000);
         }
     };
     const summary = (s: TaskStatus) => ({ state: s.state, ended: s.manifest?.ended ?? null, steps: s.manifest?.steps?.length ?? 0, builder: s.run?.builder ?? null, tools: [...new Set((s.manifest?.steps ?? []).map((x) => x.capability).filter(Boolean))] }) as JsonValue;
     const builder = run.options.builder;
     try {
+        narrate(`Scenario: ${doc.title}. I will tell you where we are.`);
         // 1. registration: the scene's devices, under names of this run when the register holds them already (a server plays more than once).
         begin(1);
         const scene = JSON.parse(readFileSync(fromRoot(...doc.devices.split("/")), "utf8")) as { devices: Array<{ path: string; descriptor: Record<string, unknown> }> };
@@ -200,9 +219,11 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
         loop(2).taskId = reqP.taskId;
         run.tasks.push(reqP.taskId);
         notify();
-        const p = await taskEnded(reqP.taskId);
+        narrate(`The procedure factory is writing the test for the scrubber: ${builder === "scripted" ? "the script" : "a model"} at work, the harness checking each step.`);
+        const p = await taskEnded(reqP.taskId, "The procedure factory");
         end(2, summary(p));
         if (p.state !== "proposed") throw new Error(`the procedure factory ended ${p.state}: ${p.manifest?.ended ?? ""}`);
+        narrate(`The procedure factory proposed its test in ${p.manifest?.steps?.length ?? "?"} steps. I check it before I ask you.`);
 
         // 3. the relay: Mother re-checked the proposed procedure with the occupancy she reads; the commissioning waits for the commander.
         begin(3);
@@ -253,6 +274,7 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
 
         // 7. the Observer: what the twin must do, from the document's words and the telemetry; or the request the caller gave.
         begin(7);
+        narrate(`The test is done. The Observer now writes what the twin must do, from the description and the ${telemetry.length - 1} minutes of telemetry.`);
         let request: TwinFactoryRequest;
         if (run.options.builder === "scripted" && run.request) {
             request = run.request;
@@ -276,12 +298,14 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
                 observed = await call("observer", "request", { id: opened.id });
                 if (observed.status !== "running") break;
                 if (Date.now() - t2 > waitMs) throw new Error(`the Observer did not answer in ${waitMs} ms`);
+                if (Date.now() - t2 >= everyMs && (Date.now() - t2) % everyMs < 2000) narrate(`The Observer is still writing: attempt ${Math.max(1, observed.attempts?.length ?? 1)}.`);
                 await sleep(2000);
             }
             if (observed.status === "failed") throw new Error(`the Observer failed: ${observed.error ?? "no reason"}`);
             if (!observed.ok || !observed.request) throw new Error(`the Observer's request was not accepted after ${observed.attempts.length} attempt(s)`);
             request = observed.request;
             end(7, { attempts: observed.attempts.length, outputs: request.outputs.map((o) => `${o.name} (${o.quantity}, ${o.unit})`), known: (request.known ?? []).length } as JsonValue);
+            narrate(`The Observer's request is accepted after ${observed.attempts.length} attempt${observed.attempts.length === 1 ? "" : "s"}: the twin must give ${request.outputs.map((o) => o.name).join(", ")}.`);
         }
 
         // 8. the graph factory, on the twin's catalogue; the document's threshold.
@@ -304,8 +328,10 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
         loop(8).taskId = reqG.taskId;
         run.tasks.push(reqG.taskId);
         notify();
-        const g = await taskEnded(reqG.taskId);
+        narrate("The graph factory is building the twin from the catalogue and fitting it to the test's telemetry. Each simulator it tries, I will tell you.");
+        const g = await taskEnded(reqG.taskId, "The graph factory");
         end(8, summary(g));
+        if (/^MISSING_CAPABILITY/.test(g.manifest?.ended ?? "")) narrate("The graph factory needs a node the catalogue does not have. It wrote the contract that node must meet; the decision is yours.");
 
         // 9. the hand-off, when the graph factory found a node missing: the commander's questions, the code factory, the replay.
         let final = g;
@@ -335,7 +361,8 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
                 loop(9).waitingFor = undefined;
                 loop(9).note = `code task ${codeId} on the contract`;
                 notify();
-                const code = await taskEnded(codeId);
+                narrate("The code factory is writing the missing node against its contract. The forge will build it, test it and judge it.");
+                const code = await taskEnded(codeId, "The code factory");
                 if (code.state !== "proposed") {
                     end(9, { code: summary(code) } as JsonValue, `the code factory ended ${code.state}`);
                 } else {
@@ -348,7 +375,8 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
                         loop(9).waitingFor = undefined;
                         loop(9).note = `code task ${codeId} proposed; replay ${replayId} on the forge`;
                         notify();
-                        const replay = await taskEnded(replayId);
+                        narrate("The forge accepted the new node. The graph factory replays the request with it.");
+                        const replay = await taskEnded(replayId, "The graph factory, replayed");
                         end(9, { code: summary(code), replay: summary(replay) } as JsonValue);
                         final = replay;
                         finalId = replayId;
@@ -367,6 +395,7 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
         end(10, { task: finalId, state: final.state, artifacts: final.manifest?.artifacts ?? [] } as JsonValue, proposed ? `task ${finalId} proposed to the station` : `task ${finalId} ended ${final.state}: nothing proposed`);
         run.status = proposed ? "done" : "failed";
         run.ended = proposed ? `the twin proposed (task ${finalId})` : `${final.manifest?.ended ?? final.state}`;
+        narrate(proposed ? "Scenario complete. The twin is proposed to the station." : `Scenario ended without a twin: ${String(run.ended).slice(0, 160)}.`);
     } catch (e) {
         const reason = errorMessage(e);
         const active = run.loops.find((l) => l.status === "running" || l.status === "waiting");
@@ -378,10 +407,13 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
         run.status = "failed";
         run.ended = reason;
         log(`[scenario] ${run.id}: ${reason}`);
+        narrate(`Scenario stopped: ${reason.slice(0, 160)}.`);
     } finally {
         run.endedAt = new Date().toISOString();
         for (const l of run.loops) if (l.status === "pending") l.status = "skipped";
         notify();
+        // The last lines are said before the session closes.
+        await Promise.allSettled(said);
         await operator.close();
         await agent.close();
     }

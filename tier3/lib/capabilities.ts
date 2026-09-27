@@ -61,7 +61,7 @@ const EXCLUDED = [
     // The CAD (Fusion 360's MCP server: a model read or changed) is the factories' business; the night's agent has no model to draw.
     /^cad\./,
     // The questions to the commander are asked by the harness and the factories, answered by the commander: the night's agent neither asks nor answers, and resumes nothing.
-    /^station\.(ask|answer|questions_policy)$/,
+    /^station\.(ask|answer|questions_policy|narrate)$/,
     /^factory\.resume$/,
     /^twin\.(registry_|document_|session_run)/,
     /^station\.propose$/,

@@ -177,7 +177,11 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
     /** Mother says one line: filled per language (a hole may itself be a phrase), kept, pushed, logged. */
     const say = (key: string, commissioning: Commissioning | null, params: (w: McpGrammar) => Record<string, string | number> = () => ({})) => {
         const en = params(words.en);
-        const line: MotherLine = { n: state.mother.length + 1, key, params: en, text: { en: words.en.phrase(key, en), fr: words.fr.phrase(key, params(words.fr)) }, commissioningId: commissioning?.id ?? null, at: new Date().toISOString() };
+        return emit({ n: state.mother.length + 1, key, params: en, text: { en: words.en.phrase(key, en), fr: words.fr.phrase(key, params(words.fr)) }, commissioningId: commissioning?.id ?? null, at: new Date().toISOString() });
+    };
+
+    /** A line of Mother's: kept, pushed to whoever reads her, logged, spoken. */
+    const emit = (line: MotherLine): MotherLine => {
         state.mother.push(line);
         log(`[station] Mother: ${line.text.en}`);
         notify(MOTHER_URI, { [META_MOTHER]: line });
@@ -553,6 +557,18 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     if (ids.length) say(ids.length === 1 ? "mother.monitoring.active.one" : "mother.monitoring.active.many", c, () => ({ count: ids.length }));
                     announce(c);
                     return { commissioningId: c.id, status: c.status, monitoring: c.monitoring };
+                },
+            },
+            {
+                // Mother tells the room where a run stands (2026-09-27: a commissioning went silent for minutes while its factories worked): a line the caller writes, from the state it holds, kept and spoken like her own.
+                name: "narrate",
+                inputSchema: obj({ text: { type: "string" }, fr: { type: "string" }, from: { type: "string" }, commissioningId: { type: "string" } }, ["text", "from"]),
+                handle: (args, s) => {
+                    const text = str(args.text).trim();
+                    if (!text) throw new Error("text is needed: what Mother says");
+                    if (text.length > 400) throw new Error(`a line of Mother's is a sentence or two, not ${text.length} characters`);
+                    const line = emit({ n: s.mother.length + 1, key: "mother.narration", params: { from: str(args.from) }, text: { en: text, fr: str(args.fr) || text }, commissioningId: str(args.commissioningId) || null, at: new Date().toISOString() });
+                    return { n: line.n, said: line.text.en };
                 },
             },
             {

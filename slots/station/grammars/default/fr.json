@@ -153,6 +153,16 @@
                 "kind": "un genre, ou tous quand absent",
                 "choice": "pour auto : l'id de l'option répondue, la première quand absent"
             }
+        },
+        "narrate": {
+            "title": "Mother dit à la salle où l'on en est",
+            "description": "Une ligne que Mother dit à la salle, écrite par l'appelant à partir de l'état qu'il tient (le joueur d'un scénario qui raconte ses boucles, une usine au travail) : gardée dans ses lignes, affichée dans la salle de contrôle et dite avec la voix de la station. Une ou deux phrases ; ce que la station dit elle-même (un appareil enregistré, une procédure refusée, un essai en cours), elle le dit avec ses propres mots, pas par cet outil.",
+            "properties": {
+                "text": "ce que dit Mother, en anglais, une ou deux phrases",
+                "fr": "la même chose en français, quand l'appelant l'a",
+                "from": "qui raconte : scenario, une usine",
+                "commissioningId": "la mise en service dont parle la ligne, s'il y en a une"
+            }
         }
     },
     "resources": {

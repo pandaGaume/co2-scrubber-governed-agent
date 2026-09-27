@@ -131,6 +131,16 @@
                 "kind": "one kind, or every kind when absent",
                 "choice": "for auto: the option id answered, the first option when absent"
             }
+        },
+        "narrate": {
+            "title": "Mother tells the room where things stand",
+            "description": "A line Mother says to the room, written by the caller from the state it holds (a scenario's player narrating its loops, a factory at work): kept in her lines, drawn on the control room and spoken in the station's voice. One or two sentences; what the station itself says (a device registered, a procedure refused, a test running) it says in its own words, not through this tool.",
+            "properties": {
+                "text": "what Mother says, in English, one or two sentences",
+                "fr": "the same in French, when the caller has it",
+                "from": "who narrates: scenario, a factory",
+                "commissioningId": "the commissioning the line is about, when there is one"
+            }
         }
     },
     "resources": {
