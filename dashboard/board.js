@@ -497,6 +497,16 @@ const audio = new AudioOutput(
     `board-${Math.random().toString(36).slice(2, 8)}`,
     {
         onPlay: (u) => {
+            // Mother's own lines are drawn as the station says them (mother-chat.js); the voice lights the one it plays instead of adding it again.
+            const drawn = [...voiceLog.querySelectorAll(".line[data-said]")].find((l) => l.dataset.said === (u.text ?? ""));
+            if (drawn) {
+                for (const l of voiceLog.querySelectorAll(".line.now")) l.classList.remove("now");
+                drawn.classList.add("now");
+                voiceLog.prepend(drawn);
+                reveal(drawn, u.text ?? "");
+                startMeter?.();
+                return;
+            }
             reveal(voiceLine("", "now"), u.text ?? "");
             startMeter?.();
         },

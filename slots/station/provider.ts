@@ -181,6 +181,9 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
         state.mother.push(line);
         log(`[station] Mother: ${line.text.en}`);
         notify(MOTHER_URI, { [META_MOTHER]: line });
+        // Mother embodies the station: what she says is spoken, in the station's voice, by the speech slot the control room plays (2026-09-27: a silent station read as software).
+        // Said and not awaited: a voice that is down or not configured never holds the register, a relay or a question back.
+        if (process.env.STATION_VOICE !== "off") void client().call("speech", "say", { text: line.text.en, voice: "station" }).catch(() => undefined);
         return line;
     };
 

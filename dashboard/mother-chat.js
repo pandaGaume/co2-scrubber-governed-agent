@@ -49,6 +49,8 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
         for (const l of fresh) {
             const el = document.createElement("div");
             el.className = "line";
+            // The English text is what the station sends the voice: board.js finds the line by it when the voice plays it.
+            el.dataset.said = l.text?.en ?? "";
             el.innerHTML = `<span class="who">mother</span>`;
             el.appendChild(document.createTextNode(l.text?.[locale] ?? l.text?.en ?? ""));
             log.prepend(el);
