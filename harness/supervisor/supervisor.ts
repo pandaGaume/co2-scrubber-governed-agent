@@ -83,7 +83,7 @@ export interface SupervisionInput {
     report: ContractReport;
     assumptions?: string[];
     hypotheses?: string[];
-    /** The symbols a request uses for its known constants, each with the fact id it cites (or "" when it cites none). */
+    /** The symbols a request uses for its known constants, each with the fact id it cites, or the value and the source it gives when it cites none by id (2026-09-27: an empty string here was read as a fault by the supervisor, three verdicts in a row). */
     symbols?: Record<string, string>;
     /** The variables a downstream producer fitted, by fact id when they map to one: a known fact fitted downstream is a conflict. */
     fitted?: string[];
@@ -130,7 +130,15 @@ export function checkVerdict(input: unknown, context: SupervisionInput): Verdict
                 if (/unsupported|missing/i.test(String(f.kind)) || f.required_action === "COMPLETE" || !names) problems.push(`${where}: an assumption is unsupported by nature; a finding on ${fact} names the fact or the document that contradicts it (one of ${[...factIds].slice(0, 8).join(", ")}, ${[...sources].join(", ")}) in its reason, with REVISE, or is not a finding`);
             }
         } else if (fact.startsWith("symbol:")) {
-            if (!symbols.includes(fact.slice("symbol:".length))) problems.push(`${where}: "${fact}" names no symbol (${symbols.join(", ") || "none"})`);
+            const sym = fact.slice("symbol:".length);
+            if (!symbols.includes(sym)) problems.push(`${where}: "${fact}" names no symbol (${symbols.join(", ") || "none"})`);
+            else {
+                // A finding on a symbol is an ambiguity, two symbols for one fact or one symbol for two facts, and its reason names the other symbol or both facts; what a symbol cites is not the supervisor's to judge.
+                const reason = String(f.reason ?? "");
+                const otherSymbols = symbols.filter((s) => s !== sym && reason.includes(s)).length;
+                const factsNamed = [...factIds].filter((id) => reason.includes(id)).length;
+                if (otherSymbols < 1 && factsNamed < 2) problems.push(`${where}: a finding on ${fact} is an ambiguity, two symbols for one fact or one symbol for two facts, and its reason names the other symbol or both facts; what a symbol cites (a fact id, or a value and its source) is the Observer's and is not a finding`);
+            }
         } else if (!factIds.has(fact)) problems.push(`${where}: "${fact}" is not a fact of the list (${[...factIds].slice(0, 12).join(", ")}${factIds.size > 12 ? ", ..." : ""}); name a fact by its id exactly as the state's factIds writes it, or assumption:<n>, or symbol:<s>`);
         else if (/conflict|value|number|mismatch|disagree/i.test(String(f.kind)) && !context.report.conflicts.some((c) => c.id === fact)) {
             // A numeric disagreement the deterministic layer already weighed and found within the tolerance is not the supervisor's to reopen (the first passage declared 0.3 against 0.30303).
@@ -166,7 +174,7 @@ export function findingsFor(verdict: Verdict | null | undefined, producer: strin
 }
 
 interface RequestLike {
-    known?: Array<{ symbol?: string; factId?: string }>;
+    known?: Array<{ symbol?: string; factId?: string; value?: unknown; unit?: string; source?: string }>;
     assumptions?: string[];
     hypotheses?: Array<string | { statement?: string }>;
 }
@@ -175,7 +183,7 @@ interface RequestLike {
 export function supervisionOfRequest(request: RequestLike, devices: unknown[], libraryFacts: Array<LibraryFact & { source: string }>, required: string[] = []): SupervisionInput {
     const facts = taskFacts({ requirements: request as Record<string, unknown>, observations: { devices } }, libraryFacts);
     const symbols: Record<string, string> = {};
-    for (const k of list(request.known)) if (k?.symbol) symbols[k.symbol] = k.factId ?? "";
+    for (const k of list(request.known)) if (k?.symbol) symbols[k.symbol] = k.factId ?? `${String(k.value)}${k.unit ? ` ${k.unit}` : ""} (${String(k.source ?? "no source")}, no fact id)`;
     return {
         facts,
         report: reviewContracts(facts, required),
