@@ -10,6 +10,13 @@
  * commander, and the station calls back whoever asked. The page decides
  * nothing.
  *
+ * Mother's own lines (station://mother: a device registered, a procedure
+ * refused and corrected, the request for authorisation) are the station's,
+ * kept by the station and never sent to the speech slot, so the panel would
+ * not show them: this module draws them in Mother's log, the newest on top as
+ * board.js draws what the voice says (2026-09-27: a commissioning played from
+ * the scenarios page went unseen in the control room).
+ *
  * A station older than the authorise question leaves a commissioning
  * awaiting its authorisation with no question: the chips then call
  * `station.commissioning_authorise` directly.
@@ -30,9 +37,26 @@ export function optionOf(text, options) {
     return hits.length === 1 ? hits[0] : null;
 }
 
-export function mountMotherChat({ box, form, input, mic, policy, lang }) {
+export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
     if (!box) return;
     let station = null;
+    /** The last of Mother's lines drawn in the log; -1 until the first read, which draws the last few only. */
+    let lastLine = -1;
+    const locale = (document.documentElement.lang || "en").toLowerCase().startsWith("fr") ? "fr" : "en";
+    const drawLines = (lines) => {
+        if (!log || !Array.isArray(lines)) return;
+        const fresh = lastLine < 0 ? lines.slice(-6) : lines.filter((l) => l.n > lastLine);
+        for (const l of fresh) {
+            const el = document.createElement("div");
+            el.className = "line";
+            el.innerHTML = `<span class="who">mother</span>`;
+            el.appendChild(document.createTextNode(l.text?.[locale] ?? l.text?.en ?? ""));
+            log.prepend(el);
+        }
+        while (log.children.length > 40) log.lastChild.remove();
+        if (lines.length) lastLine = Math.max(lastLine, ...lines.map((l) => l.n));
+        else if (lastLine < 0) lastLine = 0;
+    };
     const heard = new Map();
     const notes = [];
     let open = [];
@@ -78,17 +102,28 @@ export function mountMotherChat({ box, form, input, mic, policy, lang }) {
     }
 
     async function refresh() {
+        // Each read stands alone: one the station does not serve must not empty the others.
+        try {
+            drawLines(await read("station://mother"));
+        } catch {
+            // no lines to draw
+        }
         try {
             const questions = await read("station://questions");
             open = questions.filter((q) => q.status === "open");
             const commissionings = await read("station://commissionings").catch(() => []);
             awaiting = commissionings.filter((c) => c.status === "awaiting-authorisation" && !open.some((q) => q.kind === "authorise" && q.context?.commissioningId === c.id));
-            const p = await read("station://questions-policy");
-            if (policy && document.activeElement !== policy) policy.value = p.mode === "auto" ? "auto" : "ask";
-        } catch {
+        } catch (e) {
             station = null;
             open = [];
             awaiting = [];
+            note(`no questions from the station: ${e.message}`);
+        }
+        try {
+            const p = await read("station://questions-policy");
+            if (policy && document.activeElement !== policy) policy.value = p.mode === "auto" ? "auto" : "ask";
+        } catch {
+            // the standing order select keeps what it shows
         }
         render();
     }

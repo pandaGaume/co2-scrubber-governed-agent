@@ -180,7 +180,7 @@
     // Mother's questions to the commander, answered in her chat (dashboard/mother-chat.js).
     import { mountMotherChat } from "./mother-chat.js";
     const $ = (id) => document.getElementById(id);
-    mountMotherChat({ box: $("mother-questions"), form: $("mother-form"), input: $("mother-input"), mic: $("mother-mic"), policy: $("questions-policy"), lang: $("questions-lang") });
+    mountMotherChat({ box: $("mother-questions"), form: $("mother-form"), input: $("mother-input"), mic: $("mother-mic"), policy: $("questions-policy"), lang: $("questions-lang"), log: $("voice-log") });
 </script>
 <script type="module" src="./app.js"></script>
 </body>
