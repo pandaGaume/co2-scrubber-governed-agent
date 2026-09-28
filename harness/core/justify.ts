@@ -218,7 +218,7 @@ export function factOf(facts: SignedFact[], reference: string): SignedFact | und
 export function safetyProblems(constants: Constant[], given: unknown[], facts: SignedFact[]): string[] {
     const problems: string[] = [];
     const list = asJustifications(given);
-    const signing = "a person reviews it and signs it: npm run library:sign -- <document> \"<name>\"";
+    const signing = "a person reviews it and signs it on the library page of the control room (library.html), or: npm run library:sign -- <document> \"<name>\"";
     const paths = constants.map((x) => x.constant);
     for (const c of constants) {
         const j = justificationOf(list, c.constant, paths);

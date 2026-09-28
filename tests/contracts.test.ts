@@ -195,4 +195,33 @@ describe("the library's typed facts, through the broker", () => {
         const none = await broker.call("library", "facts", { id: "nowhere" });
         assert.ok(!none.ok);
     });
+
+    it("the library page: a document reviewed whole (its text, facts and rules, the digest a signature binds), signed only as it was read (2026-09-28)", async () => {
+        const list = await broker.call("library", "list", {});
+        assert.ok(list.ok, list.error);
+        const catalogue = list.output as { documents: Array<{ id: string; rules: number }>; signatures: { scope: string } };
+        assert.equal(catalogue.signatures.scope, "repository");
+        assert.ok((catalogue.documents.find((d) => d.id === "commissioning-test-safety")?.rules ?? 0) > 0, "the safety card carries the guard's rules");
+        type Review = { files: Array<{ name: string; text: string }>; digest: string; rules: { rules: unknown[] } | null; signature: { by: string; valid: boolean } | null };
+        const review = async (id: string) => {
+            const r = await broker.call("library", "review", { id });
+            assert.ok(r.ok, r.error);
+            return r.output as Review;
+        };
+        const card = await review("commissioning-test-safety");
+        assert.deepEqual(card.files.map((f) => f.name), ["commissioning-test-safety.md", "commissioning-test-safety.facts.json", "commissioning-test-safety.rules.json"]);
+        assert.match(card.digest, /^[0-9a-f]{64}$/);
+        assert.ok(card.rules && card.rules.rules.length > 0);
+        assert.equal(card.signature?.valid, true, "signed by the suite, in its own directory");
+        // Unsigned; a signature with the digest of something else is refused, the one of what was read is taken.
+        const topology = await review("station-topology");
+        assert.equal(topology.signature, null);
+        const stale = await broker.call("library", "sign", { id: "station-topology", by: "a reviewer", digest: "0".repeat(64) });
+        assert.ok(!stale.ok);
+        assert.match(String(stale.error), /changed since it was read: read it again before signing/);
+        assert.equal((await review("station-topology")).signature, null);
+        const signed = await broker.call("library", "sign", { id: "station-topology", by: "a reviewer", digest: topology.digest });
+        assert.ok(signed.ok, signed.error);
+        assert.deepEqual([(await review("station-topology")).signature?.by, (await review("station-topology")).signature?.valid], ["a reviewer", true]);
+    });
 });

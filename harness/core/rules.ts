@@ -258,7 +258,7 @@ export function evaluateRules(input: unknown, doc: RulesDocument, ctx: RuleConte
 
 /** The problem a rules document unsigned, or changed since it was signed, makes of every proposal: nothing is judged by rules nobody signed. */
 export function unsignedRules(doc: RulesDocument): RuleProblem | null {
-    const signing = `a person reviews it and signs it: npm run library:sign -- ${doc.document} "<name>"`;
+    const signing = `a person reviews it and signs it on the library page of the control room (library.html), or: npm run library:sign -- ${doc.document} "<name>"`;
     if (!doc.signed) return { kind: "rules", message: `the guard's rules are in "${doc.document}", which no person has signed as valid: no proposal is judged by rules nobody signed; ${signing}` };
     if (!doc.signed.valid) return { kind: "rules", message: `the guard's rules are in "${doc.document}", which no person has signed as valid (signed by ${doc.signed.by}, changed since): no proposal is judged by rules nobody signed; ${signing}` };
     return null;

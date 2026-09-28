@@ -54,12 +54,13 @@
         },
         "sign": {
             "title": "Sign a document as reviewed",
-            "description": "The commander signs a library document as reviewed, from the control room: the station calls it back with the answer to Mother's question (kind sign). The signature binds the document and its facts as they are; a safety procedure's limits are justified only by the facts of a signed document. Not a model's to call.",
+            "description": "The commander signs a library document as reviewed, from the control room: the station calls it back with the answer to Mother's question (kind sign), or the library page with the digest of what it showed. The signature binds the document, its facts and its rules as they are; a safety procedure's limits are justified only by the facts of a signed document. Not a model's to call.",
             "properties": {
                 "id": "the document",
                 "by": "who signs; the commander named by this machine's git when absent",
                 "questionId": "the question answered",
-                "answer": "the commander's answer: sign, or not"
+                "answer": "the commander's answer: sign, or not",
+                "digest": "the digest of what the person read (review); a document changed since is not signed"
             }
         },
         "signatures_scope": {
@@ -73,6 +74,13 @@
         "rules": {
             "title": "A document's rules",
             "description": "The rules a guard checks a proposal against, beside the facts of the same document, with the document's signature as it stands: the guard judges only by rules a person signed.",
+            "properties": {
+                "id": "the document"
+            }
+        },
+        "review": {
+            "title": "Review a document before signing",
+            "description": "Every file a signature binds (the document, its facts, its rules), as it is now, with the digest a signature would bind and the signature as it stands: what the library page shows a person before they sign.",
             "properties": {
                 "id": "the document"
             }

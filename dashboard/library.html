@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#04090c">
+<title>Library signatures</title>
+<!--
+  The library's page (2026-09-28): the documents a factory may cite, and a
+  person's signature on each. A safety constant is justified only by a fact of
+  a signed document, and the guard judges a procedure only by rules a person
+  signed; this is where that person reads and signs.
+
+  It shows every file a signature binds as it is on disk now (the document, its
+  facts, its rules; `library.review`), and signs with the digest of what it
+  showed (`library.sign` with `digest`): a document changed between the read
+  and the click is refused, and read again. It never signs by itself: the
+  button asks for a name and for the box saying the files were read.
+
+  It talks to the `library` slot only. Opened from the control room (the
+  library button, or the arrow on the library's row); `#<id>` opens a
+  document directly, as Mother's question to sign links to it.
+
+  Style: dashboard/room.css's tokens, restated, as the other slot pages do.
+-->
+<style>
+  :root {
+    --bg: #04090c;
+    --bg-2: #061218;
+    --panel: rgba(10, 28, 34, 0.66);
+    --panel-2: rgba(10, 28, 34, 0.9);
+    --line: rgba(64, 214, 200, 0.16);
+    --line-strong: rgba(64, 214, 200, 0.34);
+    --teal: #2fe0c8;
+    --teal-soft: #7ad6cc;
+    --text: #d3ecea;
+    --muted: #6d908e;
+    --muted-2: #4d6f6e;
+    --amber: #ffb648;
+    --red: #ff5064;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, -apple-system, "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(800px 500px at 30% 0%, rgba(47, 224, 200, 0.07), transparent 60%),
+      linear-gradient(180deg, var(--bg-2), var(--bg) 55%);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .shell { height: 100%; display: grid; grid-template-rows: auto 1fr; }
+
+  header { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; padding: 14px 20px; border-bottom: 1px solid var(--line); }
+  header .brand { font-size: 14px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; }
+  header .brand span { color: var(--teal); }
+  header .who { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  header .who b { color: var(--teal-soft); font-weight: 500; }
+  header .who.run b { color: var(--amber); }
+  header .spacer { flex: 1; }
+  .btn {
+    font: inherit; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--teal-soft); background: transparent; border: 1px solid var(--line-strong); border-radius: 999px;
+    padding: 6px 12px; cursor: pointer;
+  }
+  .btn:hover:not(:disabled) { border-color: var(--teal); color: var(--teal); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn.primary { color: var(--bg); background: var(--teal); border-color: var(--teal); font-weight: 600; }
+  .btn.primary:hover:not(:disabled) { color: var(--bg); background: #5ff0dc; }
+
+  main { min-height: 0; display: grid; grid-template-columns: minmax(260px, 340px) 1fr; }
+  @media (max-width: 760px) {
+    main { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    nav { max-height: 38vh; border-right: none !important; border-bottom: 1px solid var(--line); }
+  }
+
+  nav { min-height: 0; overflow-y: auto; border-right: 1px solid var(--line); padding: 12px 10px 20px; }
+  nav h2 { margin: 14px 8px 6px; font-size: 9.5px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted-2); }
+  nav h2:first-child { margin-top: 2px; }
+  .doc {
+    display: block; width: 100%; text-align: left; font: inherit; color: inherit; background: transparent;
+    border: 1px solid transparent; border-radius: 10px; padding: 8px 10px; cursor: pointer;
+  }
+  .doc:hover { background: rgba(47, 224, 200, 0.05); }
+  .doc.on { border-color: var(--line-strong); background: var(--panel); }
+  .doc .id { font-size: 12.5px; color: var(--text); word-break: break-all; }
+  .doc .meta { margin-top: 4px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+  .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .pill.valid { color: var(--teal); }
+  .pill.changed { color: var(--amber); }
+  .pill.unsigned { color: var(--muted); }
+  .pill.unsigned::before { background: transparent; border: 1px solid currentColor; }
+  .tag { font-size: 10px; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; }
+
+  section.review { min-height: 0; display: grid; grid-template-rows: 1fr auto; }
+  .scroll { min-height: 0; overflow-y: auto; padding: 18px 24px 24px; }
+  .empty { color: var(--muted); padding: 40px 24px; font-family: var(--sans); }
+  .review h1 { margin: 0; font-family: var(--sans); font-size: 20px; font-weight: 600; line-height: 1.3; }
+  .review .sub { margin-top: 6px; color: var(--muted); font-size: 12px; }
+  .status { margin-top: 14px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); font-family: var(--sans); font-size: 13.5px; line-height: 1.45; }
+  .status.valid { border-color: rgba(47, 224, 200, 0.4); }
+  .status.changed { border-color: rgba(255, 182, 72, 0.45); }
+  .status.changed b, .status .warn { color: var(--amber); }
+
+  .block { margin-top: 22px; }
+  .block > h3 { margin: 0 0 8px; font-size: 10px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--teal-soft); display: flex; gap: 10px; align-items: baseline; }
+  .block > h3 .file { color: var(--muted-2); letter-spacing: 0.04em; text-transform: none; }
+  .block > p.note { margin: 0 0 10px; font-family: var(--sans); font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th { text-align: left; font-weight: 500; font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted-2); padding: 6px 8px; border-bottom: 1px solid var(--line-strong); }
+  td { padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.4; }
+  td.says { font-family: var(--sans); font-size: 13px; }
+  td .cond { color: var(--teal-soft); }
+  td .dim, .dim { color: var(--muted); }
+  td.num { white-space: nowrap; color: var(--teal-soft); }
+  .kind { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .safety { margin: 0 0 10px; display: flex; gap: 6px; flex-wrap: wrap; align-items: baseline; font-size: 12px; }
+  .safety code { color: var(--amber); }
+
+  .md { font-family: var(--sans); font-size: 14px; line-height: 1.55; max-width: 78ch; }
+  .md h1, .md h2, .md h3, .md h4 { font-family: var(--sans); margin: 1.2em 0 0.4em; line-height: 1.3; }
+  .md h1 { font-size: 18px; } .md h2 { font-size: 16px; } .md h3, .md h4 { font-size: 14.5px; }
+  .md code { font-family: var(--mono); font-size: 0.9em; color: var(--teal-soft); }
+  .md pre { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; overflow-x: auto; }
+  .md pre code { color: var(--text); }
+  .md table { font-family: var(--sans); margin: 10px 0; }
+  .md .scroll-x { overflow-x: auto; }
+  details.raw { margin-top: 10px; }
+  details.raw summary { cursor: pointer; color: var(--muted); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
+  details.raw pre { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; overflow-x: auto; font-size: 12px; }
+
+  .sign { border-top: 1px solid var(--line-strong); background: var(--panel-2); padding: 12px 24px 14px; display: grid; gap: 10px; }
+  .sign .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .sign label { font-family: var(--sans); font-size: 13px; line-height: 1.4; }
+  .sign label.check { display: flex; gap: 10px; align-items: flex-start; flex: 1 1 380px; }
+  .sign input[type="checkbox"] { margin-top: 3px; accent-color: var(--teal); width: 16px; height: 16px; }
+  .sign input[type="text"] {
+    font: inherit; font-size: 13px; color: var(--text); background: var(--bg); border: 1px solid var(--line-strong); border-radius: 8px; padding: 7px 10px; min-width: 240px;
+  }
+  .sign input[type="text"]:focus { outline: none; border-color: var(--teal); }
+  .sign .digest { font-size: 11px; color: var(--muted-2); word-break: break-all; }
+  .sign .said { font-family: var(--sans); font-size: 13px; }
+  .sign .said.ok { color: var(--teal); }
+  .sign .said.err { color: var(--red); }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div class="brand">Library <span>signatures</span></div>
+    <div class="who" id="who"></div>
+    <div class="spacer"></div>
+    <button class="btn" id="refresh" type="button" title="read the library again">refresh</button>
+  </header>
+  <main>
+    <nav id="list" aria-label="the library's documents"></nav>
+    <section class="review">
+      <div class="scroll" id="review"><div class="empty">Choose a document on the left: its text, its facts and its rules as a signature would bind them.</div></div>
+      <form class="sign" id="sign" hidden>
+        <div class="row">
+          <label class="check"><input type="checkbox" id="read-it"><span id="read-label">I have read this document, its facts and its rules as shown above, and they hold.</span></label>
+          <input type="text" id="signer" placeholder="your name" autocomplete="name" aria-label="who signs">
+          <button class="btn primary" id="sign-btn" type="submit" disabled>sign</button>
+        </div>
+        <div class="digest" id="digest"></div>
+        <div class="said" id="said" role="status"></div>
+      </form>
+    </section>
+  </main>
+</div>
+<script type="module">
+import { connectMcp, toolText } from "./vendor/mcp-http-client.js";
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+let session = null;
+async function call(tool, args = {}) {
+    session ??= await connectMcp(location.origin, "library", { headers: {}, clientInfo: { name: "library-page", version: "0" } }).catch((e) => {
+        session = null;
+        throw e;
+    });
+    const r = await session.callTool(tool, args);
+    const text = toolText(r);
+    let body;
+    try {
+        body = JSON.parse(text);
+    } catch {
+        body = null;
+    }
+    if (r?.isError || body?.refused) throw new Error(body?.refused ?? text);
+    return body?.result ?? body;
+}
+
+let catalogue = null;
+let current = null;
+
+/** A signature as it stands: valid, changed since, or none. */
+const statusOf = (sig) => (!sig ? "unsigned" : sig.valid ? "valid" : "changed");
+const pill = (sig) => {
+    const s = statusOf(sig);
+    return `<span class="pill ${s}">${s === "valid" ? "signed" : s === "changed" ? "changed since signed" : "unsigned"}</span>`;
+};
+const when = (iso) => {
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? String(iso) : d.toLocaleString();
+};
+
+function renderWho() {
+    const who = $("who");
+    if (!catalogue) return (who.textContent = "");
+    const run = catalogue.signatures?.scope === "run";
+    who.className = `who${run ? " run" : ""}`;
+    who.innerHTML = run
+        ? `signatures: <b>scenario run ${esc(catalogue.signatures.runId)}</b>, its own, not the repository's`
+        : `signatures: <b>the repository's</b>${catalogue.signer ? ` · signing as <b>${esc(catalogue.signer)}</b>` : ""}`;
+}
+
+function renderList() {
+    const docs = catalogue?.documents ?? [];
+    // The documents a factory cites as limits first: those with facts or rules.
+    const cited = docs.filter((d) => d.facts > 0 || d.rules > 0);
+    const others = docs.filter((d) => !(d.facts > 0 || d.rules > 0));
+    const row = (d) => `<button class="doc${current?.id === d.id ? " on" : ""}" type="button" data-id="${esc(d.id)}">
+        <div class="id">${esc(d.id)}</div>
+        <div class="meta">${pill(d.signature)}${d.rules ? `<span class="tag">${d.rules} rules</span>` : ""}${d.facts ? `<span class="tag">${d.facts} facts</span>` : ""}</div>
+      </button>`;
+    $("list").innerHTML =
+        (cited.length ? `<h2>Facts and rules a guard judges by</h2>${cited.map(row).join("")}` : "") +
+        (others.length ? `<h2>Knowledge and methods</h2>${others.map(row).join("")}` : "") ||
+        `<div class="empty">The library holds no document.</div>`;
+}
+
+// ── A small markdown reader: headings, paragraphs, lists, tables, code; the text as written, escaped. ──
+function inline(s) {
+    return esc(s)
+        .replace(/`([^`]+)`/g, "<code>$1</code>")
+        .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+        .replace(/(^|[^*])\*([^*\s][^*]*)\*/g, "$1<i>$2</i>");
+}
+function markdown(text) {
+    const lines = text.split("\n");
+    const out = [];
+    let i = 0;
+    while (i < lines.length) {
+        const l = lines[i];
+        if (/^```/.test(l)) {
+            const body = [];
+            for (i++; i < lines.length && !/^```/.test(lines[i]); i++) body.push(lines[i]);
+            i++;
+            out.push(`<pre><code>${esc(body.join("\n"))}</code></pre>`);
+        } else if (/^#{1,6}\s/.test(l)) {
+            const n = Math.min(4, l.match(/^#+/)[0].length);
+            out.push(`<h${n}>${inline(l.replace(/^#+\s+/, ""))}</h${n}>`);
+            i++;
+        } else if (/^\s*\|/.test(l)) {
+            const rows = [];
+            for (; i < lines.length && /^\s*\|/.test(lines[i]); i++) rows.push(lines[i]);
+            const cells = (r) => r.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+            const body = rows.filter((r) => !/^\s*\|[\s:|-]+\|\s*$/.test(r));
+            const [head, ...rest] = body;
+            out.push(`<div class="scroll-x"><table><thead><tr>${cells(head).map((c) => `<th>${inline(c)}</th>`).join("")}</tr></thead><tbody>${rest.map((r) => `<tr>${cells(r).map((c) => `<td>${inline(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`);
+        } else if (/^\s*([-*]|\d+\.)\s/.test(l)) {
+            const ordered = /^\s*\d+\./.test(l);
+            const items = [];
+            for (; i < lines.length && /^\s*([-*]|\d+\.)\s/.test(lines[i]); i++) {
+                let item = lines[i].replace(/^\s*([-*]|\d+\.)\s+/, "");
+                while (i + 1 < lines.length && /^\s{2,}\S/.test(lines[i + 1]) && !/^\s*([-*]|\d+\.)\s/.test(lines[i + 1])) item += ` ${lines[++i].trim()}`;
+                items.push(`<li>${inline(item)}</li>`);
+            }
+            out.push(ordered ? `<ol>${items.join("")}</ol>` : `<ul>${items.join("")}</ul>`);
+        } else if (!l.trim()) {
+            i++;
+        } else {
+            const para = [];
+            for (; i < lines.length && lines[i].trim() && !/^(#{1,6}\s|```|\s*\||\s*([-*]|\d+\.)\s)/.test(lines[i]); i++) para.push(lines[i].trim());
+            out.push(`<p>${inline(para.join(" "))}</p>`);
+        }
+    }
+    return out.join("");
+}
+
+// ── The rules, as the guard reads them: what each says, and its condition. ──
+const OPS = { ">=": "≥", ">": ">", "<=": "≤", "<": "<" };
+function conditionOf(rule, facts) {
+    const fact = (id) => {
+        const f = facts.find((x) => x.id === id);
+        return f ? `${esc(id)} <span class="dim">(${esc(f.value)} ${esc(f.unit)})</span>` : `${esc(id)} <span class="warn">(not a fact of this document)</span>`;
+    };
+    if (rule.compare) {
+        const c = rule.compare;
+        const left = c.sum ? `sum of ${esc(c.sum)}` : esc(c.subject);
+        const right =
+            c.fact !== undefined ? fact(c.fact)
+            : c.constant !== undefined ? `the procedure's ${esc(c.constant)}`
+            : c.measured !== undefined ? `measured ${esc(c.measured)}${c.plusFact ? ` + ${fact(c.plusFact)}` : ""}`
+            : esc(c.value);
+        return `${left} ${OPS[c.op] ?? esc(c.op)} ${right}`;
+    }
+    if (rule.present) return `present: ${rule.present.map(esc).join(", ")}`;
+    if (rule.fields) return `every ${esc(rule.fields.list)} gives ${rule.fields.fields.map(esc).join(", ")}`;
+    if (rule.nonEmpty) return `${esc(rule.nonEmpty)} is not empty`;
+    if (rule.match) return `${esc(rule.match.path)} matches <code>${esc(rule.match.pattern)}</code>`;
+    if (rule.require) return `${esc(rule.require.list)} has ${esc(rule.require.key)} ${rule.require.values.map(esc).join(" and ")}`;
+    if (rule.readable) return `every ${esc(rule.readable.list)} ${esc(rule.readable.key)} is one the executor can read`;
+    if (rule.watch) {
+        const w = rule.watch;
+        return `an occupied ${esc(w.place)}: every occupant read is in ${esc(w.subjects)}, and ${esc(w.stop.list)} has ${esc(w.stop.key)} ${esc(w.stop.value)} (${esc(w.stop.source)}); occupancy not read: ${esc(w.unread?.kind ?? "refused")}`;
+    }
+    return `<span class="dim">${esc(JSON.stringify(rule))}</span>`;
+}
+
+function renderReview() {
+    const r = current;
+    const review = $("review");
+    const form = $("sign");
+    if (!r) {
+        form.hidden = true;
+        return;
+    }
+    const sig = r.signature;
+    const s = statusOf(sig);
+    const status =
+        s === "valid" ? `<div class="status valid">Signed by <b>${esc(sig.by)}</b> on ${esc(when(sig.at))} (${esc(sig.scope)}). The files below are as they were signed.</div>`
+        : s === "changed" ? `<div class="status changed">Signed by <b>${esc(sig.by)}</b> on ${esc(when(sig.at))}, and <b>changed since</b>: the signature no longer holds. A factory citing this document is refused until a person reads it again and signs it.</div>`
+        : `<div class="status">No person has signed this document. ${r.facts.length || r.rules ? "A factory citing its facts, or a guard judging by its rules, is refused until a person signs it." : "It is knowledge a factory may read; a signature says a person reviewed it."}</div>`;
+    const file = (suffix) => r.files.find((f) => f.name.endsWith(suffix));
+    const blocks = [];
+    if (r.rules) {
+        const f = file(".rules.json");
+        blocks.push(`<div class="block"><h3>The rules a guard judges by <span class="file">${esc(f?.name ?? "")}</span></h3>
+          <p class="note">The guard's code holds none of these: it evaluates what is written here, and only once a person signed it.</p>
+          <div class="safety"><span class="dim">Safety constants, justified only by a fact of a signed document:</span> ${r.rules.safety.map((p) => `<code>${esc(p)}</code>`).join(" ")}</div>
+          <div class="scroll-x"><table><thead><tr><th>rule</th><th>what it says</th><th>condition</th></tr></thead><tbody>
+          ${r.rules.rules.map((x) => `<tr><td>${esc(x.id)}<div class="kind">${esc(x.kind)}</div></td><td class="says">${esc(x.says ?? "")}</td><td><span class="cond">${conditionOf(x, r.facts)}</span></td></tr>`).join("")}
+          </tbody></table></div>
+          <details class="raw"><summary>the file as signed</summary><pre>${esc(f?.text ?? "")}</pre></details></div>`);
+    }
+    if (r.facts.length) {
+        const f = file(".facts.json");
+        const side = (b) => (b === "upper" ? "at most" : b === "lower" ? "at least" : b ? esc(b) : "");
+        blocks.push(`<div class="block"><h3>The facts <span class="file">${esc(f?.name ?? "")}</span></h3>
+          <div class="scroll-x"><table><thead><tr><th>fact</th><th>value</th><th>safe side</th><th>what it says, where it comes from</th></tr></thead><tbody>
+          ${r.facts.map((x) => `<tr><td>${esc(x.id)}<div class="kind">${esc(x.kind ?? "")}</div></td><td class="num">${esc(x.value)} ${esc(x.unit)}</td><td>${side(x.bound)}</td><td class="says">${esc(x.says ?? "")}${x.reference ? `<div class="dim">${esc(x.reference)}</div>` : ""}</td></tr>`).join("")}
+          </tbody></table></div>
+          <details class="raw"><summary>the file as signed</summary><pre>${esc(f?.text ?? "")}</pre></details></div>`);
+    }
+    const md = file(".md");
+    blocks.push(`<div class="block"><h3>The document <span class="file">${esc(md?.name ?? "")}</span></h3><div class="md">${markdown(md?.text ?? "")}</div></div>`);
+    review.innerHTML = `<h1>${esc(r.title)}</h1><div class="sub">${esc(r.id)} · ${r.files.map((f) => esc(f.name)).join(" + ")}</div>${status}${blocks.join("")}`;
+    review.scrollTop = 0;
+
+    form.hidden = false;
+    $("read-it").checked = false;
+    const parts = ["this document", r.facts.length ? "its facts" : null, r.rules ? "its rules" : null].filter(Boolean);
+    $("read-label").textContent = `I have read ${parts.length > 1 ? `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}` : parts[0]} as shown above, and they hold.`;
+    if (!$("signer").value) $("signer").value = r.signer ?? "";
+    $("sign-btn").textContent = s === "valid" ? "sign again" : "sign";
+    $("digest").textContent = `a signature binds these files as they are: sha256 ${r.digest}`;
+    $("said").textContent = "";
+    $("said").className = "said";
+    updateButton();
+}
+
+function updateButton() {
+    $("sign-btn").disabled = !current || !$("read-it").checked || !$("signer").value.trim();
+}
+
+async function open(id) {
+    try {
+        current = await call("review", { id });
+        if (location.hash.slice(1) !== id) history.replaceState(null, "", `#${encodeURIComponent(id)}`);
+    } catch (e) {
+        current = null;
+        $("review").innerHTML = `<div class="empty">Could not read ${esc(id)}: ${esc(e.message)}</div>`;
+    }
+    renderList();
+    renderReview();
+}
+
+async function load() {
+    try {
+        catalogue = await call("list");
+    } catch (e) {
+        catalogue = null;
+        $("list").innerHTML = `<div class="empty">The library does not answer: ${esc(e.message)}</div>`;
+        return;
+    }
+    renderWho();
+    renderList();
+    const wanted = decodeURIComponent(location.hash.slice(1));
+    if (wanted && catalogue.documents.some((d) => d.id === wanted)) await open(wanted);
+    else if (current) await open(current.id);
+}
+
+$("list").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-id]");
+    if (b) open(b.dataset.id);
+});
+$("read-it").addEventListener("change", updateButton);
+$("signer").addEventListener("input", updateButton);
+$("refresh").addEventListener("click", load);
+window.addEventListener("hashchange", () => {
+    const id = decodeURIComponent(location.hash.slice(1));
+    if (id && id !== current?.id) open(id);
+});
+$("sign").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!current || $("sign-btn").disabled) return;
+    const id = current.id;
+    const by = $("signer").value.trim();
+    $("sign-btn").disabled = true;
+    try {
+        const r = await call("sign", { id, by, digest: current.digest });
+        await load();
+        await open(id);
+        $("said").textContent = `Signed by ${r.by}${r.scope?.scope === "run" ? `, in scenario run ${r.scope.runId}'s own signatures` : ""}.`;
+        $("said").className = "said ok";
+    } catch (err) {
+        $("said").textContent = err.message;
+        $("said").className = "said err";
+        updateButton();
+    }
+});
+
+load();
+</script>
+</body>
+</html>

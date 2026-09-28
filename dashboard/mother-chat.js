@@ -98,7 +98,9 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
         const card = (q) => {
             if (q.kind !== "sign" || !Array.isArray(q.context?.facts)) return "";
             const side = (b) => (b === "upper" ? "at most" : b === "lower" ? "at least" : "exactly");
-            return `<div class="card">${q.context.facts.map((f) => `<div class="line dim"><b>${esc(f.id)}</b> ${esc(side(f.bound))} ${esc(f.value)} ${esc(f.unit)}${f.kind ? ` <span class="t">${esc(f.kind)}</span>` : ""}${f.reference ? `: ${esc(f.reference)}` : ""}</div>`).join("")}</div>`;
+            // The whole document, its facts and its rules on the library page, where it can be read before the answer.
+            const page = q.context.document ? `<div class="line"><a class="badge link" href="./library.html#${encodeURIComponent(q.context.document)}" target="library">read it whole, with its rules</a></div>` : "";
+            return `<div class="card">${q.context.facts.map((f) => `<div class="line dim"><b>${esc(f.id)}</b> ${esc(side(f.bound))} ${esc(f.value)} ${esc(f.unit)}${f.kind ? ` <span class="t">${esc(f.kind)}</span>` : ""}${f.reference ? `: ${esc(f.reference)}` : ""}</div>`).join("")}${page}</div>`;
         };
         const chips = open.map((q) => {
             const h = heard.get(q.id);

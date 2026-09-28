@@ -34,7 +34,7 @@ import { objectSchema, publishSlot, type PublishedSlot, type SlotTool } from "..
 import { sha256Of } from "../lib/workshop.js";
 import { describeGraph, loadGraphLibrary, type GraphLibraryEntry } from "../../../lib/graph-library.js";
 import type { LibraryFact } from "../../../harness/core/contracts.js";
-import { signatureOf, signaturesDir, signDocument } from "../../../harness/lib/signatures.js";
+import { documentDigest, signatureOf, signaturesDir, signDocument } from "../../../harness/lib/signatures.js";
 import { execSync } from "node:child_process";
 import { WORKSHOP_ROOT } from "../lib/workshop.js";
 
@@ -113,6 +113,11 @@ export function loadRules(dir: string, id: string): LibraryDocument["rules"] {
     }
 }
 
+/** The files a signature binds, as they are on disk now: the document, its facts, its rules (what a person reads before signing). */
+export function filesOf(dir: string, id: string): Array<{ name: string; text: string }> {
+    return [`${id}.md`, `${id}.facts.json`, `${id}.rules.json`].filter((name) => existsSync(path.join(dir, name))).map((name) => ({ name, text: readFileSync(path.join(dir, name), "utf8").replace(/\r\n/g, "\n") }));
+}
+
 /** The documents a query's words appear in, the most matched first, with the lines they appear on. */
 export function searchLibrary(documents: LibraryDocument[], query: string, limit = 5): Array<{ id: string; title: string; score: number; lines: string[] }> {
     const words = query
@@ -148,7 +153,12 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
         {
             name: "list",
             inputSchema: objectSchema({}),
-            handle: (_args, s) => ({ documents: s.documents.map(({ id, title, summary, measures, sha256, bytes, facts }) => ({ id, title, summary, measures, sha256, bytes, facts: facts.length, signature: signatureOf(id, s.dir, s.sigDir) })) }),
+            handle: (_args, s) => ({
+                documents: s.documents.map(({ id, title, summary, measures, sha256, bytes, facts, rules }) => ({ id, title, summary, measures, sha256, bytes, facts: facts.length, rules: rules ? rules.rules.length : 0, signature: signatureOf(id, s.dir, s.sigDir) })),
+                // Who signs from the control room, and where the signatures go: what the library page says before a person signs.
+                signer: person || null,
+                signatures: s.sigScope,
+            }),
         },
         {
             name: "methods",
@@ -211,12 +221,24 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
             },
         },
         {
-            // The commander signs a document as reviewed, from the control room: called back by the station with the answer to Mother's question (kind sign). Never a model's: kept out of every harness's and the night agent's tools.
-            name: "sign",
-            inputSchema: objectSchema({ id: { type: "string" }, by: { type: "string" }, questionId: { type: "string" }, answer: { type: "object" } }, ["id"]),
+            // What a person reads before signing (the library page, 2026-09-28): every file the signature binds, as it is on disk now, and the digest a signature would bind.
+            name: "review",
+            inputSchema: objectSchema({ id: { type: "string" } }, ["id"]),
             handle: (args, s) => {
                 const d = s.documents.find((x) => x.id === args.id);
                 if (!d) throw new Error(`no document "${String(args.id)}" in the library`);
+                return { id: d.id, title: d.title, files: filesOf(s.dir, d.id), facts: loadFacts(s.dir, d.id), rules: loadRules(s.dir, d.id), digest: documentDigest(d.id, s.dir), signature: signatureOf(d.id, s.dir, s.sigDir), signer: person || null, signatures: s.sigScope };
+            },
+        },
+        {
+            // The commander signs a document as reviewed, from the control room: called back by the station with the answer to Mother's question (kind sign), or from the library page. Never a model's: kept out of every harness's and the night agent's tools.
+            name: "sign",
+            inputSchema: objectSchema({ id: { type: "string" }, by: { type: "string" }, questionId: { type: "string" }, answer: { type: "object" }, digest: { type: "string" } }, ["id"]),
+            handle: (args, s) => {
+                const d = s.documents.find((x) => x.id === args.id);
+                if (!d) throw new Error(`no document "${String(args.id)}" in the library`);
+                // A person signs what they read: the digest of what the page showed, which a document changed since no longer has.
+                if (typeof args.digest === "string" && args.digest !== documentDigest(d.id, s.dir)) throw new Error(`the document "${d.id}" changed since it was read: read it again before signing`);
                 const answer = args.answer && typeof args.answer === "object" ? (args.answer as { choice?: string; by?: string }) : null;
                 if (answer && answer.choice !== "sign") return { id: d.id, signed: false, why: `the commander answered ${String(answer.choice)}` };
                 const who = typeof args.by === "string" && args.by.trim() ? args.by.trim() : `${person || "the commander"} (commander, from the control room)`;

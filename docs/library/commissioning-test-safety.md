@@ -2,7 +2,7 @@
 
 The bounds every test procedure on the Lab's scrubber stays within, whoever writes the procedure. A procedure's safety constants (its CO2 limits, its speeds, its duration, its abort thresholds, the heart-rate band it watches) are justified by these facts and respect them; a value found, computed or assumed elsewhere is not a safety limit.
 
-**Status:** to be reviewed and signed by a person (`npm run library:sign -- commissioning-test-safety "<name>"`). Until it is signed, and as soon as it changes after being signed, the factory's guard and Mother refuse every procedure whose safety constants cite it.
+**Status:** to be reviewed and signed by a person, on the library page of the control room (`library.html`) or with `npm run library:sign -- commissioning-test-safety "<name>"`. The rules the guard checks every procedure against are beside it (`commissioning-test-safety.rules.json`) and signed with it. Until it is signed, and as soon as it, its facts or its rules change after being signed, the factory's guard and Mother refuse every procedure.
 
 ## The facts, and which side of each is safe
 

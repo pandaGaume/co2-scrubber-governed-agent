@@ -59,7 +59,8 @@
                 "id": "le document",
                 "by": "qui signe ; le commandant nommé par le git de cette machine s'il est absent",
                 "questionId": "la question à laquelle on répond",
-                "answer": "la réponse du commandant : signer, ou non"
+                "answer": "la réponse du commandant : signer, ou non",
+                "digest": "l'empreinte de ce que la personne a lu (review) ; un document modifié depuis n'est pas signé"
             }
         },
         "signatures_scope": {
@@ -73,6 +74,13 @@
         "rules": {
             "title": "Les règles d'un document",
             "description": "Les règles contre lesquelles une garde vérifie une proposition, à côté des faits du même document, avec la signature du document telle qu'elle est : la garde ne juge que selon des règles qu'une personne a signées.",
+            "properties": {
+                "id": "le document"
+            }
+        },
+        "review": {
+            "title": "Relire un document avant de le signer",
+            "description": "Tous les fichiers qu'une signature engage (le document, ses faits, ses règles), tels qu'ils sont maintenant, avec l'empreinte qu'une signature engagerait et la signature telle qu'elle est : ce que la page de la bibliothèque montre à une personne avant qu'elle signe.",
             "properties": {
                 "id": "le document"
             }

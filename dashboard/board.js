@@ -64,6 +64,7 @@ const PAGES = {
     factory: { page: "factory.html", what: "The factory" },
     agent: { page: LOOP_URL.replace(/^\.\//u, ""), what: "The agent's loop" },
     twin: { page: TWIN_URL.replace(/^\.\//u, ""), what: "The twin's graph" },
+    library: { page: "library.html", what: "The library, read and signed" },
 };
 /* A code, small: three finder squares and some noise. It says a code is
    behind the row without drawing one on every row. */
@@ -916,6 +917,7 @@ async function main() {
     $("btn-agent")?.addEventListener("click", () => openLoopWindow());
     $("btn-factory")?.addEventListener("click", () => openFactoryWindow());
     $("btn-twin")?.addEventListener("click", () => openTwinWindow());
+    $("btn-library")?.addEventListener("click", () => openSlotPage("library", PAGES.library));
 
     $("btn-sound").addEventListener("click", () => {
         if (audio.enabled) {
