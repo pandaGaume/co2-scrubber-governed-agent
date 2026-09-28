@@ -166,7 +166,7 @@ var Broker = class {
   }
 };
 
-// harness/browser/studio-loop.ts
+// ui/studio-loop.ts
 var LOOP_STYLE = `
 .hx-bar { display: flex; align-items: center; gap: 8px; }
 .hx-title { font: 11px/1 var(--ne-font-mono, ui-monospace, Consolas, monospace); letter-spacing: 0.14em; color: var(--ne-color-text-muted, #8a8a9a); margin-right: 4px; }
@@ -238,7 +238,7 @@ function createBar(title) {
   return { bar, badge, select, button, numberInput };
 }
 
-// harness/browser/room-skin.ts
+// ui/room-skin.ts
 var ROOM_SKIN_NAME = "control_room";
 var TEAL = "#2fe0c8";
 var TEAL_SOFT = "#7ad6cc";
@@ -312,7 +312,7 @@ ${S} .hm-line.error .tag { color: #ff8a98; }
 `;
 var ROOM_COLORS = { teal: TEAL, tealSoft: TEAL_SOFT, amber: AMBER, red: RED };
 
-// harness/browser/pushes.ts
+// ui/pushes.ts
 function watchSlot(base, slot, onUpdate, onState = () => void 0) {
   const source = new EventSource(`${base.replace(/\/+$/u, "")}/${encodeURIComponent(slot)}/sse`);
   let open = false;
@@ -345,7 +345,7 @@ function watchSlot(base, slot, onUpdate, onState = () => void 0) {
   };
 }
 
-// harness/browser/twin-plots.ts
+// ui/twin-plots.ts
 var NOTES_LABEL = "Twin: the question";
 var PLOTS = [
   { id: "plot-co2", label: "Plot: cabin CO2", title: "cabin CO2 (ppm)", from: { node: "cabin", port: "co2Ppm" }, column: 1, color: ROOM_COLORS.teal, at: { x: 1240, y: 340 }, tile: { x: 3, w: 3 } },
@@ -354,7 +354,7 @@ var PLOTS = [
   { id: "plot-reserve", label: "Plot: night reserve", title: "night reserve (%)", from: { node: "battery", port: "stateOfChargePercent" }, column: 5, color: ROOM_COLORS.tealSoft, at: { x: 1240, y: -100 }, tile: { x: 10, w: 2 } }
 ];
 
-// harness/browser/twin-page.ts
+// ui/twin-page.ts
 var SOURCE = "twin";
 var RUNS_URI = "twin://runs";
 var META_RUN = "spikypanda/run";

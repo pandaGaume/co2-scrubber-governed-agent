@@ -15,7 +15,7 @@
   sentence is a keyed phrase, `?locale=fr` picks the French one, and the keys
   below are the ones that go into the biomed slot's grammar
   (`slots/biomed/grammars/default/{en,fr}.json`, section `phrases`). Wired to
-  the broker, `harness/browser/words.ts` reads them off `grammar://phrases` on
+  the broker, `ui/words.ts` reads them off `grammar://phrases` on
   the page's own session and the dictionary in this file disappears. Numbers
   are formatted for the locale too, which is why 2,800 reads 2 800 in French.
 
@@ -270,7 +270,7 @@
   /* ------------------------------------------------------------------ *
    * The words. Keys only in the code; en-US by default, ?locale=fr for
    * French. These keys are the biomed slot's grammar phrases: wired to the
-   * broker this object goes away and `harness/browser/words.ts` reads them
+   * broker this object goes away and `ui/words.ts` reads them
    * off `grammar://phrases` on the page's session. Same keys, same holes,
    * which is what mcp-core checks at publish time.
    * ------------------------------------------------------------------ */

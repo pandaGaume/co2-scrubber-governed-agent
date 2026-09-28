@@ -17,7 +17,7 @@
  *   declared   each pattern it classes names a capability it allows
  *   justify    it says where its constants are (`justify.ts`), on a call it
  *              allows, and that call accepts their justifications
- *   script     it has its script (`harness/scripted/index.ts`), on the
+ *   script     it has its script (`stand-ins/builders/index.ts`), on the
  *              scripts' base, on the reasoning state as the models are
  *   words      what it says to a model is its spec's (2026-09-28, zero domain
  *              in the harness): its prompt under specs/, its words file
@@ -46,8 +46,8 @@ import { taskCapabilities } from "../harness/core/task-capabilities.js";
 import { newProgress } from "../harness/core/workspace-observer.js";
 import type { TaskFile } from "../harness/core/task.js";
 import type { TopicDefinition } from "../harness/core/topic.js";
-import { SCRIPTED_BUILDERS } from "../harness/scripted/index.js";
-import { ScriptedBuilderBase } from "../harness/scripted/base.js";
+import { SCRIPTED_BUILDERS } from "../stand-ins/builders/index.js";
+import { ScriptedBuilderBase } from "../harness/core/scripted-base.js";
 import { missingWords } from "../harness/core/words.js";
 
 const PORT = 3146;

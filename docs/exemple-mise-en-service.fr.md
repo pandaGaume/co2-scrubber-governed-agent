@@ -61,7 +61,7 @@ entrée : à chaque pas, la conversation entière est renvoyée au modèle, et
 elle grossit (section 12).
 
 Le monde est le monde de remplacement à deux zones
-(`harness/stand-in/two-zone-world.ts`) : Lab de 30 m³, Hab-B de 400 m³,
+(`stand-ins/worlds/two-zone-world.ts`) : Lab de 30 m³, Hab-B de 400 m³,
 échange de 0,6 m³/min par le sas fermé, deux opérateurs au travail léger dans
 le Lab. Il avance minute par minute à la vitesse que la carte a réellement
 prise : la télémétrie répond aux commandes que l'agent a vraiment envoyées.

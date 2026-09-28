@@ -18,7 +18,7 @@
  * minute (`twin://runs`, the last few), and pushed to the slot's readers as
  * it is computed: `notifications/resources/updated` on `twin://runs`, the run
  * in `_meta` under `spikypanda/run`. The answer the caller gets stays short;
- * the twin's page (`harness/browser/twin-page.ts`) replays the run on the
+ * the twin's page (`ui/twin-page.ts`) replays the run on the
  * graph that computed it.
  */
 import { objectSchema as obj, publishSlot, type PublishedSlot } from "../lib/slot-server.js";

@@ -36,7 +36,7 @@ import type { PublishedSlot } from "../slots/lib/slot-server.js";
 import { startAllOrFail } from "./lib/start.js";
 import { Broker } from "../harness/lib/broker.js";
 import { runTask, type BuilderContext } from "../harness/core/runner.js";
-import { ScriptedProcedureBuilder, type ScriptedProcedureOptions } from "../harness/scripted/procedure.js";
+import { ScriptedProcedureBuilder, type ScriptedProcedureOptions } from "../stand-ins/builders/procedure.js";
 import { checkProcedure, envelopeOf, FORMAT, safetyProblems, type MeasuredStart, type PresenceRead, type SignedFact } from "../harness/topics/procedure/check.js";
 import type { RulesDocument } from "../harness/core/rules.js";
 import { loadFacts, loadRules, LIBRARY_DIR } from "../slots/tools/library/provider.js";

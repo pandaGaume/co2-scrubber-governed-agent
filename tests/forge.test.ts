@@ -15,7 +15,7 @@ import type { PublishedSlot } from "../slots/lib/slot-server.js";
 import { checkSources, checkImports, importsOf } from "../slots/forge/plugin-check.js";
 import { parseDiagnostics, pluginDir, type Build, type ForgeState, type LoadedPlugin, type TestRun } from "../slots/forge/provider.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
-import { leakFixture, leakSpec, LEAK_CONTRACT, LEAK_TYPE } from "../harness/scripted/code-fixture.js";
+import { leakFixture, leakSpec, LEAK_CONTRACT, LEAK_TYPE } from "../stand-ins/builders/code-fixture.js";
 import { contractProblems, parseBehavior, satisfies } from "../slots/forge/contract.js";
 
 const PORT = 3130;

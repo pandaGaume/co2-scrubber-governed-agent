@@ -4,9 +4,9 @@
  * Each is a `ScriptedBuilderBase`; `tests/conformance.test.ts` checks that
  * every topic has one.
  */
-import type { BuilderContext } from "../core/runner.js";
-import type { Topic } from "../core/task.js";
-import type { ScriptedBuilderBase } from "./base.js";
+import type { BuilderContext } from "../../harness/core/runner.js";
+import type { Topic } from "../../harness/core/task.js";
+import type { ScriptedBuilderBase } from "../../harness/core/scripted-base.js";
 import { ScriptedCodeBuilder } from "./code.js";
 import { ScriptedGraphBuilder } from "./graph.js";
 import { ScriptedBuilder } from "./onnx.js";

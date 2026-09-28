@@ -720,7 +720,7 @@ var application_default = {
 var strip = (v) => v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).filter(([k]) => k !== "note").map(([k, x]) => [k, strip(x)])) : v;
 var APP = strip(application_default);
 
-// harness/providers/scripted.ts
+// stand-ins/night/scripted.ts
 var ppmOf = (s) => {
   const v = s.features.co2Ppm;
   return typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : 1500;
@@ -1065,7 +1065,7 @@ async function createAgent2({ broker, provider, guardMode = "measured", approve,
   return { ...loop, console: crewConsole, calls, guardMode };
 }
 
-// harness/browser/studio-loop.ts
+// ui/studio-loop.ts
 var MONITOR_TYPE = "Harness.Monitor:trace";
 var LOOP_STYLE = `
 .hx-bar { display: flex; align-items: center; gap: 8px; }
@@ -1228,7 +1228,7 @@ function viewControls(bar, initial, studio, lit, first) {
   return { view: () => settings, frame };
 }
 
-// harness/browser/room-skin.ts
+// ui/room-skin.ts
 var ROOM_SKIN_NAME = "control_room";
 var TEAL = "#2fe0c8";
 var TEAL_SOFT = "#7ad6cc";
@@ -1997,7 +1997,7 @@ var McpGrammarBehavior = class _McpGrammarBehavior extends McpBehaviorBase {
   }
 };
 
-// harness/browser/words.ts
+// ui/words.ts
 async function loadWords(session) {
   const r = await session.request("resources/read", { uri: GRAMMAR_PHRASES_URI });
   const text = r?.contents?.[0]?.text;
@@ -2007,7 +2007,7 @@ async function loadWords(session) {
 }
 var NO_WORDS = McpGrammar.fromJSON({ phrases: {} });
 
-// harness/browser/pushes.ts
+// ui/pushes.ts
 function watchSlot(base, slot, onUpdate, onState = () => void 0) {
   const source = new EventSource(`${base.replace(/\/+$/u, "")}/${encodeURIComponent(slot)}/sse`);
   let open = false;

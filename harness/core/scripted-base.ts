@@ -21,8 +21,8 @@
  */
 import type { JsonValue, PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
 import type { Provider, ProviderExchange } from "../lib/provider.js";
-import type { CapabilityCall } from "../core/capabilities.js";
-import type { TaskFile } from "../core/task.js";
+import type { CapabilityCall } from "./capabilities.js";
+import type { TaskFile } from "./task.js";
 
 /** What a script is given, as the runner builds it (`BuilderContext`). */
 export interface ScriptContext {

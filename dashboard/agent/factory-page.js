@@ -166,7 +166,7 @@ var Broker = class {
   }
 };
 
-// harness/browser/studio-loop.ts
+// ui/studio-loop.ts
 var MONITOR_TYPE = "Harness.Monitor:trace";
 var LOOP_STYLE = `
 .hx-bar { display: flex; align-items: center; gap: 8px; }
@@ -337,7 +337,7 @@ function viewControls(bar, initial, studio, lit, first) {
   return { view: () => settings, frame };
 }
 
-// harness/browser/room-skin.ts
+// ui/room-skin.ts
 var ROOM_SKIN_NAME = "control_room";
 var TEAL = "#2fe0c8";
 var TEAL_SOFT = "#7ad6cc";
@@ -411,7 +411,7 @@ ${S} .hm-line.error .tag { color: #ff8a98; }
 `;
 var ROOM_COLORS = { teal: TEAL, tealSoft: TEAL_SOFT, amber: AMBER, red: RED };
 
-// harness/browser/pushes.ts
+// ui/pushes.ts
 function watchSlot(base, slot, onUpdate, onState = () => void 0) {
   const source = new EventSource(`${base.replace(/\/+$/u, "")}/${encodeURIComponent(slot)}/sse`);
   let open = false;
@@ -1139,7 +1139,7 @@ var McpGrammarBehavior = class _McpGrammarBehavior extends McpBehaviorBase {
   }
 };
 
-// harness/browser/words.ts
+// ui/words.ts
 async function loadWords(session) {
   const r = await session.request("resources/read", { uri: GRAMMAR_PHRASES_URI });
   const text = r?.contents?.[0]?.text;
@@ -1149,7 +1149,7 @@ async function loadWords(session) {
 }
 var NO_WORDS = McpGrammar.fromJSON({ phrases: {} });
 
-// harness/browser/factory-voice.ts
+// ui/factory-voice.ts
 var num = (v, digits = 4) => typeof v === "number" && Number.isFinite(v) ? Number.isInteger(v) ? String(v) : v.toFixed(digits).replace(/\.?0+$/, "") : "?";
 var count = (v) => {
   if (Array.isArray(v)) return String(v.length);
@@ -1230,7 +1230,7 @@ function stageSentence(words, stage, values, next) {
   return [words.phrase(key, values), words.phrase(`${key}.now`, values)];
 }
 
-// harness/browser/factory-loop.ts
+// ui/factory-loop.ts
 var BY_WORD = { OBSERVE: "observe", HYPOTHESIZE: "hypothesize", BUILD: "build", EXECUTE: "execute", EVALUATE: "evaluate", PASS: "pass", DONE: "done", DIAGNOSE: "diagnose", PARAMETER: "parameter", STRUCTURAL: "structural", INVALID: "invalid", REVISE: "revise", INSUFFICIENT: "experiment" };
 function loopNodes(viewer) {
   const out = /* @__PURE__ */ new Map();
@@ -1300,7 +1300,7 @@ function createLoopLights(byState) {
   };
 }
 
-// harness/browser/factory-page.ts
+// ui/factory-page.ts
 var TASKS_URI = "factory://tasks";
 var META_TASK = "spikypanda/task";
 var SOURCE = "factory";

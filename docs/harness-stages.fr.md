@@ -82,7 +82,7 @@ Le paquet assemble ce que le modèle recevra : l'état, l'intention, les capacit
 Le paquet appelle `fallback.resolve(request)` et vérifie la décision rendue : une action, un outil, une entrée. Si l'outil n'est pas dans la liste permise, le pas s'arrête (« Provider proposed a capability outside the allowlist »).
 
 - Station : le slot `reasoner` (une conversation par événement, la grammaire du slot choisie par la famille du modèle) ou l'agent scripté (`compliant`, `prudent`). Une réponse en texte sans appel d'outil devient un `crew.report`.
-- Usine : le constructeur scripté du sujet (`harness/scripted/<sujet>.ts`) : une ligne par phase, qui lit le dernier résultat dans l'état quand elle a besoin d'un chemin ou d'un chiffre. Avec un modèle (F5), une réponse sans outil est renvoyée au modèle comme une erreur de forme : l'usine n'a pas d'équipage à qui parler.
+- Usine : le constructeur scripté du sujet (`stand-ins/builders/<sujet>.ts`) : une ligne par phase, qui lit le dernier résultat dans l'état quand elle a besoin d'un chemin ou d'un chiffre. Avec un modèle (F5), une réponse sans outil est renvoyée au modèle comme une erreur de forme : l'usine n'a pas d'équipage à qui parler.
 - Arrêt possible : un outil hors liste, un délai dépassé, le modèle injoignable. Le runner note le pas comme échoué avec la raison et continue ; si le modèle lui-même est en panne (aucune proposition faite), il abandonne la tâche, comme le runner de la station abandonne l'événement.
 
 ### 7. `merge` (`policy` ou `reasoning` → `decision`)
@@ -143,7 +143,7 @@ Le paquet enregistre l'expérience dans la mémoire (ce qui met à jour les stat
 | `harness/core/recipes.ts` | la signature de tâche (nœud 2), le chargement et la sauvegarde des recettes (nœuds 3 et 12) |
 | `harness/core/manifest.ts` | le manifeste de la tâche (section 5 de `factory-harness.fr.md`) |
 | `harness/core/runner.ts` | une tâche de bout en bout : les pas, les budgets, la trace, le manifeste, la proposition |
-| `harness/scripted/onnx.ts` | le constructeur scripté du sujet `onnx` (nœud 6 sans modèle) |
+| `stand-ins/builders/onnx.ts` | le constructeur scripté du sujet `onnx` (nœud 6 sans modèle) |
 
 **Les phases.** `plan` tant qu'aucun `task.plan` n'a été accepté ; `build` ensuite ; `done` quand `task.done` a passé le validateur ; `failed` quand le budget est épuisé, que le modèle est en panne, ou que le constructeur a renoncé (`task.fail`). La vérification du contrat n'est pas une phase visible : c'est l'évaluation du pas `task.done`.
 

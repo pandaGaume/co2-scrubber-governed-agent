@@ -698,7 +698,7 @@ async function refreshModel() {
 /**
  * The log is pushed, not polled: the slot that publishes it sends
  * `resources/updated` on `spk://events` with the new events in its `_meta`
- * (`harness/browser/pushes.ts`, bundled as `agent/pushes.js`). The page reads
+ * (`ui/pushes.ts`, bundled as `agent/pushes.js`). The page reads
  * the log only to fill a gap, and every `EVENTS_SLOW_MS` while the stream is
  * down.
  */

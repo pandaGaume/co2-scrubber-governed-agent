@@ -51,7 +51,7 @@ The log is pushed. The slot that publishes it (`twin`) sends
 `notifications/resources/updated` on `spk://events` whenever it grows
 (`pushEvents`, `slots/lib/events.ts`); the broker relays a slot's notifications
 to every client of that slot, and a page follows them on the broker's SSE
-endpoint (`/twin/sse`, `harness/browser/pushes.ts`). mcp-core has no
+endpoint (`/twin/sse`, `ui/pushes.ts`). mcp-core has no
 `resources/subscribe` yet, so there is no per-client subscription: every client
 of the slot is told.
 

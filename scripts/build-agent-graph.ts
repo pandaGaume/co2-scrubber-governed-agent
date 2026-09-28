@@ -12,7 +12,7 @@
  *     node dist/scripts/build-agent-graph.js graphs/x.spikypanda   one (factory labels when the name says factory)
  *
  * The loaders open them in the studio (`tier3/browser/loader.ts`,
- * `harness/browser/factory-loader.ts`); the agent's extension executes the
+ * `ui/factory-loader.ts`); the agent's extension executes the
  * very instances the studio created, the factory's replays the steps its
  * slot ran.
  *
@@ -22,7 +22,7 @@
  * of its range, a structure that cannot follow, an evaluation not to be
  * trusted) and revise. Its states are plain gates of the Logic plugin with
  * the ids `loop-<state>`; the factory's page lights them from what the
- * harness decided at each step (`harness/browser/factory-loop.ts`).
+ * harness decided at each step (`ui/factory-loop.ts`).
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import * as path from "node:path";

@@ -1,4 +1,4 @@
-// harness/browser/studio-loop.ts
+// ui/studio-loop.ts
 var MONITOR_TYPE = "Harness.Monitor:trace";
 function findMonitor(viewer) {
   for (const n of viewer.nodes) {
@@ -8,7 +8,7 @@ function findMonitor(viewer) {
   return null;
 }
 
-// harness/browser/room-skin.ts
+// ui/room-skin.ts
 var ROOM_SKIN_NAME = "control_room";
 var TEAL = "#2fe0c8";
 var TEAL_SOFT = "#7ad6cc";
@@ -208,7 +208,7 @@ function roomMonitor(viewer) {
   if (m && typeof m._drawSeries === "function") m._drawSeries = drawRoomSeries;
 }
 
-// harness/browser/loader.ts
+// ui/loader.ts
 async function loadLoopExtension(studio, { pluginUrl, pluginGlobal, pluginId, defaultGraph, pageUrl, prepare }) {
   applyRoomSkin(studio.getViewer());
   if (pluginUrl) await studio.loadPlugin({ url: pluginUrl, globalName: pluginGlobal ?? "SpkPluginHarness", id: pluginId ?? "harness" });

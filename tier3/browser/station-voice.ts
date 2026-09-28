@@ -16,7 +16,7 @@
  */
 import type { Broker } from "../../harness/lib/broker.js";
 import type { CapabilityCall } from "../lib/capabilities.js";
-import type { Words } from "../../harness/browser/words.js";
+import type { Words } from "../../ui/words.js";
 
 export interface SpokenEvent {
     intention: string;

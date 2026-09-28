@@ -25,7 +25,7 @@
  *      `&task=<id>` follows one task instead of the latest
  *      `&view=follow|fit&threshold=120&zoom=1` as on the agent's page (follow by default).
  */
-import { Broker } from "../lib/broker.js";
+import { Broker } from "../harness/lib/broker.js";
 import { createBar, createStageLights, disableStudioPlayer, findMonitor, hideMonitorNode, installLoopStyle, stageNodes, viewControls, type MonitorTile, type Studio, type ViewMode } from "./studio-loop.js";
 import { ROOM_COLORS } from "./room-skin.js";
 import { watchSlot } from "./pushes.js";

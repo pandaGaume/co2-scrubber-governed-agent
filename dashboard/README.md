@@ -8,7 +8,7 @@ Two static pages, served by the broker from this folder (`www.mounts` in
   licenses. Reading only; the door leads to the control room.
 - `factory.html`, the factory's page: the studio on the factory's document,
   opened by the server next to the board; it replays the steps of the
-  factory's tasks (`harness/browser/factory-page.ts`).
+  factory's tasks (`ui/factory-page.ts`).
 - what the station says and the factory's page shows about a task are the
   `phrases` of the factory slot's grammar files (`slots/factory/grammars/`),
   read by each page on its MCP session in its language (`grammar://phrases`);

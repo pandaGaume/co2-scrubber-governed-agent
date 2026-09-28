@@ -38,7 +38,7 @@ import { createAgent, type Agent } from "./agent.js";
 import { outcomeOf, type TraceOutcome } from "./lib/evaluator.js";
 import type { CatalogueEntry } from "./lib/capabilities.js";
 import type { GuardMode } from "./lib/capabilities.js";
-import { ScriptedProvider } from "../harness/providers/scripted.js";
+import { ScriptedProvider } from "../stand-ins/night/scripted.js";
 import { ReasonerProvider } from "../harness/providers/reasoner.js";
 import type { Provider, ProviderExchange, ProviderProfile } from "../harness/lib/provider.js";
 

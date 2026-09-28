@@ -14,7 +14,7 @@
  * keeps no counter.
  */
 import type { JsonValue, PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
-import { decide, ScriptedBuilderBase, valueOf, type ScriptContext } from "./base.js";
+import { decide, ScriptedBuilderBase, valueOf, type ScriptContext } from "../../harness/core/scripted-base.js";
 import { leakFixture, leakSpec, LEAK_TYPE } from "./code-fixture.js";
 
 export interface ScriptedCodeOptions extends ScriptContext {

@@ -21,7 +21,7 @@ import { activityOf } from "../plugins/habitat/activity.js";
 import { instantiateTemplate, loadGraphLibrary, wordsOf } from "../lib/graph-library.js";
 import { resolveSpec } from "../harness/topics/graph/params.js";
 import { co2MassPerM3 } from "../plugins/habitat/signals.js";
-import { LAB_WORLD, twoZoneTelemetry } from "../harness/stand-in/two-zone-world.js";
+import { LAB_WORLD, twoZoneTelemetry } from "../stand-ins/worlds/two-zone-world.js";
 
 const registry = buildRegistry();
 const parameters = readHabitatParameters();

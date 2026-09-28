@@ -17,7 +17,7 @@
  * last capability, the last refusal) and keeps no counter.
  */
 import type { JsonValue, PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
-import { decide, ScriptedBuilderBase, valueOf, type ScriptContext } from "./base.js";
+import { decide, ScriptedBuilderBase, valueOf, type ScriptContext } from "../../harness/core/scripted-base.js";
 import type { Procedure } from "../../lib/procedure/format.js";
 
 export interface ScriptedProcedureOptions extends ScriptContext {

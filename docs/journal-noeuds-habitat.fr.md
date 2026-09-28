@@ -105,7 +105,7 @@ pour décrire le graphe dans des termes qu'une IA comprend.*
 - Dans spikypanda (commit `4c85f08`, `core` 1.0.2, `plugin-physics` 0.1.2, `factory` 0.1.2) : trois bugs corrigés qui empêchaient une atmosphère et sa porte de tourner hors de l'éditeur (un lien vers un port non déclaré bloque l'ordonnanceur ; les liens de configuration devenaient des canaux morts ; le solveur écrasait ce qu'une porte écrivait), la porte avec un débit câblé et un mode `exchange`, trois fichiers de tests. Puis (`core` 1.0.3, `factory` 0.1.3) le validateur de documents qui refusait les réserves variadiques.
 - `graphs/habitat.spikypanda` (20 nœuds, 22 liens), construit depuis `specs/habitat-parameters.json` par `npm run habitat:build` ; `graphs/habitat.manifest.json` ; `graphs/habitat.template.json` et `graphs/habitat.grammars/` : le même graphe dans la bibliothèque, avec ses mots, pour l'usine de graphes.
 - Le défaut de la mise en service est un nombre du fichier : `ventilation.filter.initialLoadingKg = 0.127` ; le ventilateur délivre 2,0 m³/min pour 3 de conception.
-- Le monde de test en TypeScript (`harness/stand-in/two-zone-world.ts`) et le graphe s'accordent à 6 ppm près : le monde peut être retiré quand l'exemple lira la référence.
+- Le monde de test en TypeScript (`stand-ins/worlds/two-zone-world.ts`) et le graphe s'accordent à 6 ppm près : le monde peut être retiré quand l'exemple lira la référence.
 
 ## 3. Ce qu'une usine de code aurait à faire, comparé à ce travail
 

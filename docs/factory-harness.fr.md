@@ -186,7 +186,7 @@ Ce qui est propre à l'usine (nouveau) :
 | `harness/core/manifest.ts` | le manifeste de la section 5 |
 | `harness/core/runner.ts` | une tâche de bout en bout, local ou conteneur, jusqu'à la proposition |
 | `harness/topics/<sujet>/{tools.ts, prompt.md, validator.ts, signatures.json}` | ce qui spécialise |
-| `harness/scripted/<sujet>.ts` | un constructeur scripté par sujet : la tâche de la démo tourne sans modèle |
+| `stand-ins/builders/<sujet>.ts` | un constructeur scripté par sujet : la tâche de la démo tourne sans modèle |
 | `harness/prompts/FACTORY_PROMPT.md` | le prompt commun : constructeur, plan d'abord, un outil par étape, DONE quand le contrat est tenu, jamais de chiffre inventé |
 
 **Fait le 21 septembre (F4).** Les pièces du tableau sont construites ; ce que chaque nœud du graphe fait à la station et à l'usine est décrit dans `harness-stages.fr.md`. Deux précisions par rapport au tableau : le plan et la fin du travail entrent dans la boucle par deux outils en processus, `task.plan` (vérifié par la garde) et `task.done` (jugé par le validateur du sujet dans l'évaluateur) ; et `station.propose` est l'action du runner, pas du modèle, parce que le sha256 du manifeste n'existe qu'une fois la trace close (ce que la station a reçu est gardé tel quel dans `manifest.proposed.json`). Les phases sont `plan`, `build`, `done`, `failed` ; il n'y a pas de phase `validate`.

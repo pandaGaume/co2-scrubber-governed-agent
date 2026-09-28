@@ -20,7 +20,7 @@ Everything in this document is one of three things, and the distinction matters 
 
 - **Code** is hand-written TypeScript: the slots, the guards, the evaluator, the compactor, the contract layer, the forge's checks. It is read by a programmer, changed by a commit, and does what it says.
 - **A graph** is a document of typed nodes and channels that the substrate's runtime executes: nodes from a catalogue, each with its ports and its signature, wired by channels, stepped by a session tick by tick. A twin is a graph: an atmosphere, persons, a scrubber, a sensor, a timeline, wired, run over the telemetry's span with probes on its outputs. A generated plugin adds node types to the catalogue a graph is built from. A graph is not written as code by whoever uses it: it is declared (a spec, a library template, a document), built by the runtime, drawn and edited in the studio, and judged by running it.
-- **A harness** is a graph too, of the same substrate: the decision loop is twelve typed nodes of the catalogue (`Harness.Observation:state`, `Harness.Policy:context`, `Harness.Policy:lookup`, `Harness.Policy:confidence-gate`, `Harness.Reasoning:provider`, `Harness.Policy:merge`, `Harness.Execution:capability`, `Harness.Observation:outcome`, `Harness.Learning:evaluate`, `Harness.Learning:record`, and their kin) wired by twelve channels (`harness/lib/flow.ts`), built with the same `RuntimeGraphBuilder` as a twin, validated, and handed to a driver the runtime steps. The services (the capabilities, the reasoner, the observer, the evaluator, the guard, the memory) are what the harness's nodes are given to work with; the model is the provider one node calls. The studio draws that graph like it draws a twin, and a run lights its nodes one at a time (`harness/browser/studio-loop.ts`, `factory-loop.ts`); the loop a page draws can be handed to the run in place of the one built in code (`driver`), so what is executed is what is drawn.
+- **A harness** is a graph too, of the same substrate: the decision loop is twelve typed nodes of the catalogue (`Harness.Observation:state`, `Harness.Policy:context`, `Harness.Policy:lookup`, `Harness.Policy:confidence-gate`, `Harness.Reasoning:provider`, `Harness.Policy:merge`, `Harness.Execution:capability`, `Harness.Observation:outcome`, `Harness.Learning:evaluate`, `Harness.Learning:record`, and their kin) wired by twelve channels (`harness/lib/flow.ts`), built with the same `RuntimeGraphBuilder` as a twin, validated, and handed to a driver the runtime steps. The services (the capabilities, the reasoner, the observer, the evaluator, the guard, the memory) are what the harness's nodes are given to work with; the model is the provider one node calls. The studio draws that graph like it draws a twin, and a run lights its nodes one at a time (`ui/studio-loop.ts`, `factory-loop.ts`); the loop a page draws can be handed to the run in place of the one built in code (`driver`), so what is executed is what is drawn.
 
 So: the harness is not the code around the loop; it is the loop as a graph. The code around it (the runner, the topics, the slots) gives that graph its services, its early ends and its files. And the twin the harness builds is another graph of the same runtime, carrying physics where the harness carries decisions. One substrate, one runtime, two graphs: the one that decides and the one that is judged. What a factory produces, in the end, is a graph (a twin) or a node type for graphs (a plugin); what runs a factory is a graph as well.
 
@@ -62,7 +62,7 @@ The night's agent (`tier3/`, the agent that runs the habitat's scenarios) shares
 The loop is the substrate's (`@spiky-panda/harness`), stepped by an `AdaptivePolicyRuntime`; what makes it the factory's constructor rather than the habitat's agent is the six services it is given (`harness/core/agent.ts`):
 
 - **the capabilities** (code): the tools the model may call, built from the broker's catalogue and the task's local capabilities (`harness/core/capabilities.ts`);
-- **the reasoner** (the one language model in the loop): a `Provider`, a model behind an API (`harness/providers/`), or a scripted stand-in for the tests (`harness/scripted/`, code); it is called at one node of the twelve, `reason`, and only when the memory has nothing to replay;
+- **the reasoner** (the one language model in the loop): a `Provider`, a model behind an API (`harness/providers/`), or a scripted stand-in for the tests (`stand-ins/builders/`, code); it is called at one node of the twelve, `reason`, and only when the memory has nothing to replay;
 - **the observer** (code): what the loop reads before and after every step; at the factory, the workshop of the task and the reasoning state rebuilt from it (`harness/core/workspace-observer.ts`, `reasoning-state.ts`);
 - **the evaluator** (code): what a step was worth, and, at `task.done`, whether the contract is held (`harness/core/task-evaluator.ts`);
 - **the guard** (code): what the loop refuses before executing (`harness/core/builder-guard.ts`, then the topic's own rules);
@@ -304,7 +304,7 @@ The four topics, read through it:
 
 **`onnx`** (`harness/topics/onnx/`): fits a monitor model from a telemetry and checks its contract; the last topic in the conversation mode, not on the commissioning path.
 
-How a fifth topic is written: a directory with an `index.ts` exporting a `TopicDefinition` and a `prompt.md`; the tools it allows; a local capability that produces its artifact and a validator that recognises it by sha256; a state with the requirements of its stages and the briefs that name them; a scripted builder in `harness/scripted/` so the whole chain is tested without a key; its name in `TOPICS` and `TOPIC_DEFINITIONS`. Nothing in the loop changes.
+How a fifth topic is written: a directory with an `index.ts` exporting a `TopicDefinition` and a `prompt.md`; the tools it allows; a local capability that produces its artifact and a validator that recognises it by sha256; a state with the requirements of its stages and the briefs that name them; a scripted builder in `stand-ins/builders/` so the whole chain is tested without a key; its name in `TOPICS` and `TOPIC_DEFINITIONS`. Nothing in the loop changes.
 
 ---
 
@@ -480,8 +480,8 @@ What is missing, in the order the work is planned: the identifiability chain and
 | `harness/observer/` | the Observer, its guard (`request.ts`), its prompt |
 | `harness/supervisor/` | the supervisor, its prompt |
 | `harness/lib/units.ts` | the units service |
-| `harness/scripted/` | the scripted builders, for the tests |
-| `harness/stand-in/two-zone-world.ts` | the stand-in world the examples measure |
+| `stand-ins/builders/` | the scripted builders, for the tests |
+| `stand-ins/worlds/two-zone-world.ts` | the stand-in world the examples measure |
 | `slots/factory/` | the factory slot: requests, launches, the inventory, the hand-off, the resume |
 | `slots/forge/` | the forge: the sandbox, the guard on sources, the template, the contract, the acceptance |
 | `slots/station/` | the station: the register, the commissionings, the proposals, the questions, Mother's words |

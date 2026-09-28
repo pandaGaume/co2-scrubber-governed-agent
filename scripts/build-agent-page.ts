@@ -5,21 +5,21 @@
  * - `tier3.js`, the agent's extension (`?ext=/agent/tier3.js`), from
  *   `tier3/browser/loader.ts`: loads the plugin, opens the document, imports
  *   the page; `factory.js`, the factory's (`?ext=/agent/factory.js`), from
- *   `harness/browser/factory-loader.ts`, the same way;
- * - `factory-page.js`, the factory's page (`harness/browser/factory-page.ts`):
+ *   `ui/factory-loader.ts`, the same way;
+ * - `factory-page.js`, the factory's page (`ui/factory-page.ts`):
  *   it runs nothing, it reads the factory's tasks and replays their steps;
  * - `factory-voice.js`, the words about a factory task for the Control Board
- *   (`harness/browser/factory-voice.ts`; the sentences themselves are in
+ *   (`ui/factory-voice.ts`; the sentences themselves are in
  *   `dashboard/words/factory/<locale>.json`);
  * - `twin.js` and `twin-page.js`, the twin's extension and page
- *   (`harness/browser/twin-loader.ts`, `twin-page.ts`): the cabin's graph,
+ *   (`ui/twin-loader.ts`, `twin-page.ts`): the cabin's graph,
  *   and the twin's answers replayed on it;
  * - `habitat.js`, the habitat reference's extension (`?ext=/agent/habitat.js`,
- *   `harness/browser/habitat-loader.ts`): the habitat plugin, then the
+ *   `ui/habitat-loader.ts`): the habitat plugin, then the
  *   reference graph, to inspect; `SpkPluginHabitat.js`, that plugin for the
  *   studio (`plugins/habitat/studio.ts`, the studio's core as its core),
  *   with the nodes' cards under `habitat-docs/`;
- * - `pushes.js`, what a slot pushes to a page (`harness/browser/pushes.ts`),
+ * - `pushes.js`, what a slot pushes to a page (`ui/pushes.ts`),
  *   for the control room;
  * - `SpkPluginHarness.js`, the harness studio plugin, copied from
  *   `@spiky-panda/plugin-harness` (its `bundle/SpkPluginHarness.studio.js`);
@@ -45,14 +45,14 @@ const PLUGIN_BUNDLE = "SpkPluginHarness.studio.js";
 export async function buildAgentPage(outDir = fromRoot("dashboard", "agent")): Promise<void> {
     for (const [entry, out] of [
         [fromRoot("tier3", "browser", "loader.ts"), "tier3.js"],
-        [fromRoot("harness", "browser", "factory-loader.ts"), "factory.js"],
-        [fromRoot("harness", "browser", "factory-voice.ts"), "factory-voice.js"],
-        [fromRoot("harness", "browser", "factory-page.ts"), "factory-page.js"],
-        [fromRoot("harness", "browser", "twin-loader.ts"), "twin.js"],
-        [fromRoot("harness", "browser", "twin-page.ts"), "twin-page.js"],
-        [fromRoot("harness", "browser", "habitat-loader.ts"), "habitat.js"],
+        [fromRoot("ui", "factory-loader.ts"), "factory.js"],
+        [fromRoot("ui", "factory-voice.ts"), "factory-voice.js"],
+        [fromRoot("ui", "factory-page.ts"), "factory-page.js"],
+        [fromRoot("ui", "twin-loader.ts"), "twin.js"],
+        [fromRoot("ui", "twin-page.ts"), "twin-page.js"],
+        [fromRoot("ui", "habitat-loader.ts"), "habitat.js"],
         // What a slot pushes, alone, for the control room (plain JS): the same code as the studio pages'.
-        [fromRoot("harness", "browser", "pushes.ts"), "pushes.js"],
+        [fromRoot("ui", "pushes.ts"), "pushes.js"],
     ] as const) {
         await build({
             entryPoints: [entry],

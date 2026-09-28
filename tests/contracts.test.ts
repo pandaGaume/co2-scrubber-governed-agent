@@ -25,7 +25,7 @@ import { existsSync, rmSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { runTask, type BuilderContext } from "../harness/core/runner.js";
-import { ScriptedGraphBuilder } from "../harness/scripted/graph.js";
+import { ScriptedGraphBuilder } from "../stand-ins/builders/graph.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
 
 const PORT = 3128;

@@ -40,7 +40,7 @@ import { findingsFor, supervise, supervisionOfRequest, SUPERVISOR_PROMPT } from 
 import type { LibraryFact } from "../harness/core/contracts.js";
 import type { TwinFactoryRequest } from "../harness/observer/request.js";
 import { factoryContractOf } from "../harness/observer/request.js";
-import { LAB_WORLD, TwoZoneWorldSim, type TelemetryRow } from "../harness/stand-in/two-zone-world.js";
+import { LAB_WORLD, TwoZoneWorldSim, type TelemetryRow } from "../stand-ins/worlds/two-zone-world.js";
 import { runProcedure } from "../tier3/procedure.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
 import { renderTrace, renderTraceFile, type RenderableLine } from "./render-trace.js";
@@ -48,7 +48,7 @@ import { GRAPH_PROMPT } from "../harness/topics/graph/index.js";
 import { evaluateCandidate, REFERENCE_GRAPH_ID, referenceGraph, type Candidate } from "../harness/topics/graph/evaluate.js";
 import { deliveredFlowM3PerMinute, readHabitatParameters } from "../lib/habitat.js";
 import { compareGraphs, compareParameters, referenceOfSpec } from "../harness/topics/graph/reference.js";
-import { labCandidate } from "../harness/scripted/graph.js";
+import { labCandidate } from "../stand-ins/builders/graph.js";
 import type { Spec } from "../harness/topics/graph/params.js";
 import type { TaskFile } from "../harness/core/task.js";
 import type { MotherLine } from "../slots/station/provider.js";

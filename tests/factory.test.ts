@@ -23,7 +23,7 @@ import { startAllOrFail } from "./lib/start.js";
 import { Broker } from "../harness/lib/broker.js";
 import type { Provider, ProviderExchange } from "../harness/lib/provider.js";
 import { runTask, type BuilderContext } from "../harness/core/runner.js";
-import { ScriptedBuilder } from "../harness/scripted/onnx.js";
+import { ScriptedBuilder } from "../stand-ins/builders/onnx.js";
 import { pathProblem } from "../harness/core/builder-guard.js";
 import { taskSignature } from "../harness/core/recipes.js";
 import { NEVER_REPLAYED, proposalKey, restrictReplays } from "../harness/core/replay.js";
@@ -33,7 +33,7 @@ import { briefOf as onnxBrief, requirementsOf as onnxRequirements, stateOfTopic 
 import { newProgress } from "../harness/core/workspace-observer.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
 import { sha256Of } from "../slots/tools/lib/workshop.js";
-import { endSentence, loadWords, stageSentence, stepSentence } from "../harness/browser/factory-voice.js";
+import { endSentence, loadWords, stageSentence, stepSentence } from "../ui/factory-voice.js";
 
 const PORT = 3120;
 

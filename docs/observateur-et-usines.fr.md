@@ -321,7 +321,7 @@ Ses six étapes, dans l'ordre où un plugin traverse la forge :
    revendiqué soit celui que la forge a signé (même chemin, même sha256), et
    le runner propose le manifeste à la station avec lui (kind `plugin`).
 
-Le constructeur scripté (`harness/scripted/code.ts`, la fixture
+Le constructeur scripté (`stand-ins/builders/code.ts`, la fixture
 `code-fixture.ts`) joue la chaîne sans clé : dix pas, la tâche finit
 `proposed`, la station tient deux propositions (celle de la forge, celle de
 la tâche avec son manifeste), le catalogue du jumeau ne voit rien. Avec un

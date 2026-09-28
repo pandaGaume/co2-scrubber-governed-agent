@@ -109,7 +109,7 @@ Rien de nouveau sur les pages : les pas d'audit et du sujet `graph` sont des pas
 
 ## 5. Ce qui est écrit, ce qui est vérifié
 
-Dans le substrat : `auditFit` dans `@spiky-panda/factory` (une source pour l'audit et l'ajustement), repack (`vendor/`, version 0.1.2). Dans la démo : `model.audit` (slot `model`, grammaires en/fr), `progress.audits` et la règle de la garde, le scripté `onnx` révisé, `harness/topics/graph/` (outils, validateur) et `harness/scripted/graph.ts`, la phase par sujet dans le runner et l'observateur, le fournisseur choisi par le profil, `reasoner.decide` avec `role`, les grammaires du slot `reasoner` (prompt et textes de l'usine, base et familles), `wording` en option des adaptateurs, les phrases nouvelles du slot `factory` en anglais et en français.
+Dans le substrat : `auditFit` dans `@spiky-panda/factory` (une source pour l'audit et l'ajustement), repack (`vendor/`, version 0.1.2). Dans la démo : `model.audit` (slot `model`, grammaires en/fr), `progress.audits` et la règle de la garde, le scripté `onnx` révisé, `harness/topics/graph/` (outils, validateur) et `stand-ins/builders/graph.ts`, la phase par sujet dans le runner et l'observateur, le fournisseur choisi par le profil, `reasoner.decide` avec `role`, les grammaires du slot `reasoner` (prompt et textes de l'usine, base et familles), `wording` en option des adaptateurs, les phrases nouvelles du slot `factory` en anglais et en français.
 
 Tests, à travers le broker :
 

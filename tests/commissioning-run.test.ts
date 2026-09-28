@@ -14,7 +14,7 @@ import { startAllOrFail } from "./lib/start.js";
 import { Broker } from "../harness/lib/broker.js";
 import type { LocalBroker } from "../slots/lib/local-broker.js";
 import type { PublishedSlot } from "../slots/lib/slot-server.js";
-import { LEAK_CONTRACT } from "../harness/scripted/code-fixture.js";
+import { LEAK_CONTRACT } from "../stand-ins/builders/code-fixture.js";
 import type { Run } from "../slots/scenario/commissioning.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
 

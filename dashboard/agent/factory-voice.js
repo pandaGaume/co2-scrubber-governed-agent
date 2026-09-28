@@ -693,7 +693,7 @@ var McpGrammarBehavior = class _McpGrammarBehavior extends McpBehaviorBase {
   }
 };
 
-// harness/browser/words.ts
+// ui/words.ts
 async function loadWords(session) {
   const r = await session.request("resources/read", { uri: GRAMMAR_PHRASES_URI });
   const text = r?.contents?.[0]?.text;
@@ -703,7 +703,7 @@ async function loadWords(session) {
 }
 var NO_WORDS = McpGrammar.fromJSON({ phrases: {} });
 
-// harness/browser/factory-voice.ts
+// ui/factory-voice.ts
 var num = (v, digits = 4) => typeof v === "number" && Number.isFinite(v) ? Number.isInteger(v) ? String(v) : v.toFixed(digits).replace(/\.?0+$/, "") : "?";
 var count = (v) => {
   if (Array.isArray(v)) return String(v.length);

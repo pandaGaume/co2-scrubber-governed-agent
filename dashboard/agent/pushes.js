@@ -1,4 +1,4 @@
-// harness/browser/pushes.ts
+// ui/pushes.ts
 function watchSlot(base, slot, onUpdate, onState = () => void 0) {
   const source = new EventSource(`${base.replace(/\/+$/u, "")}/${encodeURIComponent(slot)}/sse`);
   let open = false;

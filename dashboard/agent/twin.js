@@ -1,4 +1,4 @@
-// harness/browser/studio-loop.ts
+// ui/studio-loop.ts
 var MONITOR_TYPE = "Harness.Monitor:trace";
 function findMonitor(viewer) {
   for (const n of viewer.nodes) {
@@ -8,7 +8,7 @@ function findMonitor(viewer) {
   return null;
 }
 
-// harness/browser/room-skin.ts
+// ui/room-skin.ts
 var ROOM_SKIN_NAME = "control_room";
 var TEAL = "#2fe0c8";
 var TEAL_SOFT = "#7ad6cc";
@@ -209,7 +209,7 @@ function roomMonitor(viewer) {
 }
 var ROOM_COLORS = { teal: TEAL, tealSoft: TEAL_SOFT, amber: AMBER, red: RED };
 
-// harness/browser/loader.ts
+// ui/loader.ts
 async function loadLoopExtension(studio, { pluginUrl, pluginGlobal, pluginId, defaultGraph, pageUrl, prepare }) {
   applyRoomSkin(studio.getViewer());
   if (pluginUrl) await studio.loadPlugin({ url: pluginUrl, globalName: pluginGlobal ?? "SpkPluginHarness", id: pluginId ?? "harness" });
@@ -227,7 +227,7 @@ async function loadLoopExtension(studio, { pluginUrl, pluginGlobal, pluginId, de
   await page.default(studio);
 }
 
-// harness/browser/twin-plots.ts
+// ui/twin-plots.ts
 var NOTES_LABEL = "Twin: the question";
 var NOTES_AT = { x: -520, y: 60 };
 var PLOTS = [
@@ -260,7 +260,7 @@ function withTwinTiles(json) {
   return JSON.stringify(doc);
 }
 
-// harness/browser/twin-loader.ts
+// ui/twin-loader.ts
 function load(studio) {
   return loadLoopExtension(studio, {
     defaultGraph: "/graphs/cabin.spikypanda",

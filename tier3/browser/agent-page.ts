@@ -10,7 +10,7 @@
  *
  * Same pieces as the Node runner (`lib/broker`, `lib/capabilities`,
  * `lib/observer`, `lib/evaluator`, `providers/reasoner`, `agent`), and the
- * studio-page pieces every loop page shares (`harness/browser/studio-loop.ts`:
+ * studio-page pieces every loop page shares (`ui/studio-loop.ts`:
  * the stage highlight, the monitor tile, the toolbar controls), bundled
  * for the page by `scripts/build-agent-page.ts`, with `@spiky-panda/core`
  * and `@spiky-panda/harness` resolved to the studio's own copies
@@ -20,7 +20,7 @@
  * Every sentence the page says or shows is a phrase of the station slot's
  * wording (`slots/station/grammars/default/<locale>.json`), read on the
  * page's session as `grammar://phrases` in the page's language; nothing is
- * written here (`station-voice.ts`, `harness/browser/words.ts`).
+ * written here (`station-voice.ts`, `ui/words.ts`).
  *
  * URL: `?mcp=0&ext=/agent/tier3.js` (the loader, `loader.ts`, brings the plugin and the document, then this page)
  *      `&scenario=/specs/scenario-night-9.json` (default) `&broker=<origin>` (default: the page's)
@@ -42,14 +42,14 @@ import { StationVoice, eventSentence, outcomeSentence, proposalSentence, shortSe
 import type { GuardMode } from "../lib/capabilities.js";
 import { outcomeOf } from "../lib/evaluator.js";
 import { ReasonerProvider } from "../../harness/providers/reasoner.js";
-import { ScriptedProvider } from "../../harness/providers/scripted.js";
+import { ScriptedProvider } from "../../stand-ins/night/scripted.js";
 import type { Provider } from "../../harness/lib/provider.js";
 import { createAgent, type Agent } from "../agent.js";
 import type { Scenario, ScenarioEvent } from "../../lib/factory.js";
-import { createBar, createStageLights, disableStudioPlayer, findMonitor, hideMonitorNode, installLoopStyle, viewControls, type MonitorTile, type Studio, type StudioNode, type StudioViewer, type ViewMode } from "../../harness/browser/studio-loop.js";
-import { ROOM_COLORS } from "../../harness/browser/room-skin.js";
-import { loadWords, NO_WORDS, type Words } from "../../harness/browser/words.js";
-import { eventsAfter, watchSlot } from "../../harness/browser/pushes.js";
+import { createBar, createStageLights, disableStudioPlayer, findMonitor, hideMonitorNode, installLoopStyle, viewControls, type MonitorTile, type Studio, type StudioNode, type StudioViewer, type ViewMode } from "../../ui/studio-loop.js";
+import { ROOM_COLORS } from "../../ui/room-skin.js";
+import { loadWords, NO_WORDS, type Words } from "../../ui/words.js";
+import { eventsAfter, watchSlot } from "../../ui/pushes.js";
 
 /** `claude-haiku-4-5-20251001` -> `claude-haiku-4-5`: the date suffix says nothing on a badge. */
 const shortModel = (model: string) => model.replace(/^.*\//, "").replace(/-\d{8}$/, "").slice(0, 22);
@@ -574,7 +574,7 @@ export default async function activate(studio: Studio): Promise<void> {
     };
     /**
      * The log is pushed: the slot that publishes it (`twin`) sends
-     * `resources/updated` with the new events (`harness/browser/pushes.ts`),
+     * `resources/updated` with the new events (`ui/pushes.ts`),
      * and the page reads it only to fill a gap. While the stream is down it
      * looks every `slow` ms; when it is back it looks once, for what it missed.
      */

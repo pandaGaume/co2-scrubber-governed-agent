@@ -26,7 +26,7 @@
  *      `&seconds=6` how long one trajectory takes to replay
  *      `&slow=15000` ms between two looks at the runs while the push stream is down
  */
-import { Broker } from "../lib/broker.js";
+import { Broker } from "../harness/lib/broker.js";
 import { createBar, disableStudioPlayer, installLoopStyle, type Studio, type StudioNode } from "./studio-loop.js";
 import { ROOM_COLORS } from "./room-skin.js";
 import { watchSlot } from "./pushes.js";

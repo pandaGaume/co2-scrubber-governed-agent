@@ -19,7 +19,7 @@
  *               both use, the connections the candidate shares, lacks, or
  *               adds. Two references are compared: the station's twin, and
  *               the graph written by hand for the commissioning
- *               (`labCandidate`, `harness/scripted/graph.ts`).
+ *               (`labCandidate`, `stand-ins/builders/graph.ts`).
  */
 import { readFileSync } from "node:fs";
 import { resolveSpec, type Row, type Spec, type Variables } from "./params.js";

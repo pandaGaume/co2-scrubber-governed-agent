@@ -28,7 +28,7 @@ import type { JsonValue } from "@spiky-panda/harness";
 import { fromRoot } from "../../lib/paths.js";
 import { Broker } from "../../harness/lib/broker.js";
 import { runProcedure } from "../../tier3/procedure.js";
-import { LAB_WORLD, TwoZoneWorldSim, type TelemetryRow } from "../../harness/stand-in/two-zone-world.js";
+import { LAB_WORLD, TwoZoneWorldSim, type TelemetryRow } from "../../stand-ins/worlds/two-zone-world.js";
 import { factoryContractOf, type TwinFactoryRequest } from "../../harness/observer/request.js";
 import { inventoryOf } from "../factory/inventory.js";
 import type { Device } from "../station/registry.js";

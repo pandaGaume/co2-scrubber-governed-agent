@@ -27,11 +27,11 @@
  * substrate's life-support nodes (rates folded on a volume): kept for the
  * tests of the parametric spec and for comparison.
  */
-import { justificationsFor } from "../core/justify.js";
-import { candidateConstants } from "../topics/graph/index.js";
+import { justificationsFor } from "../../harness/core/justify.js";
+import { candidateConstants } from "../../harness/topics/graph/index.js";
 import type { JsonValue, PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
-import { decide, ScriptedBuilderBase, type ScriptContext } from "./base.js";
-import { REFERENCE_GRAPH_ID } from "../topics/graph/evaluate.js";
+import { decide, ScriptedBuilderBase, type ScriptContext } from "../../harness/core/scripted-base.js";
+import { REFERENCE_GRAPH_ID } from "../../harness/topics/graph/evaluate.js";
 
 export interface ScriptedGraphOptions extends ScriptContext {
 }

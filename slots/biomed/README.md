@@ -125,7 +125,7 @@ French.
 
 `dashboard/prototypes/vitals-panel.html` is the style prototype. It carries a
 copy of the dictionary so it runs on its own; wired to the broker,
-`harness/browser/words.ts` reads `grammar://phrases` off the page's session
+`ui/words.ts` reads `grammar://phrases` off the page's session
 and that copy goes away.
 
 ## Status

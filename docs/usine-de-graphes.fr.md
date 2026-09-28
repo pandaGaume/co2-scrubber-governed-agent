@@ -205,7 +205,7 @@ carte tient sans modèle.
 | constantes connues depuis la fiche technique et la topologie de la station | construit (bibliothèque) ; règle écrite, pas encore un contrôle |
 | boucle sur l'écart : candidat, verdict, révision de structure | construit ; essais réels sur Claude Haiku 4.5 |
 | incertitude des paramètres, identifiabilité, analyse des résidus, parcimonie, validation croisée, domaine de validité | **non construit** (sections 4 à 6) |
-| monde à deux volumes dans le substrat (le CO2 en masse) | non construit ; un monde de remplacement en code produit la télémétrie (`harness/stand-in/`) |
+| monde à deux volumes dans le substrat (le CO2 en masse) | non construit ; un monde de remplacement en code produit la télémétrie (`stand-ins/worlds/`) |
 
 ## 9. Questions pour le Dr Grigoriadis
 

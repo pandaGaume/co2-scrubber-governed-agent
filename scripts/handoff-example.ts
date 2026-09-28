@@ -24,7 +24,7 @@ import { startAll } from "../slots/run-all.js";
 import { Broker } from "../harness/lib/broker.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
 import { renderTraceFile } from "./render-trace.js";
-import { LAB_WORLD, twoZoneTelemetry } from "../harness/stand-in/two-zone-world.js";
+import { LAB_WORLD, twoZoneTelemetry } from "../stand-ins/worlds/two-zone-world.js";
 import { GRAPH_PROMPT } from "../harness/topics/graph/index.js";
 import { CODE_PROMPT } from "../harness/topics/code/index.js";
 

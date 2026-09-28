@@ -26,7 +26,7 @@ import { objectSchema as obj, publishSlot, type PublishedSlot, type SlotTool } f
 import { checkTaskId, listTaskFiles, safeRelative, sha256Of, taskDir, WORKSHOP_ROOT } from "../tools/lib/workshop.js";
 import { DEFAULT_BUDGET, TOPICS, topicFor, type RequiredOutput, type TaskFile, type TaskState, type Topic } from "../../harness/core/task.js";
 import { runTask, TOPIC_DEFINITIONS, type RunTaskOptions } from "../../harness/core/runner.js";
-import { SCRIPTED_BUILDERS } from "../../harness/scripted/index.js";
+import { SCRIPTED_BUILDERS } from "../../stand-ins/builders/index.js";
 import { codeTaskRequest, handoffDepthOf, MAX_HANDOFF_DEPTH, missingForCode, openCodeQuestion, replayQuestion, replayRequest, type GeneratedType, type MissingForCode } from "./handoff.js";
 import type { Plan } from "../../harness/core/workspace-observer.js";
 import { ReasonerProvider } from "../../harness/providers/reasoner.js";

@@ -13,7 +13,7 @@ avec ceux qui sont générés ? »*
 Il y a deux graphes écrits à la main dans le dépôt, et aucun n'avait été
 fait dans les conditions de l'usine.
 
-| | le jumeau du slot (`graphs/cabin.spikypanda`) | le graphe de la mise en service (`labCandidate`, `harness/scripted/graph.ts`) | ce que l'usine devait faire |
+| | le jumeau du slot (`graphs/cabin.spikypanda`) | le graphe de la mise en service (`labCandidate`, `stand-ins/builders/graph.ts`) | ce que l'usine devait faire |
 |---|---|---|---|
 | d'où vient la physique | traduite des équations déjà écrites de l'exemple co2-mpc de spikypanda | écrite par moi, qui connais le monde de test | à trouver dans la bibliothèque |
 | comment j'ai appris le câblage | en lisant le code source des nœuds et en corrigeant à la compilation, sans limite de tours | idem | 30 tours, le catalogue et ses fiches, sans le code |

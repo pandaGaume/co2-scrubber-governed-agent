@@ -6,7 +6,7 @@ ce qui a été fait priorité par priorité, ce que ça a mesuré, et ce qui
 reste. Le code : `harness/core/reasoning-state.ts`, `compact.ts`,
 `runner.ts`, `workspace-observer.ts`, `topic.ts`, les adaptateurs
 `harness/providers/*`, le sujet `harness/topics/graph/`, la page
-`harness/browser/factory-loop.ts`.*
+`ui/factory-loop.ts`.*
 
 ---
 

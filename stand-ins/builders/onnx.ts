@@ -26,9 +26,9 @@
  *   after a failed call     task.fail with the tool's own reason (the affine fit
  *                           on one speed only, a file that is not there).
  */
-import { justificationsFor, numbersOf } from "../core/justify.js";
+import { justificationsFor, numbersOf } from "../../harness/core/justify.js";
 import type { JsonValue, PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
-import { decide, ScriptedBuilderBase, valueOf, type ScriptContext } from "./base.js";
+import { decide, ScriptedBuilderBase, valueOf, type ScriptContext } from "../../harness/core/scripted-base.js";
 
 export interface ScriptedBuilderOptions extends ScriptContext {
 }
