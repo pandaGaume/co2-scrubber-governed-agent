@@ -11,6 +11,12 @@
  *   relation  --follows-->    law        the law it applies
  *   constant  --uses-->       law        a constant the law holds
  *   unit      --measures-->   quantity   a unit of a quantity, with its factor
+ *   name      --names-->      quantity   a name a person or a model writes for it
+ *
+ * Every quantity and every unit of the core's unit system (UCUM codes,
+ * factors to the base unit, the affine scales marked) is a node too, added
+ * from the core when the graph is built: the core stays the one source of
+ * the units, the graph is how they are walked.
  *
  * Navigating is following typed links: which relations read a quantity,
  * which give it, which need it, which law a relation follows and the
@@ -19,7 +25,7 @@
  * formulas are data, evaluated by `lib/expression.ts`.
  */
 import { readFileSync } from "node:fs";
-import { Graph, GraphNode, GraphOLink, ONTOLOGY, type INode, type IOlink } from "@spiky-panda/core";
+import { Graph, GraphNode, GraphOLink, ONTOLOGY, quantityNames, quantityUnits, resolveQuantityKind, type INode, type IOlink } from "@spiky-panda/core";
 import { fromRoot } from "../../lib/paths.js";
 import { evaluateExpression } from "../../lib/expression.js";
 
@@ -37,6 +43,8 @@ export const T = {
     follows: "physics.follows",
     uses: "physics.uses",
     measures: "physics.measures",
+    name: "physics.name",
+    names: "physics.names",
 } as const;
 
 type Bag = Record<string, unknown>;
@@ -59,25 +67,49 @@ export class KnowledgeGraph {
         const nodes: KnowledgeNode[] = file.nodes.map((n) => {
             if (!ONTOLOGY.has(n.type)) throw new Error(`${KNOWLEDGE_FILE}: node "${n.id}" has the type "${n.type}", which the ontology does not declare`);
             if (this.byId.has(n.id)) throw new Error(`${KNOWLEDGE_FILE}: two nodes are "${n.id}"`);
-            const node = new GraphNode<Bag>();
-            node.id = n.id;
-            node.type = n.type;
-            node.bag = { ...(n.bag ?? {}) };
-            this.byId.set(n.id, node);
-            return node;
+            return this.addNode(n.id, n.type, n.bag ?? {});
         });
-        const links: KnowledgeLink[] = file.links.map((l) => {
+        const links: KnowledgeLink[] = [];
+        // The core's unit system, as nodes: each quantity (its semantic kind, its base unit) and each of its units, measuring it with its factor.
+        for (const q of quantityNames()) {
+            const units = Object.entries(quantityUnits(q) ?? {});
+            const base = units.find(([, u]) => u.value === 1 && !u.converter);
+            const declared = this.byId.get(q);
+            const quantity = declared ?? this.addNode(q, T.quantity, {});
+            if (!declared) nodes.push(quantity);
+            // What the file declares of a quantity stays; the unit system adds its kind and its base unit.
+            quantity.bag = { kind: resolveQuantityKind(q) ?? q, ...(base ? { unit: base[1].ucum ?? base[0] } : {}), system: "ucum", ...(quantity.bag ?? {}) };
+            for (const [key, u] of units) {
+                const unit = this.addNode(`unit:${q}:${key}`, T.unit, { key, ...(u.ucum ? { ucum: u.ucum } : {}), symbol: u.symbol, name: u.name, toBase: u.value, ...(u.converter ? { affine: true } : {}) });
+                nodes.push(unit);
+                links.push(this.addLink(unit, quantity, T.measures, { factor: u.value, ...(u.converter ? { affine: true } : {}) }));
+            }
+        }
+        for (const l of file.links) {
             const a = this.byId.get(l.from);
             const b = this.byId.get(l.to);
-            if (!a || !b) throw new Error(`${KNOWLEDGE_FILE}: a ${l.type} link names "${!a ? l.from : l.to}", which is no node`);
+            if (!a || !b) throw new Error(`${KNOWLEDGE_FILE}: a ${l.type} link names "${!a ? l.from : l.to}", which is no node (nor a quantity of the unit system)`);
             if (!ONTOLOGY.isA(l.type, "physics.link")) throw new Error(`${KNOWLEDGE_FILE}: "${l.type}" is not a link type of the ontology`);
-            // The core wires a link into both its nodes as it is made (oini, ofin).
-            const link = new GraphOLink<Bag>(a, b);
-            link.type = l.type;
-            link.bag = { ...(l.bag ?? {}) };
-            return link;
-        });
+            links.push(this.addLink(a, b, l.type, l.bag ?? {}));
+        }
         this.graph = new Graph<KnowledgeNode, KnowledgeLink>(nodes, links);
+    }
+
+    private addNode(id: string, type: string, bag: Bag): KnowledgeNode {
+        const node = new GraphNode<Bag>();
+        node.id = id;
+        node.type = type;
+        node.bag = { ...bag };
+        this.byId.set(id, node);
+        return node;
+    }
+
+    /** A typed link, wired into both its nodes as the core makes it (oini, ofin). */
+    private addLink(a: KnowledgeNode, b: KnowledgeNode, type: string, bag: Bag): KnowledgeLink {
+        const link = new GraphOLink<Bag>(a, b);
+        link.type = type;
+        link.bag = { ...bag };
+        return link;
     }
 
     node(id: string): KnowledgeNode | undefined {
@@ -103,6 +135,13 @@ export class KnowledgeGraph {
     quantity(name: string): KnowledgeNode | undefined {
         const wanted = name.toLowerCase();
         return this.nodesOf(T.quantity).find((n) => String(n.id).toLowerCase() === wanted);
+    }
+
+    /** The quantity a name written by a person or a model names (its letters only, case aside), following the names links; undefined when none does. */
+    named(text: string): KnowledgeNode | undefined {
+        const letters = text.toLowerCase().replace(/[^a-z]/g, "");
+        const name = this.nodesOf(T.name).find((n) => String(n.bag?.name) === letters);
+        return name ? (this.out(name, T.names)[0]?.ofin as KnowledgeNode | undefined) : undefined;
     }
 
     /** The relation's quantities: what it reads, what it gives, what it needs by name. */
@@ -179,7 +218,8 @@ export class KnowledgeGraph {
         return Object.fromEntries(
             this.in(quantity, T.measures).map((l) => {
                 const f = l.bag?.factor;
-                return [String((l.oini as KnowledgeNode).bag?.symbol), typeof f === "string" ? evaluateExpression(f, {}) : Number(f)];
+                const bag = (l.oini as KnowledgeNode).bag ?? {};
+                return [String(bag.ucum ?? bag.key ?? bag.symbol), typeof f === "string" ? evaluateExpression(f, {}) : Number(f)];
             }),
         );
     }

@@ -30,6 +30,7 @@
  * A unit this table does not know is said unknown, never guessed.
  */
 import { Quantity, quantityNames, quantityUnits, resolveQuantityKind, type Unit } from "@spiky-panda/core";
+import { physicsKnowledge } from "./knowledge.js";
 
 export interface UnitRef {
     /** The quantity, when known: the core's name or an industrial alias; without it the unit alone decides, and may be ambiguous. */
@@ -54,37 +55,15 @@ export interface ResolvedUnit {
 
 export type Resolution = { ok: true; unit: ResolvedUnit } | { ok: false; code: "UNKNOWN_UNIT" | "UNKNOWN_QUANTITY" | "AMBIGUOUS_UNIT"; reason: string; candidates?: ResolvedUnit[] };
 
-/** The industrial names the demo speaks, over the core's quantity names (case and punctuation do not matter). */
-const QUANTITY_ALIASES: Record<string, string> = {
-    concentration: "Dimensionless",
-    molefraction: "Dimensionless",
-    ratio: "Dimensionless",
-    efficiency: "Dimensionless",
-    fraction: "Dimensionless",
-    volumeflowrate: "VolumetricFlow",
-    volumetricflow: "VolumetricFlow",
-    volumeflow: "VolumetricFlow",
-    airflow: "VolumetricFlow",
-    flow: "VolumetricFlow",
-    massflowrate: "MassFlow",
-    massflow: "MassFlow",
-    duration: "Timespan",
-    time: "Timespan",
-    timeconstant: "Timespan",
-    electriccurrent: "Current",
-    planeangle: "Angle",
-    velocity: "Speed",
-    electricpotential: "Voltage",
-};
-
 const letters = (s: string): string => s.toLowerCase().replace(/[^a-z]/g, "");
 
-/** The core's quantity name for a name a caller writes, or null. */
+/** The core's quantity name for a name a caller writes, or null: the core's own names, then the names the knowledge graph gives a quantity (the industrial names the demo speaks: its names links). */
 export function canonicalQuantity(name: string): string | null {
     const names = quantityNames();
     if (names.includes(name)) return name;
     const l = letters(name);
-    if (QUANTITY_ALIASES[l]) return QUANTITY_ALIASES[l];
+    const named = physicsKnowledge().named(name);
+    if (named) return String(named.id);
     return names.find((n) => letters(n) === l) ?? names.find((n) => letters(resolveQuantityKind(n) ?? "") === l) ?? null;
 }
 

@@ -8,7 +8,8 @@ import assert from "node:assert/strict";
 import { relate as relateWith, relationBetween } from "../slots/physics/relations.js";
 import { relationDefaults } from "../slots/physics/provider.js";
 import { physicsKnowledge } from "../slots/physics/knowledge.js";
-import { ONTOLOGY } from "@spiky-panda/core";
+import { ONTOLOGY, quantityNames, quantityUnits } from "@spiky-panda/core";
+import { canonicalQuantity } from "../slots/physics/units.js";
 
 // The defaults are the library's facts, as the physics slot reads them.
 const DEFAULTS = relationDefaults();
@@ -61,5 +62,36 @@ describe("the relations between quantities", () => {
         assert.deepEqual(k.pathBetween("VolumetricFlow", "ConcentrationRate")?.map((p) => `${String(p.relation.id)}:${p.direction}`), ["gas-volume-flow-to-mass-flow:forward", "mass-flow-to-fraction-rate:forward"]);
         assert.deepEqual(k.pathBetween("MassConcentration", "Dimensionless")?.map((p) => p.direction), ["inverse"]);
         assert.equal(k.pathBetween("MassFlow", "Pressure"), null);
+    });
+
+    it("every unit of the core's unit system is a node of the graph, measuring its quantity with the core's factor; a name a person writes names a quantity by its link (2026-09-28)", () => {
+        const k = physicsKnowledge();
+        let units = 0;
+        for (const q of quantityNames()) {
+            const quantity = k.quantity(q);
+            assert.ok(quantity, `the quantity ${q} is a node`);
+            for (const [key, u] of Object.entries(quantityUnits(q) ?? {})) {
+                units++;
+                const node = k.node(`unit:${q}:${key}`);
+                assert.ok(node && node.type === "physics.unit", `the unit ${key} of ${q} is a node`);
+                const measures = k.out(node!, "physics.measures");
+                assert.equal(measures.length, 1);
+                assert.equal(measures[0].ofin, quantity, `${key} measures ${q}`);
+                assert.equal(measures[0].bag?.factor, u.value, `${key}: the core's factor`);
+                if (u.ucum) assert.equal(node!.bag?.ucum, u.ucum);
+            }
+        }
+        assert.ok(units > 100, String(units));
+        assert.equal(k.nodesOf("physics.unit").length, units + 4, "the core's units, and the four of the derived reading");
+        // From a unit to its quantity, and on to the relations that read it: the walk a model does with units_knowledge.
+        const litres = k.node("unit:VolumetricFlow:Lpmin");
+        assert.ok(litres, "L/min is a node");
+        const flow = k.out(litres!, "physics.measures")[0].ofin as typeof litres;
+        assert.deepEqual(k.out(flow!, "physics.from").map((l) => l.ofin?.id), ["gas-volume-flow-to-mass-flow"]);
+        // The names: "airflow" names the volumetric flow, by its link, and canonicalQuantity reads them there.
+        assert.equal(k.named("Airflow")?.id, "VolumetricFlow");
+        assert.equal(k.named("mass flow rate")?.id, "MassFlow");
+        assert.equal(canonicalQuantity("efficiency"), "Dimensionless");
+        assert.equal(canonicalQuantity("no such thing"), null);
     });
 });
