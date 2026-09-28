@@ -1,0 +1,70 @@
+{
+    "note": "What the graph factory says to its model and in its refusals (2026-09-28, zero domain in the harness): the code fills the holes {name} and says nothing of its own.",
+    "intention": "Build the twin graph that produces {outputs} and reproduces the task's telemetry within its residual threshold, from the node catalogue; evaluate each candidate (graph.evaluate) and revise it by its gap until it holds.",
+    "capability": "Build a candidate twin from a parametric graph, or instantiate a graph of the library on the twin (graph: its id), estimate its unknown variables within their bounds (fit, with the estimator chosen), run every trial in the twin's sandbox over the telemetry, and measure the residual against the columns named. The best is kept as candidate-<n>.spikypanda in the workshop. Answers whether the task's residual threshold is held, the residual per column and where the gap is worst, the prediction against the measurement every five minutes, and the best trials.",
+    "noTelemetry": "the task holds no telemetry table with a \"minute\" column: a twin cannot be judged against nothing",
+    "threshold": {
+        "some": "an RMSE of {rmse} {unit} per compared column{absolute}",
+        "absolute": " and {absolute} {unit} at the worst minute",
+        "none": "no threshold (the task must give objective.constraints.{constraint})",
+        "missing": "the task gives no residual threshold (objective.constraints.{constraint}, an RMSE per compared column; its absolute bound limits the worst minute when given): nobody said how close is close enough"
+    },
+    "held": " Known, from the documentation, held in variables under these names and never fitted: {known}. Watch their units against the nodes' (a flow in m3/min enters a node as flow / V).",
+    "heldOne": "{symbol} = {value}{unit}{band} ({name}{source})",
+    "heldBand": " (band {min} to {max}: may be fitted within it)",
+    "how": {
+        "sourcesConsistent": "SOURCE_CONFLICT: the task's sources disagree on a fact (the state's invariants.contracts names it, and who must revise); the reference graph would take the device's value and hide the error: end with task.fail naming the conflict and REQUIRE_RESOLUTION, so the request is revised upstream",
+        "telemetryAvailable": "the task carries no telemetry table: nothing to judge a twin against (task.fail with that reason)",
+        "knownConstantsResolved": "no known constant in the task and nothing read from the library: read the device's datasheet (library.read) so the documented constants are held",
+        "referenceGraphsKnown": "the shelf is not known: library.graphs lists the reference graphs",
+        "missing": "the plan needs {requirement}: {how}"
+    },
+    "openQuestions": {
+        "invalid": "the evaluation of candidate {n} is invalid ({reasons}): fix what the diagnostics name before any residual is read",
+        "heldFitted": "candidate {n} held {names} at a value, and the graph says only the installation knows {them}: fit {them} within the graph's bounds before doubting the structure",
+        "atBounds": "candidate {n} ends at the edge of the range for {names}: the range decided, not the physics; widen it only if the physics allows the value beyond, else the structure is in question",
+        "structural": "no admissible parameter set of this structure follows {column} (worst {worst} {unit} at minute {minute}): a term is missing or wrong; revise the topology, do not widen the bounds again",
+        "identifiability": "the identifiability of {names} is not assessed (no profile likelihood or sensitivity yet; evaluation.identifiability gives the range each takes among the trials under the threshold): say so when handing over",
+        "calibrated": "calibration passed on this telemetry; validation on another profile, hatch state or occupancy has not been performed: hand over as calibrated, not validated"
+    },
+    "brief": {
+        "planNotYet": "Plan, not yet: the evidence the plan needs is incomplete. {unmet}. The state (the observation) holds what the harness already read: the task's invariants, the telemetry's shape, the shelf; read nothing it already gives. The twin must produce {outputs} within {threshold}.{held}",
+        "plan": "Plan. The state holds the task's invariants (objective, outputs, threshold, the known constants with their status), the telemetry's shape and the library's shelf (the reference graph \"{reference}\" with its node types, its variables and their status): nothing needs reading first. Submit task.plan with the node types you will use, copied from the shelf's \"types\" for the reference graph (they are the catalogue's exact ids), or a structure of your own from the catalogue ({runtime}.registry_search); declare missing only what no node can express.{generated} A required output that no telemetry column judges is either mapped in produced (its exact name to the selected type and the output port that produce it: a quantity in common is not enough, a person's CO2 is a mass flow and not a leak) or declared missing. A required output no node of the catalogue produces is declared missing with the topic \"code\" and its contract, written on the library's card \"capability-contract\" (library.read it once before writing: the shape, the rules, three examples; the forge runs the contract on the node, so a behavior is a measurement): the code factory writes the node against it, the forge runs the contract on the node, and this request is replayed with the node in the catalogue; leave the type to the code factory (it is named under Generated.). After such a plan this task ends by itself: nothing to evaluate here, the twin is built on the replay. The twin must produce {outputs} within {threshold}.{held}",
+        "generated": " This request is replayed on the forge's catalogue, which now holds the generated type(s) {types} ({runtime}.registry_describe_node for their ports and signature): select them, map the output they were made for in produced (its exact name, the type, the port), and wire them into the candidate (for a library graph, graph.evaluate's add: the node and its connections into the graph's own node ids); nothing is missing any more.",
+        "refused": " Your last evaluation was not run: {error}. Change what that names; the same call gets the same answer.",
+        "start": " The library holds the station's reference graph (library.graphs, graph \"{reference}\": two volumes in mass, the persons by name, the scrubber in its datasheet's units, the ventilation through its filter, the sensors); do not rebuild it: instantiate it (graph.evaluate with graph: \"{reference}\", persons for who is on board, fit for the bounds of what only the installation knows; its interface is the shelf's variables and nothing else, a name outside it is refused) and adapt its numbers. The scrubber's own numbers come from the registered device ({devices}) and are held; what is fitted is the volumes and the filter's loading, the operators' rate within its band.{persons} It is wired: {wiring}. A spec of your own is accepted instead, with a measured input as a Logic.Time:timeline whose segments are the $series, its value port wired into the input.",
+        "startDevices": "the task carries the register: {devices}",
+        "startNoDevice": "the datasheet's defaults when the task carries no device",
+        "startPersons": " On board, as observed: {persons}: give them as persons.",
+        "first": "Evaluate a first candidate.{start}{also} Give the bounds of the variables nobody knows (fit), justify every number you set (justifications: each variable held, each bound, each setting, each parameter, with its source), and evaluate the candidate (graph.evaluate); its answer is compact, the whole is at the handle the state names. Threshold: {threshold}.{held}{refused}",
+        "firstAlso": " Also, {sentence}.",
+        "where": "{column}: {rmse} {unit}, worst {worst} at minute {minute}",
+        "notYet": "Not a hand-over yet. Candidate {n} ({path}) holds the threshold ({where}) but not {types}, which the plan says produces a required output: a twin handed over without it is short of what was asked. Evaluate the same graph \"{graph}\" with the same levers and add wiring the node in, for instance add: {add} (the graph's sinks: {sinks}; params left empty keep the values the contract set); then hand that candidate over.",
+        "handOver": "Hand over. Candidate {n} ({path}) holds the threshold: {where}. The harness hands the numbers over itself, from the evaluation (the state's evaluation.parameters: for each variable its value, unit, name and how it was set); the summary says in words what was found and does not give a variable a meaning of its own. Its calibration passed on this telemetry; its validation on another profile, hatch state or occupancy was not performed, and the identifiability of the fitted parameters is not assessed: say both. End with task.done, the graph as the artifact: {\"kind\": \"graph\", \"path\": \"{path}\"}.",
+        "invalid": "The evaluation of candidate {n} is invalid, no residual was trusted: {diagnostics}. Fix what that names (a probe that exists, a run that covers the telemetry) and evaluate again.{refused}",
+        "levers": " The next candidate is the same graph \"{graph}\" with its levers, which the state already holds (do not read the template again): fit (the bounds of {fitted} within the graph's), persons (who is on board: the observed persons plus one more in the module whose column parts most, {worst}, or an activity changed: a CO2 source the observation missed is one more person at work there), settings; or a spec of your own from the catalogue. A rate at the top of its band with that column still under-predicted means more CO2 is produced there than the observed persons make: add a person there.",
+        "leversWorst": "{column}, {rmse} {unit}",
+        "leversNoWorst": "the worst column",
+        "parameterHeld": "it held {names} at a value ({values}), and the graph says only the installation knows {them}: fit {them} within the graph's bounds",
+        "parameterEdge": "its best fit sits at the edge of the range for {names} ({variables} over {runs} runs): the range decided, not the physics. Widen that range only if the physics allows the value beyond it (the graph's bounds are the template's; a documented band is never left); otherwise the structure is in question",
+        "parameter": "The gap is a parameter's. Candidate {n} ({label}) misses the threshold of {threshold} {unit}: {where}; {why}.{warned} {count} candidate(s) so far.{levers} Evaluate the next (graph.evaluate).{held}{refused}",
+        "structural": "The gap is structural. Candidate {n} ({label}) misses the threshold of {threshold} {unit}: {where}, with {variables} its best fit over {runs} runs, and no admissible parameter set of this structure closes it ({count} candidate(s) so far).{warned} Do not widen the bounds again: revise the topology where the curves part, guided by the task's hypotheses.{levers} {lacks}A term added must name its physical hypothesis (an exchange, a source); a constant term with no physics behind it closes a gap for the wrong reason.{held} Evaluate the next candidate (graph.evaluate).{refused}",
+        "lacks": "Against the station's reference graph, candidate {n} lacks: {wires}. "
+    },
+    "add": {
+        "sentence": "the plan says {types} produce(s) a required output, and graph \"{graph}\" holds no node of that type: evaluate it with add wiring the node into the module the request names, for instance add: {add} (the graph's sinks: {sinks}; params left empty keep the values the contract set)",
+        "sink": "{id} (its next free input: {port})"
+    },
+    "validate": {
+        "unmapped": "the plan says \"{type}\" produces \"{name}\", and candidate {n} holds no node of that type: evaluate a candidate that holds it (for a library graph, graph.evaluate with the same graph and add: {nodes: [{id: \"<an id>\", typeId: \"{type}\", params: {...}}], connections: [{from: [\"<that id>\", \"{port}\"], to: [\"<a node of the graph>\", \"<its input>\"]}]}; library.graph gives the graph's node ids and their inputs)",
+        "missing": "the plan declares {names} missing: a twin is not handed over short of a required output; end with task.fail naming the missing capability, the harness opens a code task on its contract and replays this request once the node exists",
+        "none": "no graph among the claimed artifacts",
+        "notAFile": "claimed graph \"{path}\" is not a file of the workshop",
+        "notACandidate": "claimed graph \"{path}\" is not a candidate graph.evaluate built in this task",
+        "notTheFile": "claimed graph \"{path}\" is not the file graph.evaluate built (sha256 {sha})",
+        "above": "claimed graph \"{path}\" has a residual of {rmse} {unit}, above the threshold of {threshold} {unit}"
+    },
+    "plausibility": "units: over the first {minutes} minutes the twin moves {predicted} {unit}/min where {column} moves {measured} {unit}/min, {how}. A gap from the first minute is not a missing term (an exchange shows late, as the volumes drift apart): check the units and scale of the rates.{terms} The catalogue's rates are per volume: a flow Qe in m3/min enters as Qe / V (1/min), a source of g L/min as g * 1e3 / V (ppm/min), an emission input takes ppm/min, and a concentration (ppm) entering one is scaled first (q / V for an exchange).",
+    "plausibilityTerms": " What enters the node at the first minute: {terms}.",
+    "outside": "graph \"{graph}\" has no variable {names}: its interface is {interface}; pass only fit (the bounds of what the installation alone knows) and persons, the graph carries the rest"
+}

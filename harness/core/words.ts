@@ -37,7 +37,8 @@ export function loadWords(file: string): Words {
 export function say(words: Words, key: string, vars: Record<string, string | number> = {}): string {
     const template = words.templates[key];
     if (template === undefined) throw new Error(`${words.file}: no words for "${key}"`);
-    return template.replace(/\{([A-Za-z0-9_.]+)\}/g, (hole, name: string) => {
+    // A hole is a name: `{...}` or `{"kind": ...}` in a template is text.
+    return template.replace(/\{([A-Za-z][A-Za-z0-9_.]*)\}/g, (hole, name: string) => {
         if (!(name in vars)) throw new Error(`${words.file}: "${key}" has a hole {${name}} nothing fills`);
         return String(vars[name]);
     });

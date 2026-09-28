@@ -1,0 +1,35 @@
+{
+    "note": "What the harness's core knows of the application it serves (2026-09-28, zero domain in the harness): the slots and tools it calls by name, the reads it may replay, the words it says outside any factory, and how the task's observations and thresholds are named. Another application changes this file, not the core.",
+    "authority": {
+        "note": "Where a factory hands a result over, asks a person, and is resumed.",
+        "propose": { "slot": "station", "tool": "propose" },
+        "ask": { "slot": "station", "tool": "ask" },
+        "resume": { "slot": "factory", "tool": "resume" }
+    },
+    "text": {
+        "note": "The capabilities a model's plain text becomes: a report to the people, a question handed back.",
+        "report": "crew.report",
+        "reportDescription": "report to the crew",
+        "ask": "crew.ask"
+    },
+    "reads": ["factory.inventory", "station.registry_list", "biomed.describe", "biomed.presence"],
+    "thresholds": {
+        "note": "The residual bounds a task's objective carries, by the names of its constraints (the first name found is taken), and their unit.",
+        "rmse": ["rmsePpmMax", "residualPpmMax"],
+        "absolute": ["absoluteResidualPpmMax"],
+        "unit": "ppm"
+    },
+    "observed": {
+        "note": "Observations a task may carry that the state says in one line each: the field, and the template of a line.",
+        "persons": "{callsign} in {module} at {activity}"
+    },
+    "compact": {
+        "note": "How the answer of an application's read is reduced for the model's state (harness/core/words.ts, viewOf).",
+        "factory.inventory": { "keep": ["lines", "openings"], "lists": { "volumes": { "from": "volumes", "fields": ["path"] }, "unknowns": { "from": "unknowns", "fields": ["what", "how"] } } }
+    },
+    "words": {
+        "chooseOne": "Choose exactly one tool call now. To speak to the crew, call {report}; to hand back, call {ask}.",
+        "situation": "Situation \"{id}\" (story minute {minute}): {description}",
+        "textIgnored": "Your last answer was text, which nobody reads here: answer with one tool call. "
+    }
+}

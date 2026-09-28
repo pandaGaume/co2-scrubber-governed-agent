@@ -21,6 +21,7 @@
  * The step is still recorded: the builder decides it, the recipes learn it.
  */
 import type { PolicyGraph } from "@spiky-panda/harness";
+import { APP } from "./application.js";
 
 export const NEVER_REPLAYED: ReadonlyArray<RegExp> = [/^task\.(fail|ask)$/];
 
@@ -34,9 +35,8 @@ export const READ_CAPABILITIES: ReadonlyArray<RegExp> = [
     /^web\.search$/,
     /^physics\.units_(normalize|convert|compatible|validate_connection|relations|relate)$/,
     /^workspace\.(list|read)$/,
-    /^factory\.inventory$/,
-    /^station\.registry_list$/,
-    /^biomed\.(describe|presence)$/,
+    // The application's own reads (specs/harness/application.json).
+    ...APP.reads.map((id) => new RegExp(`^${id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`)),
     /^(twin|forge)\.registry_(search|describe_node|list_nodes)$/,
     /^(twin|forge)\.document_validate$/,
     /^forge\.plugin_template$/,

@@ -1,0 +1,14 @@
+{
+    "title": "The graph factory: what it builds on, and how it says it",
+    "note": "What the graph factory knows of this application (2026-09-28, zero domain in the harness): the library graph a candidate starts from and is compared with, the saved twin kept for comparison, where a generated node is wired into that graph, who is told of every candidate, what a flat first slope is, and which node types frame a document rather than make its physics. Its words are words.json, its prompt prompt.md, the schema of an evaluation evaluate.schema.json.",
+    "words": "specs/graph/words.json",
+    "prompt": "specs/graph/prompt.md",
+    "evaluateSchema": "specs/graph/evaluate.schema.json",
+    "reference": "habitat",
+    "comparison": "graphs/cabin.spikypanda",
+    "sink": { "type": "Physics.Scene:atmosphere", "port": "delta_CO2_" },
+    "notify": { "slot": "station", "tool": "candidate_evaluated" },
+    "flatSlope": 2,
+    "frame": "^Control\\.Sim:|^Physics\\.Scene:(?!atmosphere)",
+    "outside": "^Physics\\.Electric:"
+}

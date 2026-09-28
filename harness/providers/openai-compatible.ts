@@ -13,6 +13,7 @@
 import type { PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
 import type { Provider, ProviderExchange, ProviderProfile } from "../lib/provider.js";
 import { apiKeyFor, compactRequest, contextSizes, decisionFrom, familyOf, fromApiName, intentionText, observationText, parseJsonArgs, toApiName, TRUNCATED_RESULT, truncatedDecision, type ContextMode } from "../lib/llm-common.js";
+import { APP } from "../core/application.js";
 
 interface ToolCall {
     id: string;
@@ -134,7 +135,7 @@ export class OpenAiCompatibleProvider implements Provider {
             context: { mode: this.contextMode, ...contextSizes(this.options.systemPrompt, tools.map((t) => t.function), this.messages.slice(1, -1) as Array<{ role: string; content: unknown }>, this.contextMode) },
             response: completion,
             decision,
-            proposedCapabilityId: call ? fromApiName(call.function.name) : "crew.report",
+            proposedCapabilityId: call ? fromApiName(call.function.name) : APP.text.report,
             proposedInput: call ? parseJsonArgs(call.function.arguments) : { message: text },
             latencyMs,
             tokens: usage ? { prompt: usage.prompt_tokens ?? 0, completion: usage.completion_tokens ?? 0, total: usage.total_tokens ?? (usage.prompt_tokens ?? 0) + (usage.completion_tokens ?? 0) } : null,

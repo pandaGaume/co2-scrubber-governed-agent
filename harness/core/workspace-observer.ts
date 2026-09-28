@@ -24,6 +24,7 @@ import type { Broker } from "../lib/broker.js";
 import type { CapabilityCall } from "./capabilities.js";
 import type { ReasoningState } from "./reasoning-state.js";
 import type { ContractReport } from "./contracts.js";
+import { APP, appSays } from "./application.js";
 
 export type Phase = "plan" | "build" | "done" | "failed" | "waiting";
 
@@ -147,7 +148,7 @@ export function createWorkspaceObserver(broker: Broker, taskId: string, progress
             const last = progress.lastCall;
             const features: WorkshopFeatures = {
                 // A text answer is not read here: the loop turns it into a crew report, which a factory does not have; said in the brief, so the builder answers with a tool.
-                brief: (progress.lastRefusal?.capability === "crew.report" ? "Your last answer was text, which nobody reads here: answer with one tool call. " : "") + justificationNote(progress.justify) + brief(),
+                brief: (progress.lastRefusal?.capability === APP.text.report ? appSays("textIgnored") : "") + justificationNote(progress.justify) + brief(),
                 phase: progress.phase,
                 iteration: progress.iteration,
                 files: files.length,

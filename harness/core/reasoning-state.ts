@@ -39,6 +39,7 @@ import type { JsonValue } from "@spiky-panda/harness";
 import { thresholdsOf, type TaskFile } from "./task.js";
 import type { ContractReport } from "./contracts.js";
 import type { Progress } from "./workspace-observer.js";
+import { observedLine } from "./application.js";
 
 export interface KnownInvariant {
     symbol: string;
@@ -54,7 +55,7 @@ export interface KnownInvariant {
 
 export interface StateInvariants {
     /** `threshold` is the RMSE bound per column; `thresholds` says both bounds by name. */
-    objective: { outputs: string[]; threshold: number | null; thresholds: { rmsePpmMax: number; absoluteResidualPpmMax: number | null } | null; constraints: Record<string, JsonValue> };
+    objective: { outputs: string[]; threshold: number | null; thresholds: { rmseMax: number; absoluteMax: number | null; unit: string } | null; constraints: Record<string, JsonValue> };
     known: KnownInvariant[];
     missingInformation: string[];
     hypotheses: string[];
@@ -137,7 +138,8 @@ export function knownInvariants(task: TaskFile["task"]): KnownInvariant[] {
 export function invariantsOf(task: TaskFile["task"], shelf: StateInvariants["shelf"], telemetry: StateInvariants["telemetry"], contracts?: ContractReport): StateInvariants {
     const req = (task.requirements ?? {}) as Record<string, unknown>;
     const obs = (task.observations ?? {}) as Record<string, unknown>;
-    const persons = Array.isArray(obs.persons) ? (obs.persons as Array<Record<string, unknown>>).map((p) => `${str(p.callsign) || str(p.id) || "someone"} in ${str(p.module)} at ${str(p.activity)}`) : [];
+    // Who is observed, one line each by the application's template (specs/harness/application.json, observed).
+    const persons = Array.isArray(obs.persons) ? (obs.persons as Array<Record<string, unknown>>).map((p) => observedLine("persons", { ...p, callsign: str(p.callsign) || str(p.id) || "someone" }) ?? JSON.stringify(p)) : [];
     // A device of the register, with what it lets one command (the embodied side of the state: what can be acted upon, not only read).
     const devices = Array.isArray(obs.devices)
         ? (obs.devices as Array<Record<string, unknown>>).map((d) => {
@@ -154,7 +156,7 @@ export function invariantsOf(task: TaskFile["task"], shelf: StateInvariants["she
     return {
         objective: {
             outputs: task.objective.required_outputs.map((o) => `${o.name} (${o.quantity}${o.unit ? `, ${o.unit}` : ""})`),
-            threshold: thresholds?.rmsePpmMax ?? null,
+            threshold: thresholds?.rmseMax ?? null,
             thresholds,
             constraints: (task.objective.constraints ?? {}) as Record<string, JsonValue>,
         },

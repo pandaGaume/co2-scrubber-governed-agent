@@ -15,6 +15,8 @@
  * size, its head above it.
  */
 import type { JsonValue } from "@spiky-panda/harness";
+import { APP } from "./application.js";
+import { viewOf } from "./words.js";
 
 /** Above this many characters a full answer goes to the workshop and the model gets a summary and the handle. */
 export const COMPACT_ABOVE = 1500;
@@ -148,10 +150,8 @@ const COMPACTORS: Record<string, (v: unknown, input: JsonValue) => JsonValue> = 
             runs: o.runs,
         } as unknown as JsonValue;
     },
-    "factory.inventory": (v) => {
-        const o = obj(v);
-        return { lines: o.lines, volumes: list(o.volumes).map((x) => String(x.path)), openings: o.openings, unknowns: list(o.unknowns).map((u) => `${String(u.what)} (${String(u.how)})`) } as JsonValue;
-    },
+    // The application's reads, as its file says to reduce them (specs/harness/application.json).
+    ...Object.fromEntries(Object.entries(APP.compact).map(([id, view]) => [id, (v: unknown) => viewOf(v, view) as JsonValue])),
 };
 
 /** The answer as the model reads it, and whether it was reduced. */

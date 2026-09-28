@@ -639,6 +639,47 @@ var ReasonerProvider = class _ReasonerProvider {
   }
 };
 
+// specs/harness/application.json
+var application_default = {
+  note: "What the harness's core knows of the application it serves (2026-09-28, zero domain in the harness): the slots and tools it calls by name, the reads it may replay, the words it says outside any factory, and how the task's observations and thresholds are named. Another application changes this file, not the core.",
+  authority: {
+    note: "Where a factory hands a result over, asks a person, and is resumed.",
+    propose: { slot: "station", tool: "propose" },
+    ask: { slot: "station", tool: "ask" },
+    resume: { slot: "factory", tool: "resume" }
+  },
+  text: {
+    note: "The capabilities a model's plain text becomes: a report to the people, a question handed back.",
+    report: "crew.report",
+    reportDescription: "report to the crew",
+    ask: "crew.ask"
+  },
+  reads: ["factory.inventory", "station.registry_list", "biomed.describe", "biomed.presence"],
+  thresholds: {
+    note: "The residual bounds a task's objective carries, by the names of its constraints (the first name found is taken), and their unit.",
+    rmse: ["rmsePpmMax", "residualPpmMax"],
+    absolute: ["absoluteResidualPpmMax"],
+    unit: "ppm"
+  },
+  observed: {
+    note: "Observations a task may carry that the state says in one line each: the field, and the template of a line.",
+    persons: "{callsign} in {module} at {activity}"
+  },
+  compact: {
+    note: "How the answer of an application's read is reduced for the model's state (harness/core/words.ts, viewOf).",
+    "factory.inventory": { keep: ["lines", "openings"], lists: { volumes: { from: "volumes", fields: ["path"] }, unknowns: { from: "unknowns", fields: ["what", "how"] } } }
+  },
+  words: {
+    chooseOne: "Choose exactly one tool call now. To speak to the crew, call {report}; to hand back, call {ask}.",
+    situation: 'Situation "{id}" (story minute {minute}): {description}',
+    textIgnored: "Your last answer was text, which nobody reads here: answer with one tool call. "
+  }
+};
+
+// harness/core/application.ts
+var strip = (v) => v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).filter(([k]) => k !== "note").map(([k, x]) => [k, strip(x)])) : v;
+var APP = strip(application_default);
+
 // harness/providers/scripted.ts
 var ppmOf = (s) => {
   const v = s.features.co2Ppm;
@@ -653,7 +694,7 @@ var stop = (s, crew, stopMinutes) => decide("twin.time_to_critical", { co2Ppm: p
 var setSpeed = (percent, rationale) => decide("scrubber.motor.set_speed", { percent }, rationale, "set the scrubber speed");
 var setMinFlow = (percent, rationale) => decide("scrubber.scrubber.set_min_flow", { percent }, rationale, "lower the minimum-flow protection");
 var power = (on, rationale) => decide("scrubber.scrubber.power", { on }, rationale, "power the scrubber");
-var report = (message) => decide("crew.report", { message }, "tell the crew", "report to the crew");
+var report = (message) => decide(APP.text.report, { message }, "tell the crew", APP.text.reportDescription);
 var ASLEEP = [{ count: 4, activity: "sleep" }];
 var EXERCISE = [
   { count: 2, activity: "sleep" },
@@ -2009,8 +2050,8 @@ async function activate(studio) {
   const remoteOutput = params.get("output") === "none";
   installLoopStyle();
   const viewer = studio.getViewer();
-  const strip = findMonitor(viewer);
-  if (strip) strip.series = [
+  const strip2 = findMonitor(viewer);
+  if (strip2) strip2.series = [
     { key: "co2Ppm", label: "CO2 ppm", color: ROOM_COLORS.teal, min: 0, max: 6e3 },
     { key: "speedPercent", label: "speed %", color: ROOM_COLORS.amber, min: 0, max: 100 }
   ];

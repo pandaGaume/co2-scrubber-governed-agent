@@ -10,6 +10,7 @@
  */
 import type { CapabilityDescriptor, JsonValue, PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
 import type { ProviderProfile } from "./provider.js";
+import { APP, appSays } from "../core/application.js";
 
 export const toApiName = (capabilityId: string): string => capabilityId.replace(/\./g, "__").slice(0, 64);
 export const fromApiName = (name: string): string => name.replace(/__/g, ".");
@@ -42,13 +43,13 @@ export function observationText(input: PolicyFallbackInput): string {
     const lines = f.state && typeof f.state === "object" ? [`Observation at this step (state ${input.state.id}). The harness's brief: ${String(f.brief ?? "")}`, "Reasoning state (the harness's, rebuilt every step; the conversation is not replayed):", JSON.stringify(f.state, null, 0)] : [`Observation at this step (state ${input.state.id}):`, JSON.stringify(f, null, 0)];
     if (input.candidates.length) lines.push(`Learned decisions the harness considered but did not trust enough: ${input.candidates.map((c) => c.action.id).join(", ")}.`);
     if (input.recentFailures.length) lines.push(`Recent failures: ${input.recentFailures.map((e) => `${e.decision.invocation.capabilityId} -> ${e.result.error ?? "failed"}`).join("; ")}.`);
-    lines.push("Choose exactly one tool call now. To speak to the crew, call crew__report; to hand back, call crew__ask.");
+    lines.push(appSays("chooseOne", { report: toApiName(APP.text.report), ask: toApiName(APP.text.ask) }));
     return lines.join("\n");
 }
 
 export function intentionText(input: PolicyFallbackInput): string {
     const p = input.intention.parameters ?? {};
-    return `Situation "${input.intention.id}" (story minute ${String(p.minute ?? "?")}): ${input.intention.description ?? ""}`;
+    return appSays("situation", { id: input.intention.id, minute: String(p.minute ?? "?"), description: input.intention.description ?? "" });
 }
 
 /** One harness decision from a tool call, or a crew report from plain text. */
@@ -81,7 +82,7 @@ export function truncatedDecision(capabilityId: string): PolicyDecision {
 }
 
 export function report(message: string): PolicyDecision {
-    return { action: { id: "crew.report", description: "report to the crew" }, invocation: { actionId: "crew.report", capabilityId: "crew.report", input: { message } }, rationale: "said in text, without a tool call" };
+    return { action: { id: APP.text.report, description: APP.text.reportDescription }, invocation: { actionId: APP.text.report, capabilityId: APP.text.report, input: { message } }, rationale: "said in text, without a tool call" };
 }
 
 /** Compact JSON for the trace: the request without the schemas repeated at every step. */

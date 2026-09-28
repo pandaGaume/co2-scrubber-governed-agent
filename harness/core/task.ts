@@ -5,6 +5,7 @@
  * The loop (`runner.ts`) reads it; the front and the runner share this
  * shape and nothing else.
  */
+import { APP } from "./application.js";
 export interface RequiredOutput {
     name: string;
     quantity: string;
@@ -42,22 +43,29 @@ export interface TaskFile {
 export type TaskState = "created" | "running" | "waiting" | "done" | "proposed" | "accepted" | "rejected" | "failed";
 
 /**
- * The residual thresholds of a task (2026-09-25, unambiguous): `rmsePpmMax`
+ * The residual thresholds of a task (2026-09-25, unambiguous): `rmseMax`
  * bounds the root mean square residual of each compared column, and
- * `absoluteResidualPpmMax`, when given, bounds the worst residual at any
- * minute. `residualPpmMax` is the older name of the first, still read.
+ * `absoluteMax`, when given, bounds the worst residual at any minute. The
+ * constraints that carry them, and their unit, are the application's
+ * (`specs/harness/application.json`, thresholds): the first name found is
+ * taken.
  */
 export interface Thresholds {
-    rmsePpmMax: number;
-    absoluteResidualPpmMax: number | null;
+    rmseMax: number;
+    absoluteMax: number | null;
+    unit: string;
 }
+
+/** The name of the constraint that carries the RMSE bound, as a request writes it: what a message asking for one names. */
+export const RMSE_CONSTRAINT = APP.thresholds.rmse[0];
 
 export function thresholdsOf(task: Pick<TaskFile["task"], "objective">): Thresholds | null {
     const c = (task.objective?.constraints ?? {}) as Record<string, unknown>;
-    const rmse = Number(c.rmsePpmMax ?? c.residualPpmMax);
+    const first = (names: string[]) => Number(c[names.find((n) => c[n] !== undefined) ?? ""]);
+    const rmse = first(APP.thresholds.rmse);
     if (!Number.isFinite(rmse) || rmse <= 0) return null;
-    const absolute = Number(c.absoluteResidualPpmMax);
-    return { rmsePpmMax: rmse, absoluteResidualPpmMax: Number.isFinite(absolute) && absolute > 0 ? absolute : null };
+    const absolute = first(APP.thresholds.absolute);
+    return { rmseMax: rmse, absoluteMax: Number.isFinite(absolute) && absolute > 0 ? absolute : null, unit: APP.thresholds.unit };
 }
 
 export const TOPICS = ["graph", "onnx", "procedure", "code"] as const;

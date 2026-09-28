@@ -23,6 +23,7 @@
  */
 import { readFileSync } from "node:fs";
 import { resolveSpec, type Row, type Spec, type Variables } from "./params.js";
+import { GRAPH_FORMAT } from "./format.js";
 
 export interface Wire {
     from: string;
@@ -35,10 +36,9 @@ export interface ReferenceGraph {
     wires: Wire[];
 }
 
-/** Node types that frame a saved document (the scene preset, the solver) and are not part of a twin's physics; the atmosphere and its gate are physics. */
-const FRAME = /^Control\.Sim:|^Physics\.Scene:(?!atmosphere)/;
-/** Node types outside the CO2 balance a commissioning twin is about (the battery the cabin twin also feeds). */
-const OUTSIDE = /^Physics\.Electric:/;
+/** Node types that frame a saved document (a scene preset, a solver) and are not part of a twin's physics, and those outside the balance a twin is about: the spec's (`specs/graph/format.json`). */
+const FRAME = new RegExp(GRAPH_FORMAT.frame);
+const OUTSIDE = new RegExp(GRAPH_FORMAT.outside);
 
 const typeWire = (typeOf: (id: string) => string | undefined, from: [string, string], to: [string, string]): Wire | null => {
     const a = typeOf(from[0]);

@@ -12,6 +12,7 @@
 import type { PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
 import type { Provider, ProviderExchange, ProviderProfile } from "../lib/provider.js";
 import { apiKeyFor, compactRequest, contextSizes, decisionFrom, familyOf, fromApiName, intentionText, observationText, parseJsonArgs, toApiName, TRUNCATED_RESULT, truncatedDecision, type ContextMode } from "../lib/llm-common.js";
+import { APP } from "../core/application.js";
 
 type ContentBlock = { type: "text"; text: string } | { type: "tool_use"; id: string; name: string; input: unknown } | { type: "tool_result"; tool_use_id: string; content: string };
 interface Message {
@@ -145,7 +146,7 @@ export class AnthropicProvider implements Provider {
             context: { mode: this.contextMode, ...contextSizes(this.options.systemPrompt, tools, this.messages.slice(0, -1), this.contextMode) },
             response: result,
             decision,
-            proposedCapabilityId: toolUse ? fromApiName(toolUse.name) : "crew.report",
+            proposedCapabilityId: toolUse ? fromApiName(toolUse.name) : APP.text.report,
             proposedInput: toolUse ? parseJsonArgs(toolUse.input) : { message: text },
             latencyMs,
             tokens: usage ? { prompt: usage.input_tokens ?? 0, completion: usage.output_tokens ?? 0, total: (usage.input_tokens ?? 0) + (usage.output_tokens ?? 0) } : null,

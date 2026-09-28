@@ -34,43 +34,45 @@
  * reason (equifinality): the structure must close it.
  */
 import type { JsonValue } from "@spiky-panda/harness";
-import { thresholdsOf, type Thresholds } from "../../core/task.js";
+import { RMSE_CONSTRAINT, thresholdsOf, type Thresholds } from "../../core/task.js";
+import { GRAPH_FORMAT, gw } from "./format.js";
+import { APP } from "../../core/application.js";
 import type { Broker } from "../../lib/broker.js";
 import type { TaskFile } from "../../core/task.js";
 import { combinations, resolveSpec, type Row, type Spec, type Variables } from "./params.js";
 import { estimatorFor, type Bounds } from "./fit.js";
-import { CABIN_DOCUMENT_FILE } from "../../../lib/paths.js";
+import { fromRoot } from "../../../lib/paths.js";
 import { instantiateTemplate, loadGraphLibrary, type DeviceLike, type GraphTemplate, type PersonSpec } from "../../../lib/graph-library.js";
 import { compareStructure, referenceOfDocument, referenceOfSpec, type ReferenceGraph, type StructureComparison } from "./reference.js";
 
-/** The library graph a candidate is compared with when the request names none: the station's reference. */
-export const STATION_GRAPH_ID = "habitat";
+/** The library graph a candidate starts from and is compared with when the request names none: the spec's (`specs/graph/format.json`). */
+export const REFERENCE_GRAPH_ID = GRAPH_FORMAT.reference;
 
-/** The station's reference, read once from the library's shelf (its template, at its defaults): the structure a candidate is compared with. */
-let stationTwin: ReferenceGraph | null | undefined;
-export function stationReference(): ReferenceGraph | null {
-    if (stationTwin === undefined) {
+/** The reference, read once from the library's shelf (its template, at its defaults): the structure a candidate is compared with. */
+let referenceTwin: ReferenceGraph | null | undefined;
+export function referenceGraph(): ReferenceGraph | null {
+    if (referenceTwin === undefined) {
         try {
-            const entry = loadGraphLibrary().find((g) => g.template.id === STATION_GRAPH_ID);
-            stationTwin = entry ? referenceOfSpec(instantiateTemplate(entry.template).spec, `the station's reference graph (library graph "${STATION_GRAPH_ID}", ${entry.template.document})`) : null;
+            const entry = loadGraphLibrary().find((g) => g.template.id === REFERENCE_GRAPH_ID);
+            referenceTwin = entry ? referenceOfSpec(instantiateTemplate(entry.template).spec, `the reference graph (library graph "${REFERENCE_GRAPH_ID}", ${entry.template.document})`) : null;
         } catch {
-            stationTwin = null;
+            referenceTwin = null;
         }
     }
-    return stationTwin;
+    return referenceTwin;
 }
 
-/** The cabin twin of the first nights (`graphs/cabin.spikypanda`), kept for comparison. */
-let cabinTwin: ReferenceGraph | null | undefined;
-export function cabinReference(): ReferenceGraph | null {
-    if (cabinTwin === undefined) {
+/** A saved twin kept for comparison, the spec's (`comparison`). */
+let comparisonTwin: ReferenceGraph | null | undefined;
+export function comparisonGraph(): ReferenceGraph | null {
+    if (comparisonTwin === undefined) {
         try {
-            cabinTwin = referenceOfDocument(CABIN_DOCUMENT_FILE, "the station's cabin twin (graphs/cabin.spikypanda)");
+            comparisonTwin = referenceOfDocument(fromRoot(...GRAPH_FORMAT.comparison.split("/")), `the saved twin (${GRAPH_FORMAT.comparison})`);
         } catch {
-            cabinTwin = null;
+            comparisonTwin = null;
         }
     }
-    return cabinTwin;
+    return comparisonTwin;
 }
 
 export interface Compare {
@@ -427,8 +429,8 @@ export function earlySlopeOf(series: Record<string, number[]>, compare: Compare,
     return { column: compare.column, minutes: t1 - t0, predicted: Number(((p1 - p0) / (t1 - t0)).toFixed(1)), measured: Number(((m1 - m0) / (t1 - t0)).toFixed(1)) };
 }
 
-/** Below this slope (ppm/min) the measurement is flat for the check: noise, not a trend. */
-const FLAT = 2;
+/** Below this slope (the residual's unit per minute, the spec's) the measurement is flat for the check: noise, not a trend. */
+const FLAT = GRAPH_FORMAT.flatSlope;
 
 /** What a first slope says about the candidate's units, in words the builder can act on; nothing when it starts right. */
 export function plausibilityOf(early: EarlySlope | undefined): string[] {
@@ -438,8 +440,8 @@ export function plausibilityOf(early: EarlySlope | undefined): string[] {
     const ratio = Math.abs(m) >= FLAT ? Math.abs(p) / Math.abs(m) : Math.abs(p) >= 5 * FLAT ? Number.POSITIVE_INFINITY : 1;
     if (!wrongWay && ratio <= 3 && ratio >= 1 / 3) return [];
     const how = wrongWay ? "the other way" : ratio > 3 ? `${Number.isFinite(ratio) ? `${ratio.toFixed(1)} times` : "far"} faster` : `${(1 / ratio).toFixed(1)} times slower`;
-    const terms = early.inflows?.length ? ` What enters the node at the first minute: ${early.inflows.map((t) => `${t.from} into ${t.into} = ${t.value}`).join("; ")}.` : "";
-    return [`units: over the first ${minutes} minutes the twin moves ${p} ppm/min where ${column} moves ${m} ppm/min, ${how}. A gap from the first minute is not a missing term (an exchange shows late, as the volumes drift apart): check the units and scale of the rates.${terms} The catalogue's rates are per volume: a flow Qe in m3/min enters as Qe / V (1/min), a source of g L/min as g * 1e3 / V (ppm/min), an emission input takes ppm/min, and a concentration (ppm) entering one is scaled first (q / V for an exchange).`];
+    const terms = early.inflows?.length ? gw("plausibilityTerms", { terms: early.inflows.map((t) => `${t.from} into ${t.into} = ${t.value}`).join("; ") }) : "";
+    return [gw("plausibility", { minutes, predicted: p, measured: m, column, how, terms, unit: APP.thresholds.unit })];
 }
 
 const scoreOf = (residuals: Residual[]) => Math.max(...residuals.map((r) => r.rmse));
@@ -495,7 +497,7 @@ async function instantiateFromLibrary(input: EvaluateInput, ctx: EvaluateContext
     const given = { ...(input.variables ?? {}) };
     // Strict: a library graph has an interface, and a name outside it (Qe_full, tau_scrubber, C_ELEVATED) is not a variable of the graph, whatever it meant.
     const outside = [...new Set([...Object.keys(given), ...searched])].filter((k) => !(k in template.variables));
-    if (outside.length) throw new Error(`graph "${template.id}" has no variable ${outside.map((k) => `"${k}"`).join(", ")}: its interface is ${Object.keys(template.variables).join(", ")}; pass only fit (the bounds of what the installation alone knows) and persons, the graph carries the rest`);
+    if (outside.length) throw new Error(gw("outside", { graph: template.id, names: outside.map((k) => `"${k}"`).join(", "), interface: Object.keys(template.variables).join(", ") }));
     const inst = instantiateTemplate(template, { variables: given, settings: input.settings, persons: input.persons, devices: devicesOf(ctx.task) });
     // What the builder adds to the library graph (2026-09-27): nodes and connections beside the template's, a generated node wired into the graph's own nodes.
     const added = (input as { add?: { nodes?: unknown[]; connections?: unknown[] } }).add;
@@ -535,8 +537,8 @@ export function parametersOf(values: Variables, fitted: string[], shelf: { defau
 export async function evaluateCandidate(input: EvaluateInput, ctx: EvaluateContext): Promise<{ candidate: Candidate; profile: Array<{ minute: number; predicted: number | null; measured: number | null }>; ranking: Array<{ variables: Variables; score: number }> }> {
     const { broker, taskId, task, rows, runtimeSlot = "twin" } = ctx;
     const thresholds = thresholdsOf(task);
-    if (!thresholds) throw new Error("the task gives no residual threshold (objective.constraints.rmsePpmMax, an RMSE per compared column; absoluteResidualPpmMax bounds the worst minute when given): nobody said how close is close enough");
-    const threshold = thresholds.rmsePpmMax;
+    if (!thresholds) throw new Error(gw("threshold.missing", { constraint: RMSE_CONSTRAINT }));
+    const threshold = thresholds.rmseMax;
     if (!input.graph && !input.spec) throw new Error("a candidate is a spec (nodes and connections) or a graph of the library (graph: its id, from library.graphs)");
     if (input.graph && input.spec) throw new Error("a candidate is a spec or a library graph, not both");
     // A library graph: its template instantiated on the twin, the builder's variables over its defaults, its own probes when the builder names none.
@@ -616,7 +618,7 @@ export async function evaluateCandidate(input: EvaluateInput, ctx: EvaluateConte
     const fittedNames = Object.keys(input.fit ?? input.vary ?? {});
     const identifiability = hasFit ? identifiabilityOf(tried, best!, fittedNames, threshold) : {};
     const atBounds = atBoundsOf(best!.variables, input.fit);
-    const withinThreshold = covered && final.residuals.every((r) => r.rmse <= threshold && (thresholds.absoluteResidualPpmMax === null || r.worst <= thresholds.absoluteResidualPpmMax));
+    const withinThreshold = covered && final.residuals.every((r) => r.rmse <= threshold && (thresholds.absoluteMax === null || r.worst <= thresholds.absoluteMax));
     const candidate: Candidate = {
         n: ctx.n,
         label: String(input.label ?? "").slice(0, 200),
@@ -668,8 +670,8 @@ export async function evaluateCandidate(input: EvaluateInput, ctx: EvaluateConte
     candidate.spec = inputSpec;
     candidate.structure = referenceOfSpec(inputSpec, `candidate ${ctx.n}`);
     candidate.diagnosis = diagnose(candidate, ctx.previous ?? []);
-    const station = stationReference();
-    if (station) candidate.reference = compareStructure(inputSpec, station);
+    const reference = referenceGraph();
+    if (reference) candidate.reference = compareStructure(inputSpec, reference);
     const series = final.series[`${first.node}.${first.property}`] ?? [];
     const profile = rows
         .filter((r) => Number(r.minute) % 5 === 0)

@@ -33,7 +33,7 @@ import type { TraceLine } from "../harness/core/runner.js";
 import { validateGraph } from "../harness/topics/graph/index.js";
 import { estimatorFor } from "../harness/topics/graph/fit.js";
 import { compareStructure, referenceOfSpec } from "../harness/topics/graph/reference.js";
-import { cabinReference, stationReference } from "../harness/topics/graph/evaluate.js";
+import { comparisonGraph, referenceGraph } from "../harness/topics/graph/evaluate.js";
 import { labCandidate } from "../harness/scripted/graph.js";
 import { deliveredFlowM3PerMinute, readHabitatParameters } from "../lib/habitat.js";
 import { ScriptedGraphBuilder } from "../harness/scripted/graph.js";
@@ -144,7 +144,7 @@ describe("the parametric graph and its residual", () => {
     });
 
     it("the station's reference graph is read from the library's shelf by types and ports, and a candidate is compared with it; the cabin twin stays readable", () => {
-        const station = stationReference();
+        const station = referenceGraph();
         assert.ok(station, "the library's habitat graph is readable");
         const wires = station!.wires.map((w) => `${w.from} -> ${w.to}`);
         assert.ok(wires.includes("Logic.Time:timeline.value -> Physics.Habitat:scrubber.command"));
@@ -156,7 +156,7 @@ describe("the parametric graph and its residual", () => {
         const hand = compareStructure(labCandidate(true) as never, station!);
         assert.equal(hand.sharedWires.length, 0, "the life-support form shares no typed wire with the reference");
         assert.equal(hand.wiringMatch, 0);
-        const cabin = cabinReference();
+        const cabin = comparisonGraph();
         assert.ok(cabin && cabin.wires.map((w) => `${w.from} -> ${w.to}`).includes("Logic.Time:timeline.value -> Physics.LifeSupport:scrubber.command"), "graphs/cabin.spikypanda, still read for comparison");
         assert.equal(referenceOfSpec(labCandidate(false) as never, "x").wires.length, 3);
     });
@@ -262,7 +262,7 @@ describe("the parametric graph and its residual", () => {
 
     it("the validator accepts only a candidate the harness built and found under the threshold", () => {
         const progress = newProgress();
-        const c = (n: number, pass: boolean): Candidate => ({ n, label: "", path: `candidate-${n}.spikypanda`, sha256: String(n).repeat(64), nodes: 4, types: [], connections: 3, variables: {}, identifiabilityAssessment: "NOT_ASSESSED", thresholds: { rmsePpmMax: 10, absoluteResidualPpmMax: null }, coverage: { expected: 1, predicted: 1, missing: [], valid: true }, parameters: {}, status: pass ? "calibration_pass" : "calibration_fail", calibration: pass ? "PASS" : "FAIL", validation: "NOT_PERFORMED", diagnosis: pass ? "PASS" : "STRUCTURAL_MISMATCH", residuals: [{ column: "c", probe: "lab.co2Ppm", rmse: pass ? 3 : 45, worst: 0, worstMinute: 0 }], threshold: 25, pass, combinations: 1, fitted: [], estimator: "given", warnings: [], at: "" });
+        const c = (n: number, pass: boolean): Candidate => ({ n, label: "", path: `candidate-${n}.spikypanda`, sha256: String(n).repeat(64), nodes: 4, types: [], connections: 3, variables: {}, identifiabilityAssessment: "NOT_ASSESSED", thresholds: { rmseMax: 10, absoluteMax: null, unit: "ppm" }, coverage: { expected: 1, predicted: 1, missing: [], valid: true }, parameters: {}, status: pass ? "calibration_pass" : "calibration_fail", calibration: pass ? "PASS" : "FAIL", validation: "NOT_PERFORMED", diagnosis: pass ? "PASS" : "STRUCTURAL_MISMATCH", residuals: [{ column: "c", probe: "lab.co2Ppm", rmse: pass ? 3 : 45, worst: 0, worstMinute: 0 }], threshold: 25, pass, combinations: 1, fitted: [], estimator: "given", warnings: [], at: "" });
         progress.topic.graph = { candidates: [c(1, false), c(2, true)], runs: 2 } as never;
         const files = [1, 2].map((n) => ({ path: `candidate-${n}.spikypanda`, bytes: 1, sha256: String(n).repeat(64) }));
         assert.match(validateGraph({ summary: "", artifacts: [{ kind: "graph", path: "candidate-1.spikypanda" }] }, files, progress).problems.join(), /residual of 45 ppm, above the threshold of 25/);
@@ -402,7 +402,7 @@ describe("the graph factory's loop on the gap, through the broker", () => {
         for (const [k, i] of Object.entries(coupled.identifiability ?? {})) assert.ok(i.underThresholdRange && i.underThresholdRange[0] <= i.estimate && i.estimate <= i.underThresholdRange[1], `${k}: ${JSON.stringify(i)}`);
         // The coverage block: every compared minute predicted; the thresholds by name; the parameters with value, unit, name and status, what the hand-over is built from.
         assert.deepEqual(coupled.coverage, { expected: 2 * TELEMETRY.length, predicted: 2 * TELEMETRY.length, missing: [], valid: true });
-        assert.deepEqual(coupled.thresholds, { rmsePpmMax: 10, absoluteResidualPpmMax: null });
+        assert.deepEqual(coupled.thresholds, { rmseMax: 10, absoluteMax: null, unit: "ppm" });
         assert.equal(coupled.parameters.L.status, "fitted");
         assert.equal(coupled.parameters.L.unit, "kg");
         assert.match(coupled.parameters.L.name, /loading/);

@@ -16,6 +16,7 @@ import type { LocalCapability } from "./capabilities.js";
 import type { DoneClaim, Plan, Progress } from "./workspace-observer.js";
 import { normalizePlan } from "./builder-guard.js";
 import type { TaskFile } from "./task.js";
+import { APP } from "./application.js";
 
 const MISSING_SCHEMA = {
     type: "object",
@@ -96,14 +97,14 @@ export function taskCapabilities(broker: Broker, taskId: string, progress: Progr
             inputSchema: ASK_SCHEMA,
             async execute(input: JsonValue): Promise<CapabilityResult> {
                 const q = input as { question: string; options: string[]; why?: string };
-                const r = await broker.call("station", "ask", {
+                const r = await broker.call(APP.authority.ask.slot, APP.authority.ask.tool, {
                     taskId,
                     from: `factory:${topic}`,
                     kind: "ask",
                     question: q.question,
                     options: q.options.map((o) => ({ id: String(o), label: String(o) })),
                     context: { why: q.why ?? null, topic },
-                    resume: { slot: "factory", tool: "resume", args: { taskId, step: "answer" } },
+                    resume: { ...APP.authority.resume, args: { taskId, step: "answer" } },
                 });
                 if (!r.ok) return { ok: false, error: r.error ?? "the station did not take the question", output: { outcome: r.outcome } };
                 const asked = r.output as { questionId: string; status: string; answer?: { choice: string; by: string; note: string | null } | null };

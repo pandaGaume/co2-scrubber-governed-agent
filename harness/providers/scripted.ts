@@ -18,6 +18,7 @@
  */
 import type { JsonValue, PolicyDecision, PolicyFallbackInput, State } from "@spiky-panda/harness";
 import type { Provider, ProviderExchange } from "../lib/provider.js";
+import { APP } from "../core/application.js";
 
 type Line = (state: State) => PolicyDecision;
 type Script = Record<string, Line[]>;
@@ -41,7 +42,7 @@ const stop = (s: State, crew: CrewGroupJson[], stopMinutes: number) => decide("t
 const setSpeed = (percent: number, rationale: string) => decide("scrubber.motor.set_speed", { percent }, rationale, "set the scrubber speed");
 const setMinFlow = (percent: number, rationale: string) => decide("scrubber.scrubber.set_min_flow", { percent }, rationale, "lower the minimum-flow protection");
 const power = (on: boolean, rationale: string) => decide("scrubber.scrubber.power", { on }, rationale, "power the scrubber");
-const report = (message: string) => decide("crew.report", { message }, "tell the crew", "report to the crew");
+const report = (message: string) => decide(APP.text.report, { message }, "tell the crew", APP.text.reportDescription);
 
 const ASLEEP: CrewGroupJson[] = [{ count: 4, activity: "sleep" }];
 const EXERCISE: CrewGroupJson[] = [

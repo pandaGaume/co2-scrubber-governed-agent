@@ -61,7 +61,7 @@ describe("the hand-off's rules, without a broker", () => {
         assert.deepEqual(need.types, [LEAK_TYPE]);
         assert.deepEqual(need.add.nodes, [{ id: "generated-1", typeId: LEAK_TYPE, params: {} }]);
         assert.deepEqual(need.add.connections, [{ from: ["generated-1", "co2Delta"], to: ["lab", "delta_CO2_2"] }]);
-        assert.match(need.where, /habb \(its next free CO2 input: delta_CO2_1\)/);
+        assert.match(need.where, /habb \(its next free input: delta_CO2_1\)/);
         assert.equal(addNeededFor(progress, "habitat", [LEAK_TYPE]), null);
         assert.equal(addNeededFor(newProgress(), "habitat"), null);
         const context = { progress, task: {} as never, broker: {} as never, taskId: "t", runtimeSlot: "forge" } as never;

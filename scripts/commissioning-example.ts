@@ -45,7 +45,7 @@ import { runProcedure } from "../tier3/procedure.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
 import { renderTrace, renderTraceFile, type RenderableLine } from "./render-trace.js";
 import { GRAPH_PROMPT } from "../harness/topics/graph/index.js";
-import { evaluateCandidate, STATION_GRAPH_ID, stationReference, type Candidate } from "../harness/topics/graph/evaluate.js";
+import { evaluateCandidate, REFERENCE_GRAPH_ID, referenceGraph, type Candidate } from "../harness/topics/graph/evaluate.js";
 import { deliveredFlowM3PerMinute, readHabitatParameters } from "../lib/habitat.js";
 import { compareGraphs, compareParameters, referenceOfSpec } from "../harness/topics/graph/reference.js";
 import { labCandidate } from "../harness/scripted/graph.js";
@@ -354,8 +354,8 @@ async function main(): Promise<void> {
         const compare = [{ node: "lab", property: "co2Ppm", column: "co2_lab_ppm" }];
         const byHand: Array<{ name: string; spec?: Spec; graph?: string; fit: Record<string, { min: number; max: number }>; held?: Record<string, number> }> = [
             // The library's reference graph: its known constants at their defaults, the volumes fitted; then the filter's loading as well.
-            { name: "library graph habitat: a clean filter, the ventilation at its design flow", graph: STATION_GRAPH_ID, fit: { V: { min: 10, max: 200 }, Vh: { min: 50, max: 1000 }, g: { min: 0.26, max: 0.45 } }, held: { L: 0 } },
-            { name: "library graph habitat: the filter's loading fitted, what the ventilation delivers", graph: STATION_GRAPH_ID, fit: { V: { min: 10, max: 200 }, Vh: { min: 50, max: 1000 }, g: { min: 0.26, max: 0.45 }, L: { min: 0, max: 0.2 } } },
+            { name: "library graph habitat: a clean filter, the ventilation at its design flow", graph: REFERENCE_GRAPH_ID, fit: { V: { min: 10, max: 200 }, Vh: { min: 50, max: 1000 }, g: { min: 0.26, max: 0.45 } }, held: { L: 0 } },
+            { name: "library graph habitat: the filter's loading fitted, what the ventilation delivers", graph: REFERENCE_GRAPH_ID, fit: { V: { min: 10, max: 200 }, Vh: { min: 50, max: 1000 }, g: { min: 0.26, max: 0.45 }, L: { min: 0, max: 0.2 } } },
             { name: "by hand: the ventilation at its design flow (3 m3/min)", spec: labCandidate(true) as unknown as Spec, fit: { V: { min: 10, max: 200 }, g: { min: 0.26, max: 0.45 } }, held: { q: 3.0 } },
             { name: "by hand: the ventilation's delivered flow measured", spec: labCandidate(true) as unknown as Spec, fit: { V: { min: 10, max: 200 }, g: { min: 0.26, max: 0.45 }, q: { min: 0, max: 6 } } },
         ];
@@ -372,7 +372,7 @@ async function main(): Promise<void> {
             }
         }
         const handGraph = referenceOfSpec(labCandidate(true) as unknown as Spec, "the commissioning graph written by hand");
-        const station = stationReference();
+        const station = referenceGraph();
         const comparisons = (candidates as Candidate[]).map((c) => ({
             n: c.n,
             label: c.label,
