@@ -131,9 +131,9 @@ export function checkProcedure(input: unknown, presence: PresenceRead | null, en
     if (read && read.occupants > 0) {
         const watched = new Set(p.monitoring?.subjects ?? []);
         const unwatched = occupants.filter((s) => !watched.has(s.id));
-        if (!p.monitoring) add("monitoring", `${module} is occupied (${read.occupants}) and the procedure asks for no monitoring of its occupants (its "monitoring" names no subject)`);
-        else if (unwatched.length) add("monitoring", `${module} is occupied and ${unwatched.map((s) => s.callsign ?? s.id).join(", ")} would not be monitored`);
-        if (!aborts.some((a) => a?.id === "vitals" || a?.source === envelope.vitalsSource)) add("monitoring", `${module} is occupied and no abort condition reads ${envelope.vitalsSource}`);
+        if (!p.monitoring) add("monitoring", `${module} is occupied (${read.occupants}) and the procedure asks for no monitoring of its occupants (its "monitoring" names no subject): name them in monitoring.subjects, with the band; the medical monitor is on standby until the test is authorised, and the station starts it then for the subjects the procedure names`);
+        else if (unwatched.length) add("monitoring", `${module} is occupied and ${unwatched.map((s) => s.callsign ?? s.id).join(", ")} would not be monitored: name them in monitoring.subjects too; the medical monitor is on standby until the test is authorised, and the station starts it then for the subjects the procedure names`);
+        if (!aborts.some((a) => a?.id === "vitals" || a?.source === envelope.vitalsSource)) add("monitoring", `${module} is occupied and no abort condition reads ${envelope.vitalsSource}: add one (id "vitals", source "${envelope.vitalsSource}"), which stops the test when an occupant leaves the band or the watch is lost`);
         if (p.occupancy && p.occupancy.occupants !== read.occupants) add("monitoring", `the procedure declares ${p.occupancy.occupants} occupant(s) in ${module}; ${read.occupants} were read`);
     }
 

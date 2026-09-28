@@ -122,7 +122,7 @@ export function biomedSlot(wsBase: string, log: (line: string) => void): Publish
         {
             name: "describe",
             title: "What this monitor is",
-            description: "The biomed monitor: the roster, the nominal band, the source behind the readings, and whether a monitoring session is open. Says plainly when the readings are simulated.",
+            description: "The biomed monitor: the roster, the nominal band, the source behind the readings, and whether a monitoring session is open (none between tests: the station opens one when the commander authorises a test, for the subjects the procedure names). Says plainly when the readings are simulated.",
             inputSchema: objectSchema({}),
             handle: (_args, s) => ({
                 provider: s.provider?.id ?? null,
@@ -138,6 +138,8 @@ export function biomedSlot(wsBase: string, log: (line: string) => void): Publish
                 // rate as a delta against it, which is what makes a number mean something at a glance.
                 roster: s.service.roster.map((x) => ({ id: x.id, callsign: x.callsign, name: x.name ?? null, module: x.module, restingBpm: x.restingBpm ?? null, band: s.service.bandOf(x) })),
                 session: s.service.current?.sessionId ?? null,
+                // Standby is how the monitor waits between tests (2026-09-28: a model read "no session" as "no monitoring possible").
+                opens: "on the commander's authorisation of a test: the station starts the monitoring for the subjects the procedure names in monitoring, and stops it at the test's end",
             }),
         },
         {

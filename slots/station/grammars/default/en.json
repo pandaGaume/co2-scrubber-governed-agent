@@ -261,7 +261,7 @@
         "mother.procedure.refused.floor": "Procedure refused. Step {step}: {what}. Below the minimum flow.",
         "mother.procedure.refused.floorLimit": "Procedure refused. It sets its own minimum speed at {percent} percent. Below the minimum flow.",
         "mother.procedure.refused.diligence": "Procedure refused. The occupancy of module {module} was not read.",
-        "mother.procedure.refused.monitoring": "Procedure refused. Module {module} is occupied and its occupants are not under monitoring.",
+        "mother.procedure.refused.monitoring": "Procedure refused. Module {module} is occupied and the procedure does not ask for its occupants to be monitored.",
         "mother.procedure.refused.bounds": "Procedure refused. A limit is outside the envelope.",
         "mother.procedure.refused.duration": "Procedure refused. Its duration is not bounded.",
         "mother.procedure.refused.abort": "Procedure refused. An abort condition is missing.",

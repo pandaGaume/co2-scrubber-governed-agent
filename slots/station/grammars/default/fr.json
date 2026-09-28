@@ -283,7 +283,7 @@
         "mother.procedure.refused.floor": "Protocole refusé. Pas numéro {step} : {what}. Sous le débit minimal.",
         "mother.procedure.refused.floorLimit": "Protocole refusé. Il fixe sa propre vitesse minimale à {percent} pour cent. Sous le débit minimal.",
         "mother.procedure.refused.diligence": "Protocole refusé. L'occupation du module {module} n'a pas été lue.",
-        "mother.procedure.refused.monitoring": "Protocole refusé. Le module {module} est occupé et ses occupants ne sont pas sous surveillance.",
+        "mother.procedure.refused.monitoring": "Protocole refusé. Le module {module} est occupé et le protocole ne demande pas la surveillance de ses occupants.",
         "mother.procedure.refused.bounds": "Protocole refusé. Une limite sort de l'enveloppe.",
         "mother.procedure.refused.duration": "Protocole refusé. Sa durée n'est pas bornée.",
         "mother.procedure.refused.abort": "Protocole refusé. Une condition d'arrêt manque.",
