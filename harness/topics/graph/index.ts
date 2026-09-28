@@ -23,6 +23,7 @@
  * under the threshold: the builder's claim is checked against the harness's
  * record, never taken at its word.
  */
+import { withBase } from "../../core/base.js";
 import type { CapabilityResult, Intention, JsonValue } from "@spiky-panda/harness";
 import type { LocalCapability } from "../../core/capabilities.js";
 import type { TaskFile } from "../../core/task.js";
@@ -35,7 +36,7 @@ import { loadGraphLibrary } from "../../../lib/graph-library.js";
 import type { Row } from "./params.js";
 import type { TopicState } from "../../core/reasoning-state.js";
 
-export const GRAPH_TOOLS: ReadonlyArray<RegExp> = [/^workspace\.(list|read)$/, /^library\.(list|methods|search|read|graphs|graph|facts)$/, /^web\.search$/, /^physics\.units_(normalize|convert|compatible|validate_connection|relations|relate)$/, /^(twin|forge)\.registry_(search|describe_node|list_nodes)$/, /^(twin|forge)\.document_validate$/, /^graph\.evaluate$/, /^task\.(plan|done|fail|ask)$/];
+export const GRAPH_TOOLS: ReadonlyArray<RegExp> = withBase([/^workspace\.(list|read)$/, /^library\.(graphs|graph)$/, /^(twin|forge)\.registry_(search|describe_node|list_nodes)$/, /^(twin|forge)\.document_validate$/, /^graph\.evaluate$/]);
 
 /** The generated types a replayed request may use, named in its observations by the hand-off (`slots/factory/handoff.ts`). */
 export function generatedOf(task: TaskFile["task"]): Array<{ type: string; plugin: string; sha256: string; task: string }> {

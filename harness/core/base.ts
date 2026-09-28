@@ -11,8 +11,20 @@
  *                      between quantities (a volume flow as a mass flow)
  *   the task           its plan, its claim, its failure, its question
  *
- * `tests/conformance.test.ts` checks every topic against it.
+ * A model is told of them once, in `socle.md`, which the reasoner adds to
+ * every factory's prompt. `tests/conformance.test.ts` checks every topic
+ * against it.
  */
+import { readFileSync } from "node:fs";
+import { fromRoot } from "../../lib/paths.js";
+
+export const SOCLE_PROMPT = "harness/core/socle.md";
+
+/** A factory's prompt as the model reads it: the topic's own, then what every factory reaches. */
+export function promptWithSocle(topicPrompt: string): string {
+    return `${topicPrompt.trimEnd()}\n\n${readFileSync(fromRoot(SOCLE_PROMPT), "utf8").trim()}\n`;
+}
+
 export const BASE_CAPABILITIES: ReadonlyArray<string> = [
     "library.list",
     "library.methods",
@@ -31,3 +43,9 @@ export const BASE_CAPABILITIES: ReadonlyArray<string> = [
     "task.fail",
     "task.ask",
 ];
+
+/** The socle as tool patterns, one per capability. */
+export const BASE_TOOLS: ReadonlyArray<RegExp> = BASE_CAPABILITIES.map((id) => new RegExp(`^${id.replace(/\./g, "\\.")}$`));
+
+/** A topic's tools: the socle's, then its own. */
+export const withBase = (own: ReadonlyArray<RegExp>): ReadonlyArray<RegExp> => [...BASE_TOOLS, ...own];

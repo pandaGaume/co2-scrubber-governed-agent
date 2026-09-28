@@ -40,6 +40,7 @@
  *   6  proposed, handed over          forge.plugin_promote, then task.done with
  *                                     the artifact the forge signed
  */
+import { withBase } from "../../core/base.js";
 import type { Intention, JsonValue } from "@spiky-panda/harness";
 import type { LocalCapability } from "../../core/capabilities.js";
 import type { TaskFile } from "../../core/task.js";
@@ -50,18 +51,15 @@ import { candidatesOf, evaluateCapability } from "../graph/index.js";
 import { contractProblems, type CapabilityContract } from "../../../slots/forge/contract.js";
 import type { CapabilityResult } from "@spiky-panda/harness";
 
-export const CODE_TOOLS: ReadonlyArray<RegExp> = [
+export const CODE_TOOLS: ReadonlyArray<RegExp> = withBase([
     /^forge\.registry_(search|describe_node|list_nodes)$/,
     /^forge\.plugin_(template|write|build|test|load|promote)$/,
     /^code\.accept$/,
     /^forge\.document_(validate|build)$/,
     /^forge\.session_run$/,
-    /^library\.(list|methods|search|read|facts)$/,
-    /^physics\.units_(normalize|convert|compatible|validate_connection)$/,
     // No workshop tools: everything the topic reads is in the state (the template, the plugin's sources, the forge's answers); a model given workspace.read read state fields as files, eight steps in a row (the seventh passage).
     /^graph\.evaluate$/,
-    /^task\.(plan|done|fail|ask)$/,
-];
+]);
 
 export const CODE_PROMPT = "harness/topics/code/prompt.md";
 

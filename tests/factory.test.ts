@@ -29,6 +29,8 @@ import { taskSignature } from "../harness/core/recipes.js";
 import { NEVER_REPLAYED, proposalKey, restrictReplays } from "../harness/core/replay.js";
 import { PROCEDURE_TOPIC } from "../harness/topics/procedure/index.js";
 import { CODE_TOPIC } from "../harness/topics/code/index.js";
+import { briefOf as onnxBrief, requirementsOf as onnxRequirements, stateOfTopic as onnxState } from "../harness/topics/onnx/index.js";
+import { newProgress } from "../harness/core/workspace-observer.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
 import { sha256Of } from "../slots/tools/lib/workshop.js";
 import { endSentence, loadWords, stageSentence, stepSentence } from "../harness/browser/factory-voice.js";
@@ -98,6 +100,27 @@ describe("what a replay from the recipes may be (replay.ts)", () => {
         assert.deepEqual(eligible([...NEVER_REPLAYED, ...(PROCEDURE_TOPIC.neverReplayed ?? [])], new Set()), ["library.read", "biomed.presence", "graph.evaluate"]);
         // The code topic: the plugin and its claim are written for this contract.
         assert.ok((CODE_TOPIC.neverReplayed ?? []).some((r) => r.test("forge.plugin_write")) && (CODE_TOPIC.neverReplayed ?? []).some((r) => r.test("task.done")));
+    });
+});
+
+describe("the onnx factory on the socle: its stages, its state (2026-09-28)", () => {
+    it("the brief leads from the catalogue to the claim, and the state shows the shape of a reviewed fit spec until the fit", () => {
+        const task = { objective: REQUEST.objective, observations: {}, data: [{ file: "telemetry.json", columns: ["duty_percent", "current_amps"] }] } as never;
+        const p = newProgress();
+        assert.match(onnxBrief(p, task), /^Stage 1 of 5, the gap/);
+        p.reads["twin.registry_search"] = { at: "", value: { matches: [] } };
+        assert.match(onnxBrief(p, task), /^Stage 2 of 5, the plan/);
+        p.plan = { selected_nodes: [], missing_capabilities: [] } as never;
+        assert.match(onnxBrief(p, task), /^Stage 3 of 5, the fit.*duty_percent, current_amps/);
+        assert.equal((onnxState(p, task).hypothesis as { spec: { job?: string } }).spec.job, "fit", "the reviewed spec's shape");
+        p.reads["model.fit"] = { at: "", value: { onnx: { path: "models/m/m.onnx", sha256: "a".repeat(64) }, quality: { rmse: 0.001 }, parity: { ok: true } } };
+        assert.match(onnxBrief(p, task), /^Stage 4 of 5, the model/);
+        p.reads["model.inspect"] = { at: "", value: { sha256: "a".repeat(64), inputs: ["x"], outputs: ["y"] } };
+        assert.match(onnxBrief(p, task), /^Stage 4 of 5, the contract/);
+        p.checkedModels.push("a".repeat(64));
+        assert.match(onnxBrief(p, task), /^Stage 5 of 5, hand over/);
+        assert.deepEqual(Object.values(onnxRequirements(p)), [true, true, true, true, true]);
+        assert.equal((onnxState(p, task).hypothesis as { spec: unknown }).spec, null, "once fitted, no reference spec in the state");
     });
 });
 

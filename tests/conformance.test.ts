@@ -8,7 +8,9 @@
  *   base       the topic reaches every capability of the socle (`base.ts`)
  *   tools      each of its tool patterns names a capability that exists (a
  *              published tool, a task's own, the topic's own)
- *   model      a topic a model builds on has its prompt, its brief, its state
+ *   model      a topic a model builds on has its prompt, its brief, its state,
+ *              and the prompt it reads (the topic's, then the socle's) names
+ *              every capability it may call
  *   replay     each capability it allows is a read, or classed by the topic
  *              once: never replayed, or a replayed action (`replay.ts`)
  *   declared   each pattern it classes names a capability it allows
@@ -28,7 +30,7 @@ import { startAllOrFail } from "./lib/start.js";
 import { Broker } from "../harness/lib/broker.js";
 import { fromRoot } from "../lib/paths.js";
 import { TOPIC_DEFINITIONS } from "../harness/core/runner.js";
-import { BASE_CAPABILITIES } from "../harness/core/base.js";
+import { BASE_CAPABILITIES, promptWithSocle } from "../harness/core/base.js";
 import { NEVER_REPLAYED, READ_CAPABILITIES } from "../harness/core/replay.js";
 import { taskCapabilities } from "../harness/core/task-capabilities.js";
 import { newProgress } from "../harness/core/workspace-observer.js";
@@ -40,16 +42,7 @@ const PORT = 3146;
 type Check = "base" | "tools" | "model" | "replay" | "declared";
 
 /** The deviations known and not yet closed: topic, check, the capability or pattern, and why it stands. */
-const KNOWN: Array<{ topic: string; check: Check; what: string; why: string }> = [
-    // The conversions between quantities were given to the graph factory alone (2026-09-28); the socle's tools (point 1) carry them to the others.
-    ...["physics.units_relations", "physics.units_relate"].map((what) => ({ topic: "procedure", check: "base" as const, what, why: "the conversions were added to the graph factory only; the socle's tools will carry them here" })),
-    ...["physics.units_relations", "physics.units_relate"].map((what) => ({ topic: "code", check: "base" as const, what, why: "the conversions were added to the graph factory only; the socle's tools will carry them here" })),
-    { topic: "code", check: "base", what: "web.search", why: "the web was given to the procedure and graph factories, never to the code factory; the socle's tools will carry it here" },
-    // The onnx topic is the first factory, scripted only: no model builds on it, so nothing there reads the library or the units, and it has no prompt.
-    ...["library.list", "library.methods", "library.search", "library.read", "library.facts"].map((what) => ({ topic: "onnx", check: "base" as const, what, why: "the onnx fit is scripted only, older than the library; the socle's tools will reach it" })),
-    ...["physics.units_normalize", "physics.units_convert", "physics.units_compatible", "physics.units_validate_connection", "physics.units_relations", "physics.units_relate"].map((what) => ({ topic: "onnx", check: "base" as const, what, why: "the onnx fit is scripted only, older than the unit system; the socle's tools will reach it" })),
-    { topic: "onnx", check: "model", what: "prompt", why: "the onnx fit is scripted only: no model has been asked to build on it, so it has no prompt, brief nor state" },
-];
+const KNOWN: Array<{ topic: string; check: Check; what: string; why: string }> = [];
 
 const TASK = { objective: { required_outputs: [{ name: "x", quantity: "Volume", unit: "m3" }], constraints: {} }, data: [] } as unknown as TaskFile["task"];
 
@@ -90,6 +83,8 @@ describe("every factory against the socle", () => {
             if (!existsSync(fromRoot(topic.prompt)) || !readFileSync(fromRoot(topic.prompt), "utf8").trim()) found.push(`model|${topic.prompt}`);
             if (!topic.brief) found.push("model|brief");
             if (!topic.state) found.push("model|state");
+            const text = existsSync(fromRoot(topic.prompt)) ? promptWithSocle(readFileSync(fromRoot(topic.prompt), "utf8")) : "";
+            for (const id of allowed) if (!own.includes(id) || id.startsWith("task.")) if (!text.includes(`\`${id}\``)) found.push(`model|unnamed ${id}`);
         }
         const never = [...NEVER_REPLAYED, ...(topic.neverReplayed ?? [])];
         const replayed = topic.replayedActions ?? [];

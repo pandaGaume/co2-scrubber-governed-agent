@@ -80,11 +80,22 @@ export interface FactoryState {
 const VERSION = "0.3.0";
 
 
+/**
+ * A task id, reserved by creating its directory: the creation fails when the directory exists, so two processes
+ * sharing the workshop (a server and a test run, two test files) never take the same id (2026-09-28: checked, then
+ * created, one id went to two tasks, and one's cleanup removed the other's).
+ */
 function newTaskId(): string {
     const stamp = new Date().toISOString().slice(0, 10);
+    mkdirSync(WORKSHOP_ROOT, { recursive: true });
     for (let n = 1; n < 10000; n++) {
         const id = `t-${stamp}-${n.toString().padStart(4, "0")}`;
-        if (!existsSync(path.join(WORKSHOP_ROOT, id))) return id;
+        try {
+            mkdirSync(path.join(WORKSHOP_ROOT, id));
+            return id;
+        } catch (e) {
+            if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
+        }
     }
     throw new Error("no free task id today");
 }
@@ -297,8 +308,8 @@ function launch(httpBase: string, taskId: string, topic: Topic, builder: Builder
             const reasoner = await ReasonerProvider.connect(broker);
             if (!reasoner.description.ready) throw new Error(`the reasoner is not ready: ${reasoner.description.reason ?? "no reason given"}`);
             reasoner.usePrompt(prompt);
-            // The graph and procedure factories run on the reasoning state: the model reads the state the harness rebuilds at every step, never the transcript (the refactoring of 2026-09-25); their state carries what they read. The onnx topic keeps the conversation.
-            reasoner.useContext(topic === "onnx" ? "conversation" : "state");
+            // Every factory runs on the reasoning state: the model reads the state the harness rebuilds at every step, never the transcript (the refactoring of 2026-09-25); since 2026-09-28 the onnx topic has one too.
+            reasoner.useContext("state");
             run.builder = reasoner.name;
             provider = reasoner;
             promptFile = prompt;
@@ -434,7 +445,7 @@ export function factorySlot(wsBase: string, log: (line: string) => void): Publis
             handle: (args, s) => {
                 const { taskId, task, topic } = createTask(args, s, log);
                 const status = statusOf(taskId);
-                const builder: BuilderChoice = args.builder === "scripted" || args.builder === "reasoner" ? args.builder : TOPIC_DEFINITIONS[topic]?.prompt ? "reasoner" : "scripted";
+                const builder: BuilderChoice = args.builder === "scripted" || args.builder === "reasoner" ? args.builder : (TOPIC_DEFINITIONS[topic]?.defaultBuilder ?? (TOPIC_DEFINITIONS[topic]?.prompt ? "reasoner" : "scripted"));
                 const run = args.run === false ? null : launch(httpBase, taskId, topic, builder, s, log, (id, manifest) => announce(id, manifest), (a) => createTask(a, s, log));
                 if (!run) announce(taskId);
                 return { taskId, state: run ? "running" : status.state, workspace: status.workspace, taskSha256: status.taskSha256, data: task.task.data, builder: run?.builder ?? null, started: Boolean(run) };
