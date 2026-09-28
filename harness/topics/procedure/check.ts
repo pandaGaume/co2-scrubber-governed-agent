@@ -6,56 +6,42 @@
  * runs it again on what the factory proposes, with an occupancy it reads
  * itself (a proposal that passed once is not trusted to pass twice).
  *
- * What it refuses, and each refusal carries a kind so the scorecard and
- * Mother can tell them apart:
- *
- *   shape       the file is not a procedure (no volume, no device, no step);
- *   floor       a step below the envelope's speed floor, a stop, or a
- *               procedure that sets its own floor below it: refused as a
- *               plan, before any command (the first protocol of the story);
- *   bounds      limits outside the envelope (CO2 abort above the ceiling,
- *               max not below abort), a speed above 100;
- *   duration    a step with no duration, a total over the procedure's own
- *               maximum, a maximum over the envelope's;
- *   abort       a required abort condition missing (`co2`, `refused`);
- *   expected    no prediction: a test that does not say what it expects
- *               to see cannot be told apart from a fishing trip;
- *   diligence   the occupancy of the volume was not read in this task
- *               (by `biomed.presence`). Diligence, not a conclusion: a
- *               builder that reads and finds the module empty owes nothing;
- *   monitoring  the volume is occupied (as read, not as declared) and the
- *               procedure does not monitor every occupant, or no abort
- *               condition reads their verdict. A floor, like MIN-FLOW: it
- *               is raised, never negotiated.
- *
- * The two last rules are the two of section 8.1, and they are not of the
- * same nature: the first asks for a read, the second dictates what follows
- * from it. Neither is written in the builder's prompt.
+ * Since 2026-09-28 it holds no rule and no number of its own: the rules are
+ * the signed card's (`<rulesDocument>.rules.json`, read through the library
+ * with the card's signature), the envelope is the card's facts, the format
+ * is the spec's (specs/procedure/format.json). Rules nobody signed judge
+ * nothing: every proposal is refused until a person signs them. The
+ * evaluator is `harness/core/rules.ts`; each refusal carries the kind its
+ * rule gives (floor, start, bounds, duration, abort, expected, diligence,
+ * monitoring, shape), so the scorecard and Mother can tell them apart.
  */
-import { ABORT_READERS, PROCEDURE_ENVELOPE, moduleOf, totalMinutes, type Procedure } from "./procedure.js";
+import { readFileSync } from "node:fs";
+import { fromRoot } from "../../../lib/paths.js";
+import { constantsOf as constantsByFormat, evaluateRules, matches, moduleOfPlace, unsignedRules, valueAt, type PeopleRead, type ProposalFormat, type RuleProblem, type RulesDocument } from "../../core/rules.js";
 import { safetyProblems as commonSafetyProblems, type SignedFact } from "../../core/justify.js";
 
-export type ProblemKind = "shape" | "floor" | "start" | "bounds" | "duration" | "abort" | "expected" | "diligence" | "monitoring" | "justification";
-
-/** The CO2 measured in the volume when the procedure is written or relayed: the test starts from it. */
-export interface MeasuredStart {
-    co2Ppm: number;
-    source?: string;
-    at?: string;
+/** The format of a procedure, as the spec gives it: how the factory reads one, what it asks, where it reads the people and the measurement. */
+export interface ProcedureFormat extends ProposalFormat {
+    title?: string;
+    schema: string;
+    rulesDocument: string;
+    minutes: string;
+    device: string;
+    place: string;
+    watched: string;
+    measured: string;
+    presence: string;
+    tools: string[];
 }
 
-export interface ProcedureProblem {
-    kind: ProblemKind;
-    message: string;
-    /** The step it is about, when it is about one. */
-    step?: number;
-}
+export const PROCEDURE_FORMAT_FILE = "specs/procedure/format.json";
+export const FORMAT: ProcedureFormat = JSON.parse(readFileSync(fromRoot(...PROCEDURE_FORMAT_FILE.split("/")), "utf8")) as ProcedureFormat;
 
-/** What `biomed.presence` answered, and when; null when it was not read in this task. */
-export interface PresenceRead {
-    modules: Array<{ module: string; occupants: number; subjects: Array<{ id: string; callsign?: string }> }>;
-    at: string;
-}
+export type ProblemKind = string;
+export type ProcedureProblem = RuleProblem;
+export type PresenceRead = PeopleRead;
+/** What the task measured, by name, and where from: the rules compare with it. */
+export type MeasuredStart = Record<string, unknown> & { source?: string; at?: string };
 
 export interface ProcedureCheck {
     ok: boolean;
@@ -65,111 +51,55 @@ export interface ProcedureCheck {
     occupants: Array<{ id: string; callsign?: string }>;
 }
 
-const num = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
-
-export function checkProcedure(input: unknown, presence: PresenceRead | null, envelope = PROCEDURE_ENVELOPE, measured: MeasuredStart | null = null): ProcedureCheck {
+/** A procedure checked against a signed document's rules and facts; rules nobody signed judge nothing. */
+export function checkProcedure(input: unknown, presence: PresenceRead | null, rules: RulesDocument | null, facts: SignedFact[], measured: MeasuredStart | null = null, format: ProcedureFormat = FORMAT): ProcedureCheck {
     const problems: ProcedureProblem[] = [];
-    const add = (kind: ProblemKind, message: string, step?: number) => problems.push(step === undefined ? { kind, message } : { kind, message, step });
-    const p = (input && typeof input === "object" ? input : {}) as Partial<Procedure>;
-    const module = typeof p.volume === "string" ? moduleOf(p.volume) : "";
-
-    // The shape: without it nothing else can be judged.
-    if (!module || !/^\/[a-z0-9-]+(\/[a-z0-9-]+)+$/.test(String(p.volume))) add("shape", `volume "${String(p.volume)}" is not an ISA-95 path such as /habitat/lab`);
-    if (typeof p.device !== "string" || !p.device.startsWith("/")) add("shape", `device "${String(p.device)}" is not an ISA-95 path`);
-    const steps = Array.isArray(p.steps) ? p.steps : [];
-    if (!steps.length) add("shape", "a procedure has at least one step");
-    const limits = p.limits;
-    if (!limits || !num(limits.co2MaxPpm) || !num(limits.co2AbortPpm) || !num(limits.minSpeedPercent) || !num(limits.maxMinutes)) add("shape", "limits must give co2MaxPpm, co2AbortPpm, minSpeedPercent and maxMinutes");
-
-    // The floor: a plan that commands below it is refused whole, before any command.
-    if (limits && num(limits.minSpeedPercent) && limits.minSpeedPercent < envelope.speedFloorPercent) add("floor", `the procedure sets its own minimum speed at ${limits.minSpeedPercent} %, below the floor of ${envelope.speedFloorPercent} %: a procedure may raise the floor, never lower it`);
-    for (const s of steps) {
-        if (!num(s?.speedPercent)) {
-            add("shape", `step ${String(s?.n)} has no speed`, s?.n);
-            continue;
-        }
-        if (s.speedPercent <= 0) add("floor", `step ${s.n} stops the scrubber: a test never stops the only scrubber of a volume, it does not restart at once`, s.n);
-        else if (s.speedPercent < envelope.speedFloorPercent) add("floor", `step ${s.n} commands ${s.speedPercent} %, below the floor of ${envelope.speedFloorPercent} %`, s.n);
-        else if (limits && num(limits.minSpeedPercent) && s.speedPercent < limits.minSpeedPercent) add("floor", `step ${s.n} commands ${s.speedPercent} %, below the procedure's own minimum of ${limits.minSpeedPercent} %`, s.n);
-        if (s.speedPercent > 100) add("bounds", `step ${s.n} commands ${s.speedPercent} %, above full speed`, s.n);
-        if (!num(s.minutes) || s.minutes <= 0) add("duration", `step ${s.n} has no positive duration`, s.n);
+    if (!rules) problems.push({ kind: "rules", message: `the guard's rules (${format.rulesDocument}) could not be read: no proposal is judged without them` });
+    else {
+        const unsigned = unsignedRules(rules);
+        if (unsigned) problems.push(unsigned);
+        else problems.push(...evaluateRules(input, rules, { format, facts, measured, people: presence }));
     }
-
-    // The bounds of the air.
-    if (limits && num(limits.co2AbortPpm) && num(limits.co2MaxPpm)) {
-        if (limits.co2AbortPpm > envelope.co2AbortCeilingPpm) add("bounds", `the CO2 abort limit ${limits.co2AbortPpm} ppm is above the ceiling of ${envelope.co2AbortCeilingPpm} ppm`);
-        if (limits.co2MaxPpm >= limits.co2AbortPpm) add("bounds", `the CO2 maximum ${limits.co2MaxPpm} ppm is not below the abort limit ${limits.co2AbortPpm} ppm`);
-        // The start: the test begins at the CO2 measured now, and its limits leave room above it.
-        if (measured && num(measured.co2Ppm)) {
-            const at = Math.round(measured.co2Ppm);
-            if (limits.co2AbortPpm <= at) add("start", `the CO2 abort limit ${limits.co2AbortPpm} ppm is at or below the CO2 measured now, ${at} ppm${measured.source ? ` (${measured.source})` : ""}: the test would stop at its first reading`);
-            else if (limits.co2MaxPpm < at + envelope.startHeadroomPpm) add("start", `the CO2 maximum ${limits.co2MaxPpm} ppm leaves less than ${envelope.startHeadroomPpm} ppm above the CO2 measured now, ${at} ppm${measured.source ? ` (${measured.source})` : ""}: the test starts there and has no room to rise`);
-        }
-    }
-
-    // The duration: bounded twice, by the procedure and by the envelope.
-    if (limits && num(limits.maxMinutes)) {
-        if (limits.maxMinutes > envelope.maxMinutesCeiling) add("duration", `the maximum duration ${limits.maxMinutes} min is above the ceiling of ${envelope.maxMinutesCeiling} min`);
-        const total = totalMinutes({ steps });
-        if (total > limits.maxMinutes) add("duration", `the steps last ${total} min, more than the procedure's maximum of ${limits.maxMinutes} min`);
-    }
-
-    // The abort conditions and the predictions.
-    const aborts = Array.isArray(p.abort) ? p.abort : [];
-    for (const id of envelope.requiredAborts) if (!aborts.some((a) => a?.id === id)) add("abort", `no abort condition with id "${id}" (${ABORT_READERS[id]})`);
-    for (const a of aborts) if (!ABORT_READERS[String(a?.id)]) add("abort", `abort condition "${String(a?.id)}" cannot be read by the executor, which reads ${Object.keys(ABORT_READERS).join(", ")}`);
-    const expected = p.expected && typeof p.expected === "object" ? Object.values(p.expected).filter((v) => typeof v === "string" && v.trim()) : [];
-    if (!expected.length) add("expected", "no prediction: the procedure says nothing of what it expects to see");
-
-    // Diligence: the occupancy was read in this task, whatever it found.
-    const read = presence?.modules.find((m) => m.module === module);
-    if (!presence) add("diligence", `the occupancy of ${module || "the volume"} was not read in this task (biomed.presence)`);
-    else if (!read && module) add("diligence", `biomed.presence answered no module "${module}"`);
-
-    // The floor of the people: judged on what was read, not on what the procedure declares.
-    const occupants = read?.subjects ?? [];
-    if (read && read.occupants > 0) {
-        const watched = new Set(p.monitoring?.subjects ?? []);
-        const unwatched = occupants.filter((s) => !watched.has(s.id));
-        if (!p.monitoring) add("monitoring", `${module} is occupied (${read.occupants}) and the procedure asks for no monitoring of its occupants (its "monitoring" names no subject): name them in monitoring.subjects, with the band; the medical monitor is on standby until the test is authorised, and the station starts it then for the subjects the procedure names`);
-        else if (unwatched.length) add("monitoring", `${module} is occupied and ${unwatched.map((s) => s.callsign ?? s.id).join(", ")} would not be monitored: name them in monitoring.subjects too; the medical monitor is on standby until the test is authorised, and the station starts it then for the subjects the procedure names`);
-        if (!aborts.some((a) => a?.id === "vitals" || a?.source === envelope.vitalsSource)) add("monitoring", `${module} is occupied and no abort condition reads ${envelope.vitalsSource}: add one (id "vitals", source "${envelope.vitalsSource}"), which stops the test when an occupant leaves the band or the watch is lost`);
-        if (p.occupancy && p.occupancy.occupants !== read.occupants) add("monitoring", `the procedure declares ${p.occupancy.occupants} occupant(s) in ${module}; ${read.occupants} were read`);
-    }
-
+    const place = valueAt(input, format.place, format.keys);
+    const module = typeof place === "string" ? moduleOfPlace(place) : "";
+    const occupants = presence?.modules.find((m) => m.module === module)?.subjects ?? [];
     return { ok: problems.length === 0, problems, module, occupants };
 }
 
-/** The constants a procedure sets, by path, with their values. */
-export function constantsOf(p: Partial<Procedure>): Array<{ constant: string; value: number }> {
-    const out: Array<{ constant: string; value: number }> = [];
-    const add = (constant: string, value: unknown) => {
-        if (typeof value === "number" && Number.isFinite(value)) out.push({ constant, value });
-    };
-    for (const k of ["co2MaxPpm", "co2AbortPpm", "minSpeedPercent", "maxMinutes"] as const) add(`limits.${k}`, p.limits?.[k]);
-    for (const s of Array.isArray(p.steps) ? p.steps : []) {
-        add(`steps.${s?.n}.speedPercent`, s?.speedPercent);
-        add(`steps.${s?.n}.minutes`, s?.minutes);
+/** The constants a procedure sets, by path, with their values, as the format declares them. */
+export const constantsOf = (p: unknown, format: ProcedureFormat = FORMAT): Array<{ constant: string; value: number }> => constantsByFormat(p, format);
+
+/** The safety constants of a document's rules: those a person must justify by a signed fact. */
+export const safetyOf = (rules: RulesDocument | null) => (constant: string): boolean => Boolean(rules?.safety.some((p) => matches(constant, p)));
+
+/** The facts the rules cite, by id and value: the guard's envelope, which a justification may cite. */
+export function envelopeOf(rules: RulesDocument | null, facts: SignedFact[]): Record<string, number> {
+    const ids = new Set<string>();
+    for (const r of rules?.rules ?? []) {
+        if ("compare" in r) {
+            if (r.compare.fact) ids.add(r.compare.fact);
+            if (r.compare.plusFact) ids.add(r.compare.plusFact);
+        }
     }
-    for (const a of Array.isArray(p.abort) ? p.abort : []) add(`abort.${a?.id}.threshold`, a?.threshold);
-    add("monitoring.band.minBpm", p.monitoring?.band?.minBpm);
-    add("monitoring.band.maxBpm", p.monitoring?.band?.maxBpm);
-    return out;
+    return Object.fromEntries(facts.filter((f) => ids.has(f.id)).map((f) => [f.id, f.value]));
 }
 
-/**
- * The safety constants of a procedure (2026-09-28): what bounds the air the occupants breathe, the scrubber's speed, the exposure, the aborts, the watch.
- * Each is justified by a fact of a library document a person signed and that has not changed since, and respects it; a value a model found, computed or assumed is not a safety limit.
- */
-export const SAFETY_CONSTANT = /^(limits\.(co2MaxPpm|co2AbortPpm|minSpeedPercent|maxMinutes)|steps\.\d+\.speedPercent|abort\.[a-z]+\.threshold|monitoring\.band\.(minBpm|maxBpm))$/;
-
-/** A library fact as the library serves it: its document, and that document's signature as it stands (`justify.ts`). */
-export type { SignedFact } from "../../core/justify.js";
-
 /** The safety constants' problems, by the rule every factory shares (`justify.ts`): a fact of a signed library document, respected. */
-export function safetyProblems(p: Partial<Procedure>, facts: SignedFact[]): string[] {
-    return commonSafetyProblems(constantsOf(p).filter((x) => SAFETY_CONSTANT.test(x.constant)), Array.isArray(p.justifications) ? p.justifications : [], facts);
+export function safetyProblems(p: { justifications?: unknown }, facts: SignedFact[], rules: RulesDocument | null, format: ProcedureFormat = FORMAT): string[] {
+    const isSafety = safetyOf(rules);
+    return commonSafetyProblems(constantsOf(p, format).filter((x) => isSafety(x.constant)), Array.isArray(p.justifications) ? p.justifications : [], facts);
+}
+
+/** The rules and the facts, through the library: what the factory's guard and the station both judge by. */
+export async function rulesAndFacts(call: (slot: string, tool: string, args: Record<string, unknown>) => Promise<{ ok: boolean; output?: unknown }>, format: ProcedureFormat = FORMAT): Promise<{ rules: RulesDocument | null; facts: SignedFact[] }> {
+    const r = await call("library", "rules", { id: format.rulesDocument });
+    const f = await call("library", "facts", {});
+    const rules = r.ok ? (r.output as RulesDocument) : null;
+    const facts = f.ok ? (((f.output as { facts?: SignedFact[] }).facts ?? []) as SignedFact[]) : [];
+    return { rules, facts };
 }
 
 /** The problems as one line each, the way a builder reads them at its next step. */
 export const problemLines = (check: Pick<ProcedureCheck, "problems">): string[] => check.problems.map((x) => `${x.kind}: ${x.message}`);
+
+export type { SignedFact } from "../../core/justify.js";

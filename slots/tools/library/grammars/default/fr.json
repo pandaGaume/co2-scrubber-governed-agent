@@ -69,6 +69,13 @@
                 "scope": "repository, ou run",
                 "runId": "le run, pour des signatures propres"
             }
+        },
+        "rules": {
+            "title": "Les règles d'un document",
+            "description": "Les règles contre lesquelles une garde vérifie une proposition, à côté des faits du même document, avec la signature du document telle qu'elle est : la garde ne juge que selon des règles qu'une personne a signées.",
+            "properties": {
+                "id": "le document"
+            }
         }
     },
     "resources": {

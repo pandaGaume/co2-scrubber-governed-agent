@@ -244,7 +244,7 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
         const unsignedOf = async (s: TaskStatus): Promise<string[]> => {
             const steps = (s.manifest?.steps ?? []) as Array<{ reason?: string | null }>;
             const text = [...steps.map((x) => String(x.reason ?? "")), String(s.manifest?.ended ?? "")].join("\n");
-            const named = new Set<string>([card, ...[...text.matchAll(/is in "([^"]+)", which no person has signed/g)].map((m) => m[1])]);
+            const named = new Set<string>([card, ...[...text.matchAll(/(?:is|are) in "([^"]+)", which no person has signed/g)].map((m) => m[1])]);
             const out: string[] = [];
             for (const id of named) {
                 const f = await call<{ facts: Array<{ signed?: { valid: boolean } | null }> }>("library", "facts", { id }).catch(() => ({ facts: [] }));

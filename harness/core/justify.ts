@@ -68,8 +68,8 @@ export interface Justified {
     constants(input: JsonValue): Constant[];
     /** The justifications the call gives; its `justifications` field by default. */
     given?(input: JsonValue): unknown[];
-    /** The safety constants, by path: justified by a signed fact only. */
-    safety?: RegExp;
+    /** The safety constants, by path: justified by a signed fact only (a pattern, or what a signed document's rules name). */
+    safety?: RegExp | ((constant: string) => boolean);
     /** The guard's envelope, when a constant may cite one of its bounds. */
     envelope?: Record<string, unknown>;
     /** Does the task give a measurement to cite; any observation or data by default. */
@@ -255,7 +255,7 @@ export const givenOf = (justified: Justified, input: JsonValue): unknown[] => {
 export async function checkJustifications(justified: Justified, input: JsonValue, context: Pick<TopicContext, "broker" | "task" | "progress">): Promise<string[]> {
     const constants = justified.constants(input);
     const given = givenOf(justified, input);
-    const isSafety = (c: Constant) => Boolean(justified.safety?.test(c.constant));
+    const isSafety = (c: Constant) => (typeof justified.safety === "function" ? justified.safety(c.constant) : Boolean(justified.safety?.test(c.constant)));
     const safety = constants.filter(isSafety);
     let facts: SignedFact[] = [];
     if (safety.length) {

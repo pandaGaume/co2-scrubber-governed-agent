@@ -53,6 +53,12 @@ export function documentDigest(id: string, dir: string = LIBRARY_DOCS_DIR): stri
     const facts = path.join(dir, `${id}.facts.json`);
     hash.update("\n--facts--\n");
     if (existsSync(facts)) hash.update(text(facts));
+    // The guard's rules, when the document holds some (2026-09-28): signed with the facts they cite, and a rule changed voids the signature as a fact changed does.
+    const rules = path.join(dir, `${id}.rules.json`);
+    if (existsSync(rules)) {
+        hash.update("\n--rules--\n");
+        hash.update(text(rules));
+    }
     return hash.digest("hex");
 }
 

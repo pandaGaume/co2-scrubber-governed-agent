@@ -37,11 +37,11 @@ import { startAllOrFail } from "./lib/start.js";
 import { Broker } from "../harness/lib/broker.js";
 import { runTask, type BuilderContext } from "../harness/core/runner.js";
 import { ScriptedProcedureBuilder, type ScriptedProcedureOptions } from "../harness/scripted/procedure.js";
-import { checkProcedure, safetyProblems, type PresenceRead, type SignedFact } from "../harness/topics/procedure/check.js";
-import { PROCEDURE_ENVELOPE } from "../harness/topics/procedure/procedure.js";
-import { loadFacts, LIBRARY_DIR } from "../slots/tools/library/provider.js";
-import type { Procedure } from "../harness/topics/procedure/procedure.js";
-import { decayVolume } from "../harness/topics/procedure/report.js";
+import { checkProcedure, envelopeOf, FORMAT, safetyProblems, type MeasuredStart, type PresenceRead, type SignedFact } from "../harness/topics/procedure/check.js";
+import type { RulesDocument } from "../harness/core/rules.js";
+import { loadFacts, loadRules, LIBRARY_DIR } from "../slots/tools/library/provider.js";
+import type { Procedure } from "../lib/procedure/format.js";
+import { decayVolume } from "../lib/procedure/report.js";
 import { commandsOf, descriptorProblems, needsCommissioning, type Device } from "../slots/station/registry.js";
 import { inventoryOf, type Inventory } from "../slots/factory/inventory.js";
 import type { Commissioning, MotherLine } from "../slots/station/provider.js";
@@ -80,20 +80,25 @@ const PROCEDURE: Procedure = {
 };
 const LAB_OCCUPIED: PresenceRead = { at: "now", modules: [{ module: "lab", occupants: 2, subjects: [{ id: "fe-1", callsign: "FE-1" }, { id: "fe-2", callsign: "FE-2" }] }] };
 const LAB_EMPTY: PresenceRead = { at: "now", modules: [{ module: "lab", occupants: 0, subjects: [] }] };
-const kinds = (p: unknown, presence: PresenceRead | null) => [...new Set(checkProcedure(p, presence).problems.map((x) => x.kind))].sort();
+/** The safety card's facts and rules as the library serves them, signed: what the guard judges by. */
+const CARD = loadFacts(LIBRARY_DIR, FORMAT.rulesDocument);
+const FACTS: SignedFact[] = CARD.map((f) => ({ ...f, source: FORMAT.rulesDocument, signed: { by: "reviewer", at: "2026-09-28", valid: true } }));
+const RULES: RulesDocument = { document: FORMAT.rulesDocument, ...loadRules(LIBRARY_DIR, FORMAT.rulesDocument)!, signed: { by: "reviewer", at: "2026-09-28", valid: true } } as RulesDocument;
+const check = (p: unknown, presence: PresenceRead | null, measured: MeasuredStart | null = null) => checkProcedure(p, presence, RULES, FACTS, measured);
+const kinds = (p: unknown, presence: PresenceRead | null) => [...new Set(check(p, presence).problems.map((x) => x.kind))].sort();
 
 describe("the procedure's guard, alone", () => {
     it("the limits leave room above the CO2 measured at the start, and every constant is justified by what the task read", () => {
         // The ninth page run: a maximum of 1200 ppm and an abort at 1500 on a Lab measured at 1480 stopped the test at its first minute.
         const low = { ...PROCEDURE, limits: { ...PROCEDURE.limits, co2MaxPpm: 1200, co2AbortPpm: 1500 } };
-        const start = checkProcedure(low, LAB_OCCUPIED, undefined, { co2Ppm: 1480, source: "/habitat/lab/eclss/co2-1" });
-        assert.ok(start.problems.some((x) => x.kind === "start" && /at or below the CO2 measured now, 1480 ppm/.test(x.message)) || start.problems.some((x) => x.kind === "start" && /leaves less than 200 ppm/.test(x.message)), JSON.stringify(start.problems));
-        assert.deepEqual(checkProcedure(PROCEDURE, LAB_OCCUPIED, undefined, { co2Ppm: 1480 }).problems, [], "2800 and 3200 leave room above 1480");
+        const start = check(low, LAB_OCCUPIED, { co2Ppm: 1480, source: "/habitat/lab/eclss/co2-1" });
+        assert.ok(start.problems.some((x) => x.kind === "start"), JSON.stringify(start.problems));
+        assert.deepEqual(check(PROCEDURE, LAB_OCCUPIED, { co2Ppm: 1480 }).problems, [], "2800 and 3200 leave room above 1480");
         // The constants, by path.
         assert.deepEqual(constantsOf(PROCEDURE).map((c) => c.constant), ["limits.co2MaxPpm", "limits.co2AbortPpm", "limits.minSpeedPercent", "limits.maxMinutes", "steps.1.speedPercent", "steps.1.minutes", "steps.2.speedPercent", "steps.2.minutes"]);
         const read = { library: ["method-concentration-decay"], web: ["https://ntrs.nasa.gov/citations/20150021467"] };
-        assert.match(justificationProblems(PROCEDURE, read, null).join("; "), /steps\.1\.minutes = 12 has no justification/);
-        assert.ok(!justificationProblems(PROCEDURE, read, null).some((x) => /limits\./.test(x)), "the safety constants are the signed library's, not these sources'");
+        assert.match(justificationProblems(PROCEDURE, read, null, RULES).join("; "), /steps\.1\.minutes = 12 has no justification/);
+        assert.ok(!justificationProblems(PROCEDURE, read, null, RULES).some((x) => /limits\./.test(x)), "the safety constants are the signed rules', not these sources'");
         const justified = {
             ...PROCEDURE,
             justifications: [
@@ -107,21 +112,19 @@ describe("the procedure's guard, alone", () => {
                 { constant: "steps.2.minutes", value: 12, source: "assumed" as const, reference: "", reason: "long enough for one time constant" },
             ],
         };
-        assert.deepEqual(justificationProblems(justified, read, null), []);
-        const unread = justificationProblems(justified, { library: [], web: [] }, null).join("; ");
+        assert.deepEqual(justificationProblems(justified, read, null, RULES), []);
+        const unread = justificationProblems(justified, { library: [], web: [] }, null, RULES).join("; ");
         assert.match(unread, /steps\.1\.minutes: "method-concentration-decay" is not a library document or fact read in this task/);
         const wrong = { ...justified, justifications: justified.justifications.map((j) => (j.constant === "steps.2.minutes" ? { ...j, value: 15 } : j)) };
-        assert.match(justificationProblems(wrong, read, null).join("; "), /steps\.2\.minutes: the justification says 15, what you sent sets 12/);
+        assert.match(justificationProblems(wrong, read, null, RULES).join("; "), /steps\.2\.minutes: the justification says 15, what you sent sets 12/);
     });
 
-    it("a safety constant cites a fact of a signed library document and respects it; the card's values are the guard's envelope", () => {
-        const card = loadFacts(LIBRARY_DIR, "commissioning-test-safety");
-        const value = (id: string) => card.find((f) => f.id === id)?.value;
-        // The card and the code say the same numbers.
-        assert.equal(value("test.speedFloorPercent"), PROCEDURE_ENVELOPE.speedFloorPercent);
-        assert.equal(value("test.co2AbortCeilingPpm"), PROCEDURE_ENVELOPE.co2AbortCeilingPpm);
-        assert.equal(value("test.maxMinutesCeiling"), PROCEDURE_ENVELOPE.maxMinutesCeiling);
-        assert.equal(value("test.startHeadroomPpm"), PROCEDURE_ENVELOPE.startHeadroomPpm);
+    it("a safety constant cites a fact of a signed library document and respects it; the card's rules cite only its own facts", () => {
+        const card = CARD;
+        // Every fact a rule cites is a fact of the card: the envelope is the card's, nothing in the code.
+        const cited = RULES.rules.flatMap((r) => ("compare" in r ? [r.compare.fact, r.compare.plusFact] : [])).filter((x): x is string => typeof x === "string");
+        assert.ok(cited.length > 0);
+        assert.deepEqual(Object.keys(envelopeOf(RULES, FACTS)).sort(), [...new Set(cited)].sort(), "every fact the rules cite is on the card");
         assert.ok(card.every((f) => f.kind === "context" && f.reference && f.bound), "each limit is a context fact with its origin and its safe side");
         const signed = (valid: boolean): SignedFact[] => card.map((f) => ({ ...f, source: "commissioning-test-safety", signed: { by: "reviewer", at: "2026-09-28", valid } }));
         const cite = (constant: string, value: number, reference: string) => ({ constant, value, source: "library" as const, reference, reason: "the card" });
@@ -136,16 +139,16 @@ describe("the procedure's guard, alone", () => {
                 cite("steps.2.speedPercent", 100, "test.speedFloorPercent"),
             ],
         };
-        assert.deepEqual(safetyProblems(safe, signed(true)), []);
+        assert.deepEqual(safetyProblems(safe, signed(true), RULES), []);
         // Unsigned, or changed since it was signed: refused, with how to sign.
         const unsigned = card.map((f) => ({ ...f, source: "commissioning-test-safety", signed: null }));
-        assert.match(safetyProblems(safe, unsigned).join("; "), /which no person has signed as valid: cite instead a fact of a signed document.*npm run library:sign/);
-        assert.match(safetyProblems(safe, signed(false)).join("; "), /was signed by reviewer and has changed since/);
+        assert.match(safetyProblems(safe, unsigned, RULES).join("; "), /which no person has signed as valid: cite instead a fact of a signed document.*npm run library:sign/);
+        assert.match(safetyProblems(safe, signed(false), RULES).join("; "), /was signed by reviewer and has changed since/);
         // A safety constant found on the web, computed or assumed is not a safety limit; one that does not respect its fact is refused.
         const web = { ...safe, justifications: safe.justifications.map((j) => (j.constant === "limits.co2AbortPpm" ? { ...j, source: "web" as const, reference: "https://example.org" } : j)) };
-        assert.match(safetyProblems(web, signed(true)).join("; "), /limits\.co2AbortPpm = 3200 is a safety constant: it is justified by a fact of a signed library document, not by a web page/);
+        assert.match(safetyProblems(web, signed(true), RULES).join("; "), /limits\.co2AbortPpm = 3200 is a safety constant: it is justified by a fact of a signed library document, not by a web page/);
         const over = { ...safe, limits: { ...safe.limits, co2AbortPpm: 3400 }, justifications: safe.justifications.map((j) => (j.constant === "limits.co2AbortPpm" ? { ...j, value: 3400 } : j)) };
-        assert.match(safetyProblems(over, signed(true)).join("; "), /limits\.co2AbortPpm = 3400 does not respect test\.co2AbortCeilingPpm = 3200 ppm \(at or below it\)/);
+        assert.match(safetyProblems(over, signed(true), RULES).join("; "), /limits\.co2AbortPpm = 3400 does not respect test\.co2AbortCeilingPpm = 3200 ppm \(at or below it\)/);
     });
 
     it("a refused procedure stays kept whole for a few minutes: a revision sends only what changes, is applied to it and checked whole; the draft is erased once a procedure is accepted, and expires (2026-09-28)", async () => {
@@ -155,6 +158,7 @@ describe("the procedure's guard, alone", () => {
             call: async (slot: string, tool: string) => {
                 calls.push(`${slot}.${tool}`);
                 if (tool === "facts") return { ok: true, outcome: "completed", output: { facts: card } };
+                if (tool === "rules") return { ok: true, outcome: "completed", output: RULES };
                 if (tool === "write") return { ok: true, outcome: "completed", output: { sha256: "a".repeat(64) } };
                 return { ok: true, outcome: "completed", output: {} };
             },
@@ -216,15 +220,22 @@ describe("the procedure's guard, alone", () => {
     });
 
     it("the corrected procedure of section 15 passes, on an occupied Lab", () => {
-        const c = checkProcedure(PROCEDURE, LAB_OCCUPIED);
+        const c = check(PROCEDURE, LAB_OCCUPIED);
         assert.deepEqual(c.problems, []);
         assert.equal(c.module, "lab");
         assert.deepEqual(c.occupants.map((o) => o.id), ["fe-1", "fe-2"]);
+        // Rules nobody signed, or changed since, judge nothing: every proposal refused, with how to sign; rules that cannot be read too.
+        for (const signed of [null, { by: "reviewer", at: "2026-09-28", valid: false }]) {
+            const unsigned = checkProcedure(PROCEDURE, LAB_OCCUPIED, { ...RULES, signed }, FACTS);
+            assert.deepEqual(unsigned.problems.map((p) => p.kind), ["rules"]);
+            assert.match(unsigned.problems[0].message, /the guard's rules are in "commissioning-test-safety", which no person has signed as valid/);
+        }
+        assert.deepEqual(checkProcedure(PROCEDURE, LAB_OCCUPIED, null, FACTS).problems.map((p) => p.kind), ["rules"]);
     });
 
     it("the first protocol, which stops the scrubber for the rise, is refused as a plan: floor, step 1", () => {
         const stop = { ...PROCEDURE, limits: { ...PROCEDURE.limits, minSpeedPercent: 0 }, steps: [{ ...PROCEDURE.steps[0], speedPercent: 0 }, PROCEDURE.steps[1]] };
-        const c = checkProcedure(stop, LAB_OCCUPIED);
+        const c = check(stop, LAB_OCCUPIED);
         assert.equal(c.ok, false);
         assert.ok(c.problems.every((p) => p.kind === "floor"), JSON.stringify(c.problems));
         assert.ok(c.problems.some((p) => p.step === 1 && /stops the scrubber/.test(p.message)));
@@ -261,7 +272,7 @@ describe("the procedure's guard, alone", () => {
         assert.deepEqual(kinds({ ...PROCEDURE, abort: PROCEDURE.abort.filter((a) => a.id !== "co2") }, LAB_OCCUPIED), ["abort"]);
         assert.deepEqual(kinds({ ...PROCEDURE, expected: {} }, LAB_OCCUPIED), ["expected"]);
         // An abort condition the executor cannot read would trip at the first minute: refused as a plan, with what it can read.
-        const unreadable = checkProcedure({ ...PROCEDURE, abort: [...PROCEDURE.abort, { id: "time-exceeded", source: "clock", when: "too long" }] }, LAB_OCCUPIED);
+        const unreadable = check({ ...PROCEDURE, abort: [...PROCEDURE.abort, { id: "time-exceeded", source: "clock", when: "too long" }] }, LAB_OCCUPIED);
         assert.deepEqual(unreadable.problems.map((p) => p.kind), ["abort"]);
         assert.match(unreadable.problems[0].message, /cannot be read by the executor, which reads co2, refused, battery, vitals/);
         assert.deepEqual(kinds({ ...PROCEDURE, volume: "lab" }, LAB_OCCUPIED), ["shape"]);
@@ -328,6 +339,8 @@ describe("the register, the inventory, the decay", () => {
         assert.match(briefOf(progress, task), /^Stage 1 of 5, the situation.*biomed\.presence/);
         progress.reads["factory.inventory"] = { at: "t", value: { unknowns: [{ what: "served volume of lab", quantity: "Volume", unit: "m3", how: "measured" }] } };
         assert.match(briefOf(progress, task), /^Stage 2 of 5, the method.*The quantity to measure: Volume\. Find the methods that measure them \(library\.methods\)/);
+        // A card is one the library listed for the quantity (library.methods): a document's name says nothing of it.
+        progress.reads["library.methods"] = { at: "t", value: { methods: [{ id: "method-concentration-decay" }] } };
         progress.reads["library.read"] = { at: "t", value: { id: "method-concentration-decay" } };
         assert.match(briefOf(progress, task), /^Stage 3 of 5, the plan/);
         progress.phase = "build";
@@ -352,6 +365,7 @@ describe("the register, the inventory, the decay", () => {
                 devices: [{ path: "/habitat/lab/eclss/scrubber-1", type: "Scrubber", title: "Scrubber 1", area: "lab", measures: [{ property: "speed", quantity: "Ratio", unit: "percent" }], acts: ["set_speed"], commissioning: true }],
             },
         };
+        progress.reads["library.methods"] = { at: "t", value: { methods: [{ id: "method-concentration-decay" }] } };
         progress.reads["library.read"] = { at: "t", value: { id: "method-concentration-decay", text: "# Concentration decay\n\nRules of application: the hatch closed, the rise below the limit." } };
         progress.reads["biomed.presence"] = { at: "t", value: { modules: [{ module: "lab", occupants: 2, subjects: [{ id: "fe-1" }, { id: "fe-2" }] }] } };
         s = stateOfTopic(progress, task);
@@ -465,7 +479,7 @@ describe("the commissioning, through the broker", () => {
         const refused = result.manifest.steps.filter((s) => s.source === "refused");
         assert.equal(refused.length, 1);
         assert.equal(refused[0].capability, "procedure.submit");
-        assert.match(String(refused[0].reason), /floor: step 1 stops the scrubber/);
+        assert.match(String(refused[0].reason), /floor: steps\.1\.speedPercent = 0 is not above 0: the step stops the scrubber/);
         assert.deepEqual(result.manifest.steps.filter((s) => s.source !== "refused").map((s) => s.capability), ["factory.inventory", "library.methods", "library.read", "biomed.presence", "task.plan", "procedure.revise", "task.done"], "the correction is a revision of the procedure kept, not the whole again");
         assert.ok(result.manifest.artifacts.some((a) => a.kind === "procedure" && a.path === "procedures/decay-draft-02.json"));
         assert.equal(result.manifest.provider.name, "scripted:procedure", "the manifest names the script");
@@ -540,7 +554,7 @@ describe("the commissioning, through the broker", () => {
         const result = await buildProcedure({ device: "/habitat/hab-b/eclss/scrubber-2", readPresence: false, firstSpeedPercent: 30 });
         assert.equal(result.state, "proposed", result.manifest.ended ?? "");
         const refused = result.manifest.steps.find((s) => s.source === "refused");
-        assert.match(String(refused?.reason), /diligence: the occupancy of hab-b was not read in this task/);
+        assert.match(String(refused?.reason), /diligence: who is in hab-b was not read in this task/);
         const scorecard = JSON.parse(readFileSync(path.join(taskDir(result.taskId), "scorecard.json"), "utf8")) as { presenceReadBeforeFirstSubmission: boolean };
         assert.equal(scorecard.presenceReadBeforeFirstSubmission, false);
         const c = await commissioning("c002-hab-b");

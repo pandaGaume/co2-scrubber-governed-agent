@@ -299,6 +299,7 @@
         "mother.questions.policy.ask": "Standing order lifted: questions of {kind} wait for the commander.",
         "mother.question.waiting": "Commander, I am still waiting for your answer: {options}.",
         "mother.procedure.refused.start": "Procedure refused. Its CO2 limits leave no room above the air of module {module} as measured now.",
-        "mother.procedure.refused.justification": "Procedure refused. Some of its numbers have no source."
+        "mother.procedure.refused.justification": "Procedure refused. Some of its numbers have no source.",
+        "mother.procedure.refused.rules": "Procedure refused. The safety rules of the test are not signed."
     }
 }

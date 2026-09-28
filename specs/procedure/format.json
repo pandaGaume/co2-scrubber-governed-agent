@@ -1,0 +1,22 @@
+{
+    "title": "The test procedure of a commissioning: how the factory reads one",
+    "note": "The format of the station's test procedures, as the procedure factory reads it (2026-09-28: no domain in the harness). The guard's rules are not here: they are the signed document's (rulesDocument). The executor reads the procedure as tier3/procedure.ts says; readers says what it can read to stop a test.",
+    "schema": "specs/procedure/procedure.schema.json",
+    "rulesDocument": "commissioning-test-safety",
+    "keys": { "steps": "n", "abort": "id" },
+    "constants": ["limits.*", "steps.*.speedPercent", "steps.*.minutes", "abort.*.threshold", "monitoring.band.*"],
+    "steps": "steps",
+    "minutes": "steps.*.minutes",
+    "place": "volume",
+    "device": "device",
+    "watched": "monitoring.subjects",
+    "measured": "measured",
+    "presence": "biomed.presence",
+    "tools": ["factory.inventory", "station.registry_list", "biomed.describe", "biomed.presence", "workspace.list", "workspace.read"],
+    "readers": {
+        "co2": "scrubber.motor.state: the CO2 of the volume, at or above limits.co2AbortPpm",
+        "refused": "scrubber.motor.set_speed: the device refused a step's command",
+        "battery": "station.registry_list: the battery's state of charge under threshold percent (the card's minimum when absent)",
+        "vitals": "biomed.verdict: a monitored person out of their band, the monitoring lost, or one more person in the volume under test"
+    }
+}

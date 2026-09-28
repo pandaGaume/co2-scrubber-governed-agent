@@ -69,6 +69,13 @@
                 "scope": "repository, or run",
                 "runId": "the run, for a run's own"
             }
+        },
+        "rules": {
+            "title": "A document's rules",
+            "description": "The rules a guard checks a proposal against, beside the facts of the same document, with the document's signature as it stands: the guard judges only by rules a person signed.",
+            "properties": {
+                "id": "the document"
+            }
         }
     },
     "resources": {

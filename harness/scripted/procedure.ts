@@ -18,7 +18,7 @@
  */
 import type { JsonValue, PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
 import { decide, ScriptedBuilderBase, valueOf, type ScriptContext } from "./base.js";
-import type { Procedure } from "../topics/procedure/procedure.js";
+import type { Procedure } from "../../lib/procedure/format.js";
 
 export interface ScriptedProcedureOptions extends ScriptContext {
     /** The speed of the rise in the first submission: 0 is the story's first protocol (default). */
@@ -139,7 +139,7 @@ export class ScriptedProcedureBuilder extends ScriptedBuilderBase<ScriptedProced
         const refusal = String(state.features.lastRefusal ?? "");
         const after = `${String(state.features.phase)}:${String(state.features.lastCapability)}`;
         // A safety limit that cites an unsigned document: no procedure passes until a person signs it, so the script ends, naming it, as the refusal asks.
-        const unsigned = /the fact \S+ is in "([^"]+)", which no person has signed/.exec(refusal);
+        const unsigned = /(?:the fact \S+ is|the guard's rules are) in "([^"]+)", which no person has signed/.exec(refusal);
         if (unsigned) return decide("task.fail", { reason: `the safety card "${unsigned[1]}" is not signed: no procedure's safety limits can be justified until a person signs it` }, "the refusal names an unsigned document");
         switch (after) {
             case "plan:":

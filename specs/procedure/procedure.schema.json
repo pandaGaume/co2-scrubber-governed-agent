@@ -1,0 +1,44 @@
+{
+    "type": "object",
+    "properties": {
+        "version": { "type": "number", "enum": [1] },
+        "id": { "type": "string", "minLength": 1, "description": "An identifier for this procedure, e.g. decay-2026-10-14-01." },
+        "method": { "type": "string", "minLength": 1, "description": "The method, e.g. concentration-decay." },
+        "standard": { "type": "string", "description": "The standard the method follows, if any." },
+        "purpose": { "type": "string", "description": "What the test is for, in one line." },
+        "volume": { "type": "string", "description": "ISA-95 path of the volume under test, e.g. /habitat/lab." },
+        "device": { "type": "string", "description": "ISA-95 path of the device the steps command." },
+        "quantities": { "type": "array", "items": { "type": "object", "properties": { "name": { "type": "string" }, "quantity": { "type": "string" }, "unit": { "type": "string" } }, "required": ["name", "quantity", "unit"] }, "description": "What the test measures." },
+        "hypotheses": { "type": "array", "items": { "type": "string" }, "description": "What the test does not measure and leaves to be decided otherwise." },
+        "limits": {
+            "type": "object",
+            "properties": { "co2MaxPpm": { "type": "number" }, "co2AbortPpm": { "type": "number" }, "minSpeedPercent": { "type": "number" }, "maxMinutes": { "type": "number" } },
+            "required": ["co2MaxPpm", "co2AbortPpm", "minSpeedPercent", "maxMinutes"],
+            "description": "The bounds the test stays within."
+        },
+        "occupancy": { "type": "object", "properties": { "module": { "type": "string" }, "occupants": { "type": "number" }, "subjects": { "type": "array", "items": { "type": "string" } }, "readBy": { "type": "string" }, "at": { "type": "string" } }, "required": ["module", "occupants"], "description": "Who is in the volume, as read." },
+        "monitoring": {
+            "type": "object",
+            "properties": { "subjects": { "type": "array", "items": { "type": "string" } }, "band": { "type": "object", "properties": { "minBpm": { "type": "number" }, "maxBpm": { "type": "number" } } }, "reason": { "type": "string" } },
+            "required": ["subjects"],
+            "description": "People monitored during the test, if any."
+        },
+        "authorisation": { "type": "object", "properties": { "by": { "type": "string" }, "required": { "type": "boolean" } }, "required": ["by", "required"] },
+        "steps": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "object", "properties": { "n": { "type": "number" }, "hatch": { "type": "string", "enum": ["open", "closed"] }, "speedPercent": { "type": "number" }, "minutes": { "type": "number" }, "why": { "type": "string" } }, "required": ["n", "hatch", "speedPercent", "minutes"] }
+        },
+        "abort": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": { "id": { "type": "string", "description": "What the executor reads to stop the test (see the description of abort)." }, "source": { "type": "string" }, "when": { "type": "string" }, "threshold": { "type": "number", "description": "A number (the battery's percent); leave the field out for a condition that has none, never null" } },
+                "required": ["id", "source", "when"]
+            },
+            "description": "The conditions that stop the test, by the id of what the executor can read. A condition that cannot be read stops the test."
+        },
+        "expected": { "type": "object", "additionalProperties": { "type": "string" }, "description": "What the test is expected to show, written before it runs." }
+    },
+    "required": ["version", "id", "method", "volume", "device", "quantities", "limits", "steps", "abort", "expected", "justifications"]
+}

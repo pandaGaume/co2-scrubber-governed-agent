@@ -49,6 +49,8 @@ export interface LibraryDocument {
     text: string;
     /** The facts the document states, typed (`<id>.facts.json` beside it): id, semantic, quantity, unit, value, the register property that carries the same fact. */
     facts: LibraryFact[];
+    /** The rules a guard checks against these facts (`<id>.rules.json` beside it), signed with them; none when the document has none. */
+    rules: { safety: string[]; rules: unknown[] } | null;
 }
 
 export interface LibraryState {
@@ -83,7 +85,7 @@ export function loadLibrary(dir: string = LIBRARY_DIR): LibraryDocument[] {
                 .map((q) => q.trim())
                 .filter(Boolean);
             const id = file.replace(/\.md$/, "");
-            return { id, title, summary, measures, sha256: sha256Of(bytes), bytes: bytes.length, text, facts: loadFacts(dir, id) };
+            return { id, title, summary, measures, sha256: sha256Of(bytes), bytes: bytes.length, text, facts: loadFacts(dir, id), rules: loadRules(dir, id) };
         });
 }
 
@@ -94,6 +96,18 @@ export function loadFacts(dir: string, id: string): LibraryFact[] {
     try {
         const parsed = JSON.parse(readFileSync(file, "utf8")) as { facts?: LibraryFact[] };
         return Array.isArray(parsed.facts) ? parsed.facts.filter((f) => f && typeof f.id === "string" && typeof f.value === "number" && typeof f.unit === "string") : [];
+    } catch (e) {
+        throw new Error(`${file}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+}
+
+/** The rules of a document, from its sidecar; none when it has none. A sidecar that does not parse is a startup problem, said once. */
+export function loadRules(dir: string, id: string): LibraryDocument["rules"] {
+    const file = path.join(dir, `${id}.rules.json`);
+    if (!existsSync(file)) return null;
+    try {
+        const parsed = JSON.parse(readFileSync(file, "utf8")) as { safety?: unknown; rules?: unknown };
+        return { safety: Array.isArray(parsed.safety) ? parsed.safety.map(String) : [], rules: Array.isArray(parsed.rules) ? parsed.rules : [] };
     } catch (e) {
         throw new Error(`${file}: ${e instanceof Error ? e.message : String(e)}`);
     }
@@ -173,6 +187,17 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
                 if (typeof args.id === "string" && args.id && !docs.length) throw new Error(`no document "${String(args.id)}" in the library`);
                 // Each fact carries whether its document is signed and still as signed: a safety limit is justified only by a signed one (2026-09-28).
                 return { facts: docs.flatMap((d) => { const signature = signatureOf(d.id, s.dir, s.sigDir); return d.facts.map((f) => ({ ...f, source: d.id, signed: signature })); }) };
+            },
+        },
+        {
+            // The rules a guard checks against a document's facts, with the document's signature as it stands: a guard judges by rules a person signed, or not at all (2026-09-28).
+            name: "rules",
+            inputSchema: objectSchema({ id: { type: "string" } }, ["id"]),
+            handle: (args, s) => {
+                const d = s.documents.find((x) => x.id === args.id);
+                if (!d) throw new Error(`no document "${String(args.id)}" in the library`);
+                if (!d.rules) throw new Error(`the document "${d.id}" holds no rules`);
+                return { document: d.id, safety: d.rules.safety, rules: d.rules.rules, signed: signatureOf(d.id, s.dir, s.sigDir) };
             },
         },
         {

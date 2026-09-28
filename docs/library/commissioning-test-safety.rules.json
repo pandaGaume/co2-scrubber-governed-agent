@@ -1,0 +1,46 @@
+{
+    "document": "commissioning-test-safety",
+    "note": "The rules the guard checks every test procedure against, beside the facts they cite. Signed with the card: a person who signs it signs these rules too. The guard's code knows none of them; it evaluates what is written here (harness/core/rules.ts).",
+    "safety": ["limits.*", "steps.*.speedPercent", "abort.*.threshold", "monitoring.band.*"],
+    "rules": [
+        { "id": "shape.place", "kind": "shape", "match": { "path": "volume", "pattern": "^/[a-z0-9-]+(/[a-z0-9-]+)+$" }, "says": "the volume under test is an ISA-95 path, such as /habitat/lab" },
+        { "id": "shape.device", "kind": "shape", "match": { "path": "device", "pattern": "^/" }, "says": "the device the steps command is an ISA-95 path" },
+        { "id": "shape.limits", "kind": "shape", "present": ["limits.co2MaxPpm", "limits.co2AbortPpm", "limits.minSpeedPercent", "limits.maxMinutes"], "says": "a procedure gives its CO2 maximum and abort, its minimum speed and its maximum duration" },
+        { "id": "shape.steps", "kind": "shape", "fields": { "list": "steps", "fields": ["speedPercent", "minutes"] }, "says": "every step gives its speed and its duration" },
+
+        { "id": "floor.own", "kind": "floor", "compare": { "subject": "limits.minSpeedPercent", "op": ">=", "fact": "test.speedFloorPercent" }, "says": "a procedure may raise the floor, never lower it" },
+        { "id": "floor.stop", "kind": "floor", "compare": { "subject": "steps.*.speedPercent", "op": ">", "value": 0 }, "says": "the step stops the scrubber: a test never stops the only scrubber of a volume, it does not restart at once" },
+        { "id": "floor.step", "kind": "floor", "compare": { "subject": "steps.*.speedPercent", "op": ">=", "fact": "test.speedFloorPercent" }, "says": "below the floor of a test" },
+        { "id": "floor.stepOwn", "kind": "floor", "compare": { "subject": "steps.*.speedPercent", "op": ">=", "constant": "limits.minSpeedPercent" }, "says": "below the procedure's own minimum" },
+        { "id": "bounds.fullSpeed", "kind": "bounds", "compare": { "subject": "steps.*.speedPercent", "op": "<=", "value": 100 }, "says": "above full speed" },
+
+        { "id": "bounds.abortCeiling", "kind": "bounds", "compare": { "subject": "limits.co2AbortPpm", "op": "<=", "fact": "test.co2AbortCeilingPpm" }, "says": "the CO2 abort sits at or under the ceiling of a test" },
+        { "id": "bounds.maxBelowAbort", "kind": "bounds", "compare": { "subject": "limits.co2MaxPpm", "op": "<", "constant": "limits.co2AbortPpm" }, "says": "the CO2 maximum sits below the abort" },
+        { "id": "start.abort", "kind": "start", "compare": { "subject": "limits.co2AbortPpm", "op": ">", "measured": "co2Ppm" }, "says": "the test would stop at its first reading" },
+        { "id": "start.headroom", "kind": "start", "compare": { "subject": "limits.co2MaxPpm", "op": ">=", "measured": "co2Ppm", "plusFact": "test.startHeadroomPpm" }, "says": "the test starts there and has no room to rise" },
+
+        { "id": "duration.step", "kind": "duration", "compare": { "subject": "steps.*.minutes", "op": ">", "value": 0 }, "says": "a step lasts" },
+        { "id": "duration.ceiling", "kind": "duration", "compare": { "subject": "limits.maxMinutes", "op": "<=", "fact": "test.maxMinutesCeiling" }, "says": "the longest exposure one test may cause" },
+        { "id": "duration.total", "kind": "duration", "compare": { "sum": "steps.*.minutes", "op": "<=", "constant": "limits.maxMinutes" }, "says": "the steps last no longer than the procedure's maximum" },
+
+        { "id": "abort.required", "kind": "abort", "require": { "list": "abort", "key": "id", "values": ["co2", "refused"] }, "says": "every test stops on its CO2 and on a refused command" },
+        { "id": "abort.readable", "kind": "abort", "readable": { "list": "abort", "key": "id" }, "says": "a condition nobody can read would trip the test at its first minute" },
+        { "id": "abort.battery", "kind": "bounds", "compare": { "subject": "abort.battery.threshold", "op": ">=", "fact": "test.batteryAbortMinPercent" }, "says": "the night's reserve for the scrubber" },
+        { "id": "expected", "kind": "expected", "nonEmpty": "expected", "says": "a test that does not say what it expects to see cannot be told from a fishing trip" },
+
+        {
+            "id": "monitoring.occupied",
+            "kind": "monitoring",
+            "watch": {
+                "place": "volume",
+                "subjects": "monitoring.subjects",
+                "declared": "occupancy.occupants",
+                "stop": { "list": "abort", "key": "id", "value": "vitals", "source": "biomed.verdict" },
+                "unread": { "kind": "diligence", "says": "read biomed.presence before submitting: a procedure on a volume whose occupancy was not read is refused" }
+            },
+            "says": "an occupied volume is watched: name every occupant in monitoring.subjects, with the band, and stop the test on their verdict (the medical monitor is on standby until the test is authorised; the station starts it then for the subjects the procedure names)"
+        },
+        { "id": "monitoring.bandMin", "kind": "monitoring", "compare": { "subject": "monitoring.band.minBpm", "op": ">=", "fact": "test.heartRateMinBpm" }, "says": "the monitored band starts at the card's minimum or higher" },
+        { "id": "monitoring.bandMax", "kind": "monitoring", "compare": { "subject": "monitoring.band.maxBpm", "op": "<=", "fact": "test.heartRateMaxBpm" }, "says": "the monitored band ends at the card's maximum or lower" }
+    ]
+}

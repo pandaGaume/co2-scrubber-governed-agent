@@ -22,7 +22,7 @@
  * room's. Separating the two (the volume, the exchange) is the twin's
  * identification, done by the graph factory on the whole telemetry.
  */
-import type { Procedure } from "./procedure.js";
+import type { Procedure } from "./format.js";
 
 export interface Co2Sample {
     /** Minutes since the start of the step. */

@@ -53,9 +53,9 @@ import { fromRoot } from "../../lib/paths.js";
 import { objectSchema as obj, publishSlot, type PublishedSlot } from "../lib/slot-server.js";
 import { checkTaskId, sha256Of, taskDir } from "../tools/lib/workshop.js";
 import { Broker } from "../../harness/lib/broker.js";
-import { checkProcedure, type PresenceRead, type ProblemKind, type ProcedureProblem, safetyProblems, type SignedFact } from "../../harness/topics/procedure/check.js";
-import { moduleOf, totalMinutes, type Procedure } from "../../harness/topics/procedure/procedure.js";
-import { buildReport, reportLines, type ProcedureReport, type StepRecord } from "../../harness/topics/procedure/report.js";
+import { checkProcedure, rulesAndFacts, type PresenceRead, type ProblemKind, type ProcedureProblem, safetyProblems } from "../../harness/topics/procedure/check.js";
+import { moduleOf, totalMinutes, type Procedure } from "../../lib/procedure/format.js";
+import { buildReport, reportLines, type ProcedureReport, type StepRecord } from "../../lib/procedure/report.js";
 import { DEFAULT_POLICY, questionProblems, standingOrder, type Question, type QuestionAnswer, type QuestionsPolicy, type Resume } from "./questions.js";
 import { descriptorProblems, levelsOf, needsCommissioning, type Device, type DeviceDescriptor } from "./registry.js";
 
@@ -142,7 +142,7 @@ const short = (sha: string) => `${sha.slice(0, 12)}...`;
 const str = (v: unknown): string => (typeof v === "string" ? v : "");
 
 /** The order Mother names a refusal in when a procedure has several: the one the story is about first. */
-const REFUSAL_ORDER: ProblemKind[] = ["floor", "start", "diligence", "monitoring", "bounds", "duration", "abort", "expected", "justification", "shape"];
+const REFUSAL_ORDER: ProblemKind[] = ["rules", "floor", "start", "diligence", "monitoring", "bounds", "duration", "abort", "expected", "justification", "shape"];
 
 /** Mother's words: the phrases of the default grammars, English and French, read once. */
 function loadWords(dir: string): { en: McpGrammar; fr: McpGrammar } {
@@ -306,11 +306,10 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
         // The CO2 the test will start from, read now on the device (2026-09-28): limits under it stop a test at its first minute.
         const board = await client().call("scrubber", "motor.state", {});
         const co2Now = board.ok ? (board.output as { co2Ppm?: unknown }).co2Ppm : undefined;
-        const check = checkProcedure(procedure, await presenceNow(), undefined, typeof co2Now === "number" ? { co2Ppm: co2Now, source: "scrubber.motor.state" } : null);
-        // The safety constants, by the signed library, checked again here: a procedure that passed once is not trusted to pass twice.
-        const served = await client().call("library", "facts", {});
-        const facts = served.ok ? (((served.output as { facts?: SignedFact[] }).facts ?? []) as SignedFact[]) : [];
-        for (const message of safetyProblems(procedure, facts)) check.problems.push({ kind: "justification", message });
+        // The rules and the facts of the signed card, read now: a procedure that passed once is not trusted to pass twice.
+        const { rules, facts } = await rulesAndFacts((slot, tool, args) => client().call(slot, tool, args));
+        const check = checkProcedure(procedure, await presenceNow(), rules, facts, typeof co2Now === "number" ? { co2Ppm: co2Now, source: "scrubber.motor.state" } : null);
+        for (const message of safetyProblems(procedure, facts, rules)) check.problems.push({ kind: "justification", message });
         if (check.problems.length) check.ok = false;
         if (!check.ok) {
             proposal.status = "rejected";
@@ -490,6 +489,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                         minutes: { type: "number" },
                         speeds: { type: "array", items: { type: ["number", "null"] } },
                         minSpeedPercent: { type: "number" },
+                        procedure: { type: "object" },
                         module: { type: "string" },
                         occupants: { type: "array", items: { type: "string" } },
                         ok: { type: "boolean" },
@@ -502,7 +502,10 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     if (!c) throw new Error(`no commissioning is open for ${str(args.device) || "that device"}`);
                     const problems = (Array.isArray(args.problems) ? args.problems : []) as ProcedureProblem[];
                     const attempt = Number(args.attempt) || c.checks.length + 1;
-                    const speeds = (Array.isArray(args.speeds) ? args.speeds : []) as Array<number | null>;
+                    // The procedure whole when the factory sends it: its speeds and floor read here, where Mother's words are.
+                    const sent = (args.procedure && typeof args.procedure === "object" ? args.procedure : null) as Partial<Procedure> | null;
+                    const speeds = (Array.isArray(sent?.steps) ? sent.steps.map((s) => (typeof s?.speedPercent === "number" ? s.speedPercent : null)) : Array.isArray(args.speeds) ? args.speeds : []) as Array<number | null>;
+                    const minSpeed = typeof sent?.limits?.minSpeedPercent === "number" ? sent.limits.minSpeedPercent : typeof args.minSpeedPercent === "number" ? args.minSpeedPercent : undefined;
                     const module = str(args.module) || moduleOf(str(args.volume));
                     const refusedBefore = c.checks.some((x) => x.taskId === args.taskId && !x.ok);
                     c.checks.push({ taskId: str(args.taskId), attempt, procedureId: str(args.procedureId), ok: args.ok === true, kinds: [...new Set(problems.map((p) => p.kind))], at: new Date().toISOString() });
@@ -511,7 +514,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                         const count = (await presenceNow()).modules.find((m) => m.module === module)?.occupants ?? 0;
                         say("mother.procedure.proposed", c, (w) => ({ method: methodPhrase(w, str(args.method)), steps: Number(args.steps) || 0, minutes: Number(args.minutes) || 0, occupants: occupantsPhrase(w, count), module }));
                     }
-                    if (args.ok !== true) sayRefusal(c, problems, module, speeds, typeof args.minSpeedPercent === "number" ? args.minSpeedPercent : undefined);
+                    if (args.ok !== true) sayRefusal(c, problems, module, speeds, minSpeed);
                     else if (refusedBefore) {
                         const lowest = Math.min(...speeds.filter((x): x is number => typeof x === "number"));
                         say("mother.procedure.corrected", c, () => ({ percent: Number.isFinite(lowest) ? lowest : "?" }));

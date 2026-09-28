@@ -321,6 +321,7 @@
         "mother.questions.policy.ask": "Consigne levée : les questions de {kind} attendent le commandant.",
         "mother.question.waiting": "Commandant, j'attends toujours votre réponse : {options}.",
         "mother.procedure.refused.start": "Procédure refusée. Ses limites de CO2 ne laissent pas de marge au-dessus de l'air du module {module} tel qu'il est mesuré maintenant.",
-        "mother.procedure.refused.justification": "Procédure refusée. Certains de ses chiffres n'ont pas de source."
+        "mother.procedure.refused.justification": "Procédure refusée. Certains de ses chiffres n'ont pas de source.",
+        "mother.procedure.refused.rules": "Procédure refusée. Les règles de sécurité de l'essai ne sont pas signées."
     }
 }

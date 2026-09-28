@@ -34,8 +34,8 @@
  * reads.
  */
 import type { Broker } from "../harness/lib/broker.js";
-import type { AbortCondition, Procedure } from "../harness/topics/procedure/procedure.js";
-import type { Co2Sample, ProcedureReport, StepRecord } from "../harness/topics/procedure/report.js";
+import type { AbortCondition, Procedure } from "../lib/procedure/format.js";
+import type { Co2Sample, ProcedureReport, StepRecord } from "../lib/procedure/report.js";
 
 export interface RunProcedureOptions {
     /** The agent's client of the broker: its identity, its rights. */
