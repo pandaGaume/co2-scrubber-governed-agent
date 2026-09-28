@@ -19,6 +19,20 @@
         "units_validate_connection": {
             "title": "Check a restated value",
             "description": "A source states a value in its unit (a datasheet: 1.0 m3/min); a request restates it in another (60 L/min). Converted, they must agree within the tolerance (2 percent by default): OK with the expected value, or INVALID_CONVERSION with what the restatement should have been."
+        },
+        "units_relations": {
+            "title": "The relations between quantities",
+            "description": "The conversions between different quantities a physical relation ties together, each with its formula, its parameters (their units, the cabin's defaults) and which side is a derived reading rather than a quantity of the unit system: a gas's volume flow and mass flow, a fraction in ppm and a mass per volume, a mass flow into a volume and the rate its fraction changes."
+        },
+        "units_relate": {
+            "title": "Convert to a related quantity",
+            "description": "A value converted from one quantity to a related one (units_relations lists them), instead of redoing the physics: 0.69 g/min of CO2 as L/min, 1000 ppm as mg/m3, a scrubber's kg/s from a 30 m3 volume as ppm per minute. The answer names the formula and says which parameters were given and which took the cabin's default (101 325 Pa, 293.15 K, CO2's molar mass). Refused when no relation ties the two quantities, or a parameter without a default (a volume) is missing.",
+            "properties": {
+                "value": "the value, in the from unit",
+                "from": "its quantity and unit, e.g. {quantity: MassFlow, unit: g/min}",
+                "to": "the related quantity and the unit wanted, e.g. {quantity: VolumetricFlow, unit: L/min}",
+                "parameters": "by name, a number in the parameter's unit or {value, unit}: V (the volume, m3), P (Pa), T (K), M (kg/mol)"
+            }
         }
     },
     "resources": {}

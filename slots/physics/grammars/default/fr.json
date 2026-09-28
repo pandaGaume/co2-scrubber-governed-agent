@@ -19,6 +19,20 @@
         "units_validate_connection": {
             "title": "Vérifier une valeur reformulée",
             "description": "Une source donne une valeur dans son unité (une fiche technique : 1,0 m3/min) ; une demande la reformule dans une autre (60 L/min). Converties, elles doivent concorder à la tolérance près (2 pour cent par défaut) : OK avec la valeur attendue, ou INVALID_CONVERSION avec ce que la reformulation aurait dû être."
+        },
+        "units_relations": {
+            "title": "Les relations entre grandeurs",
+            "description": "Les conversions entre grandeurs différentes qu'une relation physique relie, chacune avec sa formule, ses paramètres (leurs unités, les valeurs par défaut de la cabine) et le côté qui est une lecture dérivée plutôt qu'une grandeur du système d'unités : le débit volumique et le débit massique d'un gaz, une fraction en ppm et une masse par volume, un débit massique entrant dans un volume et la vitesse à laquelle sa fraction varie."
+        },
+        "units_relate": {
+            "title": "Convertir vers une grandeur liée",
+            "description": "Une valeur convertie d'une grandeur vers une grandeur liée (units_relations les liste), au lieu de refaire la physique : 0,69 g/min de CO2 en L/min, 1000 ppm en mg/m3, les kg/s d'un épurateur sur un volume de 30 m3 en ppm par minute. La réponse nomme la formule et dit quels paramètres ont été donnés et lesquels ont pris la valeur par défaut de la cabine (101 325 Pa, 293,15 K, la masse molaire du CO2). Refusé si aucune relation ne relie les deux grandeurs, ou si un paramètre sans valeur par défaut (un volume) manque.",
+            "properties": {
+                "value": "la valeur, dans l'unité de départ",
+                "from": "sa grandeur et son unité, par exemple {quantity: MassFlow, unit: g/min}",
+                "to": "la grandeur liée et l'unité voulue, par exemple {quantity: VolumetricFlow, unit: L/min}",
+                "parameters": "par nom, un nombre dans l'unité du paramètre ou {value, unit} : V (le volume, m3), P (Pa), T (K), M (kg/mol)"
+            }
         }
     },
     "resources": {}

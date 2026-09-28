@@ -26,6 +26,7 @@ import type { DecisionContext, JsonValue, PolicyDecision, SafetyDecision, Safety
 import type { Broker } from "../lib/broker.js";
 import { contractProblems } from "../../slots/forge/contract.js";
 import { compatibleUnits } from "../lib/units.js";
+import { relationBetween } from "../lib/relations.js";
 import { TOPICS, type TaskFile } from "./task.js";
 import type { TopicDefinition } from "./topic.js";
 import type { Plan, Progress } from "./workspace-observer.js";
@@ -130,7 +131,7 @@ export async function planProblems(plan: Plan, { broker, task, runtimeSlot = "tw
     }
     // The outputs the request judges against a column (the Observer's validation.compare): the rest is not judged by the residual, so a quantity in common cannot stand for it.
     const compared = new Set((((task.requirements as { validation?: { compare?: Array<{ output?: string }> } } | undefined)?.validation?.compare) ?? []).map((c) => String(c?.output ?? "")));
-    const mapped = (plan.produced ?? {}) as Record<string, { type?: string; port?: string }>;
+    const mapped = (plan.produced ?? {}) as Record<string, { type?: string; port?: string; convert?: { relation?: string; parameters?: Record<string, unknown> } }>;
     for (const [name, m] of Object.entries(mapped)) {
         if (!names.includes(name)) problems.push(`produced: "${name}" is not the name of a required output (${names.map((n) => `"${n}"`).join(", ")})`);
         const node = described.find((n) => (n as { type?: string }).type === m?.type) ?? (plan.selected_nodes.includes(String(m?.type)) ? described[plan.selected_nodes.indexOf(String(m?.type))] : undefined);
@@ -142,7 +143,16 @@ export async function planProblems(plan: Plan, { broker, task, runtimeSlot = "tw
             else if (required) {
                 const sameQuantity = String(port.quantity ?? "").toLowerCase() === required.quantity.toLowerCase();
                 const units = required.unit && port.unit ? compatibleUnits({ quantity: required.quantity, unit: required.unit }, { quantity: required.quantity, unit: port.unit }) : null;
-                if (!sameQuantity || (units && (!units.ok || !units.compatible))) problems.push(`produced: "${name}" (${required.quantity}${required.unit ? `, ${required.unit}` : ""}) is mapped to "${String(m?.type)}".${String(m?.port)}, a ${port.quantity ?? "?"}${port.unit ? ` in ${port.unit}` : ""}${sameQuantity ? ", which does not convert" : ""}; when no node of the catalogue has an output of that quantity for it, declare it missing (topic "code", a contract on the library's card "capability-contract") instead of mapping it`);
+                // A port of another quantity, with a conversion a physical relation makes (2026-09-28): the conversion is asked of the units service, not rebuilt as a node.
+                const related = port.quantity ? relationBetween(String(port.quantity), required.quantity) : null;
+                if (m?.convert) {
+                    if (!related) problems.push(`produced: "${name}": no relation ties "${String(m?.type)}".${String(m?.port)} (${port.quantity ?? "?"}) to ${required.quantity} (physics.units_relations lists them); map a port of the output's quantity, or declare it missing`);
+                    else if (m.convert.relation !== related.relation.id) problems.push(`produced: "${name}": the relation that ties ${port.quantity} to ${required.quantity} is "${related.relation.id}", not "${String(m.convert.relation)}"`);
+                    else {
+                        const need = Object.entries(related.relation.parameters).filter(([k, spec]) => spec.default === undefined && m.convert?.parameters?.[k] === undefined).map(([k, spec]) => `${k} (${spec.description}, ${spec.unit})`);
+                        if (need.length) problems.push(`produced: "${name}": the conversion ${related.relation.id} needs ${need.join(", ")} in convert.parameters`);
+                    }
+                } else if (!sameQuantity || (units && (!units.ok || !units.compatible))) problems.push(`produced: "${name}" (${required.quantity}${required.unit ? `, ${required.unit}` : ""}) is mapped to "${String(m?.type)}".${String(m?.port)}, a ${port.quantity ?? "?"}${port.unit ? ` in ${port.unit}` : ""}${sameQuantity ? ", which does not convert" : ""}; ${related ? `a relation ties the two (${related.relation.id}): give convert {relation: "${related.relation.id}", parameters} to map it through the conversion` : `when no node of the catalogue has an output of that quantity for it, declare it missing (topic "code", a contract on the library's card "capability-contract") instead of mapping it`}`);
             }
         }
     }

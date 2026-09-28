@@ -9,12 +9,16 @@
  *   units_compatible           whether two units measure the same quantity
  *   units_validate_connection  a source's value in its unit against a request's in another:
  *                              OK, or INVALID_CONVERSION with the expected value
+ *   units_relations            the relations between quantities (harness/lib/relations.ts)
+ *   units_relate               a value from one quantity to a related one: a gas's L/min as g/min,
+ *                              ppm as mg/m3, a mass flow into a volume as ppm per minute
  *
  * No state, no model: the same question gets the same answer. A unit the
  * system does not know is said unknown, never guessed.
  */
 import { fromRoot } from "../../lib/paths.js";
 import { compatibleUnits, convertValue, resolveUnitRef, validateConnection, type UnitRef } from "../../harness/lib/units.js";
+import { RELATIONS, relate } from "../../harness/lib/relations.js";
 import { objectSchema, publishSlot, type PublishedSlot, type SlotTool } from "../lib/slot-server.js";
 
 export type PhysicsState = Record<string, never>;
@@ -65,6 +69,30 @@ export function physicsSlot(wsBase: string, log: (line: string) => void): Publis
                 const c = validateConnection({ value: Number(s.value), ...ref(s) }, { value: Number(t.value), ...ref(t) }, typeof args.tolerance === "number" ? args.tolerance : undefined);
                 if (!c.ok && c.code !== "INVALID_CONVERSION") throw new Error(`${c.code}: ${c.reason}`);
                 return c;
+            },
+        },
+        {
+            name: "units_relations",
+            inputSchema: objectSchema({}),
+            handle: () => ({
+                relations: RELATIONS.map((r) => ({ id: r.id, title: r.title, from: r.from, to: { quantity: r.to.quantity, unit: r.to.unit, ...(r.to.derived ? { derived: true, units: Object.keys(r.to.units ?? {}) } : {}) }, formula: r.formula, parameters: r.parameters })),
+            }),
+        },
+        {
+            name: "units_relate",
+            inputSchema: objectSchema(
+                {
+                    value: { type: "number" },
+                    from: { type: "object", properties: { quantity: { type: "string" }, unit: { type: "string" } }, required: ["quantity", "unit"] },
+                    to: { type: "object", properties: { quantity: { type: "string" }, unit: { type: "string" } }, required: ["quantity", "unit"] },
+                    parameters: { type: "object" },
+                },
+                ["value", "from", "to"],
+            ),
+            handle: (args) => {
+                const f = args.from as { quantity: string; unit: string };
+                const t = args.to as { quantity: string; unit: string };
+                return relate(Number(args.value), { quantity: String(f.quantity), unit: String(f.unit) }, { quantity: String(t.quantity), unit: String(t.unit) }, (args.parameters ?? {}) as Record<string, unknown>);
             },
         },
     ];
