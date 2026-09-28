@@ -16,6 +16,7 @@ import type { JsonValue } from "@spiky-panda/harness";
 import { readFileSync } from "node:fs";
 import { fromRoot } from "../../../lib/paths.js";
 import { withBase } from "../../core/base.js";
+import { refusedNote } from "../../core/brief.js";
 import { numbersOf, type Justified } from "../../core/justify.js";
 import type { TaskFile } from "../../core/task.js";
 import type { TopicDefinition, Validation } from "../../core/topic.js";
@@ -129,7 +130,7 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
     const fit = fitOf(progress);
     const outputs = task.objective.required_outputs.map((o) => `${o.name} (${o.quantity}${o.unit ? `, ${o.unit}` : ""})`).join(", ");
     const { file, columns } = columnsOf(task);
-    const refused = (cap: string) => (progress.refusals[cap] ? ` Your last ${cap} was refused: ${progress.refusals[cap].reason}. What you sent is in the state (lastRefusal); change what the reasons name.` : "");
+    const refused = (cap: string) => refusedNote(progress, cap);
     if (!r.catalogueSearched) return `Stage 1 of 5, the gap. Required: ${outputs}. Ask the catalogue which node types produce them (twin.registry_search with requiredOutputs); what no type produces is fitted from the task's telemetry.`;
     if (!r.planAccepted) return `Stage 2 of 5, the plan. Declare with task.plan the types found for the outputs they produce (selected_nodes), and in missing_capabilities each required output no type produces, with its reason and the topic "onnx".${refused("task.plan")}`;
     if (!r.fitted) return `Stage 3 of 5, the fit. The task's telemetry is ${file ?? "(none given)"}, columns ${columns.join(", ") || "(none given)"}. Fit the model with model.fit: a spec of the shape the state shows under hypothesis, field "spec" (a reviewed one: its numbers are that device's), its dataset on this task's file and columns, its full scale, its domain and its monitor set for this device from what you read (the library, the telemetry), never copied; every number of the spec justified (justifications, with its source).${refused("model.fit")}`;

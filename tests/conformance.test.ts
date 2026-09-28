@@ -10,7 +10,8 @@
  *              published tool, a task's own, the topic's own)
  *   model      a topic a model builds on has its prompt, its brief, its state,
  *              and the prompt it reads (the topic's, then the socle's) names
- *              every capability it may call
+ *              every capability it may call, and says each of the socle's
+ *              rules once: the topic's own prompt does not say them again
  *   replay     each capability it allows is a read, or classed by the topic
  *              once: never replayed, or a replayed action (`replay.ts`)
  *   declared   each pattern it classes names a capability it allows
@@ -35,6 +36,7 @@ import { Broker } from "../harness/lib/broker.js";
 import { fromRoot } from "../lib/paths.js";
 import { TOPIC_DEFINITIONS } from "../harness/core/runner.js";
 import { BASE_CAPABILITIES, promptWithSocle } from "../harness/core/base.js";
+import { SOCLE_RULES } from "../harness/core/brief.js";
 import { NEVER_REPLAYED, READ_CAPABILITIES } from "../harness/core/replay.js";
 import { taskCapabilities } from "../harness/core/task-capabilities.js";
 import { newProgress } from "../harness/core/workspace-observer.js";
@@ -99,6 +101,7 @@ describe("every factory against the socle", () => {
             if (!topic.state) found.push("model|state");
             const text = existsSync(fromRoot(topic.prompt)) ? promptWithSocle(readFileSync(fromRoot(topic.prompt), "utf8")) : "";
             for (const id of allowed) if (!own.includes(id) || id.startsWith("task.")) if (!text.includes(`\`${id}\``)) found.push(`model|unnamed ${id}`);
+            for (const rule of SOCLE_RULES) if (text.split(rule).length - 1 !== 1) found.push(`model|says "${rule}" ${text.split(rule).length - 1} times`);
         }
         const never = [...NEVER_REPLAYED, ...(topic.neverReplayed ?? [])];
         const replayed = topic.replayedActions ?? [];

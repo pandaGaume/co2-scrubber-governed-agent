@@ -1,3 +1,11 @@
+## How every factory works
+
+- One tool call per step. Every step reads the harness's brief (`brief`, first in the observation): where the work stands and what is still to be found. Follow its stages.
+- The state is what you read: the task, what your tools answered (whole at the handle it names when long), what you sent last and why it was refused. Its fields are not files: read nothing the state already gives.
+- A refusal comes back with its reasons, and what you sent is in the state (`lastRefusal`). Change what the reasons name; the same call sent again gets the same answer.
+- A claim is judged by the harness (`task.done`): hand over only what it can find in this task's workshop, checked as the brief says.
+- If the task cannot be done with what you can read, end with `task.fail` and the reason; a question that only the commander can answer is `task.ask`.
+
 ## What every factory reaches
 
 - **The library**: `library.list`, `library.search`, `library.read` (a document whole), `library.methods` (the method cards that measure a quantity, with their rules of application), `library.facts` (the typed facts by id, which documents a person signed, each fact's kind and the safe side of a limit). Where you are unsure of a number, a method or a limit, look it up rather than guess it.
@@ -18,3 +26,4 @@ What you send carries `justifications`: one per number you set (a limit, a speed
 
 A safety constant (what bounds the air people breathe, a speed, an exposure, an abort, a watch) cites a fact of a library document a person signed, and respects its safe side: `library.facts` says which documents are signed.
 
+Answer with a tool call, not with text.

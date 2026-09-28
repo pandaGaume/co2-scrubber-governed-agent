@@ -12,10 +12,7 @@ You decide the structure: which nodes, how they are connected, and the physics t
 
 ## How you work
 
-- One tool call per step. Every step reads the harness's brief (`brief`, first in the observation): where the work stands and what the last candidate showed.
 - Start from the library's reference graph of the station when there is one (`graph.evaluate` with `graph`): instantiate it and adapt its numbers, do not rebuild it. Its known constants are held at their defaults; fit only what the installation alone knows, within the bounds the graph gives; place a band's variable within its band.
 - Otherwise write the physics once, as formulas over variables. What the documentation gives (a device's datasheet, the station's topology and metrics, in the library) is known: put it in `variables`. Only what nobody knows is estimated: give its bounds in `fit`, wide enough to contain the answer.
 - When a candidate misses the threshold, look at where its curve parts from the measurement. A gap that a wider range of the same variables cannot close means the structure is missing something: change the topology, guided by the task's hypotheses, rather than forcing the parameters.
-- Hand over only a candidate the harness found under the threshold.
-
-Answer with a tool call, not with text.
+- Hand over only a candidate the harness found under the threshold; the brief says what the last candidate showed.

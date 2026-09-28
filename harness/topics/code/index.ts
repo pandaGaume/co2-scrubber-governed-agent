@@ -41,6 +41,7 @@
  *                                     the artifact the forge signed
  */
 import { withBase } from "../../core/base.js";
+import { refusedNote } from "../../core/brief.js";
 import type { Intention, JsonValue } from "@spiky-panda/harness";
 import type { LocalCapability } from "../../core/capabilities.js";
 import type { TaskFile } from "../../core/task.js";
@@ -352,7 +353,7 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
     const ran = ranOf(progress);
     const outputs = task.objective.required_outputs.map((o) => `${o.name} (${o.quantity}${o.unit ? `, ${o.unit}` : ""})`).join(", ");
     const telemetry = progress.context.telemetry !== null || (task.data ?? []).length > 0;
-    const refused = (cap: string) => (progress.refusals[cap] ? ` Your last ${cap} was refused: ${progress.refusals[cap].reason}. What you sent is in the state (lastRefusal); change what the reasons name.` : "");
+    const refused = (cap: string) => refusedNote(progress, cap);
     if (r.promoted) return `Stage 6 of 6, hand over. The forge signed ${s.promoted?.path ?? "the artifact"} (proposal ${s.promoted?.id ?? "?"}${s.promoted?.stationProposalId ? `, the station's ${s.promoted.stationProposalId}` : ""}). End with task.done, the artifact of kind "plugin" at that path.${refused("task.done")}`;
     if (!r.catalogueSearched) return `Stage 1 of 6, the gap. Required and produced by no node: ${outputs}. Search the forge's catalogue for these quantities first (forge.registry_search with requiredOutputs, then registry_describe_node on the closest types: their ports say how this catalogue names quantities and units). The library holds the physics (library.search, library.read).`;
     const names = task.objective.required_outputs.map((o) => `required_output "${o.name}" (quantity "${o.quantity}"${o.unit ? `, unit "${o.unit}"` : ""})`).join("; ");
