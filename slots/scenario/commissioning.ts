@@ -266,12 +266,16 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
             broker: agent,
             commissioningId,
             waitMinute: async () => {
+                // The station keeps the test's clock: where it is on the station's time, and at what pace.
+                const tick = (m: number) => void operator.call("station", "procedure_run", { commissioningId, action: "clock", minute: m, secondsPerMinute, ...(planned ? { planned } : {}) }).catch(() => undefined);
+                if (minute === 0) tick(0);
                 if (secondsPerMinute > 0) await sleep(secondsPerMinute * 1000);
                 const speed = await speedNow();
                 world.step(speed);
                 await call("scrubber", "debug.set_co2", { state: "NOMINAL", ppm: Math.round(world.labPpm) });
                 telemetry.push(world.row(speed));
                 minute++;
+                tick(minute);
                 if (secondsPerMinute > 0 && minute % 10 === 0) narrate(`Minute ${minute}${planned ? ` of ${planned}` : ""}: the Lab's CO2 at ${Math.round(world.labPpm)} ppm, the scrubber at ${speed} percent.`);
             },
         });
@@ -352,10 +356,10 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
             if (/^MISSING_CAPABILITY/.test(g.manifest?.ended ?? "")) narrate("The graph factory needs a node the catalogue does not have. It wrote the contract that node must meet; the decision is yours.");
 
 
-            const conflict = /^SOURCE_CONFLICT/.test(g.manifest?.ended ?? "") && /REQUIRE_RESOLUTION: [^;]*\bobserver\b/.test(g.manifest?.ended ?? "");
+            const conflict = /^(SOURCE_CONFLICT|UNBUILDABLE_OUTPUT)/.test(g.manifest?.ended ?? "") && /REQUIRE_RESOLUTION: [^;]*\bobserver\b/.test(g.manifest?.ended ?? "");
             if (!conflict || round === 2 || (run.options.builder === "scripted" && run.request)) break;
             feedback = String(g.manifest?.ended ?? "");
-            narrate("The graph factory found the request in conflict with the documentation. I send it back to the Observer with the reason, once.");
+            narrate(/^UNBUILDABLE_OUTPUT/.test(feedback) ? "The graph factory cannot build one of the outputs the Observer asked for. I send the request back to the Observer with the reason, once." : "The graph factory found the request in conflict with the documentation. I send it back to the Observer with the reason, once.");
             for (const n of [7, 8]) {
                 const l = loop(n);
                 l.status = "pending";

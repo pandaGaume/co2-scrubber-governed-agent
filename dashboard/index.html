@@ -42,6 +42,7 @@
         <span class="brand">CO2 <span>scrubber</span></span>
         <span class="mission" id="top-clock">night 9 &middot; min 0</span>
         <span class="mission state" id="top-state">idle</span>
+        <span class="badge clock" id="test-clock" hidden title="the test's time on the station's clock, played faster than real time: the factor, and the real time it has taken"></span>
         <span class="spacer"></span>
         <span class="badge agent" id="top-reasoner" title="the model behind the reasoner slot"></span>
         <span class="badge" id="top-voice" title="the engine behind the speech slot"></span>
@@ -179,7 +180,9 @@
 <script type="module">
     // Mother's questions to the commander, answered in her chat (dashboard/mother-chat.js).
     import { mountMotherChat } from "./mother-chat.js";
+    import { mountTestClock } from "./test-clock.js";
     const $ = (id) => document.getElementById(id);
+    mountTestClock($("test-clock"));
     mountMotherChat({ box: $("mother-questions"), form: $("mother-form"), input: $("mother-input"), mic: $("mother-mic"), policy: $("questions-policy"), lang: $("questions-lang"), log: $("voice-log") });
 </script>
 <script type="module" src="./app.js"></script>

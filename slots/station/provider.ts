@@ -103,7 +103,7 @@ export interface Commissioning {
     procedure: { procedureId: string; taskId: string; proposalId: string; path: string; sha256: string; module: string; occupants: Array<{ id: string; callsign?: string }>; steps: number; minutes: number; content: Procedure } | null;
     authorisation: { decision: "authorise" | "refuse"; by: string; at: string; note: string | null } | null;
     monitoring: { sessionId: string; subjects: string[] } | null;
-    run: { startedAt: string; current: number; steps: StepRecord[] } | null;
+    run: { startedAt: string; current: number; steps: StepRecord[]; clock?: { minute: number; planned: number | null; secondsPerMinute: number; at: string } } | null;
     report: ProcedureReport | null;
 }
 
@@ -655,7 +655,10 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                 inputSchema: obj(
                     {
                         commissioningId: { type: "string" },
-                        action: { type: "string", enum: ["begin", "step", "record", "abort", "finish"] },
+                        action: { type: "string", enum: ["begin", "step", "record", "clock", "abort", "finish"] },
+                        minute: { type: "number" },
+                        planned: { type: "number" },
+                        secondsPerMinute: { type: "number" },
                         n: { type: "number" },
                         record: { type: "object" },
                         condition: { type: "string" },
@@ -688,6 +691,13 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                             if (n !== c.run.steps.length + 1 || n > total) throw new Error(`step ${n} is out of order: step ${c.run.steps.length + 1} of ${total} is next`);
                             c.run.current = n;
                             say("mother.step", c, () => ({ n, total }));
+                            break;
+                        }
+                        case "clock": {
+                            // The test's clock (2026-09-28): the minute of the station's clock the test is at, and the pace it is played at, so a room tells the test's time from the time it takes to run.
+                            if (c.status !== "running" || !c.run) throw new Error(`commissioning ${c.id} is ${c.status}: no clock runs`);
+                            c.run.clock = { minute: Number(args.minute) || 0, planned: typeof args.planned === "number" ? args.planned : null, secondsPerMinute: Number(args.secondsPerMinute) || 0, at: new Date().toISOString() };
+                            announce(c);
                             break;
                         }
                         case "record": {

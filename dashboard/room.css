@@ -96,6 +96,8 @@ button.badge { font-family: var(--mono); cursor: pointer; }
     0% { box-shadow: 0 0 0 0 rgba(47, 224, 200, 0.85); }
     100% { box-shadow: 0 0 0 14px rgba(47, 224, 200, 0); }
 }
+/* The test's clock: amber, the one clock on the page that runs faster than the wall's. */
+.badge.clock { color: var(--amber); border-color: rgba(255, 182, 72, 0.45); background: rgba(255, 182, 72, 0.08); font-variant-numeric: tabular-nums; }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 8px var(--teal); }
 .badge.down .dot { background: var(--red); box-shadow: 0 0 8px var(--red); }
 
