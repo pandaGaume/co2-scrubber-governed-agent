@@ -8,6 +8,10 @@ The base the documents of this library apply to, as its designers describe it. T
 - One CO2 scrubber, centralised, rather than one per module; a CO2 sensor in each module.
 - Four crew members. Who is in which module at a given time is known to the medical monitor (`biomed`), not to the plan.
 
+## The cabin's air
+
+- The cabin is held at one standard atmosphere (101,325 Pa) and about 20 C (293.15 K). A conversion between a gas's volume and its mass, or between ppm and a mass per cubic metre, is made at these conditions unless others are measured (facts `cabin.air.pressurePa`, `cabin.air.temperatureK`).
+
 ## Operating levels
 
 - The scrubber's effective flow at full speed is 1.0 m3/min (library `scrubber-1-datasheet`). At steady state the CO2 settles where removal matches production, C = G / (Qe x speed): with four people asleep (about 0.24 L/min each, library `nasa-crew-metabolic-loads`), about 960 ppm at full speed and about 2,900 ppm at a third of it; with four awake (about 0.38 L/min each), about 1,520 ppm at full speed and about 3,800 ppm at 40 %. These are the levels of the whole habitat once the ventilation has mixed it; Hab-B sits above the Lab by its crew's production divided by the ventilation's flow.

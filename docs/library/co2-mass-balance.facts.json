@@ -1,0 +1,15 @@
+{
+    "document": "co2-mass-balance",
+    "facts": [
+        {
+            "id": "co2.molarMass",
+            "semantic": "CO2MolarMass",
+            "quantity": "MolarMass",
+            "unit": "kg/mol",
+            "value": 0.04401,
+            "says": "the molar mass of CO2, 44.01 g/mol",
+            "kind": "scientific",
+            "reference": "IUPAC standard atomic weights: C 12.011, O 15.999"
+        }
+    ]
+}

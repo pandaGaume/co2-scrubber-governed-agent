@@ -44,4 +44,6 @@ Two volumes connected by an opening exchange air at a flow q that depends on the
 
 ## Conversions
 
+The molar mass of CO2 is 44.01 g/mol (fact `co2.molarMass`); with the ideal gas law, a gas's volume, its mass and its fraction of the air convert into one another at a given pressure and temperature.
+
 At 1 atm (101.3 kPa), a CO2 partial pressure of 1 mmHg is about 1,316 ppm; 1 kPa is about 9,870 ppm.

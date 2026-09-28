@@ -14,11 +14,31 @@
  *                              ppm as mg/m3, a mass flow into a volume as ppm per minute
  *
  * No state, no model: the same question gets the same answer. A unit the
- * system does not know is said unknown, never guessed.
+ * system does not know is said unknown, never guessed. A relation's
+ * parameter the caller does not give takes a fact of the library, as
+ * `specs/physics/relation-defaults.json` names it (the gas, the cabin's
+ * pressure and temperature): the answer says which fact.
  */
+import { readFileSync } from "node:fs";
 import { fromRoot } from "../../lib/paths.js";
 import { compatibleUnits, convertValue, resolveUnitRef, validateConnection, type UnitRef } from "../../harness/lib/units.js";
-import { RELATIONS, relate } from "../../harness/lib/relations.js";
+import { RELATIONS, relate, type RelationDefault } from "../../harness/lib/relations.js";
+import { LIBRARY_DIR, loadLibrary } from "../tools/library/provider.js";
+
+export const RELATION_DEFAULTS_FILE = "specs/physics/relation-defaults.json";
+
+/** The defaults of the relations' parameters, each the library fact the spec names; a fact the library does not hold is a startup problem. */
+export function relationDefaults(dir: string = LIBRARY_DIR): Record<string, RelationDefault> {
+    const spec = JSON.parse(readFileSync(fromRoot(...RELATION_DEFAULTS_FILE.split("/")), "utf8")) as { defaults: Record<string, string> };
+    const facts = loadLibrary(dir).flatMap((d) => d.facts);
+    return Object.fromEntries(
+        Object.entries(spec.defaults).map(([name, id]) => {
+            const f = facts.find((x) => x.id === id);
+            if (!f) throw new Error(`${RELATION_DEFAULTS_FILE}: the default of ${name} is the fact "${id}", which no library document holds`);
+            return [name, { value: f.value, unit: f.unit, fact: f.id }];
+        }),
+    );
+}
 import { objectSchema, publishSlot, type PublishedSlot, type SlotTool } from "../lib/slot-server.js";
 
 export type PhysicsState = Record<string, never>;
@@ -32,6 +52,7 @@ const ref = (v: unknown): UnitRef => {
 };
 
 export function physicsSlot(wsBase: string, log: (line: string) => void): PublishedSlot<PhysicsState> {
+    const defaults = relationDefaults();
     const tools: SlotTool<PhysicsState>[] = [
         {
             name: "units_normalize",
@@ -75,7 +96,7 @@ export function physicsSlot(wsBase: string, log: (line: string) => void): Publis
             name: "units_relations",
             inputSchema: objectSchema({}),
             handle: () => ({
-                relations: RELATIONS.map((r) => ({ id: r.id, title: r.title, from: r.from, to: { quantity: r.to.quantity, unit: r.to.unit, ...(r.to.derived ? { derived: true, units: Object.keys(r.to.units ?? {}) } : {}) }, formula: r.formula, parameters: r.parameters })),
+                relations: RELATIONS.map((r) => ({ id: r.id, title: r.title, from: r.from, to: { quantity: r.to.quantity, unit: r.to.unit, ...(r.to.derived ? { derived: true, units: Object.keys(r.to.units ?? {}) } : {}) }, formula: r.formula, parameters: Object.fromEntries(Object.entries(r.parameters).map(([k, p]) => [k, { ...p, ...(defaults[k] ? { default: defaults[k] } : {}) }])) })),
             }),
         },
         {
@@ -92,7 +113,7 @@ export function physicsSlot(wsBase: string, log: (line: string) => void): Publis
             handle: (args) => {
                 const f = args.from as { quantity: string; unit: string };
                 const t = args.to as { quantity: string; unit: string };
-                return relate(Number(args.value), { quantity: String(f.quantity), unit: String(f.unit) }, { quantity: String(t.quantity), unit: String(t.unit) }, (args.parameters ?? {}) as Record<string, unknown>);
+                return relate(Number(args.value), { quantity: String(f.quantity), unit: String(f.unit) }, { quantity: String(t.quantity), unit: String(t.unit) }, (args.parameters ?? {}) as Record<string, unknown>, defaults);
             },
         },
     ];

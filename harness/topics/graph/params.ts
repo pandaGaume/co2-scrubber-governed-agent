@@ -15,7 +15,7 @@
  *                                          command, a neighbour's CO2);
  *   { "$first": "c" }                      the first value of a telemetry column (an
  *                                          initial state);
- *   { "$initialMasses": { "co2Ppm": ..., "volume": "V", "temperatureK": 295.15 } }
+ *   { "$initialMasses": { "co2Ppm": ..., "volume": "V", "temperatureK": "Tk" } }
  *                                          the substrate atmosphere's `_initialMassKg`:
  *                                          the air of a volume seeded from a CO2 reading
  *                                          (each field a number, a formula or one of the
@@ -132,7 +132,8 @@ export function resolveParam(value: unknown, vars: Variables, rows: Row[]): unkn
             return resolved;
         };
         const preset = typeof m.preset === "string" ? m.preset : undefined;
-        return initialMassesKg(numberOf("co2Ppm"), numberOf("volume"), numberOf("temperatureK"), preset, numberOf("pressurePa", 101325));
+        // No pressure given: the air preset's own (lib/air.ts), not a number of this code.
+        return initialMassesKg(numberOf("co2Ppm"), numberOf("volume"), numberOf("temperatureK"), preset, m.pressurePa === undefined ? undefined : numberOf("pressurePa"));
     }
     if (v.$series && typeof v.$series === "object") {
         const s = v.$series as { column?: unknown; scale?: unknown; offset?: unknown };

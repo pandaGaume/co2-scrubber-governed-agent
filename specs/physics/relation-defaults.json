@@ -1,0 +1,8 @@
+{
+    "note": "The values a relation uses for a parameter the caller does not give (2026-09-28: no number of an installation in the harness): each is a fact of the library, by id, and the answer names it. The gas is CO2 and the conditions the cabin's, because this installation says so; another installation changes this file, not the code.",
+    "defaults": {
+        "P": "cabin.air.pressurePa",
+        "T": "cabin.air.temperatureK",
+        "M": "co2.molarMass"
+    }
+}

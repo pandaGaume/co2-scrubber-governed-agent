@@ -26,7 +26,7 @@ import type { DecisionContext, JsonValue, PolicyDecision, SafetyDecision, Safety
 import type { Broker } from "../lib/broker.js";
 import { contractProblems } from "../../slots/forge/contract.js";
 import { compatibleUnits } from "../lib/units.js";
-import { relationBetween } from "../lib/relations.js";
+import { defaultedParameters, relationBetween } from "../lib/relations.js";
 import { TOPICS, type TaskFile } from "./task.js";
 import type { TopicDefinition } from "./topic.js";
 import { checkJustifications } from "./justify.js";
@@ -150,7 +150,8 @@ export async function planProblems(plan: Plan, { broker, task, runtimeSlot = "tw
                     if (!related) problems.push(`produced: "${name}": no relation ties "${String(m?.type)}".${String(m?.port)} (${port.quantity ?? "?"}) to ${required.quantity} (physics.units_relations lists them); map a port of the output's quantity, or declare it missing`);
                     else if (m.convert.relation !== related.relation.id) problems.push(`produced: "${name}": the relation that ties ${port.quantity} to ${required.quantity} is "${related.relation.id}", not "${String(m.convert.relation)}"`);
                     else {
-                        const need = Object.entries(related.relation.parameters).filter(([k, spec]) => spec.default === undefined && m.convert?.parameters?.[k] === undefined).map(([k, spec]) => `${k} (${spec.description}, ${spec.unit})`);
+                        const defaulted = defaultedParameters();
+                        const need = Object.entries(related.relation.parameters).filter(([k]) => !defaulted.includes(k) && m.convert?.parameters?.[k] === undefined).map(([k, spec]) => `${k} (${spec.description}, ${spec.unit})`);
                         if (need.length) problems.push(`produced: "${name}": the conversion ${related.relation.id} needs ${need.join(", ")} in convert.parameters`);
                     }
                 } else if (!sameQuantity || (units && (!units.ok || !units.compatible))) problems.push(`produced: "${name}" (${required.quantity}${required.unit ? `, ${required.unit}` : ""}) is mapped to "${String(m?.type)}".${String(m?.port)}, a ${port.quantity ?? "?"}${port.unit ? ` in ${port.unit}` : ""}${sameQuantity ? ", which does not convert" : ""}; ${related ? `a relation ties the two (${related.relation.id}): give convert {relation: "${related.relation.id}", parameters} to map it through the conversion` : `when no node of the catalogue has an output of that quantity for it, declare it missing (topic "code", a contract on the library's card "capability-contract") instead of mapping it`}`);

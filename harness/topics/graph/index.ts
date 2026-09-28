@@ -83,7 +83,7 @@ async function telemetryOf(context: TopicContext): Promise<Row[]> {
 }
 
 const COMPARE = { type: "object", properties: { node: { type: "string" }, property: { type: "string" }, column: { type: "string" } }, required: ["node", "property", "column"] };
-const PARAM_DOC = "a number, or {\"$expr\": \"formula over the variables\"}, or {\"$series\": {\"column\": \"telemetry column\", \"scale\": \"formula\", \"offset\": \"formula\"}} for the segments of a Logic.Time:timeline driven by a measured column, or {\"$first\": \"telemetry column\"}, or {\"$initialMasses\": {\"co2Ppm\": ..., \"volume\": \"V\", \"temperatureK\": 295.15}} for a Physics.Scene:atmosphere's _initialMassKg";
+const PARAM_DOC = "a number, or {\"$expr\": \"formula over the variables\"}, or {\"$series\": {\"column\": \"telemetry column\", \"scale\": \"formula\", \"offset\": \"formula\"}} for the segments of a Logic.Time:timeline driven by a measured column, or {\"$first\": \"telemetry column\"}, or {\"$initialMasses\": {\"co2Ppm\": ..., \"volume\": \"V\", \"temperatureK\": \"Tk\"}} for a Physics.Scene:atmosphere's _initialMassKg";
 
 export const EVALUATE_SCHEMA = {
     type: "object",

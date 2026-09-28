@@ -5,14 +5,19 @@
  * already done: a person's CO2 is documented in g/min and in L/min, a
  * scrubber's removal is a mass flow in kg/s and a room reads it in ppm per
  * minute, a concentration in ppm is a mass per cubic metre. Each relation is
- * a formula over named parameters, each with its unit and, when the cabin
- * gives one, a default: the answer says which were given and which defaulted.
- *
- * The gas is CO2 unless its molar mass is given; the conditions are the
- * cabin's (101 325 Pa, 293.15 K) unless given. The ideal gas law is the only
- * physics here.
+ * a formula over named parameters, each with its unit; a parameter the
+ * caller does not give takes the default the caller of `relate` passes, a
+ * fact of the library (`specs/physics/relation-defaults.json`, read by the
+ * physics slot): the answer says which were given and which defaulted, from
+ * which fact. No gas and no condition is this code's: the ideal gas law is
+ * the only physics here, and its constant R the only number.
  */
+import { readFileSync } from "node:fs";
+import { fromRoot } from "../../lib/paths.js";
 import { canonicalQuantity, convertValue, type UnitRef } from "./units.js";
+
+/** The parameters the physics slot defaults, by name, as the spec names them (`specs/physics/relation-defaults.json`); their values are the library's. */
+export const defaultedParameters = (): string[] => Object.keys((JSON.parse(readFileSync(fromRoot("specs", "physics", "relation-defaults.json"), "utf8")) as { defaults: Record<string, string> }).defaults);
 
 /** The molar gas constant, J/(mol K). */
 const R = 8.314462618;
@@ -20,9 +25,14 @@ const R = 8.314462618;
 export interface RelationParameter {
     quantity: string;
     unit: string;
-    /** The value used when the caller gives none; absent: the caller must give it. */
-    default?: number;
     description: string;
+}
+
+/** A parameter's default, as the caller of `relate` knows it: a value in some unit, and the fact it comes from. */
+export interface RelationDefault {
+    value: number;
+    unit: string;
+    fact?: string;
 }
 
 export interface Relation {
@@ -39,9 +49,9 @@ export interface Relation {
 }
 
 const GAS: Record<string, RelationParameter> = {
-    P: { quantity: "Pressure", unit: "Pa", default: 101325, description: "the gas's pressure, the cabin's by default" },
-    T: { quantity: "Temperature", unit: "K", default: 293.15, description: "the gas's temperature, 20 C by default" },
-    M: { quantity: "MolarMass", unit: "kg/mol", default: 0.04401, description: "the gas's molar mass, CO2's by default" },
+    P: { quantity: "Pressure", unit: "Pa", description: "the gas's pressure" },
+    T: { quantity: "Temperature", unit: "K", description: "the gas's temperature" },
+    M: { quantity: "MolarMass", unit: "kg/mol", description: "the gas's molar mass" },
 };
 /** The density of the gas, kg/m3, by the ideal gas law. */
 const density = (p: Record<string, number>): number => (p.P * p.M) / (R * p.T);
@@ -89,7 +99,7 @@ export interface Related {
     relation: string;
     formula: string;
     direction: "forward" | "inverse";
-    parameters: Record<string, { value: number; unit: string; given: boolean }>;
+    parameters: Record<string, { value: number; unit: string; given: boolean; fact?: string }>;
 }
 
 const same = (a: string, b: string): boolean => (canonicalQuantity(a) ?? a).toLowerCase() === (canonicalQuantity(b) ?? b).toLowerCase();
@@ -128,10 +138,11 @@ function fromSide(value: number, side: Relation["from"] | Relation["to"], ref: U
 }
 
 /**
- * A value converted from one quantity to a related one. `parameters` by name, as numbers in the parameter's unit or as { value, unit }.
- * Refused when no relation ties the two quantities, when a parameter without a default is missing, or when a unit does not fit.
+ * A value converted from one quantity to a related one. `parameters` by name, as numbers in the parameter's unit or as { value, unit };
+ * `defaults` by name, for those not given (the library's facts, as the physics slot reads them).
+ * Refused when no relation ties the two quantities, when a parameter is neither given nor defaulted, or when a unit does not fit.
  */
-export function relate(value: number, from: UnitRef & { quantity: string }, to: UnitRef & { quantity: string }, given: Record<string, unknown> = {}): Related {
+export function relate(value: number, from: UnitRef & { quantity: string }, to: UnitRef & { quantity: string }, given: Record<string, unknown> = {}, defaults: Record<string, RelationDefault> = {}): Related {
     const found = relationBetween(from.quantity, to.quantity);
     if (!found) throw new Error(`no relation ties ${from.quantity} to ${to.quantity}; the relations are ${RELATIONS.map((r) => `${r.from.quantity} <-> ${r.to.quantity} (${r.id})`).join("; ")}`);
     const { relation, direction } = found;
@@ -148,12 +159,19 @@ export function relate(value: number, from: UnitRef & { quantity: string }, to: 
             if (!c.ok) throw new Error(`parameter ${name}: ${c.code}: ${c.reason}`);
             v = c.value;
         }
-        if (v === undefined && spec.default === undefined) {
+        const fallback = defaults[name];
+        let d: number | undefined;
+        if (v === undefined && fallback) {
+            const c = convertValue(fallback.value, { quantity: spec.quantity, unit: fallback.unit }, { quantity: spec.quantity, unit: spec.unit });
+            if (!c.ok) throw new Error(`the default of ${name}${fallback.fact ? ` (${fallback.fact})` : ""}: ${c.code}: ${c.reason}`);
+            d = c.value;
+        }
+        if (v === undefined && d === undefined) {
             missing.push(`${name} (${spec.description}, in ${spec.unit})`);
             continue;
         }
-        p[name] = v ?? (spec.default as number);
-        parameters[name] = { value: p[name], unit: spec.unit, given: v !== undefined };
+        p[name] = v ?? (d as number);
+        parameters[name] = { value: p[name], unit: spec.unit, given: v !== undefined, ...(v === undefined && fallback?.fact ? { fact: fallback.fact } : {}) };
     }
     if (missing.length) throw new Error(`relation ${relation.id} needs ${missing.join(", ")}`);
     const [inSide, outSide] = direction === "forward" ? [relation.from, relation.to] : [relation.to, relation.from];

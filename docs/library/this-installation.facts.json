@@ -1,0 +1,25 @@
+{
+    "document": "this-installation",
+    "facts": [
+        {
+            "id": "cabin.air.pressurePa",
+            "semantic": "CabinAirPressure",
+            "quantity": "Pressure",
+            "unit": "Pa",
+            "value": 101325,
+            "says": "the cabin is held at one standard atmosphere, 101,325 Pa",
+            "kind": "context",
+            "reference": "the habitat's design: its cabin conditions"
+        },
+        {
+            "id": "cabin.air.temperatureK",
+            "semantic": "CabinAirTemperature",
+            "quantity": "Temperature",
+            "unit": "K",
+            "value": 293.15,
+            "says": "the cabin's air is held about 20 C, 293.15 K",
+            "kind": "context",
+            "reference": "the habitat's design: its cabin conditions"
+        }
+    ]
+}
