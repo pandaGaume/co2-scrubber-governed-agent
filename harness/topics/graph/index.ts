@@ -369,6 +369,8 @@ function guardGraph(capabilityId: string, input: JsonValue, context: TopicContex
 export const GRAPH_TOPIC: TopicDefinition = {
     name: "graph",
     tools: GRAPH_TOOLS,
+    // A candidate is evaluated again against this task's data, a plan checked again by the guard, a claim by the validator: a recipe here is a first try, judged.
+    replayedActions: [/^task\.(plan|done)$/, /^graph\.evaluate$/],
     validate: (claim, files, progress) => validateGraph(claim, files, progress),
     local: (context) => [evaluateCapability(context, context.runtimeSlot ?? "twin")],
     guard: guardGraph,

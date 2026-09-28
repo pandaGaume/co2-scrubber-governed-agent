@@ -30,4 +30,5 @@ export function validateOnnx(claim: DoneClaim, files: WorkshopFile[], progress: 
     return { ok: problems.length === 0, problems };
 }
 
-export const ONNX_TOPIC: TopicDefinition = { name: "onnx", tools: ONNX_TOOLS, validate: validateOnnx };
+// The fit is deterministic on the task's telemetry: its plan, its files, the fit, the check and the claim are a recipe.
+export const ONNX_TOPIC: TopicDefinition = { name: "onnx", tools: ONNX_TOOLS, validate: validateOnnx, replayedActions: [/^workspace\.write$/, /^model\.(fit|contract)$/, /^task\.(plan|done)$/] };

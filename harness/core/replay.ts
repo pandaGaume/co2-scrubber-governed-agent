@@ -24,6 +24,25 @@ import type { PolicyGraph } from "@spiky-panda/harness";
 
 export const NEVER_REPLAYED: ReadonlyArray<RegExp> = [/^task\.(fail|ask)$/];
 
+/**
+ * The reads: no side effect, and an answer the task reads again when it is replayed. A replay of a read is
+ * always allowed (a call already made in the task aside); every other capability a topic allows is classed by
+ * the topic, as `neverReplayed` or `replayedActions` (`tests/conformance.test.ts`).
+ */
+export const READ_CAPABILITIES: ReadonlyArray<RegExp> = [
+    /^library\.(list|methods|search|read|facts|graphs|graph)$/,
+    /^web\.search$/,
+    /^physics\.units_(normalize|convert|compatible|validate_connection|relations|relate)$/,
+    /^workspace\.(list|read)$/,
+    /^factory\.inventory$/,
+    /^station\.registry_list$/,
+    /^biomed\.(describe|presence)$/,
+    /^(twin|forge)\.registry_(search|describe_node|list_nodes)$/,
+    /^(twin|forge)\.document_validate$/,
+    /^forge\.plugin_template$/,
+    /^model\.inspect$/,
+];
+
 /** The key of a call in this task: the capability and its input as proposed. */
 export const proposalKey = (capabilityId: string | null | undefined, input: unknown): string => `${capabilityId ?? ""}:${JSON.stringify(input ?? null)}`;
 

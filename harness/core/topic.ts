@@ -41,9 +41,15 @@ export interface TopicDefinition {
     /**
      * The capabilities the builder decides every time, never replayed from the recipes (2026-09-28): those whose
      * input is made of this task's readings (the procedure submitted, the plugin written for this contract). The
-     * rules every topic shares (no call repeated in a task, no `task.*`) are in `replay.ts`.
+     * rules every topic shares (no call repeated in a task, no question nor failure) are in `replay.ts`.
      */
     neverReplayed?: ReadonlyArray<RegExp>;
+    /**
+     * The actions the topic lets the recipes replay (2026-09-28): what is judged again when it runs (a candidate
+     * evaluated against this task's data, a plan the guard checks) or deterministic (the onnx fit). With
+     * `neverReplayed`, every capability the topic allows that is not a read is classed, once, on purpose.
+     */
+    replayedActions?: ReadonlyArray<RegExp>;
     /** Is the contract held: the artifacts claimed, the files of the workshop, what the steps recorded. */
     validate(claim: DoneClaim, files: WorkshopFile[], progress: Progress, task: TaskFile["task"]): Validation;
     /** Capabilities in process the topic adds to the task's three. */

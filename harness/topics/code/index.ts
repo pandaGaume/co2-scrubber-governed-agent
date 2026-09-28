@@ -419,7 +419,9 @@ export const CODE_TOPIC: TopicDefinition = {
     name: "code",
     tools: CODE_TOOLS,
     // The plugin is written, built, tested, loaded, run and promoted for this task's contract: never replayed from another task's (two missing nodes of the same quantity share a task signature).
-    neverReplayed: [/^forge\.plugin_(write|build|test|load|promote)$/, /^code\.accept$/, /^forge\.(document_build|session_run)$/, /^task\.done$/],
+    neverReplayed: [/^forge\.plugin_(write|build|test|load|promote)$/, /^code\.accept$/, /^forge\.(document_build|session_run)$/, /^graph\.evaluate$/, /^task\.done$/],
+    // The plan declares what no node produces, from the task's required outputs; the guard checks it again.
+    replayedActions: [/^task\.plan$/],
     validate: (claim, files, progress) => validateCode(claim, files, progress),
     local: noteWrite,
     guard: (capabilityId, input, context) => {
