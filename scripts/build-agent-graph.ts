@@ -77,6 +77,12 @@ export const STAGE_POSITIONS: Readonly<Record<string, readonly [number, number]>
     record: [1900, 0],
 };
 
+/** Where the factory's graph places some stages differently from the night agent's (Guillaume's layout, 2026-09-28): the loop's gates under them take the room. */
+export const FACTORY_STAGE_POSITIONS: Readonly<Record<string, readonly [number, number]>> = {
+    observe: [-380, 0],
+    context: [-140, 0],
+};
+
 /** The factory's labels: the same loop, the workshop instead of the cabin, the builder instead of the reasoner. */
 export const FACTORY_STAGE_LABELS: Readonly<Record<string, string>> = {
     observe: "1  Observe the workshop",
@@ -98,16 +104,16 @@ export const LOOP_NODES: ReadonlyArray<{ id: string; label: string; x: number; y
     { id: "observe", label: "OBSERVE  the task, the shelf, the telemetry", x: -280, y: 260 },
     { id: "hypothesize", label: "HYPOTHESIZE  the structure and what is fitted", x: 20, y: 260 },
     { id: "build", label: "BUILD  instantiate the graph", x: 340, y: 260 },
-    { id: "execute", label: "EXECUTE  fit and run in the sandbox", x: 620, y: 260 },
-    { id: "evaluate", label: "EVALUATE  coverage, residual, identifiability", x: 900, y: 260 },
-    { id: "pass", label: "PASS  calibration held", x: 1240, y: 260 },
-    { id: "done", label: "DONE  handed over, validation pending", x: 1520, y: 260 },
-    { id: "diagnose", label: "DIAGNOSE  why it does not hold", x: 900, y: 420 },
-    { id: "parameter", label: "PARAMETER MISMATCH  a fitted value at the edge of its range", x: 620, y: 420 },
-    { id: "structural", label: "STRUCTURAL MISMATCH  no admissible set follows the curve", x: 1240, y: 420 },
-    { id: "invalid", label: "INVALID EVALUATION  a prediction missing, not finite", x: 900, y: 560 },
-    { id: "revise", label: "REVISE  the bounds if the physics allows, else the topology", x: 340, y: 420 },
-    { id: "experiment", label: "INSUFFICIENT INFORMATION  plan an experiment", x: 1520, y: 420 },
+    { id: "execute", label: "EXECUTE  fit and run in the sandbox", x: 640, y: 260 },
+    { id: "evaluate", label: "EVALUATE  coverage, residual, identifiability", x: 900, y: 360 },
+    { id: "pass", label: "PASS  calibration held", x: 1240, y: 360 },
+    { id: "done", label: "DONE  handed over, validation pending", x: 1460, y: 360 },
+    { id: "diagnose", label: "DIAGNOSE  why it does not hold", x: 1320, y: 720 },
+    { id: "parameter", label: "PARAMETER MISMATCH  a fitted value at the edge of its range", x: 1780, y: 460 },
+    { id: "structural", label: "STRUCTURAL MISMATCH  no admissible set follows the curve", x: 1780, y: 820 },
+    { id: "invalid", label: "INVALID EVALUATION  a prediction missing, not finite", x: 1780, y: 640 },
+    { id: "revise", label: "REVISE  the bounds if the physics allows, else the topology", x: 2260, y: 460 },
+    { id: "experiment", label: "INSUFFICIENT INFORMATION  plan an experiment", x: 1780, y: 1000 },
 ];
 /** The loop's transitions, from state to state. */
 export const LOOP_EDGES: ReadonlyArray<readonly [string, string]> = [
@@ -142,7 +148,7 @@ export function buildAgentDocument(outFile: string, labels: Readonly<Record<stri
 
     const nodes: DocumentNodeSpec[] = V1_HARNESS_NODES.map((entry) => {
         const stage = new entry.ctor().stage;
-        const [x, y] = STAGE_POSITIONS[stage] ?? DEFAULT_POSITIONS[stage] ?? [0, 0];
+        const [x, y] = (options.loop ? FACTORY_STAGE_POSITIONS[stage] : undefined) ?? STAGE_POSITIONS[stage] ?? DEFAULT_POSITIONS[stage] ?? [0, 0];
         return { id: stage, typeId: entry.type, x, y, label: labels[stage] ?? entry.label };
     });
     nodes.push({ id: MONITOR_NODE_ID, typeId: MONITOR_TYPE, x: 0, y: 700, label: "Run monitor" });

@@ -4,7 +4,7 @@
     "nodes": [
       {
         "id": "observe",
-        "x": -280,
+        "x": -380,
         "y": 0,
         "typeId": "Harness.Observation:state",
         "inputs": [],
@@ -18,7 +18,7 @@
       },
       {
         "id": "context",
-        "x": -100,
+        "x": -140,
         "y": 0,
         "typeId": "Harness.Policy:context",
         "inputs": [
@@ -310,7 +310,7 @@
       },
       {
         "id": "loop-execute",
-        "x": 620,
+        "x": 640,
         "y": 260,
         "typeId": "Logic.Flow:gate",
         "inputs": [
@@ -331,7 +331,7 @@
       {
         "id": "loop-evaluate",
         "x": 900,
-        "y": 260,
+        "y": 360,
         "typeId": "Logic.Flow:gate",
         "inputs": [
           {
@@ -351,7 +351,7 @@
       {
         "id": "loop-pass",
         "x": 1240,
-        "y": 260,
+        "y": 360,
         "typeId": "Logic.Flow:gate",
         "inputs": [
           {
@@ -370,8 +370,8 @@
       },
       {
         "id": "loop-done",
-        "x": 1520,
-        "y": 260,
+        "x": 1460,
+        "y": 360,
         "typeId": "Logic.Flow:gate",
         "inputs": [
           {
@@ -390,8 +390,8 @@
       },
       {
         "id": "loop-diagnose",
-        "x": 900,
-        "y": 420,
+        "x": 1320,
+        "y": 720,
         "typeId": "Logic.Flow:gate",
         "inputs": [
           {
@@ -410,8 +410,8 @@
       },
       {
         "id": "loop-parameter",
-        "x": 620,
-        "y": 420,
+        "x": 1780,
+        "y": 460,
         "typeId": "Logic.Flow:gate",
         "inputs": [
           {
@@ -430,8 +430,8 @@
       },
       {
         "id": "loop-structural",
-        "x": 1240,
-        "y": 420,
+        "x": 1780,
+        "y": 820,
         "typeId": "Logic.Flow:gate",
         "inputs": [
           {
@@ -450,8 +450,8 @@
       },
       {
         "id": "loop-invalid",
-        "x": 900,
-        "y": 560,
+        "x": 1780,
+        "y": 640,
         "typeId": "Logic.Flow:gate",
         "inputs": [
           {
@@ -470,8 +470,8 @@
       },
       {
         "id": "loop-revise",
-        "x": 340,
-        "y": 420,
+        "x": 2260,
+        "y": 460,
         "typeId": "Logic.Flow:gate",
         "inputs": [
           {
@@ -490,8 +490,8 @@
       },
       {
         "id": "loop-experiment",
-        "x": 1520,
-        "y": 420,
+        "x": 1780,
+        "y": 1000,
         "typeId": "Logic.Flow:gate",
         "inputs": [
           {
