@@ -296,6 +296,7 @@
         "mother.question.answered": "Answer recorded: {choice}, by {by}.",
         "mother.question.auto": "Answered by standing order: {choice}. The question was: {question}",
         "mother.questions.policy.auto": "Standing order: questions of {kind} are answered with {choice}.",
-        "mother.questions.policy.ask": "Standing order lifted: questions of {kind} wait for the commander."
+        "mother.questions.policy.ask": "Standing order lifted: questions of {kind} wait for the commander.",
+        "mother.question.waiting": "Commander, I am still waiting for your answer: {options}."
     }
 }

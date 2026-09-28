@@ -101,6 +101,10 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
         const said = notes.filter((n) => Date.now() - n.at < 15000).map((n) => `<div class="line dim">${esc(n.text)}</div>`);
         box.innerHTML = chips.join("") + direct.join("") + said.join("");
         box.hidden = !box.innerHTML;
+        // The prompt blinks while Mother waits for the commander.
+        const waiting = open.length > 0 || awaiting.length > 0;
+        form?.classList.toggle("awaiting", waiting);
+        if (input) input.placeholder = waiting ? "Mother is waiting for your answer: type it, or press mic" : "answer Mother: type it, or press mic";
     }
 
     async function refresh() {

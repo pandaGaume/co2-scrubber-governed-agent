@@ -15,6 +15,8 @@ export async function startAllOrFail(port: number): Promise<{ broker: LocalBroke
     process.env.CAD_MCP_URL ??= "http://127.0.0.1:1/mcp";
     // The station speaks every line of Mother's on the control room; the suite asserts the lines, not the voice.
     process.env.STATION_VOICE ??= "off";
+    process.env.SCENARIO_SECONDS_PER_MINUTE ??= "0";
+    process.env.STATION_REMIND_SECONDS ??= "0";
     const started = await startAll(port, quiet, "ignore");
     if (started.failures.length) {
         await started.stop();

@@ -69,6 +69,8 @@ export interface CommissioningDocument {
     /** The words the Observer is given, one line each; `{test}`, `{apparentVolume}`, `{why}` and `{controls}` are filled by the player from the test. */
     observer: { attempts: number; description: string[] };
     graph: { rmsePpmMax: number; budget: Record<string, number> };
+    /** How the test is played on the stand-in world: seconds of real time per minute of the station's clock (0: as fast as it computes). */
+    execution?: { secondsPerMinute?: number };
     loops: Array<Pick<Loop, "name" | "nature" | "who">>;
 }
 
@@ -254,14 +256,23 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
         const speedNow = async () => (await call<{ speedPercent: number }>("scrubber", "motor.state")).speedPercent;
         await call("scrubber", "debug.set_co2", { state: "NOMINAL", ppm: Math.round(world.labPpm) });
         telemetry.push(world.row(await speedNow()));
+        // The test is played at a pace a room can follow (2026-09-28: sixty minutes in one second closed the medical monitoring as it opened, with two samples per person);
+        // the monitoring the authorisation opened stays open until the test ends, and Mother says where the CO2 stands every ten minutes of the station's clock.
+        const secondsPerMinute = Number(process.env.SCENARIO_SECONDS_PER_MINUTE ?? doc.execution?.secondsPerMinute ?? 2);
+        const planned = c1.commissioning.procedure?.minutes ?? null;
+        if (secondsPerMinute > 0) narrate(`The test starts${planned ? `: ${planned} minutes on the station's clock` : ""}, played at one minute every ${secondsPerMinute} seconds. The medical monitoring stays open until it ends.`);
+        let minute = 0;
         const executed = await runProcedure({
             broker: agent,
             commissioningId,
             waitMinute: async () => {
+                if (secondsPerMinute > 0) await sleep(secondsPerMinute * 1000);
                 const speed = await speedNow();
                 world.step(speed);
                 await call("scrubber", "debug.set_co2", { state: "NOMINAL", ppm: Math.round(world.labPpm) });
                 telemetry.push(world.row(speed));
+                minute++;
+                if (secondsPerMinute > 0 && minute % 10 === 0) narrate(`Minute ${minute}${planned ? ` of ${planned}` : ""}: the Lab's CO2 at ${Math.round(world.labPpm)} ppm, the scrubber at ${speed} percent.`);
             },
         });
         end(5, { steps: executed.report?.steps?.length ?? 0, minutes: telemetry.length - 1, aborted: (executed as { aborted?: unknown }).aborted ?? null } as JsonValue);

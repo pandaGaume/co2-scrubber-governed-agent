@@ -318,6 +318,7 @@
         "mother.question.answered": "Réponse enregistrée : {choice}, par {by}.",
         "mother.question.auto": "Répondu par consigne permanente : {choice}. La question était : {question}",
         "mother.questions.policy.auto": "Consigne permanente : les questions de {kind} reçoivent {choice}.",
-        "mother.questions.policy.ask": "Consigne levée : les questions de {kind} attendent le commandant."
+        "mother.questions.policy.ask": "Consigne levée : les questions de {kind} attendent le commandant.",
+        "mother.question.waiting": "Commandant, j'attends toujours votre réponse : {options}."
     }
 }

@@ -8,8 +8,15 @@
     "leak": true,
     "devices": "specs/commissioning-devices.json",
     "procedure": {
-        "requiredOutput": { "name": "V_lab", "quantity": "Volume", "unit": "m3" },
-        "budget": { "iterations": 25, "minutes": 15 }
+        "requiredOutput": {
+            "name": "V_lab",
+            "quantity": "Volume",
+            "unit": "m3"
+        },
+        "budget": {
+            "iterations": 25,
+            "minutes": 15
+        }
     },
     "observer": {
         "attempts": 5,
@@ -27,18 +34,65 @@
     },
     "graph": {
         "rmsePpmMax": 10,
-        "budget": { "iterations": 30, "minutes": 20, "twinPoints": 600 }
+        "budget": {
+            "iterations": 30,
+            "minutes": 20,
+            "twinPoints": 600
+        }
+    },
+    "execution": {
+        "secondsPerMinute": 2
     },
     "loops": [
-        { "name": "registration", "nature": "code", "who": "the station (Mother), a written rule" },
-        { "name": "procedure factory", "nature": "model", "who": "the procedure factory" },
-        { "name": "relay", "nature": "code", "who": "the station (Mother)" },
-        { "name": "authorisation", "nature": "human", "who": "the commander" },
-        { "name": "execution", "nature": "code", "who": "the executor, under the agent's rights" },
-        { "name": "report", "nature": "code", "who": "the station, the decay fit" },
-        { "name": "observer", "nature": "model", "who": "the Observer" },
-        { "name": "graph factory", "nature": "model", "who": "the graph factory" },
-        { "name": "hand-off", "nature": "human", "who": "the commander, then the code factory, then the graph factory replayed" },
-        { "name": "proposal", "nature": "code", "who": "the station" }
+        {
+            "name": "registration",
+            "nature": "code",
+            "who": "the station (Mother), a written rule"
+        },
+        {
+            "name": "procedure factory",
+            "nature": "model",
+            "who": "the procedure factory"
+        },
+        {
+            "name": "relay",
+            "nature": "code",
+            "who": "the station (Mother)"
+        },
+        {
+            "name": "authorisation",
+            "nature": "human",
+            "who": "the commander"
+        },
+        {
+            "name": "execution",
+            "nature": "code",
+            "who": "the executor, under the agent's rights"
+        },
+        {
+            "name": "report",
+            "nature": "code",
+            "who": "the station, the decay fit"
+        },
+        {
+            "name": "observer",
+            "nature": "model",
+            "who": "the Observer"
+        },
+        {
+            "name": "graph factory",
+            "nature": "model",
+            "who": "the graph factory"
+        },
+        {
+            "name": "hand-off",
+            "nature": "human",
+            "who": "the commander, then the code factory, then the graph factory replayed"
+        },
+        {
+            "name": "proposal",
+            "nature": "code",
+            "who": "the station"
+        }
     ]
 }

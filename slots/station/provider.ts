@@ -329,6 +329,22 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
         });
     };
 
+    // A question left open is recalled (2026-09-28): every STATION_REMIND_SECONDS (30 by default, 0 for never), Mother says she is still waiting, with its options.
+    const remindMs = Number(process.env.STATION_REMIND_SECONDS ?? 30) * 1000;
+    const reminded = new Map<string, number>();
+    if (remindMs > 0) {
+        const reminder = setInterval(() => {
+            for (const q of state.questions) {
+                if (q.status !== "open") continue;
+                const since = reminded.get(q.id) ?? Date.parse(q.at);
+                if (Date.now() - since < remindMs) continue;
+                reminded.set(q.id, Date.now());
+                say("mother.question.waiting", null, () => ({ options: q.options.map((o) => o.label).join(" / ") }));
+            }
+        }, 1000);
+        reminder.unref?.();
+    }
+
     const published = publishSlot<StationState>({
         slot: "station",
         description: "The site station, Mother: the register of the devices and their commissioning, artifact registration under the evaluate rule, validated push, journal of stable operating points",
