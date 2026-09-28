@@ -256,6 +256,24 @@ export function evaluateRules(input: unknown, doc: RulesDocument, ctx: RuleConte
     return problems;
 }
 
+/**
+ * The facts a document's rules bound a constant by: those a comparison of that constant names, and, through a comparison
+ * with another constant, the facts that one is bounded by (a maximum below an abort that sits under a ceiling is bounded by
+ * the ceiling). What a justification of a safety constant cites (2026-09-28: a model cited the scrubber's flow for a speed
+ * nineteen times, the guard answering that 100 is not 1 m3/min, never naming the floor the rules compare speeds with).
+ */
+export function factsBounding(doc: RulesDocument | null, constant: string, seen: Set<string> = new Set()): string[] {
+    if (!doc || seen.has(constant)) return [];
+    seen.add(constant);
+    const out = new Set<string>();
+    for (const rule of doc.rules) {
+        if (!("compare" in rule) || !rule.compare.subject || !matches(constant, rule.compare.subject)) continue;
+        if (rule.compare.fact) out.add(rule.compare.fact);
+        if (rule.compare.constant) for (const f of factsBounding(doc, rule.compare.constant, seen)) out.add(f);
+    }
+    return [...out];
+}
+
 /** The problem a rules document unsigned, or changed since it was signed, makes of every proposal: nothing is judged by rules nobody signed. */
 export function unsignedRules(doc: RulesDocument): RuleProblem | null {
     const signing = `a person reviews it and signs it on the library page of the control room (library.html), or: npm run library:sign -- ${doc.document} "<name>"`;

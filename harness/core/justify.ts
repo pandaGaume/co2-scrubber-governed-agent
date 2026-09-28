@@ -72,6 +72,8 @@ export interface Justified {
     safety?: RegExp | ((constant: string) => boolean);
     /** The guard's envelope, when a constant may cite one of its bounds. */
     envelope?: Record<string, unknown>;
+    /** The facts the signed rules bound a safety constant by, by id (`rules.ts`, factsBounding): the ones its justification cites. */
+    boundBy?(constant: string): string[];
     /** Does the task give a measurement to cite; any observation or data by default. */
     measured?(task: TaskFile["task"]): boolean;
     /** The topic's own guard checks them and reports them with its other checks; the constructor's guard leaves them to it. */
@@ -93,6 +95,22 @@ export interface JustificationHelp {
     missing: Constant[];
     /** The names the justifications gave that are no constant the call set. */
     unmatched: string[];
+    /**
+     * The safety constants justified by no fact the signed rules bound them by, or by the wrong one, with the unit they are
+     * in and the facts to cite (2026-09-28: a speed in percent justified by a flow in m3/min nineteen times in a row; the
+     * guard's refusal alone did not turn the model, the next prompt says the unit and the fact).
+     */
+    misjustified?: Misjustified[];
+}
+
+/** A safety constant whose justification is not a fact the signed rules bound it by: the unit it is in, the facts to cite, the fact it cited. */
+export interface Misjustified {
+    constant: string;
+    value: ConstantValue;
+    /** The unit the constant is in: the one of the facts the rules compare it with. */
+    unit: string;
+    expected: Array<{ id: string; value: number; unit: string; side: string }>;
+    cited: { id: string; value: number; unit: string } | null;
 }
 
 export function justificationHelp(justified: Justified, input: JsonValue): Pick<JustificationHelp, "missing" | "unmatched"> {
@@ -107,11 +125,24 @@ export function justificationHelp(justified: Justified, input: JsonValue): Pick<
 
 /** The brief's words for it: said at the top of the brief, differently at each repetition. */
 export function justificationNote(help: JustificationHelp | null | undefined): string {
-    if (!help || !help.missing.length) return "";
-    const list = help.missing.slice(0, 12).map((c) => `${c.constant} = ${shown(c.value)}`).join(", ") + (help.missing.length > 12 ? `, and ${help.missing.length - 12} more` : "");
-    const names = help.unmatched.length ? ` Your justifications named ${help.unmatched.slice(0, 12).join(", ")}, which is no constant you set: a justification names its constant by the path listed here, exactly.` : "";
+    const wrong = help?.misjustified ?? [];
+    if (!help || (!help.missing.length && !wrong.length)) return "";
     const again = help.times > 1 ? ` This is refusal number ${help.times} for the same reason: sending the same justifications again gets it again.` : "";
-    return `Your last ${help.capability} was refused for its justifications: ${help.missing.length} constant(s) you set have none under their path: ${list}.${names} The state lists them under justify.skeleton, path and value filled: give each its source, reference and reason, and send again.${again} `;
+    const parts: string[] = [];
+    if (help.missing.length) {
+        const list = help.missing.slice(0, 12).map((c) => `${c.constant} = ${shown(c.value)}`).join(", ") + (help.missing.length > 12 ? `, and ${help.missing.length - 12} more` : "");
+        const names = help.unmatched.length ? ` Your justifications named ${help.unmatched.slice(0, 12).join(", ")}, which is no constant you set: a justification names its constant by the path listed here, exactly.` : "";
+        parts.push(`${help.missing.length} constant(s) you set have none under their path: ${list}.${names} The state lists them under justify.skeleton, path and value filled: give each its source, reference and reason.`);
+    }
+    if (wrong.length) {
+        // Said with the unit: the rules compare the constant with a fact in that unit, so a fact in another unit (another quantity) never justifies it.
+        const list = wrong
+            .slice(0, 12)
+            .map((m) => `${m.constant} = ${shown(m.value)} is in ${m.unit}: cite ${m.expected.map((e) => `${e.id} (${e.value} ${e.unit}, ${e.side})`).join(" or ")}${m.cited ? `, not ${m.cited.id} (${m.cited.value} ${m.cited.unit}${m.cited.unit !== m.unit ? `: another unit, another quantity` : ""})` : ""}`)
+            .join("; ");
+        parts.push(`${wrong.length} safety constant(s) must cite the fact of the signed rules that bounds them, a fact in their own unit: ${list}. The state's justify.skeleton has them with source "library" and the reference to cite already filled.`);
+    }
+    return `Your last ${help.capability} was refused for its justifications. ${parts.join(" ")} Send again with these.${again} `;
 }
 
 /** The `justifications` field of a call's input, as a schema a tool adds to its own. */
@@ -214,25 +245,54 @@ export function factOf(facts: SignedFact[], reference: string): SignedFact | und
     return named.length === 1 ? named[0] : undefined;
 }
 
-/** The problems of the safety constants: each cites a fact of a signed library document, unchanged since, and respects its safe side. */
-export function safetyProblems(constants: Constant[], given: unknown[], facts: SignedFact[]): string[] {
+/** A fact's safe side, in words. */
+const sideOf = (fact: SignedFact): string => (fact.bound === "upper" ? "at or below it" : fact.bound === "lower" ? "at or above it" : "equal to it");
+
+/**
+ * The problems of the safety constants: each cites a fact of a signed library document, unchanged since, and respects its
+ * safe side. When the signed rules say which facts bound a constant (`boundBy`), a refusal names them, and a fact they do
+ * not bound it by is refused as such (2026-09-28: a speed justified by the scrubber's flow in m3/min was refused nineteen
+ * times as "100 is not 1 m3/min", and the model never learnt that the rules bound a speed by the card's floor).
+ */
+export function safetyProblems(constants: Constant[], given: unknown[], facts: SignedFact[], boundBy?: (constant: string) => string[]): string[] {
+    return safetyReview(constants, given, facts, boundBy).problems;
+}
+
+/** The problems of the safety constants, and those justified by no fact the rules bound them by, structured for the next prompt. */
+export function safetyReview(constants: Constant[], given: unknown[], facts: SignedFact[], boundBy?: (constant: string) => string[]): { problems: string[]; misjustified: Misjustified[] } {
     const problems: string[] = [];
+    const misjustified: Misjustified[] = [];
     const list = asJustifications(given);
     const signing = "a person reviews it and signs it on the library page of the control room (library.html), or: npm run library:sign -- <document> \"<name>\"";
     const paths = constants.map((x) => x.constant);
     for (const c of constants) {
+        const bounding = (boundBy?.(c.constant) ?? []).map((id) => facts.find((f) => f.id === id)).filter((f): f is SignedFact => f !== undefined);
+        const cite = bounding.length ? `; the signed rules bound it by ${bounding.map((f) => `${f.id} = ${f.value} ${f.unit} (${sideOf(f)})`).join(" and ")}: cite ${bounding.length > 1 ? "one of them" : "it"} (source "library", reference "${bounding[0].id}")` : "";
         const j = justificationOf(list, c.constant, paths);
+        // What the next prompt says of this constant when its justification is not a fact the rules bound it by: its unit, the facts to cite.
+        const wrong = (cited: SignedFact | null) => {
+            if (bounding.length) misjustified.push({ constant: c.constant, value: c.value, unit: bounding[0].unit, expected: bounding.map((f) => ({ id: f.id, value: f.value, unit: f.unit, side: sideOf(f) })), cited: cited ? { id: cited.id, value: cited.value, unit: cited.unit } : null });
+        };
         if (!j) {
-            problems.push(`${c.constant} = ${shown(c.value)} is a safety constant with no justification ${named(c.constant)}: cite the fact of a signed library document it respects (source "library", the fact's id as reference)`);
+            wrong(null);
+            problems.push(`${c.constant} = ${shown(c.value)} is a safety constant with no justification ${named(c.constant)}: cite the fact of a signed library document it respects (source "library", the fact's id as reference)${cite}`);
             continue;
         }
         if (j.source !== "library") {
-            problems.push(`${c.constant} = ${shown(c.value)} is a safety constant: it is justified by a fact of a signed library document, not by ${j.source === "web" ? "a web page" : j.source === "assumed" ? "an assumption" : j.source === "derived" ? "a calculation" : j.source === "measured" ? "a measurement" : `"${String(j.source)}"`} (${String(j.reference)})`);
+            wrong(null);
+            problems.push(`${c.constant} = ${shown(c.value)} is a safety constant: it is justified by a fact of a signed library document, not by ${j.source === "web" ? "a web page" : j.source === "assumed" ? "an assumption" : j.source === "derived" ? "a calculation" : j.source === "measured" ? "a measurement" : `"${String(j.source)}"`} (${String(j.reference)})${cite}`);
             continue;
         }
         const fact = factOf(facts, String(j.reference));
         if (!fact) {
-            problems.push(`${c.constant}: "${String(j.reference)}" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)`);
+            wrong(null);
+            problems.push(`${c.constant}: "${String(j.reference)}" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)${cite}`);
+            continue;
+        }
+        // A fact the rules do not bound this constant by is not its justification, whatever its value (another quantity, another unit).
+        if (bounding.length && !bounding.some((f) => f.id === fact.id)) {
+            wrong(fact);
+            problems.push(`${c.constant} = ${shown(c.value)} cites ${fact.id} (${fact.value} ${fact.unit}), which the signed rules do not bound it by${cite}`);
             continue;
         }
         // A signed fact first (2026-09-28: told to end with task.fail, a model gave up while the signed card held the fact it needed).
@@ -240,9 +300,9 @@ export function safetyProblems(constants: Constant[], given: unknown[], facts: S
         else if (!fact.signed.valid) problems.push(`${c.constant}: "${fact.source}" was signed by ${fact.signed.by} and has changed since; ${signing}`);
         const values = Array.isArray(c.value) ? c.value : [c.value];
         const ok = values.every((v) => (fact.bound === "upper" ? v <= fact.value : fact.bound === "lower" ? v >= fact.value : Math.abs(v - fact.value) <= 1e-9 * Math.max(1, Math.abs(fact.value))));
-        if (!ok) problems.push(`${c.constant} = ${shown(c.value)} does not respect ${fact.id} = ${fact.value} ${fact.unit} (${fact.bound === "upper" ? "at or below it" : fact.bound === "lower" ? "at or above it" : "equal to it"})`);
+        if (!ok) problems.push(`${c.constant} = ${shown(c.value)} does not respect ${fact.id} = ${fact.value} ${fact.unit} (${sideOf(fact)})${bounding.length ? "" : cite}`);
     }
-    return problems;
+    return { problems, misjustified };
 }
 
 /** The given justifications of a call: its `justifications` field, unless the topic reads them elsewhere. */
@@ -263,7 +323,10 @@ export async function checkJustifications(justified: Justified, input: JsonValue
         facts = served.ok ? (((served.output as { facts?: SignedFact[] }).facts ?? []) as SignedFact[]) : [];
     }
     const measured = justified.measured ? justified.measured(context.task) : Object.keys(context.task.observations ?? {}).length > 0 || (context.task.data ?? []).length > 0;
-    return [...safetyProblems(safety, given, facts), ...justificationProblems(constants.filter((c) => !isSafety(c)), given, context.progress.sources, { measured, envelope: justified.envelope })];
+    const review = safetyReview(safety, given, facts, justified.boundBy);
+    // Handed to the runner, which puts it in the next prompt with the refusal (the call is refused: nothing executes, the state may move).
+    if (review.misjustified.length) context.progress.misjustified = review.misjustified;
+    return [...review.problems, ...justificationProblems(constants.filter((c) => !isSafety(c)), given, context.progress.sources, { measured, envelope: justified.envelope })];
 }
 
 /** The numbers of an object, by path (`prefix.key`), the nested ones too; what a spec or a set of variables sets. */

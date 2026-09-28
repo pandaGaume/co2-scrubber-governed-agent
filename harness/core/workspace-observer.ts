@@ -17,7 +17,7 @@
  * The progress record is the runner's: the observer reads it, the local
  * capabilities (`task.plan`, `task.done`) and the evaluator write it.
  */
-import { justificationNote, type JustificationHelp } from "./justify.js";
+import { justificationNote, type JustificationHelp, type Misjustified } from "./justify.js";
 import { createHash } from "node:crypto";
 import type { JsonValue, State, StateObserver } from "@spiky-panda/harness";
 import type { Broker } from "../lib/broker.js";
@@ -85,6 +85,8 @@ export interface Progress {
     sources: { library: string[]; web: string[] };
     /** What a refusal for justifications left to do: the constants without one, by path; put in the state and the brief until the call completes (`justify.ts`). */
     justify: JustificationHelp | null;
+    /** The safety constants the topic's guard found justified by no fact the signed rules bound them by, for the runner to put in `justify` with the refusal. */
+    misjustified?: Misjustified[] | null;
     /** What a topic keeps across the steps of one task (the procedure topic: its submissions). */
     topic: Record<string, JsonValue>;
     /** What the task read so far, each answer compact, by capability and argument (`evidence:` in the state); the oldest dropped past the cap. */

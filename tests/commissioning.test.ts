@@ -38,7 +38,7 @@ import { Broker } from "../harness/lib/broker.js";
 import { runTask, type BuilderContext } from "../harness/core/runner.js";
 import { ScriptedProcedureBuilder, type ScriptedProcedureOptions } from "../stand-ins/builders/procedure.js";
 import { checkProcedure, envelopeOf, FORMAT, safetyProblems, type MeasuredStart, type PresenceRead, type SignedFact } from "../harness/topics/procedure/check.js";
-import type { RulesDocument } from "../harness/core/rules.js";
+import { factsBounding, type RulesDocument } from "../harness/core/rules.js";
 import { loadFacts, loadRules, LIBRARY_DIR } from "../slots/tools/library/provider.js";
 import type { Procedure } from "../lib/procedure/format.js";
 import { decayVolume } from "../lib/procedure/report.js";
@@ -140,6 +140,16 @@ describe("the procedure's guard, alone", () => {
             ],
         };
         assert.deepEqual(safetyProblems(safe, signed(true), RULES), []);
+        // The facts the signed rules bound each constant by, through another constant too (a maximum under an abort under a ceiling).
+        assert.deepEqual(factsBounding(RULES, "steps.2.speedPercent"), ["test.speedFloorPercent"]);
+        assert.deepEqual(factsBounding(RULES, "limits.co2MaxPpm"), ["test.co2AbortCeilingPpm"]);
+        assert.deepEqual(factsBounding(RULES, "limits.maxMinutes"), ["test.maxMinutesCeiling"]);
+        // A speed justified by the scrubber's flow (2026-09-28, nineteen refusals in a row): refused as a fact the rules do not bound it by, naming the one they do.
+        const datasheet: SignedFact = { id: "scrubber.effectiveFlowAtFull", semantic: "ScrubberEffectiveFlowAtFull", quantity: "VolumetricFlow", unit: "m3/min", value: 1, source: "scrubber-1-datasheet", signed: { by: "reviewer", at: "2026-09-28", valid: true } };
+        const byFlow = { ...safe, justifications: safe.justifications.map((j) => (j.constant === "steps.2.speedPercent" ? { ...j, reference: "scrubber.effectiveFlowAtFull" } : j)) };
+        const flowProblems = safetyProblems(byFlow, [...signed(true), datasheet], RULES);
+        assert.equal(flowProblems.length, 1, flowProblems.join("; "));
+        assert.match(flowProblems[0], /^steps\.2\.speedPercent = 100 cites scrubber\.effectiveFlowAtFull \(1 m3\/min\), which the signed rules do not bound it by; the signed rules bound it by test\.speedFloorPercent = 30 percent \(at or above it\): cite it \(source "library", reference "test\.speedFloorPercent"\)$/);
         // Unsigned, or changed since it was signed: refused, with how to sign.
         const unsigned = card.map((f) => ({ ...f, source: "commissioning-test-safety", signed: null }));
         assert.match(safetyProblems(safe, unsigned, RULES).join("; "), /which no person has signed as valid: cite instead a fact of a signed document.*npm run library:sign/);

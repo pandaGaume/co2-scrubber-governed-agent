@@ -418,6 +418,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             progress.lastRefusal = null;
             if (trace.result.ok) delete progress.refusals[trace.decision.invocation.capabilityId];
             if (trace.result.ok && progress.justify?.capability === trace.decision.invocation.capabilityId) progress.justify = null;
+            progress.misjustified = null;
             const outcome = ((trace.result.output as { outcome?: string } | undefined)?.outcome ?? (trace.result.ok ? "completed" : "error")) as string;
             manifest.steps.push({
                 n,
@@ -459,7 +460,10 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
                 const whole = topic.justified.whole ? topic.justified.whole(exchange.proposedCapabilityId, (exchange.proposedInput ?? null) as JsonValue, progress) : ((exchange.proposedInput ?? null) as JsonValue);
                 const help = whole ? justificationHelp(topic.justified, whole) : null;
                 const times = progress.justify?.capability === exchange.proposedCapabilityId || (progress.justify && topic.justified.capability.test(progress.justify.capability)) ? (progress.justify?.times ?? 0) + 1 : 1;
-                progress.justify = help && help.missing.length ? { capability: exchange.proposedCapabilityId, times, ...help } : null;
+                // The guard's own finding (a safety constant justified by a fact of another unit, or none the rules name) goes with it.
+                const misjustified = progress.misjustified ?? [];
+                progress.justify = help && (help.missing.length || misjustified.length) ? { capability: exchange.proposedCapabilityId, times, ...help, misjustified } : null;
+                progress.misjustified = null;
             }
             noteProposal(exchange.proposedCapabilityId, exchange.proposedInput);
             made.add(proposalKey(exchange.proposedCapabilityId, exchange.proposedInput));

@@ -10,7 +10,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import type { JsonValue } from "@spiky-panda/harness";
-import { checkJustifications, factOf, justificationHelp, justificationNote, justificationOf, justificationProblems, justificationsFor, noteSources, numbersOf, safetyProblems, type ReadSources, type SignedFact } from "../harness/core/justify.js";
+import { checkJustifications, factOf, justificationHelp, justificationNote, justificationOf, justificationProblems, justificationsFor, noteSources, numbersOf, safetyProblems, safetyReview, type ReadSources, type SignedFact } from "../harness/core/justify.js";
 import { compactOutput } from "../harness/core/compact.js";
 import { CANDIDATE_JUSTIFIED, candidateConstants } from "../harness/topics/graph/index.js";
 import { reasoningStateOf } from "../harness/core/reasoning-state.js";
@@ -124,7 +124,7 @@ describe("the justification of constants, common to every factory", () => {
         const help = justificationHelp(CANDIDATE_JUSTIFIED, input);
         assert.deepEqual(help, { missing: [{ constant: "fit.V", value: [10, 200] }], unmatched: ["volume"] });
         const first = justificationNote({ capability: "graph.evaluate", times: 1, ...help });
-        assert.match(first, /^Your last graph\.evaluate was refused for its justifications: 1 constant\(s\) you set have none under their path: fit\.V = \[10, 200\]\. Your justifications named volume, which is no constant you set/);
+        assert.match(first, /^Your last graph\.evaluate was refused for its justifications\. 1 constant\(s\) you set have none under their path: fit\.V = \[10, 200\]\. Your justifications named volume, which is no constant you set/);
         assert.doesNotMatch(first, /refusal number/);
         assert.match(justificationNote({ capability: "graph.evaluate", times: 3, ...help }), /This is refusal number 3 for the same reason/);
         assert.equal(justificationNote(null), "");
@@ -132,6 +132,29 @@ describe("the justification of constants, common to every factory", () => {
         progress.justify = { capability: "graph.evaluate", times: 2, ...help };
         const state = reasoningStateOf({ task: { objective: { required_outputs: [], constraints: {} }, observations: {}, data: [] } as never, progress, budget: { iterations: 10, minutes: 5 }, nextActions: [], shelf: [], telemetry: null });
         assert.deepEqual(state.justify, { refused: "graph.evaluate", times: 2, namesThatAreNoConstant: ["volume"], skeleton: [{ constant: "fit.V", value: [10, 200], source: "", reference: "", reason: "" }] });
+    });
+
+    it("a safety constant justified by a fact of another unit: refused, and the next prompt says its unit and the fact the signed rules bound it by, the skeleton filled (2026-09-28: a speed in percent justified nineteen times by a flow in m3/min)", () => {
+        const signed = { by: "reviewer", at: "2026-09-28", valid: true };
+        const facts: SignedFact[] = [
+            { id: "test.speedFloorPercent", semantic: "S", quantity: "Ratio", unit: "percent", value: 30, bound: "lower", source: "commissioning-test-safety", signed },
+            { id: "scrubber.effectiveFlowAtFull", semantic: "Q", quantity: "VolumetricFlow", unit: "m3/min", value: 1, source: "scrubber-1-datasheet", signed },
+        ];
+        const constants = [{ constant: "steps.2.speedPercent", value: 100 }];
+        const boundBy = (c: string) => (c.endsWith(".speedPercent") ? ["test.speedFloorPercent"] : []);
+        const review = safetyReview(constants, [{ constant: "steps.2.speedPercent", value: 100, source: "library", reference: "scrubber.effectiveFlowAtFull", reason: "full flow" }], facts, boundBy);
+        assert.equal(review.problems.length, 1);
+        assert.deepEqual(review.misjustified, [{ constant: "steps.2.speedPercent", value: 100, unit: "percent", expected: [{ id: "test.speedFloorPercent", value: 30, unit: "percent", side: "at or above it" }], cited: { id: "scrubber.effectiveFlowAtFull", value: 1, unit: "m3/min" } }]);
+        // The fact the rules name, cited: accepted.
+        assert.deepEqual(safetyReview(constants, [{ constant: "steps.2.speedPercent", value: 100, source: "library", reference: "test.speedFloorPercent", reason: "above the floor" }], facts, boundBy), { problems: [], misjustified: [] });
+        // The next prompt: the unit, the fact to cite, the wrong one named as another quantity.
+        const help = { capability: "procedure.revise", times: 2, missing: [], unmatched: [], misjustified: review.misjustified };
+        assert.match(justificationNote(help), /steps\.2\.speedPercent = 100 is in percent: cite test\.speedFloorPercent \(30 percent, at or above it\), not scrubber\.effectiveFlowAtFull \(1 m3\/min: another unit, another quantity\)/);
+        assert.match(justificationNote(help), /This is refusal number 2/);
+        const progress = newProgress();
+        progress.justify = help;
+        const state = reasoningStateOf({ task: { objective: { required_outputs: [], constraints: {} }, observations: {}, data: [] } as never, progress, budget: { iterations: 10, minutes: 5 }, nextActions: [], shelf: [], telemetry: null });
+        assert.deepEqual((state.justify as { skeleton: unknown[] }).skeleton, [{ constant: "steps.2.speedPercent", value: 100, unit: "percent", source: "library", reference: "test.speedFloorPercent", reason: "" }]);
     });
 });
 

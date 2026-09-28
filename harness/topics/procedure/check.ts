@@ -17,7 +17,7 @@
  */
 import { readFileSync } from "node:fs";
 import { fromRoot } from "../../../lib/paths.js";
-import { constantsOf as constantsByFormat, evaluateRules, matches, moduleOfPlace, unsignedRules, valueAt, type PeopleRead, type ProposalFormat, type RuleProblem, type RulesDocument } from "../../core/rules.js";
+import { constantsOf as constantsByFormat, evaluateRules, factsBounding, matches, moduleOfPlace, unsignedRules, valueAt, type PeopleRead, type ProposalFormat, type RuleProblem, type RulesDocument } from "../../core/rules.js";
 import { safetyProblems as commonSafetyProblems, type SignedFact } from "../../core/justify.js";
 
 /** The format of a procedure, as the spec gives it: how the factory reads one, what it asks, where it reads the people and the measurement. */
@@ -106,7 +106,7 @@ export function envelopeOf(rules: RulesDocument | null, facts: SignedFact[]): Re
 /** The safety constants' problems, by the rule every factory shares (`justify.ts`): a fact of a signed library document, respected. */
 export function safetyProblems(p: { justifications?: unknown }, facts: SignedFact[], rules: RulesDocument | null, format: ProcedureFormat = FORMAT): string[] {
     const isSafety = safetyOf(rules);
-    return commonSafetyProblems(constantsOf(p, format).filter((x) => isSafety(x.constant)), Array.isArray(p.justifications) ? p.justifications : [], facts);
+    return commonSafetyProblems(constantsOf(p, format).filter((x) => isSafety(x.constant)), Array.isArray(p.justifications) ? p.justifications : [], facts, (constant) => factsBounding(rules, constant));
 }
 
 /** The rules and the facts, through the library: what the factory's guard and the station both judge by. */

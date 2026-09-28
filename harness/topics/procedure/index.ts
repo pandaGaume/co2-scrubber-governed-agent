@@ -51,7 +51,7 @@ import { readFileSync } from "node:fs";
 import { fromRoot } from "../../../lib/paths.js";
 import { checkProcedure, constantsOf, envelopeOf, FORMAT, problemLines, rulesAndFacts, safetyOf, type MeasuredStart, type PresenceRead, type ProcedureCheck } from "./check.js";
 import { checkJustifications, JUSTIFICATIONS_SCHEMA, justificationProblems as commonJustificationProblems, type Justified, type ReadSources } from "../../core/justify.js";
-import { leavesOf, matches, valueAt, type RulesDocument } from "../../core/rules.js";
+import { factsBounding, leavesOf, matches, valueAt, type RulesDocument } from "../../core/rules.js";
 import { loadWords, say, viewOf } from "../../core/words.js";
 import { physics } from "../../core/physics.js";
 export { constantsOf } from "./check.js";
@@ -243,7 +243,7 @@ export const PROCEDURE_JUSTIFIED: Justified = {
 };
 
 /** The declaration with what the signed rules say: their safety constants, and the facts they cite as the envelope. */
-export const justifiedBy = (rules: RulesDocument | null, envelope: Record<string, number>): Justified => ({ ...PROCEDURE_JUSTIFIED, safety: safetyOf(rules), envelope });
+export const justifiedBy = (rules: RulesDocument | null, envelope: Record<string, number>): Justified => ({ ...PROCEDURE_JUSTIFIED, safety: safetyOf(rules), envelope, boundBy: (constant) => factsBounding(rules, constant) });
 
 /** Who is where, as the format's presence read answered in this task, if it was called. */
 export function presenceOf(progress: Progress): PresenceRead | null {
