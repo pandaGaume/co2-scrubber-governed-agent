@@ -15,6 +15,7 @@
  * The keys are English because code reads them; the story around them is
  * in French in the spec.
  */
+import { JUSTIFICATIONS_SCHEMA } from "../../core/justify.js";
 
 export interface ProcedureStep {
     n: number;
@@ -173,21 +174,8 @@ export const PROCEDURE_SCHEMA = {
             description: "The conditions that stop the test, by the id of what the executor can read: co2 (scrubber.motor.state, the CO2 of the volume at or above limits.co2AbortPpm); refused (scrubber.motor.set_speed, the device refused a step's command); battery (station.registry_list, the battery's state of charge under threshold percent); vitals (biomed.verdict, a monitored person out of band, the monitoring lost, or one more person in the volume). A condition that cannot be read stops the test.",
         },
         expected: { type: "object", additionalProperties: { type: "string" }, description: "What the test is expected to show, written before it runs." },
-        justifications: {
-            type: "array",
-            items: {
-                type: "object",
-                properties: {
-                    constant: { type: "string", description: "The constant by its path: limits.co2MaxPpm, limits.co2AbortPpm, limits.minSpeedPercent, limits.maxMinutes, steps.<n>.speedPercent, steps.<n>.minutes, abort.<id>.threshold, monitoring.band.minBpm, monitoring.band.maxBpm." },
-                    value: { type: "number", description: "Its value, as the procedure sets it." },
-                    source: { type: "string", enum: ["library", "web", "measured", "envelope", "derived", "assumed"], description: "library (a document or fact read in this task), web (a page a web search returned in this task), measured (the measurement the task gives), envelope (the guard's own bound), derived (computed from other constants), assumed (chosen without a source)." },
-                    reference: { type: "string", description: "The document or fact id, the URL, the measurement, the envelope's key, or the formula." },
-                    reason: { type: "string", description: "Why this value, in one sentence." },
-                },
-                required: ["constant", "value", "source", "reference", "reason"],
-            },
-            description: "Every constant the procedure sets, justified: its source and why, so a reviewer can challenge it against a written procedure or the literature.",
-        },
+        // The socle's, the same in every factory (justify.ts): a number, or [min, max] for bounds (2026-09-28: a model told so by the socle was refused by a schema of its own here).
+        justifications: JUSTIFICATIONS_SCHEMA,
     },
     required: ["version", "id", "method", "volume", "device", "quantities", "limits", "steps", "abort", "expected", "justifications"],
 } as const;

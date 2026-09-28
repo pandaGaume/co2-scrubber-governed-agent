@@ -153,6 +153,14 @@ export function justificationProblems(constants: Constant[], given: unknown[], r
     return problems;
 }
 
+/** The fact a reference names: its id exactly, or the one fact id the reference contains (a model may cite the fact as the state shows it). */
+export function factOf(facts: SignedFact[], reference: string): SignedFact | undefined {
+    const exact = facts.find((f) => f.id === reference);
+    if (exact) return exact;
+    const named = facts.filter((f) => new RegExp(`(^|[^A-Za-z0-9_.])${f.id.replace(/\./g, "\\.")}($|[^A-Za-z0-9_])`).test(reference));
+    return named.length === 1 ? named[0] : undefined;
+}
+
 /** The problems of the safety constants: each cites a fact of a signed library document, unchanged since, and respects its safe side. */
 export function safetyProblems(constants: Constant[], given: unknown[], facts: SignedFact[]): string[] {
     const problems: string[] = [];
@@ -168,12 +176,13 @@ export function safetyProblems(constants: Constant[], given: unknown[], facts: S
             problems.push(`${c.constant} = ${shown(c.value)} is a safety constant: it is justified by a fact of a signed library document, not by ${j.source === "web" ? "a web page" : j.source === "assumed" ? "an assumption" : j.source === "derived" ? "a calculation" : j.source === "measured" ? "a measurement" : `"${String(j.source)}"`} (${String(j.reference)})`);
             continue;
         }
-        const fact = facts.find((f) => f.id === String(j.reference));
+        const fact = factOf(facts, String(j.reference));
         if (!fact) {
             problems.push(`${c.constant}: "${String(j.reference)}" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)`);
             continue;
         }
-        if (!fact.signed) problems.push(`${c.constant}: the fact ${fact.id} is in "${fact.source}", which no person has signed as valid; ${signing}; until then no procedure passes: end with task.fail naming the document`);
+        // A signed fact first (2026-09-28: told to end with task.fail, a model gave up while the signed card held the fact it needed).
+        if (!fact.signed) problems.push(`${c.constant}: the fact ${fact.id} is in "${fact.source}", which no person has signed as valid: cite instead a fact of a signed document that bounds this constant (library.facts says which are signed); only if no signed document has one, end with task.fail naming the document a person must sign (${signing})`);
         else if (!fact.signed.valid) problems.push(`${c.constant}: "${fact.source}" was signed by ${fact.signed.by} and has changed since; ${signing}`);
         const values = Array.isArray(c.value) ? c.value : [c.value];
         const ok = values.every((v) => (fact.bound === "upper" ? v <= fact.value : fact.bound === "lower" ? v >= fact.value : Math.abs(v - fact.value) <= 1e-9 * Math.max(1, Math.abs(fact.value))));

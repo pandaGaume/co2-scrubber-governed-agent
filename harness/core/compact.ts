@@ -77,7 +77,16 @@ const COMPACTORS: Record<string, (v: unknown, input: JsonValue) => JsonValue> = 
         const text = typeof o.text === "string" ? o.text : "";
         return { id: o.id, title: o.title, sha256: o.sha256, bytes: text.length, text: head(text, 1400), note: "the document whole is at the handle; its numbers with their units are what to keep" } as JsonValue;
     },
-    "library.facts": (v) => ({ facts: list(obj(v).facts).map((f) => `${String(f.id)} = ${String(f.value)} ${String(f.unit)}${f.min !== undefined ? ` (${String(f.min)} to ${String(f.max)})` : ""} [${String(f.semantic)}, ${String(f.source)}]`) }) as JsonValue,
+    // Keyed by id, the reference a justification cites (2026-09-28: a model cited a whole displayed line as the reference); each with its safe side and whether its document is signed, which decides whether it may justify a safety constant.
+    "library.facts": (v) => ({
+        facts: Object.fromEntries(
+            list(obj(v).facts).map((f) => {
+                const signed = obj(f.signed);
+                const side = f.bound === "upper" ? "at most " : f.bound === "lower" ? "at least " : "";
+                return [String(f.id), `${side}${String(f.value)} ${String(f.unit)}${f.min !== undefined ? ` (${String(f.min)} to ${String(f.max)})` : ""}; in ${String(f.source)}, ${signed.by ? (signed.valid ? "signed" : "signed, changed since") : "not signed"}`];
+            }),
+        ),
+    }) as JsonValue,
     "library.graphs": (v) => ({
         graphs: list(obj(v).graphs).map((g) => ({
             id: g.id,

@@ -38,6 +38,7 @@ import { TOPIC_DEFINITIONS } from "../harness/core/runner.js";
 import { BASE_CAPABILITIES, promptWithSocle } from "../harness/core/base.js";
 import { SOCLE_RULES } from "../harness/core/brief.js";
 import { NEVER_REPLAYED, READ_CAPABILITIES } from "../harness/core/replay.js";
+import { JUSTIFICATIONS_SCHEMA } from "../harness/core/justify.js";
 import { taskCapabilities } from "../harness/core/task-capabilities.js";
 import { newProgress } from "../harness/core/workspace-observer.js";
 import type { TaskFile } from "../harness/core/task.js";
@@ -116,7 +117,13 @@ describe("every factory against the socle", () => {
         else {
             const carriers = allowed.filter((id) => topic.justified!.capability.test(id));
             if (!carriers.length) found.push(`justify|${String(topic.justified.capability)}`);
-            for (const id of carriers) if (!schemaOf(id)?.properties?.justifications) found.push(`justify|${id} takes no justifications`);
+            // The socle's schema, whatever the words each slot gives it (2026-09-28: the procedure's own schema refused the [min, max] the socle allows).
+            const shape = (v: unknown): string => JSON.stringify(v, (k, x) => (k === "description" ? undefined : x));
+            for (const id of carriers) {
+                const given = schemaOf(id)?.properties?.justifications;
+                if (!given) found.push(`justify|${id} takes no justifications`);
+                else if (shape(given) !== shape(JUSTIFICATIONS_SCHEMA)) found.push(`justify|${id} takes justifications of another shape than the socle's`);
+            }
         }
         const script = SCRIPTED_BUILDERS[topic.name]?.({ taskId: context.taskId, task: TASK, topic: topic.name, lastCall: () => null, read: () => null });
         if (!script) found.push("script|none");

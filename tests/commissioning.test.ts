@@ -137,7 +137,7 @@ describe("the procedure's guard, alone", () => {
         assert.deepEqual(safetyProblems(safe, signed(true)), []);
         // Unsigned, or changed since it was signed: refused, with how to sign.
         const unsigned = card.map((f) => ({ ...f, source: "commissioning-test-safety", signed: null }));
-        assert.match(safetyProblems(safe, unsigned).join("; "), /which no person has signed as valid; a person reviews it and signs it: npm run library:sign/);
+        assert.match(safetyProblems(safe, unsigned).join("; "), /which no person has signed as valid: cite instead a fact of a signed document.*npm run library:sign/);
         assert.match(safetyProblems(safe, signed(false)).join("; "), /was signed by reviewer and has changed since/);
         // A safety constant found on the web, computed or assumed is not a safety limit; one that does not respect its fact is refused.
         const web = { ...safe, justifications: safe.justifications.map((j) => (j.constant === "limits.co2AbortPpm" ? { ...j, source: "web" as const, reference: "https://example.org" } : j)) };

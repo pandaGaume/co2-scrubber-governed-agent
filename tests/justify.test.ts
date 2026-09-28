@@ -10,7 +10,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import type { JsonValue } from "@spiky-panda/harness";
-import { checkJustifications, justificationProblems, justificationsFor, noteSources, numbersOf, safetyProblems, type ReadSources, type SignedFact } from "../harness/core/justify.js";
+import { checkJustifications, factOf, justificationProblems, justificationsFor, noteSources, numbersOf, safetyProblems, type ReadSources, type SignedFact } from "../harness/core/justify.js";
+import { compactOutput } from "../harness/core/compact.js";
 import { candidateConstants } from "../harness/topics/graph/index.js";
 import { ONNX_TOPIC } from "../harness/topics/onnx/index.js";
 import { newProgress } from "../harness/core/workspace-observer.js";
@@ -89,4 +90,22 @@ describe("the justification of constants, common to every factory", () => {
         const allowed = await guard.validate(decision({ label: "c", graph: "habitat", variables: { g: 0.42 }, justifications: [{ constant: "variables.g", value: 0.42, source: "assumed", reference: "a rate", reason: "the operators' rate" }] }), {} as never);
         assert.equal(allowed.allowed, true, String(allowed.reason));
     });
+
+    it("the facts as a model reads them: keyed by id, the safe side, signed or not; a reference that names one fact is that fact (2026-09-28, the first run on the socle)", () => {
+        const served = { facts: [
+            { id: "test.speedFloorPercent", value: 30, unit: "percent", bound: "lower", semantic: "TestScrubberSpeedFloor", source: "commissioning-test-safety", signed: { by: "a person", at: "", scope: "safety", valid: true } },
+            { id: "scrubber.minimumSpeedElevated", value: 40, unit: "percent", semantic: "X", source: "scrubber-1-datasheet", signed: null },
+        ] };
+        const summary = compactOutput("library.facts", {}, served as never).summary as { facts: Record<string, string> };
+        assert.deepEqual(summary.facts, { "test.speedFloorPercent": "at least 30 percent; in commissioning-test-safety, signed", "scrubber.minimumSpeedElevated": "40 percent; in scrubber-1-datasheet, not signed" });
+        const facts = served.facts as unknown as SignedFact[];
+        assert.equal(factOf(facts, "test.speedFloorPercent")?.id, "test.speedFloorPercent");
+        assert.equal(factOf(facts, "test.speedFloorPercent = 30 percent [TestScrubberSpeedFloor, commissioning-test-safety]")?.id, "test.speedFloorPercent", "the line as it was once shown");
+        assert.equal(factOf(facts, "testXspeedFloorPercent"), undefined, "a dot is a dot");
+        assert.equal(factOf(facts, "test.speedFloorPercent or scrubber.minimumSpeedElevated"), undefined, "two facts named: none chosen");
+        // An unsigned fact leads to a signed one first, task.fail only when there is none.
+        const unsigned = safetyProblems([{ constant: "steps.1.speedPercent", value: 40 }], [{ constant: "steps.1.speedPercent", value: 40, source: "library", reference: "scrubber.minimumSpeedElevated", reason: "r" }], facts).join();
+        assert.match(unsigned, /cite instead a fact of a signed document that bounds this constant.*only if no signed document has one, end with task\.fail/);
+    });
 });
+
