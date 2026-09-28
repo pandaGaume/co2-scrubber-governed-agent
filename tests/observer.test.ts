@@ -54,6 +54,8 @@ describe("the Observer's guard and its telemetry", () => {
         assert.match(checkTwinRequest(extra(), { description: leakDescription }).problems.join(), /scope: output "leak" is compared with no measurement and quotes no words of the description/);
         assert.match(checkTwinRequest(extra("the inter-module CO2 flow"), { description: leakDescription }).problems.join(), /scope: output "leak": asked "the inter-module CO2 flow" is not in the description as written/);
         assert.equal(checkTwinRequest(extra("expose the CO2 that leaves the Lab through a leak in a seal"), { description: leakDescription }).ok, true);
+        // The words quoted name the output: "The Lab and its scrubber" is in the description and names no leak.
+        assert.match(checkTwinRequest(extra("The Lab and its scrubber"), { description: leakDescription }).problems.join(), /scope: output "leak": the words quoted \("The Lab and its scrubber"\) do not name it/);
         assert.equal(checkTwinRequest(extra(), {}).ok, true, "without the description the rule does not apply");
     });
 

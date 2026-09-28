@@ -46,6 +46,7 @@ import type { Provider } from "../lib/provider.js";
 import { checkTwinRequest, TWIN_REQUEST_SCHEMA, type TwinFactoryRequest, type VocabularyEntry } from "./request.js";
 import type { LibraryFact } from "../core/contracts.js";
 import { summarizeTelemetry, type TelemetrySummary } from "./telemetry.js";
+import { canonicalQuantity } from "../lib/units.js";
 
 export const OBSERVER_PROMPT = "harness/observer/prompt.md";
 export const OBSERVER_CAPABILITY = "observer.request";
@@ -103,7 +104,8 @@ async function catalogueOf(broker: Broker | undefined, slot: string): Promise<{ 
     const units = new Map<string, Set<string>>();
     for (const t of types) {
         for (const port of [...Object.values(t.signature?.inputs ?? {}), ...Object.values(t.signature?.outputs ?? {})]) {
-            if (!port?.quantity) continue;
+            // A quantity the units service does not know cannot be asked of a factory: nothing could produce it, and no contract could be written in it (2026-09-28: "ConcentrationRate" asked, a graph task spent its budget on it).
+            if (!port?.quantity || !canonicalQuantity(port.quantity)) continue;
             const set = units.get(port.quantity) ?? new Set<string>();
             if (port.unit) set.add(port.unit);
             units.set(port.quantity, set);
@@ -115,7 +117,7 @@ async function catalogueOf(broker: Broker | undefined, slot: string): Promise<{ 
 /** The library: the documentation of the devices and of the station, where the Observer checks what the description leaves open. Read-only, never the catalogue. */
 const LIBRARY_TOOLS = ["list", "search", "read", "facts"] as const;
 /** The units, deterministic: a conversion the model must not do in its head. Not a read, not an attempt. */
-const UNITS_TOOLS = ["units_convert", "units_validate_connection", "units_normalize"] as const;
+const UNITS_TOOLS = ["units_convert", "units_validate_connection", "units_normalize", "units_relate"] as const;
 export const OBSERVER_MAX_READS = 6;
 /** Characters of the last document read kept whole in the state; the earlier ones keep only their numeric lines. */
 const READ_WHOLE_CHARS = 8000;

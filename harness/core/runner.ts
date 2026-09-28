@@ -36,6 +36,7 @@ import { DEFAULT_BUDGET, topicFor, type TaskFile, type TaskState, type Topic } f
 import type { TopicDefinition } from "./topic.js";
 import { createWorkspaceObserver, isArtifact, listWorkshop, newProgress, type Progress } from "./workspace-observer.js";
 import { type ContractReport, type LibraryFact } from "./contracts.js";
+import { canonicalQuantity } from "../lib/units.js";
 import { applyVerdict, supervisionOfRequest, type SupervisionInput, type Verdict, reviewDigest } from "../supervisor/supervisor.js";
 import { ONNX_TOPIC } from "../topics/onnx/index.js";
 import { PROCEDURE_TOPIC } from "../topics/procedure/index.js";
@@ -322,6 +323,17 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         progress.failure = ended;
         progress.phase = "failed";
         log(`[factory] task ${taskId}: ${ended}`);
+    }
+    // A required output in a quantity the units service does not know can be neither produced nor declared missing (a contract is written in known quantities):
+    // the task ends before its first step and names who revises (2026-09-28: thirty steps spent mapping and declaring "CO2 removal rate" in ppm/min).
+    if (!ended) {
+        const unknown = task.objective.required_outputs.filter((o) => !canonicalQuantity(o.quantity));
+        if (unknown.length) {
+            ended = `UNBUILDABLE_OUTPUT: ${unknown.map((o) => `"${o.name}" is a ${o.quantity}${o.unit ? ` in ${o.unit}` : ""}, a quantity the units service does not know: no node can produce it and no contract can be written in it`).join(" | ")}; REQUIRE_RESOLUTION: observer to revise, upstream of this task`;
+            progress.failure = ended;
+            progress.phase = "failed";
+            log(`[factory] task ${taskId}: ${ended}`);
+        }
     }
     while (progress.phase !== "done" && progress.phase !== "failed" && progress.phase !== "waiting") {
         // The step just recorded, said before the next one starts (every branch below ends in `continue`).

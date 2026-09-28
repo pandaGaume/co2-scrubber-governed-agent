@@ -207,6 +207,14 @@ export function checkTwinRequest(input: unknown, context: CheckContext = {}): Re
             const asked = typeof o.asked === "string" ? squash(o.asked) : "";
             if (!asked) problems.push(`scope: output "${o.name}" is compared with no measurement and quotes no words of the description asking for it: give asked, the description's words as written, or leave the output out (a twin exposes what was asked, the rest is the factory's)`);
             else if (!description.includes(asked)) problems.push(`scope: output "${o.name}": asked "${o.asked}" is not in the description as written; quote it exactly, or leave the output out`);
+            else {
+                // The quote names the output (2026-09-28: "evaluate scrubber speed strategies" quoted for a "CO2 removal rate" it does not name): two thirds of the name's words are in it.
+                const stem = (w: string) => w.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 5);
+                const words = String(o.name).split(/[\s_\-/()]+/).map(stem).filter((w) => w.length > 2);
+                const quoted = new Set(asked.split(/[\s_\-/(),.;:]+/).map(stem).filter((w) => w.length > 2));
+                const named = words.filter((w) => quoted.has(w)).length;
+                if (words.length && named * 3 < words.length * 2) problems.push(`scope: output "${o.name}": the words quoted ("${o.asked}") do not name it; quote the description's words that ask for this output, name it with them, or leave it out`);
+            }
         }
     }
 
