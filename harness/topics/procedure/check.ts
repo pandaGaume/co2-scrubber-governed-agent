@@ -185,7 +185,7 @@ export function safetyProblems(p: Partial<Procedure>, facts: SignedFact[]): stri
             problems.push(`${c.constant}: "${String(j.reference)}" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)`);
             continue;
         }
-        if (!fact.signed) problems.push(`${c.constant}: the fact ${fact.id} is in "${fact.source}", which no person has signed as valid; ${signing}`);
+        if (!fact.signed) problems.push(`${c.constant}: the fact ${fact.id} is in "${fact.source}", which no person has signed as valid; ${signing}; until then no procedure passes: end with task.fail naming the document`);
         else if (!fact.signed.valid) problems.push(`${c.constant}: "${fact.source}" was signed by ${fact.signed.by} and has changed since; ${signing}`);
         const ok = fact.bound === "upper" ? c.value <= fact.value : fact.bound === "lower" ? c.value >= fact.value : Math.abs(c.value - fact.value) <= 1e-9 * Math.max(1, Math.abs(fact.value));
         if (!ok) problems.push(`${c.constant} = ${c.value} does not respect ${fact.id} = ${fact.value} ${fact.unit} (${fact.bound === "upper" ? "at or below it" : fact.bound === "lower" ? "at or above it" : "equal to it"})`);

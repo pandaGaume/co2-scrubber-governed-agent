@@ -26,7 +26,9 @@
         "facts": {
             "title": "Les faits typés",
             "description": "Les faits que les documents de la bibliothèque énoncent, typés : id (scrubber.singlePassEfficiency), sémantique (SinglePassRemovalEfficiency), grandeur, unité, valeur, une bande quand le document en donne une, et la propriété du registre qui porte le même fait. Une constante connue en cite un par son id (factId) ; deux ratios ne sont pas le même fait.",
-            "properties": { "id": "les faits d'un document ; tous quand absent" }
+            "properties": {
+                "id": "les faits d'un document ; tous quand absent"
+            }
         },
         "read": {
             "title": "Lire un document",
@@ -48,6 +50,24 @@
             "properties": {
                 "id": "l'identifiant du graphe, depuis graphs",
                 "grammar": "la clé de formulation de votre session ; la référence en son absence"
+            }
+        },
+        "sign": {
+            "title": "Signer un document comme relu",
+            "description": "Le commandant signe un document de la bibliothèque comme relu, depuis la salle de contrôle : la station le rappelle avec la réponse à la question de Mother (kind sign). La signature lie le document et ses faits tels qu'ils sont ; les limites d'une procédure de sécurité ne se justifient que par les faits d'un document signé. Jamais appelé par un modèle.",
+            "properties": {
+                "id": "le document",
+                "by": "qui signe ; le commandant nommé par le git de cette machine s'il est absent",
+                "questionId": "la question à laquelle on répond",
+                "answer": "la réponse du commandant : signer, ou non"
+            }
+        },
+        "signatures_scope": {
+            "title": "Quelles signatures",
+            "description": "Pour le joueur de scénarios : les signatures du dépôt (celles d'une personne), ou celles propres à un run, vides à son départ, pour qu'une démonstration signe sans toucher à celles du dépôt.",
+            "properties": {
+                "scope": "repository, ou run",
+                "runId": "le run, pour des signatures propres"
             }
         }
     },

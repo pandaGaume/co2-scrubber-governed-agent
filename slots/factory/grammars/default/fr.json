@@ -36,6 +36,10 @@
         }
     },
     "resources": {
+        "factory://running": {
+            "name": "Tâches en cours",
+            "description": "Les tâches en cours, depuis la mémoire : constructeur, dernière étape, pas, début"
+        },
         "factory://tasks": {
             "name": "Tâches",
             "description": "Chaque tâche de l'atelier avec son état"

@@ -23,7 +23,12 @@ export function mountTestClock(badge) {
             station ??= await connectMcp(location.origin, "station", { headers: {} });
             const r = await station.request("resources/read", { uri: "station://commissionings" });
             const list = JSON.parse(r.contents[0].text);
-            running = list.find((c) => c.status === "running" && c.run?.clock) ?? null;
+            // Running first; else a test awaiting its authorisation; else one that ended in the last five minutes.
+            running =
+                list.find((c) => c.status === "running" && c.run?.clock) ??
+                list.find((c) => c.status === "awaiting-authorisation" && c.procedure) ??
+                list.find((c) => ["done", "aborted"].includes(c.status) && c.run?.clock && Date.now() - Date.parse(c.run.clock.at) < 5 * 60000) ??
+                null;
         } catch {
             station = null;
             running = null;
@@ -35,7 +40,17 @@ export function mountTestClock(badge) {
             badge.hidden = true;
             return;
         }
+        if (c.status === "awaiting-authorisation") {
+            badge.textContent = `test 00:00 / ${two(c.procedure.minutes ?? 0)}:00 \u00b7 awaiting authorisation`;
+            badge.hidden = false;
+            return;
+        }
         const k = c.run.clock;
+        if (c.status !== "running") {
+            badge.textContent = `test ${clock(k.minute * 60)}${k.planned ? ` / ${two(k.planned)}:00` : ""} \u00b7 ${c.status === "done" ? "done" : "aborted"}`;
+            badge.hidden = false;
+            return;
+        }
         const spm = Number(k.secondsPerMinute) || 0;
         const since = (Date.now() - Date.parse(k.at)) / 1000;
         // Between two minutes the clock runs at the pace, never past the next minute the station has not reached.

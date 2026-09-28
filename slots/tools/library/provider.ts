@@ -34,7 +34,9 @@ import { objectSchema, publishSlot, type PublishedSlot, type SlotTool } from "..
 import { sha256Of } from "../lib/workshop.js";
 import { describeGraph, loadGraphLibrary, type GraphLibraryEntry } from "../../../lib/graph-library.js";
 import type { LibraryFact } from "../../../harness/core/contracts.js";
-import { signatureOf } from "../../../harness/lib/signatures.js";
+import { signatureOf, signaturesDir, signDocument } from "../../../harness/lib/signatures.js";
+import { execSync } from "node:child_process";
+import { WORKSHOP_ROOT } from "../lib/workshop.js";
 
 export interface LibraryDocument {
     id: string;
@@ -51,6 +53,9 @@ export interface LibraryDocument {
 
 export interface LibraryState {
     dir: string;
+    /** Where the signatures are read and written: the repository's (a person's, by npm run library:sign), or a scenario run's own, empty at its start, so a demonstration signs without touching the repository's (2026-09-28). */
+    sigDir: string;
+    sigScope: { scope: "repository" | "run"; runId?: string };
     documents: LibraryDocument[];
     /** The reference graphs on the shelf, with their grammars. */
     graphs: GraphLibraryEntry[];
@@ -114,14 +119,22 @@ export function searchLibrary(documents: LibraryDocument[], query: string, limit
 }
 
 export function librarySlot(wsBase: string, log: (line: string) => void): PublishedSlot<LibraryState> {
-    const state: LibraryState = { dir: LIBRARY_DIR, documents: loadLibrary(), graphs: loadGraphLibrary(), reads: [] };
+    const state: LibraryState = { dir: LIBRARY_DIR, sigDir: signaturesDir(), sigScope: { scope: "repository" }, documents: loadLibrary(), graphs: loadGraphLibrary(), reads: [] };
+    // Who signs from the control room: the person this machine's git names, as the commander.
+    const person = (() => {
+        try {
+            return execSync("git config user.name", { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+        } catch {
+            return "";
+        }
+    })();
     for (const g of state.graphs) for (const problem of g.problems) log(`[library] graph ${g.template.id}: ${problem}`);
     const wordingOf = (args: Record<string, unknown>) => (typeof args.grammar === "string" && args.grammar.trim() ? args.grammar.trim() : null);
     const tools: SlotTool<LibraryState>[] = [
         {
             name: "list",
             inputSchema: objectSchema({}),
-            handle: (_args, s) => ({ documents: s.documents.map(({ id, title, summary, measures, sha256, bytes, facts }) => ({ id, title, summary, measures, sha256, bytes, facts: facts.length, signature: signatureOf(id, s.dir) })) }),
+            handle: (_args, s) => ({ documents: s.documents.map(({ id, title, summary, measures, sha256, bytes, facts }) => ({ id, title, summary, measures, sha256, bytes, facts: facts.length, signature: signatureOf(id, s.dir, s.sigDir) })) }),
         },
         {
             name: "methods",
@@ -159,7 +172,7 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
                 const docs = typeof args.id === "string" && args.id ? s.documents.filter((d) => d.id === args.id) : s.documents;
                 if (typeof args.id === "string" && args.id && !docs.length) throw new Error(`no document "${String(args.id)}" in the library`);
                 // Each fact carries whether its document is signed and still as signed: a safety limit is justified only by a signed one (2026-09-28).
-                return { facts: docs.flatMap((d) => { const signature = signatureOf(d.id, s.dir); return d.facts.map((f) => ({ ...f, source: d.id, signed: signature })); }) };
+                return { facts: docs.flatMap((d) => { const signature = signatureOf(d.id, s.dir, s.sigDir); return d.facts.map((f) => ({ ...f, source: d.id, signed: signature })); }) };
             },
         },
         {
@@ -169,7 +182,40 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
                 const d = s.documents.find((x) => x.id === args.id);
                 if (!d) throw new Error(`no document "${String(args.id)}" in the library (${s.documents.map((x) => x.id).join(", ")})`);
                 s.reads.push({ id: d.id, sha256: d.sha256, at: new Date().toISOString() });
-                return { id: d.id, title: d.title, sha256: d.sha256, text: d.text, facts: d.facts, signature: signatureOf(d.id, s.dir) };
+                return { id: d.id, title: d.title, sha256: d.sha256, text: d.text, facts: d.facts, signature: signatureOf(d.id, s.dir, s.sigDir) };
+            },
+        },
+        {
+            // The commander signs a document as reviewed, from the control room: called back by the station with the answer to Mother's question (kind sign). Never a model's: kept out of every harness's and the night agent's tools.
+            name: "sign",
+            inputSchema: objectSchema({ id: { type: "string" }, by: { type: "string" }, questionId: { type: "string" }, answer: { type: "object" } }, ["id"]),
+            handle: (args, s) => {
+                const d = s.documents.find((x) => x.id === args.id);
+                if (!d) throw new Error(`no document "${String(args.id)}" in the library`);
+                const answer = args.answer && typeof args.answer === "object" ? (args.answer as { choice?: string; by?: string }) : null;
+                if (answer && answer.choice !== "sign") return { id: d.id, signed: false, why: `the commander answered ${String(answer.choice)}` };
+                const who = typeof args.by === "string" && args.by.trim() ? args.by.trim() : `${person || "the commander"} (commander, from the control room)`;
+                const signature = signDocument(d.id, who, { dir: s.dir, sigDir: s.sigDir, note: `${s.sigScope.scope === "run" ? `scenario run ${s.sigScope.runId}` : "repository"}${args.questionId ? `, question ${String(args.questionId)}` : ""}` });
+                log(`[library] ${d.id} signed by ${who} (${s.sigScope.scope === "run" ? `run ${s.sigScope.runId}'s own signatures` : "the repository's signatures"})`);
+                return { id: d.id, signed: true, by: signature.signedBy, at: signature.signedAt, scope: s.sigScope };
+            },
+        },
+        {
+            // A scenario run that starts with its documents unsigned (a demonstration): its own signatures, empty; the repository's back at its end.
+            name: "signatures_scope",
+            inputSchema: objectSchema({ scope: { type: "string", enum: ["repository", "run"] }, runId: { type: "string" } }, ["scope"]),
+            handle: (args, s) => {
+                if (args.scope === "run") {
+                    const runId = String(args.runId ?? "").replace(/[^A-Za-z0-9-]/g, "");
+                    if (!runId) throw new Error("a run's signatures need its runId");
+                    s.sigDir = path.join(WORKSHOP_ROOT, "scenarios", `signatures-${runId}-${Date.now()}`);
+                    s.sigScope = { scope: "run", runId };
+                } else {
+                    s.sigDir = signaturesDir();
+                    s.sigScope = { scope: "repository" };
+                }
+                log(`[library] signatures: ${s.sigScope.scope === "run" ? `run ${s.sigScope.runId}'s own, empty at its start` : "the repository's"}`);
+                return { ...s.sigScope, dir: s.sigDir };
             },
         },
     ];

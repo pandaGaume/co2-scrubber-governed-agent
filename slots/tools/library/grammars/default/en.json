@@ -26,7 +26,9 @@
         "facts": {
             "title": "The typed facts",
             "description": "The facts the library's documents state, typed: id (scrubber.singlePassEfficiency), semantic (SinglePassRemovalEfficiency), quantity, unit, value, a band when the document gives one, and the register property that carries the same fact. A known constant cites one by id (factId); two ratios are not the same fact.",
-            "properties": { "id": "one document's facts; all when absent" }
+            "properties": {
+                "id": "one document's facts; all when absent"
+            }
         },
         "read": {
             "title": "Read a document",
@@ -48,6 +50,24 @@
             "properties": {
                 "id": "the graph's id, from graphs",
                 "grammar": "the wording key of your session; the baseline when absent"
+            }
+        },
+        "sign": {
+            "title": "Sign a document as reviewed",
+            "description": "The commander signs a library document as reviewed, from the control room: the station calls it back with the answer to Mother's question (kind sign). The signature binds the document and its facts as they are; a safety procedure's limits are justified only by the facts of a signed document. Not a model's to call.",
+            "properties": {
+                "id": "the document",
+                "by": "who signs; the commander named by this machine's git when absent",
+                "questionId": "the question answered",
+                "answer": "the commander's answer: sign, or not"
+            }
+        },
+        "signatures_scope": {
+            "title": "Whose signatures",
+            "description": "The scenario player's: the repository's signatures (a person's), or a run's own, empty at its start, so a demonstration signs without touching the repository's.",
+            "properties": {
+                "scope": "repository, or run",
+                "runId": "the run, for a run's own"
             }
         }
     },

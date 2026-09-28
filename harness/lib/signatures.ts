@@ -7,7 +7,11 @@
  *
  * A signature is a file, `docs/library/signatures/<id>.json` (the directory
  * is LIBRARY_SIGNATURES_DIR when set), written by `npm run library:sign`, a
- * command a person runs: no slot and no model can sign. It holds who signed,
+ * command a person runs, or by the commander's answer to Mother's question
+ * in the control room (`library.sign`, called back by the station; no
+ * standing order answers it, and no harness or night agent has the tool):
+ * no model can sign. A scenario run may sign in a directory of its own,
+ * empty at its start (`library.signatures_scope`). It holds who signed,
  * when, for what scope, and the digest of the document and of its facts as
  * they were signed. A document changed since no longer matches its digest:
  * its signature is kept, and said no longer valid.

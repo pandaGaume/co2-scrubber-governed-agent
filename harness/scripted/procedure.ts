@@ -131,6 +131,9 @@ export class ScriptedProcedureBuilder implements Provider {
         const refusal = String(state.features.lastRefusal ?? "");
         const after = `${String(state.features.phase)}:${String(state.features.lastCapability)}`;
         if (last && !last.result.ok) return decide("task.fail", { reason: (last.result.error ?? last.result.outcome).replace(/^(device refused|error):\s*/i, "") }, `${last.id} failed: nothing else to try`);
+        // A safety limit that cites an unsigned document: no procedure passes until a person signs it, so the script ends, naming it, as the refusal asks.
+        const unsigned = /the fact \S+ is in "([^"]+)", which no person has signed/.exec(refusal);
+        if (unsigned) return decide("task.fail", { reason: `the safety card "${unsigned[1]}" is not signed: no procedure's safety limits can be justified until a person signs it` }, "the refusal names an unsigned document");
         switch (after) {
             case "plan:":
                 return decide("factory.inventory", {}, "what is installed, and where");

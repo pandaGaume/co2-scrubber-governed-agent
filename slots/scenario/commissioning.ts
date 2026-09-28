@@ -71,6 +71,8 @@ export interface CommissioningDocument {
     graph: { rmsePpmMax: number; budget: Record<string, number> };
     /** How the test is played on the stand-in world: seconds of real time per minute of the station's clock (0: as fast as it computes). */
     execution?: { secondsPerMinute?: number };
+    /** fresh: the run starts with signatures of its own, empty, whatever the repository signed (a demonstration of the signature). */
+    library?: { signatures?: "repository" | "fresh"; safetyCard?: string };
     loops: Array<Pick<Loop, "name" | "nature" | "who">>;
 }
 
@@ -195,8 +197,15 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
     };
     const summary = (s: TaskStatus) => ({ state: s.state, ended: s.manifest?.ended ?? null, steps: s.manifest?.steps?.length ?? 0, builder: s.run?.builder ?? null, tools: [...new Set((s.manifest?.steps ?? []).map((x) => x.capability).filter(Boolean))] }) as JsonValue;
     const builder = run.options.builder;
+    let fresh = false;
     try {
         narrate(`Scenario: ${doc.title}. I will tell you where we are.`);
+        const card = doc.library?.safetyCard ?? "commissioning-test-safety";
+        if (doc.library?.signatures === "fresh") {
+            await call("library", "signatures_scope", { scope: "run", runId: run.id });
+            fresh = true;
+            narrate(`This run starts with the library unsigned: the safety card ${card} has no signature yet.`);
+        }
         // 1. registration: the scene's devices, under names of this run when the register holds them already (a server plays more than once).
         begin(1);
         const scene = JSON.parse(readFileSync(fromRoot(...doc.devices.split("/")), "utf8")) as { devices: Array<{ path: string; descriptor: Record<string, unknown> }> };
@@ -229,7 +238,43 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
         run.tasks.push(reqP.taskId);
         notify();
         narrate(`The procedure factory is writing the test for the scrubber: ${builder === "scripted" ? "the script" : "a model"} at work, the harness checking each step.`);
-        const p = await taskEnded(reqP.taskId, "The procedure factory");
+        let p = await taskEnded(reqP.taskId, "The procedure factory");
+        // A procedure refused because its safety limits cite an unsigned card: Mother asks the commander to sign it, then the factory writes again (2026-09-28, the signature's demonstration).
+        const unsigned = async (): Promise<boolean> => {
+            const f = await call<{ facts: Array<{ signed?: { valid: boolean } | null }> }>("library", "facts", { id: card }).catch(() => ({ facts: [] }));
+            return f.facts.length > 0 && !f.facts[0].signed?.valid;
+        };
+        if (p.state !== "proposed" && (await unsigned())) {
+            const facts = (await call<{ facts: Array<{ id: string; value: number; unit: string; bound?: string; kind?: string; reference?: string; says?: string }> }>("library", "facts", { id: card })).facts;
+            narrate(`The procedure factory could not justify its safety limits: the safety card ${card} is not signed. Commander, review it in my chat and sign it, or not.`);
+            const asked = await call<{ questionId: string }>("station", "ask", {
+                from: "scenario",
+                kind: "sign",
+                question: `The safety card ${card} is not signed: no procedure's safety limits can be justified by it. Review its values and sign it as valid?`,
+                options: [{ id: "sign", label: "sign it as valid" }, { id: "not-now", label: "not now" }],
+                context: { document: card, facts: facts.map((f) => ({ id: f.id, value: f.value, unit: f.unit, bound: f.bound ?? null, kind: f.kind ?? null, reference: f.reference ?? null, says: f.says ?? null })) },
+                resume: { slot: "library", tool: "sign", args: { id: card } },
+            });
+            wait(2, `the commander's signature of ${card} (Mother's question in her chat)`);
+            const t0 = Date.now();
+            for (;;) {
+                if (!(await unsigned())) break;
+                const read = await (await operator.session("station")).request<{ contents: Array<{ text: string }> }>("resources/read", { uri: "station://questions" });
+                const mine = (JSON.parse(read.contents[0].text) as Array<{ id: string; status: string; answer?: { choice?: string } | null }>).find((x) => x.id === asked.questionId);
+                if (mine && mine.status !== "open" && mine.answer?.choice !== "sign") throw new Error(`the commander did not sign ${card}: no procedure can pass`);
+                if (Date.now() - t0 > waitMs) throw new Error(`the commander did not decide on ${card} in ${waitMs} ms`);
+                await sleep(1000);
+            }
+            narrate(`The safety card ${card} is signed. The procedure factory writes the test again.`);
+            loop(2).status = "running";
+            loop(2).waitingFor = undefined;
+            notify();
+            const again = await call<{ taskId: string; builder: string }>("factory", "request", { objective: { required_outputs: [doc.procedure.requiredOutput] }, observations: { device: scrubberPath, measured }, topics: ["procedure"], builder, budget: doc.procedure.budget, requestedBy: "scenario" });
+            loop(2).taskId = again.taskId;
+            run.tasks.push(again.taskId);
+            notify();
+            p = await taskEnded(again.taskId, "The procedure factory");
+        }
         end(2, summary(p));
         if (p.state !== "proposed") throw new Error(`the procedure factory ended ${p.state}: ${p.manifest?.ended ?? ""}`);
 
@@ -449,6 +494,8 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
         log(`[scenario] ${run.id}: ${reason}`);
         narrate(`Scenario stopped: ${reason.slice(0, 160)}.`);
     } finally {
+        // A run that signed in its own scope gives the repository's signatures back: a demonstration never signs for the repository.
+        if (fresh) await operator.call("library", "signatures_scope", { scope: "repository" }).catch(() => undefined);
         run.endedAt = new Date().toISOString();
         for (const l of run.loops) if (l.status === "pending") l.status = "skipped";
         notify();

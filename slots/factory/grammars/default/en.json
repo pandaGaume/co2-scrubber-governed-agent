@@ -38,6 +38,10 @@
         }
     },
     "resources": {
+        "factory://running": {
+            "name": "Tasks at work",
+            "description": "The tasks at work now, from memory: builder, last stage, steps, start"
+        },
         "factory://tasks": {
             "name": "Tasks",
             "description": "Every task of the workshop with its state"

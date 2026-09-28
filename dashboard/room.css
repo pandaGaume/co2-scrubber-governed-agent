@@ -167,6 +167,10 @@ button.badge { font-family: var(--mono); cursor: pointer; }
 .mother-form .badge { flex: none; }
 .station .mother-form { flex-wrap: wrap; }
 .station .mother-form input { flex: 1 1 100%; order: -1; }
+.mother-log .line.busy { display: flex; align-items: center; gap: 8px; color: var(--teal); }
+.mother-log .spin { flex: none; width: 10px; height: 10px; border: 2px solid var(--teal); border-top-color: transparent; border-radius: 50%; animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.mother-log .card { display: flex; flex-direction: column; gap: 2px; padding: 4px 0 4px 8px; border-left: 2px solid var(--amber); }
 .mother-questions { flex: none; max-height: 40%; overflow-y: auto; padding: 6px 15px 8px; border-top: 1px solid var(--line); }
 .run-log { display: flex; flex-direction: column; gap: 3px; margin-top: 6px; padding-left: 8px; border-left: 2px solid var(--line); font-size: 11px; line-height: 1.4; color: var(--muted); }
 .run-log .line .t { color: var(--muted-2); letter-spacing: 0.06em; margin-right: 6px; }

@@ -154,4 +154,82 @@ describe("the commissioning chain played by the slot, the commander deciding", (
         assert.match(failed.ended ?? "", /the commander refused/);
         assert.deepEqual(failed.loops.slice(4).map((l) => l.status), ["skipped", "skipped", "skipped", "skipped", "skipped", "skipped"]);
     });
+
+});
+
+describe("a run that starts with the library unsigned, the commander signing in Mother's chat", () => {
+    let local: LocalBroker;
+    let slots: PublishedSlot<object>[];
+    let operator: Broker;
+    const tasks: string[] = [];
+    const ok = async <T>(slot: string, tool: string, args: Record<string, unknown> = {}): Promise<T> => {
+        const r = await operator.call(slot, tool, args);
+        assert.ok(r.ok, `${slot}.${tool}: ${r.error}`);
+        return r.output as T;
+    };
+    const read = async <T>(slot: string, uri: string): Promise<T> => JSON.parse((await (await operator.session(slot)).request<{ contents: Array<{ text: string }> }>("resources/read", { uri })).contents[0].text) as T;
+    const until = async (what: string, test: (run: Run) => boolean, ms = 240_000): Promise<Run> => {
+        const t0 = Date.now();
+        for (;;) {
+            const run = await read<Run | null>("scenario", "scenario://run");
+            if (run && (test(run) || run.status !== "running")) return run;
+            if (Date.now() - t0 > ms) throw new Error(`${what}: not reached in ${ms} ms (${JSON.stringify(run?.loops.map((l) => [l.n, l.status, l.note ?? ""]))})`);
+            await new Promise((r) => setTimeout(r, 500));
+        }
+    };
+    type Question = { id: string; taskId: string | null; kind: string; status: string };
+    const openQuestion = async (kind: string, ms = 60_000): Promise<Question> => {
+        const t0 = Date.now();
+        for (;;) {
+            const q = (await read<Question[]>("station", "station://questions")).find((x) => x.kind === kind && x.status === "open");
+            if (q) return q;
+            if (Date.now() - t0 > ms) throw new Error(`no open question of kind ${kind} in ${ms} ms`);
+            await new Promise((r) => setTimeout(r, 500));
+        }
+    };
+
+    before(async () => {
+        process.env.SPEECH_PROVIDER = "silent";
+        process.env.BIOMED_PROVIDER = "simulated";
+        ({ broker: local, slots } = await startAllOrFail(PORT + 1));
+        operator = new Broker(local.httpBase, { name: "operator-test", version: "0", locale: "en" });
+    });
+    after(async () => {
+        delete process.env.SPEECH_PROVIDER;
+        delete process.env.BIOMED_PROVIDER;
+        await operator?.close();
+        for (const s of slots ?? []) await s.close().catch(() => undefined);
+        await local?.stop();
+        for (const t of tasks) rmSync(taskDir(t), { recursive: true, force: true });
+    });
+
+    it("a run with the library unsigned: the procedure is refused, Mother asks the commander to sign the safety card with its values, no standing order signs it; signed, the factory writes again; the repository's signatures are given back at the end", async () => {
+        type Facts = { facts: Array<{ id: string; signed: { by: string; valid: boolean } | null }> };
+        const card = async () => (await ok<Facts>("library", "facts", { id: "commissioning-test-safety" })).facts[0].signed;
+        assert.equal((await card())?.by, "the test suite", "the suite's own signature, before the run");
+        // A standing order that answers every question does not answer a signature.
+        await ok("station", "questions_policy", { mode: "auto" });
+        const started = await ok<{ runId: string }>("scenario", "play", { id: "commissioning-signature", builder: "scripted", request: REQUEST });
+        const asking = await until("the signature's question", (r) => r.loops[1].status === "waiting");
+        assert.equal(asking.status, "running", asking.ended ?? "");
+        assert.match(asking.loops[1].waitingFor ?? "", /signature of commissioning-test-safety/);
+        tasks.push(...asking.tasks);
+        assert.equal(await card(), null, "the run's own signatures start empty");
+        const q = (await openQuestion("sign")) as Question & { context: { document: string; facts: Array<{ id: string; value: number; bound: string | null }> } };
+        assert.equal(q.context.document, "commissioning-test-safety");
+        assert.ok(q.context.facts.some((f) => f.id === "test.co2AbortCeilingPpm" && f.value === 3200 && f.bound === "upper"), "the card's values are shown to the commander");
+        await ok("station", "questions_policy", { mode: "ask" });
+        await ok("station", "answer", { questionId: q.id, choice: "sign", by: "commander-test", how: "script" });
+        assert.match((await card())?.by ?? "", /commander, from the control room/);
+        // Signed: the factory writes again, the procedure passes, the run waits for the authorisation.
+        const waiting = await until("the authorisation", (r) => r.loops[3].status === "waiting");
+        assert.equal(waiting.status, "running", waiting.ended ?? "");
+        assert.equal(waiting.loops[1].status, "done");
+        tasks.push(...waiting.tasks.filter((t) => !tasks.includes(t)));
+        assert.ok(waiting.tasks.length >= 2, "the refused procedure task, then the one written again");
+        await ok("station", "commissioning_authorise", { commissioningId: waiting.commissioningId, decision: "refuse", by: "commander-test" });
+        const ended = await until("the end", (r) => r.status !== "running");
+        assert.equal(ended.id, started.runId);
+        assert.equal((await card())?.by, "the test suite", "the repository's signatures are back; the run's signature stayed in the run");
+    });
 });

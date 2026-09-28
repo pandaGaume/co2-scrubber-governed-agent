@@ -63,6 +63,10 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
     const notes = [];
     let open = [];
     let awaiting = [];
+    /** What is at work now: the scenario's loop, the factory's tasks (2026-09-28: a room that sees nothing move does not know it must wait). */
+    let busy = [];
+    let scenarioSession = null;
+    let factorySession = null;
 
     const session = async () => (station ??= await connectMcp(location.origin, "station", { headers: {} }));
     const read = async (uri) => {
@@ -90,16 +94,23 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
     };
 
     function render() {
+        // A signature asked: the card's values under the question, each with its safe side, its kind and its origin, so the commander signs what they read.
+        const card = (q) => {
+            if (q.kind !== "sign" || !Array.isArray(q.context?.facts)) return "";
+            const side = (b) => (b === "upper" ? "at most" : b === "lower" ? "at least" : "exactly");
+            return `<div class="card">${q.context.facts.map((f) => `<div class="line dim"><b>${esc(f.id)}</b> ${esc(side(f.bound))} ${esc(f.value)} ${esc(f.unit)}${f.kind ? ` <span class="t">${esc(f.kind)}</span>` : ""}${f.reference ? `: ${esc(f.reference)}` : ""}</div>`).join("")}</div>`;
+        };
         const chips = open.map((q) => {
             const h = heard.get(q.id);
             const options = q.options.map((o) => `<button class="badge link" data-q="${esc(q.id)}" data-choice="${esc(o.id)}" type="button">${esc(o.label)}</button>`).join(" ");
             const text = q.from === "station" ? "" : `<div class="line ask"><span class="dim">${esc(q.from)}${q.taskId ? `, ${esc(q.taskId)}` : ""}: </span>${esc(q.question)}</div>`;
             const said = h ? `<div class="line dim">heard: "${esc(h.text)}"${h.option ? ` : ${esc(h.option.label)}` : ", no option matches: say one of the words above, or click"}</div>` : "";
-            return `${text}<div class="chips"><span class="t">${esc(q.id)}</span>${options}<button class="badge link" data-voice="${esc(q.id)}" type="button" title="answer by voice">mic</button></div>${said}`;
+            return `${text}${card(q)}<div class="chips"><span class="t">${esc(q.id)}</span>${options}<button class="badge link" data-voice="${esc(q.id)}" type="button" title="answer by voice">mic</button></div>${said}`;
         });
         const direct = awaiting.map((c) => `<div class="chips"><span class="t">${esc(c.id)}</span><button class="badge link" data-authorise="${esc(c.id)}" data-decision="authorise" type="button">authorise the test</button><button class="badge link" data-authorise="${esc(c.id)}" data-decision="refuse" type="button">refuse it</button></div>`);
         const said = notes.filter((n) => Date.now() - n.at < 15000).map((n) => `<div class="line dim">${esc(n.text)}</div>`);
-        box.innerHTML = chips.join("") + direct.join("") + said.join("");
+        const turning = busy.map((b) => `<div class="line busy"><i class="spin"></i>${esc(b)}</div>`);
+        box.innerHTML = turning.join("") + chips.join("") + direct.join("") + said.join("");
         box.hidden = !box.innerHTML;
         // The prompt blinks while Mother waits for the commander.
         const waiting = open.length > 0 || awaiting.length > 0;
@@ -107,7 +118,31 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
         if (input) input.placeholder = waiting ? "Mother is waiting for your answer: type it, or press mic" : "answer Mother: type it, or press mic";
     }
 
+    const clockOf = (iso) => {
+        const s = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000));
+        return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+    };
+    async function readBusy() {
+        const lines = [];
+        try {
+            scenarioSession ??= await connectMcp(location.origin, "scenario", { headers: {} });
+            const run = JSON.parse((await scenarioSession.request("resources/read", { uri: "scenario://run" })).contents[0].text);
+            const l = run && run.status === "running" ? run.loops.find((x) => x.status === "running") : null;
+            if (l) lines.push(`${l.name}: at work${l.note ? `, ${l.note}` : ""}${l.startedAt ? ` (${clockOf(l.startedAt)})` : ""}`);
+        } catch {
+            scenarioSession = null;
+        }
+        try {
+            factorySession ??= await connectMcp(location.origin, "factory", { headers: {} });
+            const running = JSON.parse((await factorySession.request("resources/read", { uri: "factory://running" })).contents[0].text);
+            for (const t of running) if (!t.waiting) lines.push(`factory task ${t.taskId}: step ${t.steps}${t.lastStage ? `, ${t.lastStage}` : ""} (${clockOf(t.startedAt)})`);
+        } catch {
+            factorySession = null;
+        }
+        busy = lines;
+    }
     async function refresh() {
+        await readBusy();
         // Each read stands alone: one the station does not serve must not empty the others.
         try {
             drawLines(await read("station://mother"));

@@ -473,6 +473,14 @@ export function factorySlot(wsBase: string, log: (line: string) => void): Publis
         tools,
         resources: [
             {
+                // The tasks at work now, from memory (2026-09-28): what the control room's Mother shows turning, without reading every task of the disk.
+                uri: "factory://running",
+                read: (s) =>
+                    Object.entries(s.runs)
+                        .filter(([, r]) => !r.ended)
+                        .map(([taskId, r]) => ({ taskId, builder: r.builder, startedAt: r.startedAt, lastStage: r.lastStage, waiting: r.waiting ?? null, steps: Array.isArray((s.tasks[taskId]?.manifest as { steps?: unknown[] } | null | undefined)?.steps) ? ((s.tasks[taskId]?.manifest as { steps: unknown[] }).steps.length) : 0 })),
+            },
+            {
                 uri: TASKS_URI,
                 read: () => {
                     if (!existsSync(WORKSHOP_ROOT)) return [];
