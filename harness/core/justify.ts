@@ -76,6 +76,42 @@ export interface Justified {
     measured?(task: TaskFile["task"]): boolean;
     /** The topic's own guard checks them and reports them with its other checks; the constructor's guard leaves them to it. */
     inTopicGuard?: boolean;
+    /** The whole a call stands for, when it carries only a part (a revision applied to a draft); the call's input by default. */
+    whole?(capabilityId: string, input: JsonValue, progress: TopicContext["progress"]): JsonValue | null;
+}
+
+/**
+ * What a refusal for justifications leaves the builder to do, from the call refused and what the topic declares
+ * (2026-09-28: the same refusal text, read nine times, changed nothing; what is missing is now put in the context,
+ * named as the guard names it, with its value, and the prompt says it differently at every repetition).
+ */
+export interface JustificationHelp {
+    capability: string;
+    /** How many refusals in a row of this capability left constants unjustified. */
+    times: number;
+    /** The constants set with no justification found, by path, with their values. */
+    missing: Constant[];
+    /** The names the justifications gave that are no constant the call set. */
+    unmatched: string[];
+}
+
+export function justificationHelp(justified: Justified, input: JsonValue): Pick<JustificationHelp, "missing" | "unmatched"> {
+    const constants = justified.constants(input);
+    const given = asJustifications(givenOf(justified, input));
+    const paths = constants.map((c) => c.constant);
+    const missing = constants.filter((c) => !justificationOf(given, c.constant, paths));
+    const matches = (name: string) => paths.filter((p) => p === name || p.endsWith(`.${name}`)).length === 1;
+    const unmatched = [...new Set(given.map((j) => String(j.constant ?? "")).filter((name) => name && !matches(name)))];
+    return { missing, unmatched };
+}
+
+/** The brief's words for it: said at the top of the brief, differently at each repetition. */
+export function justificationNote(help: JustificationHelp | null | undefined): string {
+    if (!help || !help.missing.length) return "";
+    const list = help.missing.slice(0, 12).map((c) => `${c.constant} = ${shown(c.value)}`).join(", ") + (help.missing.length > 12 ? `, and ${help.missing.length - 12} more` : "");
+    const names = help.unmatched.length ? ` Your justifications named ${help.unmatched.slice(0, 12).join(", ")}, which is no constant you set: a justification names its constant by the path listed here, exactly.` : "";
+    const again = help.times > 1 ? ` This is refusal number ${help.times} for the same reason: sending the same justifications again gets it again.` : "";
+    return `Your last ${help.capability} was refused for its justifications: ${help.missing.length} constant(s) you set have none under their path: ${list}.${names} The state lists them under justify.skeleton, path and value filled: give each its source, reference and reason, and send again.${again} `;
 }
 
 /** The `justifications` field of a call's input, as a schema a tool adds to its own. */
@@ -108,6 +144,22 @@ export function noteSources(sources: ReadSources, call: Pick<CapabilityCall, "id
     if (call.id === "web.search") for (const m of text.matchAll(/https?:\/\/[^"\s\\]+/g)) if (!sources.web.includes(m[0])) sources.web.push(m[0]);
 }
 
+/**
+ * The justification of a constant: the one that names its path, or else the one alone that names the end of it, when
+ * no other constant sent ends the same way (2026-09-28: a model justified "V" for fit.V, refused nine times for a name
+ * it was never told). `paths` are the constants sent; a short name two of them end with names neither.
+ */
+export function justificationOf(list: Array<Partial<Justification>>, constant: string, paths: string[] = [constant]): Partial<Justification> | undefined {
+    const exact = list.find((x) => x.constant === constant);
+    if (exact) return exact;
+    const endsWith = (path: string, name: string) => path === name || path.endsWith(`.${name}`);
+    const ends = list.filter((x) => typeof x.constant === "string" && x.constant.length > 0 && constant.endsWith(`.${x.constant}`) && paths.filter((p) => endsWith(p, String(x.constant))).length === 1);
+    return ends.length === 1 ? ends[0] : undefined;
+}
+
+/** How to name a constant in a justification, said when none matched. */
+const named = (constant: string): string => `(a justification names it by its path, constant "${constant}")`;
+
 const same = (a: unknown, b: ConstantValue): boolean =>
     Array.isArray(b) ? Array.isArray(a) && a.length === 2 && a[0] === b[0] && a[1] === b[1] : typeof a === "number" && a === b;
 const shown = (v: unknown): string => (Array.isArray(v) ? `[${v.join(", ")}]` : String(v));
@@ -117,10 +169,11 @@ const asJustifications = (given: unknown[]): Array<Partial<Justification>> => gi
 export function justificationProblems(constants: Constant[], given: unknown[], read: ReadSources, options: { measured: boolean; envelope?: Record<string, unknown> }): string[] {
     const problems: string[] = [];
     const list = asJustifications(given);
+    const paths = constants.map((x) => x.constant);
     for (const c of constants) {
-        const j = list.find((x) => x.constant === c.constant);
+        const j = justificationOf(list, c.constant, paths);
         if (!j) {
-            problems.push(`${c.constant} = ${shown(c.value)} has no justification: say its source (a library document or fact read, a web page found, the measurement given, the guard's envelope, a calculation from other constants, or an assumption said as such) and why`);
+            problems.push(`${c.constant} = ${shown(c.value)} has no justification ${named(c.constant)}: say its source (a library document or fact read, a web page found, the measurement given, the guard's envelope, a calculation from other constants, or an assumption said as such) and why`);
             continue;
         }
         if (!same(j.value, c.value)) problems.push(`${c.constant}: the justification says ${shown(j.value)}, what you sent sets ${shown(c.value)}`);
@@ -166,10 +219,11 @@ export function safetyProblems(constants: Constant[], given: unknown[], facts: S
     const problems: string[] = [];
     const list = asJustifications(given);
     const signing = "a person reviews it and signs it: npm run library:sign -- <document> \"<name>\"";
+    const paths = constants.map((x) => x.constant);
     for (const c of constants) {
-        const j = list.find((x) => x.constant === c.constant);
+        const j = justificationOf(list, c.constant, paths);
         if (!j) {
-            problems.push(`${c.constant} = ${shown(c.value)} is a safety constant with no justification: cite the fact of a signed library document it respects (source "library", the fact's id as reference)`);
+            problems.push(`${c.constant} = ${shown(c.value)} is a safety constant with no justification ${named(c.constant)}: cite the fact of a signed library document it respects (source "library", the fact's id as reference)`);
             continue;
         }
         if (j.source !== "library") {

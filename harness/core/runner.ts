@@ -31,7 +31,7 @@ import { compactOutput } from "./compact.js";
 import { reasoningStateOf } from "./reasoning-state.js";
 import { intentionFor, loadRecipes, saveRecipes, taskSignature } from "./recipes.js";
 import { NEVER_REPLAYED, proposalKey, restrictReplays } from "./replay.js";
-import { noteSources } from "./justify.js";
+import { justificationHelp, noteSources } from "./justify.js";
 import { createTaskEvaluator } from "./task-evaluator.js";
 import { taskCapabilities } from "./task-capabilities.js";
 import { DEFAULT_BUDGET, topicFor, type TaskFile, type TaskState, type Topic } from "./task.js";
@@ -416,6 +416,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         if (trace) {
             progress.lastRefusal = null;
             if (trace.result.ok) delete progress.refusals[trace.decision.invocation.capabilityId];
+            if (trace.result.ok && progress.justify?.capability === trace.decision.invocation.capabilityId) progress.justify = null;
             const outcome = ((trace.result.output as { outcome?: string } | undefined)?.outcome ?? (trace.result.ok ? "completed" : "error")) as string;
             manifest.steps.push({
                 n,
@@ -452,6 +453,13 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             // The harness stopped the step (the guard, the schema, a capability outside the list, a timeout): the model reads the reason at the next step.
             progress.lastRefusal = { capability: exchange.proposedCapabilityId, reason: failed ?? "refused", input: (exchange.proposedInput ?? null) as JsonValue };
             progress.refusals[exchange.proposedCapabilityId] = { reason: failed ?? "refused", input: (exchange.proposedInput ?? null) as JsonValue, at: new Date().toISOString() };
+            // A refusal of the call that carries constants: what is left unjustified goes into the context, named as the guard names it (justify.ts).
+            if (topic.justified?.capability.test(exchange.proposedCapabilityId)) {
+                const whole = topic.justified.whole ? topic.justified.whole(exchange.proposedCapabilityId, (exchange.proposedInput ?? null) as JsonValue, progress) : ((exchange.proposedInput ?? null) as JsonValue);
+                const help = whole ? justificationHelp(topic.justified, whole) : null;
+                const times = progress.justify?.capability === exchange.proposedCapabilityId || (progress.justify && topic.justified.capability.test(progress.justify.capability)) ? (progress.justify?.times ?? 0) + 1 : 1;
+                progress.justify = help && help.missing.length ? { capability: exchange.proposedCapabilityId, times, ...help } : null;
+            }
             noteProposal(exchange.proposedCapabilityId, exchange.proposedInput);
             made.add(proposalKey(exchange.proposedCapabilityId, exchange.proposedInput));
             const refusedKey = `${exchange.proposedCapabilityId}:${JSON.stringify(exchange.proposedInput ?? null)}`;

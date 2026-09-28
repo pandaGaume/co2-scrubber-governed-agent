@@ -10,9 +10,10 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import type { JsonValue } from "@spiky-panda/harness";
-import { checkJustifications, factOf, justificationProblems, justificationsFor, noteSources, numbersOf, safetyProblems, type ReadSources, type SignedFact } from "../harness/core/justify.js";
+import { checkJustifications, factOf, justificationHelp, justificationNote, justificationOf, justificationProblems, justificationsFor, noteSources, numbersOf, safetyProblems, type ReadSources, type SignedFact } from "../harness/core/justify.js";
 import { compactOutput } from "../harness/core/compact.js";
-import { candidateConstants } from "../harness/topics/graph/index.js";
+import { CANDIDATE_JUSTIFIED, candidateConstants } from "../harness/topics/graph/index.js";
+import { reasoningStateOf } from "../harness/core/reasoning-state.js";
 import { ONNX_TOPIC } from "../harness/topics/onnx/index.js";
 import { newProgress } from "../harness/core/workspace-observer.js";
 import type { Broker } from "../harness/lib/broker.js";
@@ -106,6 +107,31 @@ describe("the justification of constants, common to every factory", () => {
         // An unsigned fact leads to a signed one first, task.fail only when there is none.
         const unsigned = safetyProblems([{ constant: "steps.1.speedPercent", value: 40 }], [{ constant: "steps.1.speedPercent", value: 40, source: "library", reference: "scrubber.minimumSpeedElevated", reason: "r" }], facts).join();
         assert.match(unsigned, /cite instead a fact of a signed document that bounds this constant.*only if no signed document has one, end with task\.fail/);
+    });
+
+    it("a justification may name a constant by the end of its path when that is unambiguous; otherwise the refusal says the path to write (2026-09-28: \"V\" for fit.V, refused nine times)", () => {
+        const read: ReadSources = { library: ["habitat"], web: [] };
+        const why = (constant: string, value: number | [number, number]) => ({ constant, value, source: "library", reference: "habitat", reason: "the reference graph" });
+        const constants = [{ constant: "fit.V", value: [10, 200] as [number, number] }, { constant: "variables.g", value: 0.4 }];
+        assert.deepEqual(justificationProblems(constants, [why("V", [10, 200]), why("g", 0.4)], read, { measured: false }), [], "the end of the path, alone");
+        const two = [{ constant: "fit.V", value: 10 }, { constant: "variables.V", value: 10 }];
+        assert.match(justificationProblems(two, [why("V", 10)], read, { measured: false }).join(), /fit\.V = 10 has no justification \(a justification names it by its path, constant "fit\.V"\)/);
+        assert.equal(justificationOf([{ constant: "it.V" }], "fit.V"), undefined, "a dot boundary, not any suffix");
+    });
+
+    it("a refusal for justifications is put in the context: the constants without one by path and value, the names that are no constant, a skeleton in the state, and a brief that changes at each repetition (2026-09-28)", () => {
+        const input = { label: "c", fit: { V: { min: 10, max: 200 } }, variables: { g: 0.4 }, justifications: [{ constant: "volume", value: [10, 200], source: "assumed", reference: "x", reason: "y" }, { constant: "g", value: 0.4, source: "assumed", reference: "x", reason: "y" }] } as unknown as JsonValue;
+        const help = justificationHelp(CANDIDATE_JUSTIFIED, input);
+        assert.deepEqual(help, { missing: [{ constant: "fit.V", value: [10, 200] }], unmatched: ["volume"] });
+        const first = justificationNote({ capability: "graph.evaluate", times: 1, ...help });
+        assert.match(first, /^Your last graph\.evaluate was refused for its justifications: 1 constant\(s\) you set have none under their path: fit\.V = \[10, 200\]\. Your justifications named volume, which is no constant you set/);
+        assert.doesNotMatch(first, /refusal number/);
+        assert.match(justificationNote({ capability: "graph.evaluate", times: 3, ...help }), /This is refusal number 3 for the same reason/);
+        assert.equal(justificationNote(null), "");
+        const progress = newProgress();
+        progress.justify = { capability: "graph.evaluate", times: 2, ...help };
+        const state = reasoningStateOf({ task: { objective: { required_outputs: [], constraints: {} }, observations: {}, data: [] } as never, progress, budget: { iterations: 10, minutes: 5 }, nextActions: [], shelf: [], telemetry: null });
+        assert.deepEqual(state.justify, { refused: "graph.evaluate", times: 2, namesThatAreNoConstant: ["volume"], skeleton: [{ constant: "fit.V", value: [10, 200], source: "", reference: "", reason: "" }] });
     });
 });
 

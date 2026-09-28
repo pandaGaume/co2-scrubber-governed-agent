@@ -96,15 +96,21 @@ const ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
 /** How long the last procedure checked stays cached for a revision: five minutes, or PROCEDURE_DRAFT_TTL_SECONDS. */
 export const draftTtlMs = (): number => Number(process.env.PROCEDURE_DRAFT_TTL_SECONDS ?? 300) * 1000;
 
-/** The cached draft while it is fresh; an expired one is dropped. */
+/**
+ * The cached draft while it is fresh; an expired one is dropped. A whole procedure the schema refused, before the topic
+ * could check it, is a draft too (2026-09-28: a threshold written as text, and the revision that followed found nothing).
+ */
 export function draftOf(progress: Progress, now = Date.now()): Partial<Procedure> | null {
     const state = stateOf(progress);
-    if (!state.draft) return null;
-    if (now - state.draft.at > draftTtlMs()) {
+    if (state.accepted) return null;
+    const refused = progress.refusals["procedure.submit"];
+    const fromSchema = refused && isObject(refused.input) && (!state.draft || Date.parse(refused.at) > state.draft.at) ? { procedure: refused.input as unknown as Partial<Procedure>, at: Date.parse(refused.at) } : null;
+    const draft = fromSchema ?? state.draft ?? null;
+    if (!draft || now - draft.at > draftTtlMs()) {
         state.draft = null;
         return null;
     }
-    return state.draft.procedure;
+    return draft.procedure;
 }
 
 const isObject = (v: unknown): v is Record<string, unknown> => Boolean(v) && typeof v === "object" && !Array.isArray(v);
@@ -186,6 +192,8 @@ export const PROCEDURE_JUSTIFIED: Justified = {
     measured: (task) => measuredOf(task) !== null,
     // The procedure's guard reports them with its other checks, to Mother.
     inTopicGuard: true,
+    // A revision stands for the whole draft it was applied to (kept by the guard on its refusal).
+    whole: (capabilityId, input, progress) => (capabilityId === "procedure.revise" ? ((draftOf(progress) as unknown as JsonValue) ?? null) : input),
 };
 
 /** What `biomed.presence` answered in this task, if it was called. */

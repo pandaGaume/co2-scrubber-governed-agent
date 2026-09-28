@@ -200,11 +200,19 @@ describe("the procedure's guard, alone", () => {
         assert.equal(written.ok, true, JSON.stringify(written));
         assert.equal(draftOf(progress), null, "the draft is erased once the procedure is accepted");
         assert.ok(calls.includes("workspace.write"));
-        // Expired: a refused procedure is kept for a few minutes, not longer.
-        await guard("procedure.submit", { ...withoutWatch, id: "decay-test-02", justifications });
-        assert.ok(draftOf(progress));
-        assert.equal(draftOf(progress, Date.now() + 6 * 60000), null, "kept five minutes by default");
-        assert.match((await guard("procedure.revise", revision)).join(), /kept longer than 5 minutes/);
+        // A whole procedure the schema refused, before the topic could check it, is a draft too.
+        const schemaRefused = newProgress();
+        schemaRefused.refusals["procedure.submit"] = { reason: "Invalid capability arguments: data/abort/1/threshold must be number", input: { ...PROCEDURE, id: "decay-test-03" } as unknown as JsonValue, at: new Date().toISOString() };
+        assert.equal(draftOf(schemaRefused)?.id, "decay-test-03");
+        // Expired, in another task: a refused procedure is kept for a few minutes, not longer.
+        const later = newProgress();
+        later.reads = progress.reads;
+        later.sources = progress.sources;
+        const laterContext = { ...context, progress: later };
+        await PROCEDURE_TOPIC.guard!("procedure.submit", { ...withoutWatch, id: "decay-test-02", justifications } as unknown as JsonValue, laterContext);
+        assert.ok(draftOf(later));
+        assert.equal(draftOf(later, Date.now() + 6 * 60000), null, "kept five minutes by default");
+        assert.match((await PROCEDURE_TOPIC.guard!("procedure.revise", revision as unknown as JsonValue, laterContext)).join(), /kept longer than 5 minutes/);
     });
 
     it("the corrected procedure of section 15 passes, on an occupied Lab", () => {

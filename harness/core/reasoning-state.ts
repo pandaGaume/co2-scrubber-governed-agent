@@ -77,6 +77,8 @@ export interface ReasoningState extends Record<string, JsonValue> {
     lastRefusal: { capability: string; reason: string; input: JsonValue } | null;
     /** What a justification may cite, as read in this task: the library's documents and facts, the pages a web search returned (`justify.ts`). */
     sources: { library: string[]; web: string[] };
+    /** After a refusal for justifications: the constants left without one, by path, and a skeleton to fill (`justify.ts`). */
+    justify: JsonValue;
     evaluation: JsonValue;
     requirements: Record<string, boolean>;
     openQuestions: string[];
@@ -182,6 +184,14 @@ export function reasoningStateOf(inputs: StateInputs): ReasoningState {
         lastAction: last ? { capability: last.id, outcome: last.result.outcome, summary: (progress.lastSummary ?? null) as JsonValue, artifact: progress.lastArtifact ?? null } : null,
         lastRefusal: progress.lastRefusal ? { capability: progress.lastRefusal.capability, reason: progress.lastRefusal.reason, input: boundedInput(progress.lastRefusal.input) } : null,
         sources: { library: [...progress.sources.library], web: [...progress.sources.web] },
+        justify: progress.justify
+            ? ({
+                  refused: progress.justify.capability,
+                  times: progress.justify.times,
+                  namesThatAreNoConstant: progress.justify.unmatched,
+                  skeleton: progress.justify.missing.map((c) => ({ constant: c.constant, value: c.value, source: "", reference: "", reason: "" })),
+              } as unknown as JsonValue)
+            : null,
         evaluation: topic.evaluation ?? null,
         requirements: topic.requirements ?? {},
         openQuestions: topic.openQuestions ?? [],

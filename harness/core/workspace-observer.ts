@@ -17,6 +17,7 @@
  * The progress record is the runner's: the observer reads it, the local
  * capabilities (`task.plan`, `task.done`) and the evaluator write it.
  */
+import { justificationNote, type JustificationHelp } from "./justify.js";
 import { createHash } from "node:crypto";
 import type { JsonValue, State, StateObserver } from "@spiky-panda/harness";
 import type { Broker } from "../lib/broker.js";
@@ -81,6 +82,8 @@ export interface Progress {
     reads: Record<string, { at: string; value: JsonValue }>;
     /** What a justification may cite, as read in this task: the library's documents and facts, the pages a web search returned (`justify.ts`). */
     sources: { library: string[]; web: string[] };
+    /** What a refusal for justifications left to do: the constants without one, by path; put in the state and the brief until the call completes (`justify.ts`). */
+    justify: JustificationHelp | null;
     /** What a topic keeps across the steps of one task (the procedure topic: its submissions). */
     topic: Record<string, JsonValue>;
     /** What the task read so far, each answer compact, by capability and argument (`evidence:` in the state); the oldest dropped past the cap. */
@@ -95,7 +98,7 @@ export interface Progress {
 }
 
 export function newProgress(): Progress {
-    return { phase: "plan", iteration: 0, plan: null, done: null, lastCall: null, repeats: 0, lastSummary: null, lastArtifact: null, lastRefusal: null, refusals: {}, checkedModels: [], sandbox: null, failure: null, reads: {}, sources: { library: [], web: [] }, topic: {}, evidence: {}, context: { shelf: [], telemetry: null } };
+    return { phase: "plan", iteration: 0, plan: null, done: null, lastCall: null, repeats: 0, lastSummary: null, lastArtifact: null, lastRefusal: null, refusals: {}, checkedModels: [], sandbox: null, failure: null, reads: {}, sources: { library: [], web: [] }, justify: null, topic: {}, evidence: {}, context: { shelf: [], telemetry: null } };
 }
 
 export interface WorkshopFeatures extends Record<string, JsonValue> {
@@ -144,7 +147,7 @@ export function createWorkspaceObserver(broker: Broker, taskId: string, progress
             const last = progress.lastCall;
             const features: WorkshopFeatures = {
                 // A text answer is not read here: the loop turns it into a crew report, which a factory does not have; said in the brief, so the builder answers with a tool.
-                brief: (progress.lastRefusal?.capability === "crew.report" ? "Your last answer was text, which nobody reads here: answer with one tool call. " : "") + brief(),
+                brief: (progress.lastRefusal?.capability === "crew.report" ? "Your last answer was text, which nobody reads here: answer with one tool call. " : "") + justificationNote(progress.justify) + brief(),
                 phase: progress.phase,
                 iteration: progress.iteration,
                 files: files.length,
