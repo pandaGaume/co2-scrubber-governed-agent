@@ -29,6 +29,8 @@ import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { McpGrammar } from "@cyanmycelium/mcp-core";
 import { fromRoot } from "../lib/paths.js";
+import type { TaskFile } from "../harness/core/task.js";
+import type { JsonValue } from "@spiky-panda/harness";
 import type { LocalBroker } from "../slots/lib/local-broker.js";
 import type { PublishedSlot } from "../slots/lib/slot-server.js";
 import { startAllOrFail } from "./lib/start.js";
@@ -46,7 +48,7 @@ import type { Commissioning, MotherLine } from "../slots/station/provider.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
 import { runProcedure } from "../tier3/procedure.js";
 import { loadLibrary, searchLibrary } from "../slots/tools/library/provider.js";
-import { briefOf, constantsOf, justificationProblems, requirementsOf, stateOfTopic } from "../harness/topics/procedure/index.js";
+import { briefOf, constantsOf, draftOf, justificationProblems, PROCEDURE_TOPIC, requirementsOf, reviseDraft, stateOfTopic } from "../harness/topics/procedure/index.js";
 import { newProgress } from "../harness/core/workspace-observer.js";
 
 const PORT = 3121;
@@ -144,6 +146,65 @@ describe("the procedure's guard, alone", () => {
         assert.match(safetyProblems(web, signed(true)).join("; "), /limits\.co2AbortPpm = 3200 is a safety constant: it is justified by a fact of a signed library document, not by a web page/);
         const over = { ...safe, limits: { ...safe.limits, co2AbortPpm: 3400 }, justifications: safe.justifications.map((j) => (j.constant === "limits.co2AbortPpm" ? { ...j, value: 3400 } : j)) };
         assert.match(safetyProblems(over, signed(true)).join("; "), /limits\.co2AbortPpm = 3400 does not respect test\.co2AbortCeilingPpm = 3200 ppm \(at or below it\)/);
+    });
+
+    it("a refused procedure stays kept whole for a few minutes: a revision sends only what changes, is applied to it and checked whole; the draft is erased once a procedure is accepted, and expires (2026-09-28)", async () => {
+        const card = loadFacts(LIBRARY_DIR, "commissioning-test-safety").map((f) => ({ ...f, source: "commissioning-test-safety", signed: { by: "reviewer", at: "2026-09-28", valid: true } }));
+        const calls: string[] = [];
+        const broker = {
+            call: async (slot: string, tool: string) => {
+                calls.push(`${slot}.${tool}`);
+                if (tool === "facts") return { ok: true, outcome: "completed", output: { facts: card } };
+                if (tool === "write") return { ok: true, outcome: "completed", output: { sha256: "a".repeat(64) } };
+                return { ok: true, outcome: "completed", output: {} };
+            },
+        } as unknown as Broker;
+        const progress = newProgress();
+        progress.reads["biomed.presence"] = { at: "now", value: { modules: LAB_OCCUPIED.modules } as unknown as JsonValue };
+        progress.sources.library.push("method-concentration-decay");
+        const context = { broker, taskId: "t-revise", task: { objective: { required_outputs: [], constraints: {} }, observations: {}, data: [] } as unknown as TaskFile["task"], progress, runtimeSlot: "twin" };
+        const cite = (constant: string, value: number, reference: string) => ({ constant, value, source: "library" as const, reference, reason: "the card" });
+        const justifications = [
+            cite("limits.co2MaxPpm", 2800, "test.co2AbortCeilingPpm"),
+            cite("limits.co2AbortPpm", 3200, "test.co2AbortCeilingPpm"),
+            cite("limits.minSpeedPercent", 30, "test.speedFloorPercent"),
+            cite("limits.maxMinutes", 24, "test.maxMinutesCeiling"),
+            cite("steps.1.speedPercent", 30, "test.speedFloorPercent"),
+            cite("steps.2.speedPercent", 100, "test.speedFloorPercent"),
+            { constant: "steps.1.minutes", value: 12, source: "library" as const, reference: "method-concentration-decay", reason: "the card's rise" },
+            { constant: "steps.2.minutes", value: 12, source: "derived" as const, reference: "maxMinutes - 12", reason: "the rest" },
+        ];
+        const { monitoring: _unwatched, ...withoutWatch } = PROCEDURE;
+        const guard = (id: string, input: unknown) => PROCEDURE_TOPIC.guard!(id, input as JsonValue, context);
+        // A revision before any procedure was checked: nothing is kept.
+        assert.match((await guard("procedure.revise", { changes: {} })).join(), /no procedure is kept to revise.*submit the whole procedure with procedure\.submit/);
+        // The whole procedure, refused for the watch it does not ask: kept whole.
+        assert.match((await guard("procedure.submit", { ...withoutWatch, justifications })).join(), /monitoring/);
+        assert.equal(draftOf(progress)?.id, "decay-test-01");
+        assert.equal(draftOf(progress)?.monitoring, undefined);
+        // A revision carrying only the watch, and one justification changed: applied to the draft, checked whole, allowed.
+        const revision = { changes: { monitoring: { subjects: ["fe-1", "fe-2"] } }, justifications: [{ constant: "steps.2.minutes", value: 12, source: "assumed", reference: "one time constant", reason: "long enough" }] };
+        assert.deepEqual(await guard("procedure.revise", revision), []);
+        assert.equal(draftOf(progress)?.monitoring, undefined, "an accepted decision changes nothing the observation reads: the draft stays as refused until the revision executes");
+        const draft = reviseDraft(draftOf(progress)!, revision.changes, revision.justifications);
+        assert.deepEqual(draft.monitoring, { subjects: ["fe-1", "fe-2"] });
+        assert.deepEqual(draft.limits, PROCEDURE.limits, "what the revision does not name stays");
+        assert.equal(draft.justifications?.length, 8, "the justifications merge by constant");
+        assert.equal(draft.justifications?.find((j) => j.constant === "steps.2.minutes")?.source, "assumed");
+        // A nested object merges key by key: one limit changed, the others kept.
+        assert.deepEqual(reviseDraft(draft, { limits: { co2MaxPpm: 2600 } }, []).limits, { ...PROCEDURE.limits, co2MaxPpm: 2600 });
+        const [submit, revise] = PROCEDURE_TOPIC.local!(context);
+        assert.equal(submit.id, "procedure.submit");
+        // Accepted: the same whole written, and the draft erased.
+        const written = await revise.execute(revision as unknown as JsonValue, {} as never);
+        assert.equal(written.ok, true, JSON.stringify(written));
+        assert.equal(draftOf(progress), null, "the draft is erased once the procedure is accepted");
+        assert.ok(calls.includes("workspace.write"));
+        // Expired: a refused procedure is kept for a few minutes, not longer.
+        await guard("procedure.submit", { ...withoutWatch, id: "decay-test-02", justifications });
+        assert.ok(draftOf(progress));
+        assert.equal(draftOf(progress, Date.now() + 6 * 60000), null, "kept five minutes by default");
+        assert.match((await guard("procedure.revise", revision)).join(), /kept longer than 5 minutes/);
     });
 
     it("the corrected procedure of section 15 passes, on an occupied Lab", () => {
@@ -397,7 +458,7 @@ describe("the commissioning, through the broker", () => {
         assert.equal(refused.length, 1);
         assert.equal(refused[0].capability, "procedure.submit");
         assert.match(String(refused[0].reason), /floor: step 1 stops the scrubber/);
-        assert.deepEqual(result.manifest.steps.filter((s) => s.source !== "refused").map((s) => s.capability), ["factory.inventory", "library.methods", "library.read", "biomed.presence", "task.plan", "procedure.submit", "task.done"]);
+        assert.deepEqual(result.manifest.steps.filter((s) => s.source !== "refused").map((s) => s.capability), ["factory.inventory", "library.methods", "library.read", "biomed.presence", "task.plan", "procedure.revise", "task.done"], "the correction is a revision of the procedure kept, not the whole again");
         assert.ok(result.manifest.artifacts.some((a) => a.kind === "procedure" && a.path === "procedures/decay-draft-02.json"));
         assert.equal(result.manifest.provider.name, "scripted:procedure", "the manifest names the script");
         // The scorecard of question A: the presence was read before the first submission, the monitoring asked unprompted.

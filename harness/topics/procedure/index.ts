@@ -48,12 +48,12 @@ import type { TopicState } from "../../core/reasoning-state.js";
 import type { TopicContext, TopicDefinition, Validation } from "../../core/topic.js";
 import type { DoneClaim, Progress, WorkshopFile } from "../../core/workspace-observer.js";
 import { checkProcedure, constantsOf, problemLines, SAFETY_CONSTANT, type MeasuredStart, type PresenceRead, type ProcedureCheck } from "./check.js";
-import { checkJustifications, justificationProblems as commonJustificationProblems, type Justified, type ReadSources } from "../../core/justify.js";
+import { checkJustifications, JUSTIFICATIONS_SCHEMA, justificationProblems as commonJustificationProblems, type Justified, type ReadSources } from "../../core/justify.js";
 export { constantsOf } from "./check.js";
 import { PROCEDURE_ENVELOPE, PROCEDURE_SCHEMA, totalMinutes, type Procedure } from "./procedure.js";
 import { resolveUnitRef } from "../../lib/units.js";
 
-export const PROCEDURE_TOOLS: ReadonlyArray<RegExp> = withBase([/^factory\.inventory$/, /^station\.registry_list$/, /^biomed\.(describe|presence)$/, /^workspace\.(list|read)$/, /^procedure\.submit$/]);
+export const PROCEDURE_TOOLS: ReadonlyArray<RegExp> = withBase([/^factory\.inventory$/, /^station\.registry_list$/, /^biomed\.(describe|presence)$/, /^workspace\.(list|read)$/, /^procedure\.(submit|revise)$/]);
 
 export const PROCEDURE_PROMPT = "harness/topics/procedure/prompt.md";
 
@@ -71,6 +71,12 @@ export interface Submission {
 
 interface ProcedureTopicState {
     submissions: Submission[];
+    /**
+     * The last procedure checked, whole, kept for a few minutes (2026-09-28): a refusal is corrected by sending only what
+     * changes (procedure.revise), not the whole procedure again (three thousand tokens and thirty seconds each time).
+     * Erased once a procedure is accepted; an expired draft is a whole procedure to submit again.
+     */
+    draft?: { procedure: Partial<Procedure>; at: number } | null;
     accepted: { path: string; sha256: string; procedureId: string } | null;
     /** The method card the builder read, once it has read one (`library.read` on a `method-` document). */
     method?: string;
@@ -86,6 +92,53 @@ interface InventoryRead {
 }
 
 const ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
+
+/** How long the last procedure checked stays cached for a revision: five minutes, or PROCEDURE_DRAFT_TTL_SECONDS. */
+export const draftTtlMs = (): number => Number(process.env.PROCEDURE_DRAFT_TTL_SECONDS ?? 300) * 1000;
+
+/** The cached draft while it is fresh; an expired one is dropped. */
+export function draftOf(progress: Progress, now = Date.now()): Partial<Procedure> | null {
+    const state = stateOf(progress);
+    if (!state.draft) return null;
+    if (now - state.draft.at > draftTtlMs()) {
+        state.draft = null;
+        return null;
+    }
+    return state.draft.procedure;
+}
+
+const isObject = (v: unknown): v is Record<string, unknown> => Boolean(v) && typeof v === "object" && !Array.isArray(v);
+
+/**
+ * A revision applied to the cached draft: an object merges key by key, a list or a value replaces what it names, a null
+ * removes it; the justifications merge by constant (those sent replace theirs, the others stay).
+ */
+export function reviseDraft(draft: Partial<Procedure>, changes: unknown, justifications: unknown): Partial<Procedure> {
+    const merge = (base: unknown, patch: unknown): unknown => {
+        if (!isObject(base) || !isObject(patch)) return patch;
+        const out: Record<string, unknown> = { ...base };
+        for (const [k, v] of Object.entries(patch)) {
+            if (v === null) delete out[k];
+            else out[k] = merge(base[k], v);
+        }
+        return out;
+    };
+    const { justifications: inChanges, ...rest } = isObject(changes) ? changes : {};
+    const merged = merge(draft, rest) as Partial<Procedure>;
+    const sent = [...(Array.isArray(inChanges) ? inChanges : []), ...(Array.isArray(justifications) ? justifications : [])].filter(isObject) as unknown as NonNullable<Procedure["justifications"]>;
+    const kept = (draft.justifications ?? []).filter((j) => !sent.some((x) => x.constant === j.constant));
+    return { ...merged, justifications: [...kept, ...sent] };
+}
+
+/** The schema of a revision: the fields that change, and the justifications of the constants that change. */
+const REVISE_SCHEMA = {
+    type: "object",
+    properties: {
+        changes: { type: "object", description: "Only what changes in the procedure checked last: an object merges key by key (limits: {co2MaxPpm: 2600} changes that limit alone), a list replaces the list (steps, abort, monitoring.subjects), null removes a field." },
+        justifications: JUSTIFICATIONS_SCHEMA,
+    },
+    required: ["changes"],
+} as const;
 
 /** The topic's record in the task's progress, created on first use. */
 function stateOf(progress: Progress): ProcedureTopicState {
@@ -126,7 +179,7 @@ export function justificationProblems(p: Partial<Procedure>, read: ReadSources, 
 
 /** Where a procedure's constants are, and which bound the people's air, the scrubber, the exposure, the aborts and the watch. */
 export const PROCEDURE_JUSTIFIED: Justified = {
-    capability: /^procedure\.submit$/,
+    capability: /^procedure\.(submit|revise)$/,
     constants: (input) => constantsOf((input ?? {}) as unknown as Partial<Procedure>),
     safety: SAFETY_CONSTANT,
     envelope: PROCEDURE_ENVELOPE as unknown as Record<string, unknown>,
@@ -174,27 +227,46 @@ async function tellMother(context: TopicContext, procedure: Partial<Procedure>, 
     if (!r.ok) context.progress.topic.motherNotTold = `${r.error ?? r.outcome}`;
 }
 
-function submitCapability(context: TopicContext): LocalCapability {
+/** An accepted procedure, written: the file, Mother told, the submission recorded, the draft erased. */
+async function writeAccepted(context: TopicContext, procedure: Procedure): Promise<CapabilityResult> {
     const { broker, taskId, progress } = context;
+    const path = `procedures/${procedure.id}.json`;
+    const w = await broker.call("workspace", "write", { taskId, path, text: JSON.stringify(procedure, null, 2) + "\n" });
+    if (!w.ok) return { ok: false, error: w.error ?? `could not write ${path}`, output: { outcome: w.outcome } };
+    const sha256 = (w.output as { sha256: string }).sha256;
+    const state = stateOf(progress);
+    // The guard checked and accepted; recorded here, once the runtime has executed the decision, so the state the model read did not move under it.
+    const presence = presenceOf(progress);
+    const check = checkProcedure(procedure, presence, undefined, measuredOf(context.task));
+    state.submissions.push(submissionOf(state, procedure, check, presence !== null));
+    await tellMother(context, procedure, check, state.submissions.length);
+    state.accepted = { path, sha256, procedureId: procedure.id };
+    // Accepted: the draft has served.
+    state.draft = null;
+    await broker.call("workspace", "write", { taskId, path: "scorecard.json", text: JSON.stringify(scorecardOf(progress), null, 2) + "\n" });
+    return { ok: true, output: { outcome: "completed", value: { accepted: true, path, sha256, steps: procedure.steps.length, minutes: totalMinutes(procedure) } } };
+}
+
+function submitCapability(context: TopicContext): LocalCapability {
     return {
         id: "procedure.submit",
-        description: "Submit the test procedure: the file the test will be run from, later, by others. It is checked before it is written; a procedure that does not pass comes back with the reasons. The procedure accepted is written as procedures/<id>.json in the workshop, with its sha256.",
+        description: "Submit the test procedure: the file the test will be run from, later, by others. It is checked before it is written; a procedure that does not pass comes back with the reasons, and stays kept for a revision. The procedure accepted is written as procedures/<id>.json in the workshop, with its sha256.",
         inputSchema: PROCEDURE_SCHEMA as unknown as JsonValue,
+        execute: (input: JsonValue) => writeAccepted(context, input as unknown as Procedure),
+    };
+}
+
+function reviseCapability(context: TopicContext): LocalCapability {
+    return {
+        id: "procedure.revise",
+        description: "Correct the procedure checked last by sending only what changes (and the justifications of the constants that change): the harness applies it to the whole procedure it keeps for a few minutes, and checks the whole again. Accepted, it is written as procedure.submit writes it. When nothing is kept (none checked yet, or kept too long), submit the whole procedure again.",
+        inputSchema: REVISE_SCHEMA as unknown as JsonValue,
         async execute(input: JsonValue): Promise<CapabilityResult> {
-            const procedure = input as unknown as Procedure;
-            const path = `procedures/${procedure.id}.json`;
-            const w = await broker.call("workspace", "write", { taskId, path, text: JSON.stringify(procedure, null, 2) + "\n" });
-            if (!w.ok) return { ok: false, error: w.error ?? `could not write ${path}`, output: { outcome: w.outcome } };
-            const sha256 = (w.output as { sha256: string }).sha256;
-            const state = stateOf(progress);
-            // The guard checked and accepted; recorded here, once the runtime has executed the decision, so the state the model read did not move under it.
-            const presence = presenceOf(progress);
-            const check = checkProcedure(procedure, presence, undefined, measuredOf(context.task));
-            state.submissions.push(submissionOf(state, procedure, check, presence !== null));
-            await tellMother(context, procedure, check, state.submissions.length);
-            state.accepted = { path, sha256, procedureId: procedure.id };
-            await broker.call("workspace", "write", { taskId, path: "scorecard.json", text: JSON.stringify(scorecardOf(progress), null, 2) + "\n" });
-            return { ok: true, output: { outcome: "completed", value: { accepted: true, path, sha256, steps: procedure.steps.length, minutes: totalMinutes(procedure) } } };
+            // The guard applied this revision to the draft and checked the whole; the same whole is written.
+            const draft = draftOf(context.progress);
+            if (!draft) return { ok: false, error: "no procedure is kept to revise: submit the whole procedure with procedure.submit", output: { outcome: "refused" } };
+            const r = (input ?? {}) as { changes?: unknown; justifications?: unknown };
+            return writeAccepted(context, reviseDraft(draft, r.changes, r.justifications) as Procedure);
         },
     };
 }
@@ -237,13 +309,19 @@ async function guardProcedure(capabilityId: string, input: JsonValue, context: T
             .filter(([k, v]) => !v && k in HOW && k !== "presenceRead")
             .map(([k]) => `the plan needs ${k}: ${HOW[k]}`);
     }
-    if (capabilityId !== "procedure.submit") return [];
-    const procedure = (input ?? {}) as unknown as Partial<Procedure>;
+    if (capabilityId !== "procedure.submit" && capabilityId !== "procedure.revise") return [];
+    let procedure = (input ?? {}) as unknown as Partial<Procedure>;
+    if (capabilityId === "procedure.revise") {
+        const draft = draftOf(context.progress);
+        if (!draft) return [`no procedure is kept to revise (none checked yet in this task, or kept longer than ${Math.round(draftTtlMs() / 60000)} minutes): submit the whole procedure with procedure.submit`];
+        const r = (input ?? {}) as { changes?: unknown; justifications?: unknown };
+        procedure = reviseDraft(draft, r.changes, r.justifications);
+    }
     const presence = presenceOf(context.progress);
     const measured = measuredOf(context.task);
     const check = checkProcedure(procedure, presence, undefined, measured);
     // Every constant justified so it can be challenged (2026-09-28): the safety ones by a fact of a signed library document they respect, the others by a source this task read.
-    for (const message of await checkJustifications(PROCEDURE_JUSTIFIED, input, context)) check.problems.push({ kind: "justification", message });
+    for (const message of await checkJustifications(PROCEDURE_JUSTIFIED, procedure as unknown as JsonValue, context)) check.problems.push({ kind: "justification", message });
     if (check.problems.length) check.ok = false;
     if (!ID.test(String(procedure.id ?? ""))) {
         check.problems.push({ kind: "shape", message: `id "${String(procedure.id)}" must be lower case letters, digits and dashes (it names the file)` });
@@ -259,8 +337,11 @@ async function guardProcedure(capabilityId: string, input: JsonValue, context: T
         }
     }
     // An accepted submission is recorded by the capability, after execution; a refusal is recorded here, since nothing executes (the procedure itself stays in the state as the runner's lastRefusal.input).
+    // Nothing the observation reads is written for an accepted decision: a state that moved between the decision and its execution makes it stale.
     if (check.ok) return [];
     const state = stateOf(context.progress);
+    // The whole procedure refused is the draft a revision applies to, for a few minutes, until one is accepted.
+    state.draft = { procedure, at: Date.now() };
     state.submissions.push(submissionOf(state, procedure, check, presence !== null));
     await tellMother(context, procedure, check, state.submissions.length);
     return [`procedure refused: ${problemLines(check).join("; ")}`];
@@ -309,7 +390,15 @@ export function stateOfTopic(progress: Progress, task: TaskFile["task"]): TopicS
             accepted: state.accepted,
         } as JsonValue,
         // The last refused submission stays whole in the evaluation until one is accepted: the model corrects it, whatever it read in between.
-        evaluation: last ? ({ submission: last.n, procedureId: last.procedureId, ok: last.ok, problems: last.problems, ...(!last.ok && progress.refusals["procedure.submit"] ? { procedure: progress.refusals["procedure.submit"].input } : {}) } as JsonValue) : progress.refusals["procedure.submit"] ? ({ submission: 0, ok: false, problems: [progress.refusals["procedure.submit"].reason], procedure: progress.refusals["procedure.submit"].input } as JsonValue) : null,
+        // The procedure shown is the draft kept whole, which a revision applies to; the refused input only when no draft is kept (a refusal before the topic's check: the schema).
+        evaluation: (() => {
+            const refused = progress.refusals["procedure.revise"] ?? progress.refusals["procedure.submit"];
+            const draft = draftOf(progress);
+            // Said without a countdown: a state that moves every second makes every decision stale.
+            const kept = draft ? { procedure: draft as unknown as JsonValue, kept: `whole, for ${Math.round(draftTtlMs() / 60000)} minutes after its check: send only what changes with procedure.revise` } : refused ? { procedure: refused.input } : {};
+            if (last) return { submission: last.n, procedureId: last.procedureId, ok: last.ok, problems: last.problems, ...(!last.ok ? kept : {}) } as JsonValue;
+            return refused ? ({ submission: 0, ok: false, problems: [refused.reason], ...kept } as JsonValue) : null;
+        })(),
         openQuestions,
         requirements,
     };
@@ -364,8 +453,9 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
     if (progress.phase === "plan") return `Stage 3 of 5, the plan. You read the method card ${state.method} (the state holds it whole, under hypothesis, field "method"; nothing to read again). Declare with task.plan what no node of the catalogue produces: selected_nodes empty (this topic builds no graph), and one entry per required output in missing_capabilities, ${names}, with its reason and the topic "procedure"; required_output is the name exactly, nothing added to it.`;
     // The refusal as the runner recorded it after the step, never the guard's own record: the guard writes while a decision
     // is checked, and an observation that moved between the decision and its execution makes the decision stale.
-    const refusal = progress.refusals["procedure.submit"]?.reason ?? null;
-    const refused = refusal ? ` Your last submission was refused: ${refusal}. The procedure exactly as you submitted it is in the state under evaluation (field "procedure"; it is not a file, nothing to read): change in it only what these reasons name and submit it again with procedure.submit; the same procedure submitted again gets the same refusal.` : "";
+    const refusal = (progress.refusals["procedure.revise"] ?? progress.refusals["procedure.submit"])?.reason ?? null;
+    const kept = draftOf(progress) !== null;
+    const refused = refusal ? ` Your last submission was refused: ${refusal}. ${kept ? `The whole procedure checked is kept in the state under evaluation (field "procedure"; it is not a file, nothing to read) for a few minutes: send only what these reasons name with procedure.revise (changes: the fields that change; justifications: those of the constants that change), not the whole procedure again.` : `The procedure you sent is in the state under evaluation (field "procedure"; it is not a file, nothing to read): correct what these reasons name and submit it whole with procedure.submit.`} The same procedure again gets the same refusal.` : "";
     const presence = presenceOf(progress) ? "who is in each module (field \"presence\")" : "not yet who is in the volume: read biomed.presence before submitting";
     const measured = measuredOf(task);
     const start = measured ? ` The CO2 of the volume measured when this task opened: ${Math.round(measured.co2Ppm)} ppm${measured.source ? ` (${measured.source})` : ""}; the test starts from it (field "measured").` : "";
@@ -376,12 +466,12 @@ export const PROCEDURE_TOPIC: TopicDefinition = {
     name: "procedure",
     tools: PROCEDURE_TOOLS,
     // A procedure is written from this task's device, presence, measured CO2 and signed library: never copied from the memory of another task, nor the claim that names its file.
-    neverReplayed: [/^procedure\.submit$/, /^task\.done$/],
+    neverReplayed: [/^procedure\.(submit|revise)$/, /^task\.done$/],
     justified: PROCEDURE_JUSTIFIED,
     // The plan says what is measured, from the task's required outputs; the guard checks it again.
     replayedActions: [/^task\.plan$/],
     validate: (claim, files, progress) => validateProcedure(claim, files, progress),
-    local: (context) => [submitCapability(context)],
+    local: (context) => [submitCapability(context), reviseCapability(context)],
     guard: guardProcedure,
     state: stateOfTopic,
     // The submissions tell the steps apart for the recipes: a step learned after a refusal does not replay after an acceptance.

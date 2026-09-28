@@ -41,6 +41,8 @@ interface Inventory {
 export class ScriptedProcedureBuilder extends ScriptedBuilderBase<ScriptedProcedureOptions> {
     private inventory: Inventory = {};
     private presence: Presence = [];
+    /** The last procedure sent whole: a correction sends only what differs from it (procedure.revise), as a model does. */
+    private lastSent: Procedure | null = null;
 
     constructor(options: ScriptedProcedureOptions) {
         super("procedure", options);
@@ -49,6 +51,22 @@ export class ScriptedProcedureBuilder extends ScriptedBuilderBase<ScriptedProced
     override begin(): void {
         this.inventory = {};
         this.presence = [];
+        this.lastSent = null;
+    }
+
+    /** A correction as a revision: the fields that differ from the procedure refused (null for one removed), the justifications of the constants that changed. */
+    private revision(next: Procedure): JsonValue {
+        const before = (this.lastSent ?? {}) as unknown as Record<string, unknown>;
+        const after = next as unknown as Record<string, unknown>;
+        const changes: Record<string, unknown> = {};
+        for (const k of new Set([...Object.keys(before), ...Object.keys(after)])) {
+            if (k === "justifications") continue;
+            if (!(k in after)) changes[k] = null;
+            else if (JSON.stringify(before[k]) !== JSON.stringify(after[k])) changes[k] = after[k];
+        }
+        const had = new Set((this.lastSent?.justifications ?? []).map((j) => `${j.constant}=${JSON.stringify(j.value)}`));
+        const justifications = (next.justifications ?? []).filter((j) => !had.has(`${j.constant}=${JSON.stringify(j.value)}`));
+        return { changes, justifications } as unknown as JsonValue;
     }
 
     /** The procedure the script writes: two steps, hatch closed, the rise at `speed`. */
@@ -149,7 +167,11 @@ export class ScriptedProcedureBuilder extends ScriptedBuilderBase<ScriptedProced
                 const corrected = Boolean(refusal) || after === "build:biomed.presence";
                 const speed = corrected ? Math.max(firstSpeedPercent, 30) : firstSpeedPercent;
                 const monitoring = askMonitoring || /monitoring/.test(refusal);
-                return decide("procedure.submit", this.procedure(speed, monitoring) as unknown as JsonValue, corrected ? `corrected after: ${refusal.slice(0, 200) || "the occupancy read"}` : "the rise is fastest with the scrubber stopped");
+                const next = this.procedure(speed, monitoring);
+                // Refused by the topic's guard, the whole procedure is kept: the correction sends only what changes.
+                if (this.lastSent && /procedure refused:/.test(refusal)) return decide("procedure.revise", this.revision(next), `revised after: ${refusal.slice(0, 200)}`);
+                this.lastSent = next;
+                return decide("procedure.submit", next as unknown as JsonValue, corrected ? `corrected after: ${refusal.slice(0, 200) || "the occupancy read"}` : "the rise is fastest with the scrubber stopped");
             }
             default: {
                 const accepted = valueOf(last) as { path?: string; value?: { path?: string } };
