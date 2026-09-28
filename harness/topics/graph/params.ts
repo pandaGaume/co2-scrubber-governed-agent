@@ -15,11 +15,13 @@
  *                                          command, a neighbour's CO2);
  *   { "$first": "c" }                      the first value of a telemetry column (an
  *                                          initial state);
- *   { "$initialMasses": { "co2Ppm": ..., "volume": "V", "temperatureK": "Tk" } }
+ *   { "$initialMasses": { "species": "S", "fraction": ..., "unit": "u", "volume": "V", "temperatureK": "Tk" } }
  *                                          the substrate atmosphere's `_initialMassKg`:
- *                                          the air of a volume seeded from a CO2 reading
- *                                          (each field a number, a formula or one of the
- *                                          forms above; `preset` and `pressurePa` optional).
+ *                                          the air of a volume seeded from a reading of one
+ *                                          species' fraction, in its unit (the physics slot
+ *                                          converts it; each number a number, a formula or
+ *                                          one of the forms above; `preset` and `pressurePa`
+ *                                          optional).
  *
  * The harness resolves them for every combination of the variables it
  * tries, so the builder writes the physics once and never types a fitted
@@ -28,6 +30,7 @@
  */
 
 import { initialMassesKg } from "../../../lib/air.js";
+import { physics } from "../../core/physics.js";
 
 export type Variables = Record<string, number>;
 export type Row = Record<string, unknown>;
@@ -124,7 +127,7 @@ export function resolveParam(value: unknown, vars: Variables, rows: Row[]): unkn
         const numberOf = (field: string, fallback?: number): number => {
             const raw = m[field];
             if (raw === undefined) {
-                if (fallback === undefined) throw new Error(`$initialMasses: "${field}" is missing (co2Ppm, volume and temperatureK are needed)`);
+                if (fallback === undefined) throw new Error(`$initialMasses: "${field}" is missing (species, fraction, volume and temperatureK are needed; unit when the fraction is not a ratio)`);
                 return fallback;
             }
             const resolved = typeof raw === "string" && !Object.prototype.hasOwnProperty.call(vars, raw) ? evaluateExpression(raw, vars) : resolveParam(raw, vars, rows);
@@ -133,7 +136,13 @@ export function resolveParam(value: unknown, vars: Variables, rows: Row[]): unkn
         };
         const preset = typeof m.preset === "string" ? m.preset : undefined;
         // No pressure given: the air preset's own (lib/air.ts), not a number of this code.
-        return initialMassesKg(numberOf("co2Ppm"), numberOf("volume"), numberOf("temperatureK"), preset, m.pressurePa === undefined ? undefined : numberOf("pressurePa"));
+        if (typeof m.species !== "string" || !m.species) throw new Error(`$initialMasses: "species" is missing (the species whose fraction was read)`);
+        // The fraction in the unit it was read in, as a ratio: the physics slot converts it (ppm, percent, ...), this code knows no unit.
+        const read = numberOf("fraction");
+        const unit = typeof m.unit === "string" && m.unit ? m.unit : "1";
+        const ratio = physics().convertValue(read, { quantity: "Dimensionless", unit }, { quantity: "Dimensionless", unit: "1" });
+        if (!ratio.ok) throw new Error(`$initialMasses: the fraction's unit "${unit}": ${ratio.reason}`);
+        return initialMassesKg(m.species, ratio.value, numberOf("volume"), numberOf("temperatureK"), preset, m.pressurePa === undefined ? undefined : numberOf("pressurePa"));
     }
     if (v.$series && typeof v.$series === "object") {
         const s = v.$series as { column?: unknown; scale?: unknown; offset?: unknown };

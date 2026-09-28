@@ -61,7 +61,7 @@ describe("the habitat plugin in the registry", () => {
     });
 
     it("seeds a volume at the sensor's ppm from the core's composition preset, the pressure kept", () => {
-        const masses = initialMassesKg(1480, 30, 295.15);
+        const masses = initialMassesKg("CO2", 1480e-6, 30, 295.15);
         assert.equal(masses.length, 5);
         const M = { N2: 28.0134e-3, O2: 31.9988e-3, CO2: 44.0095e-3, H2O: 18.01528e-3, Ar: 39.948e-3 };
         const moles = ["N2", "O2", "CO2", "H2O", "Ar"].map((s, i) => masses[i] / M[s as keyof typeof M]);

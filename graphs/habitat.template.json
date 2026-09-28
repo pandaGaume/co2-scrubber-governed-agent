@@ -275,9 +275,11 @@
           "initial_atmosphere_preset": "earthHumidAirSeaLevel",
           "_initialMassKg": {
             "$initialMasses": {
-              "co2Ppm": {
+              "species": "CO2",
+              "fraction": {
                 "$first": "co2_lab_ppm"
               },
+              "unit": "ppm",
               "volume": "V",
               "temperatureK": 295.15,
               "preset": "earthHumidAirSeaLevel",
@@ -300,9 +302,11 @@
           "initial_atmosphere_preset": "earthHumidAirSeaLevel",
           "_initialMassKg": {
             "$initialMasses": {
-              "co2Ppm": {
+              "species": "CO2",
+              "fraction": {
                 "$first": "co2_habb_ppm"
               },
+              "unit": "ppm",
               "volume": "Vh",
               "temperatureK": 295.15,
               "preset": "earthHumidAirSeaLevel",

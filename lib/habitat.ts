@@ -114,7 +114,7 @@ export function habitatDocumentSpec(parameters: CabinParameters, options: Habita
     const fanCommand = options.fanCommand ?? p("ventilation.fan.command");
     const preset = p<string>("atmosphere.preset");
     const pressure = p("atmosphere.pressurePa");
-    const air = (volume: number, temperature: number, ppm: number) => ({ volume, temperature_k: temperature, initial_atmosphere_preset: preset, _initialMassKg: initialMassesKg(ppm, volume, temperature, preset, pressure) });
+    const air = (volume: number, temperature: number, ppm: number) => ({ volume, temperature_k: temperature, initial_atmosphere_preset: preset, _initialMassKg: initialMassesKg("CO2", ppm * 1e-6, volume, temperature, preset, pressure) });
     const sensor = { cutoffHz: p("sensors.cutoffHz"), noiseStdev: p("sensors.noisePpm"), quantizationStep: p("sensors.resolutionPpm"), driftPerSec: 0 };
     const litres = (activity: string) => p(`crew.litresPerMinute.${activity}`);
     const crewParams = {
@@ -264,7 +264,7 @@ export function habitatTemplate(parameters: CabinParameters = readHabitatParamet
     const seen: Record<string, number> = {};
     const preset = p<string>("atmosphere.preset");
     const pressure = p("atmosphere.pressurePa");
-    const air = (volume: string, column: string, temperatureK: number) => ({ volume: { $expr: volume }, temperature_k: temperatureK, initial_atmosphere_preset: preset, _initialMassKg: { $initialMasses: { co2Ppm: { $first: column }, volume, temperatureK, preset, pressurePa: pressure } } });
+    const air = (volume: string, column: string, temperatureK: number) => ({ volume: { $expr: volume }, temperature_k: temperatureK, initial_atmosphere_preset: preset, _initialMassKg: { $initialMasses: { species: "CO2", fraction: { $first: column }, unit: "ppm", volume, temperatureK, preset, pressurePa: pressure } } });
     const nodes: TemplateNode[] = base.nodes.map((n) => {
         const node: TemplateNode = { ...(n as TemplateNode) };
         const person = persons.find((who) => `person-${who.id}` === n.id);
