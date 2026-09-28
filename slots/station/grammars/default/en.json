@@ -285,7 +285,7 @@
         "mother.abort.unreadable": "An abort condition cannot be read.",
         "mother.abort.other": "Abort condition {condition}.",
         "mother.procedure.done": "Test complete. {minutes} minutes.",
-        "mother.result.volume": "Apparent volume: {volume} cubic metres.",
+        "mother.result.volume": "Apparent volume, module {module} taken as one room: {volume} cubic metres. The twin will say what the air exchanged with the next module hides in it.",
         "mother.result.pending": "Served volume: not computed yet.",
         "mother.vitals.nominal": "Vital signs nominal throughout.",
         "mother.vitals.events": "{count} vital-sign alerts during the test.",
@@ -300,6 +300,7 @@
         "mother.question.waiting": "Commander, I am still waiting for your answer: {options}.",
         "mother.procedure.refused.start": "Procedure refused. Its CO2 limits leave no room above the air of module {module} as measured now.",
         "mother.procedure.refused.justification": "Procedure refused. Some of its numbers have no source.",
+        "mother.procedure.refused.justificationFact": "Procedure refused. A safety limit cites the wrong fact of the safety card.",
         "mother.procedure.refused.rules": "Procedure refused. The safety rules of the test are not signed."
     }
 }

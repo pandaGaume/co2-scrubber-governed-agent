@@ -35,6 +35,7 @@
     "draft": {
         "none": "no procedure is kept to revise (none checked yet in this task, or kept longer than {minutes} minutes): submit the whole procedure with procedure.submit",
         "noneAtExecution": "no procedure is kept to revise: submit the whole procedure with procedure.submit",
+        "accepted": "the procedure is already accepted ({path}): nothing more to revise or submit; end with task.done, {path} as the artifact",
         "kept": "whole, for {minutes} minutes after its check: send only what changes with procedure.revise"
     },
     "capabilities": {

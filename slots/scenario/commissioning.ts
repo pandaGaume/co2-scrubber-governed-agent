@@ -68,7 +68,8 @@ export interface CommissioningDocument {
     procedure: { requiredOutput: { name: string; quantity: string; unit: string }; budget: Record<string, number> };
     /** The words the Observer is given, one line each; `{test}`, `{apparentVolume}`, `{why}` and `{controls}` are filled by the player from the test. */
     observer: { attempts: number; description: string[] };
-    graph: { rmsePpmMax: number; budget: Record<string, number> };
+    /** `measured`: the twin's variable the commissioning's test measures, compared at the end with the test's apparent value. */
+    graph: { rmsePpmMax: number; budget: Record<string, number>; measured?: string };
     /** How the test is played on the stand-in world: seconds of real time per minute of the station's clock (0: as fast as it computes). */
     execution?: { secondsPerMinute?: number };
     /** fresh: the run starts with signatures of its own, empty, whatever the repository signed (a demonstration of the signature). */
@@ -380,11 +381,17 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
                 notify();
                 const t2 = Date.now();
                 let observed: { ok: boolean; request: TwinFactoryRequest | null; attempts: unknown[]; status: string; error?: string; reviewed?: Record<string, unknown> | null };
+                // Said once per attempt, when one is refused and the next begins: the clock alone is not news (2026-09-28: "still writing: attempt 1" five times in a row).
+                let told = 0;
                 for (;;) {
                     observed = await call("observer", "request", { id: opened.id });
                     if (observed.status !== "running") break;
                     if (Date.now() - t2 > waitMs) throw new Error(`the Observer did not answer in ${waitMs} ms`);
-                    if (Date.now() - t2 >= everyMs && (Date.now() - t2) % everyMs < 2000) narrate(`The Observer is still writing: attempt ${Math.max(1, observed.attempts?.length ?? 1)}.`);
+                    const done = observed.attempts?.length ?? 0;
+                    if (done > told) {
+                        narrate(`The Observer's request ${done} was refused by its guard; it writes request ${done + 1}.`);
+                        told = done;
+                    }
                     await sleep(2000);
                 }
                 if (observed.status === "failed") throw new Error(`the Observer failed: ${observed.error ?? "no reason"}`);
@@ -496,6 +503,13 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
         run.status = proposed ? "done" : "failed";
         run.ended = proposed ? `the twin proposed (task ${finalId})` : `${final.manifest?.ended ?? final.state}`;
         narrate(proposed ? "Scenario complete. The twin is proposed to the station." : `Scenario ended without a twin: ${String(run.ended).slice(0, 160)}.`);
+        // The test read one room; the twin, both volumes and the air between them: what the one-room reading hid, said once (2026-09-28: 13 m3 announced for a Lab the twin puts at 27).
+        const apparent = report?.result?.value;
+        if (proposed && doc.graph.measured && typeof apparent === "number") {
+            const read = await call<{ text: string }>("workspace", "read", { taskId: finalId, path: "candidates.json" }).catch(() => null);
+            const held = read ? ([...(JSON.parse(read.text) as Array<{ pass: boolean; parameters?: Record<string, { value: number; unit: string }> }>)].reverse().find((x) => x.pass)?.parameters?.[doc.graph.measured] ?? null) : null;
+            if (held) narrate(`The twin puts the volume the test measured at ${Math.round(held.value)} cubic metres; the test, reading one room, gave ${Math.round(apparent)}. The difference is the air exchanged with the next module, which a one-room reading takes for volume.`);
+        }
     } catch (e) {
         const reason = errorMessage(e);
         const active = run.loops.find((l) => l.status === "running" || l.status === "waiting");

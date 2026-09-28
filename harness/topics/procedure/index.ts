@@ -70,7 +70,7 @@ export const PROCEDURE_WORD_KEYS = [
     ...FORMAT.requirements.map((r) => `openQuestions.${r}`), "openQuestions.method",
     "brief.handOver", "brief.situation", "brief.method", "brief.methodListed", "brief.methodFind", "brief.methodNotACard", "brief.plan", "brief.planOutput", "brief.planUnit",
     "brief.procedure", "brief.presenceRead", "brief.presenceUnread", "brief.measured", "brief.measuredSource", "brief.refused", "brief.refusedKept", "brief.refusedWhole",
-    "draft.none", "draft.noneAtExecution", "draft.kept", "capabilities.submit", "capabilities.revise", "capabilities.reviseChanges", "guard.refused", "guard.id", "guard.quantity",
+    "draft.none", "draft.noneAtExecution", "draft.accepted", "draft.kept", "capabilities.submit", "capabilities.revise", "capabilities.reviseChanges", "guard.refused", "guard.id", "guard.quantity",
 ];
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -327,6 +327,8 @@ function reviseCapability(context: TopicContext): LocalCapability {
         async execute(input: JsonValue): Promise<CapabilityResult> {
             // The guard applied this revision to the draft and checked the whole; the same whole is written.
             const draft = draftOf(context.progress);
+            const done = stateOf(context.progress).accepted;
+            if (done) return { ok: false, error: w("draft.accepted", { path: done.path }), output: { outcome: "refused" } };
             if (!draft) return { ok: false, error: w("draft.noneAtExecution"), output: { outcome: "refused" } };
             const r = (input ?? {}) as { changes?: unknown; justifications?: unknown };
             return writeAccepted(context, reviseDraft(draft, r.changes, r.justifications));
@@ -369,6 +371,9 @@ async function guardProcedure(capabilityId: string, input: JsonValue, context: T
     }
     if (capabilityId !== "procedure.submit" && capabilityId !== "procedure.revise") return [];
     let procedure = (input ?? {}) as unknown as ProcedureLike;
+    // A procedure already accepted is not revised nor submitted again: the task ends with it (2026-09-28: a revision sent after the acceptance was told that none had been checked yet).
+    const done = stateOf(context.progress).accepted;
+    if (done) return [w("draft.accepted", { path: done.path })];
     if (capabilityId === "procedure.revise") {
         const draft = draftOf(context.progress);
         if (!draft) return [w("draft.none", { minutes: draftMinutes() })];

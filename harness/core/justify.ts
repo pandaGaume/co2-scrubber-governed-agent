@@ -167,10 +167,34 @@ export const JUSTIFICATIONS_SCHEMA = {
 export function noteSources(sources: ReadSources, call: Pick<CapabilityCall, "id" | "input" | "result">): void {
     if (!call.result.ok) return;
     const text = JSON.stringify(call.result.output ?? null);
-    if (/^library\.(read|facts|methods|graphs|graph)$/.test(call.id)) {
-        const id = (call.input as { id?: unknown } | null)?.id;
-        if (typeof id === "string" && !sources.library.includes(id)) sources.library.push(id);
-        for (const m of text.matchAll(/"id":"([a-z0-9][a-z0-9._-]*)"/gi)) if (!sources.library.includes(m[1])) sources.library.push(m[1]);
+    const add = (id: unknown) => {
+        if (typeof id === "string" && id && !sources.library.includes(id)) sources.library.push(id);
+    };
+    const inner = ((o: unknown) => (o && typeof o === "object" && "value" in (o as object) ? (o as { value: unknown }).value : o))(call.result.output) as Record<string, unknown> | null;
+    if (/^library\.(read|facts|methods)$/.test(call.id)) {
+        add((call.input as { id?: unknown } | null)?.id);
+        // A document read, the facts it states, the method cards listed: their ids and the documents facts come from.
+        for (const m of text.matchAll(/"id":"([a-z0-9][a-z0-9._-]*)"/gi)) add(m[1]);
+        for (const m of text.matchAll(/"source":"([a-z0-9][a-z0-9-]*)"/gi)) add(m[1]);
+    }
+    if (/^library\.(graphs|graph)$/.test(call.id)) {
+        // A graph read: the graph itself, and the documents its variables say they come from ("nasa-crew-metabolic-loads: ...",
+        // "(library station-topology)"), never the ids of its nodes (2026-09-28: "person-fe-1, scene, solver" were taken for documents
+        // read, and the card the graph's rate comes from was not, which cost a refusal).
+        const graphs = call.id === "library.graph" ? [inner] : Array.isArray(inner?.graphs) ? (inner!.graphs as Array<Record<string, unknown>>) : [];
+        add((call.input as { id?: unknown } | null)?.id);
+        for (const g of graphs) {
+            if (!g) continue;
+            add(g.id);
+            const variables = (g.variables ?? (g.template as { variables?: unknown } | undefined)?.variables ?? {}) as Record<string, { source?: unknown; factId?: unknown }>;
+            for (const v of Object.values(variables)) {
+                add(v?.factId);
+                const source = typeof v?.source === "string" ? v.source : "";
+                const cited = /^([a-z0-9][a-z0-9-]*[a-z0-9]):/.exec(source)?.[1];
+                if (cited && cited.includes("-")) add(cited);
+                for (const m of source.matchAll(/\blibrary ([a-z0-9][a-z0-9-]*[a-z0-9])\b/g)) add(m[1]);
+            }
+        }
     }
     if (call.id === "web.search") for (const m of text.matchAll(/https?:\/\/[^"\s\\]+/g)) if (!sources.web.includes(m[0])) sources.web.push(m[0]);
 }

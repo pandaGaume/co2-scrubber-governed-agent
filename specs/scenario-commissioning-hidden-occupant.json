@@ -33,6 +33,7 @@
     },
     "graph": {
         "rmsePpmMax": 10,
+        "measured": "V",
         "budget": {
             "iterations": 30,
             "minutes": 20,

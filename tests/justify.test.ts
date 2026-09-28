@@ -11,7 +11,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import type { JsonValue } from "@spiky-panda/harness";
 import { checkJustifications, factOf, justificationHelp, justificationNote, justificationOf, justificationProblems, justificationsFor, noteSources, numbersOf, safetyProblems, safetyReview, type ReadSources, type SignedFact } from "../harness/core/justify.js";
-import { compactOutput } from "../harness/core/compact.js";
+import { compactOutput, fitted } from "../harness/core/compact.js";
 import { CANDIDATE_JUSTIFIED, candidateConstants } from "../harness/topics/graph/index.js";
 import { reasoningStateOf } from "../harness/core/reasoning-state.js";
 import { ONNX_TOPIC } from "../harness/topics/onnx/index.js";
@@ -30,6 +30,21 @@ describe("the justification of constants, common to every factory", () => {
         noteSources(read, ok("web.search", { query: "x" }, { results: [{ url: "https://www.nasa.gov/crew-co2" }] }));
         noteSources(read, { id: "library.read", input: { id: "unread" }, result: { ok: false, outcome: "refused" } } as never);
         assert.deepEqual(read, { library: ["commissioning-test-safety", "test.speedFloorPercent", "habitat"], web: ["https://www.nasa.gov/crew-co2"] });
+        // A graph read: the graph and the documents its variables cite, never the ids of its nodes (2026-09-28: "person-fe-1, scene, solver" were taken for documents read).
+        const graph = { library: [] as string[], web: [] as string[] };
+        noteSources(graph, ok("library.graph", { id: "habitat" }, { id: "habitat", nodes: [{ id: "person-fe-1" }, { id: "scene" }], template: { spec: { nodes: [{ id: "solver" }] } }, variables: { g: { source: "nasa-crew-metabolic-loads: a crewmember awake" }, Vh: { source: "not documented as built (library station-topology)" }, V: { source: "the commissioning: the volume the scrubber serves" }, eta: { factId: "scrubber.singlePassEfficiency" } } }));
+        assert.deepEqual(graph.library, ["habitat", "nasa-crew-metabolic-loads", "station-topology", "scrubber.singlePassEfficiency"]);
+    });
+
+    it("a summary over its limit is fitted, its fields and identifiers kept, its prose and then its lists shortened; never the raw answer's first characters (2026-09-28)", () => {
+        const long = "a sentence of prose that says a great deal ".repeat(20);
+        const summary = { id: "habitat", description: long, types: Array.from({ length: 12 }, (_, i) => `Physics.Habitat:type-${i}`), variables: Object.fromEntries(Array.from({ length: 10 }, (_, i) => [`v${i}`, { status: "fitted", description: long }])) };
+        const fit = fitted(summary, 2200) as typeof summary;
+        assert.ok(JSON.stringify(fit).length <= 2200);
+        assert.deepEqual(fit.types, summary.types, "identifiers whole");
+        assert.equal(fit.variables.v9.status, "fitted", "the fields kept");
+        assert.ok(fit.description.length < long.length);
+        assert.equal(fitted({ ids: Array.from({ length: 2000 }, (_, i) => `an-identifier-far-too-long-to-cut-and-still-fit-${i}`) }, 200), null, "nothing fits: the caller falls back to a head");
     });
 
     it("a graph candidate's constants: the variables held, each bound as a range, the settings, the parameters' numbers; not the estimator's knobs", () => {

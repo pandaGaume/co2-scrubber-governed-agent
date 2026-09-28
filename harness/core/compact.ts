@@ -22,6 +22,8 @@ import { viewOf } from "./words.js";
 export const COMPACT_ABOVE = 1500;
 /** What a summary may weigh at most, characters of JSON. */
 export const SUMMARY_LIMIT = 2200;
+/** A read a plan is built from gets more room: a reference graph's node types, nodes and variables whole (2026-09-28). */
+const SUMMARY_LIMITS: Record<string, number> = { "library.graph": 3600 };
 
 export interface CompactResult {
     /** What the model reads. */
@@ -50,6 +52,29 @@ const value = (output: unknown): unknown => {
 };
 const list = (v: unknown): Obj[] => (Array.isArray(v) ? v.map(obj) : []);
 const num = (v: unknown, digits = 4): unknown => (typeof v === "number" && Number.isFinite(v) ? Number(v.toPrecision(digits)) : v);
+
+/** A value with its prose cut to `chars` and its lists to `items` (the rest counted), its shape kept; an identifier (no space in it) is never cut. */
+function capped(v: unknown, chars: number, items: number): unknown {
+    if (typeof v === "string") return v.length <= chars || !/\s/.test(v) ? v : `${v.slice(0, chars)}...`;
+    if (Array.isArray(v)) return [...v.slice(0, items).map((x) => capped(x, chars, items)), ...(v.length > items ? [`... and ${v.length - items} more`] : [])];
+    if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, capped(x, chars, items)]));
+    return v;
+}
+
+/**
+ * A summary made to fit: its strings, then its lists, shortened step by step until its JSON weighs at most `limit`; still a
+ * summary with its fields (2026-09-28: a summary over the limit was cut as text, which is never JSON again, and the model got
+ * the first 1,200 characters of the raw answer instead: a reference graph's types and variables never reached it).
+ */
+export function fitted(summary: unknown, limit: number = SUMMARY_LIMIT): JsonValue | null {
+    if (size(summary) <= limit) return summary as JsonValue;
+    // The prose first, the lists last: what a model acts on is mostly ids and numbers.
+    for (const [chars, items] of [[300, 40], [160, 40], [100, 40], [60, 40], [40, 40], [0, 40], [0, 20], [0, 12], [0, 5]] as const) {
+        const cut = capped(summary, chars, items);
+        if (size(cut) <= limit) return cut as JsonValue;
+    }
+    return null;
+}
 
 /** The compactors by capability id (or its slot and tool); each returns what the model reads. */
 const COMPACTORS: Record<string, (v: unknown, input: JsonValue) => JsonValue> = {
@@ -107,10 +132,13 @@ const COMPACTORS: Record<string, (v: unknown, input: JsonValue) => JsonValue> = 
             id: o.id,
             description: head(String(o.description ?? ""), 300),
             instructions: head(String(o.instructions ?? ""), 500),
-            variables: Object.fromEntries(Object.entries(obj(o.variables)).map(([k, x]) => [k, { status: obj(x).status, default: obj(x).default, ...(obj(x).min !== undefined ? { min: obj(x).min, max: obj(x).max } : {}), ...(obj(x).unit ? { unit: obj(x).unit } : {}), description: head(String(obj(x).description ?? ""), 160) }])),
+            variables: Object.fromEntries(Object.entries(obj(o.variables)).map(([k, x]) => [k, { status: obj(x).status, default: obj(x).default, ...(obj(x).min !== undefined ? { min: obj(x).min, max: obj(x).max } : {}), ...(obj(x).unit ? { unit: obj(x).unit } : {}), description: head(String(obj(x).description ?? ""), 100) }])),
             settings: o.settings,
             probes: list(o.probes).map((p) => ({ node: p.node, property: p.property, column: p.column ?? null, name: p.name })),
-            spec: { nodes: list(obj(t.spec).nodes).length, connections: list(obj(t.spec).connections).length, note: "the parametric spec is at the handle; graph.evaluate with graph: id instantiates it" },
+            // The node types a plan names, and the nodes by id: what a model reads a graph again for when only a count is given (2026-09-28: library.graph read three times before a plan).
+            types: [...new Set(list(obj(t.spec).nodes).map((n) => String(n.typeId)))].sort(),
+            nodes: Object.fromEntries(list(obj(t.spec).nodes).map((n) => [String(n.id), String(n.typeId)])),
+            spec: { connections: list(obj(t.spec).connections).length, note: "the parametric spec whole is at the handle; graph.evaluate with graph: id instantiates it, nothing to read again" },
         } as JsonValue;
     },
     "twin.registry_search": (v) => ({ matches: list(obj(v).matches).map((m) => `${String(m.type)}: ${head(String(obj(m.signature).purpose ?? m.label ?? ""), 140)}`) }) as JsonValue,
@@ -164,9 +192,8 @@ export function compactOutput(capabilityId: string, input: JsonValue, output: un
     const compactor = COMPACTORS[capabilityId];
     if (compactor) {
         try {
-            const summary = compactor(inner, input);
-            const s = size(summary);
-            return { summary: s > SUMMARY_LIMIT ? (JSON.parse(head(JSON.stringify(summary), SUMMARY_LIMIT).replace(/\.\.\. \([^)]*\)$/, "") + '"') as JsonValue) : summary, bytes, reduced: true };
+            const summary = fitted(compactor(inner, input), SUMMARY_LIMITS[capabilityId] ?? SUMMARY_LIMIT);
+            if (summary !== null) return { summary, bytes, reduced: true };
         } catch {
             // a compactor that trips on an unexpected shape falls back to the generic head
         }

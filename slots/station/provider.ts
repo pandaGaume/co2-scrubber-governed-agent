@@ -256,6 +256,9 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
             const step = problem?.step ?? 0;
             const speed = step ? speeds[step - 1] : null;
             say("mother.procedure.refused.floor", c, (w) => ({ step: step || "?", what: speed !== null && speed !== undefined && speed > 0 ? w.phrase("mother.what.speed", { percent: speed }) : w.phrase("mother.what.stop") }));
+        } else if (kind === "justification" && problems.some((p) => p.kind === "justification" && /which the signed rules do not bound it by|does not respect/.test(p.message))) {
+            // A limit that cites a fact, the wrong one or one it does not respect: not a number without a source (2026-09-28).
+            say("mother.procedure.refused.justificationFact", c, () => ({}));
         } else say(`mother.procedure.refused.${kind}`, c, () => ({ module }));
     };
 
@@ -745,7 +748,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                             c.status = "done";
                             const r = c.report;
                             say("mother.procedure.done", c, () => ({ minutes: r.minutes }));
-                            if (r.result.value !== null) say("mother.result.volume", c, () => ({ volume: Math.round(r.result.value as number) }));
+                            if (r.result.value !== null) say("mother.result.volume", c, () => ({ volume: Math.round(r.result.value as number), module: p.module }));
                             else say("mother.result.pending", c);
                             if (p.occupants.length) say(vitalEvents ? "mother.vitals.events" : "mother.vitals.nominal", c, () => ({ count: vitalEvents }));
                             say("mother.aborts.none", c);

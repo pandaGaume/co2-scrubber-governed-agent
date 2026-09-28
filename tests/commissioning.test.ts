@@ -213,6 +213,9 @@ describe("the procedure's guard, alone", () => {
         const written = await revise.execute(revision as unknown as JsonValue, {} as never);
         assert.equal(written.ok, true, JSON.stringify(written));
         assert.equal(draftOf(progress), null, "the draft is erased once the procedure is accepted");
+        // Accepted: a revision or a submission after it is told the task ends with it, not that nothing was checked (2026-09-28).
+        assert.match((await guard("procedure.revise", revision)).join(), /^the procedure is already accepted \(procedures\/decay-test-01\.json\): nothing more to revise or submit; end with task\.done/);
+        assert.match((await guard("procedure.submit", { ...PROCEDURE, justifications })).join(), /already accepted/);
         assert.ok(calls.includes("workspace.write"));
         // A whole procedure the schema refused, before the topic could check it, is a draft too.
         const schemaRefused = newProgress();
@@ -557,7 +560,7 @@ describe("the commissioning, through the broker", () => {
         assert.equal((await commissioning("c001-lab")).status, "done");
         const lines = (await mother()).map((l) => l.text.en);
         assert.ok(lines.includes("Test running. Step 1 of 2.") && lines.includes("Test running. Step 2 of 2."));
-        assert.deepEqual(lines.slice(-4), ["Test complete. 24 minutes.", "Apparent volume: 18 cubic metres.", "Vital signs nominal throughout.", "No emergency stop."]);
+        assert.deepEqual(lines.slice(-4), ["Test complete. 24 minutes.", "Apparent volume, module lab taken as one room: 18 cubic metres. The twin will say what the air exchanged with the next module hides in it.", "Vital signs nominal throughout.", "No emergency stop."]);
     });
 
     it("a builder that did not read who was there is refused for it; the procedure it corrects is authorised, and a third person walking in aborts the test", async () => {
