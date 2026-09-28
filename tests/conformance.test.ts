@@ -49,6 +49,10 @@ import type { TopicDefinition } from "../harness/core/topic.js";
 import { SCRIPTED_BUILDERS } from "../stand-ins/builders/index.js";
 import { ScriptedBuilderBase } from "../harness/core/scripted-base.js";
 import { missingWords } from "../harness/core/words.js";
+import { noteRefusal } from "../harness/core/problems.js";
+import { briefWithNotes } from "../harness/core/workspace-observer.js";
+import { reasoningStateOf } from "../harness/core/reasoning-state.js";
+import type { JsonValue } from "@spiky-panda/harness";
 
 const PORT = 3146;
 
@@ -146,6 +150,30 @@ describe("every factory against the socle", () => {
             const closed = known.filter((k) => !found.includes(k));
             assert.deepEqual(fresh, [], `the ${name} factory departs from the socle: ${fresh.join("; ")} (bring it back, or say why in KNOWN)`);
             assert.deepEqual(closed, [], `the ${name} factory no longer departs on: ${closed.join("; ")} (take it out of KNOWN)`);
+        });
+    }
+
+    // A refusal of any factory's guard, whatever it says, is in the next prompt (2026-09-28: the reinjection had been written refusal
+    // kind by refusal kind, and a kind it did not know looped nineteen times with the same text): the brief opens on its problems,
+    // and the state holds them with their points. When the guard lets an empty call through, the schema's refusal stands for it.
+    for (const [name, topic] of Object.entries(TOPIC_DEFINITIONS)) {
+        it(`the ${name} factory: a refusal of its guard is in the next prompt, whatever it says`, async () => {
+            const progress = newProgress();
+            const context = { broker, taskId: "t-conformance", task: TASK, progress, runtimeSlot: "twin" };
+            const locals = [...taskCapabilities(broker, context.taskId, progress, topic!.name, TASK), ...(topic!.local?.(context) ?? [])];
+            const capability = locals.map((c) => c.id).find((id) => topic!.justified?.capability.test(id)) ?? locals.find((c) => !c.id.startsWith("task."))?.id ?? "task.plan";
+            const said = topic!.guard ? await topic!.guard(capability, {} as JsonValue, context) : [];
+            const reason = said.length ? said.join("; ") : `Invalid capability arguments: data/label must be string`;
+            progress.lastRefusal = { capability, reason, input: {} as JsonValue };
+            const streak = noteRefusal(progress, capability, reason);
+            assert.ok(streak.problems.length > 0, `${name}: the refusal "${reason.slice(0, 120)}" gives no problem`);
+            const brief = briefWithNotes(progress, topic!.brief ? topic!.brief(progress, TASK) : "");
+            assert.ok(brief.startsWith(`Your last ${capability} was refused, on ${streak.problems.length} point(s):`), `${name}: the brief does not open on the refusal: ${brief.slice(0, 200)}`);
+            // The first ten said whole, the rest counted.
+            for (const p of streak.problems.slice(0, 10)) assert.ok(brief.includes(p.says.slice(0, 80)), `${name}: the brief does not say "${p.says.slice(0, 80)}"`);
+            if (streak.problems.length > 10) assert.ok(brief.includes(`And ${streak.problems.length - 10} more.`), `${name}: the brief does not count the problems it does not show`);
+            const state = reasoningStateOf({ task: TASK, progress, budget: { iterations: 10, minutes: 5 }, nextActions: [], shelf: [], telemetry: null });
+            assert.equal((state.lastRefusal as { problems?: unknown[] } | null)?.problems?.length, streak.problems.length, `${name}: the state does not hold the refusal's problems`);
         });
     }
 

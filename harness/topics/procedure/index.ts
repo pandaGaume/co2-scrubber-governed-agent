@@ -53,6 +53,7 @@ import { checkProcedure, constantsOf, envelopeOf, FORMAT, problemLines, rulesAnd
 import { checkJustifications, JUSTIFICATIONS_SCHEMA, justificationProblems as commonJustificationProblems, type Justified, type ReadSources } from "../../core/justify.js";
 import { factsBounding, leavesOf, matches, valueAt, type RulesDocument } from "../../core/rules.js";
 import { loadWords, say, viewOf } from "../../core/words.js";
+import { problemOf } from "../../core/problems.js";
 import { physics } from "../../core/physics.js";
 export { constantsOf } from "./check.js";
 
@@ -397,6 +398,13 @@ async function guardProcedure(capabilityId: string, input: JsonValue, context: T
             check.ok = false;
         }
     }
+    // The problems as the guard knows them, for the next prompt (problems.ts): the rules' own points, what is expected there, what was sent;
+    // a justification's constant read from its words (what it must cite, the runner adds from the guard's finding).
+    if (!check.ok)
+        context.progress.pendingProblems = check.problems.map((p) => {
+            const path = p.path ?? problemOf(`${p.kind}: ${p.message}`).path;
+            return { says: `${p.kind}: ${p.message}`, kind: p.kind, ...(path ? { path } : {}), ...(p.expected ? { expected: p.expected } : {}), ...(p.got !== undefined ? { got: p.got } : {}) };
+        });
     // An accepted submission is recorded by the capability, after execution; a refusal is recorded here, since nothing executes.
     // Nothing the observation reads is written for an accepted decision: a state that moved between the decision and its execution makes it stale.
     if (check.ok) return [];

@@ -18,6 +18,7 @@
  * capabilities (`task.plan`, `task.done`) and the evaluator write it.
  */
 import { justificationNote, type JustificationHelp, type Misjustified } from "./justify.js";
+import { refusalNote, type Problem, type RefusalStreak } from "./problems.js";
 import { createHash } from "node:crypto";
 import type { JsonValue, State, StateObserver } from "@spiky-panda/harness";
 import type { Broker } from "../lib/broker.js";
@@ -87,6 +88,10 @@ export interface Progress {
     justify: JustificationHelp | null;
     /** The safety constants the topic's guard found justified by no fact the signed rules bound them by, for the runner to put in `justify` with the refusal. */
     misjustified?: Misjustified[] | null;
+    /** The problems of a refusal as the guard knew them (path, expected, sent), left for the runner; read from the refusal's text when a guard leaves none (`problems.ts`). */
+    pendingProblems?: Problem[] | null;
+    /** The refusals in a row on the same points, and the last one's problems: what the brief opens on (`problems.ts`). */
+    refusal?: RefusalStreak | null;
     /** What a topic keeps across the steps of one task (the procedure topic: its submissions). */
     topic: Record<string, JsonValue>;
     /** What the task read so far, each answer compact, by capability and argument (`evidence:` in the state); the oldest dropped past the cap. */
@@ -140,6 +145,15 @@ export async function listWorkshop(broker: Broker, taskId: string): Promise<Work
     return files.map(({ path, bytes, sha256 }) => ({ path, bytes, sha256 }));
 }
 
+/**
+ * The brief as the model reads it: what the refusals left to do first, whatever refused (the problems of the last refusal,
+ * and, on the same points again, what is expected at each), the justifications' own note, then the topic's brief.
+ */
+export function briefWithNotes(progress: Progress, topicBrief: string): string {
+    const refusal = progress.lastRefusal ? refusalNote(progress.refusal) : "";
+    return (progress.lastRefusal?.capability === APP.text.report ? appSays("textIgnored") : "") + refusal + justificationNote(progress.justify) + topicBrief;
+}
+
 export function createWorkspaceObserver(broker: Broker, taskId: string, progress: Progress, brief: () => string = () => "", state?: () => ReasoningState, key: () => string = () => "", contextMode: "conversation" | "state" = "conversation"): StateObserver {
     return {
         async observe(): Promise<WorkshopState> {
@@ -150,7 +164,7 @@ export function createWorkspaceObserver(broker: Broker, taskId: string, progress
             const last = progress.lastCall;
             const features: WorkshopFeatures = {
                 // A text answer is not read here: the loop turns it into a crew report, which a factory does not have; said in the brief, so the builder answers with a tool.
-                brief: (progress.lastRefusal?.capability === APP.text.report ? appSays("textIgnored") : "") + justificationNote(progress.justify) + brief(),
+                brief: briefWithNotes(progress, brief()),
                 phase: progress.phase,
                 iteration: progress.iteration,
                 files: files.length,

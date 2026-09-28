@@ -78,6 +78,10 @@ export interface RuleProblem {
     message: string;
     /** The step it is about, by the steps' key, when it is about one. */
     step?: number;
+    /** The path of the proposal it is about, what is expected there, what was sent (`problems.ts`: what the next prompt says of it). */
+    path?: string;
+    expected?: string;
+    got?: string;
 }
 
 export interface RuleContext {
@@ -152,9 +156,9 @@ export function evaluateRules(input: unknown, doc: RulesDocument, ctx: RuleConte
         const [list, key] = path.split(".");
         return ctx.format.steps && list === ctx.format.steps && num(Number(key)) ? Number(key) : undefined;
     };
-    const add = (rule: Base, message: string, path?: string, kind = rule.kind) => {
+    const add = (rule: Base, message: string, path?: string, kind = rule.kind, at: { expected?: string; got?: string } = {}) => {
         const step = path ? stepOf(path) : undefined;
-        problems.push(step === undefined ? { kind, message } : { kind, message, step });
+        problems.push({ kind, message, ...(step === undefined ? {} : { step }), ...(path ? { path } : {}), ...(at.expected ? { expected: at.expected } : {}), ...(at.got !== undefined ? { got: at.got } : {}) });
     };
     const says = (rule: Base) => (rule.says ? `: ${rule.says}` : "");
     const factOf = (id: string) => ctx.facts.find((f) => f.id === id);
@@ -196,9 +200,9 @@ export function evaluateRules(input: unknown, doc: RulesDocument, ctx: RuleConte
                 refText = `${c.measured} measured now, ${shown(m)}${from}${plus ? `, plus ${plus.id} = ${shown(plus.value)} ${plus.unit}` : ""}`;
             }
             if (ref === undefined) continue;
-            for (const s of subjects) if (!holds(s.value, c.op, ref)) add(rule, `${s.path} = ${shown(s.value)} is not ${OP_WORDS[c.op]} ${refText}${says(rule)}`, s.path);
+            for (const s of subjects) if (!holds(s.value, c.op, ref)) add(rule, `${s.path} = ${shown(s.value)} is not ${OP_WORDS[c.op]} ${refText}${says(rule)}`, c.sum ? undefined : s.path, rule.kind, { expected: `${OP_WORDS[c.op]} ${refText}`, got: shown(s.value) });
         } else if ("present" in rule) {
-            for (const p of rule.present) if (!leaves.some((l) => matches(l.path, p) && num(l.value))) add(rule, `${p} is missing${says(rule)}`);
+            for (const p of rule.present) if (!leaves.some((l) => matches(l.path, p) && num(l.value))) add(rule, `${p} is missing${says(rule)}`, p, rule.kind, { expected: "a number" });
         } else if ("fields" in rule) {
             const list = valueAt(input, rule.fields.list, keys);
             const items = Array.isArray(list) ? list : [];
@@ -206,25 +210,25 @@ export function evaluateRules(input: unknown, doc: RulesDocument, ctx: RuleConte
             const key = keys[rule.fields.list];
             items.forEach((item, i) => {
                 const name = key && isObject(item) ? String(item[key]) : String(i);
-                for (const f of rule.fields.fields) if (!isObject(item) || item[f] === undefined || item[f] === null) add(rule, `${rule.fields.list}.${name} has no ${f}${says(rule)}`, `${rule.fields.list}.${name}`);
+                for (const f of rule.fields.fields) if (!isObject(item) || item[f] === undefined || item[f] === null) add(rule, `${rule.fields.list}.${name} has no ${f}${says(rule)}`, `${rule.fields.list}.${name}.${f}`, rule.kind, { expected: rule.says ?? `its ${f}` });
             });
         } else if ("nonEmpty" in rule) {
             const v = valueAt(input, rule.nonEmpty, keys);
             const texts = isObject(v) ? Object.values(v) : Array.isArray(v) ? v : [v];
-            if (!texts.some((t) => typeof t === "string" && t.trim())) add(rule, `${rule.nonEmpty} says nothing${says(rule)}`);
+            if (!texts.some((t) => typeof t === "string" && t.trim())) add(rule, `${rule.nonEmpty} says nothing${says(rule)}`, rule.nonEmpty, rule.kind, { expected: rule.says ?? "something said" });
         } else if ("match" in rule) {
             const v = valueAt(input, rule.match.path, keys);
-            if (typeof v !== "string" || !new RegExp(rule.match.pattern).test(v)) add(rule, `${rule.match.path} "${String(v)}" does not match ${rule.match.pattern}${says(rule)}`);
+            if (typeof v !== "string" || !new RegExp(rule.match.pattern).test(v)) add(rule, `${rule.match.path} "${String(v)}" does not match ${rule.match.pattern}${says(rule)}`, rule.match.path, rule.kind, { expected: rule.says ?? `a value matching ${rule.match.pattern}`, got: String(v) });
         } else if ("require" in rule) {
             const list = valueAt(input, rule.require.list, keys);
             const items = Array.isArray(list) ? list : [];
-            for (const value of rule.require.values) if (!items.some((x) => isObject(x) && x[rule.require.key] === value)) add(rule, `no element of ${rule.require.list} with ${rule.require.key} "${value}"${ctx.format.readers?.[value] ? ` (${ctx.format.readers[value]})` : ""}${says(rule)}`);
+            for (const value of rule.require.values) if (!items.some((x) => isObject(x) && x[rule.require.key] === value)) add(rule, `no element of ${rule.require.list} with ${rule.require.key} "${value}"${ctx.format.readers?.[value] ? ` (${ctx.format.readers[value]})` : ""}${says(rule)}`, `${rule.require.list}.${value}`, rule.kind, { expected: `an element with ${rule.require.key} "${value}"` });
         } else if ("readable" in rule) {
             const readers = ctx.format.readers ?? {};
             const list = valueAt(input, rule.readable.list, keys);
             for (const x of Array.isArray(list) ? list : []) {
                 const k = isObject(x) ? String(x[rule.readable.key]) : "";
-                if (!readers[k]) add(rule, `${rule.readable.list} "${k}" cannot be read by the executor, which reads ${Object.keys(readers).join(", ")}${says(rule)}`);
+                if (!readers[k]) add(rule, `${rule.readable.list} "${k}" cannot be read by the executor, which reads ${Object.keys(readers).join(", ")}${says(rule)}`, `${rule.readable.list}.${k}`, rule.kind, { expected: `${rule.readable.key} one of ${Object.keys(readers).join(", ")}`, got: k });
             }
         } else if ("watch" in rule) {
             const w = rule.watch;
@@ -232,7 +236,7 @@ export function evaluateRules(input: unknown, doc: RulesDocument, ctx: RuleConte
             const module = typeof place === "string" ? moduleOfPlace(place) : "";
             const read = ctx.people?.modules.find((m) => m.module === module);
             if (!ctx.people) {
-                add(rule, `who is in ${module || "the place"} was not read in this task${w.unread.says ? `: ${w.unread.says}` : ""}`, undefined, w.unread.kind);
+                add(rule, `who is in ${module || "the place"} was not read in this task${w.unread.says ? `: ${w.unread.says}` : ""}`, undefined, w.unread.kind, { expected: w.unread.says ?? "the presence read first" });
                 continue;
             }
             if (!read) {
@@ -243,13 +247,14 @@ export function evaluateRules(input: unknown, doc: RulesDocument, ctx: RuleConte
             const named = valueAt(input, w.subjects, keys);
             const watched = new Set(Array.isArray(named) ? named.map(String) : []);
             const unwatched = read.subjects.filter((s) => !watched.has(s.id));
-            if (!Array.isArray(named) || !named.length) add(rule, `${module} is occupied (${read.occupants}) and ${w.subjects} names no one${says(rule)}`);
-            else if (unwatched.length) add(rule, `${module} is occupied and ${unwatched.map((s) => s.callsign ?? s.id).join(", ")} ${unwatched.length > 1 ? "are" : "is"} not in ${w.subjects}${says(rule)}`);
+            const everyone = read.subjects.map((s) => `"${s.id}"`).join(", ");
+            if (!Array.isArray(named) || !named.length) add(rule, `${module} is occupied (${read.occupants}) and ${w.subjects} names no one${says(rule)}`, w.subjects, rule.kind, { expected: `every occupant read: ${everyone}` });
+            else if (unwatched.length) add(rule, `${module} is occupied and ${unwatched.map((s) => s.callsign ?? s.id).join(", ")} ${unwatched.length > 1 ? "are" : "is"} not in ${w.subjects}${says(rule)}`, w.subjects, rule.kind, { expected: `every occupant read: ${everyone}`, got: [...watched].join(", ") });
             const stops = valueAt(input, w.stop.list, keys);
-            if (!(Array.isArray(stops) ? stops : []).some((x) => isObject(x) && (x[w.stop.key] === w.stop.value || (w.stop.source !== undefined && x.source === w.stop.source)))) add(rule, `${module} is occupied and no element of ${w.stop.list} has ${w.stop.key} "${w.stop.value}"${w.stop.source ? ` (source "${w.stop.source}")` : ""}${says(rule)}`);
+            if (!(Array.isArray(stops) ? stops : []).some((x) => isObject(x) && (x[w.stop.key] === w.stop.value || (w.stop.source !== undefined && x.source === w.stop.source)))) add(rule, `${module} is occupied and no element of ${w.stop.list} has ${w.stop.key} "${w.stop.value}"${w.stop.source ? ` (source "${w.stop.source}")` : ""}${says(rule)}`, `${w.stop.list}.${w.stop.value}`, rule.kind, { expected: `an element with ${w.stop.key} "${w.stop.value}"${w.stop.source ? ` (source "${w.stop.source}")` : ""}` });
             if (w.declared) {
                 const declared = valueAt(input, w.declared, keys);
-                if (num(declared) && declared !== read.occupants) add(rule, `${w.declared} says ${declared}; ${read.occupants} were read in ${module}`);
+                if (num(declared) && declared !== read.occupants) add(rule, `${w.declared} says ${declared}; ${read.occupants} were read in ${module}`, w.declared, rule.kind, { expected: String(read.occupants), got: String(declared) });
             }
         }
     }

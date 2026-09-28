@@ -588,4 +588,31 @@ describe("the commissioning, through the broker", () => {
         assert.equal((await mother()).at(-1)?.text.en, "Test aborted. Vital signs: abort condition.");
         await ok("biomed", "move", { subjectId: "fe-1", module: "lab" });
     });
+
+    it("a builder refused on the same point three times in a row, whatever else it changes, ends STUCK at the third refusal, the second prompt saying only what is expected there (2026-09-28: nineteen refusals of one speed)", async () => {
+        // The script keeps the stopped scrubber and changes only the purpose at each revision: another input every time, the same point refused.
+        class Stubborn extends ScriptedProcedureBuilder {
+            private tries = 0;
+            protected override next(state: Parameters<ScriptedProcedureBuilder["resolve"]>[0]["state"]) {
+                if (/procedure refused:/.test(String(state.features.lastRefusal ?? ""))) {
+                    this.tries++;
+                    return { action: { id: "procedure.revise", description: "procedure.revise" }, invocation: { actionId: "procedure.revise", capabilityId: "procedure.revise", input: { changes: { purpose: `the same test, said again (${this.tries})` } } as JsonValue }, rationale: "insists" };
+                }
+                return super.next(state);
+            }
+        }
+        const req = await ok<{ taskId: string }>("factory", "request", { objective: { required_outputs: [{ name: "V", quantity: "Volume", unit: "m3" }] }, observations: { device: "/habitat/lab/eclss/scrubber-1" }, topics: ["procedure"], builder: "scripted", requestedBy: "station", run: false });
+        tasks.push(req.taskId);
+        let builder: Stubborn | null = null;
+        const result = await runTask({ broker: operator, taskId: req.taskId, recipesDir, provider: (ctx: BuilderContext) => (builder = new Stubborn({ ...ctx, firstSpeedPercent: 0 })) });
+        assert.equal(result.state, "failed");
+        const refused = result.manifest.steps.filter((s) => s.source === "refused");
+        assert.deepEqual(refused.map((s) => s.capability), ["procedure.submit", "procedure.revise", "procedure.revise"], "the third refusal on the point ends it, not the budget");
+        assert.match(String(result.manifest.ended), /^STUCK: procedure\.revise refused 3 times in a row on the same point\(s\), .*steps\.1\.speedPercent/);
+        // What the builder read after the second refusal: the points and what is expected there, not the refusal's words again.
+        const briefs = builder!.exchanges.map((e) => String((e.request as { state?: { features?: { brief?: unknown } } }).state?.features?.brief ?? ""));
+        const second = briefs.find((b) => /^Refused 2 times in a row/.test(b));
+        assert.ok(second, briefs.at(-1));
+        assert.match(second!, /steps\.1\.speedPercent needs (above 0|at least test\.speedFloorPercent = 30 percent).*One more refusal on these points ends the task/);
+    });
 });

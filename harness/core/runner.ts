@@ -32,6 +32,8 @@ import { reasoningStateOf } from "./reasoning-state.js";
 import { intentionFor, loadRecipes, saveRecipes, taskSignature } from "./recipes.js";
 import { NEVER_REPLAYED, proposalKey, restrictReplays } from "./replay.js";
 import { justificationHelp, noteSources } from "./justify.js";
+import { noteRefusal, STUCK_AFTER } from "./problems.js";
+import { READ_CAPABILITIES } from "./replay.js";
 import { createTaskEvaluator } from "./task-evaluator.js";
 import { taskCapabilities } from "./task-capabilities.js";
 import { DEFAULT_BUDGET, topicFor, type TaskFile, type TaskState, type Topic } from "./task.js";
@@ -419,6 +421,9 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             if (trace.result.ok) delete progress.refusals[trace.decision.invocation.capabilityId];
             if (trace.result.ok && progress.justify?.capability === trace.decision.invocation.capabilityId) progress.justify = null;
             progress.misjustified = null;
+            progress.pendingProblems = null;
+            // A call that acts, executed, ends a streak of refusals; a read between two refusals does not (reading is how a builder looks for what is expected).
+            if (!READ_CAPABILITIES.some((r) => r.test(trace.decision.invocation.capabilityId))) progress.refusal = null;
             const outcome = ((trace.result.output as { outcome?: string } | undefined)?.outcome ?? (trace.result.ok ? "completed" : "error")) as string;
             manifest.steps.push({
                 n,
@@ -465,6 +470,9 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
                 progress.justify = help && (help.missing.length || misjustified.length) ? { capability: exchange.proposedCapabilityId, times, ...help, misjustified } : null;
                 progress.misjustified = null;
             }
+            // Every refusal, whatever refused, as problems with their points (problems.ts): the guard's own when it left them, its words read otherwise;
+            // a safety constant the guard found justified by no fact the rules name says its unit and the facts to cite there.
+            const streak = noteRefusal(progress, exchange.proposedCapabilityId, failed ?? "refused");
             noteProposal(exchange.proposedCapabilityId, exchange.proposedInput);
             made.add(proposalKey(exchange.proposedCapabilityId, exchange.proposedInput));
             const refusedKey = `${exchange.proposedCapabilityId}:${JSON.stringify(exchange.proposedInput ?? null)}`;
@@ -474,6 +482,14 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             manifest.steps.push({ n, decisionId: exchange.decisionId ?? null, source: "refused", capability: exchange.proposedCapabilityId, input: exchange.proposedInput, outcome: "refused", summary: failed, reward: null, reason: failed, ms, tokens: exchange.tokens });
             lines.push({ n, decisionId: exchange.decisionId ?? null, source: "refused", trace: null, failed, exchange, call: null, ms });
             log(`[factory] step ${n}: ${exchange.proposedCapabilityId} -> stopped by the harness (${failed})`);
+            // The same points refused STUCK_AFTER times in a row, whatever the input changed: the task ends, naming them, rather than spend its budget (2026-09-28: nineteen refusals of one speed).
+            if (streak.times >= STUCK_AFTER) {
+                const points = [...new Set(streak.problems.map((p) => p.path ?? p.kind ?? "the proposal"))].join(", ");
+                ended = `STUCK: ${exchange.proposedCapabilityId} refused ${streak.times} times in a row on the same point(s), ${points}: ${String(failed ?? "refused").slice(0, 400)}`;
+                progress.failure = ended;
+                progress.phase = "failed";
+                break;
+            }
             continue;
         }
         // No proposal was made: the reasoner itself failed (the endpoint, the key, the network). Repeating the call would repeat the failure.

@@ -184,7 +184,15 @@ export function reasoningStateOf(inputs: StateInputs): ReasoningState {
         evidence: Object.fromEntries(Object.entries(progress.evidence).map(([k, e]) => [k, e.summary])),
         hypothesis: topic.hypothesis ?? null,
         lastAction: last ? { capability: last.id, outcome: last.result.outcome, summary: (progress.lastSummary ?? null) as JsonValue, artifact: progress.lastArtifact ?? null } : null,
-        lastRefusal: progress.lastRefusal ? { capability: progress.lastRefusal.capability, reason: progress.lastRefusal.reason, input: boundedInput(progress.lastRefusal.input) } : null,
+        lastRefusal: progress.lastRefusal
+            ? {
+                  capability: progress.lastRefusal.capability,
+                  reason: progress.lastRefusal.reason,
+                  input: boundedInput(progress.lastRefusal.input),
+                  // The points refused, each with what is expected there, and how many refusals in a row were on them (problems.ts).
+                  ...(progress.refusal ? { times: progress.refusal.times, problems: progress.refusal.problems.map((p) => ({ ...(p.path ? { path: p.path } : {}), ...(p.kind ? { kind: p.kind } : {}), ...(p.expected ? { expected: p.expected } : {}), ...(p.got !== undefined ? { sent: p.got } : {}), says: p.says.slice(0, 400) })) } : {}),
+              }
+            : null,
         sources: { library: [...progress.sources.library], web: [...progress.sources.web] },
         justify: progress.justify
             ? ({
