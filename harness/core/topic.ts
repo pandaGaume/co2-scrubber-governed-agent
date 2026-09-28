@@ -40,8 +40,8 @@ export interface TopicDefinition {
     tools: ReadonlyArray<RegExp>;
     /**
      * The capabilities the builder decides every time, never replayed from the recipes (2026-09-28): those whose
-     * input is made of this task's readings. A procedure learned on another task carries that task's device, its
-     * occupants and its CO2; replayed, it was submitted for scrubber-1 in a run commissioning scrubber-1-r002.
+     * input is made of this task's readings (the procedure submitted, the plugin written for this contract). The
+     * rules every topic shares (no call repeated in a task, no `task.*`) are in `replay.ts`.
      */
     neverReplayed?: ReadonlyArray<RegExp>;
     /** Is the contract held: the artifacts claimed, the files of the workshop, what the steps recorded. */

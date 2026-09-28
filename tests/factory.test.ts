@@ -26,6 +26,9 @@ import { runTask, type BuilderContext } from "../harness/core/runner.js";
 import { ScriptedBuilder } from "../harness/scripted/onnx.js";
 import { pathProblem } from "../harness/core/builder-guard.js";
 import { taskSignature } from "../harness/core/recipes.js";
+import { NEVER_REPLAYED, proposalKey, restrictReplays } from "../harness/core/replay.js";
+import { PROCEDURE_TOPIC } from "../harness/topics/procedure/index.js";
+import { CODE_TOPIC } from "../harness/topics/code/index.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
 import { sha256Of } from "../slots/tools/lib/workshop.js";
 import { endSentence, loadWords, stageSentence, stepSentence } from "../harness/browser/factory-voice.js";
@@ -77,6 +80,26 @@ class ClumsyBuilder implements Provider {
         return decision;
     }
 }
+
+describe("what a replay from the recipes may be (replay.ts)", () => {
+    it("never a call already made in this task, never a question or a failure, never what the topic makes of this task's readings", () => {
+        const candidate = (capabilityId: string, input: JsonValue) => ({ eligible: true, invocation: { actionId: capabilityId, capabilityId, input } });
+        const offered = [candidate("library.read", { id: "method-concentration-decay" }), candidate("biomed.presence", {}), candidate("graph.evaluate", { label: "a" }), candidate("task.ask", { question: "go?" }), candidate("task.fail", { reason: "x" }), candidate("procedure.submit", { id: "p" }), candidate("task.done", { summary: "s" })];
+        const eligible = (never: ReadonlyArray<RegExp>, made: Set<string>) => {
+            const policy = { findCandidateActions: () => offered } as unknown as Parameters<typeof restrictReplays>[0];
+            restrictReplays(policy, never, made);
+            return (policy.findCandidateActions({} as never, {} as never) as Array<{ eligible: boolean; invocation: { capabilityId: string } }>).filter((c) => c.eligible).map((c) => c.invocation.capabilityId);
+        };
+        // Every topic: the reads, an evaluation, the claim; not the question nor the failure.
+        assert.deepEqual(eligible(NEVER_REPLAYED, new Set()), ["library.read", "biomed.presence", "graph.evaluate", "procedure.submit", "task.done"]);
+        // A call this task made with the same input is not replayed; another input is.
+        assert.deepEqual(eligible(NEVER_REPLAYED, new Set([proposalKey("graph.evaluate", { label: "a" }), proposalKey("library.read", { id: "other" })])), ["library.read", "biomed.presence", "procedure.submit", "task.done"]);
+        // The procedure topic: the procedure and its claim are written for this task.
+        assert.deepEqual(eligible([...NEVER_REPLAYED, ...(PROCEDURE_TOPIC.neverReplayed ?? [])], new Set()), ["library.read", "biomed.presence", "graph.evaluate"]);
+        // The code topic: the plugin and its claim are written for this contract.
+        assert.ok((CODE_TOPIC.neverReplayed ?? []).some((r) => r.test("forge.plugin_write")) && (CODE_TOPIC.neverReplayed ?? []).some((r) => r.test("task.done")));
+    });
+});
 
 describe("the constructor's loop (F4), through the broker", () => {
     let local: LocalBroker;

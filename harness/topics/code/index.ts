@@ -418,6 +418,8 @@ function noteWrite(context: TopicContext): LocalCapability[] {
 export const CODE_TOPIC: TopicDefinition = {
     name: "code",
     tools: CODE_TOOLS,
+    // The plugin is written, built, tested, loaded, run and promoted for this task's contract: never replayed from another task's (two missing nodes of the same quantity share a task signature).
+    neverReplayed: [/^forge\.plugin_(write|build|test|load|promote)$/, /^code\.accept$/, /^forge\.(document_build|session_run)$/, /^task\.done$/],
     validate: (claim, files, progress) => validateCode(claim, files, progress),
     local: noteWrite,
     guard: (capabilityId, input, context) => {

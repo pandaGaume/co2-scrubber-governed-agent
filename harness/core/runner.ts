@@ -30,6 +30,7 @@ import { manifestText, newTelemetry, sha256Text, summarize, toolsOf, type Manife
 import { compactOutput } from "./compact.js";
 import { reasoningStateOf } from "./reasoning-state.js";
 import { intentionFor, loadRecipes, saveRecipes, taskSignature } from "./recipes.js";
+import { NEVER_REPLAYED, proposalKey, restrictReplays } from "./replay.js";
 import { createTaskEvaluator } from "./task-evaluator.js";
 import { taskCapabilities } from "./task-capabilities.js";
 import { DEFAULT_BUDGET, topicFor, type TaskFile, type TaskState, type Topic } from "./task.js";
@@ -200,12 +201,9 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
     const generic: Intention = intentionFor(task, signature);
     const intention: Intention = topic.intention ? topic.intention(task, generic) : generic;
     const recipes = loadRecipes(recipesDir, topicId);
-    // What the topic decides every time is never a candidate for a replay: the builder decides it, the step is still recorded.
-    const neverReplayed = topic.neverReplayed ?? [];
-    if (neverReplayed.length) {
-        const candidates = recipes.policy.findCandidateActions.bind(recipes.policy);
-        recipes.policy.findCandidateActions = (state, intention, modeId) => candidates(state, intention, modeId).map((c) => (neverReplayed.some((r) => r.test(c.invocation.capabilityId)) ? { ...c, eligible: false } : c));
-    }
+    // What a replay may be, the same for every factory (replay.ts): not a call already made in this task, not a question or a failure, not what is made of this task's readings.
+    const made = new Set<string>();
+    restrictReplays(recipes.policy, [...NEVER_REPLAYED, ...(topic.neverReplayed ?? [])], made);
     const progress = newProgress();
     const calls: CapabilityCall[] = [];
     const provider = typeof providerOrBuild === "function" ? providerOrBuild({ taskId, task, topic: topicId, lastCall: () => progress.lastCall, read: (id) => progress.reads[id]?.value ?? null }) : providerOrBuild;
@@ -431,6 +429,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             });
             if (trace.source === "policy") manifest.recipes.replayedSteps++;
             noteProposal(trace.decision.invocation.capabilityId, trace.decision.invocation.input);
+            made.add(proposalKey(trace.decision.invocation.capabilityId, trace.decision.invocation.input));
             // A task.done the validator did not hold is a refusal the model reads at the next step (the call itself completed: the claim was recorded), and the same verdict again counts as a repeat.
             if (trace.decision.invocation.capabilityId === "task.done" && trace.result.ok && !trace.evaluation.success) {
                 const reason = trace.evaluation.reason ?? "contract not held";
@@ -451,6 +450,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             progress.lastRefusal = { capability: exchange.proposedCapabilityId, reason: failed ?? "refused", input: (exchange.proposedInput ?? null) as JsonValue };
             progress.refusals[exchange.proposedCapabilityId] = { reason: failed ?? "refused", input: (exchange.proposedInput ?? null) as JsonValue, at: new Date().toISOString() };
             noteProposal(exchange.proposedCapabilityId, exchange.proposedInput);
+            made.add(proposalKey(exchange.proposedCapabilityId, exchange.proposedInput));
             const refusedKey = `${exchange.proposedCapabilityId}:${JSON.stringify(exchange.proposedInput ?? null)}`;
             const refusedTimes = (refusedCounts.get(refusedKey) ?? 0) + 1;
             refusedCounts.set(refusedKey, refusedTimes);

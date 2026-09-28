@@ -35,6 +35,8 @@ export interface ScriptedBuilderOptions {
     task: TaskFile["task"];
     /** The last call of the loop, as the runner records it (what a model would read in `lastOutput`). */
     lastCall: () => CapabilityCall | null;
+    /** What the task last read by a capability, replays included; the script's own last call only when absent. */
+    read?: (capabilityId: string) => JsonValue | null;
 }
 
 const decide = (capabilityId: string, input: JsonValue, rationale: string): PolicyDecision => ({ action: { id: capabilityId, description: capabilityId }, invocation: { actionId: capabilityId, capabilityId, input }, rationale });
@@ -69,8 +71,13 @@ export class ScriptedBuilder implements Provider {
         const current = columns.find((c) => /current|amp/i.test(c)) ?? columns[1] ?? "current_amps";
         // What was done last, as the observation says it (the harness may have replayed it from the recipes).
         const after = `${String(state.features.phase)}:${String(state.features.lastCapability)}`;
-        if (last?.id === "model.fit") this.fit = valueOf(last);
-        if (last?.id === "model.inspect") this.inspect = valueOf(last);
+        // The fit and the inspection as the task made them: a step replayed from the recipes is read too.
+        const read = (id: string): Record<string, JsonValue> | null => {
+            const v = this.options.read?.(id) ?? (last?.id === id ? valueOf(last) : null);
+            return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, JsonValue>) : null;
+        };
+        this.fit = read("model.fit") ?? this.fit;
+        this.inspect = read("model.inspect") ?? this.inspect;
         // A call that failed: the script has no other way, it gives up with the tool's reason (a model would try another way, or say the same).
         if (last && !last.result.ok) return decide("task.fail", { reason: (last.result.error ?? last.result.outcome).replace(/^(device refused|error):\s*/i, "") }, `${last.id} failed: nothing else to try`);
         switch (after) {
