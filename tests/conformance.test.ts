@@ -14,6 +14,8 @@
  *   replay     each capability it allows is a read, or classed by the topic
  *              once: never replayed, or a replayed action (`replay.ts`)
  *   declared   each pattern it classes names a capability it allows
+ *   justify    it says where its constants are (`justify.ts`), on a call it
+ *              allows, and that call accepts their justifications
  *
  * A deviation known and not yet closed is in KNOWN, with why. A new one
  * fails; one that is closed fails too until it leaves KNOWN, so the ledger
@@ -39,7 +41,7 @@ import type { TopicDefinition } from "../harness/core/topic.js";
 
 const PORT = 3146;
 
-type Check = "base" | "tools" | "model" | "replay" | "declared";
+type Check = "base" | "tools" | "model" | "replay" | "declared" | "justify";
 
 /** The deviations known and not yet closed: topic, check, the capability or pattern, and why it stands. */
 const KNOWN: Array<{ topic: string; check: Check; what: string; why: string }> = [];
@@ -52,12 +54,18 @@ describe("every factory against the socle", () => {
     let broker: Broker;
     /** Every capability a factory's task can reach: the published tools, the task's own. */
     let published: string[] = [];
+    /** The input schema of every published tool, by id. */
+    const schemas = new Map<string, unknown>();
 
     before(async () => {
         process.env.SPEECH_PROVIDER = "silent";
         ({ broker: local, slots } = await startAllOrFail(PORT));
         broker = new Broker(local.httpBase, { name: "conformance", version: "0", locale: "en" });
-        for (const slot of await broker.slots()) for (const t of await broker.tools(slot)) published.push(`${slot}.${t.name}`);
+        for (const slot of await broker.slots())
+            for (const t of await broker.tools(slot)) {
+                published.push(`${slot}.${t.name}`);
+                schemas.set(`${slot}.${t.name}`, t.inputSchema);
+            }
         published = [...new Set(published)].sort();
     });
     after(async () => {
@@ -71,7 +79,9 @@ describe("every factory against the socle", () => {
     const deviations = (topic: TopicDefinition): string[] => {
         const found: string[] = [];
         const context = { broker, taskId: "t-conformance", task: TASK, progress: newProgress(), runtimeSlot: "twin" };
-        const own = [...taskCapabilities(broker, context.taskId, context.progress, topic.name, TASK), ...(topic.local?.(context) ?? [])].map((c) => c.id);
+        const locals = [...taskCapabilities(broker, context.taskId, context.progress, topic.name, TASK), ...(topic.local?.(context) ?? [])];
+        const own = locals.map((c) => c.id);
+        const schemaOf = (id: string) => (locals.find((c) => c.id === id)?.inputSchema ?? schemas.get(id)) as { properties?: Record<string, unknown> } | undefined;
         const reachable = [...new Set([...published, ...own])];
         const allows = (id: string) => topic.tools.some((r) => r.test(id));
         const allowed = reachable.filter(allows);
@@ -95,6 +105,12 @@ describe("every factory against the socle", () => {
             if (n === a) found.push(`replay|${id}`);
         }
         for (const r of [...(topic.neverReplayed ?? []), ...replayed]) if (!allowed.some((id) => r.test(id))) found.push(`declared|${String(r)}`);
+        if (!topic.justified) found.push("justify|none");
+        else {
+            const carriers = allowed.filter((id) => topic.justified!.capability.test(id));
+            if (!carriers.length) found.push(`justify|${String(topic.justified.capability)}`);
+            for (const id of carriers) if (!schemaOf(id)?.properties?.justifications) found.push(`justify|${id} takes no justifications`);
+        }
         return found.sort();
     };
 

@@ -16,6 +16,7 @@ import type { JsonValue } from "@spiky-panda/harness";
 import { readFileSync } from "node:fs";
 import { fromRoot } from "../../../lib/paths.js";
 import { withBase } from "../../core/base.js";
+import { numbersOf, type Justified } from "../../core/justify.js";
 import type { TaskFile } from "../../core/task.js";
 import type { TopicDefinition, Validation } from "../../core/topic.js";
 import type { TopicState } from "../../core/reasoning-state.js";
@@ -131,11 +132,18 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
     const refused = (cap: string) => (progress.refusals[cap] ? ` Your last ${cap} was refused: ${progress.refusals[cap].reason}. What you sent is in the state (lastRefusal); change what the reasons name.` : "");
     if (!r.catalogueSearched) return `Stage 1 of 5, the gap. Required: ${outputs}. Ask the catalogue which node types produce them (twin.registry_search with requiredOutputs); what no type produces is fitted from the task's telemetry.`;
     if (!r.planAccepted) return `Stage 2 of 5, the plan. Declare with task.plan the types found for the outputs they produce (selected_nodes), and in missing_capabilities each required output no type produces, with its reason and the topic "onnx".${refused("task.plan")}`;
-    if (!r.fitted) return `Stage 3 of 5, the fit. The task's telemetry is ${file ?? "(none given)"}, columns ${columns.join(", ") || "(none given)"}. Fit the model with model.fit: a spec of the shape the state shows under hypothesis, field "spec" (a reviewed one: its numbers are that device's), its dataset on this task's file and columns, its full scale, its domain and its monitor set for this device from what you read (the library, the telemetry), never copied.${refused("model.fit")}`;
+    if (!r.fitted) return `Stage 3 of 5, the fit. The task's telemetry is ${file ?? "(none given)"}, columns ${columns.join(", ") || "(none given)"}. Fit the model with model.fit: a spec of the shape the state shows under hypothesis, field "spec" (a reviewed one: its numbers are that device's), its dataset on this task's file and columns, its full scale, its domain and its monitor set for this device from what you read (the library, the telemetry), never copied; every number of the spec justified (justifications, with its source).${refused("model.fit")}`;
     if (!r.inspected) return `Stage 4 of 5, the model. Fitted: ${fit?.onnx?.path} (rmse ${fit?.quality?.rmse ?? "?"}, parity ${fit?.parity?.ok ? "ok" : "not ok"}). Load it as the board does: model.inspect on that path.${refused("model.inspect")}`;
     if (!r.checked) return `Stage 4 of 5, the contract. Check the model with the board's rules: model.contract on ${fit?.onnx?.path}, the contract with its sha256 (${fit?.onnx?.sha256}) and the output count model.inspect read.${refused("model.contract")}`;
     return `Stage 5 of 5, hand over. The model ${fit?.onnx?.path} holds its contract. End with task.done: the artifact of kind "model" at that path, and the numbers of the fit in the summary.${refused("task.done")}`;
 }
+
+/** Where a fit's constants are: every number of its spec but its version (the full scale, the domain, the monitor, a column's scale). */
+export const FIT_JUSTIFIED: Justified = {
+    capability: /^model\.fit$/,
+    constants: (input) => numbersOf((input as { spec?: unknown } | null)?.spec, "").filter((c) => c.constant !== "version"),
+    measured: (task) => (task.data ?? []).length > 0,
+};
 
 export const ONNX_TOPIC: TopicDefinition = {
     name: "onnx",
@@ -143,6 +151,7 @@ export const ONNX_TOPIC: TopicDefinition = {
     validate: validateOnnx,
     // The fit is deterministic on the task's telemetry: its plan, its files, the fit, the check and the claim are a recipe.
     replayedActions: [/^workspace\.write$/, /^model\.(fit|contract)$/, /^task\.(plan|done)$/],
+    justified: FIT_JUSTIFIED,
     state: stateOfTopic,
     brief: briefOf,
     prompt: ONNX_PROMPT,

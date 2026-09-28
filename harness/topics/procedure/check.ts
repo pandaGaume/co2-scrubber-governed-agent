@@ -33,7 +33,7 @@
  * from it. Neither is written in the builder's prompt.
  */
 import { ABORT_READERS, PROCEDURE_ENVELOPE, moduleOf, totalMinutes, type Procedure } from "./procedure.js";
-import type { LibraryFact } from "../../core/contracts.js";
+import { safetyProblems as commonSafetyProblems, type SignedFact } from "../../core/justify.js";
 
 export type ProblemKind = "shape" | "floor" | "start" | "bounds" | "duration" | "abort" | "expected" | "diligence" | "monitoring" | "justification";
 
@@ -163,34 +163,12 @@ export function constantsOf(p: Partial<Procedure>): Array<{ constant: string; va
  */
 export const SAFETY_CONSTANT = /^(limits\.(co2MaxPpm|co2AbortPpm|minSpeedPercent|maxMinutes)|steps\.\d+\.speedPercent|abort\.[a-z]+\.threshold|monitoring\.band\.(minBpm|maxBpm))$/;
 
-/** A library fact as the library serves it: its document, and that document's signature as it stands. */
-export type SignedFact = LibraryFact & { source: string; signed?: { by: string; at: string; valid: boolean } | null };
+/** A library fact as the library serves it: its document, and that document's signature as it stands (`justify.ts`). */
+export type { SignedFact } from "../../core/justify.js";
 
+/** The safety constants' problems, by the rule every factory shares (`justify.ts`): a fact of a signed library document, respected. */
 export function safetyProblems(p: Partial<Procedure>, facts: SignedFact[]): string[] {
-    const problems: string[] = [];
-    const given = Array.isArray(p.justifications) ? p.justifications : [];
-    const signing = "a person reviews it and signs it: npm run library:sign -- <document> \"<name>\"";
-    for (const c of constantsOf(p).filter((x) => SAFETY_CONSTANT.test(x.constant))) {
-        const j = given.find((x) => x?.constant === c.constant);
-        if (!j) {
-            problems.push(`${c.constant} = ${c.value} is a safety constant with no justification: cite the fact of a signed library document it respects (source "library", the fact's id as reference)`);
-            continue;
-        }
-        if (j.source !== "library") {
-            problems.push(`${c.constant} = ${c.value} is a safety constant: it is justified by a fact of a signed library document, not by ${j.source === "web" ? "a web page" : j.source === "assumed" ? "an assumption" : j.source === "derived" ? "a calculation" : j.source === "measured" ? "a measurement" : `"${String(j.source)}"`} (${String(j.reference)})`);
-            continue;
-        }
-        const fact = facts.find((f) => f.id === String(j.reference));
-        if (!fact) {
-            problems.push(`${c.constant}: "${String(j.reference)}" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)`);
-            continue;
-        }
-        if (!fact.signed) problems.push(`${c.constant}: the fact ${fact.id} is in "${fact.source}", which no person has signed as valid; ${signing}; until then no procedure passes: end with task.fail naming the document`);
-        else if (!fact.signed.valid) problems.push(`${c.constant}: "${fact.source}" was signed by ${fact.signed.by} and has changed since; ${signing}`);
-        const ok = fact.bound === "upper" ? c.value <= fact.value : fact.bound === "lower" ? c.value >= fact.value : Math.abs(c.value - fact.value) <= 1e-9 * Math.max(1, Math.abs(fact.value));
-        if (!ok) problems.push(`${c.constant} = ${c.value} does not respect ${fact.id} = ${fact.value} ${fact.unit} (${fact.bound === "upper" ? "at or below it" : fact.bound === "lower" ? "at or above it" : "equal to it"})`);
-    }
-    return problems;
+    return commonSafetyProblems(constantsOf(p).filter((x) => SAFETY_CONSTANT.test(x.constant)), Array.isArray(p.justifications) ? p.justifications : [], facts);
 }
 
 /** The problems as one line each, the way a builder reads them at its next step. */

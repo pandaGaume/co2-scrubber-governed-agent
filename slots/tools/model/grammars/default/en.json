@@ -9,7 +9,8 @@
             "description": "Run the fit job on a telemetry file of the task: a fit spec (version 1, job fit, model affine-residual, dataset.file relative to the task, fullScale, domain, monitor, outputs.file) as specs/*.json hold them. Writes the ONNX file, its contract (the board's vocabulary) and the fit report under models/<name>/ in the task; returns the coefficients, the quality (rows, kept, rmse, worst error), the parity check and the sha256 of the model. A dataset that is missing or empty is refused with the reason.",
             "properties": {
                 "taskId": "the task whose directory holds the files",
-                "spec": "the fit spec; dataset.file is relative to the task's directory"
+                "spec": "the fit spec; dataset.file is relative to the task's directory",
+                "justifications": "one per number of the spec you set (fullScale, domain, monitor, a column's scale): its path, value, source (library, web, measured, derived, assumed), reference and why; kept beside the model as justifications.json"
             }
         },
         "inspect": {

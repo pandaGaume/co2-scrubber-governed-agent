@@ -24,6 +24,7 @@
  * record, never taken at its word.
  */
 import { withBase } from "../../core/base.js";
+import { JUSTIFICATIONS_SCHEMA, numbersOf, type Constant, type Justified } from "../../core/justify.js";
 import type { CapabilityResult, Intention, JsonValue } from "@spiky-panda/harness";
 import type { LocalCapability } from "../../core/capabilities.js";
 import type { TaskFile } from "../../core/task.js";
@@ -115,9 +116,26 @@ export const EVALUATE_SCHEMA = {
         estimator: { type: "string", enum: ["nelder-mead", "grid"], description: "How the bounds are searched: nelder-mead (default; a simplex search, about 10 to 20 runs per parameter, local) or grid (every combination of evenly spaced levels; levels ^ parameters runs; shows the shape of the cost)." },
         levels: { type: "number", description: "For the grid: levels per parameter (5 when absent)." },
         maxRuns: { type: "number", description: "Sandbox runs the estimator may spend on this candidate (40 when absent, 80 at most)." },
+        justifications: JUSTIFICATIONS_SCHEMA,
     },
     required: ["label"],
 } as const;
+
+/**
+ * The constants a candidate sets (2026-09-28), each justified like every factory's (`justify.ts`): the variables
+ * held, the bounds searched (a range each), the settings, the numbers of the nodes' parameters. The estimator's
+ * knobs (estimator, levels, maxRuns) are the harness's, not the installation's.
+ */
+export function candidateConstants(input: JsonValue): Constant[] {
+    const i = (input ?? {}) as { variables?: unknown; settings?: unknown; fit?: Record<string, { min?: unknown; max?: unknown }>; spec?: { nodes?: Array<{ id?: string; params?: unknown }> }; add?: { nodes?: Array<{ id?: string; params?: unknown }> } };
+    const out: Constant[] = [...numbersOf(i.variables, "variables"), ...numbersOf(i.settings, "settings")];
+    for (const [name, b] of Object.entries(i.fit && typeof i.fit === "object" ? i.fit : {})) if (typeof b?.min === "number" && typeof b?.max === "number") out.push({ constant: `fit.${name}`, value: [b.min, b.max] });
+    for (const [where, nodes] of [["spec", i.spec?.nodes], ["add", i.add?.nodes]] as const) for (const n of Array.isArray(nodes) ? nodes : []) out.push(...numbersOf(n?.params, `${where}.${String(n?.id)}`));
+    return out;
+}
+
+/** Where a candidate's constants are: graph.evaluate, for the graph factory and for the code factory that judges its node. */
+export const CANDIDATE_JUSTIFIED: Justified = { capability: /^graph\.evaluate$/, constants: candidateConstants };
 
 /** The evaluator as a capability; `runtimeSlot` says which sandbox runs the trials (the twin's, or the forge's for the code topic, whose catalogue holds the generated plugins). */
 export function evaluateCapability(context: TopicContext, runtimeSlot = "twin"): LocalCapability {
@@ -292,7 +310,7 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
     const start = station ? ` The library holds the station's reference graph (library.graphs, graph "${STATION_GRAPH_ID}": two volumes in mass, the persons by name, the scrubber in its datasheet's units, the ventilation through its filter, the sensors); do not rebuild it: instantiate it (graph.evaluate with graph: "${STATION_GRAPH_ID}", persons for who is on board, fit for the bounds of what only the installation knows; its interface is the shelf's variables and nothing else, a name outside it is refused) and adapt its numbers. The scrubber's own numbers come from the registered device (${devices ? `the task carries the register: ${devices}` : "the datasheet's defaults when the task carries no device"}) and are held; what is fitted is the volumes and the filter's loading, the operators' rate within its band.${persons ? ` On board, as observed: ${persons}: give them as persons.` : ""} It is wired: ${wiringLines(station)}. A spec of your own is accepted instead, with a measured input as a Logic.Time:timeline whose segments are the $series, its value port wired into the input.` : "";
     // A type the plan maps outside the library graph (a generated node): the evaluation holds it through add, said here with the exact wiring, before the first candidate and before a hand-over.
     const needFirst = station ? addNeededFor(progress, STATION_GRAPH_ID) : null;
-    if (!last) return `Evaluate a first candidate.${start}${needFirst ? ` Also, ${addSentence(needFirst, STATION_GRAPH_ID)}.` : ""} Give the bounds of the variables nobody knows (fit), and evaluate the candidate (graph.evaluate); its answer is compact, the whole is at the handle the state names. Threshold: ${threshold}.${held}${refused}`;
+    if (!last) return `Evaluate a first candidate.${start}${needFirst ? ` Also, ${addSentence(needFirst, STATION_GRAPH_ID)}.` : ""} Give the bounds of the variables nobody knows (fit), justify every number you set (justifications: each variable held, each bound, each setting, each parameter, with its source), and evaluate the candidate (graph.evaluate); its answer is compact, the whole is at the handle the state names. Threshold: ${threshold}.${held}${refused}`;
     const where = last.residuals.map((r) => `${r.column}: ${r.rmse} ppm, worst ${r.worst} at minute ${r.worstMinute}`).join("; ");
     const needLast = last.graph ? addNeededFor(progress, last.graph, last.types) : null;
     if (last.diagnosis === "PASS" && needLast) return `Not a hand-over yet. Candidate ${last.n} (${last.path}) holds the threshold (${where}) but not ${needLast.types.map((t) => `"${t}"`).join(", ")}, which the plan says produces a required output: a twin handed over without it is short of what was asked. Evaluate the same graph "${last.graph}" with the same levers and add wiring the node in, for instance add: ${JSON.stringify(needLast.add)} (the graph's atmospheres: ${needLast.where}; params left empty keep the values the contract set); then hand that candidate over.`;
@@ -372,6 +390,7 @@ export const GRAPH_TOPIC: TopicDefinition = {
     tools: GRAPH_TOOLS,
     // A candidate is evaluated again against this task's data, a plan checked again by the guard, a claim by the validator: a recipe here is a first try, judged.
     replayedActions: [/^task\.(plan|done)$/, /^graph\.evaluate$/],
+    justified: CANDIDATE_JUSTIFIED,
     validate: (claim, files, progress) => validateGraph(claim, files, progress),
     local: (context) => [evaluateCapability(context, context.runtimeSlot ?? "twin")],
     guard: guardGraph,

@@ -27,6 +27,8 @@
  * substrate's life-support nodes (rates folded on a volume): kept for the
  * tests of the parametric spec and for comparison.
  */
+import { justificationsFor } from "../core/justify.js";
+import { candidateConstants } from "../topics/graph/index.js";
 import type { JsonValue, PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
 import type { Provider, ProviderExchange } from "../lib/provider.js";
 import type { CapabilityCall } from "../core/capabilities.js";
@@ -66,6 +68,19 @@ export const HABITAT_GRAPH_TYPES = ["Physics.Scene:atmosphere", "Physics.Scene:a
 /** The bounds of what only the installation knows: the two volumes; the filter's loading when the flow is measured. */
 const VOLUMES = { V: { min: 10, max: 100 }, Vh: { min: 50, max: 1000 } };
 
+/** Why each number of the script's candidates is what it is, as a model must say it (`justify.ts`). */
+const WHY: Array<[RegExp, { source: "library" | "measured" | "assumed"; reference: string; reason: string }]> = [
+    [/^variables\.g$/, { source: "library", reference: STATION_GRAPH_ID, reason: "the operators' CO2 rate as the station's reference graph gives it, inside NASA's band" }],
+    [/^variables\.L$/, { source: "assumed", reference: "a clean filter", reason: "the installation as designed: the ventilation at its design flow, the filter unloaded" }],
+    [/^fit\.(V|Vh)$/, { source: "assumed", reference: "the register gives no volume", reason: "the volumes only the installation knows, searched within bounds wide around a module's" }],
+    [/^fit\.L$/, { source: "assumed", reference: "from a clean filter to a fifth loaded", reason: "the filter's loading, searched: what the ventilation actually delivers" }],
+    [/^settings\./, { source: "measured", reference: "the task's observations", reason: "who is on board, as the task observed it" }],
+    [/^add\./, { source: "assumed", reference: "the world of the test has no leak", reason: "the generated node is in the candidate without changing what the residual judges" }],
+];
+
+/** A candidate with its justifications. */
+const justified = (input: Record<string, unknown>): JsonValue => ({ ...input, justifications: justificationsFor(candidateConstants(input as unknown as JsonValue), WHY) }) as unknown as JsonValue;
+
 export class ScriptedGraphBuilder implements Provider {
     readonly name = "scripted:graph";
     readonly model = "scripted/graph";
@@ -104,7 +119,7 @@ export class ScriptedGraphBuilder implements Provider {
             case "plan:library.graphs":
                 return decide("task.plan", { selected_nodes: [...HABITAT_GRAPH_TYPES, ...generatedTypes], missing_capabilities: missing as unknown as JsonValue, ...(produced ? { produced } : {}) } as unknown as JsonValue, missing.length ? `the station's reference graph, and ${missing[0].required_output} that no node produces: declared missing with its contract` : generatedTypes.length ? `the station's reference graph and the generated ${generatedTypes.join(", ")}, mapped to what it was made for` : "the station's reference graph: its types, nothing missing");
             case "build:task.plan":
-                return decide("graph.evaluate", { label: "the habitat reference with a clean filter: the ventilation at its design flow", graph: STATION_GRAPH_ID, ...onBoard, ...add, variables: { ...given, L: 0 }, fit: VOLUMES } as unknown as JsonValue, "first candidate: the installation as designed, the volumes fitted");
+                return decide("graph.evaluate", justified({ label: "the habitat reference with a clean filter: the ventilation at its design flow", graph: STATION_GRAPH_ID, ...onBoard, ...add, variables: { ...given, L: 0 }, fit: VOLUMES }), "first candidate: the installation as designed, the volumes fitted");
             default: {
                 const value = (last?.result.output ?? {}) as { value?: { pass?: boolean; candidate?: number; path?: string; diagnosis?: string; variables?: Record<string, number> } };
                 const v = value.value ?? {};
@@ -115,9 +130,9 @@ export class ScriptedGraphBuilder implements Provider {
                     this.revised = true;
                     // The hypothesis: a CO2 source in the Lab the observation did not list (one more person at work); the observed roster stays, one is added.
                     const revised = "persons" in onBoard ? { persons: [...(onBoard.persons as Array<Record<string, JsonValue>>), { id: "unobserved-1", callsign: "someone", module: "lab", activity: "light_work" }] } : { settings: { ...onBoard.settings, labOccupants: onBoard.settings.labOccupants + 1 } };
-                    return decide("graph.evaluate", { label: "the habitat reference with one more source in the Lab: a person the observation did not list, the loading fitted", graph: STATION_GRAPH_ID, ...revised, ...add, variables: given, fit: { ...VOLUMES, L: { min: 0, max: 0.2 } } } as unknown as JsonValue, "structural: no admissible parameter set of the observed roster closes the gap where the curves part (the Lab's level); the hypothesis is a source in the Lab the observation missed");
+                    return decide("graph.evaluate", justified({ label: "the habitat reference with one more source in the Lab: a person the observation did not list, the loading fitted", graph: STATION_GRAPH_ID, ...revised, ...add, variables: given, fit: { ...VOLUMES, L: { min: 0, max: 0.2 } } }), "structural: no admissible parameter set of the observed roster closes the gap where the curves part (the Lab's level); the hypothesis is a source in the Lab the observation missed");
                 }
-                return decide("graph.evaluate", { label: "the habitat reference with the filter's loading fitted: what the ventilation delivers, measured", graph: STATION_GRAPH_ID, ...onBoard, ...add, variables: given, fit: { ...VOLUMES, L: { min: 0, max: 0.2 } } } as unknown as JsonValue, "the gap the design flow cannot close: fit what the ventilation actually delivers, through the filter's loading");
+                return decide("graph.evaluate", justified({ label: "the habitat reference with the filter's loading fitted: what the ventilation delivers, measured", graph: STATION_GRAPH_ID, ...onBoard, ...add, variables: given, fit: { ...VOLUMES, L: { min: 0, max: 0.2 } } }), "the gap the design flow cannot close: fit what the ventilation actually delivers, through the filter's loading");
             }
         }
     }

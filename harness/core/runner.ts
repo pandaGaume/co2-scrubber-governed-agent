@@ -31,6 +31,7 @@ import { compactOutput } from "./compact.js";
 import { reasoningStateOf } from "./reasoning-state.js";
 import { intentionFor, loadRecipes, saveRecipes, taskSignature } from "./recipes.js";
 import { NEVER_REPLAYED, proposalKey, restrictReplays } from "./replay.js";
+import { noteSources } from "./justify.js";
 import { createTaskEvaluator } from "./task-evaluator.js";
 import { taskCapabilities } from "./task-capabilities.js";
 import { DEFAULT_BUDGET, topicFor, type TaskFile, type TaskState, type Topic } from "./task.js";
@@ -243,6 +244,8 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             progress.lastCall = call;
             calls.push(call);
             if (call.result.ok) progress.reads[call.id] = { at: new Date().toISOString(), value: (call.result.output ?? null) as JsonValue };
+            // What a justification may cite, noted on every call, replays included.
+            noteSources(progress.sources, call);
             const whole = call.result.ok ? (call.result.output ?? null) : { error: call.result.error ?? null, outcome: call.result.outcome };
             const compact = compactOutput(call.id, call.input, whole);
             progress.lastSummary = compact.summary;

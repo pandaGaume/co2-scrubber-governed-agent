@@ -29,6 +29,7 @@ import { compatibleUnits } from "../lib/units.js";
 import { relationBetween } from "../lib/relations.js";
 import { TOPICS, type TaskFile } from "./task.js";
 import type { TopicDefinition } from "./topic.js";
+import { checkJustifications } from "./justify.js";
 import type { Plan, Progress } from "./workspace-observer.js";
 
 const PATH_KEYS = new Set(["path", "file", "name", "contractPath"]);
@@ -193,6 +194,11 @@ export function createBuilderGuard(options: BuilderGuardOptions): SafetyGuard {
             if (topic.guard && progress && taskId) {
                 const problems = await topic.guard(id, decision.invocation.input, { broker: options.broker, taskId, task: options.task, progress, runtimeSlot: options.runtimeSlot ?? "twin" });
                 if (problems.length) return { allowed: false, reason: problems.join("; ") };
+            }
+            // Every constant the call sets is justified, the same way in every factory (justify.ts), unless the topic's own guard reports them with its other checks.
+            if (topic.justified && !topic.justified.inTopicGuard && topic.justified.capability.test(id) && progress) {
+                const problems = await checkJustifications(topic.justified, decision.invocation.input, { broker: options.broker, task: options.task, progress });
+                if (problems.length) return { allowed: false, reason: `justification: ${problems.join("; justification: ")}` };
             }
             return { allowed: true };
         },

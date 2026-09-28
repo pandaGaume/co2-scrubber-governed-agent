@@ -10,7 +10,8 @@
  * `expectOutputCount`, `expectOutputShape`). Nothing here judges: the twin
  * judges, on the station's request. `docs/factory-harness.fr.md`, 3.5.
  */
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { JUSTIFICATIONS_SCHEMA } from "../../../harness/core/justify.js";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
 import { OnnxModelGraph, type OnnxModelLoadOptions } from "@spiky-panda/plugin-onnx";
 import { fromRoot, relativeToRoot } from "../../../lib/paths.js";
@@ -39,7 +40,7 @@ export function modelSlot(wsBase: string, log: (line: string) => void): Publishe
     const tools: SlotTool<ModelState>[] = [
         {
             name: "fit",
-            inputSchema: objectSchema({ taskId: TASK, spec: { type: "object" } }, ["taskId", "spec"]),
+            inputSchema: objectSchema({ taskId: TASK, spec: { type: "object" }, justifications: JUSTIFICATIONS_SCHEMA }, ["taskId", "spec"]),
             handle: (args, s) => {
                 const taskId = checkTaskId(args.taskId);
                 const raw = args.spec;
@@ -56,6 +57,8 @@ export function modelSlot(wsBase: string, log: (line: string) => void): Publishe
                 const report = factory.runFit(fitSpec, { specDir: dir, outDir, log: (line: string) => log(`[model] ${line}`), factoryVersion: "demo" });
                 s.fits.push({ taskId, name: spec.name, sha256: report.sha256, rmse: report.quality.rmse, worstCaseError: report.quality.worstCaseError, wallMs: report.wallMs, at: new Date().toISOString() });
                 const under = (f: string) => path.relative(dir, path.join(outDir, f)).split(path.sep).join("/");
+                // Why each number of the spec is what it is, kept beside the model for whoever reviews it (2026-09-28).
+                if (Array.isArray(args.justifications)) writeFileSync(path.join(outDir, "justifications.json"), `${JSON.stringify({ spec: spec.name, justifications: args.justifications }, null, 4)}\n`, "utf8");
                 const contractFile = path.join(outDir, "contract.json");
                 return {
                     name: spec.name,

@@ -1,0 +1,223 @@
+/**
+ * Every constant a factory sets is justified, the same way in every factory
+ * (2026-09-28; first written for the procedure, the day a test's CO2 limits
+ * came from an Earth baseline nobody gave). A justification says, for one
+ * constant, its value, its source and why, so a reviewer can challenge it
+ * against a written procedure or the literature:
+ *
+ *   library    a document or a fact of the library read in this task
+ *   web        a page a web search returned in this task
+ *   measured   what the task observed (a sensor, the telemetry, the presence)
+ *   envelope   a bound of the guard's own envelope, by name
+ *   derived    a calculation from other constants, its formula as reference
+ *   assumed    an assumption, said as such
+ *
+ * A safety constant (what bounds the air people breathe, a speed, an
+ * exposure, an abort, a watch) is justified only by a fact of a library
+ * document a person signed, unchanged since, and respects the fact's safe
+ * side; a value a model found, computed or assumed is not a safety limit.
+ *
+ * A topic says where its constants are (`TopicDefinition.justified`): which
+ * call carries them, how to read them, which are safety constants. The
+ * constructor's guard checks them (`builder-guard.ts`), or the topic's own
+ * guard when it reports them with its other checks (the procedure's, to
+ * Mother). What was read is noted on every call (`noteSources`), whoever
+ * decided the step.
+ */
+import type { JsonValue } from "@spiky-panda/harness";
+import type { LibraryFact } from "./contracts.js";
+import type { CapabilityCall } from "./capabilities.js";
+import type { TaskFile } from "./task.js";
+import type { TopicContext } from "./topic.js";
+
+export type JustificationSource = "library" | "web" | "measured" | "envelope" | "derived" | "assumed";
+export const JUSTIFICATION_SOURCES: ReadonlyArray<JustificationSource> = ["library", "web", "measured", "envelope", "derived", "assumed"];
+
+/** A constant's value: a number, or a range given as [min, max] (a variable's bounds). */
+export type ConstantValue = number | [number, number];
+
+export interface Justification {
+    /** The constant's path in what was sent (limits.co2MaxPpm, variables.g, fit.V_lab, fullScale.current). */
+    constant: string;
+    value: ConstantValue;
+    source: JustificationSource;
+    /** The document or fact id, the URL, the envelope's bound, the formula; what the assumption rests on. */
+    reference: string;
+    reason: string;
+}
+
+export interface Constant {
+    constant: string;
+    value: ConstantValue;
+}
+
+/** What a justification may cite, as read in this task. */
+export interface ReadSources {
+    library: string[];
+    web: string[];
+}
+
+/** A library fact as the library serves it: its document, and that document's signature as it stands. */
+export type SignedFact = LibraryFact & { source: string; signed?: { by: string; at: string; valid: boolean } | null };
+
+/** Where a topic's constants are, and which are safety constants. */
+export interface Justified {
+    /** The call that carries the constants. */
+    capability: RegExp;
+    /** The constants the call sets, by path. */
+    constants(input: JsonValue): Constant[];
+    /** The justifications the call gives; its `justifications` field by default. */
+    given?(input: JsonValue): unknown[];
+    /** The safety constants, by path: justified by a signed fact only. */
+    safety?: RegExp;
+    /** The guard's envelope, when a constant may cite one of its bounds. */
+    envelope?: Record<string, unknown>;
+    /** Does the task give a measurement to cite; any observation or data by default. */
+    measured?(task: TaskFile["task"]): boolean;
+    /** The topic's own guard checks them and reports them with its other checks; the constructor's guard leaves them to it. */
+    inTopicGuard?: boolean;
+}
+
+/** The `justifications` field of a call's input, as a schema a tool adds to its own. */
+export const JUSTIFICATIONS_SCHEMA = {
+    type: "array",
+    description:
+        "One per constant you set: its path (constant), its value (a number, or [min, max] for bounds), its source (library: a document or fact id read in this task; web: a URL a search returned; measured: what the task observed; envelope: a bound of the guard's envelope; derived: the formula; assumed: what the assumption rests on), the reference, and why.",
+    items: {
+        type: "object",
+        properties: {
+            constant: { type: "string" },
+            value: { anyOf: [{ type: "number" }, { type: "array", items: { type: "number" }, minItems: 2, maxItems: 2 }] },
+            source: { type: "string", enum: [...JUSTIFICATION_SOURCES] },
+            reference: { type: "string" },
+            reason: { type: "string" },
+        },
+        required: ["constant", "value", "source", "reference", "reason"],
+    },
+} as const;
+
+/** What a call read that a justification may cite: the library's documents and facts, a web search's pages. */
+export function noteSources(sources: ReadSources, call: Pick<CapabilityCall, "id" | "input" | "result">): void {
+    if (!call.result.ok) return;
+    const text = JSON.stringify(call.result.output ?? null);
+    if (/^library\.(read|facts|methods|graphs|graph)$/.test(call.id)) {
+        const id = (call.input as { id?: unknown } | null)?.id;
+        if (typeof id === "string" && !sources.library.includes(id)) sources.library.push(id);
+        for (const m of text.matchAll(/"id":"([a-z0-9][a-z0-9._-]*)"/gi)) if (!sources.library.includes(m[1])) sources.library.push(m[1]);
+    }
+    if (call.id === "web.search") for (const m of text.matchAll(/https?:\/\/[^"\s\\]+/g)) if (!sources.web.includes(m[0])) sources.web.push(m[0]);
+}
+
+const same = (a: unknown, b: ConstantValue): boolean =>
+    Array.isArray(b) ? Array.isArray(a) && a.length === 2 && a[0] === b[0] && a[1] === b[1] : typeof a === "number" && a === b;
+const shown = (v: unknown): string => (Array.isArray(v) ? `[${v.join(", ")}]` : String(v));
+const asJustifications = (given: unknown[]): Array<Partial<Justification>> => given.filter((j): j is Partial<Justification> => Boolean(j) && typeof j === "object");
+
+/** The problems of the constants that are not safety constants: none unjustified, each value the one set, each source one this task can cite. */
+export function justificationProblems(constants: Constant[], given: unknown[], read: ReadSources, options: { measured: boolean; envelope?: Record<string, unknown> }): string[] {
+    const problems: string[] = [];
+    const list = asJustifications(given);
+    for (const c of constants) {
+        const j = list.find((x) => x.constant === c.constant);
+        if (!j) {
+            problems.push(`${c.constant} = ${shown(c.value)} has no justification: say its source (a library document or fact read, a web page found, the measurement given, the guard's envelope, a calculation from other constants, or an assumption said as such) and why`);
+            continue;
+        }
+        if (!same(j.value, c.value)) problems.push(`${c.constant}: the justification says ${shown(j.value)}, what you sent sets ${shown(c.value)}`);
+        if (!String(j.reason ?? "").trim()) problems.push(`${c.constant}: the justification gives no reason`);
+        const ref = String(j.reference ?? "").trim();
+        switch (j.source) {
+            case "library":
+                if (!read.library.includes(ref)) problems.push(`${c.constant}: "${ref}" is not a library document or fact read in this task (${read.library.slice(0, 12).join(", ") || "none read"}): read it, or cite another source`);
+                break;
+            case "web":
+                if (!read.web.includes(ref)) problems.push(`${c.constant}: "${ref}" is not a page a web search returned in this task: search, and cite a URL it returned`);
+                break;
+            case "measured":
+                if (!options.measured) problems.push(`${c.constant}: the task gives no measurement to cite`);
+                break;
+            case "envelope": {
+                const bounds = Object.keys(options.envelope ?? {}).filter((k) => typeof (options.envelope ?? {})[k] === "number");
+                if (!bounds.includes(ref)) problems.push(`${c.constant}: "${ref}" is not a bound of the guard's envelope (${bounds.join(", ") || "this factory has none"})`);
+                break;
+            }
+            case "derived":
+                if (!ref) problems.push(`${c.constant}: a derived value gives its formula as the reference`);
+                break;
+            case "assumed":
+                break;
+            default:
+                problems.push(`${c.constant}: source "${String(j.source)}" is not one of ${JUSTIFICATION_SOURCES.join(", ")}`);
+        }
+    }
+    return problems;
+}
+
+/** The problems of the safety constants: each cites a fact of a signed library document, unchanged since, and respects its safe side. */
+export function safetyProblems(constants: Constant[], given: unknown[], facts: SignedFact[]): string[] {
+    const problems: string[] = [];
+    const list = asJustifications(given);
+    const signing = "a person reviews it and signs it: npm run library:sign -- <document> \"<name>\"";
+    for (const c of constants) {
+        const j = list.find((x) => x.constant === c.constant);
+        if (!j) {
+            problems.push(`${c.constant} = ${shown(c.value)} is a safety constant with no justification: cite the fact of a signed library document it respects (source "library", the fact's id as reference)`);
+            continue;
+        }
+        if (j.source !== "library") {
+            problems.push(`${c.constant} = ${shown(c.value)} is a safety constant: it is justified by a fact of a signed library document, not by ${j.source === "web" ? "a web page" : j.source === "assumed" ? "an assumption" : j.source === "derived" ? "a calculation" : j.source === "measured" ? "a measurement" : `"${String(j.source)}"`} (${String(j.reference)})`);
+            continue;
+        }
+        const fact = facts.find((f) => f.id === String(j.reference));
+        if (!fact) {
+            problems.push(`${c.constant}: "${String(j.reference)}" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)`);
+            continue;
+        }
+        if (!fact.signed) problems.push(`${c.constant}: the fact ${fact.id} is in "${fact.source}", which no person has signed as valid; ${signing}; until then no procedure passes: end with task.fail naming the document`);
+        else if (!fact.signed.valid) problems.push(`${c.constant}: "${fact.source}" was signed by ${fact.signed.by} and has changed since; ${signing}`);
+        const values = Array.isArray(c.value) ? c.value : [c.value];
+        const ok = values.every((v) => (fact.bound === "upper" ? v <= fact.value : fact.bound === "lower" ? v >= fact.value : Math.abs(v - fact.value) <= 1e-9 * Math.max(1, Math.abs(fact.value))));
+        if (!ok) problems.push(`${c.constant} = ${shown(c.value)} does not respect ${fact.id} = ${fact.value} ${fact.unit} (${fact.bound === "upper" ? "at or below it" : fact.bound === "lower" ? "at or above it" : "equal to it"})`);
+    }
+    return problems;
+}
+
+/** The given justifications of a call: its `justifications` field, unless the topic reads them elsewhere. */
+export const givenOf = (justified: Justified, input: JsonValue): unknown[] => {
+    const given = justified.given ? justified.given(input) : (input as { justifications?: unknown } | null)?.justifications;
+    return Array.isArray(given) ? given : [];
+};
+
+/** Every problem of a call's constants, safety ones included; the library's facts are read only when a safety constant is set. */
+export async function checkJustifications(justified: Justified, input: JsonValue, context: Pick<TopicContext, "broker" | "task" | "progress">): Promise<string[]> {
+    const constants = justified.constants(input);
+    const given = givenOf(justified, input);
+    const isSafety = (c: Constant) => Boolean(justified.safety?.test(c.constant));
+    const safety = constants.filter(isSafety);
+    let facts: SignedFact[] = [];
+    if (safety.length) {
+        const served = await context.broker.call("library", "facts", {});
+        facts = served.ok ? (((served.output as { facts?: SignedFact[] }).facts ?? []) as SignedFact[]) : [];
+    }
+    const measured = justified.measured ? justified.measured(context.task) : Object.keys(context.task.observations ?? {}).length > 0 || (context.task.data ?? []).length > 0;
+    return [...safetyProblems(safety, given, facts), ...justificationProblems(constants.filter((c) => !isSafety(c)), given, context.progress.sources, { measured, envelope: justified.envelope })];
+}
+
+/** The numbers of an object, by path (`prefix.key`), the nested ones too; what a spec or a set of variables sets. */
+export function numbersOf(value: unknown, prefix: string): Constant[] {
+    const out: Constant[] = [];
+    const walk = (v: unknown, at: string) => {
+        if (typeof v === "number" && Number.isFinite(v)) out.push({ constant: at, value: v });
+        else if (v && typeof v === "object" && !Array.isArray(v)) for (const [k, x] of Object.entries(v)) walk(x, at ? `${at}.${k}` : k);
+    };
+    walk(value, prefix);
+    return out;
+}
+
+/** The justifications of a set of constants, each from the first rule whose pattern names it; a constant no rule names is said assumed, with that said. For the scripts, which justify as a model must. */
+export function justificationsFor(constants: Constant[], rules: Array<[RegExp, Omit<Justification, "constant" | "value">]>): Justification[] {
+    return constants.map((c) => {
+        const rule = rules.find(([r]) => r.test(c.constant))?.[1] ?? { source: "assumed" as const, reference: "no rule of the script", reason: "set by the script without a stated source" };
+        return { constant: c.constant, value: c.value, ...rule };
+    });
+}

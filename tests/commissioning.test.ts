@@ -109,7 +109,7 @@ describe("the procedure's guard, alone", () => {
         const unread = justificationProblems(justified, { library: [], web: [] }, null).join("; ");
         assert.match(unread, /steps\.1\.minutes: "method-concentration-decay" is not a library document or fact read in this task/);
         const wrong = { ...justified, justifications: justified.justifications.map((j) => (j.constant === "steps.2.minutes" ? { ...j, value: 15 } : j)) };
-        assert.match(justificationProblems(wrong, read, null).join("; "), /steps\.2\.minutes: the justification says 15, the procedure sets 12/);
+        assert.match(justificationProblems(wrong, read, null).join("; "), /steps\.2\.minutes: the justification says 15, what you sent sets 12/);
     });
 
     it("a safety constant cites a fact of a signed library document and respects it; the card's values are the guard's envelope", () => {

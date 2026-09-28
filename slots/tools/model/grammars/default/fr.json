@@ -9,7 +9,8 @@
             "description": "Lance le job fit sur un fichier de télémétrie de la tâche : une spécification de fit (version 1, job fit, modèle affine-residual, dataset.file relatif à la tâche, fullScale, domain, monitor, outputs.file) comme dans specs/*.json. Écrit le fichier ONNX, son contrat (le vocabulaire de la carte) et le rapport sous models/<nom>/ de la tâche ; rend les coefficients, la qualité (lignes, gardées, rmse, pire erreur), la vérification de parité et le sha256 du modèle. Un jeu de données absent ou vide est refusé avec la raison.",
             "properties": {
                 "taskId": "la tâche dont le répertoire tient les fichiers",
-                "spec": "la spécification de fit ; dataset.file est relatif au répertoire de la tâche"
+                "spec": "la spécification de fit ; dataset.file est relatif au répertoire de la tâche",
+                "justifications": "une par nombre de la spec que vous fixez (fullScale, domain, monitor, l'échelle d'une colonne) : son chemin, sa valeur, sa source (library, web, measured, derived, assumed), sa référence et pourquoi ; gardées à côté du modèle dans justifications.json"
             }
         },
         "inspect": {

@@ -17,6 +17,7 @@ import type { LocalCapability } from "./capabilities.js";
 import type { WorkshopFile, Progress, DoneClaim } from "./workspace-observer.js";
 import type { TaskFile, Topic } from "./task.js";
 import type { TopicState } from "./reasoning-state.js";
+import type { Justified } from "./justify.js";
 
 export interface Validation {
     ok: boolean;
@@ -50,6 +51,8 @@ export interface TopicDefinition {
      * `neverReplayed`, every capability the topic allows that is not a read is classed, once, on purpose.
      */
     replayedActions?: ReadonlyArray<RegExp>;
+    /** Where the topic's constants are, and which are safety constants: every one is justified (`justify.ts`). */
+    justified?: Justified;
     /** Is the contract held: the artifacts claimed, the files of the workshop, what the steps recorded. */
     validate(claim: DoneClaim, files: WorkshopFile[], progress: Progress, task: TaskFile["task"]): Validation;
     /** Capabilities in process the topic adds to the task's three. */

@@ -47,7 +47,7 @@ import type { TaskFile } from "../../core/task.js";
 import type { TopicState } from "../../core/reasoning-state.js";
 import type { TopicContext, TopicDefinition, Validation } from "../../core/topic.js";
 import type { DoneClaim, Progress, WorkshopFile } from "../../core/workspace-observer.js";
-import { candidatesOf, evaluateCapability } from "../graph/index.js";
+import { CANDIDATE_JUSTIFIED, candidatesOf, evaluateCapability } from "../graph/index.js";
 import { contractProblems, type CapabilityContract } from "../../../slots/forge/contract.js";
 import type { CapabilityResult } from "@spiky-panda/harness";
 
@@ -420,6 +420,8 @@ export const CODE_TOPIC: TopicDefinition = {
     neverReplayed: [/^forge\.plugin_(write|build|test|load|promote)$/, /^code\.accept$/, /^forge\.(document_build|session_run)$/, /^graph\.evaluate$/, /^task\.done$/],
     // The plan declares what no node produces, from the task's required outputs; the guard checks it again.
     replayedActions: [/^task\.plan$/],
+    // The numbers it sets are a candidate's, when it judges its node on the telemetry; the node's own defaults are editable parameters, said in its card.
+    justified: CANDIDATE_JUSTIFIED,
     validate: (claim, files, progress) => validateCode(claim, files, progress),
     local: noteWrite,
     guard: (capabilityId, input, context) => {

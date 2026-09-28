@@ -26,6 +26,7 @@
  *   after a failed call     task.fail with the tool's own reason (the affine fit
  *                           on one speed only, a file that is not there).
  */
+import { justificationsFor, numbersOf } from "../core/justify.js";
 import type { JsonValue, PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
 import type { Provider, ProviderExchange } from "../lib/provider.js";
 import type { CapabilityCall } from "../core/capabilities.js";
@@ -45,6 +46,15 @@ const decide = (capabilityId: string, input: JsonValue, rationale: string): Poli
 const short = (v: unknown): string => (typeof v === "number" && Number.isFinite(v) ? Number(v.toPrecision(3)).toString() : "?");
 
 const valueOf = (call: CapabilityCall | null): Record<string, JsonValue> => (call?.result.ok && call.result.output && typeof call.result.output === "object" ? (call.result.output as Record<string, JsonValue>) : {});
+
+/** Why each number of the script's fit spec is what it is: the reviewed spec's values for this board, said as such (`justify.ts`). */
+const WHY: Array<[RegExp, { source: "derived" | "assumed"; reference: string; reason: string }]> = [
+    [/^fullScale\.duty$/, { source: "derived", reference: "the duty column is in percent: full scale 100", reason: "the command's scale" }],
+    [/^(fullScale\.(current|senseSpan)|domain\.|monitor\.)/, { source: "assumed", reference: "specs/scrubber-health-twin.json, the reviewed fit spec of this board", reason: "the board's current sense, operating domain and drift monitor as the reviewed spec sets them; not measured in this task" }],
+];
+
+/** A fit's input with the justification of every number of its spec. */
+const withJustifications = (input: { spec: Record<string, unknown> }): JsonValue => ({ ...input, justifications: justificationsFor(numbersOf(input.spec, "").filter((c) => c.constant !== "version"), WHY) }) as unknown as JsonValue;
 
 export class ScriptedBuilder implements Provider {
     readonly name = "scripted:onnx";
@@ -102,7 +112,7 @@ export class ScriptedBuilder implements Provider {
             case "build:workspace.list":
                 return decide(
                     "model.fit",
-                    {
+                    withJustifications({
                         spec: {
                             version: 1,
                             job: "fit",
@@ -114,7 +124,7 @@ export class ScriptedBuilder implements Provider {
                             monitor: { residual: { threshold: 0.04, debounceCycles: 30, severity: 350, alarm: "drift.current" } },
                             outputs: { file: "scrubber_2.onnx" },
                         },
-                    },
+                    }),
                     "fit the affine residual model on the telemetry",
                 );
             case "build:model.fit": {

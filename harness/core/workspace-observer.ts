@@ -79,6 +79,8 @@ export interface Progress {
     failure: string | null;
     /** The last successful answer of every capability called in this task, and when: what a topic's rule asks "was this read here" of. */
     reads: Record<string, { at: string; value: JsonValue }>;
+    /** What a justification may cite, as read in this task: the library's documents and facts, the pages a web search returned (`justify.ts`). */
+    sources: { library: string[]; web: string[] };
     /** What a topic keeps across the steps of one task (the procedure topic: its submissions). */
     topic: Record<string, JsonValue>;
     /** What the task read so far, each answer compact, by capability and argument (`evidence:` in the state); the oldest dropped past the cap. */
@@ -93,7 +95,7 @@ export interface Progress {
 }
 
 export function newProgress(): Progress {
-    return { phase: "plan", iteration: 0, plan: null, done: null, lastCall: null, repeats: 0, lastSummary: null, lastArtifact: null, lastRefusal: null, refusals: {}, checkedModels: [], sandbox: null, failure: null, reads: {}, topic: {}, evidence: {}, context: { shelf: [], telemetry: null } };
+    return { phase: "plan", iteration: 0, plan: null, done: null, lastCall: null, repeats: 0, lastSummary: null, lastArtifact: null, lastRefusal: null, refusals: {}, checkedModels: [], sandbox: null, failure: null, reads: {}, sources: { library: [], web: [] }, topic: {}, evidence: {}, context: { shelf: [], telemetry: null } };
 }
 
 export interface WorkshopFeatures extends Record<string, JsonValue> {
