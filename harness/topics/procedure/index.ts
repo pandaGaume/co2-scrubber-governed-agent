@@ -46,8 +46,8 @@ import type { TaskFile } from "../../core/task.js";
 import type { TopicState } from "../../core/reasoning-state.js";
 import type { TopicContext, TopicDefinition, Validation } from "../../core/topic.js";
 import type { DoneClaim, Progress, WorkshopFile } from "../../core/workspace-observer.js";
-import { checkProcedure, problemLines, type PresenceRead, type ProcedureCheck } from "./check.js";
-import { PROCEDURE_SCHEMA, totalMinutes, type Procedure } from "./procedure.js";
+import { checkProcedure, problemLines, type MeasuredStart, type PresenceRead, type ProcedureCheck } from "./check.js";
+import { PROCEDURE_ENVELOPE, PROCEDURE_SCHEMA, totalMinutes, type Procedure } from "./procedure.js";
 import { resolveUnitRef } from "../../lib/units.js";
 
 export const PROCEDURE_TOOLS: ReadonlyArray<RegExp> = [/^factory\.inventory$/, /^station\.registry_list$/, /^biomed\.(describe|presence)$/, /^library\.(list|methods|search|read|facts)$/, /^web\.search$/, /^physics\.units_(normalize|convert|compatible|validate_connection)$/, /^workspace\.(list|read)$/, /^procedure\.submit$/, /^task\.(plan|done|fail|ask)$/];
@@ -67,6 +67,8 @@ export interface Submission {
 }
 
 interface ProcedureTopicState {
+    /** What the builder read in this task that a justification may cite: library documents and facts, web pages. */
+    sources?: { library: string[]; web: string[] };
     submissions: Submission[];
     accepted: { path: string; sha256: string; procedureId: string } | null;
     /** The method card the builder read, once it has read one (`library.read` on a `method-` document). */
@@ -108,6 +110,84 @@ function noteMethod(progress: Progress): ProcedureTopicState {
         if (typeof lastRead.text === "string") state.methodCard = lastRead.text;
     }
     return state;
+}
+
+/** The CO2 measured in the volume when the task was opened, as its observations give it (the scenario reads it from the sensor). */
+export function measuredOf(task: TaskFile["task"]): MeasuredStart | null {
+    const m = (task.observations as { measured?: { co2Ppm?: unknown; source?: unknown; at?: unknown } } | undefined)?.measured;
+    return m && typeof m.co2Ppm === "number" ? { co2Ppm: m.co2Ppm, ...(typeof m.source === "string" ? { source: m.source } : {}), ...(typeof m.at === "string" ? { at: m.at } : {}) } : null;
+}
+
+/** What the builder read that a justification may cite, noted from the last call each time the state is built. */
+function noteSources(progress: Progress): { library: string[]; web: string[] } {
+    const state = stateOf(progress);
+    const sources = (state.sources ??= { library: [], web: [] });
+    const last = progress.lastCall;
+    if (last?.result.ok) {
+        const text = JSON.stringify(last.result.output ?? null);
+        if (last.id === "library.read" || last.id === "library.facts" || last.id === "library.methods") {
+            const id = (last.input as { id?: unknown } | null)?.id;
+            if (typeof id === "string" && !sources.library.includes(id)) sources.library.push(id);
+            for (const m of text.matchAll(/"id":"([a-z0-9][a-z0-9._-]*)"/gi)) if (!sources.library.includes(m[1])) sources.library.push(m[1]);
+        }
+        if (last.id === "web.search") for (const m of text.matchAll(/https?:\/\/[^"\s\\]+/g)) if (!sources.web.includes(m[0])) sources.web.push(m[0]);
+    }
+    return sources;
+}
+
+/** The constants a procedure sets, by path, with their values: each one is justified. */
+export function constantsOf(p: Partial<Procedure>): Array<{ constant: string; value: number }> {
+    const out: Array<{ constant: string; value: number }> = [];
+    const add = (constant: string, value: unknown) => {
+        if (typeof value === "number" && Number.isFinite(value)) out.push({ constant, value });
+    };
+    for (const k of ["co2MaxPpm", "co2AbortPpm", "minSpeedPercent", "maxMinutes"] as const) add(`limits.${k}`, p.limits?.[k]);
+    for (const s of Array.isArray(p.steps) ? p.steps : []) {
+        add(`steps.${s?.n}.speedPercent`, s?.speedPercent);
+        add(`steps.${s?.n}.minutes`, s?.minutes);
+    }
+    for (const a of Array.isArray(p.abort) ? p.abort : []) add(`abort.${a?.id}.threshold`, a?.threshold);
+    add("monitoring.band.minBpm", p.monitoring?.band?.minBpm);
+    add("monitoring.band.maxBpm", p.monitoring?.band?.maxBpm);
+    return out;
+}
+
+/** The justifications' problems: a constant without one, a value that is not the constant's, a source this task did not read (2026-09-28: a maximum of 1200 ppm and an abort at 1500 came from a baseline of 400 ppm nobody gave). */
+export function justificationProblems(p: Partial<Procedure>, read: { library: string[]; web: string[] }, measured: MeasuredStart | null): string[] {
+    const problems: string[] = [];
+    const given = Array.isArray(p.justifications) ? p.justifications : [];
+    for (const c of constantsOf(p)) {
+        const j = given.find((x) => x?.constant === c.constant);
+        if (!j) {
+            problems.push(`${c.constant} = ${c.value} has no justification: say its source (a library document or fact read, a web page found, the measurement given, the guard's envelope, a calculation from other constants, or an assumption said as such) and why`);
+            continue;
+        }
+        if (j.value !== c.value) problems.push(`${c.constant}: the justification says ${j.value}, the procedure sets ${c.value}`);
+        if (!String(j.reason ?? "").trim()) problems.push(`${c.constant}: the justification gives no reason`);
+        const ref = String(j.reference ?? "").trim();
+        switch (j.source) {
+            case "library":
+                if (!read.library.includes(ref)) problems.push(`${c.constant}: "${ref}" is not a library document or fact read in this task (${read.library.slice(0, 12).join(", ") || "none read"}): read it, or cite another source`);
+                break;
+            case "web":
+                if (!read.web.includes(ref)) problems.push(`${c.constant}: "${ref}" is not a page a web search returned in this task: search, and cite a URL it returned`);
+                break;
+            case "measured":
+                if (!measured) problems.push(`${c.constant}: the task gives no measurement to cite`);
+                break;
+            case "envelope":
+                if (!(ref in PROCEDURE_ENVELOPE)) problems.push(`${c.constant}: "${ref}" is not a bound of the guard's envelope (${Object.keys(PROCEDURE_ENVELOPE).filter((k) => typeof (PROCEDURE_ENVELOPE as Record<string, unknown>)[k] === "number").join(", ")})`);
+                break;
+            case "derived":
+                if (!ref) problems.push(`${c.constant}: a derived value gives its formula as the reference`);
+                break;
+            case "assumed":
+                break;
+            default:
+                problems.push(`${c.constant}: source "${String(j.source)}" is not one of library, web, measured, envelope, derived, assumed`);
+        }
+    }
+    return problems;
 }
 
 /** What `biomed.presence` answered in this task, if it was called. */
@@ -164,7 +244,7 @@ function submitCapability(context: TopicContext): LocalCapability {
             const state = stateOf(progress);
             // The guard checked and accepted; recorded here, once the runtime has executed the decision, so the state the model read did not move under it.
             const presence = presenceOf(progress);
-            const check = checkProcedure(procedure, presence);
+            const check = checkProcedure(procedure, presence, undefined, measuredOf(context.task));
             state.submissions.push(submissionOf(state, procedure, check, presence !== null));
             await tellMother(context, procedure, check, state.submissions.length);
             state.accepted = { path, sha256, procedureId: procedure.id };
@@ -215,7 +295,11 @@ async function guardProcedure(capabilityId: string, input: JsonValue, context: T
     if (capabilityId !== "procedure.submit") return [];
     const procedure = (input ?? {}) as unknown as Partial<Procedure>;
     const presence = presenceOf(context.progress);
-    const check = checkProcedure(procedure, presence);
+    const measured = measuredOf(context.task);
+    const check = checkProcedure(procedure, presence, undefined, measured);
+    // Every constant justified by a source this task read, so it can be challenged (2026-09-28).
+    for (const message of justificationProblems(procedure, noteSources(context.progress), measured)) check.problems.push({ kind: "justification", message });
+    if (check.problems.length) check.ok = false;
     if (!ID.test(String(procedure.id ?? ""))) {
         check.problems.push({ kind: "shape", message: `id "${String(procedure.id)}" must be lower case letters, digits and dashes (it names the file)` });
         check.ok = false;
@@ -250,6 +334,8 @@ const headOf = (v: unknown, n: number): JsonValue => {
  */
 export function stateOfTopic(progress: Progress, task: TaskFile["task"]): TopicState {
     const state = noteMethod(progress);
+    const sources = noteSources(progress);
+    const measured = measuredOf(task);
     const inventory = progress.reads["factory.inventory"]?.value as InventoryRead | undefined;
     const presence = presenceOf(progress);
     const monitor = progress.reads["biomed.describe"]?.value;
@@ -273,6 +359,10 @@ export function stateOfTopic(progress: Progress, task: TaskFile["task"]): TopicS
             presence: presence ? presence.modules : null,
             monitor: monitor === undefined ? null : headOf(monitor, 2500),
             method: state.method ? { id: state.method, card: state.methodCard ?? "(read it: library.read)" } : null,
+            // The CO2 of the volume as measured when the task opened: the test starts from it.
+            measured: measured as unknown as JsonValue,
+            // What a justification may cite: the library documents and facts, the web pages this task read.
+            sources: sources as unknown as JsonValue,
             accepted: state.accepted,
         } as JsonValue,
         // The last refused submission stays whole in the evaluation until one is accepted: the model corrects it, whatever it read in between.
@@ -334,7 +424,9 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
     const refusal = progress.refusals["procedure.submit"]?.reason ?? null;
     const refused = refusal ? ` Your last submission was refused: ${refusal}. The procedure exactly as you submitted it is in the state under evaluation (field "procedure"; it is not a file, nothing to read): change in it only what these reasons name and submit it again with procedure.submit; the same procedure submitted again gets the same refusal.` : "";
     const presence = presenceOf(progress) ? "who is in each module (field \"presence\")" : "not yet who is in the volume: read biomed.presence before submitting";
-    return `Stage 4 of 5, the procedure. Write it by the rules of application of ${state.method} (the card is in the state, under hypothesis, field "method"), for this installation (in the state under hypothesis, field "installation": its volumes, openings, unknowns and the device under commissioning) and ${presence}; the medical monitor is there too (field "monitor") once read with biomed.describe. These are fields of the state, not files: read nothing the state already gives. Submit with procedure.submit.${refused}`;
+    const measured = measuredOf(task);
+    const start = measured ? ` The CO2 of the volume measured when this task opened: ${Math.round(measured.co2Ppm)} ppm${measured.source ? ` (${measured.source})` : ""}; the test starts from it (field "measured").` : "";
+    return `Stage 4 of 5, the procedure. Write it by the rules of application of ${state.method} (the card is in the state, under hypothesis, field "method"), for this installation (in the state under hypothesis, field "installation": its volumes, openings, unknowns and the device under commissioning) and ${presence}; the medical monitor is there too (field "monitor") once read with biomed.describe. These are fields of the state, not files: read nothing the state already gives.${start} Every constant you set (each limit, each step's speed and duration, each threshold, each band) is justified in justifications: its source among what you read (field "sources"), the measurement, the guard's envelope, a calculation, or an assumption said as such, and why. Submit with procedure.submit.${refused}`;
 }
 
 export const PROCEDURE_TOPIC: TopicDefinition = {

@@ -44,6 +44,18 @@ export interface ProcedureLimits {
     maxMinutes: number;
 }
 
+/** Why a constant of the procedure has its value, and where it comes from, so it can be challenged against a written procedure or the literature. */
+export interface Justification {
+    /** The constant, by its path in the procedure: limits.co2MaxPpm, steps.1.speedPercent, steps.2.minutes, abort.battery.threshold, monitoring.band.maxBpm. */
+    constant: string;
+    value: number;
+    /** library: a document or a fact of the library read in this task; web: a page a web search returned in this task; measured: the measurement the task was given; envelope: the guard's own bound; derived: computed from other constants; assumed: chosen without a source, said as such. */
+    source: "library" | "web" | "measured" | "envelope" | "derived" | "assumed";
+    /** The document id or fact id, the URL, the measurement, the envelope's key, or the formula; for assumed, may be empty. */
+    reference: string;
+    reason: string;
+}
+
 export interface Procedure {
     version: 1;
     id: string;
@@ -65,6 +77,8 @@ export interface Procedure {
     abort: AbortCondition[];
     /** The predictions, written before the run: the report quotes them as they were. */
     expected: Record<string, string>;
+    /** One per constant the procedure sets: its value, its source, why (2026-09-28). */
+    justifications?: Justification[];
 }
 
 /**
@@ -87,6 +101,8 @@ export interface Procedure {
 export const PROCEDURE_ENVELOPE = {
     speedFloorPercent: 30,
     co2AbortCeilingPpm: 3200,
+    /** The CO2 maximum sits at least this far above the CO2 measured when the test starts (2026-09-28: a maximum of 1200 ppm and an abort at 1500 on a Lab at 1480 stopped a test at its first minute). */
+    startHeadroomPpm: 200,
     maxMinutesCeiling: 60,
     /** Abort conditions every procedure carries, whatever it measures. */
     requiredAborts: ["co2", "refused"] as readonly string[],
@@ -157,6 +173,21 @@ export const PROCEDURE_SCHEMA = {
             description: "The conditions that stop the test, by the id of what the executor can read: co2 (scrubber.motor.state, the CO2 of the volume at or above limits.co2AbortPpm); refused (scrubber.motor.set_speed, the device refused a step's command); battery (station.registry_list, the battery's state of charge under threshold percent); vitals (biomed.verdict, a monitored person out of band, the monitoring lost, or one more person in the volume). A condition that cannot be read stops the test.",
         },
         expected: { type: "object", additionalProperties: { type: "string" }, description: "What the test is expected to show, written before it runs." },
+        justifications: {
+            type: "array",
+            items: {
+                type: "object",
+                properties: {
+                    constant: { type: "string", description: "The constant by its path: limits.co2MaxPpm, limits.co2AbortPpm, limits.minSpeedPercent, limits.maxMinutes, steps.<n>.speedPercent, steps.<n>.minutes, abort.<id>.threshold, monitoring.band.minBpm, monitoring.band.maxBpm." },
+                    value: { type: "number", description: "Its value, as the procedure sets it." },
+                    source: { type: "string", enum: ["library", "web", "measured", "envelope", "derived", "assumed"], description: "library (a document or fact read in this task), web (a page a web search returned in this task), measured (the measurement the task gives), envelope (the guard's own bound), derived (computed from other constants), assumed (chosen without a source)." },
+                    reference: { type: "string", description: "The document or fact id, the URL, the measurement, the envelope's key, or the formula." },
+                    reason: { type: "string", description: "Why this value, in one sentence." },
+                },
+                required: ["constant", "value", "source", "reference", "reason"],
+            },
+            description: "Every constant the procedure sets, justified: its source and why, so a reviewer can challenge it against a written procedure or the literature.",
+        },
     },
-    required: ["version", "id", "method", "volume", "device", "quantities", "limits", "steps", "abort", "expected"],
+    required: ["version", "id", "method", "volume", "device", "quantities", "limits", "steps", "abort", "expected", "justifications"],
 } as const;

@@ -214,10 +214,17 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
         const scrubberPath = devices.find((d) => d.descriptor["@type"] === "Scrubber")?.path ?? devices[0].path;
         end(1, { devices: devices.length, commissioning: commissioningId }, `commissioning ${commissioningId} opened for ${scrubberPath}`);
 
+        // The stand-in world, from here: its CO2 is on the device before the procedure is written, so the factory is given the CO2 the test will start from (2026-09-28).
+        const world = new TwoZoneWorldSim(run.options.world === "hidden-occupant" ? { ...LAB_WORLD, labOccupants: 3 } : LAB_WORLD);
+        await call("scrubber", "debug.set_co2", { state: "NOMINAL", ppm: Math.round(world.labPpm) });
+        const sensor = devices.find((d) => d.descriptor["@type"] === "Co2Sensor" && /\/lab\//.test(d.path))?.path ?? null;
+        const measured = { co2Ppm: Math.round(world.labPpm), source: sensor ? `${sensor} (co2)` : "scrubber.motor.state", at: new Date().toISOString() };
+        if (sensor) await call("station", "registry_report", { path: sensor, readings: { co2: measured.co2Ppm } }).catch(() => undefined);
+
         // 2. the procedure factory.
         begin(2, builder === "scripted" ? "the script stands in for the model" : undefined);
         loop(2).nature = builder === "scripted" ? "script" : "model";
-        const reqP = await call<{ taskId: string; builder: string }>("factory", "request", { objective: { required_outputs: [doc.procedure.requiredOutput] }, observations: { device: scrubberPath }, topics: ["procedure"], builder, budget: doc.procedure.budget, requestedBy: "scenario" });
+        const reqP = await call<{ taskId: string; builder: string }>("factory", "request", { objective: { required_outputs: [doc.procedure.requiredOutput] }, observations: { device: scrubberPath, measured }, topics: ["procedure"], builder, budget: doc.procedure.budget, requestedBy: "scenario" });
         loop(2).taskId = reqP.taskId;
         run.tasks.push(reqP.taskId);
         notify();
@@ -251,7 +258,6 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
 
         // 5. the execution on the stand-in world.
         begin(5);
-        const world = new TwoZoneWorldSim(run.options.world === "hidden-occupant" ? { ...LAB_WORLD, labOccupants: 3 } : LAB_WORLD);
         const telemetry: TelemetryRow[] = [];
         const speedNow = async () => (await call<{ speedPercent: number }>("scrubber", "motor.state")).speedPercent;
         await call("scrubber", "debug.set_co2", { state: "NOMINAL", ppm: Math.round(world.labPpm) });

@@ -44,7 +44,7 @@ import type { Commissioning, MotherLine } from "../slots/station/provider.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
 import { runProcedure } from "../tier3/procedure.js";
 import { loadLibrary, searchLibrary } from "../slots/tools/library/provider.js";
-import { briefOf, requirementsOf, stateOfTopic } from "../harness/topics/procedure/index.js";
+import { briefOf, constantsOf, justificationProblems, requirementsOf, stateOfTopic } from "../harness/topics/procedure/index.js";
 import { newProgress } from "../harness/core/workspace-observer.js";
 
 const PORT = 3121;
@@ -79,6 +79,37 @@ const LAB_EMPTY: PresenceRead = { at: "now", modules: [{ module: "lab", occupant
 const kinds = (p: unknown, presence: PresenceRead | null) => [...new Set(checkProcedure(p, presence).problems.map((x) => x.kind))].sort();
 
 describe("the procedure's guard, alone", () => {
+    it("the limits leave room above the CO2 measured at the start, and every constant is justified by what the task read", () => {
+        // The ninth page run: a maximum of 1200 ppm and an abort at 1500 on a Lab measured at 1480 stopped the test at its first minute.
+        const low = { ...PROCEDURE, limits: { ...PROCEDURE.limits, co2MaxPpm: 1200, co2AbortPpm: 1500 } };
+        const start = checkProcedure(low, LAB_OCCUPIED, undefined, { co2Ppm: 1480, source: "/habitat/lab/eclss/co2-1" });
+        assert.ok(start.problems.some((x) => x.kind === "start" && /at or below the CO2 measured now, 1480 ppm/.test(x.message)) || start.problems.some((x) => x.kind === "start" && /leaves less than 200 ppm/.test(x.message)), JSON.stringify(start.problems));
+        assert.deepEqual(checkProcedure(PROCEDURE, LAB_OCCUPIED, undefined, { co2Ppm: 1480 }).problems, [], "2800 and 3200 leave room above 1480");
+        // The constants, by path.
+        assert.deepEqual(constantsOf(PROCEDURE).map((c) => c.constant), ["limits.co2MaxPpm", "limits.co2AbortPpm", "limits.minSpeedPercent", "limits.maxMinutes", "steps.1.speedPercent", "steps.1.minutes", "steps.2.speedPercent", "steps.2.minutes"]);
+        const read = { library: ["method-concentration-decay"], web: ["https://ntrs.nasa.gov/citations/20150021467"] };
+        assert.match(justificationProblems(PROCEDURE, read, null).join("; "), /limits\.co2MaxPpm = 2800 has no justification/);
+        const justified = {
+            ...PROCEDURE,
+            justifications: [
+                { constant: "limits.co2MaxPpm", value: 2800, source: "derived" as const, reference: "co2AbortPpm - 400", reason: "a margin under the abort" },
+                { constant: "limits.co2AbortPpm", value: 3200, source: "envelope" as const, reference: "co2AbortCeilingPpm", reason: "the guard's ceiling" },
+                { constant: "limits.minSpeedPercent", value: 30, source: "envelope" as const, reference: "speedFloorPercent", reason: "the floor" },
+                { constant: "limits.maxMinutes", value: 24, source: "derived" as const, reference: "12 + 12", reason: "the two steps" },
+                { constant: "steps.1.speedPercent", value: 30, source: "envelope" as const, reference: "speedFloorPercent", reason: "the lowest speed allowed" },
+                { constant: "steps.1.minutes", value: 12, source: "library" as const, reference: "method-concentration-decay", reason: "the card's rise" },
+                { constant: "steps.2.speedPercent", value: 100, source: "web" as const, reference: "https://ntrs.nasa.gov/citations/20150021467", reason: "decay at full flow" },
+                { constant: "steps.2.minutes", value: 12, source: "assumed" as const, reference: "", reason: "long enough for one time constant" },
+            ],
+        };
+        assert.deepEqual(justificationProblems(justified, read, null), []);
+        const unread = justificationProblems(justified, { library: [], web: [] }, null).join("; ");
+        assert.match(unread, /steps\.1\.minutes: "method-concentration-decay" is not a library document or fact read in this task/);
+        assert.match(unread, /steps\.2\.speedPercent: "https:\/\/ntrs\.nasa\.gov\/citations\/20150021467" is not a page a web search returned/);
+        const wrong = { ...justified, justifications: justified.justifications.map((j) => (j.constant === "limits.co2AbortPpm" ? { ...j, value: 1500 } : j)) };
+        assert.match(justificationProblems(wrong, read, null).join("; "), /limits\.co2AbortPpm: the justification says 1500, the procedure sets 3200/);
+    });
+
     it("the corrected procedure of section 15 passes, on an occupied Lab", () => {
         const c = checkProcedure(PROCEDURE, LAB_OCCUPIED);
         assert.deepEqual(c.problems, []);

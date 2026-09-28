@@ -142,7 +142,7 @@ const short = (sha: string) => `${sha.slice(0, 12)}...`;
 const str = (v: unknown): string => (typeof v === "string" ? v : "");
 
 /** The order Mother names a refusal in when a procedure has several: the one the story is about first. */
-const REFUSAL_ORDER: ProblemKind[] = ["floor", "diligence", "monitoring", "bounds", "duration", "abort", "expected", "shape"];
+const REFUSAL_ORDER: ProblemKind[] = ["floor", "start", "diligence", "monitoring", "bounds", "duration", "abort", "expected", "justification", "shape"];
 
 /** Mother's words: the phrases of the default grammars, English and French, read once. */
 function loadWords(dir: string): { en: McpGrammar; fr: McpGrammar } {
@@ -303,7 +303,10 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
         const c = commissioningFor(procedure.device);
         if (!c) throw new Error(`no commissioning is open for ${procedure.device}: a procedure is relayed only for a device being commissioned`);
         if (c.status !== "open") throw new Error(`commissioning ${c.id} is ${c.status}: it does not take a new procedure`);
-        const check = checkProcedure(procedure, await presenceNow());
+        // The CO2 the test will start from, read now on the device (2026-09-28): limits under it stop a test at its first minute.
+        const board = await client().call("scrubber", "motor.state", {});
+        const co2Now = board.ok ? (board.output as { co2Ppm?: unknown }).co2Ppm : undefined;
+        const check = checkProcedure(procedure, await presenceNow(), undefined, typeof co2Now === "number" ? { co2Ppm: co2Now, source: "scrubber.motor.state" } : null);
         if (!check.ok) {
             proposal.status = "rejected";
             proposal.reason = check.problems.map((p) => p.message).join("; ");

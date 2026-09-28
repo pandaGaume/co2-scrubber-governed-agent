@@ -34,7 +34,14 @@
  */
 import { ABORT_READERS, PROCEDURE_ENVELOPE, moduleOf, totalMinutes, type Procedure } from "./procedure.js";
 
-export type ProblemKind = "shape" | "floor" | "bounds" | "duration" | "abort" | "expected" | "diligence" | "monitoring";
+export type ProblemKind = "shape" | "floor" | "start" | "bounds" | "duration" | "abort" | "expected" | "diligence" | "monitoring" | "justification";
+
+/** The CO2 measured in the volume when the procedure is written or relayed: the test starts from it. */
+export interface MeasuredStart {
+    co2Ppm: number;
+    source?: string;
+    at?: string;
+}
 
 export interface ProcedureProblem {
     kind: ProblemKind;
@@ -59,7 +66,7 @@ export interface ProcedureCheck {
 
 const num = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 
-export function checkProcedure(input: unknown, presence: PresenceRead | null, envelope = PROCEDURE_ENVELOPE): ProcedureCheck {
+export function checkProcedure(input: unknown, presence: PresenceRead | null, envelope = PROCEDURE_ENVELOPE, measured: MeasuredStart | null = null): ProcedureCheck {
     const problems: ProcedureProblem[] = [];
     const add = (kind: ProblemKind, message: string, step?: number) => problems.push(step === undefined ? { kind, message } : { kind, message, step });
     const p = (input && typeof input === "object" ? input : {}) as Partial<Procedure>;
@@ -91,6 +98,12 @@ export function checkProcedure(input: unknown, presence: PresenceRead | null, en
     if (limits && num(limits.co2AbortPpm) && num(limits.co2MaxPpm)) {
         if (limits.co2AbortPpm > envelope.co2AbortCeilingPpm) add("bounds", `the CO2 abort limit ${limits.co2AbortPpm} ppm is above the ceiling of ${envelope.co2AbortCeilingPpm} ppm`);
         if (limits.co2MaxPpm >= limits.co2AbortPpm) add("bounds", `the CO2 maximum ${limits.co2MaxPpm} ppm is not below the abort limit ${limits.co2AbortPpm} ppm`);
+        // The start: the test begins at the CO2 measured now, and its limits leave room above it.
+        if (measured && num(measured.co2Ppm)) {
+            const at = Math.round(measured.co2Ppm);
+            if (limits.co2AbortPpm <= at) add("start", `the CO2 abort limit ${limits.co2AbortPpm} ppm is at or below the CO2 measured now, ${at} ppm${measured.source ? ` (${measured.source})` : ""}: the test would stop at its first reading`);
+            else if (limits.co2MaxPpm < at + envelope.startHeadroomPpm) add("start", `the CO2 maximum ${limits.co2MaxPpm} ppm leaves less than ${envelope.startHeadroomPpm} ppm above the CO2 measured now, ${at} ppm${measured.source ? ` (${measured.source})` : ""}: the test starts there and has no room to rise`);
+        }
     }
 
     // The duration: bounded twice, by the procedure and by the envelope.
