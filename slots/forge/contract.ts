@@ -22,7 +22,7 @@
  * Nothing here knows a domain: quantities and units are the units
  * service's, formulas are the graph topic's evaluator's.
  */
-import { compatibleUnits, resolveUnitRef } from "../../harness/lib/units.js";
+import { compatibleUnits, resolveUnitRef } from "../physics/units.js";
 import { evaluateExpression } from "../../harness/topics/graph/params.js";
 
 export interface ContractPort {

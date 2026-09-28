@@ -22,7 +22,7 @@
  * for a task.
  */
 import type { TaskFile } from "./task.js";
-import { convertValue, resolveUnitRef } from "../lib/units.js";
+import { physics } from "./physics.js";
 
 export type FactStatus = "measured" | "device" | "documented" | "library" | "derived" | "assumed";
 
@@ -110,7 +110,7 @@ const rank = (s: FactStatus): number => {
 
 /** A value converted into a fact's unit, or null when the units do not convert. */
 function inUnitOf(value: number, unit: string, quantity: string | undefined, target: Fact): number | null {
-    const c = convertValue(value, { unit, ...(quantity ? { quantity } : {}) }, { unit: target.unit, ...(target.quantity ? { quantity: target.quantity } : {}) });
+    const c = physics().convertValue(value, { unit, ...(quantity ? { quantity } : {}) }, { unit: target.unit, ...(target.quantity ? { quantity: target.quantity } : {}) });
     return c.ok ? c.value : null;
 }
 
@@ -214,7 +214,7 @@ export function taskFacts(task: Pick<TaskFile["task"], "requirements" | "observa
 
 /** A known constant against the fact it cites: agrees, disagrees (with the fact's value), or its unit is unknown. */
 export function checkKnownAgainstFact(known: { value: number; unit: string; quantity?: string }, fact: LibraryFact, tolerance = 0.02): { verdict: "OK" | "CONFLICT" | "UNKNOWN_UNIT"; reason: string } {
-    const r = resolveUnitRef({ unit: known.unit, ...(known.quantity ? { quantity: known.quantity } : {}) });
+    const r = physics().resolveUnitRef({ unit: known.unit, ...(known.quantity ? { quantity: known.quantity } : {}) });
     if (!r.ok) return { verdict: "UNKNOWN_UNIT", reason: r.reason };
     const target: Fact = { id: fact.id, semantic: fact.semantic, quantity: fact.quantity, unit: fact.unit, value: fact.value, ...(typeof fact.min === "number" && typeof fact.max === "number" ? { min: fact.min, max: fact.max } : {}), status: "documented", source: "library", producer: "library" };
     const converted = inUnitOf(known.value, known.unit, known.quantity, target);

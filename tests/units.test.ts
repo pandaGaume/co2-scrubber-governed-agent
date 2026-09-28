@@ -18,7 +18,7 @@ import type { LocalBroker } from "../slots/lib/local-broker.js";
 import type { PublishedSlot } from "../slots/lib/slot-server.js";
 import { startAllOrFail } from "./lib/start.js";
 import { Broker } from "../harness/lib/broker.js";
-import { canonicalQuantity, checkAgainstDocument, compatibleUnits, convertValue, normalizeUnitText, quantitiesIn, resolveUnitRef, validateConnection } from "../harness/lib/units.js";
+import { canonicalQuantity, checkAgainstDocument, compatibleUnits, convertValue, normalizeUnitText, quantitiesIn, resolveUnitRef, validateConnection } from "../slots/physics/units.js";
 import { checkTwinRequest, type TwinFactoryRequest } from "../harness/observer/request.js";
 import { loadGraphLibrary } from "../lib/graph-library.js";
 import { fromRoot } from "../lib/paths.js";

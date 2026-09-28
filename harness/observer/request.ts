@@ -33,11 +33,11 @@
  *                it false.
  */
 
-import { checkAgainstDocument, compatibleUnits } from "../lib/units.js";
 import { checkKnownAgainstFact, type LibraryFact } from "../core/contracts.js";
 import { readFileSync } from "node:fs";
 import { fromRoot } from "../../lib/paths.js";
 import { loadWords, say } from "../core/words.js";
+import { physics } from "../core/physics.js";
 const ow = (key: string): string => say(loadWords("specs/observer/words.json"), key);
 
 /** What the documentation settles, the spec's (`specs/observer/rules.json`): contradictions a request may not assume, the words that hedge a number. */
@@ -204,7 +204,7 @@ export function checkTwinRequest(input: unknown, context: CheckContext = {}): Re
             if (!entry) problems.push(`vocabulary: output "${String(o.name)}" is a "${o.quantity}", which is not a quantity of the shared vocabulary; name it with one of: ${names}`);
             else if (entry.units.length && o.unit && !entry.units.includes(o.unit)) {
                 // Another unit of the same quantity converts (the units service, 2026-09-25): a flow in m3/min where the catalogue writes m3ps is the factory's to convert; a unit of another quantity is not.
-                const c = compatibleUnits({ quantity: entry.quantity, unit: o.unit }, { quantity: entry.quantity, unit: entry.units[0] });
+                const c = physics().compatibleUnits({ quantity: entry.quantity, unit: o.unit }, { quantity: entry.quantity, unit: entry.units[0] });
                 if (!c.ok || !c.compatible) problems.push(`vocabulary: output "${String(o.name)}" is a ${entry.quantity} in "${o.unit}", which is not a unit of that quantity${c.ok ? "" : ` (${c.reason})`}; the shared vocabulary writes it in ${entry.units.join(" or ")}, or any unit that converts to them`);
             }
         }
@@ -255,7 +255,7 @@ export function checkTwinRequest(input: unknown, context: CheckContext = {}): Re
             }
         } else if (context.documents?.[k.source] !== undefined) {
             // A document without typed facts: the value against what the document states, by the unit system; a constant copied in another unit must agree once converted.
-            const verdict = checkAgainstDocument({ value: k.value, unit: k.unit, ...(k.quantity ? { quantity: k.quantity } : {}) }, context.documents[k.source]);
+            const verdict = physics().checkAgainstDocument({ value: k.value, unit: k.unit, ...(k.quantity ? { quantity: k.quantity } : {}) }, context.documents[k.source]);
             if (verdict.verdict === "INVALID_CONVERSION") problems.push(`units: known constant "${k.symbol}" = ${k.value} ${k.unit} is an INVALID_CONVERSION of what "${k.source}" states: ${verdict.reason}; copy the document's value in the document's unit, or convert it with physics.units_convert`);
             else if (verdict.verdict === "UNKNOWN_UNIT") problems.push(`units: known constant "${k.symbol}" is written in "${k.unit}", a unit the unit system does not know (${verdict.reason}); write it in a UCUM unit of its quantity`);
         }

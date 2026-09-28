@@ -53,8 +53,8 @@ import { checkProcedure, constantsOf, envelopeOf, FORMAT, problemLines, rulesAnd
 import { checkJustifications, JUSTIFICATIONS_SCHEMA, justificationProblems as commonJustificationProblems, type Justified, type ReadSources } from "../../core/justify.js";
 import { leavesOf, matches, valueAt, type RulesDocument } from "../../core/rules.js";
 import { loadWords, say, viewOf } from "../../core/words.js";
+import { physics } from "../../core/physics.js";
 export { constantsOf } from "./check.js";
-import { resolveUnitRef } from "../../lib/units.js";
 
 /** A proposal as the topic handles it: whatever the format's schema describes; the topic reads it only by the format's paths. */
 export type ProcedureLike = { [key: string]: unknown; id?: unknown; justifications?: Array<Record<string, unknown>> };
@@ -391,7 +391,7 @@ async function guardProcedure(capabilityId: string, input: JsonValue, context: T
     const quantities = valueAt(procedure, FORMAT.quantities, FORMAT.keys);
     for (const q of Array.isArray(quantities) ? (quantities as Array<Record<string, unknown>>) : []) {
         if (!q || typeof q !== "object") continue;
-        const r = resolveUnitRef({ unit: String(q.unit ?? ""), ...(q.quantity ? { quantity: String(q.quantity) } : {}) });
+        const r = physics().resolveUnitRef({ unit: String(q.unit ?? ""), ...(q.quantity ? { quantity: String(q.quantity) } : {}) });
         if (!r.ok) {
             check.problems.push({ kind: "shape", message: w("guard.quantity", { name: String(q.name), reason: r.reason, code: r.code }) });
             check.ok = false;

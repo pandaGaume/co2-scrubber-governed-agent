@@ -38,13 +38,13 @@ import { DEFAULT_BUDGET, topicFor, type TaskFile, type TaskState, type Topic } f
 import type { TopicDefinition } from "./topic.js";
 import { createWorkspaceObserver, isArtifact, listWorkshop, newProgress, type Progress } from "./workspace-observer.js";
 import { type ContractReport, type LibraryFact } from "./contracts.js";
-import { canonicalQuantity } from "../lib/units.js";
 import { applyVerdict, supervisionOfRequest, type SupervisionInput, type Verdict, reviewDigest } from "../supervisor/supervisor.js";
 import { ONNX_TOPIC } from "../topics/onnx/index.js";
 import { PROCEDURE_TOPIC } from "../topics/procedure/index.js";
 import { GRAPH_TOPIC } from "../topics/graph/index.js";
 import { CODE_TOPIC } from "../topics/code/index.js";
 import { APP } from "./application.js";
+import { physics } from "./physics.js";
 
 /** The topics the constructor knows: the factories that share this loop, each with its own harness. */
 export const TOPIC_DEFINITIONS: Partial<Record<Topic, TopicDefinition>> = { onnx: ONNX_TOPIC, procedure: PROCEDURE_TOPIC, graph: GRAPH_TOPIC, code: CODE_TOPIC };
@@ -337,7 +337,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
     // A required output in a quantity the units service does not know can be neither produced nor declared missing (a contract is written in known quantities):
     // the task ends before its first step and names who revises (2026-09-28: thirty steps spent mapping and declaring "CO2 removal rate" in ppm/min).
     if (!ended) {
-        const unknown = task.objective.required_outputs.filter((o) => !canonicalQuantity(o.quantity));
+        const unknown = task.objective.required_outputs.filter((o) => !physics().canonicalQuantity(o.quantity));
         if (unknown.length) {
             ended = `UNBUILDABLE_OUTPUT: ${unknown.map((o) => `"${o.name}" is a ${o.quantity}${o.unit ? ` in ${o.unit}` : ""}, a quantity the units service does not know: no node can produce it and no contract can be written in it`).join(" | ")}; REQUIRE_RESOLUTION: observer to revise, upstream of this task`;
             progress.failure = ended;

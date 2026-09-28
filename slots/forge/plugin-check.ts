@@ -29,7 +29,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import * as path from "node:path";
 import { validateSignature, type INodeMeta, type NodeRegistry } from "@spiky-panda/core";
-import { canonicalQuantity, resolveUnitRef } from "../../harness/lib/units.js";
+import { canonicalQuantity, resolveUnitRef } from "../physics/units.js";
 
 /** The prefix every generated type carries. */
 export const GENERATED_PREFIX = "Generated.";

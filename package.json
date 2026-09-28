@@ -20,7 +20,7 @@
         "biomed:scan": "python scripts/polar-h10-bridge.py --scan",
         "biomed:strap": "python scripts/polar-h10-bridge.py --self-test",
         "slots": "node --env-file-if-exists=.env dist/slots/run-all.js --no-broker",
-        "test": "node --test \"dist/tests/**/*.test.js\"",
+        "test": "node --import ./dist/tests/lib/physics.js --test \"dist/tests/**/*.test.js\"",
         "job": "spikypanda-job",
         "chain": "spikypanda-job specs/rs385-drive.json && spikypanda-job specs/scrubber-health-twin.json && spikypanda-job specs/scrubber-health-eval.json",
         "twin:build": "node dist/scripts/build-cabin-graph.js",

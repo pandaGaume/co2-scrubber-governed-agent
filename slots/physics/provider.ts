@@ -21,8 +21,8 @@
  */
 import { readFileSync } from "node:fs";
 import { fromRoot } from "../../lib/paths.js";
-import { compatibleUnits, convertValue, resolveUnitRef, validateConnection, type UnitRef } from "../../harness/lib/units.js";
-import { RELATIONS, relate, type RelationDefault } from "../../harness/lib/relations.js";
+import { compatibleUnits, convertValue, resolveUnitRef, validateConnection, type UnitRef } from "./units.js";
+import { RELATIONS, relate, type RelationDefault } from "./relations.js";
 import { LIBRARY_DIR, loadLibrary } from "../tools/library/provider.js";
 
 export const RELATION_DEFAULTS_FILE = "specs/physics/relation-defaults.json";
@@ -40,6 +40,8 @@ export function relationDefaults(dir: string = LIBRARY_DIR): Record<string, Rela
     );
 }
 import { objectSchema, publishSlot, type PublishedSlot, type SlotTool } from "../lib/slot-server.js";
+// Loading the slot plugs its units and laws into the harnesses of this process (harness/core/physics.ts).
+import { installPhysics } from "./port.js";
 
 export type PhysicsState = Record<string, never>;
 
@@ -52,6 +54,7 @@ const ref = (v: unknown): UnitRef => {
 };
 
 export function physicsSlot(wsBase: string, log: (line: string) => void): PublishedSlot<PhysicsState> {
+    installPhysics();
     const defaults = relationDefaults();
     const tools: SlotTool<PhysicsState>[] = [
         {

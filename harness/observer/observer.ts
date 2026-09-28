@@ -46,8 +46,8 @@ import type { Provider } from "../lib/provider.js";
 import { checkTwinRequest, TWIN_REQUEST_SCHEMA, type TwinFactoryRequest, type VocabularyEntry } from "./request.js";
 import type { LibraryFact } from "../core/contracts.js";
 import { summarizeTelemetry, type TelemetrySummary } from "./telemetry.js";
-import { canonicalQuantity } from "../lib/units.js";
 import { loadWords, say } from "../core/words.js";
+import { physics } from "../core/physics.js";
 
 /** What the Observer's harness says to its model: the spec's words (`specs/observer/words.json`). */
 export const OBSERVER_WORDS = loadWords("specs/observer/words.json");
@@ -110,7 +110,7 @@ async function catalogueOf(broker: Broker | undefined, slot: string): Promise<{ 
     for (const t of types) {
         for (const port of [...Object.values(t.signature?.inputs ?? {}), ...Object.values(t.signature?.outputs ?? {})]) {
             // A quantity the units service does not know cannot be asked of a factory: nothing could produce it, and no contract could be written in it (2026-09-28: "ConcentrationRate" asked, a graph task spent its budget on it).
-            if (!port?.quantity || !canonicalQuantity(port.quantity)) continue;
+            if (!port?.quantity || !physics().canonicalQuantity(port.quantity)) continue;
             const set = units.get(port.quantity) ?? new Set<string>();
             if (port.unit) set.add(port.unit);
             units.set(port.quantity, set);

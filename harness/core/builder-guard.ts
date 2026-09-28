@@ -25,13 +25,12 @@
 import type { DecisionContext, JsonValue, PolicyDecision, SafetyDecision, SafetyGuard } from "@spiky-panda/harness";
 import type { Broker } from "../lib/broker.js";
 import { contractProblems } from "../../slots/forge/contract.js";
-import { compatibleUnits } from "../lib/units.js";
-import { defaultedParameters, relationBetween } from "../lib/relations.js";
 import { TOPICS, type TaskFile } from "./task.js";
 import type { TopicDefinition } from "./topic.js";
 import { checkJustifications } from "./justify.js";
 import type { Plan, Progress } from "./workspace-observer.js";
 import { appSays } from "./application.js";
+import { physics } from "./physics.js";
 
 const PATH_KEYS = new Set(["path", "file", "name", "contractPath"]);
 
@@ -144,14 +143,14 @@ export async function planProblems(plan: Plan, { broker, task, runtimeSlot = "tw
             if (!port) problems.push(`produced: "${name}": "${String(m?.type)}" has no signature output "${String(m?.port)}"`);
             else if (required) {
                 const sameQuantity = String(port.quantity ?? "").toLowerCase() === required.quantity.toLowerCase();
-                const units = required.unit && port.unit ? compatibleUnits({ quantity: required.quantity, unit: required.unit }, { quantity: required.quantity, unit: port.unit }) : null;
+                const units = required.unit && port.unit ? physics().compatibleUnits({ quantity: required.quantity, unit: required.unit }, { quantity: required.quantity, unit: port.unit }) : null;
                 // A port of another quantity, with a conversion a physical relation makes (2026-09-28): the conversion is asked of the units service, not rebuilt as a node.
-                const related = port.quantity ? relationBetween(String(port.quantity), required.quantity) : null;
+                const related = port.quantity ? physics().relationBetween(String(port.quantity), required.quantity) : null;
                 if (m?.convert) {
                     if (!related) problems.push(`produced: "${name}": no relation ties "${String(m?.type)}".${String(m?.port)} (${port.quantity ?? "?"}) to ${required.quantity} (physics.units_relations lists them); map a port of the output's quantity, or declare it missing`);
                     else if (m.convert.relation !== related.relation.id) problems.push(`produced: "${name}": the relation that ties ${port.quantity} to ${required.quantity} is "${related.relation.id}", not "${String(m.convert.relation)}"`);
                     else {
-                        const defaulted = defaultedParameters();
+                        const defaulted = physics().defaultedParameters();
                         const need = Object.entries(related.relation.parameters).filter(([k]) => !defaulted.includes(k) && m.convert?.parameters?.[k] === undefined).map(([k, spec]) => `${k} (${spec.description}, ${spec.unit})`);
                         if (need.length) problems.push(`produced: "${name}": the conversion ${related.relation.id} needs ${need.join(", ")} in convert.parameters`);
                     }

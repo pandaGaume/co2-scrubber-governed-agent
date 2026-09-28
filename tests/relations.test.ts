@@ -5,7 +5,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { relate as relateWith, relationBetween } from "../harness/lib/relations.js";
+import { relate as relateWith, relationBetween } from "../slots/physics/relations.js";
 import { relationDefaults } from "../slots/physics/provider.js";
 
 // The defaults are the library's facts, as the physics slot reads them.
