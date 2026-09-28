@@ -43,10 +43,12 @@ export interface SignatureStatus {
 export function documentDigest(id: string, dir: string = LIBRARY_DOCS_DIR): string {
     const md = path.join(dir, `${id}.md`);
     if (!existsSync(md)) throw new Error(`no document "${id}" in ${dir}`);
-    const hash = createHash("sha256").update(readFileSync(md));
+    // The text, not the bytes: a checkout that turns LF into CRLF changes no word of what was signed, and must not void the signature.
+    const text = (file: string) => readFileSync(file, "utf8").replace(/\r\n/g, "\n");
+    const hash = createHash("sha256").update(text(md));
     const facts = path.join(dir, `${id}.facts.json`);
     hash.update("\n--facts--\n");
-    if (existsSync(facts)) hash.update(readFileSync(facts));
+    if (existsSync(facts)) hash.update(text(facts));
     return hash.digest("hex");
 }
 
