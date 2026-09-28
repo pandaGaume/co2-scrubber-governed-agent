@@ -53,7 +53,7 @@ import { fromRoot } from "../../lib/paths.js";
 import { objectSchema as obj, publishSlot, type PublishedSlot } from "../lib/slot-server.js";
 import { checkTaskId, sha256Of, taskDir } from "../tools/lib/workshop.js";
 import { Broker } from "../../harness/lib/broker.js";
-import { checkProcedure, type PresenceRead, type ProblemKind, type ProcedureProblem } from "../../harness/topics/procedure/check.js";
+import { checkProcedure, type PresenceRead, type ProblemKind, type ProcedureProblem, safetyProblems, type SignedFact } from "../../harness/topics/procedure/check.js";
 import { moduleOf, totalMinutes, type Procedure } from "../../harness/topics/procedure/procedure.js";
 import { buildReport, reportLines, type ProcedureReport, type StepRecord } from "../../harness/topics/procedure/report.js";
 import { DEFAULT_POLICY, questionProblems, standingOrder, type Question, type QuestionAnswer, type QuestionsPolicy, type Resume } from "./questions.js";
@@ -307,6 +307,11 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
         const board = await client().call("scrubber", "motor.state", {});
         const co2Now = board.ok ? (board.output as { co2Ppm?: unknown }).co2Ppm : undefined;
         const check = checkProcedure(procedure, await presenceNow(), undefined, typeof co2Now === "number" ? { co2Ppm: co2Now, source: "scrubber.motor.state" } : null);
+        // The safety constants, by the signed library, checked again here: a procedure that passed once is not trusted to pass twice.
+        const served = await client().call("library", "facts", {});
+        const facts = served.ok ? (((served.output as { facts?: SignedFact[] }).facts ?? []) as SignedFact[]) : [];
+        for (const message of safetyProblems(procedure, facts)) check.problems.push({ kind: "justification", message });
+        if (check.problems.length) check.ok = false;
         if (!check.ok) {
             proposal.status = "rejected";
             proposal.reason = check.problems.map((p) => p.message).join("; ");

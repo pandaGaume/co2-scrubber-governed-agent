@@ -1,0 +1,76 @@
+/**
+ * The signatures of the library's documents (2026-09-28): a person's word
+ * that a document was reviewed and holds, bound to the document as it was
+ * read. A safety procedure's limits are justified only by the facts of a
+ * signed document; a value a model found, computed or assumed is not a
+ * safety limit ("otherwise we rewrite Chernobyl").
+ *
+ * A signature is a file, `docs/library/signatures/<id>.json` (the directory
+ * is LIBRARY_SIGNATURES_DIR when set), written by `npm run library:sign`, a
+ * command a person runs: no slot and no model can sign. It holds who signed,
+ * when, for what scope, and the digest of the document and of its facts as
+ * they were signed. A document changed since no longer matches its digest:
+ * its signature is kept, and said no longer valid.
+ */
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import * as path from "node:path";
+import { fromRoot } from "../../lib/paths.js";
+
+export const LIBRARY_DOCS_DIR = fromRoot("docs", "library");
+
+/** Where the signatures are kept: LIBRARY_SIGNATURES_DIR when set (the tests sign in their own), the library's own directory otherwise. */
+export const signaturesDir = (): string => process.env.LIBRARY_SIGNATURES_DIR || path.join(LIBRARY_DOCS_DIR, "signatures");
+
+export interface Signature {
+    document: string;
+    digest: string;
+    signedBy: string;
+    signedAt: string;
+    scope: string;
+    note?: string;
+}
+
+export interface SignatureStatus {
+    by: string;
+    at: string;
+    scope: string;
+    /** The document and its facts are as they were signed. */
+    valid: boolean;
+}
+
+/** The digest of a document as a signature binds it: its text and its facts' sidecar, when it has one. */
+export function documentDigest(id: string, dir: string = LIBRARY_DOCS_DIR): string {
+    const md = path.join(dir, `${id}.md`);
+    if (!existsSync(md)) throw new Error(`no document "${id}" in ${dir}`);
+    const hash = createHash("sha256").update(readFileSync(md));
+    const facts = path.join(dir, `${id}.facts.json`);
+    hash.update("\n--facts--\n");
+    if (existsSync(facts)) hash.update(readFileSync(facts));
+    return hash.digest("hex");
+}
+
+/** A person signs a document as reviewed: the signature file, with the digest of what they reviewed. */
+export function signDocument(id: string, signedBy: string, options: { dir?: string; sigDir?: string; scope?: string; note?: string } = {}): Signature {
+    if (!signedBy.trim()) throw new Error("a signature names the person who signs");
+    const dir = options.dir ?? LIBRARY_DOCS_DIR;
+    const sigDir = options.sigDir ?? signaturesDir();
+    const signature: Signature = { document: id, digest: documentDigest(id, dir), signedBy: signedBy.trim(), signedAt: new Date().toISOString(), scope: options.scope ?? "safety", ...(options.note ? { note: options.note } : {}) };
+    mkdirSync(sigDir, { recursive: true });
+    writeFileSync(path.join(sigDir, `${id}.json`), `${JSON.stringify(signature, null, 4)}\n`, "utf8");
+    return signature;
+}
+
+/** A document's signature as it stands now: who, when, and whether the document is still what was signed; null when unsigned. */
+export function signatureOf(id: string, dir: string = LIBRARY_DOCS_DIR, sigDir: string = signaturesDir()): SignatureStatus | null {
+    const file = path.join(sigDir, `${id}.json`);
+    if (!existsSync(file)) return null;
+    const s = JSON.parse(readFileSync(file, "utf8")) as Signature;
+    let valid = false;
+    try {
+        valid = s.digest === documentDigest(id, dir);
+    } catch {
+        valid = false;
+    }
+    return { by: s.signedBy, at: s.signedAt, scope: s.scope, valid };
+}

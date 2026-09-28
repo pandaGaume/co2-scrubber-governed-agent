@@ -46,7 +46,8 @@ import type { TaskFile } from "../../core/task.js";
 import type { TopicState } from "../../core/reasoning-state.js";
 import type { TopicContext, TopicDefinition, Validation } from "../../core/topic.js";
 import type { DoneClaim, Progress, WorkshopFile } from "../../core/workspace-observer.js";
-import { checkProcedure, problemLines, type MeasuredStart, type PresenceRead, type ProcedureCheck } from "./check.js";
+import { checkProcedure, constantsOf, problemLines, safetyProblems, SAFETY_CONSTANT, type MeasuredStart, type PresenceRead, type ProcedureCheck, type SignedFact } from "./check.js";
+export { constantsOf } from "./check.js";
 import { PROCEDURE_ENVELOPE, PROCEDURE_SCHEMA, totalMinutes, type Procedure } from "./procedure.js";
 import { resolveUnitRef } from "../../lib/units.js";
 
@@ -135,28 +136,12 @@ function noteSources(progress: Progress): { library: string[]; web: string[] } {
     return sources;
 }
 
-/** The constants a procedure sets, by path, with their values: each one is justified. */
-export function constantsOf(p: Partial<Procedure>): Array<{ constant: string; value: number }> {
-    const out: Array<{ constant: string; value: number }> = [];
-    const add = (constant: string, value: unknown) => {
-        if (typeof value === "number" && Number.isFinite(value)) out.push({ constant, value });
-    };
-    for (const k of ["co2MaxPpm", "co2AbortPpm", "minSpeedPercent", "maxMinutes"] as const) add(`limits.${k}`, p.limits?.[k]);
-    for (const s of Array.isArray(p.steps) ? p.steps : []) {
-        add(`steps.${s?.n}.speedPercent`, s?.speedPercent);
-        add(`steps.${s?.n}.minutes`, s?.minutes);
-    }
-    for (const a of Array.isArray(p.abort) ? p.abort : []) add(`abort.${a?.id}.threshold`, a?.threshold);
-    add("monitoring.band.minBpm", p.monitoring?.band?.minBpm);
-    add("monitoring.band.maxBpm", p.monitoring?.band?.maxBpm);
-    return out;
-}
-
 /** The justifications' problems: a constant without one, a value that is not the constant's, a source this task did not read (2026-09-28: a maximum of 1200 ppm and an abort at 1500 came from a baseline of 400 ppm nobody gave). */
 export function justificationProblems(p: Partial<Procedure>, read: { library: string[]; web: string[] }, measured: MeasuredStart | null): string[] {
     const problems: string[] = [];
     const given = Array.isArray(p.justifications) ? p.justifications : [];
-    for (const c of constantsOf(p)) {
+    // The safety constants are the signed library's (safetyProblems); the others are justified by what this task read.
+    for (const c of constantsOf(p).filter((x) => !SAFETY_CONSTANT.test(x.constant))) {
         const j = given.find((x) => x?.constant === c.constant);
         if (!j) {
             problems.push(`${c.constant} = ${c.value} has no justification: say its source (a library document or fact read, a web page found, the measurement given, the guard's envelope, a calculation from other constants, or an assumption said as such) and why`);
@@ -297,8 +282,10 @@ async function guardProcedure(capabilityId: string, input: JsonValue, context: T
     const presence = presenceOf(context.progress);
     const measured = measuredOf(context.task);
     const check = checkProcedure(procedure, presence, undefined, measured);
-    // Every constant justified by a source this task read, so it can be challenged (2026-09-28).
-    for (const message of justificationProblems(procedure, noteSources(context.progress), measured)) check.problems.push({ kind: "justification", message });
+    // Every constant justified so it can be challenged (2026-09-28): the safety ones by a fact of a signed library document they respect, the others by a source this task read.
+    const served = await context.broker.call("library", "facts", {});
+    const facts = served.ok ? (((served.output as { facts?: SignedFact[] }).facts ?? []) as SignedFact[]) : [];
+    for (const message of [...safetyProblems(procedure, facts), ...justificationProblems(procedure, noteSources(context.progress), measured)]) check.problems.push({ kind: "justification", message });
     if (check.problems.length) check.ok = false;
     if (!ID.test(String(procedure.id ?? ""))) {
         check.problems.push({ kind: "shape", message: `id "${String(procedure.id)}" must be lower case letters, digits and dashes (it names the file)` });
@@ -426,7 +413,7 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
     const presence = presenceOf(progress) ? "who is in each module (field \"presence\")" : "not yet who is in the volume: read biomed.presence before submitting";
     const measured = measuredOf(task);
     const start = measured ? ` The CO2 of the volume measured when this task opened: ${Math.round(measured.co2Ppm)} ppm${measured.source ? ` (${measured.source})` : ""}; the test starts from it (field "measured").` : "";
-    return `Stage 4 of 5, the procedure. Write it by the rules of application of ${state.method} (the card is in the state, under hypothesis, field "method"), for this installation (in the state under hypothesis, field "installation": its volumes, openings, unknowns and the device under commissioning) and ${presence}; the medical monitor is there too (field "monitor") once read with biomed.describe. These are fields of the state, not files: read nothing the state already gives.${start} Every constant you set (each limit, each step's speed and duration, each threshold, each band) is justified in justifications: its source among what you read (field "sources"), the measurement, the guard's envelope, a calculation, or an assumption said as such, and why. Submit with procedure.submit.${refused}`;
+    return `Stage 4 of 5, the procedure. Write it by the rules of application of ${state.method} (the card is in the state, under hypothesis, field "method"), for this installation (in the state under hypothesis, field "installation": its volumes, openings, unknowns and the device under commissioning) and ${presence}; the medical monitor is there too (field "monitor") once read with biomed.describe. These are fields of the state, not files: read nothing the state already gives.${start} Every constant you set is justified in justifications. The safety constants (the CO2 limits, the minimum speed and every step's speed, the maximum duration, the abort thresholds, the heart-rate band) cite a fact of a library document a person signed (library.facts says which are signed, and each limit's safe side) and respect it; the other constants (the steps' durations) cite what you read (field "sources"), the measurement, a calculation, or an assumption said as such. Submit with procedure.submit.${refused}`;
 }
 
 export const PROCEDURE_TOPIC: TopicDefinition = {

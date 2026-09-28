@@ -4,7 +4,11 @@
  * so the runner ends with the message instead of waiting. The server itself
  * treats the same case as a degraded mode (`slots/run-all.ts`).
  */
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import * as path from "node:path";
 import { startAll } from "../../slots/run-all.js";
+import { signDocument } from "../../harness/lib/signatures.js";
 import type { LocalBroker } from "../../slots/lib/local-broker.js";
 import type { PublishedSlot } from "../../slots/lib/slot-server.js";
 
@@ -17,6 +21,11 @@ export async function startAllOrFail(port: number): Promise<{ broker: LocalBroke
     process.env.STATION_VOICE ??= "off";
     process.env.SCENARIO_SECONDS_PER_MINUTE ??= "0";
     process.env.STATION_REMIND_SECONDS ??= "0";
+    // The suite signs the safety card in a directory of its own: the repository's signatures are a person's, never a test's.
+    if (!process.env.LIBRARY_SIGNATURES_DIR) {
+        process.env.LIBRARY_SIGNATURES_DIR = mkdtempSync(path.join(tmpdir(), "signatures-"));
+        signDocument("commissioning-test-safety", "the test suite", { note: "signed for the tests only" });
+    }
     const started = await startAll(port, quiet, "ignore");
     if (started.failures.length) {
         await started.stop();

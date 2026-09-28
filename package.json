@@ -31,6 +31,7 @@
         "tier3": "node --env-file-if-exists=.env dist/tier3/run.js",
         "image": "docker build -f docker/Dockerfile -t ghcr.io/pandagaume/co2-scrubber-factory:0.1.0 .",
         "agent:build": "node dist/scripts/build-agent-graph.js",
+        "library:sign": "node dist/scripts/library-sign.js",
         "agent:page": "node dist/scripts/build-agent-page.js",
         "substrate:vendor": "node scripts/vendor-substrate.mjs",
         "example:commissioning": "node --env-file-if-exists=.env dist/scripts/commissioning-example.js",

@@ -60,6 +60,12 @@ export interface LibraryFact {
     device?: { type: string; property: string };
     /** One line: what the document says, in words. */
     says?: string;
+    /** scientific: a value the domain accepts, with its reference in the literature; context: a value decided for this installation, with where the decision comes from (2026-09-28). */
+    kind?: "scientific" | "context";
+    /** The literature for a scientific fact, the decision's origin for a context one. */
+    reference?: string;
+    /** For a limit: the side that is safe; a procedure's constant may be at or above a lower bound, at or below an upper one. */
+    bound?: "lower" | "upper";
 }
 
 export interface ConflictValue {

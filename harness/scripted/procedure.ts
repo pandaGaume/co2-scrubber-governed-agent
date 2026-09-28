@@ -98,19 +98,19 @@ export class ScriptedProcedureBuilder implements Provider {
                 ...(monitoring && occupied ? [{ id: "vitals", source: "biomed.verdict", when: "an occupant out of band, the monitoring lost, or one more person in the volume" }] : []),
             ],
             justifications: [
-                { constant: "limits.co2MaxPpm", value: 2800, source: "derived", reference: "co2AbortPpm - 400", reason: "a margin of 400 ppm under the abort limit" },
-                { constant: "limits.co2AbortPpm", value: 3200, source: "envelope", reference: "co2AbortCeilingPpm", reason: "the guard's ceiling, under the cabin's ELEVATED level" },
-                { constant: "limits.minSpeedPercent", value: speed === 0 ? 0 : 30, source: speed === 0 ? "assumed" : "envelope", reference: speed === 0 ? "" : "speedFloorPercent", reason: speed === 0 ? "the rise is fastest with the scrubber stopped" : "the guard's floor for a test" },
-                { constant: "limits.maxMinutes", value: 24, source: "derived", reference: "steps.1.minutes + steps.2.minutes", reason: "the two steps" },
-                { constant: "steps.1.speedPercent", value: speed, source: speed === 0 ? "assumed" : "envelope", reference: speed === 0 ? "" : "speedFloorPercent", reason: "the rise, at the lowest speed the test may command" },
+                { constant: "limits.co2MaxPpm", value: 2800, source: "library", reference: "test.co2AbortCeilingPpm", reason: "a margin of 400 ppm under the test's CO2 ceiling" },
+                { constant: "limits.co2AbortPpm", value: 3200, source: "library", reference: "test.co2AbortCeilingPpm", reason: "the test's CO2 ceiling, under the cabin's ELEVATED level" },
+                { constant: "limits.minSpeedPercent", value: speed === 0 ? 0 : 30, source: "library", reference: "test.speedFloorPercent", reason: "the floor of a test" },
+                { constant: "limits.maxMinutes", value: 24, source: "library", reference: "test.maxMinutesCeiling", reason: "the two steps, under the test's ceiling" },
+                { constant: "steps.1.speedPercent", value: speed, source: "library", reference: "test.speedFloorPercent", reason: "the rise, at the lowest speed a test may command" },
                 { constant: "steps.1.minutes", value: 12, source: "assumed", reference: "", reason: "long enough for the CO2 to rise well above the sensor's noise" },
-                { constant: "steps.2.speedPercent", value: 100, source: "assumed", reference: "", reason: "the decay at full speed, the flow the datasheet gives" },
+                { constant: "steps.2.speedPercent", value: 100, source: "library", reference: "test.speedFloorPercent", reason: "the decay at full speed, above the floor" },
                 { constant: "steps.2.minutes", value: 12, source: "assumed", reference: "", reason: "long enough to see the decay's time constant" },
-                { constant: "abort.battery.threshold", value: 35, source: "assumed", reference: "", reason: "the executor's default for the battery" },
+                { constant: "abort.battery.threshold", value: 35, source: "library", reference: "test.batteryAbortMinPercent", reason: "the night's reserve for the scrubber" },
                 ...(monitoring && occupied
                     ? [
-                          { constant: "monitoring.band.minBpm", value: 45, source: "assumed" as const, reference: "", reason: "the monitor's default band" },
-                          { constant: "monitoring.band.maxBpm", value: 120, source: "assumed" as const, reference: "", reason: "the monitor's default band" },
+                          { constant: "monitoring.band.minBpm", value: 45, source: "library" as const, reference: "test.heartRateMinBpm", reason: "the monitored band's lower edge" },
+                          { constant: "monitoring.band.maxBpm", value: 120, source: "library" as const, reference: "test.heartRateMaxBpm", reason: "the monitored band's upper edge" },
                       ]
                     : []),
             ],

@@ -34,6 +34,7 @@ import { objectSchema, publishSlot, type PublishedSlot, type SlotTool } from "..
 import { sha256Of } from "../lib/workshop.js";
 import { describeGraph, loadGraphLibrary, type GraphLibraryEntry } from "../../../lib/graph-library.js";
 import type { LibraryFact } from "../../../harness/core/contracts.js";
+import { signatureOf } from "../../../harness/lib/signatures.js";
 
 export interface LibraryDocument {
     id: string;
@@ -120,7 +121,7 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
         {
             name: "list",
             inputSchema: objectSchema({}),
-            handle: (_args, s) => ({ documents: s.documents.map(({ id, title, summary, measures, sha256, bytes, facts }) => ({ id, title, summary, measures, sha256, bytes, facts: facts.length })) }),
+            handle: (_args, s) => ({ documents: s.documents.map(({ id, title, summary, measures, sha256, bytes, facts }) => ({ id, title, summary, measures, sha256, bytes, facts: facts.length, signature: signatureOf(id, s.dir) })) }),
         },
         {
             name: "methods",
@@ -157,7 +158,8 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
             handle: (args, s) => {
                 const docs = typeof args.id === "string" && args.id ? s.documents.filter((d) => d.id === args.id) : s.documents;
                 if (typeof args.id === "string" && args.id && !docs.length) throw new Error(`no document "${String(args.id)}" in the library`);
-                return { facts: docs.flatMap((d) => d.facts.map((f) => ({ ...f, source: d.id }))) };
+                // Each fact carries whether its document is signed and still as signed: a safety limit is justified only by a signed one (2026-09-28).
+                return { facts: docs.flatMap((d) => { const signature = signatureOf(d.id, s.dir); return d.facts.map((f) => ({ ...f, source: d.id, signed: signature })); }) };
             },
         },
         {
@@ -167,7 +169,7 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
                 const d = s.documents.find((x) => x.id === args.id);
                 if (!d) throw new Error(`no document "${String(args.id)}" in the library (${s.documents.map((x) => x.id).join(", ")})`);
                 s.reads.push({ id: d.id, sha256: d.sha256, at: new Date().toISOString() });
-                return { id: d.id, title: d.title, sha256: d.sha256, text: d.text, facts: d.facts };
+                return { id: d.id, title: d.title, sha256: d.sha256, text: d.text, facts: d.facts, signature: signatureOf(d.id, s.dir) };
             },
         },
     ];

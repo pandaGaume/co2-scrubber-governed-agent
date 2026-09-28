@@ -33,6 +33,7 @@
  * from it. Neither is written in the builder's prompt.
  */
 import { ABORT_READERS, PROCEDURE_ENVELOPE, moduleOf, totalMinutes, type Procedure } from "./procedure.js";
+import type { LibraryFact } from "../../core/contracts.js";
 
 export type ProblemKind = "shape" | "floor" | "start" | "bounds" | "duration" | "abort" | "expected" | "diligence" | "monitoring" | "justification";
 
@@ -137,6 +138,59 @@ export function checkProcedure(input: unknown, presence: PresenceRead | null, en
     }
 
     return { ok: problems.length === 0, problems, module, occupants };
+}
+
+/** The constants a procedure sets, by path, with their values. */
+export function constantsOf(p: Partial<Procedure>): Array<{ constant: string; value: number }> {
+    const out: Array<{ constant: string; value: number }> = [];
+    const add = (constant: string, value: unknown) => {
+        if (typeof value === "number" && Number.isFinite(value)) out.push({ constant, value });
+    };
+    for (const k of ["co2MaxPpm", "co2AbortPpm", "minSpeedPercent", "maxMinutes"] as const) add(`limits.${k}`, p.limits?.[k]);
+    for (const s of Array.isArray(p.steps) ? p.steps : []) {
+        add(`steps.${s?.n}.speedPercent`, s?.speedPercent);
+        add(`steps.${s?.n}.minutes`, s?.minutes);
+    }
+    for (const a of Array.isArray(p.abort) ? p.abort : []) add(`abort.${a?.id}.threshold`, a?.threshold);
+    add("monitoring.band.minBpm", p.monitoring?.band?.minBpm);
+    add("monitoring.band.maxBpm", p.monitoring?.band?.maxBpm);
+    return out;
+}
+
+/**
+ * The safety constants of a procedure (2026-09-28): what bounds the air the occupants breathe, the scrubber's speed, the exposure, the aborts, the watch.
+ * Each is justified by a fact of a library document a person signed and that has not changed since, and respects it; a value a model found, computed or assumed is not a safety limit.
+ */
+export const SAFETY_CONSTANT = /^(limits\.(co2MaxPpm|co2AbortPpm|minSpeedPercent|maxMinutes)|steps\.\d+\.speedPercent|abort\.[a-z]+\.threshold|monitoring\.band\.(minBpm|maxBpm))$/;
+
+/** A library fact as the library serves it: its document, and that document's signature as it stands. */
+export type SignedFact = LibraryFact & { source: string; signed?: { by: string; at: string; valid: boolean } | null };
+
+export function safetyProblems(p: Partial<Procedure>, facts: SignedFact[]): string[] {
+    const problems: string[] = [];
+    const given = Array.isArray(p.justifications) ? p.justifications : [];
+    const signing = "a person reviews it and signs it: npm run library:sign -- <document> \"<name>\"";
+    for (const c of constantsOf(p).filter((x) => SAFETY_CONSTANT.test(x.constant))) {
+        const j = given.find((x) => x?.constant === c.constant);
+        if (!j) {
+            problems.push(`${c.constant} = ${c.value} is a safety constant with no justification: cite the fact of a signed library document it respects (source "library", the fact's id as reference)`);
+            continue;
+        }
+        if (j.source !== "library") {
+            problems.push(`${c.constant} = ${c.value} is a safety constant: it is justified by a fact of a signed library document, not by ${j.source === "web" ? "a web page" : j.source === "assumed" ? "an assumption" : j.source === "derived" ? "a calculation" : j.source === "measured" ? "a measurement" : `"${String(j.source)}"`} (${String(j.reference)})`);
+            continue;
+        }
+        const fact = facts.find((f) => f.id === String(j.reference));
+        if (!fact) {
+            problems.push(`${c.constant}: "${String(j.reference)}" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)`);
+            continue;
+        }
+        if (!fact.signed) problems.push(`${c.constant}: the fact ${fact.id} is in "${fact.source}", which no person has signed as valid; ${signing}`);
+        else if (!fact.signed.valid) problems.push(`${c.constant}: "${fact.source}" was signed by ${fact.signed.by} and has changed since; ${signing}`);
+        const ok = fact.bound === "upper" ? c.value <= fact.value : fact.bound === "lower" ? c.value >= fact.value : Math.abs(c.value - fact.value) <= 1e-9 * Math.max(1, Math.abs(fact.value));
+        if (!ok) problems.push(`${c.constant} = ${c.value} does not respect ${fact.id} = ${fact.value} ${fact.unit} (${fact.bound === "upper" ? "at or below it" : fact.bound === "lower" ? "at or above it" : "equal to it"})`);
+    }
+    return problems;
 }
 
 /** The problems as one line each, the way a builder reads them at its next step. */

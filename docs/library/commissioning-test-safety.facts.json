@@ -1,0 +1,82 @@
+{
+    "document": "commissioning-test-safety",
+    "facts": [
+        {
+            "id": "test.speedFloorPercent",
+            "semantic": "TestScrubberSpeedFloor",
+            "quantity": "Ratio",
+            "unit": "percent",
+            "value": 30,
+            "bound": "lower",
+            "says": "a test never commands the scrubber below 30 percent and never stops it",
+            "kind": "context",
+            "reference": "decided 2026-09-22 for the concentration-decay test (docs/mise-en-service.fr.md, section 9)"
+        },
+        {
+            "id": "test.co2AbortCeilingPpm",
+            "semantic": "TestCO2AbortCeiling",
+            "quantity": "Concentration",
+            "unit": "ppm",
+            "value": 3200,
+            "bound": "upper",
+            "says": "a test's CO2 abort limit, and its maximum under it, stay at or below 3200 ppm, under the ELEVATED level of 3500",
+            "kind": "context",
+            "reference": "decided under the cabin's ELEVATED level, habitat.co2.elevatedPpm (station-topology)"
+        },
+        {
+            "id": "test.maxMinutesCeiling",
+            "semantic": "TestDurationCeiling",
+            "quantity": "Time",
+            "unit": "min",
+            "value": 60,
+            "bound": "upper",
+            "says": "a test lasts 60 minutes at most",
+            "kind": "context",
+            "reference": "decided for the commissioning tests: the longest exposure one test may cause"
+        },
+        {
+            "id": "test.startHeadroomPpm",
+            "semantic": "TestStartHeadroom",
+            "quantity": "Concentration",
+            "unit": "ppm",
+            "value": 200,
+            "bound": "lower",
+            "says": "a test's CO2 maximum sits at least 200 ppm above the CO2 measured at its start",
+            "kind": "context",
+            "reference": "decided 2026-09-28 after a test stopped at its first minute"
+        },
+        {
+            "id": "test.batteryAbortMinPercent",
+            "semantic": "TestBatteryAbortFloor",
+            "quantity": "Ratio",
+            "unit": "percent",
+            "value": 35,
+            "bound": "lower",
+            "says": "a test stops when the battery falls under 35 percent, or under a higher threshold",
+            "kind": "context",
+            "reference": "the executor's battery threshold, the night's reserve for the scrubber"
+        },
+        {
+            "id": "test.heartRateMinBpm",
+            "semantic": "TestHeartRateBandMin",
+            "quantity": "Frequency",
+            "unit": "bpm",
+            "value": 45,
+            "bound": "lower",
+            "says": "the monitored band starts at 45 bpm or higher",
+            "kind": "context",
+            "reference": "the medical monitor's default band"
+        },
+        {
+            "id": "test.heartRateMaxBpm",
+            "semantic": "TestHeartRateBandMax",
+            "quantity": "Frequency",
+            "unit": "bpm",
+            "value": 120,
+            "bound": "upper",
+            "says": "the monitored band ends at 120 bpm or lower",
+            "kind": "context",
+            "reference": "the medical monitor's default band"
+        }
+    ]
+}

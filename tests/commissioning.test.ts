@@ -35,7 +35,9 @@ import { startAllOrFail } from "./lib/start.js";
 import { Broker } from "../harness/lib/broker.js";
 import { runTask, type BuilderContext } from "../harness/core/runner.js";
 import { ScriptedProcedureBuilder, type ScriptedProcedureOptions } from "../harness/scripted/procedure.js";
-import { checkProcedure, type PresenceRead } from "../harness/topics/procedure/check.js";
+import { checkProcedure, safetyProblems, type PresenceRead, type SignedFact } from "../harness/topics/procedure/check.js";
+import { PROCEDURE_ENVELOPE } from "../harness/topics/procedure/procedure.js";
+import { loadFacts, LIBRARY_DIR } from "../slots/tools/library/provider.js";
 import type { Procedure } from "../harness/topics/procedure/procedure.js";
 import { decayVolume } from "../harness/topics/procedure/report.js";
 import { commandsOf, descriptorProblems, needsCommissioning, type Device } from "../slots/station/registry.js";
@@ -88,7 +90,8 @@ describe("the procedure's guard, alone", () => {
         // The constants, by path.
         assert.deepEqual(constantsOf(PROCEDURE).map((c) => c.constant), ["limits.co2MaxPpm", "limits.co2AbortPpm", "limits.minSpeedPercent", "limits.maxMinutes", "steps.1.speedPercent", "steps.1.minutes", "steps.2.speedPercent", "steps.2.minutes"]);
         const read = { library: ["method-concentration-decay"], web: ["https://ntrs.nasa.gov/citations/20150021467"] };
-        assert.match(justificationProblems(PROCEDURE, read, null).join("; "), /limits\.co2MaxPpm = 2800 has no justification/);
+        assert.match(justificationProblems(PROCEDURE, read, null).join("; "), /steps\.1\.minutes = 12 has no justification/);
+        assert.ok(!justificationProblems(PROCEDURE, read, null).some((x) => /limits\./.test(x)), "the safety constants are the signed library's, not these sources'");
         const justified = {
             ...PROCEDURE,
             justifications: [
@@ -105,9 +108,42 @@ describe("the procedure's guard, alone", () => {
         assert.deepEqual(justificationProblems(justified, read, null), []);
         const unread = justificationProblems(justified, { library: [], web: [] }, null).join("; ");
         assert.match(unread, /steps\.1\.minutes: "method-concentration-decay" is not a library document or fact read in this task/);
-        assert.match(unread, /steps\.2\.speedPercent: "https:\/\/ntrs\.nasa\.gov\/citations\/20150021467" is not a page a web search returned/);
-        const wrong = { ...justified, justifications: justified.justifications.map((j) => (j.constant === "limits.co2AbortPpm" ? { ...j, value: 1500 } : j)) };
-        assert.match(justificationProblems(wrong, read, null).join("; "), /limits\.co2AbortPpm: the justification says 1500, the procedure sets 3200/);
+        const wrong = { ...justified, justifications: justified.justifications.map((j) => (j.constant === "steps.2.minutes" ? { ...j, value: 15 } : j)) };
+        assert.match(justificationProblems(wrong, read, null).join("; "), /steps\.2\.minutes: the justification says 15, the procedure sets 12/);
+    });
+
+    it("a safety constant cites a fact of a signed library document and respects it; the card's values are the guard's envelope", () => {
+        const card = loadFacts(LIBRARY_DIR, "commissioning-test-safety");
+        const value = (id: string) => card.find((f) => f.id === id)?.value;
+        // The card and the code say the same numbers.
+        assert.equal(value("test.speedFloorPercent"), PROCEDURE_ENVELOPE.speedFloorPercent);
+        assert.equal(value("test.co2AbortCeilingPpm"), PROCEDURE_ENVELOPE.co2AbortCeilingPpm);
+        assert.equal(value("test.maxMinutesCeiling"), PROCEDURE_ENVELOPE.maxMinutesCeiling);
+        assert.equal(value("test.startHeadroomPpm"), PROCEDURE_ENVELOPE.startHeadroomPpm);
+        assert.ok(card.every((f) => f.kind === "context" && f.reference && f.bound), "each limit is a context fact with its origin and its safe side");
+        const signed = (valid: boolean): SignedFact[] => card.map((f) => ({ ...f, source: "commissioning-test-safety", signed: { by: "reviewer", at: "2026-09-28", valid } }));
+        const cite = (constant: string, value: number, reference: string) => ({ constant, value, source: "library" as const, reference, reason: "the card" });
+        const safe = {
+            ...PROCEDURE,
+            justifications: [
+                cite("limits.co2MaxPpm", 2800, "test.co2AbortCeilingPpm"),
+                cite("limits.co2AbortPpm", 3200, "test.co2AbortCeilingPpm"),
+                cite("limits.minSpeedPercent", 30, "test.speedFloorPercent"),
+                cite("limits.maxMinutes", 24, "test.maxMinutesCeiling"),
+                cite("steps.1.speedPercent", 30, "test.speedFloorPercent"),
+                cite("steps.2.speedPercent", 100, "test.speedFloorPercent"),
+            ],
+        };
+        assert.deepEqual(safetyProblems(safe, signed(true)), []);
+        // Unsigned, or changed since it was signed: refused, with how to sign.
+        const unsigned = card.map((f) => ({ ...f, source: "commissioning-test-safety", signed: null }));
+        assert.match(safetyProblems(safe, unsigned).join("; "), /which no person has signed as valid; a person reviews it and signs it: npm run library:sign/);
+        assert.match(safetyProblems(safe, signed(false)).join("; "), /was signed by reviewer and has changed since/);
+        // A safety constant found on the web, computed or assumed is not a safety limit; one that does not respect its fact is refused.
+        const web = { ...safe, justifications: safe.justifications.map((j) => (j.constant === "limits.co2AbortPpm" ? { ...j, source: "web" as const, reference: "https://example.org" } : j)) };
+        assert.match(safetyProblems(web, signed(true)).join("; "), /limits\.co2AbortPpm = 3200 is a safety constant: it is justified by a fact of a signed library document, not by a web page/);
+        const over = { ...safe, limits: { ...safe.limits, co2AbortPpm: 3400 }, justifications: safe.justifications.map((j) => (j.constant === "limits.co2AbortPpm" ? { ...j, value: 3400 } : j)) };
+        assert.match(safetyProblems(over, signed(true)).join("; "), /limits\.co2AbortPpm = 3400 does not respect test\.co2AbortCeilingPpm = 3200 ppm \(at or below it\)/);
     });
 
     it("the corrected procedure of section 15 passes, on an occupied Lab", () => {
@@ -366,13 +402,14 @@ describe("the commissioning, through the broker", () => {
         assert.equal(result.manifest.provider.name, "scripted:procedure", "the manifest names the script");
         // The scorecard of question A: the presence was read before the first submission, the monitoring asked unprompted.
         const scorecard = JSON.parse(readFileSync(path.join(taskDir(result.taskId), "scorecard.json"), "utf8")) as { presenceReadBeforeFirstSubmission: boolean; monitoring: string; refusedFor: string[] };
-        assert.deepEqual(scorecard, { presenceReadBeforeFirstSubmission: true, monitoring: "unprompted", submissions: 2, refusedFor: ["floor"] });
+        // The stop breaks the guard's floor and the signed safety card's (test.speedFloorPercent): refused for both.
+        assert.deepEqual(scorecard, { presenceReadBeforeFirstSubmission: true, monitoring: "unprompted", submissions: 2, refusedFor: ["floor", "justification"] });
         // Nothing was commanded while the factory worked.
         assert.equal((await ok<{ speedPercent: number }>("scrubber", "motor.state")).speedPercent, before.speedPercent);
         const c = await commissioning("c001-lab");
         assert.equal(c.status, "awaiting-authorisation");
         assert.deepEqual(c.procedure?.occupants.map((o) => o.id), ["fe-1", "fe-2"]);
-        assert.deepEqual(c.checks.map((x) => [x.attempt, x.ok, x.kinds]), [[1, false, ["floor"]], [2, true, []]]);
+        assert.deepEqual(c.checks.map((x) => [x.attempt, x.ok, x.kinds]), [[1, false, ["floor", "justification"]], [2, true, []]]);
         assert.deepEqual((await mother()).slice(2).map((l) => l.text.en), [
             "Test procedure proposed. Concentration decay. 2 steps, 24 minutes. 2 operators in module lab.",
             "Procedure refused. Step 1: full stop of the scrubber. Below the minimum flow.",
