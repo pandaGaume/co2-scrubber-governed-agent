@@ -16,6 +16,8 @@
  *   declared   each pattern it classes names a capability it allows
  *   justify    it says where its constants are (`justify.ts`), on a call it
  *              allows, and that call accepts their justifications
+ *   script     it has its script (`harness/scripted/index.ts`), on the
+ *              scripts' base, on the reasoning state as the models are
  *
  * A deviation known and not yet closed is in KNOWN, with why. A new one
  * fails; one that is closed fails too until it leaves KNOWN, so the ledger
@@ -38,10 +40,12 @@ import { taskCapabilities } from "../harness/core/task-capabilities.js";
 import { newProgress } from "../harness/core/workspace-observer.js";
 import type { TaskFile } from "../harness/core/task.js";
 import type { TopicDefinition } from "../harness/core/topic.js";
+import { SCRIPTED_BUILDERS } from "../harness/scripted/index.js";
+import { ScriptedBuilderBase } from "../harness/scripted/base.js";
 
 const PORT = 3146;
 
-type Check = "base" | "tools" | "model" | "replay" | "declared" | "justify";
+type Check = "base" | "tools" | "model" | "replay" | "declared" | "justify" | "script";
 
 /** The deviations known and not yet closed: topic, check, the capability or pattern, and why it stands. */
 const KNOWN: Array<{ topic: string; check: Check; what: string; why: string }> = [];
@@ -111,6 +115,9 @@ describe("every factory against the socle", () => {
             if (!carriers.length) found.push(`justify|${String(topic.justified.capability)}`);
             for (const id of carriers) if (!schemaOf(id)?.properties?.justifications) found.push(`justify|${id} takes no justifications`);
         }
+        const script = SCRIPTED_BUILDERS[topic.name]?.({ taskId: context.taskId, task: TASK, topic: topic.name, lastCall: () => null, read: () => null });
+        if (!script) found.push("script|none");
+        else if (!(script instanceof ScriptedBuilderBase) || script.contextMode !== "state" || script.name !== `scripted:${topic.name}`) found.push(`script|${script.name}`);
         return found.sort();
     };
 

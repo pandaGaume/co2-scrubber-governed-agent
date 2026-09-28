@@ -28,24 +28,13 @@
  */
 import { justificationsFor, numbersOf } from "../core/justify.js";
 import type { JsonValue, PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
-import type { Provider, ProviderExchange } from "../lib/provider.js";
-import type { CapabilityCall } from "../core/capabilities.js";
-import type { TaskFile } from "../core/task.js";
+import { decide, ScriptedBuilderBase, valueOf, type ScriptContext } from "./base.js";
 
-export interface ScriptedBuilderOptions {
-    task: TaskFile["task"];
-    /** The last call of the loop, as the runner records it (what a model would read in `lastOutput`). */
-    lastCall: () => CapabilityCall | null;
-    /** What the task last read by a capability, replays included; the script's own last call only when absent. */
-    read?: (capabilityId: string) => JsonValue | null;
+export interface ScriptedBuilderOptions extends ScriptContext {
 }
-
-const decide = (capabilityId: string, input: JsonValue, rationale: string): PolicyDecision => ({ action: { id: capabilityId, description: capabilityId }, invocation: { actionId: capabilityId, capabilityId, input }, rationale });
 
 /** A number as a summary states it: three significant digits. */
 const short = (v: unknown): string => (typeof v === "number" && Number.isFinite(v) ? Number(v.toPrecision(3)).toString() : "?");
-
-const valueOf = (call: CapabilityCall | null): Record<string, JsonValue> => (call?.result.ok && call.result.output && typeof call.result.output === "object" ? (call.result.output as Record<string, JsonValue>) : {});
 
 /** Why each number of the script's fit spec is what it is: the reviewed spec's values for this board, said as such (`justify.ts`). */
 const WHY: Array<[RegExp, { source: "derived" | "assumed"; reference: string; reason: string }]> = [
@@ -56,40 +45,31 @@ const WHY: Array<[RegExp, { source: "derived" | "assumed"; reference: string; re
 /** A fit's input with the justification of every number of its spec. */
 const withJustifications = (input: { spec: Record<string, unknown> }): JsonValue => ({ ...input, justifications: justificationsFor(numbersOf(input.spec, "").filter((c) => c.constant !== "version"), WHY) }) as unknown as JsonValue;
 
-export class ScriptedBuilder implements Provider {
-    readonly name = "scripted:onnx";
-    readonly model = "scripted/onnx";
-    readonly family = "scripted";
-    readonly exchanges: ProviderExchange[] = [];
-    calls = 0;
+export class ScriptedBuilder extends ScriptedBuilderBase<ScriptedBuilderOptions> {
     private fit: Record<string, JsonValue> = {};
     private inspect: Record<string, JsonValue> = {};
 
-    constructor(private readonly options: ScriptedBuilderOptions) {}
+    constructor(options: ScriptedBuilderOptions) {
+        super("onnx", options);
+    }
 
-    begin(): void {
+    override begin(): void {
         this.fit = {};
         this.inspect = {};
     }
 
-    private next(state: PolicyFallbackInput["state"]): PolicyDecision {
+    protected next(state: PolicyFallbackInput["state"]): PolicyDecision {
         const { task } = this.options;
-        const last = this.options.lastCall();
+        const last = this.last;
         const data = task.data[0];
         const columns = data?.columns ?? [];
         const duty = columns.find((c) => /duty|speed|command/i.test(c)) ?? columns[0] ?? "duty_percent";
         const current = columns.find((c) => /current|amp/i.test(c)) ?? columns[1] ?? "current_amps";
         // What was done last, as the observation says it (the harness may have replayed it from the recipes).
         const after = `${String(state.features.phase)}:${String(state.features.lastCapability)}`;
-        // The fit and the inspection as the task made them: a step replayed from the recipes is read too.
-        const read = (id: string): Record<string, JsonValue> | null => {
-            const v = this.options.read?.(id) ?? (last?.id === id ? valueOf(last) : null);
-            return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, JsonValue>) : null;
-        };
-        this.fit = read("model.fit") ?? this.fit;
-        this.inspect = read("model.inspect") ?? this.inspect;
-        // A call that failed: the script has no other way, it gives up with the tool's reason (a model would try another way, or say the same).
-        if (last && !last.result.ok) return decide("task.fail", { reason: (last.result.error ?? last.result.outcome).replace(/^(device refused|error):\s*/i, "") }, `${last.id} failed: nothing else to try`);
+        // The fit and the inspection as the task made them, replays included (the base's read).
+        this.fit = this.read("model.fit") ?? this.fit;
+        this.inspect = this.read("model.inspect") ?? this.inspect;
         switch (after) {
             case "plan:":
                 // The cabin twin's outputs, from a cabin: the capability ranks the cabin node above the habitat's atmosphere, which produces the same concentration.
@@ -151,22 +131,5 @@ export class ScriptedBuilder implements Provider {
                 );
             }
         }
-    }
-
-    async resolve(input: PolicyFallbackInput): Promise<PolicyDecision> {
-        this.calls++;
-        const decision = this.next(input.state);
-        this.exchanges.push({
-            decisionId: input.decisionId,
-            model: this.model,
-            request: { intention: input.intention, state: input.state, allowed: input.allowedCapabilities.map((c) => c.id) },
-            response: null,
-            decision,
-            proposedCapabilityId: decision.invocation.capabilityId,
-            proposedInput: decision.invocation.input,
-            latencyMs: 0,
-            tokens: null,
-        });
-        return decision;
     }
 }

@@ -17,16 +17,10 @@
  * last capability, the last refusal) and keeps no counter.
  */
 import type { JsonValue, PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
-import type { Provider, ProviderExchange } from "../lib/provider.js";
-import type { CapabilityCall } from "../core/capabilities.js";
-import type { TaskFile } from "../core/task.js";
+import { decide, ScriptedBuilderBase, valueOf, type ScriptContext } from "./base.js";
 import type { Procedure } from "../topics/procedure/procedure.js";
 
-export interface ScriptedProcedureOptions {
-    task: TaskFile["task"];
-    lastCall: () => CapabilityCall | null;
-    /** What the task last read by a capability, replays included; the script's own last call only when absent. */
-    read?: (capabilityId: string) => JsonValue | null;
+export interface ScriptedProcedureOptions extends ScriptContext {
     /** The speed of the rise in the first submission: 0 is the story's first protocol (default). */
     firstSpeedPercent?: number;
     /** false: submits without reading who is in the volume (default true). */
@@ -37,10 +31,6 @@ export interface ScriptedProcedureOptions {
     device?: string;
 }
 
-const decide = (capabilityId: string, input: JsonValue, rationale: string): PolicyDecision => ({ action: { id: capabilityId, description: capabilityId }, invocation: { actionId: capabilityId, capabilityId, input }, rationale });
-
-const valueOf = (call: CapabilityCall | null): Record<string, JsonValue> => (call?.result.ok && call.result.output && typeof call.result.output === "object" ? (call.result.output as Record<string, JsonValue>) : {});
-
 type Presence = Array<{ module: string; occupants: number; subjects: Array<{ id: string }> }>;
 
 interface Inventory {
@@ -48,20 +38,15 @@ interface Inventory {
     devices?: Array<{ path: string; type: string; area: string }>;
 }
 
-export class ScriptedProcedureBuilder implements Provider {
-    readonly name = "scripted:procedure";
-    readonly model = "scripted/procedure";
-    readonly family = "scripted";
-    readonly exchanges: ProviderExchange[] = [];
-    /** The script runs on the reasoning state, as the model does: the runner builds the topic's state at every step and replays nothing. */
-    readonly contextMode = "state" as const;
-    calls = 0;
+export class ScriptedProcedureBuilder extends ScriptedBuilderBase<ScriptedProcedureOptions> {
     private inventory: Inventory = {};
     private presence: Presence = [];
 
-    constructor(private readonly options: ScriptedProcedureOptions) {}
+    constructor(options: ScriptedProcedureOptions) {
+        super("procedure", options);
+    }
 
-    begin(): void {
+    override begin(): void {
         this.inventory = {};
         this.presence = [];
     }
@@ -125,21 +110,16 @@ export class ScriptedProcedureBuilder implements Provider {
         };
     }
 
-    private next(state: PolicyFallbackInput["state"]): PolicyDecision {
+    protected next(state: PolicyFallbackInput["state"]): PolicyDecision {
         const { task, firstSpeedPercent = 0, readPresence = true, askMonitoring = true } = this.options;
-        const last = this.options.lastCall();
-        // The installation and the presence as the task read them: a step replayed from the recipes is read too (2026-09-28: a replayed presence, unseen, left the procedure without its monitoring, refused until stuck).
-        const read = (id: string): Record<string, JsonValue> | null => {
-            const v = this.options.read?.(id) ?? (last?.id === id ? valueOf(last) : null);
-            return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, JsonValue>) : null;
-        };
-        const inventory = read("factory.inventory");
+        const last = this.last;
+        // The installation and the presence as the task read them, replays included (the base's read).
+        const inventory = this.read("factory.inventory");
         if (inventory) this.inventory = inventory as unknown as Inventory;
-        const presence = read("biomed.presence");
+        const presence = this.read("biomed.presence");
         if (presence) this.presence = (presence.modules ?? []) as unknown as Presence;
         const refusal = String(state.features.lastRefusal ?? "");
         const after = `${String(state.features.phase)}:${String(state.features.lastCapability)}`;
-        if (last && !last.result.ok) return decide("task.fail", { reason: (last.result.error ?? last.result.outcome).replace(/^(device refused|error):\s*/i, "") }, `${last.id} failed: nothing else to try`);
         // A safety limit that cites an unsigned document: no procedure passes until a person signs it, so the script ends, naming it, as the refusal asks.
         const unsigned = /the fact \S+ is in "([^"]+)", which no person has signed/.exec(refusal);
         if (unsigned) return decide("task.fail", { reason: `the safety card "${unsigned[1]}" is not signed: no procedure's safety limits can be justified until a person signs it` }, "the refusal names an unsigned document");
@@ -177,12 +157,5 @@ export class ScriptedProcedureBuilder implements Provider {
                 return decide("task.done", { summary: "decay procedure, two steps with the hatch closed, accepted by the guard", artifacts: [{ kind: "procedure", path }] }, "the procedure is accepted");
             }
         }
-    }
-
-    async resolve(input: PolicyFallbackInput): Promise<PolicyDecision> {
-        this.calls++;
-        const decision = this.next(input.state);
-        this.exchanges.push({ decisionId: input.decisionId, model: this.model, request: { intention: input.intention, state: input.state, allowed: input.allowedCapabilities.map((c) => c.id) }, response: null, decision, proposedCapabilityId: decision.invocation.capabilityId, proposedInput: decision.invocation.input, latencyMs: 0, tokens: null });
-        return decision;
     }
 }

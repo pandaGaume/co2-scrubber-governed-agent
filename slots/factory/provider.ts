@@ -26,10 +26,7 @@ import { objectSchema as obj, publishSlot, type PublishedSlot, type SlotTool } f
 import { checkTaskId, listTaskFiles, safeRelative, sha256Of, taskDir, WORKSHOP_ROOT } from "../tools/lib/workshop.js";
 import { DEFAULT_BUDGET, TOPICS, topicFor, type RequiredOutput, type TaskFile, type TaskState, type Topic } from "../../harness/core/task.js";
 import { runTask, TOPIC_DEFINITIONS, type RunTaskOptions } from "../../harness/core/runner.js";
-import { ScriptedBuilder } from "../../harness/scripted/onnx.js";
-import { ScriptedProcedureBuilder } from "../../harness/scripted/procedure.js";
-import { ScriptedGraphBuilder } from "../../harness/scripted/graph.js";
-import { ScriptedCodeBuilder } from "../../harness/scripted/code.js";
+import { SCRIPTED_BUILDERS } from "../../harness/scripted/index.js";
 import { codeTaskRequest, handoffDepthOf, MAX_HANDOFF_DEPTH, missingForCode, openCodeQuestion, replayQuestion, replayRequest, type GeneratedType, type MissingForCode } from "./handoff.js";
 import type { Plan } from "../../harness/core/workspace-observer.js";
 import { ReasonerProvider } from "../../harness/providers/reasoner.js";
@@ -301,7 +298,11 @@ function launch(httpBase: string, taskId: string, topic: Topic, builder: Builder
         // The builder: the script of the topic only when asked for by name; otherwise the model behind the reasoner slot, reading the topic's prompt.
         let provider: RunTaskOptions["provider"];
         let promptFile: string | null = null;
-        if (builder === "scripted") provider = topic === "procedure" ? (ctx) => new ScriptedProcedureBuilder(ctx) : topic === "graph" ? (ctx) => new ScriptedGraphBuilder(ctx) : topic === "code" ? (ctx) => new ScriptedCodeBuilder(ctx) : (ctx) => new ScriptedBuilder(ctx);
+        if (builder === "scripted") {
+            const script = SCRIPTED_BUILDERS[topic];
+            if (!script) throw new Error(`topic ${topic} has no script: ask for builder "reasoner"`);
+            provider = script;
+        }
         else {
             const prompt = TOPIC_DEFINITIONS[topic]?.prompt;
             if (!prompt) throw new Error(`topic ${topic} has no prompt for a model yet: ask for builder "scripted"`);

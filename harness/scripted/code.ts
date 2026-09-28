@@ -14,44 +14,27 @@
  * keeps no counter.
  */
 import type { JsonValue, PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
-import type { Provider, ProviderExchange } from "../lib/provider.js";
-import type { CapabilityCall } from "../core/capabilities.js";
-import type { TaskFile } from "../core/task.js";
+import { decide, ScriptedBuilderBase, valueOf, type ScriptContext } from "./base.js";
 import { leakFixture, leakSpec, LEAK_TYPE } from "./code-fixture.js";
 
-export interface ScriptedCodeOptions {
-    task: TaskFile["task"];
-    lastCall: () => CapabilityCall | null;
+export interface ScriptedCodeOptions extends ScriptContext {
     /** The type name of the first write; the story's is under Generated. (default); another shows the guard's refusal and the correction. */
     firstType?: string;
     /** The plugin's name in the forge (default "leak"). */
     plugin?: string;
 }
 
-const decide = (capabilityId: string, input: JsonValue, rationale: string): PolicyDecision => ({ action: { id: capabilityId, description: capabilityId }, invocation: { actionId: capabilityId, capabilityId, input }, rationale });
+export class ScriptedCodeBuilder extends ScriptedBuilderBase<ScriptedCodeOptions> {
 
-const valueOf = (call: CapabilityCall | null): Record<string, JsonValue> => (call?.result.ok && call.result.output && typeof call.result.output === "object" ? (call.result.output as Record<string, JsonValue>) : {});
-
-export class ScriptedCodeBuilder implements Provider {
-    readonly name = "scripted:code";
-    readonly model = "scripted/code";
-    readonly family = "scripted";
-    readonly exchanges: ProviderExchange[] = [];
-    readonly contextMode = "state" as const;
-    calls = 0;
-
-    constructor(private readonly options: ScriptedCodeOptions) {}
-
-    begin(): void {
-        // Nothing kept: the script reads the state.
+    constructor(options: ScriptedCodeOptions) {
+        super("code", options);
     }
 
-    private next(state: PolicyFallbackInput["state"]): PolicyDecision {
+    protected next(state: PolicyFallbackInput["state"]): PolicyDecision {
         const { task, firstType = LEAK_TYPE, plugin = "leak" } = this.options;
-        const last = this.options.lastCall();
+        const last = this.last;
         const refusal = String(state.features.lastRefusal ?? "");
         const after = `${String(state.features.phase)}:${String(state.features.lastCapability)}`;
-        if (last && !last.result.ok) return decide("task.fail", { reason: (last.result.error ?? last.result.outcome).replace(/^(device refused|error):\s*/i, "") }, `${last.id} failed: nothing else to try`);
         // The test's hook for the questions: asked once before anything, unless an answer is already in the task's observations.
         const observed = (task.observations ?? {}) as { askFirst?: string; answers?: Array<{ choice: string }> };
         if (observed.askFirst && !(observed.answers ?? []).length && after === "plan:") return decide("task.ask", { question: observed.askFirst, options: ["go", "stop"], why: "the test asks before writing" }, "a question for the commander first");
@@ -93,12 +76,5 @@ export class ScriptedCodeBuilder implements Provider {
                 return decide("task.done", { summary: "the leak node, generated: compiled, tested, checked, loaded and run in the forge; proposed to the station", artifacts: [{ kind: "plugin", path: promoted.path ?? `forge/${plugin}/artifact.json` }] }, "the artifact the forge signed");
             }
         }
-    }
-
-    async resolve(input: PolicyFallbackInput): Promise<PolicyDecision> {
-        this.calls++;
-        const decision = this.next(input.state);
-        this.exchanges.push({ decisionId: input.decisionId, model: this.model, request: { intention: input.intention, state: input.state, allowed: input.allowedCapabilities.map((c) => c.id) }, response: null, decision, proposedCapabilityId: decision.invocation.capabilityId, proposedInput: decision.invocation.input, latencyMs: 0, tokens: null });
-        return decision;
     }
 }

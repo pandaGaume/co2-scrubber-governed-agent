@@ -30,17 +30,11 @@
 import { justificationsFor } from "../core/justify.js";
 import { candidateConstants } from "../topics/graph/index.js";
 import type { JsonValue, PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
-import type { Provider, ProviderExchange } from "../lib/provider.js";
-import type { CapabilityCall } from "../core/capabilities.js";
-import type { TaskFile } from "../core/task.js";
+import { decide, ScriptedBuilderBase, type ScriptContext } from "./base.js";
 import { STATION_GRAPH_ID } from "../topics/graph/evaluate.js";
 
-export interface ScriptedGraphOptions {
-    task: TaskFile["task"];
-    lastCall: () => CapabilityCall | null;
+export interface ScriptedGraphOptions extends ScriptContext {
 }
-
-const decide = (capabilityId: string, input: JsonValue, rationale: string): PolicyDecision => ({ action: { id: capabilityId, description: capabilityId }, invocation: { actionId: capabilityId, capabilityId, input }, rationale });
 
 /** The Lab with the substrate's life-support nodes: its crew, the scrubber on the measured speed, the air; with the exchange when asked. */
 export function labCandidate(exchange: boolean): JsonValue {
@@ -81,22 +75,21 @@ const WHY: Array<[RegExp, { source: "library" | "measured" | "assumed"; referenc
 /** A candidate with its justifications. */
 const justified = (input: Record<string, unknown>): JsonValue => ({ ...input, justifications: justificationsFor(candidateConstants(input as unknown as JsonValue), WHY) }) as unknown as JsonValue;
 
-export class ScriptedGraphBuilder implements Provider {
-    readonly name = "scripted:graph";
-    readonly model = "scripted/graph";
-    readonly family = "scripted";
-    readonly exchanges: ProviderExchange[] = [];
-    calls = 0;
-    /** The script runs on the reasoning state, as the model does: the observation carries the state and the compact answers, and the tests read them. */
-    readonly contextMode = "state" as const;
+export class ScriptedGraphBuilder extends ScriptedBuilderBase<ScriptedGraphOptions> {
     /** Whether the structure was revised once already (a structural gap has one hypothesis in this script). */
     private revised = false;
 
-    constructor(private readonly options: ScriptedGraphOptions) {}
+    constructor(options: ScriptedGraphOptions) {
+        super("graph", options);
+    }
 
-    private next(state: PolicyFallbackInput["state"]): PolicyDecision {
+    override begin(): void {
+        this.revised = false;
+    }
+
+    protected next(state: PolicyFallbackInput["state"]): PolicyDecision {
         const { task } = this.options;
-        const last = this.options.lastCall();
+        const last = this.last;
         const after = `${String(state.features.phase)}:${String(state.features.lastCapability)}`;
         const observed = (task.observations ?? {}) as { labOccupants?: unknown; habOccupants?: unknown; persons?: unknown; declareMissing?: { required_output: string; quantity: string; unit?: string; reason: string; contract: Record<string, unknown> }; generated?: Array<{ type: string }> };
         // The test's hook for the hand-off: a capability declared missing with its contract, then the task failed on it; on the replay, the generated types are selected and nothing is missing.
@@ -112,7 +105,6 @@ export class ScriptedGraphBuilder implements Provider {
         const onBoard = Array.isArray(observed.persons) && observed.persons.length ? { persons: observed.persons as JsonValue } : { settings: { labOccupants: Number(observed.labOccupants ?? 2), habOccupants: Number(observed.habOccupants ?? 2) } };
         // What the documentation gives beyond the graph's own defaults: the operators' rate as the station's page states it (inside NASA's band).
         const given = { g: 0.42 };
-        if (last && !last.result.ok) return decide("task.fail", { reason: (last.result.error ?? last.result.outcome).replace(/^(device refused|error):\s*/i, "") }, `${last.id} failed: nothing else to try`);
         switch (after) {
             case "plan:":
                 return decide("library.graphs", {}, "which reference graphs the library holds");
@@ -135,12 +127,5 @@ export class ScriptedGraphBuilder implements Provider {
                 return decide("graph.evaluate", justified({ label: "the habitat reference with the filter's loading fitted: what the ventilation delivers, measured", graph: STATION_GRAPH_ID, ...onBoard, ...add, variables: given, fit: { ...VOLUMES, L: { min: 0, max: 0.2 } } }), "the gap the design flow cannot close: fit what the ventilation actually delivers, through the filter's loading");
             }
         }
-    }
-
-    async resolve(input: PolicyFallbackInput): Promise<PolicyDecision> {
-        this.calls++;
-        const decision = this.next(input.state);
-        this.exchanges.push({ decisionId: input.decisionId, model: this.model, request: { intention: input.intention, state: input.state, allowed: input.allowedCapabilities.map((c) => c.id) }, response: null, decision, proposedCapabilityId: decision.invocation.capabilityId, proposedInput: decision.invocation.input, latencyMs: 0, tokens: null });
-        return decision;
     }
 }
