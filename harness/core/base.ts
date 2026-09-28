@@ -38,6 +38,7 @@ export const BASE_CAPABILITIES: ReadonlyArray<string> = [
     "physics.units_validate_connection",
     "physics.units_relations",
     "physics.units_relate",
+    "physics.units_knowledge",
     "task.plan",
     "task.done",
     "task.fail",

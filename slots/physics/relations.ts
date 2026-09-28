@@ -4,23 +4,26 @@
  * (`units.ts`). A builder asks for the conversion instead of redoing work
  * already done: a person's CO2 is documented in g/min and in L/min, a
  * scrubber's removal is a mass flow in kg/s and a room reads it in ppm per
- * minute, a concentration in ppm is a mass per cubic metre. Each relation is
- * a formula over named parameters, each with its unit; a parameter the
- * caller does not give takes the default the caller of `relate` passes, a
- * fact of the library (`specs/physics/relation-defaults.json`, read by the
- * physics slot): the answer says which were given and which defaulted, from
- * which fact. No gas and no condition is this code's: the ideal gas law is
- * the only physics here, and its constant R the only number.
+ * minute, a concentration in ppm is a mass per cubic metre.
+ *
+ * The relations are the physics slot's knowledge graph (`knowledge.ts`,
+ * `specs/physics/knowledge.json`): a SpikyPanda graph whose relation nodes
+ * read a quantity, give another, need parameters and follow a law holding
+ * its constants, each formula written as data. This file reads them off the
+ * graph and applies them; it holds no relation, no law and no constant. A
+ * parameter the caller does not give takes the default the caller of
+ * `relate` passes, a fact of the library (`specs/physics/relation-defaults.json`,
+ * read by the physics slot): the answer says which were given and which
+ * defaulted, from which fact.
  */
 import { readFileSync } from "node:fs";
 import { fromRoot } from "../../lib/paths.js";
+import { evaluateExpression } from "../../lib/expression.js";
 import { canonicalQuantity, convertValue, type UnitRef } from "./units.js";
+import { physicsKnowledge, type KnowledgeNode } from "./knowledge.js";
 
 /** The parameters the physics slot defaults, by name, as the spec names them (`specs/physics/relation-defaults.json`); their values are the library's. */
 export const defaultedParameters = (): string[] => Object.keys((JSON.parse(readFileSync(fromRoot("specs", "physics", "relation-defaults.json"), "utf8")) as { defaults: Record<string, string> }).defaults);
-
-/** The molar gas constant, J/(mol K). */
-const R = 8.314462618;
 
 export interface RelationParameter {
     quantity: string;
@@ -44,52 +47,37 @@ export interface Relation {
     to: { quantity: string; unit: string; derived?: boolean; units?: Record<string, number> };
     parameters: Record<string, RelationParameter>;
     formula: string;
+    /** The law it follows, and its constants by symbol. */
+    law: string | null;
     apply(value: number, p: Record<string, number>): number;
     invert(value: number, p: Record<string, number>): number;
 }
 
-const GAS: Record<string, RelationParameter> = {
-    P: { quantity: "Pressure", unit: "Pa", description: "the gas's pressure" },
-    T: { quantity: "Temperature", unit: "K", description: "the gas's temperature" },
-    M: { quantity: "MolarMass", unit: "kg/mol", description: "the gas's molar mass" },
-};
-/** The density of the gas, kg/m3, by the ideal gas law. */
-const density = (p: Record<string, number>): number => (p.P * p.M) / (R * p.T);
+/** A relation node of the knowledge graph, as the conversions use it: its sides, its parameters, its formulas over v, the parameters and the law's constants. */
+function relationOf(node: KnowledgeNode): Relation {
+    const k = physicsKnowledge();
+    const { from, to, parameters } = k.sidesOf(node);
+    const bag = node.bag ?? {};
+    const constants = k.constantsOf(node);
+    const law = k.out(node, "physics.follows")[0]?.ofin?.id;
+    const side = (q: KnowledgeNode) => ({ quantity: String(q.id), unit: String(q.bag?.unit) });
+    const derived = Boolean(to.bag?.derived);
+    const run = (expression: string) => (value: number, p: Record<string, number>) => evaluateExpression(expression, { ...constants, ...p, v: value });
+    return {
+        id: String(node.id),
+        title: String(bag.title ?? node.id),
+        from: side(from),
+        to: { ...side(to), ...(derived ? { derived: true, units: k.unitsOf(to) } : {}) },
+        parameters: Object.fromEntries(parameters.map((x) => [x.name, { quantity: String(x.quantity.id), unit: String(x.quantity.bag?.unit), description: x.description }])),
+        formula: String(bag.formula ?? bag.forward),
+        law: law === undefined ? null : String(law),
+        apply: run(String(bag.forward)),
+        invert: run(String(bag.inverse)),
+    };
+}
 
-export const RELATIONS: ReadonlyArray<Relation> = [
-    {
-        id: "gas-volume-flow-to-mass-flow",
-        title: "A gas's volume flow as its mass flow",
-        from: { quantity: "VolumetricFlow", unit: "m3/s" },
-        to: { quantity: "MassFlow", unit: "kg/s" },
-        parameters: GAS,
-        formula: "mass flow = volume flow x P M / (R T)",
-        apply: (v, p) => v * density(p),
-        invert: (v, p) => v / density(p),
-    },
-    {
-        id: "volume-fraction-to-mass-concentration",
-        title: "A gas's fraction of the air (ppm) as its mass per volume",
-        from: { quantity: "Dimensionless", unit: "1" },
-        to: { quantity: "MassConcentration", unit: "kg/m3" },
-        parameters: GAS,
-        // The fraction arrives in the base unit of Dimensionless (1): 1000 ppm is 0.001.
-        formula: "mass concentration = fraction x P M / (R T)",
-        apply: (v, p) => v * density(p),
-        invert: (v, p) => v / density(p),
-    },
-    {
-        id: "mass-flow-to-fraction-rate",
-        title: "A gas's mass flow into a volume of air as the rate its fraction changes",
-        from: { quantity: "MassFlow", unit: "kg/s" },
-        // The rate of a fraction is not a quantity of the unit system: the answer is a reading (ppm/min, ppm/s or 1/s), not a contract's quantity.
-        to: { quantity: "ConcentrationRate", unit: "1/s", derived: true, units: { "1/s": 1, "ppm/s": 1e-6, "ppm/min": 1e-6 / 60, "ppm/h": 1e-6 / 3600 } },
-        parameters: { V: { quantity: "Volume", unit: "m3", description: "the volume of air the gas flows into" }, ...GAS },
-        formula: "fraction rate = (mass flow / M) / (P V / (R T))",
-        apply: (v, p) => v / p.M / ((p.P * p.V) / (R * p.T)),
-        invert: (v, p) => v * p.M * ((p.P * p.V) / (R * p.T)),
-    },
-];
+/** The relations of the knowledge graph, read off it once. */
+export const RELATIONS: ReadonlyArray<Relation> = physicsKnowledge().nodesOf("physics.relation").map(relationOf);
 
 export interface Related {
     value: number;

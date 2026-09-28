@@ -22,7 +22,7 @@
         },
         "units_relations": {
             "title": "The relations between quantities",
-            "description": "The conversions between different quantities a physical relation ties together, each with its formula, its parameters (their units, the cabin's defaults) and which side is a derived reading rather than a quantity of the unit system: a gas's volume flow and mass flow, a fraction in ppm and a mass per volume, a mass flow into a volume and the rate its fraction changes."
+            "description": "The conversions between different quantities a physical relation ties together, read off the knowledge graph (units_knowledge), each with its formula, the law it follows, its parameters (their units, the defaults the library's facts give) and which side is a derived reading rather than a quantity of the unit system."
         },
         "units_relate": {
             "title": "Convert to a related quantity",
@@ -32,6 +32,16 @@
                 "from": "its quantity and unit, e.g. {quantity: MassFlow, unit: g/min}",
                 "to": "the related quantity and the unit wanted, e.g. {quantity: VolumetricFlow, unit: L/min}",
                 "parameters": "by name, a number in the parameter's unit or {value, unit}: V (the volume, m3), P (Pa), T (K), M (kg/mol)"
+            }
+        },
+        "units_knowledge": {
+            "title": "The knowledge graph of the relations",
+            "description": "The graph the relations are read from, to navigate: with id, a node (a quantity, a unit, a constant, a law, a relation) and its typed links in and out (from, to, parameter, follows, uses, measures); with from and to, the shortest chain of relations from one quantity to the other; with type, the nodes of that type (physics.quantity, physics.relation, ...).",
+            "properties": {
+                "id": "a node's id, or a quantity's name",
+                "type": "a type of the ontology, to list its nodes",
+                "from": "a quantity, the start of a chain",
+                "to": "a quantity, the end of a chain"
             }
         }
     },

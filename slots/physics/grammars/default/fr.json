@@ -22,7 +22,7 @@
         },
         "units_relations": {
             "title": "Les relations entre grandeurs",
-            "description": "Les conversions entre grandeurs différentes qu'une relation physique relie, chacune avec sa formule, ses paramètres (leurs unités, les valeurs par défaut de la cabine) et le côté qui est une lecture dérivée plutôt qu'une grandeur du système d'unités : le débit volumique et le débit massique d'un gaz, une fraction en ppm et une masse par volume, un débit massique entrant dans un volume et la vitesse à laquelle sa fraction varie."
+            "description": "Les conversions entre grandeurs différentes qu'une relation physique relie, lues dans le graphe de connaissances (units_knowledge), chacune avec sa formule, la loi qu'elle suit, ses paramètres (leurs unités, les valeurs par défaut que donnent les faits de la bibliothèque) et le côté qui est une lecture dérivée plutôt qu'une grandeur du système d'unités."
         },
         "units_relate": {
             "title": "Convertir vers une grandeur liée",
@@ -32,6 +32,16 @@
                 "from": "sa grandeur et son unité, par exemple {quantity: MassFlow, unit: g/min}",
                 "to": "la grandeur liée et l'unité voulue, par exemple {quantity: VolumetricFlow, unit: L/min}",
                 "parameters": "par nom, un nombre dans l'unité du paramètre ou {value, unit} : V (le volume, m3), P (Pa), T (K), M (kg/mol)"
+            }
+        },
+        "units_knowledge": {
+            "title": "Le graphe de connaissances des relations",
+            "description": "Le graphe dont les relations sont lues, pour y naviguer : avec id, un nœud (une grandeur, une unité, une constante, une loi, une relation) et ses liens typés entrants et sortants (from, to, parameter, follows, uses, measures) ; avec from et to, la plus courte chaîne de relations d'une grandeur à l'autre ; avec type, les nœuds de ce type (physics.quantity, physics.relation, ...).",
+            "properties": {
+                "id": "l'identifiant d'un nœud, ou le nom d'une grandeur",
+                "type": "un type de l'ontologie, pour en lister les nœuds",
+                "from": "une grandeur, le début d'une chaîne",
+                "to": "une grandeur, la fin d'une chaîne"
             }
         }
     },

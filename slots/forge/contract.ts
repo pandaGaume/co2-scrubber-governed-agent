@@ -23,7 +23,7 @@
  * service's, formulas are the graph topic's evaluator's.
  */
 import { compatibleUnits, resolveUnitRef } from "../physics/units.js";
-import { evaluateExpression } from "../../harness/topics/graph/params.js";
+import { evaluateExpression } from "../../lib/expression.js";
 
 export interface ContractPort {
     quantity: string;

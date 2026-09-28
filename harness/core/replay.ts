@@ -33,7 +33,7 @@ export const NEVER_REPLAYED: ReadonlyArray<RegExp> = [/^task\.(fail|ask)$/];
 export const READ_CAPABILITIES: ReadonlyArray<RegExp> = [
     /^library\.(list|methods|search|read|facts|graphs|graph)$/,
     /^web\.search$/,
-    /^physics\.units_(normalize|convert|compatible|validate_connection|relations|relate)$/,
+    /^physics\.units_(normalize|convert|compatible|validate_connection|relations|relate|knowledge)$/,
     /^workspace\.(list|read)$/,
     // The application's own reads (specs/harness/application.json).
     ...APP.reads.map((id) => new RegExp(`^${id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`)),

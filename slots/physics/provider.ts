@@ -23,6 +23,7 @@ import { readFileSync } from "node:fs";
 import { fromRoot } from "../../lib/paths.js";
 import { compatibleUnits, convertValue, resolveUnitRef, validateConnection, type UnitRef } from "./units.js";
 import { RELATIONS, relate, type RelationDefault } from "./relations.js";
+import { physicsKnowledge } from "./knowledge.js";
 import { LIBRARY_DIR, loadLibrary } from "../tools/library/provider.js";
 
 export const RELATION_DEFAULTS_FILE = "specs/physics/relation-defaults.json";
@@ -101,6 +102,31 @@ export function physicsSlot(wsBase: string, log: (line: string) => void): Publis
             handle: () => ({
                 relations: RELATIONS.map((r) => ({ id: r.id, title: r.title, from: r.from, to: { quantity: r.to.quantity, unit: r.to.unit, ...(r.to.derived ? { derived: true, units: Object.keys(r.to.units ?? {}) } : {}) }, formula: r.formula, parameters: Object.fromEntries(Object.entries(r.parameters).map(([k, p]) => [k, { ...p, ...(defaults[k] ? { default: defaults[k] } : {}) }])) })),
             }),
+        },
+        {
+            // The knowledge graph the relations are read from, to navigate (2026-09-28): a node and its typed links, the nodes of a type, or the chain of relations from one quantity to another.
+            name: "units_knowledge",
+            inputSchema: objectSchema({ id: { type: "string" }, type: { type: "string" }, from: { type: "string" }, to: { type: "string" } }),
+            handle: (args) => {
+                const k = physicsKnowledge();
+                const brief = (n: { id?: unknown; type?: string; bag?: unknown }) => ({ id: String(n.id), type: n.type ?? null, ...(n.bag && typeof n.bag === "object" && Object.keys(n.bag).length ? { bag: n.bag } : {}) });
+                if (typeof args.from === "string" && typeof args.to === "string") {
+                    const path = k.pathBetween(args.from, args.to);
+                    if (!path) throw new Error(`no chain of relations ties ${args.from} to ${args.to}`);
+                    return { from: args.from, to: args.to, path: path.map((p) => ({ relation: String(p.relation.id), direction: p.direction, title: String(p.relation.bag?.title ?? "") })) };
+                }
+                if (typeof args.id === "string" && args.id) {
+                    const n = k.node(args.id) ?? k.quantity(args.id);
+                    if (!n) throw new Error(`no node "${args.id}" in the knowledge graph`);
+                    return {
+                        ...brief(n),
+                        out: n.onsc().map((l) => ({ type: l.type ?? null, to: String(l.ofin?.id), ...(l.bag && Object.keys(l.bag as object).length ? { bag: l.bag } : {}) })),
+                        in: n.opsc().map((l) => ({ type: l.type ?? null, from: String(l.oini?.id), ...(l.bag && Object.keys(l.bag as object).length ? { bag: l.bag } : {}) })),
+                    };
+                }
+                const type = typeof args.type === "string" && args.type ? args.type : "physics.item";
+                return { type, nodes: k.nodesOf(type).map(brief) };
+            },
         },
         {
             name: "units_relate",

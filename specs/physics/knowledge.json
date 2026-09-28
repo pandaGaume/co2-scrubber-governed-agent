@@ -1,0 +1,83 @@
+{
+    "note": "The physics slot's knowledge of how quantities relate (2026-09-28): a SpikyPanda graph (core Graph, GraphNode, GraphOLink), each item typed by the ontology (core ONTOLOGY) declared here. Quantities, units, constants and laws are nodes; a relation between two quantities is a node too, so it can be reached from what it reads (from), what it gives (to), the quantities it needs (parameter), the law it follows (follows), and a law from the constants it uses (uses); a unit measures a quantity (measures, with its factor to the quantity's unit). A formula is data (lib/expression.ts reads it): v is the value, a parameter by its name, a constant by its symbol. slots/physics/knowledge.ts builds the graph and navigates it; slots/physics/relations.ts converts through it.",
+    "types": [
+        { "id": "physics.item" },
+        { "id": "physics.quantity", "superType": "physics.item" },
+        { "id": "physics.unit", "superType": "physics.item" },
+        { "id": "physics.constant", "superType": "physics.item" },
+        { "id": "physics.law", "superType": "physics.item" },
+        { "id": "physics.relation", "superType": "physics.item" },
+        { "id": "physics.link" },
+        { "id": "physics.from", "superType": "physics.link" },
+        { "id": "physics.to", "superType": "physics.link" },
+        { "id": "physics.parameter", "superType": "physics.link" },
+        { "id": "physics.follows", "superType": "physics.link" },
+        { "id": "physics.uses", "superType": "physics.link" },
+        { "id": "physics.measures", "superType": "physics.link" }
+    ],
+    "nodes": [
+        { "id": "VolumetricFlow", "type": "physics.quantity", "bag": { "unit": "m3/s" } },
+        { "id": "MassFlow", "type": "physics.quantity", "bag": { "unit": "kg/s" } },
+        { "id": "Dimensionless", "type": "physics.quantity", "bag": { "unit": "1" } },
+        { "id": "MassConcentration", "type": "physics.quantity", "bag": { "unit": "kg/m3" } },
+        { "id": "ConcentrationRate", "type": "physics.quantity", "bag": { "unit": "1/s", "derived": true, "note": "the rate a fraction changes: not a quantity of the unit system, a reading; its units are the nodes that measure it" } },
+        { "id": "Pressure", "type": "physics.quantity", "bag": { "unit": "Pa" } },
+        { "id": "Temperature", "type": "physics.quantity", "bag": { "unit": "K" } },
+        { "id": "MolarMass", "type": "physics.quantity", "bag": { "unit": "kg/mol" } },
+        { "id": "Volume", "type": "physics.quantity", "bag": { "unit": "m3" } },
+
+        { "id": "unit:1/s", "type": "physics.unit", "bag": { "symbol": "1/s" } },
+        { "id": "unit:ppm/s", "type": "physics.unit", "bag": { "symbol": "ppm/s" } },
+        { "id": "unit:ppm/min", "type": "physics.unit", "bag": { "symbol": "ppm/min" } },
+        { "id": "unit:ppm/h", "type": "physics.unit", "bag": { "symbol": "ppm/h" } },
+
+        { "id": "R", "type": "physics.constant", "bag": { "symbol": "R", "value": 8.314462618, "unit": "J/(mol.K)", "name": "the molar gas constant", "reference": "CODATA 2018, exact since the 2019 SI" } },
+        { "id": "ideal-gas", "type": "physics.law", "bag": { "statement": "P V = n R T", "name": "the ideal gas law" } },
+
+        {
+            "id": "gas-volume-flow-to-mass-flow",
+            "type": "physics.relation",
+            "bag": { "title": "A gas's volume flow as its mass flow", "formula": "mass flow = volume flow x P M / (R T)", "forward": "v * P * M / (R * T)", "inverse": "v * R * T / (P * M)" }
+        },
+        {
+            "id": "volume-fraction-to-mass-concentration",
+            "type": "physics.relation",
+            "bag": { "title": "A gas's fraction of the air (ppm) as its mass per volume", "formula": "mass concentration = fraction x P M / (R T)", "forward": "v * P * M / (R * T)", "inverse": "v * R * T / (P * M)", "note": "the fraction arrives in the unit of Dimensionless (1): 1000 ppm is 0.001" }
+        },
+        {
+            "id": "mass-flow-to-fraction-rate",
+            "type": "physics.relation",
+            "bag": { "title": "A gas's mass flow into a volume of air as the rate its fraction changes", "formula": "fraction rate = (mass flow / M) / (P V / (R T))", "forward": "v / M / (P * V / (R * T))", "inverse": "v * M * (P * V / (R * T))" }
+        }
+    ],
+    "links": [
+        { "type": "physics.uses", "from": "R", "to": "ideal-gas" },
+
+        { "type": "physics.measures", "from": "unit:1/s", "to": "ConcentrationRate", "bag": { "factor": 1 } },
+        { "type": "physics.measures", "from": "unit:ppm/s", "to": "ConcentrationRate", "bag": { "factor": 1e-6 } },
+        { "type": "physics.measures", "from": "unit:ppm/min", "to": "ConcentrationRate", "bag": { "factor": "1e-6 / 60" } },
+        { "type": "physics.measures", "from": "unit:ppm/h", "to": "ConcentrationRate", "bag": { "factor": "1e-6 / 3600" } },
+
+        { "type": "physics.from", "from": "VolumetricFlow", "to": "gas-volume-flow-to-mass-flow" },
+        { "type": "physics.to", "from": "gas-volume-flow-to-mass-flow", "to": "MassFlow" },
+        { "type": "physics.follows", "from": "gas-volume-flow-to-mass-flow", "to": "ideal-gas" },
+        { "type": "physics.parameter", "from": "Pressure", "to": "gas-volume-flow-to-mass-flow", "bag": { "name": "P", "description": "the gas's pressure" } },
+        { "type": "physics.parameter", "from": "Temperature", "to": "gas-volume-flow-to-mass-flow", "bag": { "name": "T", "description": "the gas's temperature" } },
+        { "type": "physics.parameter", "from": "MolarMass", "to": "gas-volume-flow-to-mass-flow", "bag": { "name": "M", "description": "the gas's molar mass" } },
+
+        { "type": "physics.from", "from": "Dimensionless", "to": "volume-fraction-to-mass-concentration" },
+        { "type": "physics.to", "from": "volume-fraction-to-mass-concentration", "to": "MassConcentration" },
+        { "type": "physics.follows", "from": "volume-fraction-to-mass-concentration", "to": "ideal-gas" },
+        { "type": "physics.parameter", "from": "Pressure", "to": "volume-fraction-to-mass-concentration", "bag": { "name": "P", "description": "the gas's pressure" } },
+        { "type": "physics.parameter", "from": "Temperature", "to": "volume-fraction-to-mass-concentration", "bag": { "name": "T", "description": "the gas's temperature" } },
+        { "type": "physics.parameter", "from": "MolarMass", "to": "volume-fraction-to-mass-concentration", "bag": { "name": "M", "description": "the gas's molar mass" } },
+
+        { "type": "physics.from", "from": "MassFlow", "to": "mass-flow-to-fraction-rate" },
+        { "type": "physics.to", "from": "mass-flow-to-fraction-rate", "to": "ConcentrationRate" },
+        { "type": "physics.follows", "from": "mass-flow-to-fraction-rate", "to": "ideal-gas" },
+        { "type": "physics.parameter", "from": "Volume", "to": "mass-flow-to-fraction-rate", "bag": { "name": "V", "description": "the volume of air the gas flows into" } },
+        { "type": "physics.parameter", "from": "Pressure", "to": "mass-flow-to-fraction-rate", "bag": { "name": "P", "description": "the gas's pressure" } },
+        { "type": "physics.parameter", "from": "Temperature", "to": "mass-flow-to-fraction-rate", "bag": { "name": "T", "description": "the gas's temperature" } },
+        { "type": "physics.parameter", "from": "MolarMass", "to": "mass-flow-to-fraction-rate", "bag": { "name": "M", "description": "the gas's molar mass" } }
+    ]
+}
