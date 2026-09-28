@@ -62,7 +62,7 @@ export const CODE_TOOLS: ReadonlyArray<RegExp> = withBase([
     /^graph\.evaluate$/,
 ]);
 
-export const CODE_PROMPT = "harness/topics/code/prompt.md";
+export const CODE_PROMPT = "specs/code/prompt.md";
 
 /** The prefix a generated type carries; the forge refuses the rest at its checks, the guard here before any compilation. */
 export const GENERATED_PREFIX = "Generated.";

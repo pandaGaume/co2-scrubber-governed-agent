@@ -585,7 +585,7 @@ var ReasonerProvider = class _ReasonerProvider {
   }
   /**
    * The prompt file the slot's model reads instead of the agent's, for a
-   * builder of the factory (`harness/topics/<topic>/prompt.md`). A path,
+   * builder of the factory (`specs/<topic>/prompt.md`). A path,
    * never a text: the slot reads it from the repository and only from the
    * topics' folders, so what the model was told is a file with a sha256.
    */

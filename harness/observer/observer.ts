@@ -12,7 +12,7 @@
  *
  * It runs on the same `reasoner` slot as the factory's builder: one model,
  * two roles, and the role is the prompt. The Observer's prompt
- * (`harness/observer/prompt.md`) is generic and fixed, the same bytes for
+ * (`specs/observer/prompt.md`) is generic and fixed, the same bytes for
  * every system, so the provider keeps it in its cache; what changes from one
  * call to the next (the description, the summary of the telemetry, the
  * reasons of a refusal) is the observation, sent after it.
@@ -48,7 +48,7 @@ import type { LibraryFact } from "../core/contracts.js";
 import { summarizeTelemetry, type TelemetrySummary } from "./telemetry.js";
 import { canonicalQuantity } from "../lib/units.js";
 
-export const OBSERVER_PROMPT = "harness/observer/prompt.md";
+export const OBSERVER_PROMPT = "specs/observer/prompt.md";
 export const OBSERVER_CAPABILITY = "observer.request";
 
 export interface ObserveOptions {

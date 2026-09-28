@@ -63,18 +63,19 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
     /**
      * The system prompt of a conversation: the agent's, or a role's prompt
      * file when a caller names one (a factory builder: a topic's prompt; the
-     * Observer: its own; the Contract Supervisor: its own). Only a file under
-     * `harness/topics/<topic>/prompt.md`, `harness/observer/prompt.md` or
-     * `harness/supervisor/prompt.md` is read: a caller names what the model
-     * is told, it does not write it.
+     * Observer: its own; the Contract Supervisor: its own). Only a role's
+     * prompt file is read, `specs/<role>/prompt.md` (2026-09-28: the words of
+     * a role are its spec's, not the harness's): a caller names what the
+     * model is told, it does not write it.
      */
     function promptOf(file: string | undefined): string {
         if (!file) return systemPrompt;
-        if (!/^harness\/(topics\/[a-z0-9-]+|observer|supervisor)\/prompt\.md$/.test(file)) throw new Error(`prompt "${file}" is not a role's prompt file (harness/topics/<topic>/prompt.md, harness/observer/prompt.md, harness/supervisor/prompt.md)`);
+        const role = /^specs\/([a-z0-9-]+)\/prompt\.md$/.exec(file)?.[1];
+        if (!role) throw new Error(`prompt "${file}" is not a role's prompt file (specs/<role>/prompt.md)`);
         const full = fromRoot(file);
         if (!existsSync(full)) throw new Error(`prompt "${file}" does not exist`);
-        // A factory's prompt is its topic's, then what every factory reaches (the socle, said once).
-        return file.startsWith("harness/topics/") ? promptWithSocle(readFileSync(full, "utf8")) : readFileSync(full, "utf8");
+        // A factory's prompt is its topic's, then what every factory reaches (the socle, said once); the Observer's and the Supervisor's are whole.
+        return role === "observer" || role === "supervisor" ? readFileSync(full, "utf8") : promptWithSocle(readFileSync(full, "utf8"));
     }
 
     /** A provider instance per conversation: the adapters keep one conversation each. */
@@ -179,7 +180,7 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
                         allowedCapabilities: { type: "array", description: "[{ id, description, inputSchema?, replayPolicy? }]" },
                         candidates: { type: "array", description: "learned decisions the harness considered" },
                         recentFailures: { type: "array", description: "recent experiences that failed" },
-                        prompt: { type: "string", description: "a topic's prompt file (harness/topics/<topic>/prompt.md) the model reads instead of the agent's, for a factory builder; read once, when the conversation opens" },
+                        prompt: { type: "string", description: "a topic's prompt file (specs/<topic>/prompt.md) the model reads instead of the agent's, for a factory builder; read once, when the conversation opens" },
                         contextMode: { type: "string", enum: ["conversation", "state"], description: "conversation (default): the transcript of the event is replayed at every step; state: each step is the intention and the harness's reasoning state alone, nothing replayed" },
                     },
                     required: ["conversationId", "intention", "state", "allowedCapabilities"],

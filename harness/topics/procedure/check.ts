@@ -24,14 +24,33 @@ import { safetyProblems as commonSafetyProblems, type SignedFact } from "../../c
 export interface ProcedureFormat extends ProposalFormat {
     title?: string;
     schema: string;
+    /** What the factory says to its model (`harness/core/words.ts`), and its prompt. */
+    words: string;
+    prompt: string;
     rulesDocument: string;
     minutes: string;
+    /** Where a proposal's id is, and the file an accepted one is written to (`{id}` filled). */
+    id: string;
+    file: string;
+    method: string;
+    quantities: string;
     device: string;
     place: string;
     watched: string;
     measured: string;
     presence: string;
     tools: string[];
+    /** The reads the state carries, by the name of their field: the tool that answers each. `methods` lists the method cards, `card` reads one. */
+    reads: Record<string, string> & { methods: string; card: string; presence: string };
+    /** How a read is reshaped for the state, by field (`viewOf`). */
+    views?: Record<string, import("../../core/words.js").View>;
+    /** The reads a submission's requirements name (`<read>Read`), and those the plan needs (`method` is the card read). */
+    requirements: string[];
+    planRequires: string[];
+    /** Who is told of every check, and by which tool. */
+    notify?: { slot: string; tool: string };
+    /** The scorecard: was `readBefore` read before the first submission, and was `asked` (a path) set on the first, or after a refusal of `kind`. */
+    scorecard?: { readBefore: string; asked: { name: string; path: string; kind: string } };
 }
 
 export const PROCEDURE_FORMAT_FILE = "specs/procedure/format.json";

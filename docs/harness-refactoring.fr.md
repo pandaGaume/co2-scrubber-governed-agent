@@ -465,7 +465,7 @@ sont rendues avec.
 
 Le raisonneur que la section 15 annonçait : `harness/supervisor/`, un rôle
 de plus sur le slot `reasoner`, avec son prompt fixe
-(`harness/supervisor/prompt.md`, générique : aucune physique dedans), qui
+(`specs/supervisor/prompt.md`, générique : aucune physique dedans), qui
 lit les faits typés d'une tâche, le rapport déterministe, les hypothèses et
 les symboles de la demande, et rien d'autre (jamais une transcription ;
 quelques milliers de caractères), et répond une seule capacité,

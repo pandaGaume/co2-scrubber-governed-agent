@@ -44,7 +44,7 @@ export function generatedOf(task: TaskFile["task"]): Array<{ type: string; plugi
     const g = (task.observations as { generated?: unknown } | undefined)?.generated;
     return Array.isArray(g) ? (g as Array<{ type: string; plugin: string; sha256: string; task: string }>).filter((x) => x && typeof x.type === "string") : [];
 }
-export const GRAPH_PROMPT = "harness/topics/graph/prompt.md";
+export const GRAPH_PROMPT = "specs/graph/prompt.md";
 
 interface GraphTopicState {
     candidates: Candidate[];

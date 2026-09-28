@@ -370,12 +370,13 @@ describe("the register, the inventory, the decay", () => {
         progress.reads["biomed.presence"] = { at: "t", value: { modules: [{ module: "lab", occupants: 2, subjects: [{ id: "fe-1" }, { id: "fe-2" }] }] } };
         s = stateOfTopic(progress, task);
         assert.deepEqual(s.requirements, { installationRead: true, presenceRead: true, methodRead: true, planDeclared: false, procedureAccepted: false });
-        const h = s.hypothesis as { installation: { unknowns: unknown[]; underCommissioning: Array<{ path: string; measures: string[] }> }; presence: Array<{ module: string }>; method: { id: string; card: string } };
+        const h = s.hypothesis as { installation: { unknowns: Array<{ what: string }>; underCommissioning: Array<{ path: string; measures: unknown[] }> }; presence: Array<{ module: string }>; method: { id: string; card: string } };
         assert.equal(h.installation.underCommissioning[0].path, "/habitat/lab/eclss/scrubber-1");
-        assert.deepEqual(h.installation.underCommissioning[0].measures, ["speed (Ratio, percent)"]);
+        assert.deepEqual(h.installation.underCommissioning[0].measures, [{ property: "speed", quantity: "Ratio", unit: "percent" }], "as the inventory gives it: the spec's view keeps fields, it rewrites nothing");
         assert.equal(h.presence[0].module, "lab");
         assert.match(h.method.card, /Rules of application/);
-        assert.deepEqual(s.openQuestions, ["served volume of lab (Volume, m3): measured by the procedure"]);
+        assert.deepEqual(s.openQuestions, [], "everything read: what is unknown is the installation's own field (unknowns)");
+        assert.equal(h.installation.unknowns[0].what, "served volume of lab");
         // A refused submission stays whole in the evaluation until one is accepted, whatever the model reads in between (the schema's refusals included).
         progress.refusals["procedure.submit"] = { reason: "Invalid capability arguments: data/abort/1/threshold must be number", input: { id: "decay-1", abort: [{ id: "co2", threshold: null }] }, at: "t" };
         const e = stateOfTopic(progress, task).evaluation as { ok: boolean; problems: string[]; procedure: { id: string } };

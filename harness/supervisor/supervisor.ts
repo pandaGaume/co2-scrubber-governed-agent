@@ -29,7 +29,7 @@ import type { Provider } from "../lib/provider.js";
 import { createHash } from "node:crypto";
 import { reviewContracts, taskFacts, type ContractReport, type Fact, type LibraryFact } from "../core/contracts.js";
 
-export const SUPERVISOR_PROMPT = "harness/supervisor/prompt.md";
+export const SUPERVISOR_PROMPT = "specs/supervisor/prompt.md";
 export const SUPERVISOR_CAPABILITY = "supervisor.verdict";
 
 export type VerdictStatus = "CONSISTENT" | "CONFLICT" | "MISSING" | "AMBIGUOUS" | "UNSUPPORTED";

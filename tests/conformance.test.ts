@@ -19,6 +19,9 @@
  *              allows, and that call accepts their justifications
  *   script     it has its script (`harness/scripted/index.ts`), on the
  *              scripts' base, on the reasoning state as the models are
+ *   words      what it says to a model is its spec's (2026-09-28, zero domain
+ *              in the harness): its prompt under specs/, its words file
+ *              holding every template the topic asks for
  *
  * A deviation known and not yet closed is in KNOWN, with why. A new one
  * fails; one that is closed fails too until it leaves KNOWN, so the ledger
@@ -45,13 +48,18 @@ import type { TaskFile } from "../harness/core/task.js";
 import type { TopicDefinition } from "../harness/core/topic.js";
 import { SCRIPTED_BUILDERS } from "../harness/scripted/index.js";
 import { ScriptedBuilderBase } from "../harness/scripted/base.js";
+import { missingWords } from "../harness/core/words.js";
 
 const PORT = 3146;
 
-type Check = "base" | "tools" | "model" | "replay" | "declared" | "justify" | "script";
+type Check = "base" | "tools" | "model" | "replay" | "declared" | "justify" | "script" | "words";
 
 /** The deviations known and not yet closed: topic, check, the capability or pattern, and why it stands. */
-const KNOWN: Array<{ topic: string; check: Check; what: string; why: string }> = [];
+const KNOWN: Array<{ topic: string; check: Check; what: string; why: string }> = [
+    { topic: "graph", check: "words", what: "none", why: "its brief and hints are still sentences of the code (zero domain in the harness, stage E)" },
+    { topic: "code", check: "words", what: "none", why: "its brief and hints are still sentences of the code (zero domain in the harness, stage E)" },
+    { topic: "onnx", check: "words", what: "none", why: "its brief and hints are still sentences of the code (zero domain in the harness, stage E)" },
+];
 
 const TASK = { objective: { required_outputs: [{ name: "x", quantity: "Volume", unit: "m3" }], constraints: {} }, data: [] } as unknown as TaskFile["task"];
 
@@ -125,6 +133,9 @@ describe("every factory against the socle", () => {
                 else if (shape(given) !== shape(JUSTIFICATIONS_SCHEMA)) found.push(`justify|${id} takes justifications of another shape than the socle's`);
             }
         }
+        if (topic.prompt && !/^specs\/[a-z0-9-]+\/prompt\.md$/.test(topic.prompt)) found.push(`words|prompt ${topic.prompt}`);
+        if (!topic.words) found.push("words|none");
+        else for (const key of missingWords(topic.words.words, topic.words.keys)) found.push(`words|missing ${key}`);
         const script = SCRIPTED_BUILDERS[topic.name]?.({ taskId: context.taskId, task: TASK, topic: topic.name, lastCall: () => null, read: () => null });
         if (!script) found.push("script|none");
         else if (!(script instanceof ScriptedBuilderBase) || script.contextMode !== "state" || script.name !== `scripted:${topic.name}`) found.push(`script|${script.name}`);

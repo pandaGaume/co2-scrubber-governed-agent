@@ -11,7 +11,7 @@
  * next to it.
  *
  *     node dist/scripts/render-trace.js outputs/factory/<task>            -> <task>/trace.md
- *     node dist/scripts/render-trace.js <file>.jsonl [out.md] [--title "..."] [--prompt harness/topics/graph/prompt.md]
+ *     node dist/scripts/render-trace.js <file>.jsonl [out.md] [--title "..."] [--prompt specs/graph/prompt.md]
  *
  * The example calls `renderTrace` itself for each loop that asked the
  * model (`outputs/examples/<stamp>/trace/`).

@@ -25,7 +25,7 @@ import type { DoneClaim, Progress, WorkshopFile } from "../../core/workspace-obs
 
 export const ONNX_TOOLS: ReadonlyArray<RegExp> = withBase([/^workspace\.(list|read|write)$/, /^twin\.registry_(search|describe_node|list_nodes)$/, /^model\.(fit|inspect|contract)$/]);
 
-export const ONNX_PROMPT = "harness/topics/onnx/prompt.md";
+export const ONNX_PROMPT = "specs/onnx/prompt.md";
 
 /** The reviewed fit spec the state shows as the shape of one (`specs/scrubber-health-twin.json`). */
 const REFERENCE_SPEC = "specs/scrubber-health-twin.json";

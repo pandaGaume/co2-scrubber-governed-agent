@@ -91,12 +91,12 @@ Read this list before anything else in the document; every later chapter assumes
 
 | role | prompt | what it produces | what checks it |
 |---|---|---|---|
-| the Observer | `harness/observer/prompt.md` | the request of a twin | its guard (code), the supervisor (a model, checked by code) |
-| the graph factory's builder | `harness/topics/graph/prompt.md` | a plan, candidates to evaluate, a contract for a missing capability, the hand-over claim | the guard, the evaluator, the sandbox (code) |
-| the procedure factory's builder | `harness/topics/procedure/prompt.md` | a plan, a procedure | the guard of procedures (code); the commander |
-| the code factory's builder | `harness/topics/code/prompt.md` | a plan, a plugin's files, a document to run it | the compiler, the tests, the checks, the acceptance of the contract (code) |
-| the ONNX factory's builder | `harness/topics/onnx/prompt.md` | a plan, a fitted model | the model slot's contract check (code) |
-| the supervisor | `harness/supervisor/prompt.md` | a verdict on facts | its guard (code) |
+| the Observer | `specs/observer/prompt.md` | the request of a twin | its guard (code), the supervisor (a model, checked by code) |
+| the graph factory's builder | `specs/graph/prompt.md` | a plan, candidates to evaluate, a contract for a missing capability, the hand-over claim | the guard, the evaluator, the sandbox (code) |
+| the procedure factory's builder | `specs/procedure/prompt.md` | a plan, a procedure | the guard of procedures (code); the commander |
+| the code factory's builder | `specs/code/prompt.md` | a plan, a plugin's files, a document to run it | the compiler, the tests, the checks, the acceptance of the contract (code) |
+| the ONNX factory's builder | `specs/onnx/prompt.md` | a plan, a fitted model | the model slot's contract check (code) |
+| the supervisor | `specs/supervisor/prompt.md` | a verdict on facts | its guard (code) |
 | the night's agent (`tier3/`, outside the factory) | `tier3/prompts/system.md` | one action on the habitat at a time | the broker's policy and the device (code) |
 
 **Code**, deterministic, no model anywhere inside: the broker and its policy; the station; the twin's and the forge's runtimes; the library and the units; the capabilities, the observer of the workshop, the reasoning state and its compactor, the guard, the evaluator, the memory; the contract layer; the contract's acceptance; the hand-off; the questions and the standing orders; the rendering of a trace; the scripted builders that stand in for a model in the tests.

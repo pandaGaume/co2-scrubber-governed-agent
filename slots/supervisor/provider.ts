@@ -1,7 +1,7 @@
 /**
  * The `supervisor` slot: the Contract Supervisor (2026-09-25, night),
  * reachable through the broker like the Observer. It runs the same model as
- * the reasoner slot with its own fixed prompt (`harness/supervisor/prompt.md`),
+ * the reasoner slot with its own fixed prompt (`specs/supervisor/prompt.md`),
  * reads typed facts and a deterministic contract report, never a transcript,
  * and answers a typed verdict checked by code before it counts.
  *

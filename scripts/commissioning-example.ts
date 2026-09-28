@@ -169,7 +169,7 @@ async function main(): Promise<void> {
         });
         operator.take();
         const p = await factoryLoop(reqP.taskId);
-        const procedureTrace = traceOfTask(2, "procedure-factory", reqP.taskId, "harness/topics/procedure/prompt.md");
+        const procedureTrace = traceOfTask(2, "procedure-factory", reqP.taskId, "specs/procedure/prompt.md");
         operator.take(); // the polling of the task is the script's, not the loop's
         const scorecard = JSON.parse(readFileSync(path.join(taskDir(reqP.taskId), "scorecard.json"), "utf8"));
         void procedureTrace;
@@ -263,7 +263,7 @@ async function main(): Promise<void> {
             {
                 name: "observer",
                 kind: "model",
-                who: `the Observer, ${model.name} with harness/observer/prompt.md`,
+                who: `the Observer, ${model.name} with specs/observer/prompt.md`,
                 goal: "from the description and the telemetry, formulate what the twin must do (the TWIN_FACTORY_REQUEST), without seeing the catalogue",
                 tools: { "reasoner.decide": model.exchanges.length, ...operator.take() },
                 decisions: obs.attempts.length + obs.reads.length,
