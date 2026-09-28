@@ -52,6 +52,8 @@ export interface BuilderContext {
     task: TaskFile["task"];
     topic: Topic;
     lastCall: () => CapabilityCall | null;
+    /** What the task last read by a capability, whoever decided the step (the builder, or a replay from the recipes). */
+    read?: (capabilityId: string) => JsonValue | null;
 }
 
 export interface RunTaskOptions {
@@ -198,9 +200,15 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
     const generic: Intention = intentionFor(task, signature);
     const intention: Intention = topic.intention ? topic.intention(task, generic) : generic;
     const recipes = loadRecipes(recipesDir, topicId);
+    // What the topic decides every time is never a candidate for a replay: the builder decides it, the step is still recorded.
+    const neverReplayed = topic.neverReplayed ?? [];
+    if (neverReplayed.length) {
+        const candidates = recipes.policy.findCandidateActions.bind(recipes.policy);
+        recipes.policy.findCandidateActions = (state, intention, modeId) => candidates(state, intention, modeId).map((c) => (neverReplayed.some((r) => r.test(c.invocation.capabilityId)) ? { ...c, eligible: false } : c));
+    }
     const progress = newProgress();
     const calls: CapabilityCall[] = [];
-    const provider = typeof providerOrBuild === "function" ? providerOrBuild({ taskId, task, topic: topicId, lastCall: () => progress.lastCall }) : providerOrBuild;
+    const provider = typeof providerOrBuild === "function" ? providerOrBuild({ taskId, task, topic: topicId, lastCall: () => progress.lastCall, read: (id) => progress.reads[id]?.value ?? null }) : providerOrBuild;
     const profileFile = fromRoot(file.profile ?? "");
     const promptPath = promptFile ? fromRoot(promptFile) : null;
 

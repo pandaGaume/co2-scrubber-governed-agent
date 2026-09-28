@@ -419,6 +419,8 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
 export const PROCEDURE_TOPIC: TopicDefinition = {
     name: "procedure",
     tools: PROCEDURE_TOOLS,
+    // A procedure is written from this task's device, presence, measured CO2 and signed library: never copied from the memory of another task, nor the claim that names its file.
+    neverReplayed: [/^procedure\.submit$/, /^task\.done$/],
     validate: (claim, files, progress) => validateProcedure(claim, files, progress),
     local: (context) => [submitCapability(context)],
     guard: guardProcedure,

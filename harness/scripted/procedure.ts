@@ -25,6 +25,8 @@ import type { Procedure } from "../topics/procedure/procedure.js";
 export interface ScriptedProcedureOptions {
     task: TaskFile["task"];
     lastCall: () => CapabilityCall | null;
+    /** What the task last read by a capability, replays included; the script's own last call only when absent. */
+    read?: (capabilityId: string) => JsonValue | null;
     /** The speed of the rise in the first submission: 0 is the story's first protocol (default). */
     firstSpeedPercent?: number;
     /** false: submits without reading who is in the volume (default true). */
@@ -126,8 +128,15 @@ export class ScriptedProcedureBuilder implements Provider {
     private next(state: PolicyFallbackInput["state"]): PolicyDecision {
         const { task, firstSpeedPercent = 0, readPresence = true, askMonitoring = true } = this.options;
         const last = this.options.lastCall();
-        if (last?.id === "factory.inventory") this.inventory = valueOf(last) as unknown as Inventory;
-        if (last?.id === "biomed.presence") this.presence = (valueOf(last).modules ?? []) as unknown as Presence;
+        // The installation and the presence as the task read them: a step replayed from the recipes is read too (2026-09-28: a replayed presence, unseen, left the procedure without its monitoring, refused until stuck).
+        const read = (id: string): Record<string, JsonValue> | null => {
+            const v = this.options.read?.(id) ?? (last?.id === id ? valueOf(last) : null);
+            return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, JsonValue>) : null;
+        };
+        const inventory = read("factory.inventory");
+        if (inventory) this.inventory = inventory as unknown as Inventory;
+        const presence = read("biomed.presence");
+        if (presence) this.presence = (presence.modules ?? []) as unknown as Presence;
         const refusal = String(state.features.lastRefusal ?? "");
         const after = `${String(state.features.phase)}:${String(state.features.lastCapability)}`;
         if (last && !last.result.ok) return decide("task.fail", { reason: (last.result.error ?? last.result.outcome).replace(/^(device refused|error):\s*/i, "") }, `${last.id} failed: nothing else to try`);

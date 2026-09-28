@@ -7,7 +7,7 @@
  */
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { startAllOrFail } from "./lib/start.js";
@@ -162,6 +162,7 @@ describe("a run that starts with the library unsigned, the commander signing in 
     let slots: PublishedSlot<object>[];
     let operator: Broker;
     const tasks: string[] = [];
+    let recipesDir = "";
     const ok = async <T>(slot: string, tool: string, args: Record<string, unknown> = {}): Promise<T> => {
         const r = await operator.call(slot, tool, args);
         assert.ok(r.ok, `${slot}.${tool}: ${r.error}`);
@@ -191,16 +192,21 @@ describe("a run that starts with the library unsigned, the commander signing in 
     before(async () => {
         process.env.SPEECH_PROVIDER = "silent";
         process.env.BIOMED_PROVIDER = "simulated";
+        // Recipes of its own: the suite never learns into the workshop's, nor replays them.
+        recipesDir = mkdtempSync(path.join(tmpdir(), "recipes-signature-"));
+        process.env.FACTORY_RECIPES_DIR = recipesDir;
         ({ broker: local, slots } = await startAllOrFail(PORT + 1));
         operator = new Broker(local.httpBase, { name: "operator-test", version: "0", locale: "en" });
     });
     after(async () => {
         delete process.env.SPEECH_PROVIDER;
         delete process.env.BIOMED_PROVIDER;
+        delete process.env.FACTORY_RECIPES_DIR;
         await operator?.close();
         for (const s of slots ?? []) await s.close().catch(() => undefined);
         await local?.stop();
         for (const t of tasks) rmSync(taskDir(t), { recursive: true, force: true });
+        rmSync(recipesDir, { recursive: true, force: true });
     });
 
     it("a run with the library unsigned: the procedure is refused, Mother asks the commander to sign the safety card with its values, no standing order signs it; signed, the factory writes again; the repository's signatures are given back at the end", async () => {
@@ -231,5 +237,21 @@ describe("a run that starts with the library unsigned, the commander signing in 
         const ended = await until("the end", (r) => r.status !== "running");
         assert.equal(ended.id, started.runId);
         assert.equal((await card())?.by, "the test suite", "the repository's signatures are back; the run's signature stayed in the run");
+    });
+
+    it("runs in a row: once the recipes replay the reads, each procedure is still written for the run's own device and occupants, never replayed from another task", async () => {
+        type Step = { capability: string; source: string };
+        for (let k = 0; k < 4; k++) {
+            const started = await ok<{ runId: string }>("scenario", "play", { id: "commissioning", builder: "scripted", request: REQUEST });
+            const waiting = await until(`run ${started.runId}: the authorisation`, (r) => r.id === started.runId && r.loops[3].status === "waiting");
+            tasks.push(...waiting.tasks.filter((t) => !tasks.includes(t)));
+            assert.equal(waiting.status, "running", `${started.runId}: ${waiting.ended ?? ""}`);
+            const manifest = JSON.parse(readFileSync(path.join(taskDir(waiting.tasks[0]), "manifest.json"), "utf8")) as { steps: Step[] };
+            const replayed = manifest.steps.filter((s) => s.source === "policy").map((s) => s.capability);
+            assert.ok(!replayed.includes("procedure.submit") && !replayed.includes("task.done"), `${started.runId}: the procedure is the builder's, not a replay (${replayed.join(", ")})`);
+            if (k === 3) assert.ok(replayed.length > 0, "by the fourth run the recipes replay the reads");
+            await ok("station", "commissioning_authorise", { commissioningId: waiting.commissioningId, decision: "refuse", by: "commander-test" });
+            await until(`run ${started.runId}: the end`, (r) => r.id === started.runId && r.status !== "running");
+        }
     });
 });
