@@ -1530,6 +1530,23 @@ async function activate(studio) {
     }
   };
   taskSel.addEventListener("change", () => void tick());
+  const UNDER_WAY = { observe: "context", context: "lookup", lookup: "gate", gate: "request", request: "reason", reason: "merge", merge: "guard", guard: "execute", execute: "observe-after", "observe-after": "evaluate", evaluate: "record" };
+  let liveStage = null;
+  setInterval(() => {
+    void (async () => {
+      if (busy || !followed || finished) return;
+      const t = await readTask(followed).catch(() => null);
+      const last = t?.run?.lastStage;
+      if (!t || ended(t.state) || !last || (t.manifest?.steps ?? []).length > shown) return;
+      const stage = UNDER_WAY[last];
+      if (!stage || stage === liveStage) return;
+      liveStage = stage;
+      step = null;
+      lights.cue({ stage, status: "start" });
+      const [text, now] = sentenceFor(stage, void 0);
+      narrate(stage, text, now);
+    })();
+  }, 2e3);
   if (view().mode === "fit") {
     frame();
     setTimeout(frame, 300);

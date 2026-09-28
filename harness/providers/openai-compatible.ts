@@ -97,7 +97,7 @@ export class OpenAiCompatibleProvider implements Provider {
 
         const tools = input.allowedCapabilities.map((c) => ({ type: "function", function: { name: toApiName(c.id), description: c.description, parameters: c.inputSchema ?? { type: "object" } } }));
         // One action per step: the harness executes one decision, so the model is asked for one call at a time.
-        const body = { model: this.model, messages: this.messages, tools, tool_choice: "auto", parallel_tool_calls: false, temperature: this.options.temperature ?? 0.2, ...(this.maxTokens ? { max_tokens: this.maxTokens } : {}) };
+        const body = { model: this.model, messages: this.messages, tools, tool_choice: this.contextMode === "state" ? "required" : "auto", parallel_tool_calls: false, temperature: this.options.temperature ?? 0.2, ...(this.maxTokens ? { max_tokens: this.maxTokens } : {}) };
         const started = Date.now();
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), this.options.timeoutMs ?? 60000);

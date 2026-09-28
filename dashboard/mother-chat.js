@@ -135,7 +135,9 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
         try {
             factorySession ??= await connectMcp(location.origin, "factory", { headers: {} });
             const running = JSON.parse((await factorySession.request("resources/read", { uri: "factory://running" })).contents[0].text);
-            for (const t of running) if (!t.waiting) lines.push(`factory task ${t.taskId}: step ${t.steps}${t.lastStage ? `, ${t.lastStage}` : ""} (${clockOf(t.startedAt)})`);
+            // The stage under way, from the last one completed: after "request" the model is writing its next step, the long wait of a step (2026-09-28: the room read "request" and thought it stuck).
+            const under = (s) => (s === "request" ? "the model is writing its next step" : s === "reason" || s === "merge" ? "the harness checks the step" : s === "guard" ? "the step runs" : s ? `after ${s}` : "starting");
+            for (const t of running) if (!t.waiting) lines.push(`factory task ${t.taskId}: step ${t.steps + 1}, ${under(t.lastStage)} (${clockOf(t.startedAt)})`);
         } catch {
             factorySession = null;
         }

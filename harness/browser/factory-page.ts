@@ -315,6 +315,28 @@ export default async function activate(studio: Studio): Promise<void> {
     };
     taskSel.addEventListener("change", () => void tick());
 
+    // The stage under way while the task runs (2026-09-28): the manifest records a step once it has ended, so the long wait inside a step
+    // (the model writing, after "request") is lit from the run's last completed stage, read every two seconds; before, the guard of the
+    // previous step stayed lit through thirty seconds of the model writing, and the room read it as the guard being slow.
+    const UNDER_WAY: Record<string, string> = { observe: "context", context: "lookup", lookup: "gate", gate: "request", request: "reason", reason: "merge", merge: "guard", guard: "execute", execute: "observe-after", "observe-after": "evaluate", evaluate: "record" };
+    let liveStage: string | null = null;
+    setInterval(() => {
+        void (async () => {
+            if (busy || !followed || finished) return;
+            const t = await readTask(followed).catch(() => null);
+            const last = t?.run?.lastStage;
+            if (!t || ended(t.state) || !last || (t.manifest?.steps ?? []).length > shown) return;
+            const stage = UNDER_WAY[last];
+            if (!stage || stage === liveStage) return;
+            liveStage = stage;
+            // The step under way is not the last one replayed: its numbers are not this stage's.
+            step = null;
+            lights.cue({ stage, status: "start" });
+            const [text, now] = sentenceFor(stage, undefined);
+            narrate(stage, text, now);
+        })();
+    }, 2000);
+
     if (view().mode === "fit") {
         frame();
         setTimeout(frame, 300);

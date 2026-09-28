@@ -8,6 +8,11 @@
  * pace, when); this badge shows the test's time running, interpolated between
  * two minutes, the factor, and the real time it has taken. Only for a test:
  * the twin's runs and the factories' tasks have no clock of the station's.
+ *
+ * Since 2026-09-28 it shows from the commissioning's opening, before any
+ * test: "procedure being written" while the scenario's procedure factory
+ * works, "not run" for a few minutes when the scenario ended before the test
+ * (a room that saw no clock took it for broken).
  */
 import { connectMcp } from "./vendor/mcp-http-client.js";
 
@@ -17,8 +22,19 @@ const clock = (seconds) => `${two(seconds / 60)}:${two(seconds % 60)}`;
 export function mountTestClock(badge) {
     if (!badge) return;
     let station = null;
+    let scenario = null;
     let running = null;
+    /** The scenario's run, when one plays or ended in the last five minutes: the commissioning it opened, and how it ended. */
+    let scene = null;
     const read = async () => {
+        try {
+            scenario ??= await connectMcp(location.origin, "scenario", { headers: {} });
+            const run = JSON.parse((await scenario.request("resources/read", { uri: "scenario://run" })).contents[0].text);
+            scene = run && run.commissioningId && (run.status === "running" || Date.now() - Date.parse(run.endedAt ?? run.startedAt) < 5 * 60000) ? run : null;
+        } catch {
+            scenario = null;
+            scene = null;
+        }
         try {
             station ??= await connectMcp(location.origin, "station", { headers: {} });
             const r = await station.request("resources/read", { uri: "station://commissionings" });
@@ -28,6 +44,8 @@ export function mountTestClock(badge) {
                 list.find((c) => c.status === "running" && c.run?.clock) ??
                 list.find((c) => c.status === "awaiting-authorisation" && c.procedure) ??
                 list.find((c) => ["done", "aborted"].includes(c.status) && c.run?.clock && Date.now() - Date.parse(c.run.clock.at) < 5 * 60000) ??
+                // Before any test: the commissioning the scenario opened, its procedure not yet relayed.
+                (scene ? list.find((c) => c.id === scene.commissioningId && !c.run) : null) ??
                 null;
         } catch {
             station = null;
@@ -38,6 +56,13 @@ export function mountTestClock(badge) {
         const c = running;
         if (!c) {
             badge.hidden = true;
+            return;
+        }
+        if (!c.run && c.status !== "awaiting-authorisation") {
+            const elapsed = clock((Date.now() - Date.parse(scene?.startedAt ?? c.openedAt)) / 1000);
+            badge.textContent = scene?.status === "running" ? `test --:-- · procedure being written · ${elapsed}` : `test --:-- · not run`;
+            badge.title = scene?.status === "running" ? "the commissioning is open: the procedure factory writes the test; the clock starts when the commander authorises it" : `the scenario ended before the test: ${scene?.ended ?? c.status}`;
+            badge.hidden = false;
             return;
         }
         if (c.status === "awaiting-authorisation") {

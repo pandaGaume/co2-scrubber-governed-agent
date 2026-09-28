@@ -15,7 +15,7 @@
 
 ## Every constant you set is justified
 
-What you send carries `justifications`: one per number you set (a limit, a speed, a variable held, a bound searched, a setting, a parameter), with its path (`constant`), its `value` (a number, or `[min, max]` for bounds), its `source`, its `reference` and why (`reason`), so that a reviewer can challenge it against a written procedure or the literature. The sources:
+What you send carries `justifications`: one per number you set (a limit, a speed, a variable held, a bound searched, a setting, a parameter), with its path (`constant`), its `value` (a number, or `[min, max]` for bounds), its `source`, its `reference` and why (`reason`, a few words), so that a reviewer can challenge it against a written procedure or the literature. The sources:
 
 - `library`: a document or a fact of the library read in this task (the state lists them under `sources`), by its id;
 - `web`: a page a web search returned in this task, by its URL;

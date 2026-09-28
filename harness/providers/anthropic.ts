@@ -103,7 +103,9 @@ export class AnthropicProvider implements Provider {
         const system = [{ type: "text", text: this.options.systemPrompt, cache_control: { type: "ephemeral" } }];
         // A Claude 5 model (Opus 5.5, Sonnet 5, Fable) always thinks, and a fixed temperature is refused with it: the sampling is the model's there.
         const thinksAlways = /^claude-(opus-5|sonnet-5|fable|mythos)/.test(this.model);
-        const body = { model: this.model, system, messages: this.messages, tools, tool_choice: { type: "auto", disable_parallel_tool_use: true }, max_tokens: this.maxTokens, ...(thinksAlways ? {} : { temperature: this.options.temperature ?? 0.2 }) };
+        // On the state mode (the factories, the Observer, the Supervisor) an answer is a tool call and nothing else: a text before it is tokens and seconds nobody reads (2026-09-28: a thousand characters of thinking aloud before each procedure). A model that always thinks is left to auto, which its thinking needs.
+        const toolChoice = this.contextMode === "state" && !thinksAlways ? { type: "any", disable_parallel_tool_use: true } : { type: "auto", disable_parallel_tool_use: true };
+        const body = { model: this.model, system, messages: this.messages, tools, tool_choice: toolChoice, max_tokens: this.maxTokens, ...(thinksAlways ? {} : { temperature: this.options.temperature ?? 0.2 }) };
         const started = Date.now();
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), this.options.timeoutMs ?? 60000);

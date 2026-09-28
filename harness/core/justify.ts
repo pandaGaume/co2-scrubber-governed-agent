@@ -90,7 +90,7 @@ export const JUSTIFICATIONS_SCHEMA = {
             value: { anyOf: [{ type: "number" }, { type: "array", items: { type: "number" }, minItems: 2, maxItems: 2 }] },
             source: { type: "string", enum: [...JUSTIFICATION_SOURCES] },
             reference: { type: "string" },
-            reason: { type: "string" },
+            reason: { type: "string", description: "Why, in a few words (a dozen at most): the reviewer reads the source, not an essay." },
         },
         required: ["constant", "value", "source", "reference", "reason"],
     },
