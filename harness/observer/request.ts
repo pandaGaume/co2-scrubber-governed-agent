@@ -37,6 +37,8 @@ import { checkAgainstDocument, compatibleUnits } from "../lib/units.js";
 import { checkKnownAgainstFact, type LibraryFact } from "../core/contracts.js";
 import { readFileSync } from "node:fs";
 import { fromRoot } from "../../lib/paths.js";
+import { loadWords, say } from "../core/words.js";
+const ow = (key: string): string => say(loadWords("specs/observer/words.json"), key);
 
 /** What the documentation settles, the spec's (`specs/observer/rules.json`): contradictions a request may not assume, the words that hedge a number. */
 interface ObserverRules {
@@ -108,8 +110,8 @@ export const TWIN_REQUEST_SCHEMA = {
         assumptions: { type: "array", items: { type: "string" }, description: "What is assumed in its place, said as assumed." },
         known: {
             type: "array",
-            items: { type: "object", properties: { symbol: { type: "string", description: "a short symbol, the variable's name in the twin (Qe, tau)" }, name: { type: "string" }, value: { type: "number" }, unit: { type: "string" }, factId: { type: "string", description: "the fact's id in the library's typed facts (library.facts, or the facts a read document lists), when the document states them: scrubber.singlePassEfficiency, never a symbol of your own" }, source: { type: "string", description: "the id of the library document that states it, one you read" }, min: { type: "number", description: "the low end of the band the documentation gives, when it gives one" }, max: { type: "number", description: "the high end of that band" } }, required: ["symbol", "name", "value", "unit", "source"] },
-            description: "The constants the documentation gives (a device's datasheet, the station's metrics), each with its source: the factory holds them and never fits them.",
+            items: { type: "object", properties: { symbol: { type: "string", description: "a short symbol, the variable's name in the twin (Qe, tau)" }, name: { type: "string" }, value: { type: "number" }, unit: { type: "string" }, factId: { type: "string", description: ow("schema.factIdExample") }, source: { type: "string", description: "the id of the library document that states it, one you read" }, min: { type: "number", description: "the low end of the band the documentation gives, when it gives one" }, max: { type: "number", description: "the high end of that band" } }, required: ["symbol", "name", "value", "unit", "source"] },
+            description: ow("schema.known"),
         },
         validation: {
             type: "object",

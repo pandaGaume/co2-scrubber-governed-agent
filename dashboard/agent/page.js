@@ -712,7 +712,8 @@ var application_default = {
     chooseOne: "Choose exactly one tool call now. To speak to the crew, call {report}; to hand back, call {ask}.",
     situation: 'Situation "{id}" (story minute {minute}): {description}',
     textIgnored: "Your last answer was text, which nobody reads here: answer with one tool call. ",
-    sameQuantity: " (a person's CO2 is a mass flow, and it is not a leak)"
+    sameQuantity: " (a person's CO2 is a mass flow, and it is not a leak)",
+    producedExample: " A quantity and a unit in common are not enough: a person's CO2 output is a mass flow too, and it is not a leak."
   }
 };
 

@@ -8,5 +8,9 @@
     "readsLeft": "{n} read(s) left.",
     "noReadLeft": "No read left: hand over the request.",
     "refused": "Step {step}. Your request {n} was refused: {problems}. The state holds it whole (lastAttempt.proposed): change what these reasons name and hand it over again with {capability}; {attempts} attempt(s) left. {read} {reads}",
-    "first": "Step {step}. Read in the library what the description leaves open (the datasheets, the topology, the metabolic loads), then hand over the request with {capability}; {attempts} attempt(s). {read} {reads}"
+    "first": "Step {step}. Read in the library what the description leaves open (the datasheets, the topology, the metabolic loads), then hand over the request with {capability}; {attempts} attempt(s). {read} {reads}",
+    "schema": {
+        "factIdExample": "the fact's id in the library's typed facts (library.facts, or the facts a read document lists), when the document states them: scrubber.singlePassEfficiency, never a symbol of your own",
+        "known": "The constants the documentation gives (a device's datasheet, the station's metrics), each with its source: the factory holds them and never fits them."
+    }
 }

@@ -16,7 +16,7 @@ import type { LocalCapability } from "./capabilities.js";
 import type { DoneClaim, Plan, Progress } from "./workspace-observer.js";
 import { normalizePlan } from "./builder-guard.js";
 import type { TaskFile } from "./task.js";
-import { APP } from "./application.js";
+import { APP, appSays } from "./application.js";
 
 const MISSING_SCHEMA = {
     type: "object",
@@ -48,7 +48,7 @@ export const PLAN_SCHEMA: JsonValue = {
     properties: {
         selected_nodes: { type: "array", items: { type: "string" }, description: "Node types of the catalogue the build will use (registry_search, registry_describe_node)." },
         missing_capabilities: { type: "array", items: MISSING_SCHEMA, description: "Required outputs no node of the catalogue produces, each with the reason and the topic that can make it." },
-        produced: { type: "object", additionalProperties: { type: "object", properties: { type: { type: "string" }, port: { type: "string" }, convert: { type: "object", properties: { relation: { type: "string" }, parameters: { type: "object" } }, required: ["relation"], description: "When the port is another quantity a physical relation ties to the output (physics.units_relations): the relation and its parameters; the output is the port converted." } }, required: ["type", "port"], additionalProperties: false }, description: "For a required output that no telemetry column judges: which selected node type produces it, on which output port (by the required output's exact name). A quantity and a unit in common are not enough: a person's CO2 output is a mass flow too, and it is not a leak." },
+        produced: { type: "object", additionalProperties: { type: "object", properties: { type: { type: "string" }, port: { type: "string" }, convert: { type: "object", properties: { relation: { type: "string" }, parameters: { type: "object" } }, required: ["relation"], description: "When the port is another quantity a physical relation ties to the output (physics.units_relations): the relation and its parameters; the output is the port converted." } }, required: ["type", "port"], additionalProperties: false }, description: "For a required output that no telemetry column judges: which selected node type produces it, on which output port (by the required output's exact name)." + appSays("producedExample") },
     },
     required: ["selected_nodes", "missing_capabilities"],
     additionalProperties: false,
