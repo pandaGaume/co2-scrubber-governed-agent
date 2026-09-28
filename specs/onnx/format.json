@@ -1,0 +1,7 @@
+{
+    "title": "The ONNX factory: what it builds on, and how it says it",
+    "note": "What the ONNX factory knows of this application (2026-09-28, zero domain in the harness): the reviewed fit spec the state shows as the shape of one (its numbers are that device's, not a task's). Its words are words.json, its prompt prompt.md.",
+    "words": "specs/onnx/words.json",
+    "prompt": "specs/onnx/prompt.md",
+    "referenceSpec": "specs/scrubber-health-twin.json"
+}

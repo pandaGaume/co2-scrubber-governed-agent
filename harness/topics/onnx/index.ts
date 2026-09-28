@@ -22,28 +22,48 @@ import type { TaskFile } from "../../core/task.js";
 import type { TopicDefinition, Validation } from "../../core/topic.js";
 import type { TopicState } from "../../core/reasoning-state.js";
 import type { DoneClaim, Progress, WorkshopFile } from "../../core/workspace-observer.js";
+import { loadWords, say } from "../../core/words.js";
+
+/** What the ONNX factory knows of the application and says to its model: its spec (`specs/onnx/format.json`) and its words (2026-09-28, zero domain in the harness). */
+interface OnnxFormat {
+    words: string;
+    prompt: string;
+    /** The reviewed fit spec the state shows as the shape of one: its numbers are that device's, not a task's. */
+    referenceSpec: string;
+}
+export const ONNX_FORMAT_FILE = "specs/onnx/format.json";
+export const ONNX_FORMAT: OnnxFormat = JSON.parse(readFileSync(fromRoot(...ONNX_FORMAT_FILE.split("/")), "utf8")) as OnnxFormat;
+export const ONNX_WORDS = loadWords(ONNX_FORMAT.words);
+const ow = (key: string, vars?: Record<string, string | number>): string => say(ONNX_WORDS, key, vars);
+
+/** The words the topic asks for: the conformance test checks the file holds them all. */
+export const ONNX_WORD_KEYS = [
+    "validate.none", "validate.notAFile", "validate.notOnnx", "validate.noContract", "validate.notChecked",
+    "openQuestions.catalogue", "openQuestions.plan", "openQuestions.fit", "openQuestions.inspect", "openQuestions.contract", "openQuestions.handOver",
+    "brief.gap", "brief.plan", "brief.fit", "brief.noneGiven", "brief.model", "brief.parityOk", "brief.parityNotOk", "brief.unknown", "brief.contract", "brief.handOver",
+];
 
 export const ONNX_TOOLS: ReadonlyArray<RegExp> = withBase([/^workspace\.(list|read|write)$/, /^twin\.registry_(search|describe_node|list_nodes)$/, /^model\.(fit|inspect|contract)$/]);
 
-export const ONNX_PROMPT = "specs/onnx/prompt.md";
+export const ONNX_PROMPT = ONNX_FORMAT.prompt;
 
-/** The reviewed fit spec the state shows as the shape of one (`specs/scrubber-health-twin.json`). */
-const REFERENCE_SPEC = "specs/scrubber-health-twin.json";
+/** The reviewed fit spec the state shows as the shape of one, the format's. */
+const REFERENCE_SPEC = ONNX_FORMAT.referenceSpec;
 
 export function validateOnnx(claim: DoneClaim, files: WorkshopFile[], progress: Progress): Validation {
     const problems: string[] = [];
     const models = claim.artifacts.filter((a) => a.kind === "model");
-    if (!models.length) problems.push("no model among the claimed artifacts");
+    if (!models.length) problems.push(ow("validate.none"));
     for (const m of models) {
         const file = files.find((f) => f.path === m.path);
         if (!file) {
-            problems.push(`claimed model "${m.path}" is not a file of the workshop`);
+            problems.push(ow("validate.notAFile", { path: m.path }));
             continue;
         }
-        if (!m.path.endsWith(".onnx")) problems.push(`claimed model "${m.path}" is not an .onnx file`);
+        if (!m.path.endsWith(".onnx")) problems.push(ow("validate.notOnnx", { path: m.path }));
         const dir = m.path.includes("/") ? m.path.slice(0, m.path.lastIndexOf("/") + 1) : "";
-        if (!files.some((f) => f.path.startsWith(dir) && f.path.endsWith("contract.json"))) problems.push(`no contract.json next to "${m.path}"`);
-        if (!progress.checkedModels.includes(file.sha256)) problems.push(`no successful model.contract check on "${m.path}" (sha256 ${file.sha256.slice(0, 12)}) in this task`);
+        if (!files.some((f) => f.path.startsWith(dir) && f.path.endsWith("contract.json"))) problems.push(ow("validate.noContract", { path: m.path }));
+        if (!progress.checkedModels.includes(file.sha256)) problems.push(ow("validate.notChecked", { path: m.path, sha: file.sha256.slice(0, 12) }));
     }
     return { ok: problems.length === 0, problems };
 }
@@ -94,12 +114,12 @@ export function stateOfTopic(progress: Progress, task: TaskFile["task"]): TopicS
     const inspect = inspectOf(progress);
     const catalogue = readOf<{ matches?: Array<{ type: string; produces?: Array<{ quantity: string; unit?: string }> }> }>(progress, "twin.registry_search");
     const openQuestions: string[] = [];
-    if (!r.catalogueSearched) openQuestions.push("which node types of the catalogue already produce the required outputs (twin.registry_search)");
-    else if (!r.planAccepted) openQuestions.push("the plan: the types found, and the outputs no type produces declared missing, to fit (task.plan)");
-    else if (!r.fitted) openQuestions.push("the fit on the task's telemetry (model.fit)");
-    else if (!r.inspected) openQuestions.push("the model's inputs and outputs, as the board loads it (model.inspect)");
-    else if (!r.checked) openQuestions.push("the model against its contract, with the board's rules (model.contract)");
-    else openQuestions.push("hand the model over (task.done)");
+    if (!r.catalogueSearched) openQuestions.push(ow("openQuestions.catalogue"));
+    else if (!r.planAccepted) openQuestions.push(ow("openQuestions.plan"));
+    else if (!r.fitted) openQuestions.push(ow("openQuestions.fit"));
+    else if (!r.inspected) openQuestions.push(ow("openQuestions.inspect"));
+    else if (!r.checked) openQuestions.push(ow("openQuestions.contract"));
+    else openQuestions.push(ow("openQuestions.handOver"));
     return {
         hypothesis: {
             gap: task.objective.required_outputs.map((o) => `${o.name} (${o.quantity}${o.unit ? `, ${o.unit}` : ""})`),
@@ -131,12 +151,13 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
     const outputs = task.objective.required_outputs.map((o) => `${o.name} (${o.quantity}${o.unit ? `, ${o.unit}` : ""})`).join(", ");
     const { file, columns } = columnsOf(task);
     const refused = (cap: string) => refusedNote(progress, cap);
-    if (!r.catalogueSearched) return `Stage 1 of 5, the gap. Required: ${outputs}. Ask the catalogue which node types produce them (twin.registry_search with requiredOutputs); what no type produces is fitted from the task's telemetry.`;
-    if (!r.planAccepted) return `Stage 2 of 5, the plan. Declare with task.plan the types found for the outputs they produce (selected_nodes), and in missing_capabilities each required output no type produces, with its reason and the topic "onnx".${refused("task.plan")}`;
-    if (!r.fitted) return `Stage 3 of 5, the fit. The task's telemetry is ${file ?? "(none given)"}, columns ${columns.join(", ") || "(none given)"}. Fit the model with model.fit: a spec of the shape the state shows under hypothesis, field "spec" (a reviewed one: its numbers are that device's), its dataset on this task's file and columns, its full scale, its domain and its monitor set for this device from what you read (the library, the telemetry), never copied; every number of the spec justified (justifications, with its source).${refused("model.fit")}`;
-    if (!r.inspected) return `Stage 4 of 5, the model. Fitted: ${fit?.onnx?.path} (rmse ${fit?.quality?.rmse ?? "?"}, parity ${fit?.parity?.ok ? "ok" : "not ok"}). Load it as the board does: model.inspect on that path.${refused("model.inspect")}`;
-    if (!r.checked) return `Stage 4 of 5, the contract. Check the model with the board's rules: model.contract on ${fit?.onnx?.path}, the contract with its sha256 (${fit?.onnx?.sha256}) and the output count model.inspect read.${refused("model.contract")}`;
-    return `Stage 5 of 5, hand over. The model ${fit?.onnx?.path} holds its contract. End with task.done: the artifact of kind "model" at that path, and the numbers of the fit in the summary.${refused("task.done")}`;
+    const none = ow("brief.noneGiven");
+    if (!r.catalogueSearched) return ow("brief.gap", { outputs });
+    if (!r.planAccepted) return ow("brief.plan", { refused: refused("task.plan") });
+    if (!r.fitted) return ow("brief.fit", { file: file ?? none, columns: columns.join(", ") || none, refused: refused("model.fit") });
+    if (!r.inspected) return ow("brief.model", { path: String(fit?.onnx?.path), rmse: fit?.quality?.rmse ?? ow("brief.unknown"), parity: fit?.parity?.ok ? ow("brief.parityOk") : ow("brief.parityNotOk"), refused: refused("model.inspect") });
+    if (!r.checked) return ow("brief.contract", { path: String(fit?.onnx?.path), sha: String(fit?.onnx?.sha256), refused: refused("model.contract") });
+    return ow("brief.handOver", { path: String(fit?.onnx?.path), refused: refused("task.done") });
 }
 
 /** Where a fit's constants are: every number of its spec but its version (the full scale, the domain, the monitor, a column's scale). */
@@ -156,6 +177,7 @@ export const ONNX_TOPIC: TopicDefinition = {
     state: stateOfTopic,
     brief: briefOf,
     prompt: ONNX_PROMPT,
+    words: { words: ONNX_WORDS, keys: ONNX_WORD_KEYS },
     // The board asks for a fit without a key: the script, unless the request names the model.
     defaultBuilder: "scripted",
     // No graph is built here: the shelf's reference graphs are not read for nothing.

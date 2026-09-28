@@ -1,0 +1,12 @@
+{
+    "note": "What the Observer's harness says to its model (2026-09-28, zero domain in the harness): the code fills the holes {name}.",
+    "intention": "Formulate the TWIN_FACTORY_REQUEST for the system described in the observation.",
+    "capability": "Hand over the TWIN_FACTORY_REQUEST: what the twin must represent, receive, simulate, expose, and how it will be judged. It is checked before it reaches the factory; a refused request comes back with its reasons.",
+    "shelf": "The library holds: {documents}. ",
+    "read": "You read {read} (the state holds them under evidence: the last one whole, the earlier ones by their lines with a number); read nothing twice.",
+    "readNothing": "You read nothing yet.",
+    "readsLeft": "{n} read(s) left.",
+    "noReadLeft": "No read left: hand over the request.",
+    "refused": "Step {step}. Your request {n} was refused: {problems}. The state holds it whole (lastAttempt.proposed): change what these reasons name and hand it over again with {capability}; {attempts} attempt(s) left. {read} {reads}",
+    "first": "Step {step}. Read in the library what the description leaves open (the datasheets, the topology, the metabolic loads), then hand over the request with {capability}; {attempts} attempt(s). {read} {reads}"
+}

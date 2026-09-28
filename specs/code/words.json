@@ -1,0 +1,89 @@
+{
+    "note": "What the code factory says to its model and in its refusals (2026-09-28, zero domain in the harness): the code fills the holes {name} and says nothing of its own.",
+    "intention": "Write, through the forge, the node no type of the catalogue produces for {outputs}: a generated plugin, compiled, tested, checked, loaded and run in the forge, then proposed to the station as a signed artifact. Nothing here touches the twin's catalogue.",
+    "capability": "Run the task's capability contract on the plugin, in the forge: the signature against the contract's inputs and outputs, the parameters as editables, every behavior run in a scratch document and compared with its formula. No input: the contract is the task's. What fails is named; a plugin is loaded only once this holds.",
+    "how": {
+        "catalogueSearched": "search the forge's catalogue first (forge.registry_search, the required outputs' quantities): a node is written only for what nothing produces",
+        "templateRead": "read the forge's template (forge.plugin_template): a complete minimal plugin exactly as the substrate accepts it",
+        "written": "write the plugin (forge.plugin_write)",
+        "built": "compile it (forge.plugin_build); a build older than the files does not count",
+        "tested": "test it (forge.plugin_test) on the last build; the tests and the checks must pass",
+        "accepted": "run the task's contract on it (code.accept): the forge judges the signature, the parameters and every behavior; what fails is named",
+        "loaded": "load it (forge.plugin_load)",
+        "ran": "run it: graph.evaluate on the forge when the task carries telemetry (the candidate must hold), forge.document_build then forge.session_run otherwise",
+        "promoted": "propose it (forge.plugin_promote)"
+    },
+    "guard": {
+        "need": "{capability} needs {requirement}: {how}",
+        "planSelected": "this topic builds no graph: selected_nodes is empty, the node to write goes in missing_capabilities",
+        "planTopic": "missing capability \"{output}\": its topic is \"{topic}\", this task makes it: \"code\"",
+        "onePlugin": "one plugin per task: this task's is \"{plugin}\" (write into it, with replace: true to start it over)",
+        "templateFirst": "read the forge's template first (forge.plugin_template): a complete minimal plugin exactly as the substrate accepts it; the first passage guessed the registry's API and the compiler would have refused every file",
+        "notGenerated": "the type \"{type}\" is not named under \"{prefix}\" (as in \"{prefix}Habitat:leak\"): every catalogue must say a node is generated; the forge refuses it at its checks, so name it now",
+        "notLoaded": "forge.document_build needs loaded: load the plugin first (forge.plugin_load), the document runs its node",
+        "doneArtifact": "the artifact handed over is the plugin the forge signed (kind \"plugin\", path {path})",
+        "doneArtifactPath": "forge/<plugin>/artifact.json"
+    },
+    "document": {
+        "none": "the document holds no node of the plugin's types ({types}): the run must show the generated node",
+        "noneLoaded": "none loaded",
+        "unwired": "node \"{id}\" ({type}) has no input wired: a run with every input unwired shows nothing of the node (wire a Logic.Time:timeline's value into one of its inputs so that its output is seen over time)"
+    },
+    "openQuestions": {
+        "catalogue": "what the forge's catalogue already produces for the required outputs (forge.registry_search)",
+        "node": "the node: its ports (quantity, unit), its physics, its tests, its card (forge.plugin_write)",
+        "buildFailed": "the compilation failed: the diagnostics are under evaluation, correct the files they name",
+        "notBuilt": "the plugin is written and not compiled (forge.plugin_build)",
+        "testsRefused": "the tests or the checks refused: the reasons are under evaluation",
+        "notTested": "the plugin is compiled and not tested (forge.plugin_test)",
+        "acceptanceRefused": "the contract's acceptance refused: what fails is under evaluation",
+        "notAccepted": "the plugin is tested and its contract not yet run on it (code.accept)",
+        "notLoaded": "the plugin is tested and not loaded (forge.plugin_load)",
+        "notHeld": "the candidate with the node did not hold: revise the node or the candidate",
+        "notPromoted": "the node ran; propose it (forge.plugin_promote), then hand it over (task.done)"
+    },
+    "state": {
+        "held": "held",
+        "refused": "refused",
+        "ok": "ok"
+    },
+    "validate": {
+        "none": "no plugin among the claimed artifacts",
+        "notProposed": "no plugin was proposed by the forge in this task (forge.plugin_promote)",
+        "notAFile": "claimed plugin \"{path}\" is not a file of the workshop",
+        "notSigned": "claimed plugin \"{path}\" is not the artifact the forge signed ({signed}, sha256 {sha})"
+    },
+    "accept": {
+        "noContract": "the task carries no capability contract (requirements.capability){problems}",
+        "noContractProblems": ": {problems}",
+        "noPlugin": "no plugin was written in this task",
+        "refused": "the forge refused the acceptance"
+    },
+    "brief": {
+        "handOver": "Stage 6 of 6, hand over. The forge signed {path} (proposal {id}{station}). End with task.done, the artifact of kind \"plugin\" at that path.{refused}",
+        "handOverStation": ", the station's {id}",
+        "theArtifact": "the artifact",
+        "unknown": "?",
+        "gap": "Stage 1 of 6, the gap. Required and produced by no node: {outputs}. Search the forge's catalogue for these quantities first (forge.registry_search with requiredOutputs, then registry_describe_node on the closest types: their ports say how this catalogue names quantities and units). The library holds the physics (library.search, library.read).",
+        "plan": "Stage 2 of 6, the plan. Declare with task.plan: selected_nodes empty, and in missing_capabilities one entry per required output, {names}, with its reason and the topic \"code\"; required_output is the name exactly, nothing added to it.{refused}",
+        "planOutput": "required_output \"{name}\" (quantity \"{quantity}\"{unit})",
+        "planUnit": ", unit \"{unit}\"",
+        "template": "Stage 3 of 6, the plugin. Read the forge's template first (forge.plugin_template): a complete minimal plugin exactly as the substrate accepts it, its entry, its node class, its test, its card. You will write yours on its shape.",
+        "write": "Stage 3 of 6, the plugin. {contract}Write it with forge.plugin_write, on the template's shape (the template's files are in the state under hypothesis, field \"template\", whole; nothing to read again): src/index.ts exporting register(registry, doc) that calls reg.register(type, factory, meta) for each type named under \"{prefix}\", the meta with label, category, docPath (doc(\"<card>.md\")), inputPorts and outputPorts read off one instance, and a signature (purpose, inputs and outputs with quantity and unit as the catalogue names them, each one a declared port, at least one capability); src/<name>.node.ts, a class on RuntimeNode (IntegrableRuntimeNode for a state integrated over time) with its ports on the instance, @editable parameters, @viewable values, fire() reading the session's signals and publishing; src/<name>.test.ts on node:test; docs/<name>.md. Imports: \"@spiky-panda/core\" and the plugin's own files with the .js extension, nothing else.{refused}",
+        "writeContract": "The contract is in the state under hypothesis, field \"contract\": its inputs and outputs with their quantities and units, its parameters (editables the node must have, by these names), and its behaviors (what the output is for given inputs, or with nothing wired): the forge will run them on your node, so the node does exactly that. ",
+        "compiled": "Stage 4 of 6, compiled. {what}{refused}",
+        "compiledFailed": "The build failed: the diagnostics are in the state under evaluation (file, line, code, message). Your files are in the state you are reading now, under hypothesis, field \"plugin.sources\" (each with its path and its content, whole; it is JSON of the state, not a file: workspace.read has nothing to give you): correct them there, against the template (field \"template\": its imports, its ports as IPortDescriptor objects, its decorators with their argument, its override modifiers), and send with forge.plugin_write only the files that change (plugin \"{plugin}\"; the others stay); then forge.plugin_build again.",
+        "compiledWritten": "The plugin is written ({files}). Compile it: forge.plugin_build.",
+        "tested": "Stage 4 of 6, tested. {what}{refused}",
+        "testedRefused": "The tests or the checks refused: the reasons are in the state under evaluation (the failing checks name the type, the port, the rule; the tests' output is there). Your files are in the state under hypothesis, field \"plugin.sources\": correct them there, send with forge.plugin_write only the files that change (plugin \"{plugin}\"), compile again, test again.",
+        "testedCompiled": "Compiled. Test it: forge.plugin_test (the plugin's tests, then the forge's checks).",
+        "accepted": "Stage 4 of 6, accepted. {what}{refused}",
+        "acceptedRefused": "The contract's acceptance refused: what fails is in the state under evaluation (a port or a parameter the signature or the node lacks; a behavior with the value measured and the value the contract says). Correct the files (hypothesis.plugin.sources), compile, test, then code.accept again. The contract is under hypothesis, field \"contract\": the node does what it says, not what the prose around it suggests.",
+        "acceptedTested": "Tests and checks passed ({pass} test(s)). Now the task's contract, run by the forge: code.accept (no input; the contract is the task's, under hypothesis, field \"contract\").",
+        "loaded": "Stage 4 of 6, loaded. Tests, checks and the contract's acceptance passed ({pass} test(s), types {types}). Load it: forge.plugin_load.{refused}",
+        "judged": "Stage 5 of 6, judged. The plugin is loaded in the forge ({types}). Build the candidate that answers the request with it and judge it against the telemetry: graph.evaluate (it runs on the forge's catalogue; the same thresholds and diagnosis as the graph factory's).{notHeld}{refused}",
+        "judgedNotHeld": " The last candidate did not hold: its residuals are under evaluation; revise the node (write, build, test, load again) or the candidate.",
+        "run": "Stage 5 of 6, run. The plugin is loaded in the forge ({types}). The task carries no telemetry: run the node in a document (forge.document_build with a spec that wires at least one of its inputs, a Logic.Time:timeline's value into it (the timeline is a type of the catalogue, \"Logic.Time:timeline\" exactly; {runtime}.registry_describe_node describes it, registry_search by text does not find it since it carries no signature) with segments that change: params {segments: a JSON string such as \"[{\"from\":0,\"to\":120,\"value\":0.5},{\"from\":120,\"to\":1e9,\"value\":1}]\", defaultValue: a number}, the connection from [\"<timeline id>\", \"value\"] to [\"<node id>\", \"<input>\"]; a short name, the harness files it under the task; then forge.session_run on that same name with a probe on one of its viewables) so that its outputs are seen over time; a document that leaves every input of the node unwired is refused.{refusedRun}{refusedBuild}",
+        "proposed": "Stage 6 of 6, proposed. The node ran ({how}). Propose the plugin to the station: forge.plugin_promote (plugin \"{plugin}\"; claims, if any, as an object, never a sentence; the forge attaches its own record of the tests, the checks and the contract's acceptance whatever is claimed).{refused}"
+    }
+}

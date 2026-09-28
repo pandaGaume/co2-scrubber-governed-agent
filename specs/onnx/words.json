@@ -1,0 +1,30 @@
+{
+    "note": "What the ONNX factory says to its model and in its refusals (2026-09-28, zero domain in the harness): the code fills the holes {name} and says nothing of its own.",
+    "validate": {
+        "none": "no model among the claimed artifacts",
+        "notAFile": "claimed model \"{path}\" is not a file of the workshop",
+        "notOnnx": "claimed model \"{path}\" is not an .onnx file",
+        "noContract": "no contract.json next to \"{path}\"",
+        "notChecked": "no successful model.contract check on \"{path}\" (sha256 {sha}) in this task"
+    },
+    "openQuestions": {
+        "catalogue": "which node types of the catalogue already produce the required outputs (twin.registry_search)",
+        "plan": "the plan: the types found, and the outputs no type produces declared missing, to fit (task.plan)",
+        "fit": "the fit on the task's telemetry (model.fit)",
+        "inspect": "the model's inputs and outputs, as the board loads it (model.inspect)",
+        "contract": "the model against its contract, with the board's rules (model.contract)",
+        "handOver": "hand the model over (task.done)"
+    },
+    "brief": {
+        "gap": "Stage 1 of 5, the gap. Required: {outputs}. Ask the catalogue which node types produce them (twin.registry_search with requiredOutputs); what no type produces is fitted from the task's telemetry.",
+        "plan": "Stage 2 of 5, the plan. Declare with task.plan the types found for the outputs they produce (selected_nodes), and in missing_capabilities each required output no type produces, with its reason and the topic \"onnx\".{refused}",
+        "fit": "Stage 3 of 5, the fit. The task's telemetry is {file}, columns {columns}. Fit the model with model.fit: a spec of the shape the state shows under hypothesis, field \"spec\" (a reviewed one: its numbers are that device's), its dataset on this task's file and columns, its full scale, its domain and its monitor set for this device from what you read (the library, the telemetry), never copied; every number of the spec justified (justifications, with its source).{refused}",
+        "noneGiven": "(none given)",
+        "model": "Stage 4 of 5, the model. Fitted: {path} (rmse {rmse}, parity {parity}). Load it as the board does: model.inspect on that path.{refused}",
+        "parityOk": "ok",
+        "parityNotOk": "not ok",
+        "unknown": "?",
+        "contract": "Stage 4 of 5, the contract. Check the model with the board's rules: model.contract on {path}, the contract with its sha256 ({sha}) and the output count model.inspect read.{refused}",
+        "handOver": "Stage 5 of 5, hand over. The model {path} holds its contract. End with task.done: the artifact of kind \"model\" at that path, and the numbers of the fit in the summary.{refused}"
+    }
+}

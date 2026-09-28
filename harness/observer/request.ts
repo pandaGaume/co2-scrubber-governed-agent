@@ -35,6 +35,17 @@
 
 import { checkAgainstDocument, compatibleUnits } from "../lib/units.js";
 import { checkKnownAgainstFact, type LibraryFact } from "../core/contracts.js";
+import { readFileSync } from "node:fs";
+import { fromRoot } from "../../lib/paths.js";
+
+/** What the documentation settles, the spec's (`specs/observer/rules.json`): contradictions a request may not assume, the words that hedge a number. */
+interface ObserverRules {
+    contradictions: Array<{ semantic: string; sections: string[]; claims: string; unless?: string; says: string }>;
+    hedged: string;
+}
+export const OBSERVER_RULES_FILE = "specs/observer/rules.json";
+export const OBSERVER_RULES: ObserverRules = JSON.parse(readFileSync(fromRoot(...OBSERVER_RULES_FILE.split("/")), "utf8")) as ObserverRules;
+const fillRule = (template: string, vars: Record<string, string>): string => template.replace(/\{([A-Za-z]+)\}/g, (hole, name: string) => vars[name] ?? hole);
 
 export interface Quantity {
     name: string;
@@ -139,8 +150,8 @@ export interface CheckContext {
     description?: string;
 }
 
-/** The sentences of a description that state a result under an assumption. */
-const HEDGED = /\b(apparent|assum(e|ed|ing)|one room|if there is no|not documented)\b/i;
+/** The sentences of a description that state a result under an assumption: the spec's words for it. */
+const HEDGED = new RegExp(OBSERVER_RULES.hedged, "i");
 
 /** The numbers a description gives only under an assumption: small integers (a count, a step) are left out, they say nothing by themselves. */
 export function hedgedNumbers(description: string): number[] {
@@ -247,14 +258,16 @@ export function checkTwinRequest(input: unknown, context: CheckContext = {}): Re
             else if (verdict.verdict === "UNKNOWN_UNIT") problems.push(`units: known constant "${k.symbol}" is written in "${k.unit}", a unit the unit system does not know (${verdict.reason}); write it in a UCUM unit of its quantity`);
         }
     }
-    // Semantics the documentation settles: an assumption that the modules do not exchange air with the hatch closed contradicts the station's ventilation, documented as running through the ducts alone.
-    const ventilation = Object.entries(context.facts ?? {}).flatMap(([doc, facts]) => facts.filter((f) => /InterModuleVentilation/.test(f.semantic)).map((f) => ({ doc, f })))[0];
-    if (ventilation) {
-        const isolated = /\b(no|zero|without|negligible)\b[^.;]{0,50}\b(air )?(exchange|coupling|ventilation|mixing|transfer)\b[^.;]{0,80}\b(between|modules?|lab|hab)\b/i;
-        for (const [section, items] of [["assumptions", list(r.assumptions)], ["required_behaviors", list(r.required_behaviors)], ["constraints", list(r.constraints)]] as const) {
-            for (const text of items) {
+    // Semantics the documentation settles (the rules are specs/observer/rules.json): an assumption a documented fact contradicts is refused, with the fact.
+    for (const rule of OBSERVER_RULES.contradictions) {
+        const found = Object.entries(context.facts ?? {}).flatMap(([doc, facts]) => facts.filter((f) => new RegExp(rule.semantic).test(f.semantic)).map((f) => ({ doc, f })))[0];
+        if (!found) continue;
+        const claims = new RegExp(rule.claims, "i");
+        const unless = rule.unless ? new RegExp(rule.unless, "i") : null;
+        for (const section of rule.sections) {
+            for (const text of list((r as Record<string, unknown[] | undefined>)[section])) {
                 const t = String(text);
-                if (isolated.test(t) && !/through the hatch(way)?\b/i.test(t)) problems.push(`facts: ${section} "${t.slice(0, 120)}" treats the modules as isolated with the hatch closed; the station documents the opposite (${ventilation.doc}, ${ventilation.f.id}: ${ventilation.f.says ?? `${ventilation.f.value} ${ventilation.f.unit}`}); say what the ventilation delivers is unknown, not that it is zero`);
+                if (claims.test(t) && !(unless && unless.test(t))) problems.push(fillRule(rule.says, { section, text: t.slice(0, 120), doc: found.doc, fact: found.f.id, what: found.f.says ?? `${found.f.value} ${found.f.unit}` }));
             }
         }
     }

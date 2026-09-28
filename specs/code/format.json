@@ -1,0 +1,7 @@
+{
+    "title": "The code factory: what it builds on, and how it says it",
+    "note": "What the code factory knows of this application (2026-09-28, zero domain in the harness): the prefix every generated type is named under (the forge refuses the rest at its checks, the guard before any compilation). Its words are words.json, its prompt prompt.md.",
+    "words": "specs/code/words.json",
+    "prompt": "specs/code/prompt.md",
+    "generatedPrefix": "Generated."
+}

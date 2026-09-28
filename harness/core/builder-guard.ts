@@ -31,6 +31,7 @@ import { TOPICS, type TaskFile } from "./task.js";
 import type { TopicDefinition } from "./topic.js";
 import { checkJustifications } from "./justify.js";
 import type { Plan, Progress } from "./workspace-observer.js";
+import { appSays } from "./application.js";
 
 const PATH_KEYS = new Set(["path", "file", "name", "contractPath"]);
 
@@ -164,7 +165,7 @@ export async function planProblems(plan: Plan, { broker, task, runtimeSlot = "tw
         if (mapped[required.name]) continue;
         const produced = described.some((n) => Object.values(n.signature?.outputs ?? {}).some((o) => o.quantity === required.quantity && (!required.unit || o.unit === required.unit)));
         if (!produced) problems.push(`required output "${required.name}" (${required.quantity}${required.unit ? `, ${required.unit}` : ""}) is neither produced by a selected node nor declared missing`);
-        else if (compared.size && !compared.has(required.name)) problems.push(`required output "${required.name}" (${required.quantity}${required.unit ? `, ${required.unit}` : ""}) is judged against no telemetry column: say in produced which selected type and which output port produce it, or declare it missing; a quantity in common is not enough (a person's CO2 is a mass flow, and it is not a leak)`);
+        else if (compared.size && !compared.has(required.name)) problems.push(`required output "${required.name}" (${required.quantity}${required.unit ? `, ${required.unit}` : ""}) is judged against no telemetry column: say in produced which selected type and which output port produce it, or declare it missing; a quantity in common is not enough${appSays("sameQuantity")}`);
     }
     return problems;
 }

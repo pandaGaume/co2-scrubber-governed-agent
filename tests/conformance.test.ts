@@ -55,10 +55,7 @@ const PORT = 3146;
 type Check = "base" | "tools" | "model" | "replay" | "declared" | "justify" | "script" | "words";
 
 /** The deviations known and not yet closed: topic, check, the capability or pattern, and why it stands. */
-const KNOWN: Array<{ topic: string; check: Check; what: string; why: string }> = [
-    { topic: "code", check: "words", what: "none", why: "its brief and hints are still sentences of the code (zero domain in the harness, stage E)" },
-    { topic: "onnx", check: "words", what: "none", why: "its brief and hints are still sentences of the code (zero domain in the harness, stage E)" },
-];
+const KNOWN: Array<{ topic: string; check: Check; what: string; why: string }> = [];
 
 const TASK = { objective: { required_outputs: [{ name: "x", quantity: "Volume", unit: "m3" }], constraints: {} }, data: [] } as unknown as TaskFile["task"];
 

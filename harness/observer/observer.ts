@@ -47,6 +47,11 @@ import { checkTwinRequest, TWIN_REQUEST_SCHEMA, type TwinFactoryRequest, type Vo
 import type { LibraryFact } from "../core/contracts.js";
 import { summarizeTelemetry, type TelemetrySummary } from "./telemetry.js";
 import { canonicalQuantity } from "../lib/units.js";
+import { loadWords, say } from "../core/words.js";
+
+/** What the Observer's harness says to its model: the spec's words (`specs/observer/words.json`). */
+export const OBSERVER_WORDS = loadWords("specs/observer/words.json");
+const ow = (key: string, vars?: Record<string, string | number>): string => say(OBSERVER_WORDS, key, vars);
 
 export const OBSERVER_PROMPT = "specs/observer/prompt.md";
 export const OBSERVER_CAPABILITY = "observer.request";
@@ -183,15 +188,15 @@ async function libraryShelf(broker: Broker): Promise<string> {
     const r = await broker.call("library", "list", {});
     const docs = r.ok ? (r.output as { documents?: Array<{ id: string; title: string; summary?: string }> }).documents : undefined;
     if (!Array.isArray(docs) || !docs.length) return "";
-    return `The library holds: ${docs.map((d) => `${d.id} (${d.title}${d.summary ? `: ${d.summary.slice(0, 160)}` : ""})`).join("; ")}. `;
+    return ow("shelf", { documents: docs.map((d) => `${d.id} (${d.title}${d.summary ? `: ${d.summary.slice(0, 160)}` : ""})`).join("; ") });
 }
 
 /** The harness's brief to the Observer at a step: where it stands, what it read, why its last request was refused. Deterministic. */
 export function observerBrief(x: { step: number; attemptsLeft: number; readsLeft: number; read: string[]; last?: ObserveAttempt }): string {
-    const read = x.read.length ? `You read ${x.read.join(", ")} (the state holds them under evidence: the last one whole, the earlier ones by their lines with a number); read nothing twice.` : "You read nothing yet.";
-    const reads = x.readsLeft > 0 ? `${x.readsLeft} read(s) left.` : "No read left: hand over the request.";
-    if (x.last) return `Step ${x.step}. Your request ${x.last.n} was refused: ${x.last.problems.join("; ")}. The state holds it whole (lastAttempt.proposed): change what these reasons name and hand it over again with ${OBSERVER_CAPABILITY}; ${x.attemptsLeft} attempt(s) left. ${read} ${reads}`;
-    return `Step ${x.step}. Read in the library what the description leaves open (the datasheets, the topology, the metabolic loads), then hand over the request with ${OBSERVER_CAPABILITY}; ${x.attemptsLeft} attempt(s). ${read} ${reads}`;
+    const read = x.read.length ? ow("read", { read: x.read.join(", ") }) : ow("readNothing");
+    const reads = x.readsLeft > 0 ? ow("readsLeft", { n: x.readsLeft }) : ow("noReadLeft");
+    if (x.last) return ow("refused", { step: x.step, n: x.last.n, problems: x.last.problems.join("; "), capability: OBSERVER_CAPABILITY, attempts: x.attemptsLeft, read, reads });
+    return ow("first", { step: x.step, capability: OBSERVER_CAPABILITY, attempts: x.attemptsLeft, read, reads });
 }
 
 export async function observe({ provider, broker, runtimeSlot = "twin", description, telemetry, attempts = 3, review }: ObserveOptions): Promise<ObserveResult> {
@@ -203,8 +208,8 @@ export async function observe({ provider, broker, runtimeSlot = "twin", descript
     const facts = library.length ? await libraryFacts(broker) : {};
     // What the library holds, given up front: the model knows a datasheet exists before it thinks of searching for one.
     const shelf = library.length && broker ? await libraryShelf(broker) : "";
-    const intention = { id: "observe", description: "Formulate the TWIN_FACTORY_REQUEST for the system described in the observation." };
-    const allowed = [{ id: OBSERVER_CAPABILITY, description: "Hand over the TWIN_FACTORY_REQUEST: what the twin must represent, receive, simulate, expose, and how it will be judged. It is checked before it reaches the factory; a refused request comes back with its reasons.", inputSchema: TWIN_REQUEST_SCHEMA as never, replayPolicy: "automatic" as const }, ...library];
+    const intention = { id: "observe", description: ow("intention") };
+    const allowed = [{ id: OBSERVER_CAPABILITY, description: ow("capability"), inputSchema: TWIN_REQUEST_SCHEMA as never, replayPolicy: "automatic" as const }, ...library];
     const withUnits = (list: typeof allowed) => [...list, ...units];
     const done: ObserveAttempt[] = [];
     const reads: string[] = [];

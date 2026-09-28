@@ -1,0 +1,34 @@
+{
+    "note": "What the factory tells from the register without guessing, and what it says it cannot tell (docs/mise-en-service.fr.md, section 5; 2026-09-28, zero domain in the factory's code): which places are volumes of air, which devices are openings between them, and the unknowns a device under commissioning leaves, each with how it is to be found. slots/factory/inventory.ts applies these rules; it knows none of them.",
+    "volume": {
+        "note": "A place (the area of an ISA-95 path) that holds a device measuring this quantity is a volume of air; those devices are its sensors.",
+        "measures": "Concentration"
+    },
+    "opening": {
+        "note": "A device whose links of this relation name at least this many places is an opening between them.",
+        "rel": "connects",
+        "places": 2
+    },
+    "unknowns": [
+        {
+            "note": "The volume a device under commissioning serves: what the procedure measures.",
+            "what": "served volume of {volume}",
+            "quantity": "Volume",
+            "unit": "m3",
+            "how": "measured"
+        },
+        {
+            "note": "The air exchanged with each place an opening connects it to: a hypothesis the candidate simulators decide (2026-09-23).",
+            "through": "opening",
+            "what": "exchange between {volume} and {other} through {device}",
+            "quantity": "VolumetricFlow",
+            "unit": "m3ps",
+            "how": "hypothesis"
+        }
+    ],
+    "states": {
+        "note": "A property of an opening nobody commands is operated by a person; a unit that lists its states separates them with this.",
+        "separator": "|"
+    },
+    "lineWidth": 34
+}

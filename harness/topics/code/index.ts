@@ -51,6 +51,21 @@ import type { DoneClaim, Progress, WorkshopFile } from "../../core/workspace-obs
 import { CANDIDATE_JUSTIFIED, candidatesOf, evaluateCapability } from "../graph/index.js";
 import { contractProblems, type CapabilityContract } from "../../../slots/forge/contract.js";
 import type { CapabilityResult } from "@spiky-panda/harness";
+import { readFileSync } from "node:fs";
+import { fromRoot } from "../../../lib/paths.js";
+import { loadWords, say } from "../../core/words.js";
+
+/** What the code factory knows of the application and says to its model: its spec (`specs/code/format.json`) and its words (2026-09-28, zero domain in the harness). */
+interface CodeFormat {
+    words: string;
+    prompt: string;
+    /** The prefix a generated type carries. */
+    generatedPrefix: string;
+}
+export const CODE_FORMAT_FILE = "specs/code/format.json";
+export const CODE_FORMAT: CodeFormat = JSON.parse(readFileSync(fromRoot(...CODE_FORMAT_FILE.split("/")), "utf8")) as CodeFormat;
+export const CODE_WORDS = loadWords(CODE_FORMAT.words);
+const cw = (key: string, vars?: Record<string, string | number>): string => say(CODE_WORDS, key, vars);
 
 export const CODE_TOOLS: ReadonlyArray<RegExp> = withBase([
     /^forge\.registry_(search|describe_node|list_nodes)$/,
@@ -62,10 +77,10 @@ export const CODE_TOOLS: ReadonlyArray<RegExp> = withBase([
     /^graph\.evaluate$/,
 ]);
 
-export const CODE_PROMPT = "specs/code/prompt.md";
+export const CODE_PROMPT = CODE_FORMAT.prompt;
 
 /** The prefix a generated type carries; the forge refuses the rest at its checks, the guard here before any compilation. */
-export const GENERATED_PREFIX = "Generated.";
+export const GENERATED_PREFIX = CODE_FORMAT.generatedPrefix;
 
 interface CodeTopicState {
     /** The one plugin of this task, named at the first write. */
@@ -173,7 +188,7 @@ export function contractProblemsOf(task: TaskFile["task"]): string[] {
     return raw && typeof raw === "object" ? contractProblems(raw) : [];
 }
 
-/** The type names a plugin's entry registers, as written: `reg.register("Generated.Habitat:leak", ...)` or a constant `TYPE = "..."` passed to it. */
+/** The type names a plugin's entry registers, as written: `reg.register("<prefix><Domain>:<name>", ...)` or a constant `TYPE = "..."` passed to it. */
 export function typesWritten(files: Array<{ path?: unknown; content?: unknown }>): string[] {
     const out = new Set<string>();
     for (const f of files) {
@@ -219,17 +234,8 @@ export function requirementsOf(progress: Progress, task: TaskFile["task"]): Reco
     };
 }
 
-const HOW: Record<string, string> = {
-    catalogueSearched: "search the forge's catalogue first (forge.registry_search, the required outputs' quantities): a node is written only for what nothing produces",
-    templateRead: "read the forge's template (forge.plugin_template): a complete minimal plugin exactly as the substrate accepts it",
-    written: "write the plugin (forge.plugin_write)",
-    built: "compile it (forge.plugin_build); a build older than the files does not count",
-    tested: "test it (forge.plugin_test) on the last build; the tests and the checks must pass",
-    accepted: "run the task's contract on it (code.accept): the forge judges the signature, the parameters and every behavior; what fails is named",
-    loaded: "load it (forge.plugin_load)",
-    ran: "run it: graph.evaluate on the forge when the task carries telemetry (the candidate must hold), forge.document_build then forge.session_run otherwise",
-    promoted: "propose it (forge.plugin_promote)",
-};
+const HOW_KEYS = ["catalogueSearched", "templateRead", "written", "built", "tested", "accepted", "loaded", "ran", "promoted"];
+const howOf = (k: string): string => cw(`how.${k}`);
 
 /**
  * A document that runs the generated node must wire it: a node whose inputs
@@ -242,35 +248,35 @@ export function documentProblems(spec: unknown, generatedTypes: string[]): strin
     const nodes = Array.isArray(s.nodes) ? s.nodes : [];
     const wiredInto = new Set((Array.isArray(s.connections) ? s.connections : []).map((c) => String((c?.to ?? [])[0] ?? "")));
     const generated = nodes.filter((n) => generatedTypes.includes(String(n?.typeId)));
-    if (!generated.length) return [`the document holds no node of the plugin's types (${generatedTypes.join(", ") || "none loaded"}): the run must show the generated node`];
-    return generated.filter((n) => !wiredInto.has(String(n?.id))).map((n) => `node "${String(n?.id)}" (${String(n?.typeId)}) has no input wired: a run with every input unwired shows nothing of the node (wire a Logic.Time:timeline's value into one of its inputs so that its output is seen over time)`);
+    if (!generated.length) return [cw("document.none", { types: generatedTypes.join(", ") || cw("document.noneLoaded") })];
+    return generated.filter((n) => !wiredInto.has(String(n?.id))).map((n) => cw("document.unwired", { id: String(n?.id), type: String(n?.typeId) }));
 }
 
 async function guardCode(capabilityId: string, input: JsonValue, context: TopicContext): Promise<string[]> {
     const { progress, task } = context;
     const state = stateOf(progress);
     const requirements = requirementsOf(progress, task);
-    const need = (keys: string[]) => keys.filter((k) => !requirements[k]).map((k) => `${capabilityId} needs ${k}: ${HOW[k]}`);
+    const need = (keys: string[]) => keys.filter((k) => !requirements[k]).map((k) => cw("guard.need", { capability: capabilityId, requirement: k, how: howOf(k) }));
     if (capabilityId === "task.plan") {
         const problems = need(["catalogueSearched"]);
         const plan = (input ?? {}) as { selected_nodes?: unknown[]; missing_capabilities?: Array<{ topic?: string; required_output?: string }> };
-        if (Array.isArray(plan.selected_nodes) && plan.selected_nodes.length) problems.push("this topic builds no graph: selected_nodes is empty, the node to write goes in missing_capabilities");
-        for (const m of Array.isArray(plan.missing_capabilities) ? plan.missing_capabilities : []) if (m?.topic !== "code") problems.push(`missing capability "${String(m?.required_output)}": its topic is "${String(m?.topic)}", this task makes it: "code"`);
+        if (Array.isArray(plan.selected_nodes) && plan.selected_nodes.length) problems.push(cw("guard.planSelected"));
+        for (const m of Array.isArray(plan.missing_capabilities) ? plan.missing_capabilities : []) if (m?.topic !== "code") problems.push(cw("guard.planTopic", { output: String(m?.required_output), topic: String(m?.topic) }));
         return problems;
     }
     if (capabilityId === "forge.plugin_write") {
         const problems: string[] = [];
         const w = (input ?? {}) as { plugin?: unknown; files?: unknown };
         const plugin = String(w.plugin ?? "");
-        if (state.plugin && plugin && plugin !== state.plugin) problems.push(`one plugin per task: this task's is "${state.plugin}" (write into it, with replace: true to start it over)`);
-        if (!requirements.templateRead) problems.push("read the forge's template first (forge.plugin_template): a complete minimal plugin exactly as the substrate accepts it; the first passage guessed the registry's API and the compiler would have refused every file");
+        if (state.plugin && plugin && plugin !== state.plugin) problems.push(cw("guard.onePlugin", { plugin: state.plugin }));
+        if (!requirements.templateRead) problems.push(cw("guard.templateFirst"));
         const files = Array.isArray(w.files) ? (w.files as Array<{ path?: unknown; content?: unknown }>) : [];
-        for (const type of typesWritten(files)) if (!type.startsWith(GENERATED_PREFIX)) problems.push(`the type "${type}" is not named under "${GENERATED_PREFIX}" (as in "${GENERATED_PREFIX}Habitat:leak"): every catalogue must say a node is generated; the forge refuses it at its checks, so name it now`);
+        for (const type of typesWritten(files)) if (!type.startsWith(GENERATED_PREFIX)) problems.push(cw("guard.notGenerated", { type, prefix: GENERATED_PREFIX }));
         return problems;
     }
     if (capabilityId === "forge.document_build") {
         const loaded = stagesOf(progress).loaded?.types ?? [];
-        return loaded.length ? documentProblems((input as { spec?: unknown } | null)?.spec, loaded) : ["forge.document_build needs loaded: load the plugin first (forge.plugin_load), the document runs its node"];
+        return loaded.length ? documentProblems((input as { spec?: unknown } | null)?.spec, loaded) : [cw("guard.notLoaded")];
     }
     if (capabilityId === "forge.plugin_load") return need(["tested", "accepted"]);
     if (capabilityId === "code.accept") return need(["tested"]);
@@ -278,7 +284,7 @@ async function guardCode(capabilityId: string, input: JsonValue, context: TopicC
     if (capabilityId === "task.done") {
         const problems = need(["promoted"]);
         const claim = (input ?? {}) as Partial<DoneClaim>;
-        if (!(claim.artifacts ?? []).some((a) => a.kind === "plugin")) problems.push(`the artifact handed over is the plugin the forge signed (kind "plugin", path ${stagesOf(progress).promoted?.path ?? "forge/<plugin>/artifact.json"})`);
+        if (!(claim.artifacts ?? []).some((a) => a.kind === "plugin")) problems.push(cw("guard.doneArtifact", { path: stagesOf(progress).promoted?.path ?? cw("guard.doneArtifactPath") }));
         return problems;
     }
     return [];
@@ -293,14 +299,14 @@ export function stateOfTopic(progress: Progress, task: TaskFile["task"]): TopicS
     const ran = ranOf(progress);
     const catalogue = read<{ matches?: Array<{ type: string; signature?: { purpose?: string } }> }>(progress, "forge.registry_search");
     const openQuestions: string[] = [];
-    if (!catalogue) openQuestions.push("what the forge's catalogue already produces for the required outputs (forge.registry_search)");
-    if (!s.written) openQuestions.push("the node: its ports (quantity, unit), its physics, its tests, its card (forge.plugin_write)");
-    else if (!requirements.built) openQuestions.push(s.build && !s.build.ok ? "the compilation failed: the diagnostics are under evaluation, correct the files they name" : "the plugin is written and not compiled (forge.plugin_build)");
-    else if (!requirements.tested) openQuestions.push(s.tests && !s.tests.ok ? "the tests or the checks refused: the reasons are under evaluation" : "the plugin is compiled and not tested (forge.plugin_test)");
-    else if (!requirements.accepted) openQuestions.push(s.accepted && !s.accepted.ok && s.accepted.build === s.build?.id ? "the contract's acceptance refused: what fails is under evaluation" : "the plugin is tested and its contract not yet run on it (code.accept)");
-    else if (!requirements.loaded) openQuestions.push("the plugin is tested and not loaded (forge.plugin_load)");
-    else if (!requirements.ran) openQuestions.push(ran.how === "evaluate" ? "the candidate with the node did not hold: revise the node or the candidate" : HOW.ran);
-    else if (!requirements.promoted) openQuestions.push("the node ran; propose it (forge.plugin_promote), then hand it over (task.done)");
+    if (!catalogue) openQuestions.push(cw("openQuestions.catalogue"));
+    if (!s.written) openQuestions.push(cw("openQuestions.node"));
+    else if (!requirements.built) openQuestions.push(s.build && !s.build.ok ? cw("openQuestions.buildFailed") : cw("openQuestions.notBuilt"));
+    else if (!requirements.tested) openQuestions.push(s.tests && !s.tests.ok ? cw("openQuestions.testsRefused") : cw("openQuestions.notTested"));
+    else if (!requirements.accepted) openQuestions.push(s.accepted && !s.accepted.ok && s.accepted.build === s.build?.id ? cw("openQuestions.acceptanceRefused") : cw("openQuestions.notAccepted"));
+    else if (!requirements.loaded) openQuestions.push(cw("openQuestions.notLoaded"));
+    else if (!requirements.ran) openQuestions.push(ran.how === "evaluate" ? cw("openQuestions.notHeld") : howOf("ran"));
+    else if (!requirements.promoted) openQuestions.push(cw("openQuestions.notPromoted"));
     const candidate = candidatesOf(progress).at(-1);
     let evaluation: JsonValue | null = null;
     if (s.build && !s.build.ok) evaluation = { stage: "build", ok: false, problems: s.build.problems ?? [], diagnostics: s.build.diagnostics ?? [] } as JsonValue;
@@ -319,7 +325,7 @@ export function stateOfTopic(progress: Progress, task: TaskFile["task"]): TopicS
             catalogue: catalogue ? (catalogue.matches ?? []).slice(0, 12).map((m) => `${m.type}: ${m.signature?.purpose ?? ""}`.slice(0, 160)) : null,
             // The template whole until the plugin compiles (the shape to write on), the plugin's sources whole from the first write (what is corrected): the state carries what the model needs whole.
             template: s.template && !requirements.built ? (s.template.files ?? []) : null,
-            plugin: state.plugin ? { name: state.plugin, files: s.written?.files ?? [], sources: s.written?.sources ?? [], sha256: s.written?.sha256 ?? null, accepted: s.accepted ? { ok: s.accepted.ok === true, behaviors: (s.accepted.behaviors ?? []).map((b) => `${b.behavior}: ${b.ok ? "held" : b.reason ?? "refused"}`) } : null, build: s.build ? { id: s.build.id ?? null, ok: s.build.ok === true, current: s.build.sha256 === s.written?.sha256 } : null, tests: s.tests ? { ok: s.tests.ok === true, pass: s.tests.pass ?? 0, fail: s.tests.fail ?? 0, types: (s.tests.types ?? []).map((t) => `${t.type}: ${t.ok ? "ok" : t.problems.join("; ")}`) } : null, loaded: s.loaded?.types ?? null, ran: ran.ran ? ran.how : null, proposal: s.promoted ? { id: s.promoted.id ?? null, path: s.promoted.path ?? null, artifactSha256: s.promoted.artifactSha256 ?? null, station: s.promoted.stationProposalId ?? null } : null } : null,
+            plugin: state.plugin ? { name: state.plugin, files: s.written?.files ?? [], sources: s.written?.sources ?? [], sha256: s.written?.sha256 ?? null, accepted: s.accepted ? { ok: s.accepted.ok === true, behaviors: (s.accepted.behaviors ?? []).map((b) => `${b.behavior}: ${b.ok ? cw("state.held") : b.reason ?? cw("state.refused")}`) } : null, build: s.build ? { id: s.build.id ?? null, ok: s.build.ok === true, current: s.build.sha256 === s.written?.sha256 } : null, tests: s.tests ? { ok: s.tests.ok === true, pass: s.tests.pass ?? 0, fail: s.tests.fail ?? 0, types: (s.tests.types ?? []).map((t) => `${t.type}: ${t.ok ? cw("state.ok") : t.problems.join("; ")}`) } : null, loaded: s.loaded?.types ?? null, ran: ran.ran ? ran.how : null, proposal: s.promoted ? { id: s.promoted.id ?? null, path: s.promoted.path ?? null, artifactSha256: s.promoted.artifactSha256 ?? null, station: s.promoted.stationProposalId ?? null } : null } : null,
         } as JsonValue,
         evaluation: lastRefusal && (!evaluation || lastRefusal[1].at > (progress.reads[Object.keys(progress.reads).at(-1) ?? ""]?.at ?? "")) ? ({ refused: lastRefusal[0], reason: lastRefusal[1].reason, ...(evaluation && typeof evaluation === "object" ? { last: evaluation } : {}) } as JsonValue) : evaluation,
         openQuestions,
@@ -331,19 +337,19 @@ export function validateCode(claim: DoneClaim, files: WorkshopFile[], progress: 
     const problems: string[] = [];
     const claimed = claim.artifacts.filter((a) => a.kind === "plugin");
     const { promoted } = stagesOf(progress);
-    if (!claimed.length) problems.push("no plugin among the claimed artifacts");
-    if (!promoted?.artifactSha256) problems.push("no plugin was proposed by the forge in this task (forge.plugin_promote)");
+    if (!claimed.length) problems.push(cw("validate.none"));
+    if (!promoted?.artifactSha256) problems.push(cw("validate.notProposed"));
     for (const c of claimed) {
         const file = files.find((f) => f.path === c.path);
-        if (!file) problems.push(`claimed plugin "${c.path}" is not a file of the workshop`);
-        else if (promoted && (file.path !== promoted.path || file.sha256 !== promoted.artifactSha256)) problems.push(`claimed plugin "${c.path}" is not the artifact the forge signed (${promoted.path}, sha256 ${String(promoted.artifactSha256).slice(0, 12)})`);
+        if (!file) problems.push(cw("validate.notAFile", { path: c.path }));
+        else if (promoted && (file.path !== promoted.path || file.sha256 !== promoted.artifactSha256)) problems.push(cw("validate.notSigned", { path: c.path, signed: String(promoted.path), sha: String(promoted.artifactSha256).slice(0, 12) }));
     }
     return { ok: problems.length === 0, problems };
 }
 
 function intentionOf(task: TaskFile["task"], generic: Intention): Intention {
     const outputs = task.objective.required_outputs.map((o) => `${o.name} (${o.quantity}${o.unit ? `, ${o.unit}` : ""})`).join("; ");
-    return { ...generic, description: `Write, through the forge, the node no type of the catalogue produces for ${outputs}: a generated plugin, compiled, tested, checked, loaded and run in the forge, then proposed to the station as a signed artifact. Nothing here touches the twin's catalogue.` };
+    return { ...generic, description: cw("intention", { outputs }) };
 }
 
 /** The harness's brief, stage by stage; the rules of the forge are in the tools' descriptions and its refusals, never restated as advice. */
@@ -354,21 +360,23 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
     const outputs = task.objective.required_outputs.map((o) => `${o.name} (${o.quantity}${o.unit ? `, ${o.unit}` : ""})`).join(", ");
     const telemetry = progress.context.telemetry !== null || (task.data ?? []).length > 0;
     const refused = (cap: string) => refusedNote(progress, cap);
-    if (r.promoted) return `Stage 6 of 6, hand over. The forge signed ${s.promoted?.path ?? "the artifact"} (proposal ${s.promoted?.id ?? "?"}${s.promoted?.stationProposalId ? `, the station's ${s.promoted.stationProposalId}` : ""}). End with task.done, the artifact of kind "plugin" at that path.${refused("task.done")}`;
-    if (!r.catalogueSearched) return `Stage 1 of 6, the gap. Required and produced by no node: ${outputs}. Search the forge's catalogue for these quantities first (forge.registry_search with requiredOutputs, then registry_describe_node on the closest types: their ports say how this catalogue names quantities and units). The library holds the physics (library.search, library.read).`;
-    const names = task.objective.required_outputs.map((o) => `required_output "${o.name}" (quantity "${o.quantity}"${o.unit ? `, unit "${o.unit}"` : ""})`).join("; ");
-    if (!r.planAccepted) return `Stage 2 of 6, the plan. Declare with task.plan: selected_nodes empty, and in missing_capabilities one entry per required output, ${names}, with its reason and the topic "code"; required_output is the name exactly, nothing added to it.${refused("task.plan")}`;
-    if (!r.templateRead) return `Stage 3 of 6, the plugin. Read the forge's template first (forge.plugin_template): a complete minimal plugin exactly as the substrate accepts it, its entry, its node class, its test, its card. You will write yours on its shape.`;
-    if (!r.written) return `Stage 3 of 6, the plugin. ${contractOf(task) ? `The contract is in the state under hypothesis, field "contract": its inputs and outputs with their quantities and units, its parameters (editables the node must have, by these names), and its behaviors (what the output is for given inputs, or with nothing wired): the forge will run them on your node, so the node does exactly that. ` : ""}Write it with forge.plugin_write, on the template's shape (the template's files are in the state under hypothesis, field "template", whole; nothing to read again): src/index.ts exporting register(registry, doc) that calls reg.register(type, factory, meta) for each type named under "${GENERATED_PREFIX}", the meta with label, category, docPath (doc("<card>.md")), inputPorts and outputPorts read off one instance, and a signature (purpose, inputs and outputs with quantity and unit as the catalogue names them, each one a declared port, at least one capability); src/<name>.node.ts, a class on RuntimeNode (IntegrableRuntimeNode for a state integrated over time) with its ports on the instance, @editable parameters, @viewable values, fire() reading the session's signals and publishing; src/<name>.test.ts on node:test; docs/<name>.md. Imports: "@spiky-panda/core" and the plugin's own files with the .js extension, nothing else.${refused("forge.plugin_write")}`;
-    if (!r.built) return `Stage 4 of 6, compiled. ${s.build && !s.build.ok ? `The build failed: the diagnostics are in the state under evaluation (file, line, code, message). Your files are in the state you are reading now, under hypothesis, field "plugin.sources" (each with its path and its content, whole; it is JSON of the state, not a file: workspace.read has nothing to give you): correct them there, against the template (field "template": its imports, its ports as IPortDescriptor objects, its decorators with their argument, its override modifiers), and send with forge.plugin_write only the files that change (plugin "${stateOf(progress).plugin}"; the others stay); then forge.plugin_build again.` : `The plugin is written (${(s.written?.files ?? []).join(", ")}). Compile it: forge.plugin_build.`}${refused("forge.plugin_build")}`;
-    if (!r.tested) return `Stage 4 of 6, tested. ${s.tests && !s.tests.ok && s.tests.build === s.build?.id ? `The tests or the checks refused: the reasons are in the state under evaluation (the failing checks name the type, the port, the rule; the tests' output is there). Your files are in the state under hypothesis, field "plugin.sources": correct them there, send with forge.plugin_write only the files that change (plugin "${stateOf(progress).plugin}"), compile again, test again.` : "Compiled. Test it: forge.plugin_test (the plugin's tests, then the forge's checks)."}${refused("forge.plugin_test")}`;
-    if (!r.accepted) return `Stage 4 of 6, accepted. ${s.accepted && !s.accepted.ok && s.accepted.build === s.build?.id ? `The contract's acceptance refused: what fails is in the state under evaluation (a port or a parameter the signature or the node lacks; a behavior with the value measured and the value the contract says). Correct the files (hypothesis.plugin.sources), compile, test, then code.accept again. The contract is under hypothesis, field "contract": the node does what it says, not what the prose around it suggests.` : `Tests and checks passed (${s.tests?.pass ?? 0} test(s)). Now the task's contract, run by the forge: code.accept (no input; the contract is the task's, under hypothesis, field "contract").`}${refused("code.accept")}`;
-    if (!r.loaded) return `Stage 4 of 6, loaded. Tests, checks and the contract's acceptance passed (${s.tests?.pass ?? 0} test(s), types ${(s.tests?.types ?? []).map((t) => t.type).join(", ")}). Load it: forge.plugin_load.${refused("forge.plugin_load")}`;
+    const plugin = (): string => String(stateOf(progress).plugin);
+    if (r.promoted) return cw("brief.handOver", { path: s.promoted?.path ?? cw("brief.theArtifact"), id: s.promoted?.id ?? cw("brief.unknown"), station: s.promoted?.stationProposalId ? cw("brief.handOverStation", { id: s.promoted.stationProposalId }) : "", refused: refused("task.done") });
+    if (!r.catalogueSearched) return cw("brief.gap", { outputs });
+    const names = task.objective.required_outputs.map((o) => cw("brief.planOutput", { name: o.name, quantity: o.quantity, unit: o.unit ? cw("brief.planUnit", { unit: o.unit }) : "" })).join("; ");
+    if (!r.planAccepted) return cw("brief.plan", { names, refused: refused("task.plan") });
+    if (!r.templateRead) return cw("brief.template");
+    if (!r.written) return cw("brief.write", { contract: contractOf(task) ? cw("brief.writeContract") : "", prefix: GENERATED_PREFIX, refused: refused("forge.plugin_write") });
+    if (!r.built) return cw("brief.compiled", { what: s.build && !s.build.ok ? cw("brief.compiledFailed", { plugin: plugin() }) : cw("brief.compiledWritten", { files: (s.written?.files ?? []).join(", ") }), refused: refused("forge.plugin_build") });
+    if (!r.tested) return cw("brief.tested", { what: s.tests && !s.tests.ok && s.tests.build === s.build?.id ? cw("brief.testedRefused", { plugin: plugin() }) : cw("brief.testedCompiled"), refused: refused("forge.plugin_test") });
+    if (!r.accepted) return cw("brief.accepted", { what: s.accepted && !s.accepted.ok && s.accepted.build === s.build?.id ? cw("brief.acceptedRefused") : cw("brief.acceptedTested", { pass: s.tests?.pass ?? 0 }), refused: refused("code.accept") });
+    if (!r.loaded) return cw("brief.loaded", { pass: s.tests?.pass ?? 0, types: (s.tests?.types ?? []).map((t) => t.type).join(", "), refused: refused("forge.plugin_load") });
     if (!r.ran) {
-        if (telemetry) return `Stage 5 of 6, judged. The plugin is loaded in the forge (${(s.loaded?.types ?? []).join(", ")}). Build the candidate that answers the request with it and judge it against the telemetry: graph.evaluate (it runs on the forge's catalogue; the same thresholds and diagnosis as the graph factory's).${ran.how === "evaluate" && ran.held === false ? " The last candidate did not hold: its residuals are under evaluation; revise the node (write, build, test, load again) or the candidate." : ""}${refused("graph.evaluate")}`;
-        return `Stage 5 of 6, run. The plugin is loaded in the forge (${(s.loaded?.types ?? []).join(", ")}). The task carries no telemetry: run the node in a document (forge.document_build with a spec that wires at least one of its inputs, a Logic.Time:timeline's value into it (the timeline is a type of the catalogue, "Logic.Time:timeline" exactly; ${task.runtime ?? "forge"}.registry_describe_node describes it, registry_search by text does not find it since it carries no signature) with segments that change: params {segments: a JSON string such as "[{\"from\":0,\"to\":120,\"value\":0.5},{\"from\":120,\"to\":1e9,\"value\":1}]", defaultValue: a number}, the connection from ["<timeline id>", "value"] to ["<node id>", "<input>"]; a short name, the harness files it under the task; then forge.session_run on that same name with a probe on one of its viewables) so that its outputs are seen over time; a document that leaves every input of the node unwired is refused.${refused("forge.session_run")}${refused("forge.document_build")}`;
+        const types = (s.loaded?.types ?? []).join(", ");
+        if (telemetry) return cw("brief.judged", { types, notHeld: ran.how === "evaluate" && ran.held === false ? cw("brief.judgedNotHeld") : "", refused: refused("graph.evaluate") });
+        return cw("brief.run", { types, runtime: task.runtime ?? "forge", refusedRun: refused("forge.session_run"), refusedBuild: refused("forge.document_build") });
     }
-    return `Stage 6 of 6, proposed. The node ran (${ran.how}). Propose the plugin to the station: forge.plugin_promote (plugin "${stateOf(progress).plugin}"; claims, if any, as an object, never a sentence; the forge attaches its own record of the tests, the checks and the contract's acceptance whatever is claimed).${refused("forge.plugin_promote")}`;
+    return cw("brief.proposed", { how: String(ran.how), plugin: plugin(), refused: refused("forge.plugin_promote") });
 }
 
 function claimsOf(progress: Progress): Record<string, JsonValue> {
@@ -392,15 +400,15 @@ function acceptCapability(context: TopicContext): LocalCapability {
     const { broker, taskId, task, progress } = context;
     return {
         id: "code.accept",
-        description: "Run the task's capability contract on the plugin, in the forge: the signature against the contract's inputs and outputs, the parameters as editables, every behavior run in a scratch document and compared with its formula. No input: the contract is the task's. What fails is named; a plugin is loaded only once this holds.",
+        description: cw("capability"),
         inputSchema: { type: "object", properties: {}, additionalProperties: false } as unknown as JsonValue,
         async execute(): Promise<CapabilityResult> {
             const contract = contractOf(task);
-            if (!contract) return { ok: false, error: `the task carries no capability contract (requirements.capability)${contractProblemsOf(task).length ? `: ${contractProblemsOf(task).join("; ")}` : ""}`, output: { outcome: "refused" } };
+            if (!contract) return { ok: false, error: cw("accept.noContract", { problems: contractProblemsOf(task).length ? cw("accept.noContractProblems", { problems: contractProblemsOf(task).join("; ") }) : "" }), output: { outcome: "refused" } };
             const plugin = stateOf(progress).plugin ?? read<WriteAnswer>(progress, "forge.plugin_write")?.plugin;
-            if (!plugin) return { ok: false, error: "no plugin was written in this task", output: { outcome: "refused" } };
+            if (!plugin) return { ok: false, error: cw("accept.noPlugin"), output: { outcome: "refused" } };
             const r = await broker.call("forge", "plugin_acceptance", { taskId, plugin, contract });
-            if (!r.ok) return { ok: false, error: r.error ?? "the forge refused the acceptance", output: { outcome: r.outcome } };
+            if (!r.ok) return { ok: false, error: r.error ?? cw("accept.refused"), output: { outcome: r.outcome } };
             return { ok: true, output: { outcome: "completed", value: r.output as JsonValue } };
         },
     };
@@ -413,6 +421,20 @@ function noteWrite(context: TopicContext): LocalCapability[] {
     if (!state.plugin && w?.plugin) state.plugin = w.plugin;
     return [evaluateCapability(context, "forge"), acceptCapability(context)];
 }
+
+/** The words the topic asks for: the conformance test checks the file holds them all. */
+export const CODE_WORD_KEYS = [
+    "intention", "capability", ...HOW_KEYS.map((k) => `how.${k}`),
+    "guard.need", "guard.planSelected", "guard.planTopic", "guard.onePlugin", "guard.templateFirst", "guard.notGenerated", "guard.notLoaded", "guard.doneArtifact", "guard.doneArtifactPath",
+    "document.none", "document.noneLoaded", "document.unwired",
+    "openQuestions.catalogue", "openQuestions.node", "openQuestions.buildFailed", "openQuestions.notBuilt", "openQuestions.testsRefused", "openQuestions.notTested", "openQuestions.acceptanceRefused", "openQuestions.notAccepted", "openQuestions.notLoaded", "openQuestions.notHeld", "openQuestions.notPromoted",
+    "state.held", "state.refused", "state.ok",
+    "validate.none", "validate.notProposed", "validate.notAFile", "validate.notSigned",
+    "accept.noContract", "accept.noContractProblems", "accept.noPlugin", "accept.refused",
+    "brief.handOver", "brief.handOverStation", "brief.theArtifact", "brief.unknown", "brief.gap", "brief.plan", "brief.planOutput", "brief.planUnit", "brief.template", "brief.write", "brief.writeContract",
+    "brief.compiled", "brief.compiledFailed", "brief.compiledWritten", "brief.tested", "brief.testedRefused", "brief.testedCompiled", "brief.accepted", "brief.acceptedRefused", "brief.acceptedTested",
+    "brief.loaded", "brief.judged", "brief.judgedNotHeld", "brief.run", "brief.proposed",
+];
 
 export const CODE_TOPIC: TopicDefinition = {
     name: "code",
@@ -444,6 +466,7 @@ export const CODE_TOPIC: TopicDefinition = {
     },
     intention: intentionOf,
     prompt: CODE_PROMPT,
+    words: { words: CODE_WORDS, keys: CODE_WORD_KEYS },
     brief: briefOf,
     claims: claimsOf,
     // No graph is built here: the shelf's reference graphs and their variables are not read for nothing.

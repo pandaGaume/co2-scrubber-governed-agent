@@ -20,9 +20,28 @@
  * data: which intervention parts them most.
  *
  * A pure function: the factory slot's `inventory` tool reads the register
- * and hands it here.
+ * and hands it here. Since 2026-09-28 the rules are the spec's
+ * (`specs/factory/inventory.json`: the quantity that makes a place a volume
+ * of air, the relation that makes a device an opening, the unknowns a device
+ * under commissioning leaves and how each is found): this code applies
+ * them and knows none.
  */
+import { readFileSync } from "node:fs";
+import { fromRoot } from "../../lib/paths.js";
 import { commandsOf, levelsOf, needsCommissioning, type Device } from "../station/registry.js";
+
+interface InventoryRules {
+    volume: { measures: string };
+    opening: { rel: string; places: number };
+    unknowns: Array<{ through?: "opening"; what: string; quantity: string; unit: string; how: "measured" | "hypothesis" }>;
+    states: { separator: string };
+    lineWidth: number;
+}
+
+export const INVENTORY_RULES_FILE = "specs/factory/inventory.json";
+export const INVENTORY_RULES: InventoryRules = JSON.parse(readFileSync(fromRoot(...INVENTORY_RULES_FILE.split("/")), "utf8")) as InventoryRules;
+
+const fill = (template: string, vars: Record<string, string>): string => template.replace(/\{([A-Za-z]+)\}/g, (hole, name: string) => vars[name] ?? hole);
 
 export interface InventoryLine {
     path: string;
@@ -55,7 +74,7 @@ export interface Inventory {
     /** The five lines of section 5: path and what the device is. */
     lines: string[];
     devices: InventoryLine[];
-    /** Places that hold a CO2 sensor: volumes of air. */
+    /** Places that hold a sensor of the spec's quantity: volumes of air. */
     volumes: Array<{ name: string; path: string; sensors: string[]; devices: string[] }>;
     /** Openings between volumes, from the devices' `connects` links. */
     openings: Array<{ device: string; between: string[] }>;
@@ -65,7 +84,7 @@ export interface Inventory {
     interventions: Intervention[];
 }
 
-export function inventoryOf(devices: Device[]): Inventory {
+export function inventoryOf(devices: Device[], rules: InventoryRules = INVENTORY_RULES): Inventory {
     const lines: InventoryLine[] = [...devices]
         .sort((a, b) => a.path.localeCompare(b.path))
         .map((d) => {
@@ -82,29 +101,31 @@ export function inventoryOf(devices: Device[]): Inventory {
                 commissioning: needsCommissioning(d),
             };
         });
-    const volumes = [...new Set(lines.filter((l) => l.measures.some((m) => m.quantity === "Concentration")).map((l) => l.area))].sort().map((name) => {
+    const senses = (l: InventoryLine) => l.measures.some((m) => m.quantity === rules.volume.measures);
+    const volumes = [...new Set(lines.filter(senses).map((l) => l.area))].sort().map((name) => {
         const site = lines.find((l) => l.area === name)?.site ?? "";
         const here = lines.filter((l) => l.area === name);
-        return { name, path: `/${site}/${name}`, sensors: here.filter((l) => l.measures.some((m) => m.quantity === "Concentration")).map((l) => l.path), devices: here.map((l) => l.path) };
+        return { name, path: `/${site}/${name}`, sensors: here.filter(senses).map((l) => l.path), devices: here.map((l) => l.path) };
     });
     const openings = devices
-        .map((d) => ({ device: d.path, between: (d.descriptor.links ?? []).filter((l) => l.rel === "connects").map((l) => levelsOf(l.href).area) }))
-        .filter((o) => o.between.length >= 2);
+        .map((d) => ({ device: d.path, between: (d.descriptor.links ?? []).filter((l) => l.rel === rules.opening.rel).map((l) => levelsOf(l.href).area) }))
+        .filter((o) => o.between.length >= rules.opening.places);
     const unknowns: Inventory["unknowns"] = [];
     for (const l of lines.filter((x) => x.commissioning)) {
         const volume = volumes.find((v) => v.name === l.area);
         if (!volume) continue;
-        unknowns.push({ what: `served volume of ${volume.name}`, quantity: "Volume", unit: "m3", volume: volume.path, how: "measured" });
-        for (const o of openings.filter((x) => x.between.includes(volume.name))) {
-            for (const other of o.between.filter((b) => b !== volume.name)) unknowns.push({ what: `exchange between ${volume.name} and ${other} through ${o.device}`, quantity: "VolumetricFlow", unit: "m3ps", volume: volume.path, how: "hypothesis" });
+        for (const u of rules.unknowns) {
+            const at = { quantity: u.quantity, unit: u.unit, volume: volume.path, how: u.how };
+            if (u.through !== "opening") unknowns.push({ what: fill(u.what, { volume: volume.name }), ...at });
+            else for (const o of openings.filter((x) => x.between.includes(volume.name))) for (const other of o.between.filter((b) => b !== volume.name)) unknowns.push({ what: fill(u.what, { volume: volume.name, other, device: o.device }), ...at });
         }
     }
     const interventions: Intervention[] = [
         ...lines.flatMap((l) => l.commands.map((c) => ({ device: l.path, property: c.property, quantity: c.quantity, unit: c.unit, how: "commanded" as const, action: c.action, ...(typeof c.min === "number" ? { min: c.min } : {}), ...(typeof c.max === "number" ? { max: c.max } : {}), ...(c.states ? { states: c.states } : {}) }))),
         ...openings.flatMap((o) => {
             const device = devices.find((d) => d.path === o.device);
-            return Object.entries(device?.descriptor.properties ?? {}).filter(([, p]) => !p.commandable).map(([property, p]) => ({ device: o.device, property, quantity: p.quantity, unit: p.unit, how: "operated" as const, ...(p.unit.includes("|") ? { states: p.unit.split("|") } : {}) }));
+            return Object.entries(device?.descriptor.properties ?? {}).filter(([, p]) => !p.commandable).map(([property, p]) => ({ device: o.device, property, quantity: p.quantity, unit: p.unit, how: "operated" as const, ...(p.unit.includes(rules.states.separator) ? { states: p.unit.split(rules.states.separator) } : {}) }));
         }),
     ];
-    return { lines: lines.map((l) => `${l.path.padEnd(34)} ${l.title}`), devices: lines, volumes, openings, unknowns, interventions };
+    return { lines: lines.map((l) => `${l.path.padEnd(rules.lineWidth)} ${l.title}`), devices: lines, volumes, openings, unknowns, interventions };
 }

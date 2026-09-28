@@ -1,0 +1,14 @@
+{
+    "note": "What the Observer's guard knows the documentation settles (2026-09-28, zero domain in the harness): a request that assumes what a documented fact contradicts is refused, with the fact; a number stated only under an assumption is not a constraint. harness/observer/request.ts applies these rules and knows none.",
+    "contradictions": [
+        {
+            "note": "An assumption that the modules do not exchange air with the hatch closed contradicts the station's ventilation, documented as running through the ducts alone.",
+            "semantic": "InterModuleVentilation",
+            "sections": ["assumptions", "required_behaviors", "constraints"],
+            "claims": "\\b(no|zero|without|negligible)\\b[^.;]{0,50}\\b(air )?(exchange|coupling|ventilation|mixing|transfer)\\b[^.;]{0,80}\\b(between|modules?|lab|hab)\\b",
+            "unless": "through the hatch(way)?\\b",
+            "says": "facts: {section} \"{text}\" treats the modules as isolated with the hatch closed; the station documents the opposite ({doc}, {fact}: {what}); say what the ventilation delivers is unknown, not that it is zero"
+        }
+    ],
+    "hedged": "\\b(apparent|assum(e|ed|ing)|one room|if there is no|not documented)\\b"
+}
