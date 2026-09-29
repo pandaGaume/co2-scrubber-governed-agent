@@ -45,7 +45,61 @@ const ledger = () => {
         return [];
     }
 };
-const out = { fork: env.id, phase, builder, startedAt: new Date().toISOString(), tasks: [], reflections: [], frozen: null };
+// What the memory is before and after (2026-09-29, the memory's experiment): the ledger, the domain's memory file, the settings;
+// a validation must leave all three as they were.
+const fileOf = (...parts) => path.join(env.dir, ...parts);
+const sha = (file) => {
+    try {
+        return createHash("sha256").update(readFileSync(file)).digest("hex");
+    } catch {
+        return null;
+    }
+};
+const fingerprint = () => ({ ledger: sha(fileOf("outputs", "factory", "adaptations", "ledger.json")), memory: sha(fileOf("outputs", "factory", "memory", "procedure.json")), settings: sha(fileOf("specs", "harness", "memory.json")) });
+const memoryFile = () => {
+    try {
+        return JSON.parse(readFileSync(fileOf("outputs", "factory", "memory", "procedure.json"), "utf8"));
+    } catch {
+        return null;
+    }
+};
+const settings = JSON.parse(readFileSync(fileOf("specs", "harness", "memory.json"), "utf8"));
+/** What the model's state held of the memory when it decided a step: read from the request the trace kept. */
+const memorySeen = (taskId, n) => {
+    try {
+        const line = readFileSync(fileOf("outputs", "factory", taskId, "trace.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l)).find((l) => l.n === n);
+        // The observation's text, however deeply the request kept it escaped: the line after "Reasoning state" is the state.
+        const find = (v) => {
+            if (typeof v === "string") {
+                const lines = v.split("\n");
+                const i = lines.findIndex((l) => l.startsWith("Reasoning state"));
+                if (i >= 0 && lines[i + 1]) return JSON.parse(lines[i + 1]);
+                if (/^[[{]/.test(v.trim())) {
+                    try {
+                        return find(JSON.parse(v));
+                    } catch {
+                        return null;
+                    }
+                }
+                return null;
+            }
+            // A script's request keeps the state as it is (an object with its phase and its next actions).
+            if (v && typeof v === "object" && !Array.isArray(v) && "phase" in v && "nextActions" in v) return v;
+            if (v && typeof v === "object") for (const x of Object.values(v)) {
+                const found = find(x);
+                if (found) return found;
+            }
+            return null;
+        };
+        const state = find(line?.exchange?.request ?? null);
+        if (!state) return null;
+        const memory = state.memory ?? null;
+        return { learned: (memory?.learned ?? []).map((e) => ({ rule: e.rule, status: e.status })), episodes: (memory?.episodes ?? []).length, previousEpisodes: (memory?.episodes ?? []).filter((e) => !e.current).length };
+    } catch {
+        return null;
+    }
+};
+const out = { fork: env.id, phase, builder, settings: { workingMemory: settings.workingMemory, longTerm: settings.longTerm ?? { read: true } }, startedAt: new Date().toISOString(), fingerprintBefore: fingerprint(), memoryBefore: memoryFile(), tasks: [], reflections: [], frozen: null };
 const failures = new Map();
 
 for (const v of variants) {
@@ -89,10 +143,16 @@ for (const v of variants) {
         preGuardRefusals: preGuard.map((s) => ({ capability: s.capability, reason: String(s.reason).slice(0, 200) })),
         steps: steps.length,
         tokens: steps.reduce((a, s) => a + (s.tokens?.total ?? 0), 0),
+        inputTokens: steps.reduce((a, s) => a + (s.tokens?.prompt ?? 0), 0),
+        outputTokens: steps.reduce((a, s) => a + (s.tokens?.completion ?? 0), 0),
+        maxOutputTokensInOneStep: Math.max(0, ...steps.map((s) => s.tokens?.completion ?? 0)),
+        truncations: steps.filter((s) => s.truncated).length,
+        memorySeenAtFirstJudged: judged ? memorySeen(taskId, judged.n) : null,
         adaptationsActive: active,
     };
     out.tasks.push(row);
-    console.log(`${v.id} ${taskId}: first guard-judged ${row.firstGuardSubmission ? (row.firstGuardSubmission.accepted ? "ACCEPTED" : `refused (${row.firstGuardSubmission.shapes.join(" + ")})`) : "none"}; pre-guard ${preGuard.length}; steps ${row.steps}; tokens ${row.tokens}; adaptations ${JSON.stringify(active)}`);
+    const seen = row.memorySeenAtFirstJudged;
+    console.log(`${v.id} ${taskId}: first guard-judged ${row.firstGuardSubmission ? (row.firstGuardSubmission.accepted ? "ACCEPTED" : `refused (${row.firstGuardSubmission.shapes.join(" + ")})`) : "none"}; pre-guard ${preGuard.length}; truncated ${row.truncations}; steps ${row.steps}; tokens in ${row.inputTokens} out ${row.outputTokens} (max ${row.maxOutputTokensInOneStep}); memory seen: ${seen ? `${seen.learned.length} learned, ${seen.previousEpisodes} previous episode(s)` : "none"}`);
     for (const s of row.firstGuardSubmission?.shapes ?? []) failures.set(s, (failures.get(s) ?? 0) + 1);
     // The commissioning closed: the procedure relayed is refused (the experiment runs no test).
     const c = (await call("station", "commissioning_state", { commissioningId }).catch(() => null))?.commissioning;
@@ -105,17 +165,17 @@ for (const v of variants) {
             const rt = await until(r.taskId);
             entry.state = rt.state;
             entry.ended = rt.manifest?.ended ?? null;
-            entry.proposals = (rt.manifest?.steps ?? []).filter((s) => s.capability === "reflection.propose").map((s) => ({ outcome: s.outcome, input: s.input, refused: s.outcome === "refused" ? String(s.reason).slice(0, 400) : null }));
+            entry.proposals = (rt.manifest?.steps ?? []).filter((s) => s.capability === "reflection.propose" || s.capability === "reflection.remember").map((s) => ({ capability: s.capability, outcome: s.outcome, input: s.input, refused: s.outcome === "refused" ? String(s.reason).slice(0, 400) : null }));
             entry.proposal = rt.manifest?.proposal ?? null;
         }
+        entry.memory = ledger().filter((e) => e.memory).map((e) => ({ n: e.n, status: e.status, rule: e.memory.rule, observed: e.observed ? { failures: e.observed.failures.length, successes: e.observed.successes.length } : null, why: e.why ?? null }));
         out.reflections.push(entry);
-        console.log(`   reflection: ${entry.patterns.length} pattern(s)${r.taskId ? `, task ${r.taskId} ${entry.state}, proposal ${JSON.stringify(entry.proposal)}` : ""}`);
-        // Frozen at the first adaptation adopted that is judged on the form of a failure repeated at the first judged try.
-        const repeated = new Set([...failures.entries()].filter(([, n]) => n >= 2).map(([s]) => `first-try-shape:procedure:${createHash("sha256").update(s).digest("hex").slice(0, 12)}`));
-        const addressing = ledger().find((e) => e.status === "adopted" && (e.judgedOn ?? []).some((f) => repeated.has(f)));
-        if (addressing) {
-            out.frozen = { at: new Date().toISOString(), afterTask: taskId, adaptation: addressing };
-            console.log(`   FROZEN: adaptation ${addressing.n} addresses the repeated failure; learning stops here`);
+        console.log(`   reflection: ${entry.patterns.length} pattern(s)${r.taskId ? `, task ${r.taskId} ${entry.state}, proposal ${JSON.stringify(entry.proposal)}` : ""}; memory ${JSON.stringify(entry.memory.map((e) => `${e.n}:${e.status}`))}`);
+        // Frozen once an entry of the memory is consolidated: the long-term memory the validation starts from.
+        const consolidated = ledger().find((e) => e.memory && e.status === "consolidated");
+        if (consolidated) {
+            out.frozen = { at: new Date().toISOString(), afterTask: taskId, entry: consolidated, memory: memoryFile() };
+            console.log(`   FROZEN: memory entry ${consolidated.n} consolidated; learning stops here`);
         }
     }
     writeFileSync(outFile, `${JSON.stringify(out, null, 2)}\n`);
@@ -124,6 +184,9 @@ for (const v of variants) {
 }
 out.endedAt = new Date().toISOString();
 out.ledger = ledger();
+out.fingerprintAfter = fingerprint();
+out.memoryAfter = memoryFile();
+if (phase === "validate") out.memoryUnchanged = JSON.stringify(out.fingerprintBefore) === JSON.stringify(out.fingerprintAfter);
 writeFileSync(outFile, `${JSON.stringify(out, null, 2)}\n`);
 await broker.close();
 process.exit(0);

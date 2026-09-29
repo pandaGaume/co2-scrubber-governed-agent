@@ -36,6 +36,8 @@ describe("the memory's evidence, from real episodes", () => {
         assert.equal(readyForTrial({ failures: ["a", "b"], successes: ["a"] }, cfg), true);
         assert.equal(readyForTrial({ failures: ["a", "b"], successes: [] }, cfg), false, "failures alone never make a trial: a success must have answered them");
         assert.equal(readyForTrial({ failures: ["a"], successes: ["a"] }, cfg), false);
+        // The repository's settings: both memories read; a fork turns either off for an ablation.
+        assert.deepEqual([cfg.workingMemory.previousTasks, cfg.longTerm.read], [true, true]);
     });
 
     it("an entry proposed is checked: its episodes, what it applies to, no fact's value, nothing said again", () => {

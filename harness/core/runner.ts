@@ -284,7 +284,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
     const memorySettings = memoryConfig();
     const reading = topic.judges ? { judges: topic.judges, digest: topic.digest } : null;
     const previousEpisodes = reading && memorySettings.workingMemory.previousTasks ? workingMemory(WORKSHOP_ROOT, topicId, reading, memorySettings.workingMemory.size).filter((e) => e.taskId !== taskId && e.attempts.length) : [];
-    const learnedEntries = reading ? readMemory(WORKSHOP_ROOT, topicId, memorySettings).entries : [];
+    const learnedEntries = reading && memorySettings.longTerm.read ? readMemory(WORKSHOP_ROOT, topicId, memorySettings).entries : [];
     const intent = `${topicId}: ${task.objective.required_outputs.map((o) => `${o.name} (${o.quantity}${o.unit ? `, ${o.unit}` : ""})`).join(", ")}`;
     const memoryNow = (): JsonValue | null => {
         if (!reading) return null;

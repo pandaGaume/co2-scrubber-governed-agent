@@ -9,7 +9,8 @@
         "capabilities": [
             "tools",
             "json"
-        ]
+        ],
+        "maxTokens": 8192
     },
     "gateway": {
         "host": "laptop"

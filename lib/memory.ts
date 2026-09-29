@@ -26,19 +26,21 @@ import { firstJudged, type Episode } from "../harness/core/episodes.js";
 
 export interface MemoryConfig {
     workingMemory: { size: number; shown: number; previousTasks: boolean };
+    /** Whether a factory reads its domain's learned entries (false: an ablation, the memory kept but not read). */
+    longTerm: { read: boolean };
     consolidation: { trial: { failures: number; successes: number }; judgeAfter: number };
     file: string;
     domains: Record<string, string>;
 }
 
-const DEFAULTS: MemoryConfig = { workingMemory: { size: 10, shown: 5, previousTasks: true }, consolidation: { trial: { failures: 2, successes: 1 }, judgeAfter: 3 }, file: "memory/{topic}.json", domains: {} };
+const DEFAULTS: MemoryConfig = { workingMemory: { size: 10, shown: 5, previousTasks: true }, longTerm: { read: true }, consolidation: { trial: { failures: 2, successes: 1 }, judgeAfter: 3 }, file: "memory/{topic}.json", domains: {} };
 
 /** The memory's settings, read now (a fork has its own: an ablation turns the previous tasks off there). */
 export function memoryConfig(): MemoryConfig {
     const file = fromRoot("specs", "harness", "memory.json");
     try {
         const c = JSON.parse(readFileSync(file, "utf8")) as Partial<MemoryConfig>;
-        return { ...DEFAULTS, ...c, workingMemory: { ...DEFAULTS.workingMemory, ...(c.workingMemory ?? {}) }, consolidation: { ...DEFAULTS.consolidation, ...(c.consolidation ?? {}), trial: { ...DEFAULTS.consolidation.trial, ...(c.consolidation?.trial ?? {}) } } };
+        return { ...DEFAULTS, ...c, workingMemory: { ...DEFAULTS.workingMemory, ...(c.workingMemory ?? {}) }, longTerm: { ...DEFAULTS.longTerm, ...(c.longTerm ?? {}) }, consolidation: { ...DEFAULTS.consolidation, ...(c.consolidation ?? {}), trial: { ...DEFAULTS.consolidation.trial, ...(c.consolidation?.trial ?? {}) } } };
     } catch {
         return DEFAULTS;
     }
