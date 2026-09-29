@@ -1,0 +1,12 @@
+t1 t-2026-09-29-0001: first guard-judged refused (justification: *: … is not a fact of the library); pre-guard 0; truncated 0; steps 11; tokens in 81427 out 6670 (max 5042); memory seen: 0 learned, 0 previous episode(s)
+   reflection: 0 pattern(s); memory []
+t2 t-2026-09-29-0002: first guard-judged refused (justification: *: … is not a fact of the library); pre-guard 0; truncated 0; steps 10; tokens in 80369 out 6678 (max 5202); memory seen: 0 learned, 0 previous episode(s)
+   reflection: 2 pattern(s), task t-2026-09-29-0003 proposed, proposal {"proposalId":"p0003-02ba2af6","status":"adopted"}; memory ["1:trial"]
+t3 t-2026-09-29-0004: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 9; tokens in 67789 out 6094 (max 5120); memory seen: 1 learned, 0 previous episode(s)
+   reflection: 0 pattern(s); memory ["1:trial"]
+t4 t-2026-09-29-0005: first guard-judged refused (justification: * = # is a safety constant with no justification: cite the fact of a signed library document it respects + justification: * = # has no justification: say its source and why); pre-guard 0; truncated 0; steps 10; tokens in 88347 out 6541 (max 4201); memory seen: 1 learned, 0 previous episode(s)
+   reflection: 0 pattern(s); memory ["1:trial"]
+t5 t-2026-09-29-0006: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 9; tokens in 71489 out 5927 (max 4906); memory seen: 1 learned, 0 previous episode(s)
+   reflection: 0 pattern(s); memory ["1:consolidated"]
+   FROZEN: memory entry 1 consolidated; learning stops here
+exit 0

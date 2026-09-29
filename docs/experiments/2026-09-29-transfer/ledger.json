@@ -1,0 +1,63 @@
+[
+  {
+    "n": 1,
+    "at": "2026-09-29T20:52:29.737Z",
+    "target": "memory/procedure.json",
+    "reason": "Every first submission was refused because the reference of a safety constant held several facts, comparators or a datasheet, so it was not a fact id. Each retry citing only the bare signed id was accepted with the same value.",
+    "evidence": [
+      "first-try-shape:procedure:t-2026-09-29-0002:33231b94",
+      "first-try-category:procedure:justification:t-2026-09-29-0002"
+    ],
+    "families": [
+      "first-try-shape:procedure:33231b945eef",
+      "first-try-category:procedure:justification"
+    ],
+    "judgedOn": [
+      "first-try-shape:procedure:33231b945eef"
+    ],
+    "changes": [],
+    "baseline": {
+      "tasks": 2,
+      "withMistake": 2
+    },
+    "reflectionTask": "t-2026-09-29-0003",
+    "commit": "2cb6afc25f0e29d122564433e29540d94d685139",
+    "status": "consolidated",
+    "memory": {
+      "topic": "procedure",
+      "kind": "constraint",
+      "rule": "In the justification of each safety constant, cite as reference only the bare id of the single signed fact that bounds it (test.speedFloorPercent for every speed field, test.co2AbortCeilingPpm for the CO2 limit), never a second fact, a datasheet, a comparison sign or a value in the same reference.",
+      "appliesTo": [
+        "procedure.submit",
+        "procedure.revise"
+      ],
+      "cited": {
+        "failures": [
+          "t-2026-09-29-0001#procedure",
+          "t-2026-09-29-0002#procedure"
+        ],
+        "successes": [
+          "t-2026-09-29-0001#procedure",
+          "t-2026-09-29-0002#procedure"
+        ]
+      }
+    },
+    "observed": {
+      "failures": [
+        "t-2026-09-29-0001#procedure",
+        "t-2026-09-29-0002#procedure"
+      ],
+      "successes": [
+        "t-2026-09-29-0001#procedure",
+        "t-2026-09-29-0002#procedure"
+      ]
+    },
+    "trialAt": "2026-09-29T20:52:29.753Z",
+    "since": {
+      "tasks": 3,
+      "withMistake": 0
+    },
+    "decidedAt": "2026-09-29T20:55:39.054Z",
+    "why": "consolidated: the mistake showed in 0 of the 3 task(s) since its trial, against 2 of 2 before"
+  }
+]

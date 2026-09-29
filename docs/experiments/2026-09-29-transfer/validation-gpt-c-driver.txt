@@ -1,0 +1,11 @@
+v1 t-2026-09-29-0007: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 8; tokens in 76283 out 2230 (max 1862); memory seen: 1 learned, 0 previous episode(s)
+v2 t-2026-09-29-0008: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 8; tokens in 79542 out 1869 (max 1498); memory seen: 1 learned, 0 previous episode(s)
+v3 t-2026-09-29-0009: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 8; tokens in 82398 out 2259 (max 1921); memory seen: 1 learned, 0 previous episode(s)
+v4 t-2026-09-29-0010: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 9; tokens in 97113 out 2573 (max 1792); memory seen: 1 learned, 0 previous episode(s)
+v5 t-2026-09-29-0011: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 9; tokens in 98324 out 3183 (max 2191); memory seen: 1 learned, 0 previous episode(s)
+v6 t-2026-09-29-0012: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 8; tokens in 47151 out 2367 (max 2115); memory seen: 1 learned, 0 previous episode(s)
+v7 t-2026-09-29-0013: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 8; tokens in 45461 out 2060 (max 1778); memory seen: 1 learned, 0 previous episode(s)
+v8 t-2026-09-29-0014: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 8; tokens in 34883 out 2253 (max 1996); memory seen: 1 learned, 0 previous episode(s)
+v9 t-2026-09-29-0015: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 9; tokens in 47988 out 2649 (max 1937); memory seen: 1 learned, 0 previous episode(s)
+v10 t-2026-09-29-0016: first guard-judged refused (justification: * = # is a safety constant with no justification: cite the fact of a signed library document it respects + justification: *: the justification says #, what you sent sets # + justification: * = # has no justification: say its source and why); pre-guard 0; truncated 0; steps 9; tokens in 51955 out 3116 (max 2434); memory seen: 1 learned, 0 previous episode(s)
+exit 0
