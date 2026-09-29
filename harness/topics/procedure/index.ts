@@ -279,7 +279,25 @@ export const PROCEDURE_JUSTIFIED: Justified = {
 };
 
 /** The declaration with what the signed rules say: their safety constants, and the facts they cite as the envelope. */
-export const justifiedBy = (rules: RulesDocument | null, envelope: Record<string, number>): Justified => ({ ...PROCEDURE_JUSTIFIED, safety: safetyOf(rules), envelope, boundBy: (constant) => factsBounding(rules, constant) });
+/**
+ * What an episode keeps of a submission or a revision (2026-09-29, the memory audit, `episodes.ts`): each constant's
+ * justification by its path (the value, the source, the reference), and a revision's changes by path; the rest of a
+ * procedure is its draft's, not what an attempt is refused or accepted on.
+ */
+export function procedureDigest(input: JsonValue): Record<string, JsonValue> {
+    const out: Record<string, JsonValue> = {};
+    const flat = (v: unknown, at: string): void => {
+        if (v && typeof v === "object" && !Array.isArray(v)) for (const [k, x] of Object.entries(v as Record<string, unknown>)) flat(x, at ? `${at}.${k}` : k);
+        else if (at) out[at] = { value: v as JsonValue };
+    };
+    const i = isObject(input) ? input : {};
+    if (isObject(i.changes)) flat(i.changes, "");
+    for (const j of Array.isArray(i.justifications) ? i.justifications : [])
+        if (isObject(j) && typeof j.constant === "string") out[j.constant] = { value: (j.value ?? null) as JsonValue, source: (j.source ?? null) as JsonValue, reference: (j.reference ?? null) as JsonValue };
+    return out;
+}
+
+export const justifiedBy =(rules: RulesDocument | null, envelope: Record<string, number>): Justified => ({ ...PROCEDURE_JUSTIFIED, safety: safetyOf(rules), envelope, boundBy: (constant) => factsBounding(rules, constant) });
 
 /** Who is where, as the format's presence read answered in this task, if it was called. */
 export function presenceOf(progress: Progress): PresenceRead | null {
@@ -745,6 +763,7 @@ export const PROCEDURE_TOPIC: TopicDefinition = {
     // A proposal is written from this task's device, presence, measurement and signed library: never copied from the memory of another task, nor the claim that names its file.
     neverReplayed: [/^procedure\.(submit|revise|analyse)$/, /^task\.done$/],
     judges: [/^procedure\.(submit|revise)$/],
+    digest: (_capability, input) => procedureDigest(input),
     justified: PROCEDURE_JUSTIFIED,
     // The plan says what is measured, from the task's required outputs; the guard checks it again.
     replayedActions: [/^task\.plan$/],

@@ -59,6 +59,8 @@ export interface TopicDefinition {
      * allowlist, a schema, a call repeated) is judged by nobody, and is not the submission's first try.
      */
     judges?: ReadonlyArray<RegExp>;
+    /** The arguments of a submission that matter, by field path (`episodes.ts`): what an episode keeps of each attempt, and what a contrast compares. */
+    digest?(capabilityId: string, input: JsonValue): Record<string, JsonValue>;
     /** Is the contract held: the artifacts claimed, the files of the workshop, what the steps recorded. */
     validate(claim: DoneClaim, files: WorkshopFile[], progress: Progress, task: TaskFile["task"]): Validation;
     /** Capabilities in process the topic adds to the task's three. */

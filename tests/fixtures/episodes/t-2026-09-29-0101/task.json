@@ -1,0 +1,14 @@
+{
+ "task": {
+  "objective": {
+   "required_outputs": [
+    {
+     "name": "V_lab",
+     "quantity": "Volume",
+     "unit": "m3"
+    }
+   ],
+   "constraints": {}
+  }
+ }
+}

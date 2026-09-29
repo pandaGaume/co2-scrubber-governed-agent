@@ -1,0 +1,11 @@
+{"n":1,"source":"fallback","exchange":{"response":{"stop_reason":"tool_use"}}}
+{"n":2,"source":"fallback","exchange":{"response":{"stop_reason":"tool_use"}}}
+{"n":3,"source":"fallback","exchange":{"response":{"stop_reason":"tool_use"}}}
+{"n":4,"source":"fallback","exchange":{"response":{"stop_reason":"tool_use"}}}
+{"n":5,"source":"fallback","exchange":{"response":{"stop_reason":"tool_use"}}}
+{"n":6,"source":"fallback","exchange":{"response":{"stop_reason":"tool_use"}}}
+{"n":7,"source":"fallback","exchange":{"response":{"stop_reason":"tool_use"}}}
+{"n":8,"source":"refused","exchange":{"response":{"stop_reason":"max_tokens"}}}
+{"n":9,"source":"refused","exchange":{"response":{"stop_reason":"tool_use"}}}
+{"n":10,"source":"fallback","exchange":{"response":{"stop_reason":"tool_use"}}}
+{"n":11,"source":"fallback","exchange":{"response":{"stop_reason":"tool_use"}}}
