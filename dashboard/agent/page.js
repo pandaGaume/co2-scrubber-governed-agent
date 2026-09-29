@@ -969,8 +969,9 @@ var EXCLUDED = [
   /^web\./,
   /^twin\.(registry_|document_|session_run)/,
   /^station\.propose$/,
-  /^biomed\.(monitor_start|monitor_stop|report|move)$/,
-  /^station\.(registry_register|registry_report|procedure_checked|candidate_evaluated|commissioning_authorise|procedure_run)$/
+  // A health alarm is raised and cleared by a person (the crew, the medical panel), and an aborted commissioning reopened by the commander (2026-09-29).
+  /^biomed\.(monitor_start|monitor_stop|report|move|alarm|alarm_clear)$/,
+  /^station\.(registry_register|registry_report|procedure_checked|candidate_evaluated|commissioning_authorise|commissioning_reopen|procedure_run)$/
 ];
 function replayPolicyFor(id, guardMode) {
   if (APPROVAL_REQUIRED.some((r) => r.test(id))) return "approval-required";

@@ -141,6 +141,14 @@
                 "from": "who narrates: scenario, a factory",
                 "commissioningId": "the commissioning the line is about, when there is one"
             }
+        },
+        "commissioning_reopen": {
+            "title": "Reopen an aborted commissioning",
+            "description": "After a test was aborted, the commissioning takes another procedure: what stopped the test is kept in its attempts, and the station waits for a new procedure to relay.",
+            "properties": {
+                "commissioningId": "the commissioning",
+                "reason": "why it is reopened"
+            }
         }
     },
     "resources": {
@@ -300,7 +308,11 @@
         "mother.question.waiting": "Commander, I am still waiting for your answer: {options}.",
         "mother.procedure.refused.start": "Procedure refused. Its CO2 limits leave no room above the air of module {module} as measured now.",
         "mother.procedure.refused.justification": "Procedure refused. Some of its numbers have no source.",
+        "mother.procedure.refused.health": "Procedure refused. Someone in module {module} is under a critical health alarm: no test exposes them.",
         "mother.procedure.refused.justificationFact": "Procedure refused. A safety limit cites the wrong fact of the safety card.",
-        "mother.procedure.refused.rules": "Procedure refused. The safety rules of the test are not signed."
+        "mother.procedure.refused.rules": "Procedure refused. The safety rules of the test are not signed.",
+        "mother.commissioning.reopened": "Commissioning reopened: the procedure factory writes test {attempt}, told what stopped the last one.",
+        "mother.procedure.analysis": "Why the last test stopped, as the factory analysed it: {cause}. What the new test changes: {changes}.",
+        "mother.procedure.refused.analysis": "Procedure refused. It does not make the changes its own analysis of the aborted test names."
     }
 }

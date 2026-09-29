@@ -51,6 +51,14 @@
                 "subjectId": "La personne",
                 "module": "Le module"
             }
+        },
+        "alarm": {
+            "title": "Lever une alarme de santé critique",
+            "description": "Une alarme de santé critique pour une personne, levée par quelqu'un qui l'a vue. Elle reste jusqu'à ce qu'on la lève : un essai qui expose la personne s'arrête, et aucune procédure ne peut l'exposer entre-temps."
+        },
+        "alarm_clear": {
+            "title": "Lever l'alarme",
+            "description": "La personne est en sécurité : l'alarme est levée par quelqu'un qui le dit."
         }
     },
     "phrases": {
@@ -109,6 +117,12 @@
         "ro.band": "Bande nominale",
         "ro.samples": "Mesures",
         "ro.spo2": "SpO2 · pas de capteur",
-        "ro.resp": "Respiration · pas de capteur"
+        "ro.resp": "Respiration · pas de capteur",
+        "state.alarm": "alarme critique",
+        "alarm.raise": "Alarme critique",
+        "alarm.clear": "Lever l'alarme",
+        "alarm.prompt": "Qu'arrive-t-il à {name} ? (quelques mots)",
+        "alarm.default": "alarme de santé critique",
+        "alarm.by": "le panneau médical"
     }
 }

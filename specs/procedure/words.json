@@ -6,7 +6,8 @@
         "installationRead": "read factory.inventory (what is installed, where, what is unknown)",
         "presenceRead": "read biomed.presence (who is in which module now)",
         "methodRead": "find the method that measures the missing quantity (library.methods) and read its card (library.read)",
-        "missing": "the plan needs {requirement}: {how}"
+        "missing": "the plan needs {requirement}: {how}",
+        "analysisAccepted": "analyse why the last test was aborted (procedure.analyse): its cause, the evidence, why the last procedure did not prevent it, what the new one changes"
     },
     "openQuestions": {
         "installation": "what is installed, and what of it is unknown (factory.inventory)",
@@ -30,7 +31,9 @@
         "measuredSource": " ({source})",
         "refused": " Your last submission was refused: {reason}. {what} The same procedure again gets the same refusal.",
         "refusedKept": "The whole procedure checked is kept in the state under evaluation (field \"procedure\"; it is not a file, nothing to read) for a few minutes: send only what these reasons name with procedure.revise (changes: the fields that change; justifications: those of the constants that change), not the whole procedure again.",
-        "refusedWhole": "The procedure you sent is in the state under evaluation (field \"procedure\"; it is not a file, nothing to read): correct what these reasons name and submit it whole with procedure.submit."
+        "refusedWhole": "The procedure you sent is in the state under evaluation (field \"procedure\"; it is not a file, nothing to read): correct what these reasons name and submit it whole with procedure.submit.",
+        "analysis": "Stage 4 of 5, first the analysis. The last test of this commissioning was aborted: {reason} (condition {condition}{step}). The state holds it under hypothesis, field \"previous\" (the aborted procedure, what the test ran). Before any new procedure, analyse it with procedure.analyse: the cause (what stopped the test and what caused it), the evidence in the last test's record, why the last procedure did not prevent it or stop sooner, and the changes, each a field of the procedure by its path, what it becomes and what it prevents. The new procedure is refused until the analysis is accepted, and it must change every field the analysis names.{refused}",
+        "analysed": " The analysis of the aborted test is accepted (field \"analysis\"): the procedure must change what it names ({paths})."
     },
     "draft": {
         "none": "no procedure is kept to revise (none checked yet in this task, or kept longer than {minutes} minutes): submit the whole procedure with procedure.submit",
@@ -41,11 +44,21 @@
     "capabilities": {
         "submit": "Submit the test procedure: the file the test will be run from, later, by others. It is checked before it is written; a procedure that does not pass comes back with the reasons, and stays kept for a revision. The procedure accepted is written as {file} in the workshop, with its sha256.",
         "revise": "Correct the procedure checked last by sending only what changes (and the justifications of the constants that change): the harness applies it to the whole procedure it keeps for a few minutes, and checks the whole again. Accepted, it is written as procedure.submit writes it. When nothing is kept (none checked yet, or kept too long), submit the whole procedure again.",
-        "reviseChanges": "Only what changes in the procedure checked last: an object merges key by key (a field of an object changes alone), a list replaces the whole list, null removes a field."
+        "reviseChanges": "Only what changes in the procedure checked last: an object merges key by key (a field of an object changes alone), a list replaces the whole list, null removes a field.",
+        "analyse": "Analyse why the last test was aborted, before any new procedure: the cause, the evidence in the last test's record, why the last procedure did not prevent it, and the changes the new one makes, each a field of the procedure. Checked before it is kept; the new procedure must make these changes."
     },
     "guard": {
         "refused": "procedure refused: {problems}",
         "id": "id \"{id}\" must be lower case letters, digits and dashes (it names the file)",
         "quantity": "quantity \"{name}\": {reason} ({code})"
+    },
+    "intentionPrevious": " The last test of this commissioning was aborted ({reason}): first analyse why (procedure.analyse), then write a test that keeps it from happening again.",
+    "analysis": {
+        "first": "the last test of this commissioning was aborted ({reason}): analyse why with procedure.analyse before submitting a new procedure",
+        "noPrevious": "no test of this commissioning was aborted: there is nothing to analyse",
+        "cause": "the cause does not say what stopped the test: it names {expected}, from the abort ({reason})",
+        "path": "change {n}: \"{path}\" is not a field of the procedure (its fields: {fields})",
+        "unchanged": "the analysis says {path} changes ({change}), and the new procedure keeps it as it was ({value}): the prevention is not in the test",
+        "done": "the analysis is kept ({file}): now write the procedure that makes these changes"
     }
 }

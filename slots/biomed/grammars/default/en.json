@@ -56,6 +56,12 @@
         "ro.band": "Nominal band",
         "ro.samples": "Readings",
         "ro.spo2": "SpO2 · no sensor",
-        "ro.resp": "Respiration · no sensor"
+        "ro.resp": "Respiration · no sensor",
+        "state.alarm": "critical alarm",
+        "alarm.raise": "Critical alarm",
+        "alarm.clear": "Clear alarm",
+        "alarm.prompt": "What is wrong with {name}? (a few words)",
+        "alarm.default": "critical health alarm",
+        "alarm.by": "the medical panel"
     }
 }

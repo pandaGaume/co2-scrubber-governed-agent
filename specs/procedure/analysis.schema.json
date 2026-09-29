@@ -1,0 +1,23 @@
+{
+    "type": "object",
+    "properties": {
+        "cause": { "type": "string", "minLength": 1, "description": "What stopped the last test, and why it happened: the abort's condition and reason, then what caused it." },
+        "evidence": { "type": "array", "minItems": 1, "items": { "type": "string" }, "description": "What in the last test's record shows it: the minute, the reading, the event, the alarm." },
+        "whyNotPrevented": { "type": "string", "minLength": 1, "description": "Why the last procedure did not prevent it, or stop earlier." },
+        "changes": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "path": { "type": "string", "description": "The field of the procedure that changes, by its path (monitoring.band.maxBpm, steps.1.minutes, abort, occupancy...)." },
+                    "change": { "type": "string", "description": "What it becomes, in words." },
+                    "prevents": { "type": "string", "description": "How that keeps the cause from coming back, or stops the test sooner if it does." }
+                },
+                "required": ["path", "change", "prevents"]
+            },
+            "description": "What the new test changes so that what stopped the last one does not happen again: each change a field of the procedure, which the new procedure must indeed change."
+        }
+    },
+    "required": ["cause", "evidence", "whyNotPrevented", "changes"]
+}

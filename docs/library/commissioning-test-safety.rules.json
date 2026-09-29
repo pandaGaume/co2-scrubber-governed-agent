@@ -36,7 +36,8 @@
                 "subjects": "monitoring.subjects",
                 "declared": "occupancy.occupants",
                 "stop": { "list": "abort", "key": "id", "value": "vitals", "source": "biomed.verdict" },
-                "unread": { "kind": "diligence", "says": "read biomed.presence before submitting: a procedure on a volume whose occupancy was not read is refused" }
+                "unread": { "kind": "diligence", "says": "read biomed.presence before submitting: a procedure on a volume whose occupancy was not read is refused" },
+                "blocked": { "flag": "alarm", "kind": "health", "says": "no test exposes a person under a critical health alarm; the test waits until the alarm is cleared or the person is out of the volume (read biomed.presence again)" }
             },
             "says": "an occupied volume is watched: name every occupant in monitoring.subjects, with the band, and stop the test on their verdict (the medical monitor is on standby until the test is authorised; the station starts it then for the subjects the procedure names)"
         },

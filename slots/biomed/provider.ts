@@ -138,6 +138,8 @@ export function biomedSlot(wsBase: string, log: (line: string) => void): Publish
                 // rate as a delta against it, which is what makes a number mean something at a glance.
                 roster: s.service.roster.map((x) => ({ id: x.id, callsign: x.callsign, name: x.name ?? null, module: x.module, restingBpm: x.restingBpm ?? null, band: s.service.bandOf(x) })),
                 session: s.service.current?.sessionId ?? null,
+                // The critical alarms raised and not cleared: a person under one is exposed by no test.
+                alarms: s.service.raised,
                 // Standby is how the monitor waits between tests (2026-09-28: a model read "no session" as "no monitoring possible").
                 opens: "on the commander's authorisation of a test: the station starts the monitoring for the subjects the procedure names in monitoring, and stops it at the test's end",
             }),
@@ -214,6 +216,25 @@ export function biomedSlot(wsBase: string, log: (line: string) => void): Publish
             description: "One line for a procedure's abort list: whether a monitored subject has been out of band long enough, whether monitoring was lost, or whether someone walked into a module under test. This slot never stops anything itself.",
             inputSchema: objectSchema({}),
             handle: (_args, s) => s.service.verdict(),
+        },
+        {
+            // A person raises a critical alarm for someone (2026-09-29): the medical panel's button, a crew member, a strap that cannot say it. The slot records it; the test that exposes them stops by its own abort list, which reads the verdict.
+            name: "alarm",
+            title: "Raise a critical health alarm",
+            description: "A critical health alarm for one person, raised by someone who saw it (what, and who raises it). It stays until it is cleared: a test that exposes the person stops at its next reading of the verdict, and no procedure may expose them meanwhile.",
+            inputSchema: objectSchema({ subjectId: { type: "string" }, what: { type: "string", description: "What is wrong, in a few words: chest pain, fainted, breathless" }, by: { type: "string", description: "Who raises it" } }, ["subjectId"]),
+            handle: (args, s) => {
+                const alarm = s.service.raiseAlarm(String(args.subjectId), str(args.what) ?? "", str(args.by) ?? "");
+                log(`[biomed] critical alarm for ${String(args.subjectId)}: ${alarm.what} (${alarm.by})`);
+                return { subjectId: String(args.subjectId), alarm };
+            },
+        },
+        {
+            name: "alarm_clear",
+            title: "Clear a health alarm",
+            description: "The person is safe: the alarm raised for them is cleared, by someone who says so.",
+            inputSchema: objectSchema({ subjectId: { type: "string" }, by: { type: "string" } }, ["subjectId"]),
+            handle: (args, s) => ({ subjectId: String(args.subjectId), cleared: s.service.clearAlarm(String(args.subjectId)) }),
         },
         {
             name: "move",

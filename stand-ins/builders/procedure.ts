@@ -43,6 +43,14 @@ export class ScriptedProcedureBuilder extends ScriptedBuilderBase<ScriptedProced
     private presence: Presence = [];
     /** The last procedure sent whole: a correction sends only what differs from it (procedure.revise), as a model does. */
     private lastSent: Procedure | null = null;
+    /** The analysis of the aborted test this task follows, once sent (2026-09-29): the script then tightens the band it watches. */
+    private analysed = false;
+
+    /** What stopped the last test, when the task follows one. */
+    private get previous(): { aborted: { condition?: string | null; reason?: string | null } } | null {
+        const p = (this.options.task.observations as { previous?: { aborted?: { condition?: string | null; reason?: string | null } } } | undefined)?.previous;
+        return p?.aborted ? { aborted: p.aborted } : null;
+    }
 
     constructor(options: ScriptedProcedureOptions) {
         super("procedure", options);
@@ -71,6 +79,8 @@ export class ScriptedProcedureBuilder extends ScriptedBuilderBase<ScriptedProced
 
     /** The procedure the script writes: two steps, hatch closed, the rise at `speed`. */
     private procedure(speed: number, monitoring: boolean): Procedure {
+        // After an aborted test the band is tighter: a person leaving it stops the test sooner (the change the analysis names).
+        const maxBpm = this.analysed ? 110 : 120;
         // The device the task is about (its observations name it, as the station's request does), the option, or the first scrubber of the inventory.
         const wanted = this.options.device ?? (typeof (this.options.task.observations as { device?: unknown } | undefined)?.device === "string" ? String((this.options.task.observations as { device: string }).device) : undefined);
         const scrubber = this.inventory.devices?.find((d) => (wanted ? d.path === wanted : d.type === "Scrubber")) ?? this.inventory.devices?.find((d) => d.type === "Scrubber");
@@ -90,7 +100,7 @@ export class ScriptedProcedureBuilder extends ScriptedBuilderBase<ScriptedProced
             hypotheses: ["the flow the inter-module ventilation delivers, hatch closed, is not measured by this test; the design says 3 m3/min, and the residual of the candidate simulators says whether the installation delivers it"],
             limits: { co2MaxPpm: 2800, co2AbortPpm: 3200, minSpeedPercent: speed === 0 ? 0 : 30, maxMinutes: 24 },
             ...(read ? { occupancy: { module: volume.name, occupants: read.occupants, subjects, readBy: "biomed.presence" } } : {}),
-            ...(monitoring && occupied ? { monitoring: { subjects, band: { minBpm: 45, maxBpm: 120 }, reason: `the test raises the CO2 of the air ${subjects.length} people breathe` } } : {}),
+            ...(monitoring && occupied ? { monitoring: { subjects, band: { minBpm: 45, maxBpm }, reason: `the test raises the CO2 of the air ${subjects.length} people breathe` } } : {}),
             authorisation: { by: "commander", required: true },
             steps: [
                 { n: 1, hatch: "closed", speedPercent: speed, minutes: 12, why: "let the CO2 rise" },
@@ -115,7 +125,7 @@ export class ScriptedProcedureBuilder extends ScriptedBuilderBase<ScriptedProced
                 ...(monitoring && occupied
                     ? [
                           { constant: "monitoring.band.minBpm", value: 45, source: "library" as const, reference: "test.heartRateMinBpm", reason: "the monitored band's lower edge" },
-                          { constant: "monitoring.band.maxBpm", value: 120, source: "library" as const, reference: "test.heartRateMaxBpm", reason: "the monitored band's upper edge" },
+                          { constant: "monitoring.band.maxBpm", value: maxBpm, source: "library" as const, reference: "test.heartRateMaxBpm", reason: "the monitored band's upper edge" },
                       ]
                     : []),
             ],
@@ -161,10 +171,27 @@ export class ScriptedProcedureBuilder extends ScriptedBuilderBase<ScriptedProced
                     "the volume is not known, it is measured",
                 );
             case "build:task.plan":
-            case "build:biomed.presence": {
+            case "build:biomed.presence":
+            case "build:procedure.analyse": {
+                // A task that follows an aborted test analyses it first, from what stopped it; then writes the test with the band tightened.
+                const previous = this.previous;
+                if (previous && !this.analysed && after !== "build:procedure.analyse") {
+                    const why = [previous.aborted.condition, previous.aborted.reason].filter(Boolean).join(": ");
+                    return decide(
+                        "procedure.analyse",
+                        {
+                            cause: `the test stopped on ${why}`,
+                            evidence: [`the abort recorded by the station: ${why}`],
+                            whyNotPrevented: "the band watched was the card's widest, so the test ran until the verdict tripped rather than stopping at the first sign",
+                            changes: [{ path: "monitoring.band.maxBpm", change: "120 becomes 110 bpm", prevents: "a person whose rate climbs stops the test sooner" }],
+                        } as unknown as JsonValue,
+                        "the last test was aborted: its cause first",
+                    );
+                }
+                if (after === "build:procedure.analyse") this.analysed = true;
                 // After a refusal, the script does what the reasons say; before one, it writes its first procedure.
                 if (/diligence/.test(refusal)) return decide("biomed.presence", {}, "the refusal says the occupancy was not read");
-                const corrected = Boolean(refusal) || after === "build:biomed.presence";
+                const corrected = Boolean(refusal) || after === "build:biomed.presence" || this.analysed;
                 const speed = corrected ? Math.max(firstSpeedPercent, 30) : firstSpeedPercent;
                 const monitoring = askMonitoring || /monitoring/.test(refusal);
                 const next = this.procedure(speed, monitoring);

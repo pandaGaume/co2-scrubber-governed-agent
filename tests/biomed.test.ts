@@ -94,6 +94,31 @@ describe("the biomed monitor", () => {
         assert.match(verdict.reason, /CDR entered lab/);
     });
 
+    it("a critical alarm a person raises stops the test that exposes the one it is for, whatever the rate reads, until it is cleared (2026-09-29)", async () => {
+        const s = service();
+        const bridge = new BridgeProvider();
+        // Raised before any test: said by the presence, no verdict to trip.
+        s.raiseAlarm("fe-1", "chest pain", "the medical panel");
+        assert.deepEqual(s.presence().find((m) => m.module === "lab")?.subjects.find((x) => x.id === "fe-1")?.alarm?.what, "chest pain");
+        assert.equal(s.verdict().abort, false, "no session: nothing to stop");
+        await s.start(bridge, { reason: "decay test", modules: ["lab"] });
+        const t0 = new Date("2026-10-14T21:10:00Z");
+        bridge.accept(sample("fe-1", 70, t0));
+        bridge.accept(sample("fe-2", 62, t0));
+        const verdict = s.verdict(t0.getTime());
+        assert.equal(verdict.abort, true, "a nominal rate does not outweigh a person saying it is critical");
+        assert.match(verdict.reason, /^FE-1: critical health alarm: chest pain$/);
+        assert.equal(s.state(t0.getTime()).find((x) => x.subjectId === "fe-1")?.status, "alarm");
+        // Someone outside the module under test: not this test's reason to stop.
+        s.clearAlarm("fe-1");
+        s.raiseAlarm("cdr", "dizzy", "the crew");
+        assert.equal(s.verdict(t0.getTime()).abort, false, "the CDR is in Hab-B, which this test does not expose");
+        s.clearAlarm("cdr");
+        assert.deepEqual(s.raised, []);
+        const record = await s.stop("test over");
+        assert.ok(record.events.some((e) => e.status === "alarm" && /dizzy/.test(e.detail)), "the session keeps the alarm raised during it");
+    });
+
     it("refuses a reading for someone nobody asked to watch, and a rate no heart has", async () => {
         const s = service();
         const bridge = new BridgeProvider();

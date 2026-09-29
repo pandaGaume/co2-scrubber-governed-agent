@@ -70,13 +70,40 @@ export const PROCEDURE_WORD_KEYS = [
     ...FORMAT.requirements.map((r) => `openQuestions.${r}`), "openQuestions.method",
     "brief.handOver", "brief.situation", "brief.method", "brief.methodListed", "brief.methodFind", "brief.methodNotACard", "brief.plan", "brief.planOutput", "brief.planUnit",
     "brief.procedure", "brief.presenceRead", "brief.presenceUnread", "brief.measured", "brief.measuredSource", "brief.refused", "brief.refusedKept", "brief.refusedWhole",
+    "intentionPrevious", "requirements.analysisAccepted", "brief.analysis", "brief.analysed", "analysis.first", "analysis.noPrevious", "analysis.cause", "analysis.path", "analysis.unchanged", "analysis.done", "capabilities.analyse",
     "draft.none", "draft.noneAtExecution", "draft.accepted", "draft.kept", "capabilities.submit", "capabilities.revise", "capabilities.reviseChanges", "guard.refused", "guard.id", "guard.quantity",
 ];
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /** The format's reads, the base's, and the topic's own two capabilities. */
-export const PROCEDURE_TOOLS: ReadonlyArray<RegExp> = withBase([...FORMAT.tools.map((t) => new RegExp(`^${escape(t)}$`)), /^procedure\.(submit|revise)$/]);
+export const PROCEDURE_TOOLS: ReadonlyArray<RegExp> = withBase([...FORMAT.tools.map((t) => new RegExp(`^${escape(t)}$`)), /^procedure\.(submit|revise|analyse)$/]);
+
+/** What stopped the last test of this work, as the task's observations carry it (the spec's `history`); null when none was aborted. */
+export interface Previous {
+    procedureId?: string | null;
+    procedure?: ProcedureLike | null;
+    aborted: { condition?: string | null; reason?: string | null; step?: number | null };
+    minutesRun?: number;
+}
+export function previousOf(task: TaskFile["task"]): Previous | null {
+    const p = FORMAT.history ? (task.observations as Record<string, unknown> | undefined)?.[FORMAT.history] : undefined;
+    return isObject(p) && isObject(p.aborted) ? (p as unknown as Previous) : null;
+}
+
+/** The analysis of a stopped test, as accepted. */
+export interface Analysis {
+    cause: string;
+    evidence: string[];
+    whyNotPrevented: string;
+    changes: Array<{ path: string; change: string; prevents: string }>;
+}
+
+/** The analysis's schema, the spec's. */
+const ANALYSIS_SCHEMA: Record<string, unknown> | null = FORMAT.analysis ? (JSON.parse(readFileSync(fromRoot(...FORMAT.analysis.schema.split("/")), "utf8")) as Record<string, unknown>) : null;
+
+/** The words of a text worth matching: four letters or more, lower case. */
+const wordsOf = (t: string): Set<string> => new Set(t.toLowerCase().split(/[^a-z0-9]+/).filter((x) => x.length >= 4));
 
 /** The proposal's schema, the spec's (FORMAT.schema), with the socle's justifications and what the executor can read to stop a test. */
 export const PROCEDURE_SCHEMA: Record<string, unknown> = (() => {
@@ -126,6 +153,8 @@ interface ProcedureTopicState {
      */
     draft?: { procedure: ProcedureLike; at: number } | null;
     accepted: { path: string; sha256: string; procedureId: string } | null;
+    /** The analysis of the aborted test this task follows, once accepted (2026-09-29): the new proposal must make its changes. */
+    analysis?: Analysis | null;
     /** The method card the builder read, once it has read one the library listed. */
     method?: string;
     /** The card whole, as read: the state carries it, the model reads it once. */
@@ -351,13 +380,59 @@ function submissionOf(state: ProcedureTopicState, procedure: ProcedureLike, chec
 }
 
 /** The evidence the stages need, each true or false (`requirements` of the state): each of the spec's reads, the method card, the plan, the acceptance. */
-export function requirementsOf(progress: Progress): Record<string, boolean> {
+export function requirementsOf(progress: Progress, task?: TaskFile["task"]): Record<string, boolean> {
     const state = noteMethod(progress);
     return {
         ...Object.fromEntries(FORMAT.requirements.map((r) => [`${r}Read`, readOf(progress, r) !== undefined])),
         methodRead: Boolean(state.method),
         planDeclared: progress.plan !== null,
+        // A task that follows an aborted test analyses it before any proposal.
+        ...(task && previousOf(task) ? { analysisAccepted: Boolean(state.analysis) } : {}),
         procedureAccepted: state.accepted !== null,
+    };
+}
+
+/**
+ * The analysis's own checks (2026-09-29, recovery after an abort): a test that follows a stopped one says first why it
+ * stopped, tied to what stopped it (the cause shares its words with the abort's condition or reason), with the evidence,
+ * why the last proposal did not prevent it, and changes that are fields of the proposal. Returns its problems.
+ */
+function analysisProblems(input: unknown, previous: Previous | null): string[] {
+    if (!previous) return [w("analysis.noPrevious")];
+    const a = (input ?? {}) as Partial<Analysis>;
+    const problems: string[] = [];
+    const reason = [previous.aborted.condition, previous.aborted.reason].filter(Boolean).join(": ");
+    const expected = [...wordsOf(reason)];
+    const said = wordsOf(`${a.cause ?? ""} ${(a.evidence ?? []).join(" ")}`);
+    if (expected.length && !expected.some((x) => said.has(x))) problems.push(w("analysis.cause", { expected: expected.slice(0, 8).join(", "), reason }));
+    const fields = Object.keys(((PROCEDURE_SCHEMA as { properties?: Record<string, unknown> }).properties ?? {}) as Record<string, unknown>).filter((f) => f !== "justifications");
+    (a.changes ?? []).forEach((c, i) => {
+        if (!fields.includes(String(c?.path ?? "").split(".")[0])) problems.push(w("analysis.path", { n: i + 1, path: String(c?.path ?? ""), fields: fields.join(", ") }));
+    });
+    return problems;
+}
+
+/** The changes the accepted analysis names that the new proposal does not make, compared with the aborted one. */
+function unchangedOf(procedure: ProcedureLike, analysis: Analysis | null | undefined, previous: Previous | null): string[] {
+    if (!analysis || !previous?.procedure) return [];
+    const same = (x: unknown, y: unknown) => JSON.stringify(x ?? null) === JSON.stringify(y ?? null);
+    return analysis.changes
+        .filter((c) => same(valueAt(procedure, c.path, FORMAT.keys), valueAt(previous.procedure, c.path, FORMAT.keys)))
+        .map((c) => w("analysis.unchanged", { path: c.path, change: c.change, value: JSON.stringify(valueAt(procedure, c.path, FORMAT.keys) ?? null) }));
+}
+
+function analyseCapability(context: TopicContext): LocalCapability {
+    return {
+        id: "procedure.analyse",
+        description: w("capabilities.analyse"),
+        inputSchema: (ANALYSIS_SCHEMA ?? { type: "object" }) as unknown as JsonValue,
+        async execute(input: JsonValue): Promise<CapabilityResult> {
+            const state = stateOf(context.progress);
+            state.analysis = input as unknown as Analysis;
+            const file = FORMAT.analysis?.file ?? "analysis.json";
+            await context.broker.call("workspace", "write", { taskId: context.taskId, path: file, text: JSON.stringify({ previous: previousOf(context.task), analysis: input }, null, 2) + "\n" });
+            return { ok: true, output: { outcome: "completed", value: { accepted: true, file, next: w("analysis.done", { file }) } } };
+        },
     };
 }
 
@@ -369,8 +444,12 @@ async function guardProcedure(capabilityId: string, input: JsonValue, context: T
             .filter((k) => !requirements[k])
             .map((k) => w("requirements.missing", { requirement: k, how: w(`requirements.${k}`) }));
     }
+    if (capabilityId === "procedure.analyse") return analysisProblems(input, previousOf(context.task));
     if (capabilityId !== "procedure.submit" && capabilityId !== "procedure.revise") return [];
     let procedure = (input ?? {}) as unknown as ProcedureLike;
+    // After an aborted test: first the analysis, then a proposal that makes its changes (2026-09-29: no test is sent back as it was).
+    const previous = previousOf(context.task);
+    if (previous && !stateOf(context.progress).analysis && !stateOf(context.progress).accepted) return [w("analysis.first", { reason: [previous.aborted.condition, previous.aborted.reason].filter(Boolean).join(": ") })];
     // A procedure already accepted is not revised nor submitted again: the task ends with it (2026-09-28: a revision sent after the acceptance was told that none had been checked yet).
     const done = stateOf(context.progress).accepted;
     if (done) return [w("draft.accepted", { path: done.path })];
@@ -391,6 +470,10 @@ async function guardProcedure(capabilityId: string, input: JsonValue, context: T
     const id = text(procedure, FORMAT.id);
     if (!ID.test(id)) {
         check.problems.push({ kind: "shape", message: w("guard.id", { id }) });
+        check.ok = false;
+    }
+    for (const message of unchangedOf(procedure, stateOf(context.progress).analysis, previous)) {
+        check.problems.push({ kind: "analysis", message });
         check.ok = false;
     }
     // The quantities the proposal measures, in units the unit system knows for them (2026-09-25): a unit invented here would travel into the report.
@@ -439,7 +522,7 @@ export function stateOfTopic(progress: Progress, task: TaskFile["task"]): TopicS
     const measured = measuredOf(task);
     const presence = presenceOf(progress);
     const last = state.submissions.at(-1);
-    const requirements = requirementsOf(progress);
+    const requirements = requirementsOf(progress, task);
     const openQuestions: string[] = [];
     for (const r of FORMAT.requirements) if (!requirements[`${r}Read`]) openQuestions.push(w(`openQuestions.${r}`));
     if (!state.method) openQuestions.push(w("openQuestions.method", { quantities: quantitiesOf(task) }));
@@ -457,6 +540,8 @@ export function stateOfTopic(progress: Progress, task: TaskFile["task"]): TopicS
         hypothesis: {
             ...reads,
             method: state.method ? { id: state.method, card: state.methodCard ?? `(read it: ${FORMAT.reads.card})` } : null,
+            // What stopped the last test, and its analysis once accepted.
+            ...(previousOf(task) ? { previous: headOf(previousOf(task), 3000), analysis: (state.analysis ?? null) as unknown as JsonValue } : {}),
             // What the task measured when it opened: the test starts from it.
             measured: measured as unknown as JsonValue,
             accepted: state.accepted,
@@ -494,7 +579,9 @@ export function validateProcedure(claim: DoneClaim, files: WorkshopFile[], progr
 function intentionOf(task: TaskFile["task"], generic: Intention): Intention {
     const observed = (task.observations as Record<string, unknown> | undefined)?.[FORMAT.device];
     const device = typeof observed === "string" ? w("intentionDevice", { device: observed }) : "";
-    return { ...generic, description: w("intention", { outputs: outputsOf(task), device }) };
+    const previous = previousOf(task);
+    const after = previous ? w("intentionPrevious", { reason: [previous.aborted.condition, previous.aborted.reason].filter(Boolean).join(": ") }) : "";
+    return { ...generic, description: w("intention", { outputs: outputsOf(task), device }) + after };
 }
 
 /**
@@ -522,23 +609,27 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
     const refusal = (progress.refusals["procedure.revise"] ?? progress.refusals["procedure.submit"])?.reason ?? null;
     const kept = draftOf(progress) !== null;
     const refused = refusal ? w("brief.refused", { reason: refusal, what: w(kept ? "brief.refusedKept" : "brief.refusedWhole") }) : "";
+    // After an aborted test: the analysis first, said with what stopped it; once accepted, the changes the proposal must make.
+    const previous = previousOf(task);
+    if (previous && !state.analysis) return w("brief.analysis", { reason: previous.aborted.reason ?? "", condition: previous.aborted.condition ?? "?", step: typeof previous.aborted.step === "number" ? `, step ${previous.aborted.step}` : "", refused });
+    const analysed = state.analysis ? w("brief.analysed", { paths: state.analysis.changes.map((c) => c.path).join(", ") }) : "";
     const presence = presenceOf(progress) ? w("brief.presenceRead") : w("brief.presenceUnread");
     const measured = measuredOf(task);
     const values = measured ? Object.entries(measured).filter(([, v]) => typeof v === "number").map(([k, v]) => `${k} ${Math.round((v as number) * 100) / 100}`) : [];
     const start = values.length ? w("brief.measured", { values: values.join(", "), source: typeof measured?.source === "string" ? w("brief.measuredSource", { source: measured.source }) : "" }) : "";
-    return w("brief.procedure", { method: state.method, presence, start, refused });
+    return w("brief.procedure", { method: state.method, presence, start, refused }) + analysed;
 }
 
 export const PROCEDURE_TOPIC: TopicDefinition = {
     name: "procedure",
     tools: PROCEDURE_TOOLS,
     // A proposal is written from this task's device, presence, measurement and signed library: never copied from the memory of another task, nor the claim that names its file.
-    neverReplayed: [/^procedure\.(submit|revise)$/, /^task\.done$/],
+    neverReplayed: [/^procedure\.(submit|revise|analyse)$/, /^task\.done$/],
     justified: PROCEDURE_JUSTIFIED,
     // The plan says what is measured, from the task's required outputs; the guard checks it again.
     replayedActions: [/^task\.plan$/],
     validate: (claim, files, progress) => validateProcedure(claim, files, progress),
-    local: (context) => [submitCapability(context), reviseCapability(context)],
+    local: (context) => [submitCapability(context), reviseCapability(context), analyseCapability(context)],
     guard: guardProcedure,
     state: stateOfTopic,
     // The submissions tell the steps apart for the recipes: a step learned after a refusal does not replay after an acceptance.

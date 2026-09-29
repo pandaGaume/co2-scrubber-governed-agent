@@ -197,6 +197,15 @@
   .subject.out .hb-inner  { stroke: rgba(255, 182, 72, 0.45); }
 
   .subject.lost .hb-heart { filter: none; opacity: 0.32; }
+  /* A critical alarm a person raised: red, whatever the rate reads (2026-09-29). */
+  .subject.alarm, .module .one.alarm { box-shadow: 0 0 0 2px var(--red), 0 0 28px rgba(255, 80, 100, 0.35); border-radius: 12px; }
+  .subject.alarm .hb-body, .module .one.alarm .hb-body { stroke: var(--red); fill: rgba(255, 80, 100, 0.12); }
+  .subject.alarm .hb-vessel, .module .one.alarm .hb-vessel { stroke: var(--red); }
+  .alarm-line { margin-top: 6px; font-size: 11px; color: var(--red); letter-spacing: 0.04em; }
+  .alarm-btn { margin-top: 8px; font: inherit; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; padding: 4px 8px; border-radius: 999px; cursor: pointer; background: transparent; color: var(--red); border: 1px solid rgba(255, 80, 100, 0.55); }
+  .alarm-btn:hover { background: rgba(255, 80, 100, 0.12); }
+  .alarm-btn.clear { color: var(--teal-soft, #7ad6cc); border-color: rgba(64, 214, 200, 0.4); }
+  .module .one { grid-template-rows: auto 2.5em auto auto auto; width: 110px; padding: 6px 4px; }
   .subject.lost .hb-body  { stroke: var(--red); fill: none; }
   .subject.lost .hb-arc   { stroke: var(--red); }
 
@@ -301,6 +310,12 @@ const FALLBACK = {
   "state.outOfBand": "out of band",
   "state.signalLost": "signal lost",
   "state.waiting": "waiting",
+  "state.alarm": "critical alarm",
+  "alarm.raise": "Critical alarm",
+  "alarm.clear": "Clear alarm",
+  "alarm.prompt": "What is wrong with {name}? (a few words)",
+  "alarm.default": "critical health alarm",
+  "alarm.by": "the medical panel",
   "subject.delta": "resting {resting} · delta {delta}",
   "trace.legend": "TACHOGRAM · {seconds} S · NOMINAL BAND {min} TO {max} BPM",
   "unit.bpm": "bpm",
@@ -473,7 +488,7 @@ function showStandby(presence) {
     .map((m) => `<div class="module">
         <div class="k">${m.module} · ${n(m.occupants)} ${phrase("standby.occupants")}</div>
         <div class="people">${(m.subjects ?? [])
-          .map((s) => `<div class="one">${heartSvg('s-' + s.id)}<div class="nm">${s.name ?? s.callsign}</div><div class="cs">${s.callsign}</div></div>`)
+          .map((s) => `<div class="one${s.alarm ? " alarm" : ""}">${heartSvg('s-' + s.id)}<div class="nm">${s.name ?? s.callsign}</div><div class="cs">${s.callsign}</div>${alarmControls(s.id, s.name ?? s.callsign, s.alarm)}</div>`)
           .join("")}</div>
       </div>`)
     .join("");
@@ -511,6 +526,7 @@ function showMonitoring(state, record) {
           <div class="bpm"><span class="n">--</span><span class="u">${phrase("unit.bpm")}</span></div>
           <div class="delta"></div>
           <div class="state"><i class="dot"></i><span class="w"></span></div>
+          <div class="alarm-slot"></div>
         </div>
         <div class="readouts"></div>
         <div class="trace">
@@ -524,15 +540,18 @@ function showMonitoring(state, record) {
       const ok = node.querySelector(".ok");
       ok.style.left = ((s.band.minBpm - SCALE.min) / span) * 100 + "%";
       ok.style.width = ((s.band.maxBpm - s.band.minBpm) / span) * 100 + "%";
-      v = { node, heart: node.querySelector(".hb-heart"), arc: node.querySelector(".hb-arc"), ro: node.querySelector(".readouts"), n: node.querySelector(".bpm .n"), d: node.querySelector(".delta"), w: node.querySelector(".state .w"), mark: node.querySelector(".mark"), canvas: node.querySelector("canvas"), beats: [] };
+      v = { node, alarmSlot: node.querySelector(".alarm-slot"), heart: node.querySelector(".hb-heart"), arc: node.querySelector(".hb-arc"), ro: node.querySelector(".readouts"), n: node.querySelector(".bpm .n"), d: node.querySelector(".delta"), w: node.querySelector(".state .w"), mark: node.querySelector(".mark"), canvas: node.querySelector("canvas"), beats: [] };
       views.set(s.subjectId, v);
     }
 
+    v.node.classList.toggle("alarm", !!s.alarm);
+    const controls = alarmControls(s.subjectId, s.name ?? s.callsign, s.alarm);
+    if (v.alarmSlot.dataset.shown !== controls) { v.alarmSlot.innerHTML = controls; v.alarmSlot.dataset.shown = controls; }
     v.node.classList.toggle("out", s.status === "out-of-band");
     v.node.classList.toggle("lost", s.status === "signal-lost");
     v.n.textContent = s.bpm === null ? "--" : n(s.bpm);
     v.w.textContent = phrase(
-      s.status === "out-of-band" ? "state.outOfBand" : s.status === "signal-lost" ? "state.signalLost" : s.status === "nominal" ? "state.nominal" : "state.waiting",
+      s.status === "alarm" ? "state.alarm" : s.status === "out-of-band" ? "state.outOfBand" : s.status === "signal-lost" ? "state.signalLost" : s.status === "nominal" ? "state.nominal" : "state.waiting",
     );
     const resting = s.resting ?? null;
     v.d.innerHTML = s.bpm === null || resting === null ? "" : phrase("subject.delta", { resting: `<b>${n(resting)}</b>`, delta: `<b>${signed(s.bpm - resting)}</b>` });
@@ -731,6 +750,38 @@ async function poll() {
   ticks += 1;
   setTimeout(poll, POLL_MS);
 }
+
+/* ------------------------------------------------------------------ *
+ * The alarm (2026-09-29). A person raises it for someone: the slot records
+ * it, and a test that exposes them stops by its own abort list, which reads
+ * the verdict. The screen reports; it still stops nothing itself.
+ * ------------------------------------------------------------------ */
+
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+function alarmControls(id, name, alarm) {
+  return alarm
+    ? `<div class="alarm-line">${esc(alarm.what)}</div><button class="alarm-btn clear" type="button" data-alarm-clear="${esc(id)}">${phrase("alarm.clear")}</button>`
+    : `<button class="alarm-btn" type="button" data-alarm="${esc(id)}" data-name="${esc(name)}">${phrase("alarm.raise")}</button>`;
+}
+
+document.addEventListener("click", async (e) => {
+  const raise = e.target.closest?.("[data-alarm]");
+  const clear = e.target.closest?.("[data-alarm-clear]");
+  if (!raise && !clear) return;
+  try {
+    if (!session) await open();
+    if (raise) {
+      const what = window.prompt(phrase("alarm.prompt", { name: raise.dataset.name }), phrase("alarm.default"));
+      if (what === null) return;
+      await session.callTool("alarm", { subjectId: raise.dataset.alarm, what: what || phrase("alarm.default"), by: phrase("alarm.by") });
+    } else {
+      await session.callTool("alarm_clear", { subjectId: clear.dataset.alarmClear, by: phrase("alarm.by") });
+    }
+  } catch (err) {
+    console.warn("alarm", err);
+  }
+});
 
 /* A monitoring screen that goes dark mid-test is useless; ask to stay awake. */
 let wakeLock = null;

@@ -56,7 +56,7 @@ export type Rule =
     | (Base & { match: { path: string; pattern: string } })
     | (Base & { require: { list: string; key: string; values: string[] } })
     | (Base & { readable: { list: string; key: string } })
-    | (Base & { watch: { place: string; subjects: string; declared?: string; stop: { list: string; key: string; value: string; source?: string }; unread: { kind: string; says?: string } } });
+    | (Base & { watch: { place: string; subjects: string; declared?: string; stop: { list: string; key: string; value: string; source?: string }; unread: { kind: string; says?: string }; blocked?: { flag: string; kind?: string; says: string } } });
 
 /** A document's rules, as the library serves them, with the document's signature as it stands. */
 export interface RulesDocument {
@@ -69,7 +69,8 @@ export interface RulesDocument {
 
 /** Who is where, as read in this task (a presence read), or nothing. */
 export interface PeopleRead {
-    modules: Array<{ module: string; occupants: number; subjects: Array<{ id: string; callsign?: string }> }>;
+    /** Each subject as the presence read gives it; a flag the rules may name (`blocked`), such as a raised alarm, travels with it. */
+    modules: Array<{ module: string; occupants: number; subjects: Array<{ id: string; callsign?: string; [flag: string]: unknown }> }>;
     at: string;
 }
 
@@ -244,6 +245,11 @@ export function evaluateRules(input: unknown, doc: RulesDocument, ctx: RuleConte
                 continue;
             }
             if (read.occupants <= 0) continue;
+            // Someone the read flags (a critical health alarm raised and not cleared) is exposed by no test, whatever else the proposal says (2026-09-29).
+            if (w.blocked) {
+                const flagged = read.subjects.filter((s) => Boolean(s[w.blocked!.flag]));
+                if (flagged.length) add(rule, `${module} holds ${flagged.map((s) => s.callsign ?? s.id).join(", ")} under ${w.blocked.flag}: ${w.blocked.says}`, w.place, w.blocked.kind ?? rule.kind, { expected: `no one under ${w.blocked.flag} in ${module}` });
+            }
             const named = valueAt(input, w.subjects, keys);
             const watched = new Set(Array.isArray(named) ? named.map(String) : []);
             const unwatched = read.subjects.filter((s) => !watched.has(s.id));

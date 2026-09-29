@@ -69,8 +69,9 @@ export const DEFAULT_POLICY: QuestionsPolicy = { mode: "ask", byKind: {} };
 
 /** What the policy says for a question of this kind: wait, or answer with which choice. */
 export function standingOrder(policy: QuestionsPolicy, kind: string, options: QuestionOption[]): { mode: "ask" } | { mode: "auto"; choice: string } {
-    // A signature is a person's act: no standing order signs a document (2026-09-28).
-    if (kind === "sign") return { mode: "ask" };
+    // A signature is a person's act: no standing order signs a document (2026-09-28). Nor does one send a test back after it was aborted:
+    // a person decides it, with the analysis of what stopped it (2026-09-29).
+    if (kind === "sign" || kind === "recover") return { mode: "ask" };
     const rule = policy.byKind[kind] ?? policy.byKind["*"] ?? { mode: policy.mode };
     if (rule.mode !== "auto") return { mode: "ask" };
     const choice = rule.choice && options.some((o) => o.id === rule.choice) ? rule.choice : options[0]?.id;

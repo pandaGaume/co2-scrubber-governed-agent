@@ -46,6 +46,7 @@ import { commandsOf, descriptorProblems, needsCommissioning, type Device } from 
 import { inventoryOf, type Inventory } from "../slots/factory/inventory.js";
 import type { Commissioning, MotherLine } from "../slots/station/provider.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
+import { standingOrder } from "../slots/station/questions.js";
 import { runProcedure } from "../tier3/procedure.js";
 import { loadLibrary, searchLibrary } from "../slots/tools/library/provider.js";
 import { briefOf, constantsOf, draftOf, justificationProblems, PROCEDURE_TOPIC, requirementsOf, reviseDraft, stateOfTopic } from "../harness/topics/procedure/index.js";
@@ -274,6 +275,67 @@ describe("the procedure's guard, alone", () => {
         assert.deepEqual(kinds({ ...PROCEDURE, abort: PROCEDURE.abort.filter((a) => a.id !== "vitals") }, LAB_OCCUPIED), ["monitoring"]);
         // Judged on what was read, not on what the procedure declares.
         assert.deepEqual(kinds({ ...unmonitored, occupancy: { module: "lab", occupants: 0 } }, LAB_OCCUPIED), ["monitoring"]);
+    });
+
+    it("a person under a critical health alarm is exposed by no test: the signed rules' watch reads the flag the presence carries (2026-09-29)", () => {
+        const flagged: PresenceRead = { at: "now", modules: [{ module: "lab", occupants: 2, subjects: [{ id: "fe-1", callsign: "FE-1", alarm: { what: "chest pain" } }, { id: "fe-2", callsign: "FE-2", alarm: null }] }] };
+        const c = check(PROCEDURE, flagged);
+        assert.deepEqual([...new Set(c.problems.map((p) => p.kind))], ["health"]);
+        assert.match(c.problems[0].message, /^lab holds FE-1 under alarm: no test exposes a person under a critical health alarm/);
+        assert.deepEqual(kinds(PROCEDURE, LAB_OCCUPIED), [], "the alarm cleared, the same procedure passes");
+    });
+
+    it("after an aborted test, the analysis first, tied to what stopped it, its changes fields of the procedure; then a procedure that makes them (2026-09-29: recovery after an abort)", async () => {
+        const card = loadFacts(LIBRARY_DIR, "commissioning-test-safety").map((f) => ({ ...f, source: "commissioning-test-safety", signed: { by: "reviewer", at: "2026-09-28", valid: true } }));
+        const written: string[] = [];
+        const broker = {
+            call: async (_slot: string, tool: string, args: { path?: string }) => {
+                if (tool === "facts") return { ok: true, outcome: "completed", output: { facts: card } };
+                if (tool === "rules") return { ok: true, outcome: "completed", output: RULES };
+                if (tool === "write") {
+                    written.push(String(args.path));
+                    return { ok: true, outcome: "completed", output: { sha256: "a".repeat(64) } };
+                }
+                return { ok: true, outcome: "completed", output: {} };
+            },
+        } as unknown as Broker;
+        const progress = newProgress();
+        progress.reads["biomed.presence"] = { at: "now", value: { modules: LAB_OCCUPIED.modules } as unknown as JsonValue };
+        progress.sources.library.push("method-concentration-decay");
+        const previous = { procedureId: "decay-test-01", procedure: PROCEDURE, aborted: { condition: "vitals", reason: "FE-1: critical health alarm: chest pain", step: 1 }, minutesRun: 3 };
+        const task = { objective: { required_outputs: [], constraints: {} }, observations: { previous }, data: [] } as unknown as TaskFile["task"];
+        const context = { broker, taskId: "t-recover", task, progress, runtimeSlot: "twin" };
+        const guard = (id: string, input: unknown) => PROCEDURE_TOPIC.guard!(id, input as JsonValue, context);
+        const cite = (constant: string, value: number, reference: string) => ({ constant, value, source: "library" as const, reference, reason: "the card" });
+        const justifications = [
+            cite("limits.co2MaxPpm", 2800, "test.co2AbortCeilingPpm"),
+            cite("limits.co2AbortPpm", 3200, "test.co2AbortCeilingPpm"),
+            cite("limits.minSpeedPercent", 30, "test.speedFloorPercent"),
+            cite("limits.maxMinutes", 24, "test.maxMinutesCeiling"),
+            cite("steps.1.speedPercent", 30, "test.speedFloorPercent"),
+            cite("steps.2.speedPercent", 100, "test.speedFloorPercent"),
+            { constant: "steps.1.minutes", value: 12, source: "library" as const, reference: "method-concentration-decay", reason: "the card's rise" },
+            { constant: "steps.2.minutes", value: 12, source: "assumed" as const, reference: "one time constant", reason: "long enough" },
+        ];
+        assert.equal(requirementsOf(progress, task).analysisAccepted, false, "a task that follows an aborted test requires its analysis");
+        // No procedure before the analysis.
+        assert.match((await guard("procedure.submit", { ...PROCEDURE, justifications })).join(), /^the last test of this commissioning was aborted \(vitals: FE-1: critical health alarm: chest pain\): analyse why with procedure\.analyse/);
+        // An analysis that does not say what stopped the test, or names no field of the procedure, is refused.
+        const change = { path: "monitoring.band.maxBpm", change: "120 becomes 110 bpm", prevents: "a climbing rate stops the test sooner" };
+        assert.match((await guard("procedure.analyse", { cause: "the scrubber was slow", evidence: ["the log"], whyNotPrevented: "x", changes: [change] })).join(), /the cause does not say what stopped the test/);
+        assert.match((await guard("procedure.analyse", { cause: "FE-1's critical alarm (chest pain) during step 1", evidence: ["vitals abort at minute 3"], whyNotPrevented: "x", changes: [{ ...change, path: "nowhere.at.all" }] })).join(), /change 1: "nowhere\.at\.all" is not a field of the procedure/);
+        const analysis = { cause: "FE-1's critical alarm (chest pain) during step 1", evidence: ["vitals abort at minute 3"], whyNotPrevented: "the band watched was the card's widest", changes: [change] };
+        assert.deepEqual(await guard("procedure.analyse", analysis), []);
+        const [, , analyse] = PROCEDURE_TOPIC.local!(context);
+        assert.equal(analyse.id, "procedure.analyse");
+        assert.equal((await analyse.execute(analysis as unknown as JsonValue, {} as never)).ok, true);
+        assert.ok(written.includes("analysis.json"), "the analysis is kept in the workshop, where the station reads it");
+        assert.equal(requirementsOf(progress, task).analysisAccepted, true);
+        // The same procedure again: the change the analysis names is not in it.
+        assert.match((await guard("procedure.submit", { ...PROCEDURE, justifications })).join(), /analysis: the analysis says monitoring\.band\.maxBpm changes \(120 becomes 110 bpm\), and the new procedure keeps it as it was/);
+        // The procedure that makes it: accepted.
+        const tighter = { ...PROCEDURE, id: "decay-test-02", monitoring: { subjects: ["fe-1", "fe-2"], band: { minBpm: 45, maxBpm: 110 } }, justifications: [...justifications, cite("monitoring.band.minBpm", 45, "test.heartRateMinBpm"), cite("monitoring.band.maxBpm", 110, "test.heartRateMaxBpm")] };
+        assert.deepEqual(await guard("procedure.submit", tighter), []);
     });
 
     it("the bounds, the duration, the aborts and the predictions", () => {
@@ -590,6 +652,30 @@ describe("the commissioning, through the broker", () => {
         assert.equal((await ok<{ session: string | null }>("biomed", "state")).session, null);
         assert.equal((await mother()).at(-1)?.text.en, "Test aborted. Vital signs: abort condition.");
         await ok("biomed", "move", { subjectId: "fe-1", module: "lab" });
+    });
+
+    it("after the aborted test, the commissioning reopens; the factory analyses what stopped it, writes a test that changes it, and Mother tells the commander the cause and the change before she asks again (2026-09-29: recovery after an abort)", async () => {
+        const aborted = await commissioning("c002-hab-b");
+        assert.equal(aborted.status, "aborted");
+        const reopened = (await ok<{ commissioning: Commissioning }>("station", "commissioning_reopen", { commissioningId: aborted.id, reason: "the commander asked for another test" })).commissioning;
+        assert.equal(reopened.status, "open");
+        assert.equal(reopened.attempts?.length, 1);
+        assert.equal(reopened.attempts?.[0].aborted?.condition, "vitals");
+        assert.ok((await mother()).some((l) => /^Commissioning reopened: the procedure factory writes test 2/.test(l.text.en)));
+        const previous = { procedureId: aborted.procedure?.procedureId ?? null, procedure: aborted.procedure?.content ?? null, aborted: { condition: aborted.report?.aborted?.condition ?? null, reason: aborted.report?.aborted?.reason ?? null, step: aborted.report?.aborted?.step ?? null } };
+        const req = await ok<{ taskId: string }>("factory", "request", { objective: { required_outputs: [{ name: "V", quantity: "Volume", unit: "m3" }] }, observations: { device: "/habitat/hab-b/eclss/scrubber-2", previous }, topics: ["procedure"], builder: "scripted", requestedBy: "station", run: false });
+        tasks.push(req.taskId);
+        const result = await runTask({ broker: operator, taskId: req.taskId, recipesDir, provider: (ctx: BuilderContext) => new ScriptedProcedureBuilder({ ...ctx, firstSpeedPercent: 30 }) });
+        assert.equal(result.state, "proposed", result.manifest.ended ?? "");
+        const done = result.manifest.steps.filter((s) => s.source !== "refused").map((s) => s.capability);
+        assert.ok(done.indexOf("procedure.analyse") >= 0 && done.indexOf("procedure.analyse") < done.indexOf("procedure.submit"), `the analysis before the procedure: ${done.join(", ")}`);
+        const c = await commissioning("c002-hab-b");
+        assert.equal(c.status, "awaiting-authorisation");
+        assert.equal(c.procedure?.content.monitoring?.band?.maxBpm, 110, "the change the analysis names is in the test relayed");
+        assert.match(String(c.analysis?.cause), /vitals/);
+        assert.ok((await mother()).some((l) => /^Why the last test stopped, as the factory analysed it: .*What the new test changes: 120 becomes 110 bpm/.test(l.text.en)));
+        // A person decides it, never a standing order.
+        assert.deepEqual(standingOrder({ mode: "auto", byKind: {} }, "recover", [{ id: "rewrite", label: "rewrite" }]), { mode: "ask" });
     });
 
     it("a builder refused on the same point three times in a row, whatever else it changes, ends STUCK at the third refusal, the second prompt saying only what is expected there (2026-09-28: nineteen refusals of one speed)", async () => {

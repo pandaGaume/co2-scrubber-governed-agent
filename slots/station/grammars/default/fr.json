@@ -163,6 +163,14 @@
                 "from": "qui raconte : scenario, une usine",
                 "commissioningId": "la mise en service dont parle la ligne, s'il y en a une"
             }
+        },
+        "commissioning_reopen": {
+            "title": "Rouvrir une mise en service interrompue",
+            "description": "Après un essai interrompu, la mise en service accepte une autre procédure : ce qui a arrêté l'essai est gardé dans ses tentatives, et la station attend une nouvelle procédure à relayer.",
+            "properties": {
+                "commissioningId": "la mise en service",
+                "reason": "pourquoi elle est rouverte"
+            }
         }
     },
     "resources": {
@@ -322,7 +330,11 @@
         "mother.question.waiting": "Commandant, j'attends toujours votre réponse : {options}.",
         "mother.procedure.refused.start": "Procédure refusée. Ses limites de CO2 ne laissent pas de marge au-dessus de l'air du module {module} tel qu'il est mesuré maintenant.",
         "mother.procedure.refused.justification": "Procédure refusée. Certains de ses chiffres n'ont pas de source.",
+        "mother.procedure.refused.health": "Procédure refusée. Une personne du module {module} est sous alarme de santé critique : aucun essai ne l'expose.",
         "mother.procedure.refused.justificationFact": "Procédure refusée. Une limite de sécurité s'appuie sur le mauvais fait de la fiche de sécurité.",
-        "mother.procedure.refused.rules": "Procédure refusée. Les règles de sécurité de l'essai ne sont pas signées."
+        "mother.procedure.refused.rules": "Procédure refusée. Les règles de sécurité de l'essai ne sont pas signées.",
+        "mother.commissioning.reopened": "Mise en service rouverte : l'usine de procédures écrit l'essai {attempt}, en sachant ce qui a arrêté le précédent.",
+        "mother.procedure.analysis": "Pourquoi le dernier essai s'est arrêté, selon l'analyse de l'usine : {cause}. Ce que le nouvel essai change : {changes}.",
+        "mother.procedure.refused.analysis": "Procédure refusée. Elle ne fait pas les changements que sa propre analyse de l'essai interrompu annonce."
     }
 }

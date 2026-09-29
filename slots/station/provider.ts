@@ -53,7 +53,7 @@ import { fromRoot } from "../../lib/paths.js";
 import { objectSchema as obj, publishSlot, type PublishedSlot } from "../lib/slot-server.js";
 import { checkTaskId, sha256Of, taskDir } from "../tools/lib/workshop.js";
 import { Broker } from "../../harness/lib/broker.js";
-import { checkProcedure, rulesAndFacts, type PresenceRead, type ProblemKind, type ProcedureProblem, safetyProblems } from "../../harness/topics/procedure/check.js";
+import { checkProcedure, FORMAT as PROCEDURE_FORMAT, rulesAndFacts, type PresenceRead, type ProblemKind, type ProcedureProblem, safetyProblems } from "../../harness/topics/procedure/check.js";
 import { moduleOf, totalMinutes, type Procedure } from "../../lib/procedure/format.js";
 import { buildReport, reportLines, type ProcedureReport, type StepRecord } from "../../lib/procedure/report.js";
 import { DEFAULT_POLICY, questionProblems, standingOrder, type Question, type QuestionAnswer, type QuestionsPolicy, type Resume } from "./questions.js";
@@ -105,6 +105,10 @@ export interface Commissioning {
     monitoring: { sessionId: string; subjects: string[] } | null;
     run: { startedAt: string; current: number; steps: StepRecord[]; clock?: { minute: number; planned: number | null; secondsPerMinute: number; at: string } } | null;
     report: ProcedureReport | null;
+    /** The tests of this commissioning that were aborted, before it was reopened for another procedure (2026-09-29: recovery after an abort). */
+    attempts?: Array<{ procedureId: string; taskId: string; aborted: ProcedureReport["aborted"]; minutes: number; reopenedAt: string; reason: string }>;
+    /** The factory's analysis of the aborted test, when the procedure relayed follows one: what the commander authorises knowing. */
+    analysis?: { cause: string; evidence: string[]; whyNotPrevented: string; changes: Array<{ path: string; change: string; prevents: string }> } | null;
 }
 
 /** One line of Mother's, in both languages, with what filled it. */
@@ -142,7 +146,7 @@ const short = (sha: string) => `${sha.slice(0, 12)}...`;
 const str = (v: unknown): string => (typeof v === "string" ? v : "");
 
 /** The order Mother names a refusal in when a procedure has several: the one the story is about first. */
-const REFUSAL_ORDER: ProblemKind[] = ["rules", "floor", "start", "diligence", "monitoring", "bounds", "duration", "abort", "expected", "justification", "shape"];
+const REFUSAL_ORDER: ProblemKind[] = ["rules", "health", "analysis", "floor", "start", "diligence", "monitoring", "bounds", "duration", "abort", "expected", "justification", "shape"];
 
 /** Mother's words: the phrases of the default grammars, English and French, read once. */
 function loadWords(dir: string): { en: McpGrammar; fr: McpGrammar } {
@@ -322,6 +326,13 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
             return;
         }
         c.procedure = { procedureId: procedure.id, taskId: proposal.taskId, proposalId: proposal.proposalId, path: artifact.path, sha256: artifact.sha256, module: check.module, occupants: check.occupants, steps: procedure.steps.length, minutes: totalMinutes(procedure), content: procedure };
+        // A procedure that follows an aborted test comes with the factory's analysis of it: Mother says the cause and what changes, before she asks (2026-09-29).
+        const analysisFile = path.join(taskDir(checkTaskId(proposal.taskId)), PROCEDURE_FORMAT.analysis?.file ?? "analysis.json");
+        c.analysis = existsSync(analysisFile) ? ((JSON.parse(readFileSync(analysisFile, "utf8")) as { analysis?: Commissioning["analysis"] }).analysis ?? null) : null;
+        if (c.analysis) {
+            const a = c.analysis;
+            say("mother.procedure.analysis", c, () => ({ cause: a.cause, changes: a.changes.map((x) => `${x.change} (${x.prevents})`).join("; ") }));
+        }
         c.status = "awaiting-authorisation";
         proposal.status = "relayed";
         const count = check.occupants.length;
@@ -477,6 +488,25 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                 name: "commissioning_state",
                 inputSchema: obj({ commissioningId: { type: "string" } }),
                 handle: ({ commissioningId }, s) => (commissioningId ? { commissioning: commissioning(commissioningId) } : { commissionings: s.commissionings }),
+            },
+            {
+                // After an aborted test, the commissioning takes another procedure (2026-09-29): what stopped the test is kept in its attempts, and the factory is asked again with it.
+                name: "commissioning_reopen",
+                inputSchema: obj({ commissioningId: { type: "string" }, reason: { type: "string" } }, ["commissioningId"]),
+                handle: ({ commissioningId, reason }) => {
+                    const c = commissioning(str(commissioningId));
+                    if (c.status !== "aborted") throw new Error(`commissioning ${c.id} is ${c.status}: only an aborted one is reopened`);
+                    c.attempts = [...(c.attempts ?? []), { procedureId: c.procedure?.procedureId ?? "", taskId: c.procedure?.taskId ?? "", aborted: c.report?.aborted ?? null, minutes: c.run?.steps.reduce((m, s) => m + (Number((s as { minutes?: number }).minutes) || 0), 0) ?? 0, reopenedAt: new Date().toISOString(), reason: str(reason) || "the commander asked for another procedure" }];
+                    c.status = "open";
+                    c.procedure = null;
+                    c.authorisation = null;
+                    c.monitoring = null;
+                    c.run = null;
+                    c.report = null;
+                    say("mother.commissioning.reopened", c, () => ({ attempt: (c.attempts?.length ?? 0) + 1 }));
+                    announce(c);
+                    return { commissioning: c };
+                },
             },
             {
                 name: "procedure_checked",

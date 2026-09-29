@@ -42,7 +42,14 @@ export interface Subject {
     band?: Band;
 }
 
-export type SubjectStatus = "nominal" | "out-of-band" | "signal-lost" | "no-signal-yet";
+export type SubjectStatus = "nominal" | "out-of-band" | "signal-lost" | "no-signal-yet" | "alarm";
+
+/** A critical health alarm raised for someone: by a person who saw it (the crew, the medical panel), whatever the heart rate says (2026-09-29). */
+export interface Alarm {
+    what: string;
+    by: string;
+    at: string;
+}
 
 export interface SubjectState {
     subjectId: string;
@@ -56,6 +63,8 @@ export interface SubjectState {
     at: string | null;
     source: string | null;
     status: SubjectStatus;
+    /** A critical health alarm raised for this person and not cleared: it stops a test that exposes them. */
+    alarm?: Alarm | null;
     /** How long the status has held, in seconds; what a sustained-breach rule reads. */
     forSeconds: number;
     samples: number;
@@ -109,6 +118,7 @@ export class CrewService {
     private readonly since = new Map<string, number>();
     private session: Session | null = null;
     private provider: HeartRateProvider | null = null;
+    private readonly alarms = new Map<string, Alarm>();
 
     constructor(
         roster: Subject[],
@@ -138,7 +148,7 @@ export class CrewService {
     }
 
     /** Who is where, without opening anything: what Mother reads before she asks the commander. */
-    presence(): Array<{ module: string; occupants: number; subjects: Array<{ id: string; callsign: string; name: string | null }> }> {
+    presence(): Array<{ module: string; occupants: number; subjects: Array<{ id: string; callsign: string; name: string | null; alarm: Alarm | null }> }> {
         const byModule = new Map<string, Subject[]>();
         for (const s of this.subjects.values()) {
             const list = byModule.get(s.module) ?? [];
@@ -146,7 +156,7 @@ export class CrewService {
             byModule.set(s.module, list);
         }
         return [...byModule.entries()]
-            .map(([module, list]) => ({ module, occupants: list.length, subjects: list.map((s) => ({ id: s.id, callsign: s.callsign, name: s.name ?? null })) }))
+            .map(([module, list]) => ({ module, occupants: list.length, subjects: list.map((s) => ({ id: s.id, callsign: s.callsign, name: s.name ?? null, alarm: this.alarms.get(s.id) ?? null })) }))
             .sort((a, b) => a.module.localeCompare(b.module));
     }
 
@@ -239,7 +249,8 @@ export class CrewService {
                 this.since.set(state.subjectId, now);
                 this.record(state.subjectId, "signal-lost", state.bpm, `no reading for ${Math.round(silentFor)} s`);
             }
-            out.push({ ...state, forSeconds: Math.max(0, Math.round((now - (this.since.get(state.subjectId) ?? now)) / 1000)) });
+            const alarm = this.alarms.get(state.subjectId) ?? null;
+            out.push({ ...state, ...(alarm ? { status: "alarm" as const, alarm } : { alarm: null }), forSeconds: Math.max(0, Math.round((now - (this.since.get(state.subjectId) ?? now)) / 1000)) });
         }
         return out;
     }
@@ -256,6 +267,9 @@ export class CrewService {
      */
     verdict(now: number = Date.now()): Verdict {
         if (!this.session) return { abort: false, reason: "no monitoring session is open" };
+        // A critical alarm on anyone the test exposes, first: a person said so, whatever the rate reads.
+        const exposed = new Set([...this.session.subjectIds, ...this.occupantsOf(this.session.modules).map((s) => s.id)]);
+        for (const [id, alarm] of this.alarms) if (exposed.has(id)) return { abort: true, reason: `${this.require(id).callsign}: critical health alarm: ${alarm.what}` };
         for (const s of this.state(now)) {
             if (s.status === "out-of-band" && s.forSeconds >= this.sustainedBreachSeconds) return { abort: true, reason: `${s.callsign}: ${s.bpm} bpm outside ${s.band.minBpm} to ${s.band.maxBpm} for ${s.forSeconds} s` };
             if (s.status === "signal-lost") return { abort: true, reason: `${s.callsign}: medical monitoring lost for ${s.forSeconds} s` };
@@ -264,6 +278,28 @@ export class CrewService {
         const intruder = this.occupantsOf(this.session.modules).find((s) => !watched.has(s.id));
         if (intruder) return { abort: true, reason: `${intruder.callsign} entered ${intruder.module}, which is under test and was authorised for ${this.session.subjectIds.length} occupant(s)` };
         return { abort: false, reason: "all monitored subjects nominal" };
+    }
+
+    /** A critical health alarm for someone, raised by a person; recorded in the open session, read by the verdict until it is cleared. */
+    raiseAlarm(subjectId: string, what: string, by: string): Alarm {
+        const subject = this.require(subjectId);
+        const alarm: Alarm = { what: what.trim() || "critical health alarm", by: by.trim() || "the crew", at: new Date().toISOString() };
+        this.alarms.set(subject.id, alarm);
+        this.record(subject.id, "alarm", null, `critical health alarm: ${alarm.what} (raised by ${alarm.by})`);
+        return alarm;
+    }
+
+    /** The alarm cleared: the person is safe, by someone who says so. */
+    clearAlarm(subjectId: string): Alarm | null {
+        const subject = this.require(subjectId);
+        const was = this.alarms.get(subject.id) ?? null;
+        this.alarms.delete(subject.id);
+        return was;
+    }
+
+    /** The alarms raised and not cleared, by subject. */
+    get raised(): Array<{ subjectId: string; callsign: string; module: string } & Alarm> {
+        return [...this.alarms].map(([id, a]) => ({ subjectId: id, callsign: this.require(id).callsign, module: this.require(id).module, ...a }));
     }
 
     /** Moves someone between modules: the roster is the demo's presence sensor until there is one. */

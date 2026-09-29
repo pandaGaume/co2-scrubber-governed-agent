@@ -23,6 +23,14 @@
         },
         "move": {
             "description": "Put a subject in a module. The scenario uses it to walk a third person into a volume under test."
+        },
+        "alarm": {
+            "title": "Raise a critical health alarm",
+            "description": "A critical health alarm for one person, raised by someone who saw it. It stays until cleared: a test that exposes the person stops, and no procedure may expose them meanwhile."
+        },
+        "alarm_clear": {
+            "title": "Clear a health alarm",
+            "description": "The person is safe: the alarm is cleared by someone who says so."
         }
     }
 }

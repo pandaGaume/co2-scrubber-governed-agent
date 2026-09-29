@@ -198,6 +198,8 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
     };
     const summary = (s: TaskStatus) => ({ state: s.state, ended: s.manifest?.ended ?? null, steps: s.manifest?.steps?.length ?? 0, builder: s.run?.builder ?? null, tools: [...new Set((s.manifest?.steps ?? []).map((x) => x.capability).filter(Boolean))] }) as JsonValue;
     const builder = run.options.builder;
+    // How many times an aborted test is written again before the commissioning ends.
+    const MAX_RECOVERIES = 2;
     let fresh = false;
     try {
         narrate(`Scenario: ${doc.title}. I will tell you where we are.`);
@@ -228,125 +230,164 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
         const world = new TwoZoneWorldSim(run.options.world === "hidden-occupant" ? { ...LAB_WORLD, labOccupants: 3 } : LAB_WORLD);
         await call("scrubber", "debug.set_co2", { state: "NOMINAL", ppm: Math.round(world.labPpm) });
         const sensor = devices.find((d) => d.descriptor["@type"] === "Co2Sensor" && /\/lab\//.test(d.path))?.path ?? null;
-        const measured = { co2Ppm: Math.round(world.labPpm), source: sensor ? `${sensor} (co2)` : "scrubber.motor.state", at: new Date().toISOString() };
+        let measured = { co2Ppm: Math.round(world.labPpm), source: sensor ? `${sensor} (co2)` : "scrubber.motor.state", at: new Date().toISOString() };
         if (sensor) await call("station", "registry_report", { path: sensor, readings: { co2: measured.co2Ppm } }).catch(() => undefined);
 
-        // 2. the procedure factory.
-        begin(2, builder === "scripted" ? "the script stands in for the model" : undefined);
-        loop(2).nature = builder === "scripted" ? "script" : "model";
-        const reqP = await call<{ taskId: string; builder: string }>("factory", "request", { objective: { required_outputs: [doc.procedure.requiredOutput] }, observations: { device: scrubberPath, measured }, topics: ["procedure"], builder, budget: doc.procedure.budget, requestedBy: "scenario" });
-        loop(2).taskId = reqP.taskId;
-        run.tasks.push(reqP.taskId);
-        notify();
-        narrate(`The procedure factory is writing the test for the scrubber: ${builder === "scripted" ? "the script" : "a model"} at work, the harness checking each step.`);
-        let p = await taskEnded(reqP.taskId, "The procedure factory");
-        // A procedure refused because its safety limits cite unsigned documents: Mother asks the commander to sign each, then the factory writes again (2026-09-28, the signature's demonstration).
-        // The documents are the safety card when it is unsigned, and every one the task's refusals and its end named as unsigned (a model may cite the scrubber's datasheet): up to three rounds.
-        const unsignedOf = async (s: TaskStatus): Promise<string[]> => {
-            const steps = (s.manifest?.steps ?? []) as Array<{ reason?: string | null }>;
-            const text = [...steps.map((x) => String(x.reason ?? "")), String(s.manifest?.ended ?? "")].join("\n");
-            const named = new Set<string>([card, ...[...text.matchAll(/(?:is|are) in "([^"]+)", which no person has signed/g)].map((m) => m[1])]);
-            const out: string[] = [];
-            for (const id of named) {
-                const f = await call<{ facts: Array<{ signed?: { valid: boolean } | null }> }>("library", "facts", { id }).catch(() => ({ facts: [] }));
-                if (f.facts.length > 0 && !f.facts[0].signed?.valid) out.push(id);
+        // Steps 2 to 5, once, and again after an aborted test when the commander asks for another (2026-09-29: recovery after an abort):
+        // the factory is told what stopped the last test (observations.previous), the commissioning reopened, the world where the abort left it.
+        let previous: Record<string, unknown> | null = null;
+        let executed!: Awaited<ReturnType<typeof runProcedure>>;
+        let telemetry: TelemetryRow[] = [];
+        for (let attempt = 1; ; attempt++) {
+            // 2. the procedure factory.
+            begin(2, builder === "scripted" ? "the script stands in for the model" : undefined);
+            loop(2).nature = builder === "scripted" ? "script" : "model";
+            const reqP = await call<{ taskId: string; builder: string }>("factory", "request", { objective: { required_outputs: [doc.procedure.requiredOutput] }, observations: { device: scrubberPath, measured, ...(previous ? { previous } : {}) }, topics: ["procedure"], builder, budget: doc.procedure.budget, requestedBy: "scenario" });
+            loop(2).taskId = reqP.taskId;
+            run.tasks.push(reqP.taskId);
+            notify();
+            narrate(`The procedure factory is writing the test for the scrubber: ${builder === "scripted" ? "the script" : "a model"} at work, the harness checking each step.`);
+            let p = await taskEnded(reqP.taskId, "The procedure factory");
+            // A procedure refused because its safety limits cite unsigned documents: Mother asks the commander to sign each, then the factory writes again (2026-09-28, the signature's demonstration).
+            // The documents are the safety card when it is unsigned, and every one the task's refusals and its end named as unsigned (a model may cite the scrubber's datasheet): up to three rounds.
+            const unsignedOf = async (s: TaskStatus): Promise<string[]> => {
+                const steps = (s.manifest?.steps ?? []) as Array<{ reason?: string | null }>;
+                const text = [...steps.map((x) => String(x.reason ?? "")), String(s.manifest?.ended ?? "")].join("\n");
+                const named = new Set<string>([card, ...[...text.matchAll(/(?:is|are) in "([^"]+)", which no person has signed/g)].map((m) => m[1])]);
+                const out: string[] = [];
+                for (const id of named) {
+                    const f = await call<{ facts: Array<{ signed?: { valid: boolean } | null }> }>("library", "facts", { id }).catch(() => ({ facts: [] }));
+                    if (f.facts.length > 0 && !f.facts[0].signed?.valid) out.push(id);
+                }
+                return out;
+            };
+            const askToSign = async (id: string): Promise<void> => {
+                const facts = (await call<{ facts: Array<{ id: string; value: number; unit: string; bound?: string; kind?: string; reference?: string; says?: string }> }>("library", "facts", { id })).facts;
+                narrate(`The procedure factory could not justify its safety limits: the document ${id} is not signed. Commander, review it in my chat and sign it, or not.`);
+                const asked = await call<{ questionId: string }>("station", "ask", {
+                    from: "scenario",
+                    kind: "sign",
+                    question: `The document ${id} is not signed: no procedure's safety limits can be justified by it. Review its values and sign it as valid?`,
+                    options: [{ id: "sign", label: "sign it as valid" }, { id: "not-now", label: "not now" }],
+                    context: { document: id, facts: facts.map((f) => ({ id: f.id, value: f.value, unit: f.unit, bound: f.bound ?? null, kind: f.kind ?? null, reference: f.reference ?? null, says: f.says ?? null })) },
+                    resume: { slot: "library", tool: "sign", args: { id } },
+                });
+                wait(2, `the commander's signature of ${id} (Mother's question in her chat)`);
+                const t0 = Date.now();
+                for (;;) {
+                    const f = await call<{ facts: Array<{ signed?: { valid: boolean } | null }> }>("library", "facts", { id }).catch(() => ({ facts: [] }));
+                    if (f.facts[0]?.signed?.valid) break;
+                    const read = await (await operator.session("station")).request<{ contents: Array<{ text: string }> }>("resources/read", { uri: "station://questions" });
+                    const mine = (JSON.parse(read.contents[0].text) as Array<{ id: string; status: string; answer?: { choice?: string } | null }>).find((x) => x.id === asked.questionId);
+                    if (mine && mine.status !== "open" && mine.answer?.choice !== "sign") throw new Error(`the commander did not sign ${id}: no procedure can pass`);
+                    if (Date.now() - t0 > waitMs) throw new Error(`the commander did not decide on ${id} in ${waitMs} ms`);
+                    await sleep(1000);
+                }
+                narrate(`The document ${id} is signed.`);
+            };
+            for (let round = 0; round < 3 && p.state !== "proposed"; round++) {
+                const documents = await unsignedOf(p);
+                if (!documents.length) break;
+                for (const id of documents) await askToSign(id);
+                narrate("The procedure factory writes the test again.");
+                loop(2).status = "running";
+                loop(2).waitingFor = undefined;
+                notify();
+                const again = await call<{ taskId: string; builder: string }>("factory", "request", { objective: { required_outputs: [doc.procedure.requiredOutput] }, observations: { device: scrubberPath, measured, ...(previous ? { previous } : {}) }, topics: ["procedure"], builder, budget: doc.procedure.budget, requestedBy: "scenario" });
+                loop(2).taskId = again.taskId;
+                run.tasks.push(again.taskId);
+                notify();
+                p = await taskEnded(again.taskId, "The procedure factory");
             }
-            return out;
-        };
-        const askToSign = async (id: string): Promise<void> => {
-            const facts = (await call<{ facts: Array<{ id: string; value: number; unit: string; bound?: string; kind?: string; reference?: string; says?: string }> }>("library", "facts", { id })).facts;
-            narrate(`The procedure factory could not justify its safety limits: the document ${id} is not signed. Commander, review it in my chat and sign it, or not.`);
-            const asked = await call<{ questionId: string }>("station", "ask", {
-                from: "scenario",
-                kind: "sign",
-                question: `The document ${id} is not signed: no procedure's safety limits can be justified by it. Review its values and sign it as valid?`,
-                options: [{ id: "sign", label: "sign it as valid" }, { id: "not-now", label: "not now" }],
-                context: { document: id, facts: facts.map((f) => ({ id: f.id, value: f.value, unit: f.unit, bound: f.bound ?? null, kind: f.kind ?? null, reference: f.reference ?? null, says: f.says ?? null })) },
-                resume: { slot: "library", tool: "sign", args: { id } },
-            });
-            wait(2, `the commander's signature of ${id} (Mother's question in her chat)`);
+            end(2, summary(p));
+            if (p.state !== "proposed") throw new Error(`the procedure factory ended ${p.state}: ${p.manifest?.ended ?? ""}`);
+
+            // 3. the relay: Mother re-checked the proposed procedure with the occupancy she reads; the commissioning waits for the commander.
+            begin(3);
+            const c1 = await call<{ commissioning: { status: string; procedure: { procedureId: string; minutes: number; occupants: unknown[] } | null } }>("station", "commissioning_state", { commissioningId });
+            end(3, { status: c1.commissioning.status, procedure: c1.commissioning.procedure?.procedureId ?? null, minutes: c1.commissioning.procedure?.minutes ?? null, occupants: c1.commissioning.procedure?.occupants.length ?? 0 } as JsonValue);
+            if (c1.commissioning.status !== "awaiting-authorisation") throw new Error(`commissioning ${commissioningId} is ${c1.commissioning.status}: Mother did not relay the procedure`);
+
+            // 4. the commander authorises, in Mother's chat; the player waits.
+            begin(4);
+            wait(4, `station.commissioning_authorise on ${commissioningId} (Mother's question in her chat)`);
+            log(`[scenario] ${run.id}: waiting for the commander's authorisation of ${commissioningId}`);
             const t0 = Date.now();
-            for (;;) {
-                const f = await call<{ facts: Array<{ signed?: { valid: boolean } | null }> }>("library", "facts", { id }).catch(() => ({ facts: [] }));
-                if (f.facts[0]?.signed?.valid) break;
+            let status = c1.commissioning.status;
+            let monitoring: JsonValue = null;
+            while (status === "awaiting-authorisation") {
+                if (Date.now() - t0 > waitMs) throw new Error(`the commander did not decide in ${waitMs} ms`);
+                await sleep(1000);
+                const c = await call<{ commissioning: { status: string; authorisation?: { decision: string; by: string } | null; monitoring?: JsonValue } }>("station", "commissioning_state", { commissioningId });
+                status = c.commissioning.status;
+                monitoring = c.commissioning.monitoring ?? null;
+                if (status !== "awaiting-authorisation") end(4, { status, by: c.commissioning.authorisation?.by ?? null, monitoring } as JsonValue, `${c.commissioning.authorisation?.decision ?? status} by ${c.commissioning.authorisation?.by ?? "?"}`);
+            }
+            if (status !== "authorised") throw new Error(`the commander refused: the commissioning is ${status}`);
+
+            // 5. the execution on the stand-in world.
+            begin(5);
+            telemetry = [];
+            const speedNow = async () => (await call<{ speedPercent: number }>("scrubber", "motor.state")).speedPercent;
+            await call("scrubber", "debug.set_co2", { state: "NOMINAL", ppm: Math.round(world.labPpm) });
+            telemetry.push(world.row(await speedNow()));
+            // The test is played at a pace a room can follow (2026-09-28: sixty minutes in one second closed the medical monitoring as it opened, with two samples per person);
+            // the monitoring the authorisation opened stays open until the test ends, and Mother says where the CO2 stands every ten minutes of the station's clock.
+            const secondsPerMinute = Number(process.env.SCENARIO_SECONDS_PER_MINUTE ?? doc.execution?.secondsPerMinute ?? 2);
+            const planned = c1.commissioning.procedure?.minutes ?? null;
+            if (secondsPerMinute > 0) narrate(`The test starts${planned ? `: ${planned} minutes on the station's clock` : ""}, played at one minute every ${secondsPerMinute} seconds. The medical monitoring stays open until it ends.`);
+            let minute = 0;
+            executed = await runProcedure({
+                broker: agent,
+                commissioningId,
+                waitMinute: async () => {
+                    // The station keeps the test's clock: where it is on the station's time, and at what pace.
+                    const tick = (m: number) => void operator.call("station", "procedure_run", { commissioningId, action: "clock", minute: m, secondsPerMinute, ...(planned ? { planned } : {}) }).catch(() => undefined);
+                    if (minute === 0) tick(0);
+                    if (secondsPerMinute > 0) await sleep(secondsPerMinute * 1000);
+                    const speed = await speedNow();
+                    world.step(speed);
+                    await call("scrubber", "debug.set_co2", { state: "NOMINAL", ppm: Math.round(world.labPpm) });
+                    telemetry.push(world.row(speed));
+                    minute++;
+                    tick(minute);
+                    if (secondsPerMinute > 0 && minute % 10 === 0) narrate(`Minute ${minute}${planned ? ` of ${planned}` : ""}: the Lab's CO2 at ${Math.round(world.labPpm)} ppm, the scrubber at ${speed} percent.`);
+                },
+            });
+            end(5, { steps: executed.report?.steps?.length ?? 0, minutes: telemetry.length - 1, aborted: (executed as { aborted?: unknown }).aborted ?? null } as JsonValue);
+            if (executed.status !== "aborted") break;
+
+            // Recovery: the test stopped. The commander says, once what stopped it is dealt with (the alarm cleared, the module safe), whether the factory writes another.
+            const aborted = (executed.aborted ?? null) as { condition?: string; reason?: string; step?: number } | null;
+            const why = aborted?.reason ?? aborted?.condition ?? "an abort condition";
+            if (attempt > MAX_RECOVERIES) throw new Error(`the test was aborted ${attempt} times; the last time: ${why}`);
+            narrate(`The test stopped: ${why}. Commander, when what stopped it is dealt with, tell me in my chat whether the procedure factory writes a new test.`);
+            const asked = await call<{ questionId: string; status: string; answer?: { choice?: string } | null }>("station", "ask", {
+                from: "scenario",
+                kind: "recover",
+                question: `The test was aborted: ${why}. When it is dealt with (the alarm cleared, the module safe), shall the procedure factory write a new test that accounts for it?`,
+                options: [{ id: "rewrite", label: "write a new test" }, { id: "stop", label: "stop the commissioning" }],
+                context: { commissioningId, aborted },
+            });
+            wait(5, "the commander's decision after the abort (Mother's question in her chat)");
+            let choice = asked.status === "auto" ? (asked.answer?.choice ?? null) : null;
+            const tAsk = Date.now();
+            while (!choice) {
+                if (Date.now() - tAsk > waitMs) throw new Error(`the commander did not decide after the abort in ${waitMs} ms`);
+                await sleep(1000);
                 const read = await (await operator.session("station")).request<{ contents: Array<{ text: string }> }>("resources/read", { uri: "station://questions" });
                 const mine = (JSON.parse(read.contents[0].text) as Array<{ id: string; status: string; answer?: { choice?: string } | null }>).find((x) => x.id === asked.questionId);
-                if (mine && mine.status !== "open" && mine.answer?.choice !== "sign") throw new Error(`the commander did not sign ${id}: no procedure can pass`);
-                if (Date.now() - t0 > waitMs) throw new Error(`the commander did not decide on ${id} in ${waitMs} ms`);
-                await sleep(1000);
+                if (mine && mine.status !== "open") choice = mine.answer?.choice ?? "stop";
             }
-            narrate(`The document ${id} is signed.`);
-        };
-        for (let round = 0; round < 3 && p.state !== "proposed"; round++) {
-            const documents = await unsignedOf(p);
-            if (!documents.length) break;
-            for (const id of documents) await askToSign(id);
-            narrate("The procedure factory writes the test again.");
-            loop(2).status = "running";
-            loop(2).waitingFor = undefined;
-            notify();
-            const again = await call<{ taskId: string; builder: string }>("factory", "request", { objective: { required_outputs: [doc.procedure.requiredOutput] }, observations: { device: scrubberPath, measured }, topics: ["procedure"], builder, budget: doc.procedure.budget, requestedBy: "scenario" });
-            loop(2).taskId = again.taskId;
-            run.tasks.push(again.taskId);
-            notify();
-            p = await taskEnded(again.taskId, "The procedure factory");
+            if (choice !== "rewrite") throw new Error(`the commander stopped the commissioning after the abort: ${why}`);
+            await call("station", "commissioning_reopen", { commissioningId, reason: `aborted: ${why}` });
+            previous = { procedureId: c1.commissioning.procedure?.procedureId ?? null, aborted: { condition: aborted?.condition ?? null, reason: why, step: aborted?.step ?? null }, minutesRun: telemetry.length - 1 };
+            // The world where the abort left it: the next test starts from the CO2 measured now.
+            await call("scrubber", "debug.set_co2", { state: "NOMINAL", ppm: Math.round(world.labPpm) });
+            measured = { co2Ppm: Math.round(world.labPpm), source: sensor ? `${sensor} (co2)` : "scrubber.motor.state", at: new Date().toISOString() };
+            if (sensor) await call("station", "registry_report", { path: sensor, readings: { co2: measured.co2Ppm } }).catch(() => undefined);
+            narrate("The procedure factory writes a new test, told what stopped the last one.");
         }
-        end(2, summary(p));
-        if (p.state !== "proposed") throw new Error(`the procedure factory ended ${p.state}: ${p.manifest?.ended ?? ""}`);
-
-        // 3. the relay: Mother re-checked the proposed procedure with the occupancy she reads; the commissioning waits for the commander.
-        begin(3);
-        const c1 = await call<{ commissioning: { status: string; procedure: { procedureId: string; minutes: number; occupants: unknown[] } | null } }>("station", "commissioning_state", { commissioningId });
-        end(3, { status: c1.commissioning.status, procedure: c1.commissioning.procedure?.procedureId ?? null, minutes: c1.commissioning.procedure?.minutes ?? null, occupants: c1.commissioning.procedure?.occupants.length ?? 0 } as JsonValue);
-        if (c1.commissioning.status !== "awaiting-authorisation") throw new Error(`commissioning ${commissioningId} is ${c1.commissioning.status}: Mother did not relay the procedure`);
-
-        // 4. the commander authorises, in Mother's chat; the player waits.
-        begin(4);
-        wait(4, `station.commissioning_authorise on ${commissioningId} (Mother's question in her chat)`);
-        log(`[scenario] ${run.id}: waiting for the commander's authorisation of ${commissioningId}`);
-        const t0 = Date.now();
-        let status = c1.commissioning.status;
-        let monitoring: JsonValue = null;
-        while (status === "awaiting-authorisation") {
-            if (Date.now() - t0 > waitMs) throw new Error(`the commander did not decide in ${waitMs} ms`);
-            await sleep(1000);
-            const c = await call<{ commissioning: { status: string; authorisation?: { decision: string; by: string } | null; monitoring?: JsonValue } }>("station", "commissioning_state", { commissioningId });
-            status = c.commissioning.status;
-            monitoring = c.commissioning.monitoring ?? null;
-            if (status !== "awaiting-authorisation") end(4, { status, by: c.commissioning.authorisation?.by ?? null, monitoring } as JsonValue, `${c.commissioning.authorisation?.decision ?? status} by ${c.commissioning.authorisation?.by ?? "?"}`);
-        }
-        if (status !== "authorised") throw new Error(`the commander refused: the commissioning is ${status}`);
-
-        // 5. the execution on the stand-in world.
-        begin(5);
-        const telemetry: TelemetryRow[] = [];
-        const speedNow = async () => (await call<{ speedPercent: number }>("scrubber", "motor.state")).speedPercent;
-        await call("scrubber", "debug.set_co2", { state: "NOMINAL", ppm: Math.round(world.labPpm) });
-        telemetry.push(world.row(await speedNow()));
-        // The test is played at a pace a room can follow (2026-09-28: sixty minutes in one second closed the medical monitoring as it opened, with two samples per person);
-        // the monitoring the authorisation opened stays open until the test ends, and Mother says where the CO2 stands every ten minutes of the station's clock.
-        const secondsPerMinute = Number(process.env.SCENARIO_SECONDS_PER_MINUTE ?? doc.execution?.secondsPerMinute ?? 2);
-        const planned = c1.commissioning.procedure?.minutes ?? null;
-        if (secondsPerMinute > 0) narrate(`The test starts${planned ? `: ${planned} minutes on the station's clock` : ""}, played at one minute every ${secondsPerMinute} seconds. The medical monitoring stays open until it ends.`);
-        let minute = 0;
-        const executed = await runProcedure({
-            broker: agent,
-            commissioningId,
-            waitMinute: async () => {
-                // The station keeps the test's clock: where it is on the station's time, and at what pace.
-                const tick = (m: number) => void operator.call("station", "procedure_run", { commissioningId, action: "clock", minute: m, secondsPerMinute, ...(planned ? { planned } : {}) }).catch(() => undefined);
-                if (minute === 0) tick(0);
-                if (secondsPerMinute > 0) await sleep(secondsPerMinute * 1000);
-                const speed = await speedNow();
-                world.step(speed);
-                await call("scrubber", "debug.set_co2", { state: "NOMINAL", ppm: Math.round(world.labPpm) });
-                telemetry.push(world.row(speed));
-                minute++;
-                tick(minute);
-                if (secondsPerMinute > 0 && minute % 10 === 0) narrate(`Minute ${minute}${planned ? ` of ${planned}` : ""}: the Lab's CO2 at ${Math.round(world.labPpm)} ppm, the scrubber at ${speed} percent.`);
-            },
-        });
-        end(5, { steps: executed.report?.steps?.length ?? 0, minutes: telemetry.length - 1, aborted: (executed as { aborted?: unknown }).aborted ?? null } as JsonValue);
 
         // 6. the report.
         begin(6);
