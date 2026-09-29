@@ -90,6 +90,7 @@
         "battery": "station.registry_list: the battery's state of charge under threshold percent (the card's minimum when absent)",
         "vitals": "biomed.verdict: a monitored person out of their band, the monitoring lost, or one more person in the volume under test"
     },
+    "playbook": "specs/procedure/playbook.json",
     "history": "previous",
     "analysis": {
         "schema": "specs/procedure/analysis.schema.json",

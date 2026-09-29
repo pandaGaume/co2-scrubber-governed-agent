@@ -1,0 +1,64 @@
+{
+    "title": "The procedure factory's conduct, step by step: its stages, and what it refuses while a stage is not passed (harness/core/conduct.ts)",
+    "nodes": [
+        { "id": "start", "type": "conduct.start" },
+
+        { "id": "accepted", "type": "conduct.evidence", "bag": { "evidence": "procedureAccepted" } },
+        { "id": "installation-read", "type": "conduct.evidence", "bag": { "evidence": "installationRead" } },
+        { "id": "method-read", "type": "conduct.evidence", "bag": { "evidence": "methodRead" } },
+        { "id": "plan-phase", "type": "conduct.evidence", "bag": { "evidence": "planPhase" } },
+        { "id": "aborted-before", "type": "conduct.evidence", "bag": { "evidence": "previous" } },
+        { "id": "analysis-accepted", "type": "conduct.evidence", "bag": { "evidence": "analysisAccepted" } },
+
+        { "id": "not-accepted", "type": "conduct.not" },
+        { "id": "not-installation-read", "type": "conduct.not" },
+        { "id": "not-method-read", "type": "conduct.not" },
+        { "id": "plan-done", "type": "conduct.not" },
+        { "id": "first-test", "type": "conduct.not" },
+        { "id": "not-analysed", "type": "conduct.not" },
+        { "id": "analysis-passes", "type": "conduct.any" },
+        { "id": "analysis-owed", "type": "conduct.all" },
+
+        { "id": "hand-over", "type": "conduct.stage", "bag": { "says": "brief.handOver", "view": "accepted" } },
+        { "id": "situation", "type": "conduct.stage", "bag": { "says": "brief.situation" } },
+        { "id": "method", "type": "conduct.stage", "bag": { "says": "brief.method", "view": "method" } },
+        { "id": "plan", "type": "conduct.stage", "bag": { "says": "brief.plan", "view": "plan" } },
+        { "id": "analysis", "type": "conduct.stage", "bag": { "says": "brief.analysis", "view": "aborted" } },
+        { "id": "procedure", "type": "conduct.stage", "bag": { "says": "brief.procedure", "view": "procedure" } },
+
+        { "id": "plan-needs-installation", "type": "conduct.gate", "bag": { "capabilities": ["task.plan"], "says": "requirements.missing", "vars": { "requirement": "installationRead", "how": { "word": "requirements.installationRead" } } } },
+        { "id": "plan-needs-method", "type": "conduct.gate", "bag": { "capabilities": ["task.plan"], "says": "requirements.missing", "vars": { "requirement": "methodRead", "how": { "word": "requirements.methodRead" } } } },
+        { "id": "analysis-first", "type": "conduct.gate", "bag": { "capabilities": ["procedure.submit", "procedure.revise"], "says": "analysis.first", "view": "stopped" } },
+        { "id": "already-accepted", "type": "conduct.gate", "bag": { "capabilities": ["procedure.submit", "procedure.revise"], "says": "draft.accepted", "view": "accepted" } }
+    ],
+    "links": [
+        { "from": "accepted.value", "to": "not-accepted.in" },
+        { "from": "installation-read.value", "to": "not-installation-read.in" },
+        { "from": "method-read.value", "to": "not-method-read.in" },
+        { "from": "plan-phase.value", "to": "plan-done.in" },
+        { "from": "aborted-before.value", "to": "first-test.in" },
+        { "from": "analysis-accepted.value", "to": "not-analysed.in" },
+        { "from": "first-test.value", "to": "analysis-passes.in0" },
+        { "from": "analysis-accepted.value", "to": "analysis-passes.in1" },
+
+        { "from": "start.next", "to": "hand-over.entered" },
+        { "from": "not-accepted.value", "to": "hand-over.passes" },
+        { "from": "hand-over.next", "to": "situation.entered" },
+        { "from": "installation-read.value", "to": "situation.passes" },
+        { "from": "situation.next", "to": "method.entered" },
+        { "from": "method-read.value", "to": "method.passes" },
+        { "from": "method.next", "to": "plan.entered" },
+        { "from": "plan-done.value", "to": "plan.passes" },
+        { "from": "plan.next", "to": "analysis.entered" },
+        { "from": "analysis-passes.value", "to": "analysis.passes" },
+        { "from": "analysis.next", "to": "procedure.entered" },
+
+        { "from": "not-installation-read.value", "to": "plan-needs-installation.refuses" },
+        { "from": "not-method-read.value", "to": "plan-needs-method.refuses" },
+        { "from": "aborted-before.value", "to": "analysis-owed.in0" },
+        { "from": "not-analysed.value", "to": "analysis-owed.in1" },
+        { "from": "not-accepted.value", "to": "analysis-owed.in2" },
+        { "from": "analysis-owed.value", "to": "analysis-first.refuses" },
+        { "from": "accepted.value", "to": "already-accepted.refuses" }
+    ]
+}

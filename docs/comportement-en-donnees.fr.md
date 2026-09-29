@@ -26,23 +26,32 @@ Ce qui reste du code et décrit pourtant un comportement :
 
 Ce sont des règles de conduite, écrites en TypeScript parce que c'était le plus court. Elles peuvent devenir des données avec le même bénéfice que les règles de la garde : relues, signées, versionnées, et changées sans toucher au code.
 
-## 2. Le playbook : un graphe de conduite dans la bibliothèque
+## 2. Le playbook : un graphe qui conduit les graphes
 
-Un **playbook** est un graphe SpikyPanda, typé par l'ontologie du cœur, comme le graphe de connaissances des relations physiques :
+Un **playbook** est un graphe SpikyPanda **exécutable**, pas un document qu'un interpréteur parcourt : ses nœuds sont des nœuds du runtime du cœur (`RuntimeNode`), reliés par des canaux typés, et c'est le scheduler du cœur qui l'exécute, comme il exécute la boucle de décision en douze étapes. Il ne remplace pas cette boucle : il la conduit. La boucle décide d'un pas ; le playbook dit, à chaque pas, à quelle étape en est le travail, ce qui est dit au modèle, et ce qu'une étape refuse encore.
 
-| type | nœud ou lien | ce qu'il porte |
+**Il va vite.** Le playbook est le mécanisme qui fait tourner les harnais, pas une tâche longue. Il est évalué à chaque événement (un pas du runner, une issue de tâche, une réponse d'une personne), en une passe d'ordre topologique, en quelques dizaines de microsecondes. Entre deux événements, il ne tourne pas : il ne garde que sa position. Une durée longue (un essai de soixante minutes, une signature qui attend) appartient au monde, jamais au playbook ; le playbook se réveille quand le monde répond.
+
+**Ses nœuds**, typés par l'ontologie du cœur :
+
+| type | ports | ce qu'il fait |
 |---|---|---|
-| `conduct.stage` | nœud | une étape : ce que le modèle doit faire (une clé de `words.json`), les capacités qu'elle ouvre |
-| `conduct.requires` | lien étape → preuve | ce qui doit être vrai pour y entrer (une lecture faite, un plan déclaré, une analyse acceptée) |
-| `conduct.then` | lien étape → étape | l'étape suivante quand la précédente est tenue |
-| `conduct.onRefusal` | lien étape → étape | où va le travail après un refus (la même étape par défaut, avec la note de refus) |
-| `conduct.onAbort` | lien étape → étape | où va le travail quand l'exécution s'arrête (l'analyse, puis la proposition) |
-| `conduct.decidedBy` | lien étape → autorité | qui décide de passer : la garde, le commandant, une personne qui signe |
-| `conduct.bound` | nœud | un seuil du mécanisme (STUCK à 3, reprises à 2), avec sa raison |
+| `conduct.start` | sortie `next` | l'entrée du playbook |
+| `conduct.evidence` | sortie `value` | publie une preuve de l'événement (une lecture faite, un plan déclaré, une analyse acceptée, un arrêt précédent), lue dans ce que le runner a enregistré, jamais dans ce que le modèle affirme |
+| `conduct.not`, `conduct.all`, `conduct.any` | entrées, sortie `value` | combinent les preuves |
+| `conduct.stage` | entrées `entered`, `passes` ; sortie `next` | une étape : active quand on y est entré et qu'elle ne passe pas encore ; sinon elle passe la main à la suivante. Elle porte ce qu'elle dit au modèle (une clé de `words.json`) |
+| `conduct.gate` | entrée `refuses` | un refus de conduite : tant que sa condition tient, les capacités qu'il nomme sont refusées avec ses mots (par exemple, pas de nouvelle procédure avant l'analyse de l'arrêt) |
 
-Un **interpréteur** générique exécute le playbook comme le moteur de règles exécute `rules.json` aujourd'hui. Le brief d'une étape, les capacités ouvertes, la condition pour passer et la destination après un refus ou un arrêt sont lus dans le graphe. Les fonctions `briefOf` et `requirementsOf` deviennent un seul parcours de graphe, commun à toutes les usines. Le playbook est signé avec son document, et un playbook non signé ne conduit rien, comme des règles non signées ne jugent rien.
+Les étapes forment une chaîne : à chaque événement, une seule est active, et le runtime vérifie qu'il y en a exactement une. Ce qui reste du code dans une usine, ce sont les **capteurs** (les preuves, lues dans l'avancement de la tâche) et les **vues** (les trous des mots, remplis avec ce que la tâche a lu). L'enchaînement, lui, n'est plus que dans le graphe.
 
-**Le premier playbook porté** est la reprise après un arrêt (commit d79bb95), parce qu'elle vient d'être écrite en code et qu'elle est testée de bout en bout : arrêt, question au commandant, réouverture, analyse, proposition qui fait les changements, relais avec la cause. Le test de bout en bout reste le même ; seul l'endroit où la conduite est écrite change. C'est la preuve que la conduite en données fait la même chose que la conduite en code.
+**Deux niveaux**, le même mécanisme :
+
+1. **Le niveau du pas**, dans le runner : le playbook d'une usine remplace ses fonctions `briefOf` et, dans sa garde, les refus de conduite. Sa position n'a pas besoin d'être gardée : elle se déduit à chaque pas de l'avancement de la tâche, qui est déjà sa mémoire.
+2. **Le niveau du processus**, au-dessus des tâches : un playbook déclenché par les issues des tâches et par les réponses des personnes (un essai arrêté, la question `recover`, la réouverture, l'analyse, la nouvelle procédure, le relais avec la cause). Il remplace le lecteur de scénario et l'enchaînement des agents. Sa position est gardée entre deux événements, parce que les événements sont séparés par des heures de monde.
+
+**Où il vit, et qui le signe.** Tant qu'un playbook ne change que par un commit relu, il vit dans `specs/<usine>/playbook.json`, comme les mots et le format. Dès qu'une proposition peut le changer sans relecture de code (niveau 2 de la section 4), il passe dans la bibliothèque et se signe avec son document ; un playbook non signé ne conduit alors plus rien, comme des règles non signées ne jugent rien.
+
+**Le premier playbook porté** est celui de l'usine de procédures, au niveau du pas : les cinq étapes (situation, méthode, plan, analyse de l'arrêt, procédure, remise) et les refus de conduite (le plan sans ses lectures, la procédure avant l'analyse, une procédure après l'acceptation). La preuve est que les briefs et les refus sont les mêmes qu'avec le code, sur tous les tests existants, y compris la reprise de bout en bout. Le niveau du processus, avec la reprise après un arrêt, vient ensuite.
 
 ## 3. La forge écrit les nœuds qui manquent
 
@@ -84,7 +93,7 @@ La règle de ce dépôt ne change pas : **celui qui décide n'est pas celui qui 
 4. **Évaluer.** Les scénarios de référence sont rejoués sur la copie adaptée et sur l'originale, avec le même modèle, la même graine et le même monde : la mise en service nominale, l'occupant caché, la fuite, l'alarme critique. Le tableau compare le taux de réussite, les étapes, les refus, les jetons, la durée et les arrêts. **Toute violation de sécurité**, c'est-à-dire un essai qui expose une personne sous alarme ou une limite hors de la fiche, **disqualifie l'adaptation**, quel que soit le gain.
 5. **Rapporter.** Mother publie le rapport d'évaluation : l'adaptation, la trace qui l'a motivée, le tableau avant et après. C'est ce rapport qu'une personne lit avant de signer au niveau 3.
 
-**Ce que le mode apprentissage ne peut pas adapter, même dans la sandbox :** les règles de sécurité et les faits signés (un essai plus sûr passe par une proposition signée, jamais par une copie qui se relâche) ; les autorités (qui signe, qui autorise, qui rouvre) ; le code de la garde et de l'interpréteur ; la frontière de la sandbox. Un apprentissage qui pourrait s'accorder plus de liberté n'est plus mesurable.
+**Ce que le mode apprentissage ne peut pas adapter, même dans la sandbox :** les règles de sécurité et les faits signés (un essai plus sûr passe par une proposition signée, jamais par une copie qui se relâche) ; les autorités (qui signe, qui autorise, qui rouvre) ; le code de la garde et des nœuds de conduite ; la frontière de la sandbox. Un apprentissage qui pourrait s'accorder plus de liberté n'est plus mesurable.
 
 **Pourquoi c'est une bonne réponse à Houston.** C'est de la replanification et de la reprise autonomes, avec une mémoire des arrêts qui améliore la conduite d'une fois sur l'autre. Et c'est mesuré : chaque adaptation vient avec son évaluation, et aucune ne devient la conduite sans signature. Autrement dit, le système apprend de ses arrêts, et chaque changement de comportement passe par une signature humaine.
 
@@ -92,8 +101,9 @@ La règle de ce dépôt ne change pas : **celui qui décide n'est pas celui qui 
 
 | étape | contenu | s'appuie sur |
 |---|---|---|
-| P1 | l'ontologie `conduct.*`, le format du playbook, l'interpréteur générique ; le playbook de la procédure (les étapes et la reprise) porté depuis le code, le test de bout en bout inchangé | le graphe de connaissances (`slots/physics/knowledge.ts`), le moteur de règles |
-| P2 | les playbooks du graphe, du code et de l'onnx ; `briefOf` et `requirementsOf` retirés du code des usines | P1, les `specs/<usine>/` |
+| P1 | les nœuds `conduct.*` dans l'ontologie du cœur, le format du playbook, son exécution par le runtime ; le playbook de l'usine de procédures au niveau du pas (ses étapes, l'analyse d'un arrêt, ses refus de conduite), porté depuis le code, les tests inchangés | le runtime du cœur (`RuntimeGraphBuilder`, le scheduler), le graphe de connaissances (`slots/physics/knowledge.ts`) |
+| P1 bis | le niveau du processus : la reprise après un arrêt (arrêt, `recover`, réouverture, analyse, relais) en playbook, sa position gardée entre deux événements, à la place du lecteur de scénario | P1, `slots/scenario/commissioning.ts` |
+| P2 | les playbooks du graphe, du code et de l'onnx ; `briefOf` retiré du code des usines, qui ne gardent que leurs capteurs et leurs vues | P1, les `specs/<usine>/` |
 | P3 | la sandbox complète : copie de la bibliothèque et des specs par run, marque sandbox, test d'étanchéité | `signatures_scope`, `FACTORY_RECIPES_DIR` |
 | P4 | l'agent de réflexion : lecture des traces, propositions en diff, conformité sur la copie | `problems.ts` (les séries), les manifestes |
 | P5 | le banc d'évaluation : les scénarios de référence rejoués avant et après, le tableau, la disqualification par la sécurité, le rapport publié | le lecteur de scénario, le scorecard |

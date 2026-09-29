@@ -51,6 +51,8 @@ export interface ProcedureFormat extends ProposalFormat {
     notify?: { slot: string; tool: string };
     /** The scorecard: was `readBefore` read before the first submission, and was `asked` (a path) set on the first, or after a refusal of `kind`. */
     scorecard?: { readBefore: string; asked: { name: string; path: string; kind: string } };
+    /** The factory's conduct, step by step: its stages and its conduct refusals, as an executable graph (`harness/core/conduct.ts`). */
+    playbook: string;
     /** The observation that carries what stopped the last test of the same work, when one was aborted (2026-09-29). */
     history?: string;
     /** The analysis a stopped test calls for before any new proposal: its schema, and the workshop file it is kept in. */

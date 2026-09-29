@@ -10,9 +10,12 @@
  * (`specs/procedure/format.json`); every sentence it says to the model is a
  * template of `specs/procedure/words.json`; its prompt is
  * `specs/procedure/prompt.md`; its guard's rules are a signed library
- * document's (`check.ts`). What is left here is the mechanism: stages read
- * from the task's progress, a draft kept for a revision, the guard's call,
- * the accepted file written, the validator.
+ * document's (`check.ts`); its stages and its conduct refusals are its
+ * playbook's (`specs/procedure/playbook.json`, an executable graph run once
+ * per step, `harness/core/conduct.ts`). What is left here is the mechanism:
+ * the evidence the playbook reads and the views that fill its words, a draft
+ * kept for a revision, the guard's call, the accepted file written, the
+ * validator.
  *
  * Its tools are the spec's reads and two capabilities of its own,
  * `procedure.submit` and `procedure.revise`, the only way a proposal reaches
@@ -55,6 +58,7 @@ import { factsBounding, leavesOf, matches, valueAt, type RulesDocument } from ".
 import { loadWords, say, viewOf } from "../../core/words.js";
 import { problemOf } from "../../core/problems.js";
 import { physics } from "../../core/physics.js";
+import { loadPlaybook, sayingText, type Evidence } from "../../core/conduct.js";
 export { constantsOf } from "./check.js";
 
 /** A proposal as the topic handles it: whatever the format's schema describes; the topic reads it only by the format's paths. */
@@ -437,22 +441,14 @@ function analyseCapability(context: TopicContext): LocalCapability {
 }
 
 async function guardProcedure(capabilityId: string, input: JsonValue, context: TopicContext): Promise<string[]> {
-    if (capabilityId === "task.plan") {
-        const requirements = requirementsOf(context.progress);
-        return FORMAT.planRequires
-            .map((r) => `${r}Read`)
-            .filter((k) => !requirements[k])
-            .map((k) => w("requirements.missing", { requirement: k, how: w(`requirements.${k}`) }));
-    }
+    // The conduct refusals are the playbook's (a plan without its reads, a procedure before the analysis of an aborted
+    // test, a procedure after one was accepted); what follows is the checking of what was sent.
+    const refused = conductRefusals(capabilityId, context.progress, context.task);
+    if (refused.length || capabilityId === "task.plan") return refused;
     if (capabilityId === "procedure.analyse") return analysisProblems(input, previousOf(context.task));
     if (capabilityId !== "procedure.submit" && capabilityId !== "procedure.revise") return [];
     let procedure = (input ?? {}) as unknown as ProcedureLike;
-    // After an aborted test: first the analysis, then a proposal that makes its changes (2026-09-29: no test is sent back as it was).
     const previous = previousOf(context.task);
-    if (previous && !stateOf(context.progress).analysis && !stateOf(context.progress).accepted) return [w("analysis.first", { reason: [previous.aborted.condition, previous.aborted.reason].filter(Boolean).join(": ") })];
-    // A procedure already accepted is not revised nor submitted again: the task ends with it (2026-09-28: a revision sent after the acceptance was told that none had been checked yet).
-    const done = stateOf(context.progress).accepted;
-    if (done) return [w("draft.accepted", { path: done.path })];
     if (capabilityId === "procedure.revise") {
         const draft = draftOf(context.progress);
         if (!draft) return [w("draft.none", { minutes: draftMinutes() })];
@@ -585,39 +581,78 @@ function intentionOf(task: TaskFile["task"], generic: Intention): Intention {
 }
 
 /**
- * The harness's brief, stage by stage, from what the task has read and done: the situation, the method (found from
- * the quantity that is missing, in the library's method cards), the plan, the proposal, the hand-over. Every sentence
- * is the spec's; the stages are the mechanism's.
+ * The factory's conduct, step by step (2026-09-29, docs/comportement-en-donnees.fr.md, section 2): the playbook
+ * (`specs/procedure/playbook.json`), an executable graph the core's runtime runs once per step. What stays here is
+ * what it reads (the evidence, from what the runner recorded) and how its words are filled (the views).
  */
-export function briefOf(progress: Progress, task: TaskFile["task"]): string {
-    // Everything read here is written after a step completes (the runner's reads, the phase, the accepted file), never by the guard.
+export const PLAYBOOK = loadPlaybook(FORMAT.playbook);
+
+/** The proofs the playbook reads: the requirements of the state, whether a test of this work was aborted before, whether the runner is at the plan. */
+export function evidenceOf(progress: Progress, task: TaskFile["task"]): Evidence {
+    return { ...requirementsOf(progress, task), previous: previousOf(task) !== null, planPhase: progress.phase === "plan" };
+}
+
+/** The holes of the playbook's words, filled from what the task read and decided, by view. */
+function viewsOf(progress: Progress, task: TaskFile["task"]): Record<string, () => Record<string, string | number>> {
     const state = noteMethod(progress);
-    if (state.accepted) return w("brief.handOver", { path: state.accepted.path });
-    const requirements = requirementsOf(progress);
-    if (FORMAT.planRequires.filter((r) => r !== "method").some((r) => !requirements[`${r}Read`])) return w("brief.situation");
-    if (!state.method) {
-        const listed = methodsListed(progress);
-        const lastRead = readOf(progress, "card")?.value as { id?: string } | undefined;
-        const chosen = listed.length ? w("brief.methodListed", { listed: listed.map((id) => `"${id}"`).join(" and ") }) : w("brief.methodFind");
-        const notACard = typeof lastRead?.id === "string" && !listed.includes(lastRead.id) ? w("brief.methodNotACard", { id: lastRead.id }) : "";
-        return w("brief.method", { quantities: quantitiesOf(task), chosen, notACard });
-    }
-    const names = task.objective.required_outputs.map((o) => w("brief.planOutput", { name: o.name, quantity: o.quantity, unit: o.unit ? w("brief.planUnit", { unit: o.unit }) : "" })).join("; ");
-    if (progress.phase === "plan") return w("brief.plan", { method: state.method, names });
     // The refusal as the runner recorded it after the step, never the guard's own record: the guard writes while a decision
     // is checked, and an observation that moved between the decision and its execution makes the decision stale.
-    const refusal = (progress.refusals["procedure.revise"] ?? progress.refusals["procedure.submit"])?.reason ?? null;
-    const kept = draftOf(progress) !== null;
-    const refused = refusal ? w("brief.refused", { reason: refusal, what: w(kept ? "brief.refusedKept" : "brief.refusedWhole") }) : "";
-    // After an aborted test: the analysis first, said with what stopped it; once accepted, the changes the proposal must make.
-    const previous = previousOf(task);
-    if (previous && !state.analysis) return w("brief.analysis", { reason: previous.aborted.reason ?? "", condition: previous.aborted.condition ?? "?", step: typeof previous.aborted.step === "number" ? `, step ${previous.aborted.step}` : "", refused });
-    const analysed = state.analysis ? w("brief.analysed", { paths: state.analysis.changes.map((c) => c.path).join(", ") }) : "";
-    const presence = presenceOf(progress) ? w("brief.presenceRead") : w("brief.presenceUnread");
-    const measured = measuredOf(task);
-    const values = measured ? Object.entries(measured).filter(([, v]) => typeof v === "number").map(([k, v]) => `${k} ${Math.round((v as number) * 100) / 100}`) : [];
-    const start = values.length ? w("brief.measured", { values: values.join(", "), source: typeof measured?.source === "string" ? w("brief.measuredSource", { source: measured.source }) : "" }) : "";
-    return w("brief.procedure", { method: state.method, presence, start, refused }) + analysed;
+    const refused = (): string => {
+        const refusal = (progress.refusals["procedure.revise"] ?? progress.refusals["procedure.submit"])?.reason ?? null;
+        return refusal ? w("brief.refused", { reason: refusal, what: w(draftOf(progress) !== null ? "brief.refusedKept" : "brief.refusedWhole") }) : "";
+    };
+    return {
+        accepted: () => ({ path: state.accepted?.path ?? "" }),
+        method: () => {
+            const listed = methodsListed(progress);
+            const lastRead = readOf(progress, "card")?.value as { id?: string } | undefined;
+            const chosen = listed.length ? w("brief.methodListed", { listed: listed.map((id) => `"${id}"`).join(" and ") }) : w("brief.methodFind");
+            const notACard = typeof lastRead?.id === "string" && !listed.includes(lastRead.id) ? w("brief.methodNotACard", { id: lastRead.id }) : "";
+            return { quantities: quantitiesOf(task), chosen, notACard };
+        },
+        plan: () => ({ method: state.method ?? "", names: task.objective.required_outputs.map((o) => w("brief.planOutput", { name: o.name, quantity: o.quantity, unit: o.unit ? w("brief.planUnit", { unit: o.unit }) : "" })).join("; ") }),
+        // What stopped the last test, said with its condition and its step.
+        aborted: () => {
+            const previous = previousOf(task);
+            return {
+                reason: previous?.aborted.reason ?? "",
+                condition: previous?.aborted.condition ?? "?",
+                step: typeof previous?.aborted.step === "number" ? `, step ${previous.aborted.step}` : "",
+                refused: refused(),
+            };
+        },
+        // What stopped it, as one line: the condition, then the reason.
+        stopped: () => {
+            const previous = previousOf(task);
+            return { reason: [previous?.aborted.condition, previous?.aborted.reason].filter(Boolean).join(": ") };
+        },
+        procedure: () => {
+            const measured = measuredOf(task);
+            const values = measured ? Object.entries(measured).filter(([, v]) => typeof v === "number").map(([k, v]) => `${k} ${Math.round((v as number) * 100) / 100}`) : [];
+            return {
+                method: state.method ?? "",
+                presence: presenceOf(progress) ? w("brief.presenceRead") : w("brief.presenceUnread"),
+                start: values.length ? w("brief.measured", { values: values.join(", "), source: typeof measured?.source === "string" ? w("brief.measuredSource", { source: measured.source }) : "" }) : "",
+                refused: refused(),
+                // Once the analysis of an aborted test is accepted: the changes the proposal must make.
+                analysed: state.analysis ? w("brief.analysed", { paths: state.analysis.changes.map((c) => c.path).join(", ") }) : "",
+            };
+        },
+    };
+}
+
+/** The playbook's refusals of a capability at this step, said in the spec's words. */
+function conductRefusals(capabilityId: string, progress: Progress, task: TaskFile["task"]): string[] {
+    const views = viewsOf(progress, task);
+    return PLAYBOOK.evaluate(evidenceOf(progress, task))
+        .refusing.filter((g) => g.capabilities.includes(capabilityId))
+        .map((g) => sayingText(g, w, views));
+}
+
+/** The harness's brief: the stage the playbook is at, said with what the task has read and done. */
+export function briefOf(progress: Progress, task: TaskFile["task"]): string {
+    // Everything read here is written after a step completes (the runner's reads, the phase, the accepted file), never by the guard.
+    return sayingText(PLAYBOOK.evaluate(evidenceOf(progress, task)).stage, w, viewsOf(progress, task));
 }
 
 export const PROCEDURE_TOPIC: TopicDefinition = {
