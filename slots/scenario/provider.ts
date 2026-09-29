@@ -62,6 +62,13 @@ export interface ScenarioEntry {
 /** Where drafts wait. Never `specs/`: that directory holds what was reviewed. */
 const DRAFTS = path.join(WORKSHOP_ROOT, "scenarios");
 
+/** A playbook asked for at play time: one of the library only (library:<id>), whose signature the player checks; a file of the repository is the document's to name, reviewed with it. */
+function playbookOption(value: unknown): string {
+    const v = String(value ?? "").trim();
+    if (!/^library:[a-z0-9][a-z0-9-]{2,63}$/.test(v)) throw new Error(`playbook is library:<id>, a playbook of the library, not "${v}"`);
+    return v;
+}
+
 export type DraftState = "drafted" | "checked" | "accepted" | "rejected";
 
 export interface DraftRecord {
@@ -271,6 +278,7 @@ export function scenarioSlot(wsBase: string, log: (line: string) => void, option
                         builder: { type: "string", enum: ["reasoner", "scripted"], description: "the factories' builder: the model behind the reasoner slot (default), or the scripts (no key; then request is required)" },
                         request: { type: "object", description: "with builder scripted: the twin request the Observer would write, since no script stands in for the Observer" },
                         observations: { type: "object", description: "with builder scripted: observations added to the graph task (the scripts' hooks)" },
+                        playbook: { type: "string", description: "library:<id>: what follows each test is conducted by that playbook of the library instead of the document's, only once an authorised signatory signed it" },
                     },
                     ["id"],
                 ),
@@ -286,6 +294,7 @@ export function scenarioSlot(wsBase: string, log: (line: string) => void, option
                     const run = runOf(entry.id, entry.sha256, doc, state.runs.length + 1, builder, {
                         ...(args.request && typeof args.request === "object" ? { request: args.request as TwinFactoryRequest } : {}),
                         ...(args.observations && typeof args.observations === "object" ? { observations: args.observations as Record<string, unknown> } : {}),
+                        ...(typeof args.playbook === "string" && args.playbook ? { playbook: playbookOption(args.playbook) } : {}),
                     });
                     state.runs.push(run);
                     state.current = run;

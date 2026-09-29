@@ -375,6 +375,20 @@ const esc = (v) => String(v ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 const NATURE = { code: "code", model: "a model", script: "the script", human: "you" };
 const MARK = { pending: "\u00b7", running: "\u25b6", waiting: "\u23f8", done: "\u2713", failed: "\u2717", skipped: "\u2013" };
 
+// What follows each test (2026-09-29): the document's playbook, or one of the library, which conducts only signed and unchanged.
+let chosenPlaybook = "";
+let librarySession = null;
+async function libraryPlaybooks() {
+    try {
+        if (!librarySession) librarySession = await connectMcp(location.origin, "library", { headers: {} });
+        const body = JSON.parse(toolText(await librarySession.callTool("list", {})) || "{}");
+        return (body.result?.documents ?? body.documents ?? []).filter((d) => d.playbook);
+    } catch {
+        librarySession = null;
+        return [];
+    }
+}
+
 async function refreshScenarios() {
     const box = el("scenarios");
     try {
@@ -386,8 +400,18 @@ async function refreshScenarios() {
             box.innerHTML = "";
             return;
         }
+        const playbooks = await libraryPlaybooks();
+        if (chosenPlaybook && !playbooks.some((d) => `library:${d.id}` === chosenPlaybook && d.signature?.valid)) chosenPlaybook = "";
+        const option = (d) => {
+            const ok = d.signature?.valid;
+            const why = !d.signature ? "not signed: it conducts nothing" : !ok ? `changed since ${d.signature.by} signed it` : `signed by ${d.signature.by}`;
+            return `<option value="library:${esc(d.id)}"${ok ? "" : " disabled"}${chosenPlaybook === `library:${d.id}` ? " selected" : ""}>${esc(d.id)} (${esc(why)})</option>`;
+        };
+        const conduct = playbooks.length
+            ? `<label class="note">after each test: <select id="scenario-playbook"><option value="">the scenario's own playbook</option>${playbooks.map(option).join("")}</select></label>`
+            : "";
         box.innerHTML =
-            `<div class="label">the factories: commissioning</div>` +
+            `<div class="label">the factories: commissioning</div>` + conduct +
             list
                 .map((x) => {
                     const mine = run && run.scenario === x.id;
@@ -408,10 +432,11 @@ async function refreshScenarios() {
                     );
                 })
                 .join("");
+        el("scenario-playbook")?.addEventListener("change", (e) => (chosenPlaybook = e.target.value));
         for (const b of box.querySelectorAll("[data-scenario]")) {
             b.addEventListener("click", async () => {
                 try {
-                    const r = await (await scenarioSlot()).callTool("play", { id: b.dataset.scenario });
+                    const r = await (await scenarioSlot()).callTool("play", { id: b.dataset.scenario, ...(chosenPlaybook ? { playbook: chosenPlaybook } : {}) });
                     const body = JSON.parse(toolText(r) || "{}");
                     if (r?.isError || body.refused) say("play refused", body.refused ?? toolText(r), "refused");
                     else say("Scenario", `${b.dataset.scenario}: ${body.result?.runId ?? "started"}`);

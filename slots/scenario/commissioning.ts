@@ -36,13 +36,16 @@ import { factoryContractOf, type TwinFactoryRequest } from "../../harness/observ
 import { inventoryOf } from "../factory/inventory.js";
 import type { Device } from "../station/registry.js";
 import { errorMessage } from "../../lib/files.js";
-import { loadPlaybook, sayingText, type Saying } from "../../harness/core/conduct.js";
+import { loadPlaybook, playbookProblems, sayingText, signedPlaybook, type Playbook, type PlaybookFile, type Saying } from "../../harness/core/conduct.js";
 import { loadWords, say } from "../../harness/core/words.js";
 import { SIGNATORY } from "../../lib/roles.js";
 
 /** What the commissioning does once a test ended, unless the document names another playbook; and what that playbook says. */
 export const RECOVERY_PLAYBOOK = "specs/commissioning/recovery.playbook.json";
 const PROCESS_WORDS = loadWords("specs/commissioning/words.json");
+/** What a stage of the commissioning's playbook may do, and what its gates may refuse: what the player knows how to carry out. */
+export const PROCESS_ACTIONS = ["go-on", "ask", "end", "reopen"];
+export const PROCESS_CAPABILITIES = ["station.commissioning_reopen"];
 
 const VERSION = "0.1.0";
 
@@ -82,7 +85,7 @@ export interface CommissioningDocument {
     graph: { rmsePpmMax: number; budget: Record<string, number>; measured?: string };
     /** How the test is played on the stand-in world: seconds of real time per minute of the station's clock (0: as fast as it computes). */
     execution?: { secondsPerMinute?: number };
-    /** The process playbook of what follows a test (default `specs/commissioning/recovery.playbook.json`). */
+    /** The process playbook of what follows a test: a reviewed file of the repository (default `specs/commissioning/recovery.playbook.json`), or `library:<id>`, a playbook of the library, which conducts only signed. */
     playbook?: string;
     /** fresh: the run starts with signatures of its own, empty, whatever the repository signed (a demonstration of the signature). */
     library?: { signatures?: "repository" | "fresh"; safetyCard?: string };
@@ -97,7 +100,7 @@ export interface Run {
     startedAt: string;
     endedAt: string | null;
     status: "running" | "done" | "failed";
-    options: { world: string; leak: boolean; builder: string };
+    options: { world: string; leak: boolean; builder: string; playbook?: string };
     commissioningId: string | null;
     loops: Loop[];
     tasks: string[];
@@ -106,7 +109,7 @@ export interface Run {
     request?: TwinFactoryRequest;
     observations?: Record<string, unknown>;
     /** The process playbook's position, kept between two events: the aborts so far, the last test's end, the commander's answer, the stages it went through. */
-    conduct?: { playbook: string; stage: string | null; aborts: number; aborted: boolean; answer: string | null; stages: Array<{ stage: string; at: string }> };
+    conduct?: { playbook: string; signedBy?: string; stage: string | null; aborts: number; aborted: boolean; answer: string | null; stages: Array<{ stage: string; at: string }> };
 }
 
 export interface PlayerDeps {
@@ -133,7 +136,7 @@ export function commissioningDocumentProblems(doc: unknown): string[] {
 }
 
 /** The run of a document, before it plays: every loop pending. */
-export function runOf(id: string, sha256: string, doc: CommissioningDocument, n: number, builder: "reasoner" | "scripted", extra: { request?: TwinFactoryRequest; observations?: Record<string, unknown> } = {}): Run {
+export function runOf(id: string, sha256: string, doc: CommissioningDocument, n: number, builder: "reasoner" | "scripted", extra: { request?: TwinFactoryRequest; observations?: Record<string, unknown>; playbook?: string } = {}): Run {
     return {
         id: `R${n.toString().padStart(3, "0")}`,
         scenario: id,
@@ -141,7 +144,7 @@ export function runOf(id: string, sha256: string, doc: CommissioningDocument, n:
         startedAt: new Date().toISOString(),
         endedAt: null,
         status: "running",
-        options: { world: doc.world, leak: doc.leak === true, builder },
+        options: { world: doc.world, leak: doc.leak === true, builder, playbook: extra.playbook ?? doc.playbook ?? RECOVERY_PLAYBOOK },
         commissioningId: null,
         loops: doc.loops.map((l, i) => ({ n: i + 1, name: l.name, nature: l.nature, who: l.who, status: "pending" as LoopStatus })),
         tasks: [],
@@ -212,12 +215,27 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
     };
     const summary = (s: TaskStatus) => ({ state: s.state, ended: s.manifest?.ended ?? null, steps: s.manifest?.steps?.length ?? 0, builder: s.run?.builder ?? null, tools: [...new Set((s.manifest?.steps ?? []).map((x) => x.capability).filter(Boolean))] }) as JsonValue;
     const builder = run.options.builder;
-    // What the commissioning does once a test ended: its process playbook, and its words.
-    const playbookFile = doc.playbook ?? RECOVERY_PLAYBOOK;
-    const recovery = loadPlaybook(playbookFile);
+    // What the commissioning does once a test ended: its process playbook. A file of the repository is read once; a playbook of the
+    // library (library:<id>) is read again at every event, with its signature: unsigned, or changed since it was signed, it conducts
+    // nothing, and the run stops on it rather than go on without a conduct a person signed (2026-09-29).
+    const playbookFile = run.options.playbook ?? doc.playbook ?? RECOVERY_PLAYBOOK;
+    const fromLibrary = /^library:/.test(playbookFile) ? playbookFile.slice("library:".length) : null;
+    const repositoryPlaybook = fromLibrary ? null : loadPlaybook(playbookFile);
+    const conductNow = async (): Promise<{ playbook: Playbook; signedBy?: string }> => {
+        if (repositoryPlaybook) return { playbook: repositoryPlaybook };
+        const read = await call<{ id: string; playbook: PlaybookFile; signed: { valid: boolean; by: string } | null }>("library", "playbook", { id: fromLibrary });
+        const playbook = signedPlaybook(read);
+        // Signed is not enough: it says the commissioning's words and does only what the player carries out.
+        const problems = playbookProblems(read.playbook, playbookFile, { words: PROCESS_WORDS, actions: PROCESS_ACTIONS, capabilities: PROCESS_CAPABILITIES });
+        if (problems.length) throw new Error(`${playbookFile} cannot conduct the commissioning: ${problems.join("; ")}`);
+        return { playbook, signedBy: read.signed?.by };
+    };
     let fresh = false;
     try {
+        // A playbook of the library is checked before anything starts: no device registers under a conduct nobody signed.
+        const conduct = await conductNow();
         narrate(`Scenario: ${doc.title}. I will tell you where we are.`);
+        if (fromLibrary) narrate(`What follows each test is conducted by the playbook ${fromLibrary} of the library, signed by ${conduct.signedBy ?? "?"}.`);
         const card = doc.library?.safetyCard ?? "commissioning-test-safety";
         if (doc.library?.signatures === "fresh") {
             await call("library", "signatures_scope", { scope: "run", runId: run.id });
@@ -376,7 +394,7 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
             // test's end; the position (the aborts so far, the commander's answer) is kept in the run between two events.
             const aborted = (executed.aborted ?? null) as { condition?: string; reason?: string; step?: number } | null;
             const why = aborted?.reason ?? aborted?.condition ?? "an abort condition";
-            const position = (run.conduct ??= { playbook: playbookFile, stage: null, aborts: 0, aborted: false, answer: null, stages: [] });
+            const position = (run.conduct ??= { playbook: playbookFile, ...(conduct.signedBy ? { signedBy: conduct.signedBy } : {}), stage: null, aborts: 0, aborted: false, answer: null, stages: [] });
             position.aborted = executed.status === "aborted";
             if (position.aborted) position.aborts++;
             position.answer = null;
@@ -384,7 +402,8 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
             const says = (s: Saying, key?: string) => sayingText(s, (k, v) => say(PROCESS_WORDS, k, v), views, key);
             let next: "report" | "rewrite" | null = null;
             while (!next) {
-                const { stage, refusing } = recovery.evaluate({ aborted: position.aborted, answered: position.answer !== null, rewrite: position.answer === "rewrite", aborts: position.aborts });
+                // The playbook as it stands at this event: one of the library signed and unchanged, or the run stops here.
+                const { stage, refusing } = (await conductNow()).playbook.evaluate({ aborted: position.aborted, answered: position.answer !== null, rewrite: position.answer === "rewrite", aborts: position.aborts });
                 position.stage = stage.id;
                 position.stages.push({ stage: stage.id, at: new Date().toISOString() });
                 notify();

@@ -21,7 +21,7 @@ import type { LocalBroker } from "../slots/lib/local-broker.js";
 import type { PublishedSlot } from "../slots/lib/slot-server.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
 import { loadPlaybook, signedPlaybook, type PlaybookFile } from "../harness/core/conduct.js";
-import { RECOVERY_PLAYBOOK } from "../slots/scenario/commissioning.js";
+import { RECOVERY_PLAYBOOK, type Run } from "../slots/scenario/commissioning.js";
 
 const PORT = 3152;
 const ID = "commissioning-recovery-two-aborts";
@@ -78,6 +78,7 @@ describe("a factory writes a playbook, and an authorised signatory is asked to s
 
     before(async () => {
         process.env.SPEECH_PROVIDER = "silent";
+        process.env.BIOMED_PROVIDER = "simulated";
         recipesDir = mkdtempSync(path.join(tmpdir(), "recipes-playbook-"));
         process.env.FACTORY_RECIPES_DIR = recipesDir;
         ({ broker: local, slots } = await startAllOrFail(PORT));
@@ -85,6 +86,7 @@ describe("a factory writes a playbook, and an authorised signatory is asked to s
     });
     after(async () => {
         delete process.env.SPEECH_PROVIDER;
+        delete process.env.BIOMED_PROVIDER;
         delete process.env.FACTORY_RECIPES_DIR;
         await operator?.close();
         for (const s of slots ?? []) await s.close().catch(() => undefined);
@@ -150,5 +152,69 @@ describe("a factory writes a playbook, and an authorised signatory is asked to s
         assert.match(String(task.manifest?.ended ?? ""), /case 2 .*the stage is "give-up", not "ask"/);
         const list = await ok<{ documents: Array<{ id: string }> }>("library", "list");
         assert.ok(!list.documents.some((d) => d.id === id), "nothing refused reaches the library");
+    });
+
+    it("the scenario player conducts by the signed playbook: unsigned, the run stops before anything; signed, the commissioning ends at the second abort, where the repository's asks again", async () => {
+        const id = "commissioning-recovery-signed-run";
+        const { taskId } = await ok<{ taskId: string }>("factory", "request", request(id, 2));
+        tasks.push(taskId);
+        assert.equal((await ended(taskId)).state, "proposed");
+        const readRun = async (): Promise<Run | null> => JSON.parse((await (await operator.session("scenario")).request<{ contents: Array<{ text: string }> }>("resources/read", { uri: "scenario://run" })).contents[0].text) as Run | null;
+        const until = async (what: string, test: (run: Run) => boolean, ms = 120_000): Promise<Run> => {
+            const t0 = Date.now();
+            for (;;) {
+                const run = await readRun();
+                if (run && (test(run) || run.status !== "running")) return run;
+                if (Date.now() - t0 > ms) throw new Error(`${what}: not reached in ${ms} ms`);
+                await new Promise((r) => setTimeout(r, 300));
+            }
+        };
+        const open = async (kind: string, ms = 60_000): Promise<Question> => {
+            const t0 = Date.now();
+            for (;;) {
+                const q = (await questions()).find((x) => x.kind === kind && x.status === "open");
+                if (q) return q;
+                if (Date.now() - t0 > ms) throw new Error(`no open question of kind ${kind}`);
+                await new Promise((r) => setTimeout(r, 300));
+            }
+        };
+        const play = { id: "commissioning", builder: "scripted", request: {}, playbook: `library:${id}` };
+        assert.equal((await operator.call("scenario", "play", { ...play, playbook: "specs/commissioning/recovery.playbook.json" })).ok, false, "at play time, only a playbook of the library, whose signature is checked");
+
+        // Unsigned: the run stops before a device registers.
+        await ok("scenario", "play", play);
+        const unsigned = await until("the end", () => false);
+        assert.equal(unsigned.status, "failed");
+        assert.match(unsigned.ended ?? "", new RegExp(`the playbook "${id}" is not signed: it conducts nothing until a person signs it`));
+        assert.equal(unsigned.commissioningId, null, "nothing was registered, no commissioning opened");
+
+        // Signed by a signatory.
+        const q = (await questions()).find((x) => x.kind === "sign" && x.status === "open" && x.context.document === id);
+        await ok("station", "answer", { questionId: q!.id, choice: "sign", by: "signatory-test", how: "script" });
+
+        // Played again: FE-1's alarm aborts the first test; a new one is asked; the alarm, raised again, aborts the second.
+        await ok("scenario", "play", play);
+        const first = await until("the first authorisation", (r) => r.loops[3].status === "waiting");
+        assert.equal(first.status, "running", first.ended ?? "");
+        assert.deepEqual([first.options.playbook], [`library:${id}`]);
+        tasks.push(first.loops[1].taskId!);
+        await ok("biomed", "alarm", { subjectId: "fe-1", what: "chest pain", by: "the medical panel" });
+        await ok("station", "commissioning_authorise", { commissioningId: first.commissioningId, decision: "authorise", by: "commander-test" });
+        const asking = await until("the recover question", (r) => r.conduct?.stage === "ask");
+        assert.deepEqual([asking.conduct?.playbook, asking.conduct?.signedBy], [`library:${id}`, "signatory-test"]);
+        await ok("biomed", "alarm_clear", { subjectId: "fe-1", by: "the medical panel" });
+        await ok("station", "answer", { questionId: (await open("recover")).id, choice: "rewrite", by: "commander-test", how: "script" });
+        const second = await until("the second authorisation", (r) => r.loops[3].status === "waiting" && r.tasks.length === 2);
+        assert.equal(second.status, "running", second.ended ?? "");
+        tasks.push(second.loops[1].taskId!);
+        await ok("biomed", "alarm", { subjectId: "fe-1", what: "chest pain again", by: "the medical panel" });
+        await ok("station", "commissioning_authorise", { commissioningId: second.commissioningId, decision: "authorise", by: "commander-test" });
+        const done = await until("the end", () => false);
+        await ok("biomed", "alarm_clear", { subjectId: "fe-1", by: "the medical panel" });
+        assert.equal(done.status, "failed");
+        assert.deepEqual(done.conduct?.stages.map((s) => s.stage), ["ask", "rewrite-test", "give-up"]);
+        assert.match(done.ended ?? "", /the test was aborted 2 times; the last time: FE-1: critical health alarm: chest pain again/);
+        const repository = loadPlaybook(RECOVERY_PLAYBOOK).evaluate({ aborted: true, answered: false, rewrite: false, aborts: 2 }).stage.id;
+        assert.equal(repository, "ask", "the repository's playbook would have asked the commander a third time");
     });
 });
