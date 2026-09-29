@@ -19,6 +19,8 @@
 import type { JsonValue, PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
 import { decide, ScriptedBuilderBase, valueOf, type ScriptContext } from "../../harness/core/scripted-base.js";
 import type { Procedure } from "../../lib/procedure/format.js";
+import { WORDS } from "../../harness/topics/procedure/index.js";
+import { fresh } from "../../harness/core/words.js";
 
 export interface ScriptedProcedureOptions extends ScriptContext {
     /** The speed of the rise in the first submission: 0 is the story's first protocol (default). */
@@ -191,7 +193,11 @@ export class ScriptedProcedureBuilder extends ScriptedBuilderBase<ScriptedProced
                 if (after === "build:procedure.analyse") this.analysed = true;
                 // After a refusal, the script does what the reasons say; before one, it writes its first procedure.
                 if (/diligence/.test(refusal)) return decide("biomed.presence", {}, "the refusal says the occupancy was not read");
-                const corrected = Boolean(refusal) || after === "build:biomed.presence" || this.analysed;
+                // A builder that does not understand its refusals (observations.script.ignoresRefusals, the learning scenario, 2026-09-29) but follows
+                // its written instructions, as models were seen to do (nineteen refusals of one speed): it holds the floor only once the words of its brief name it.
+                const stubborn = (task.observations as { script?: { ignoresRefusals?: boolean } } | undefined)?.script?.ignoresRefusals === true;
+                const instructed = /\bfloor\b/i.test(fresh(WORDS).templates["brief.procedure"] ?? "");
+                const corrected = stubborn ? instructed : Boolean(refusal) || after === "build:biomed.presence" || this.analysed;
                 const speed = corrected ? Math.max(firstSpeedPercent, 30) : firstSpeedPercent;
                 const monitoring = askMonitoring || /monitoring/.test(refusal);
                 const next = this.procedure(speed, monitoring);

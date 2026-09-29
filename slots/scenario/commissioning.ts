@@ -80,7 +80,8 @@ export interface CommissioningDocument {
     leak: boolean;
     /** The scene's devices, a file under the repository. */
     devices: string;
-    procedure: { requiredOutput: { name: string; quantity: string; unit: string }; budget: Record<string, number> };
+    /** script: observations the procedure factory's script is given, with the scripts only (the learning scenario's builder that does not understand its refusals). */
+    procedure: { requiredOutput: { name: string; quantity: string; unit: string }; budget: Record<string, number>; script?: Record<string, unknown> };
     /** The words the Observer is given, one line each; `{test}`, `{apparentVolume}`, `{why}` and `{controls}` are filled by the player from the test. */
     observer: { attempts: number; description: string[] };
     /** `measured`: the twin's variable the commissioning's test measures, compared at the end with the test's apparent value. */
@@ -110,6 +111,8 @@ export interface Run {
     /** With the scripted builder: the twin request the caller gave (no script stands in for the Observer), and observations for the scripts' hooks. */
     request?: TwinFactoryRequest;
     observations?: Record<string, unknown>;
+    /** In a fork that learns: after a factory task that failed, the patterns read, the reflection's task, whether its adaptation was adopted. */
+    learning?: Array<{ at: string; patterns: string[]; taskId: string | null; state?: string; adopted?: boolean; after: string }>;
     /** The process playbook's position, kept between two events: the aborts so far, the last test's end, the commander's answer, the stages it went through. */
     conduct?: {
         playbook: string;
@@ -247,11 +250,12 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
     // fork's traces and the reflection's adaptation, when there is one, is adopted before the playbook decides what follows.
     const learning = forkId() && (process.env.FORK_LEARNING === "scripted" || process.env.FORK_LEARNING === "reasoner") ? process.env.FORK_LEARNING : null;
     /** The run as it stands, kept in the workshop (the fork's, in a fork): a trace the reflection reads, beside the tasks' manifests. */
+    const runFile = `${run.startedAt.replace(/[:.]/g, "-")}-${run.id}`;
     const keepRun = (): void => {
         try {
             const dir = path.join(WORKSHOP_ROOT, "runs");
             mkdirSync(dir, { recursive: true });
-            writeFileSync(path.join(dir, `${run.startedAt.replace(/[:.]/g, "-")}-${run.id}.json`), `${JSON.stringify(run, null, 2)}
+            writeFileSync(path.join(dir, `${runFile}.json`), `${JSON.stringify(run, null, 2)}
 `, "utf8");
         } catch (e) {
             log(`[scenario] ${run.id}: the run could not be kept: ${errorMessage(e)}`);
@@ -298,11 +302,13 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
         let previous: Record<string, unknown> | null = null;
         let executed!: Awaited<ReturnType<typeof runProcedure>>;
         let telemetry: TelemetryRow[] = [];
+        // What the procedure factory is told: the device, the CO2 measured, what stopped the last test; the scripts' hooks with the scripts.
+        const procedureObservations = () => ({ device: scrubberPath, measured, ...(previous ? { previous } : {}), ...(builder === "scripted" && doc.procedure.script ? { script: doc.procedure.script } : {}) });
         for (;;) {
             // 2. the procedure factory.
             begin(2, builder === "scripted" ? "the script stands in for the model" : undefined);
             loop(2).nature = builder === "scripted" ? "script" : "model";
-            const reqP = await call<{ taskId: string; builder: string }>("factory", "request", { objective: { required_outputs: [doc.procedure.requiredOutput] }, observations: { device: scrubberPath, measured, ...(previous ? { previous } : {}) }, topics: ["procedure"], builder, budget: doc.procedure.budget, requestedBy: "scenario" });
+            const reqP = await call<{ taskId: string; builder: string }>("factory", "request", { objective: { required_outputs: [doc.procedure.requiredOutput] }, observations: procedureObservations(), topics: ["procedure"], builder, budget: doc.procedure.budget, requestedBy: "scenario" });
             loop(2).taskId = reqP.taskId;
             run.tasks.push(reqP.taskId);
             notify();
@@ -354,11 +360,37 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
                 loop(2).status = "running";
                 loop(2).waitingFor = undefined;
                 notify();
-                const again = await call<{ taskId: string; builder: string }>("factory", "request", { objective: { required_outputs: [doc.procedure.requiredOutput] }, observations: { device: scrubberPath, measured, ...(previous ? { previous } : {}) }, topics: ["procedure"], builder, budget: doc.procedure.budget, requestedBy: "scenario" });
+                const again = await call<{ taskId: string; builder: string }>("factory", "request", { objective: { required_outputs: [doc.procedure.requiredOutput] }, observations: procedureObservations(), topics: ["procedure"], builder, budget: doc.procedure.budget, requestedBy: "scenario" });
                 loop(2).taskId = again.taskId;
                 run.tasks.push(again.taskId);
                 notify();
                 p = await taskEnded(again.taskId, "The procedure factory");
+            }
+            // Learning: a factory task that failed is the event (2026-09-29): Mother reads its traces, the reflection's adaptation of the
+            // factory's conduct is adopted in the fork, and the factory writes again, once, with its instructions as they now are.
+            if (learning && p.state !== "proposed") {
+                narrate(`Learning in the fork ${forkId()}: the procedure factory ended without a procedure (${String(p.manifest?.ended ?? p.state).slice(0, 140)}). I read its traces for a pattern.`);
+                const lastTask = loop(2).taskId!;
+                const reflected = await call<{ taskId: string | null; patterns: Array<{ id: string }> }>("station", "reflect", { builder: learning, focus: lastTask });
+                const entry: { at: string; patterns: string[]; taskId: string | null; state?: string; adopted?: boolean; after: string } = { at: new Date().toISOString(), patterns: reflected.patterns.map((x) => x.id), taskId: reflected.taskId, after: lastTask };
+                run.learning = [...(run.learning ?? []), entry];
+                notify();
+                if (reflected.taskId) {
+                    const r = await taskEnded(reflected.taskId, "The reflection");
+                    entry.state = r.state;
+                    entry.adopted = r.manifest?.proposal?.status === "adopted";
+                    notify();
+                }
+                if (entry.adopted) {
+                    narrate("The procedure factory writes again, with its instructions as the fork adapted them.");
+                    loop(2).status = "running";
+                    notify();
+                    const again = await call<{ taskId: string; builder: string }>("factory", "request", { objective: { required_outputs: [doc.procedure.requiredOutput] }, observations: procedureObservations(), topics: ["procedure"], builder, budget: doc.procedure.budget, requestedBy: "scenario" });
+                    loop(2).taskId = again.taskId;
+                    run.tasks.push(again.taskId);
+                    notify();
+                    p = await taskEnded(again.taskId, "The procedure factory");
+                }
             }
             end(2, summary(p));
             if (p.state !== "proposed") throw new Error(`the procedure factory ended ${p.state}: ${p.manifest?.ended ?? ""}`);
@@ -431,7 +463,7 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
                 if (learning) {
                     keepRun();
                     narrate(`Learning in the fork ${forkId()}: the test stopped on ${why}. I read this fork's traces for a pattern before deciding what follows.`);
-                    const reflected = await call<{ taskId: string | null; patterns: Array<{ id: string }> }>("station", "reflect", { builder: learning });
+                    const reflected = await call<{ taskId: string | null; patterns: Array<{ id: string }> }>("station", "reflect", { builder: learning, focus: runFile });
                     const entry: { at: string; patterns: string[]; taskId: string | null; state?: string; adopted?: boolean } = { at: new Date().toISOString(), patterns: reflected.patterns.map((p) => p.id), taskId: reflected.taskId };
                     (position.adaptations ??= []).push(entry);
                     notify();

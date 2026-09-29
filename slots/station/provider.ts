@@ -480,11 +480,12 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                 name: "reflect",
                 title: "Reflect on the fork's traces",
                 description: "In a fork only: the patterns of the traces its agents left (a cause stopping tests again, a factory refused on the same points again, a task stuck), and, when there are some, a task of the reflection factory for an adaptation of the conduct that answers them; the station adopts it in the fork when it arrives.",
-                inputSchema: obj({ builder: { type: "string", enum: ["reasoner", "scripted"], description: "the reflection's builder: a model (default), or its script" } }),
+                inputSchema: obj({ builder: { type: "string", enum: ["reasoner", "scripted"], description: "the reflection's builder: a model (default), or its script" }, focus: { type: "string", description: "the task or the run of the event: only the patterns read in its traces" } }),
                 handle: async (args) => {
                     const fork = forkId();
                     if (!fork) throw new Error("the reflection runs in a fork only: its adaptations are adopted and measured there, never in the repository's context");
-                    const patterns = observe(WORKSHOP_ROOT);
+                    const focus = typeof args.focus === "string" && args.focus ? args.focus : null;
+                    const patterns = observe(WORKSHOP_ROOT).filter((p) => !focus || p.source.includes(focus));
                     say("mother.reflection.read", null, () => ({ fork, count: patterns.length }));
                     if (!patterns.length) return { fork, patterns, taskId: null, note: "no pattern in the traces: nothing to adapt" };
                     const r = await client().call("factory", "request", {

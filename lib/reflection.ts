@@ -95,7 +95,8 @@ export function observe(workshop: string, format: Pick<ReflectionFormat, "repeat
             for (const s of m.steps) {
                 if (s.outcome !== "refused" || !s.capability) continue;
                 const key = refusalKey(problemsOfReason(s.reason ?? ""));
-                streak = streak && streak.capability === s.capability && streak.key === key ? { ...streak, times: streak.times + 1 } : { capability: s.capability, key, times: 1, reason: s.reason ?? "" };
+                // On the same points, whatever the capability (a submission, then its revisions), as the harness counts a streak (problems.ts); the first capability names it.
+                streak = streak && streak.key === key ? { ...streak, times: streak.times + 1 } : { capability: s.capability, key, times: 1, reason: s.reason ?? "" };
                 if (!longest || streak.times > longest.times) longest = streak;
             }
             if (longest && longest.times >= at)

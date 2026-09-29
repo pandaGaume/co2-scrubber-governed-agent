@@ -4,7 +4,8 @@
  *
  * The pattern it knows how to answer is the same cause stopping a commissioning's tests again (`abort-repeat`): the
  * bound of the playbook that ends the commissioning after so many aborts comes down to the number of aborts seen on
- * that cause, when it is higher. Any other pattern is left to a model: the script says so with task.fail.
+ * that cause, when it is higher. A factory refused again and again on the same points (`refusal-streak`): the rule
+ * it broke goes into the instructions of the stage that calls the capability. Any other pattern is left to a model.
  *
  *   plan, nothing done     task.plan: the adaptation is written here, the output missing, to the topic "reflection";
  *   build, after the plan  reflection.propose: the bound, justified by what the pattern measured;
@@ -55,6 +56,29 @@ export class ScriptedReflectionBuilder extends ScriptedBuilderBase {
                         `the bound ${bound.id} from ${atLeast} to ${p.count}`,
                     );
                 }
+                // A factory refused again and again on the same points: the rule it broke goes into the instructions of the stage that
+                // calls the capability (the template of its words that names it), said once, so it is held from the first submission.
+                for (const p of patternsOf(task)) {
+                    if (p.kind !== "refusal-streak" || !p.target) continue;
+                    const capability = String(p.detail.capability ?? "");
+                    const words = JSON.parse(readFileSync(fromRoot(...p.target.split("/")), "utf8")) as Record<string, unknown>;
+                    const found = templateNaming(words, capability);
+                    if (!found) continue;
+                    const rule = String(p.detail.reason ?? "").replace(/^[a-z]+ refused:\s*/i, "").replace(/[{}]/g, "").slice(0, 300);
+                    const learned = ` Learned in this fork, after ${p.count} refusals in a row of ${capability} on the same point: ${rule}. Hold it from the first submission.`;
+                    if (found.template.includes("Learned in this fork")) continue;
+                    return decide(
+                        "reflection.propose",
+                        {
+                            target: p.target,
+                            ops: [{ op: "replace", pointer: `/${found.key.split(".").join("/")}`, value: found.template + learned }],
+                            reason: `${capability} was refused ${p.count} times in a row on the same point: its instructions now say the rule it broke, before it submits`,
+                            evidence: [p.id],
+                            justifications: [],
+                        } as unknown as JsonValue,
+                        `the rule of ${capability}'s refusals into ${found.key}`,
+                    );
+                }
                 return decide("task.fail", { reason: "no pattern the script knows how to answer (it answers a cause of abort repeated, when the playbook's bound is higher): a model reads the others" }, "nothing the script answers");
             }
             default: {
@@ -65,4 +89,19 @@ export class ScriptedReflectionBuilder extends ScriptedBuilderBase {
             }
         }
     }
+}
+
+/** The template of a words file that names a capability (the stage that calls it), by its dotted key. */
+function templateNaming(words: Record<string, unknown>, capability: string): { key: string; template: string } | null {
+    const walk = (v: unknown, key: string): { key: string; template: string } | null => {
+        if (typeof v === "string") return capability && v.includes(capability) && key.startsWith("brief.") ? { key, template: v } : null;
+        if (v && typeof v === "object" && !Array.isArray(v))
+            for (const [k, x] of Object.entries(v)) {
+                if (k === "note") continue;
+                const hit = walk(x, key ? `${key}.${k}` : k);
+                if (hit) return hit;
+            }
+        return null;
+    };
+    return walk(words, "");
 }

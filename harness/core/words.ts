@@ -12,7 +12,7 @@
  * from others by a flag, so the state carries what the model needs and not a
  * device's every property.
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { fromRoot } from "../../lib/paths.js";
 
 export interface Words {
@@ -26,16 +26,36 @@ function flatten(value: unknown, prefix: string, out: Record<string, string>): v
     else if (value && typeof value === "object" && !Array.isArray(value)) for (const [k, v] of Object.entries(value)) if (k !== "note") flatten(v, prefix ? `${prefix}.${k}` : k, out);
 }
 
+/** When each words file was last read: a file changed since (an adaptation adopted in a fork, 2026-09-29) is read again at its next use. */
+const readAt = new WeakMap<Words, number>();
+
 /** A factory's words, from a file of the repository (`specs/<topic>/words.json`). */
 export function loadWords(file: string): Words {
     const templates: Record<string, string> = {};
-    flatten(JSON.parse(readFileSync(fromRoot(...file.split("/")), "utf8")), "", templates);
-    return { file, templates };
+    const full = fromRoot(...file.split("/"));
+    flatten(JSON.parse(readFileSync(full, "utf8")), "", templates);
+    const words = { file, templates };
+    readAt.set(words, statSync(full).mtimeMs);
+    return words;
+}
+
+/** The words as their file is now: read again, in place, when the file changed since they were read; what a running server says follows what was adopted. */
+export function fresh(words: Words): Words {
+    const full = fromRoot(...words.file.split("/"));
+    const at = readAt.get(words);
+    if (at === undefined || !existsSync(full)) return words;
+    const now = statSync(full).mtimeMs;
+    if (now === at) return words;
+    const templates: Record<string, string> = {};
+    flatten(JSON.parse(readFileSync(full, "utf8")), "", templates);
+    words.templates = templates;
+    readAt.set(words, now);
+    return words;
 }
 
 /** A template filled: `{name}` by the value given, a hole left unfilled refused so a sentence never reaches a model half written. */
 export function say(words: Words, key: string, vars: Record<string, string | number> = {}): string {
-    const template = words.templates[key];
+    const template = fresh(words).templates[key];
     if (template === undefined) throw new Error(`${words.file}: no words for "${key}"`);
     // A hole is a name: `{...}` or `{"kind": ...}` in a template is text.
     return template.replace(/\{([A-Za-z][A-Za-z0-9_.]*)\}/g, (hole, name: string) => {
