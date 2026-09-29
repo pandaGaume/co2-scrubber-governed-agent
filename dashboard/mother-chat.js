@@ -170,7 +170,8 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
             environmentRead = true;
             const badge = document.getElementById("top-fork");
             if (badge && env?.fork) {
-                badge.textContent = `fork ${env.fork.id}`;
+                badge.textContent = env.fork.learning ? `fork ${env.fork.id} · learning` : `fork ${env.fork.id}`;
+                if (env.fork.learning) badge.title += `; learning: at every abort Mother reflects and the fork adapts itself (the reflection by ${env.fork.learning === "reasoner" ? "a model" : "its script"})`;
                 badge.hidden = false;
             }
         } catch {

@@ -377,6 +377,8 @@ const MARK = { pending: "\u00b7", running: "\u25b6", waiting: "\u23f8", done: "\
 
 // What follows each test (2026-09-29): the document's playbook, or one of the library, which conducts only signed and unchanged.
 let chosenPlaybook = "";
+// Who writes the procedures and the twin: the models (a key), or the scripts (no key; the Observer is not stood in, so a run that reaches it stops there).
+let chosenBuilder = "reasoner";
 let librarySession = null;
 async function libraryPlaybooks() {
     try {
@@ -410,8 +412,9 @@ async function refreshScenarios() {
         const conduct = playbooks.length
             ? `<label class="note">after each test: <select id="scenario-playbook"><option value="">the scenario's own playbook</option>${playbooks.map(option).join("")}</select></label>`
             : "";
+        const builders = `<label class="note">the factories: <select id="scenario-builder"><option value="reasoner"${chosenBuilder === "reasoner" ? " selected" : ""}>the models</option><option value="scripted"${chosenBuilder === "scripted" ? " selected" : ""}>the scripts (no key; stops at the Observer)</option></select></label>`;
         box.innerHTML =
-            `<div class="label">the factories: commissioning</div>` + conduct +
+            `<div class="label">the factories: commissioning</div>` + builders + conduct +
             list
                 .map((x) => {
                     const mine = run && run.scenario === x.id;
@@ -433,10 +436,11 @@ async function refreshScenarios() {
                 })
                 .join("");
         el("scenario-playbook")?.addEventListener("change", (e) => (chosenPlaybook = e.target.value));
+        el("scenario-builder")?.addEventListener("change", (e) => (chosenBuilder = e.target.value));
         for (const b of box.querySelectorAll("[data-scenario]")) {
             b.addEventListener("click", async () => {
                 try {
-                    const r = await (await scenarioSlot()).callTool("play", { id: b.dataset.scenario, ...(chosenPlaybook ? { playbook: chosenPlaybook } : {}) });
+                    const r = await (await scenarioSlot()).callTool("play", { id: b.dataset.scenario, ...(chosenBuilder === "scripted" ? { builder: "scripted", request: {} } : {}), ...(chosenPlaybook ? { playbook: chosenPlaybook } : {}) });
                     const body = JSON.parse(toolText(r) || "{}");
                     if (r?.isError || body.refused) say("play refused", body.refused ?? toolText(r), "refused");
                     else say("Scenario", `${b.dataset.scenario}: ${body.result?.runId ?? "started"}`);

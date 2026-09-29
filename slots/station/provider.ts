@@ -935,7 +935,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
             { uri: QUESTIONS_POLICY_URI, read: (s) => s.questionsPolicy },
             { uri: "station://proposals", read: (s) => s.proposals },
             // Where this station runs: in a fork (an environment set apart, its data its own), or on the repository's context.
-            { uri: "station://environment", read: () => ({ fork: forkId() ? { id: forkId(), dir: forkDir() } : null }) },
+            { uri: "station://environment", read: () => ({ fork: forkId() ? { id: forkId(), dir: forkDir(), learning: process.env.FORK_LEARNING === "scripted" || process.env.FORK_LEARNING === "reasoner" ? process.env.FORK_LEARNING : null } : null }) },
             { uri: "station://artifacts", name: "Registered artifacts", description: "sha256 -> registration", read: (s) => s.artifacts },
             { uri: "station://registry", read: (s) => Object.values(s.devices) },
             { uri: COMMISSIONINGS_URI, read: (s) => s.commissionings },

@@ -129,7 +129,7 @@ async function main(): Promise<void> {
     const port = Number(option("--port", String(DEFAULT_PORT)));
     // In a fork (FORK_DIR, npm run fork -- run <id>): the context's data is the fork's own, and the server says so first.
     const fork = forkId();
-    if (fork) log(`FORK ${fork}: the library, the specs, the graphs and the outputs are the fork's, in ${forkDir()}; nothing here reaches the repository's`);
+    if (fork) log(`FORK ${fork}: the library, the specs, the graphs and the outputs are the fork's, in ${forkDir()}; nothing here reaches the repository's${process.env.FORK_LEARNING ? `; learning: at every abort Mother reflects and the fork adapts itself (the reflection by ${process.env.FORK_LEARNING === "reasoner" ? "a model" : "its script"})` : ""}`);
     const httpBase = `http://localhost:${port}`;
     const wsBase = `ws://localhost:${port}`;
 

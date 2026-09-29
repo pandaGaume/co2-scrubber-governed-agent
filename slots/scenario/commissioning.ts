@@ -30,7 +30,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
 import { WORKSHOP_ROOT } from "../tools/lib/workshop.js";
 import type { JsonValue } from "@spiky-panda/harness";
-import { fromRoot } from "../../lib/paths.js";
+import { forkId, fromRoot } from "../../lib/paths.js";
 import { Broker } from "../../harness/lib/broker.js";
 import { runProcedure } from "../../tier3/procedure.js";
 import { LAB_WORLD, TwoZoneWorldSim, type TelemetryRow } from "../../stand-ins/worlds/two-zone-world.js";
@@ -111,7 +111,18 @@ export interface Run {
     request?: TwinFactoryRequest;
     observations?: Record<string, unknown>;
     /** The process playbook's position, kept between two events: the aborts so far, the last test's end, the commander's answer, the stages it went through. */
-    conduct?: { playbook: string; signedBy?: string; stage: string | null; aborts: number; aborted: boolean; answer: string | null; stages: Array<{ stage: string; at: string }>; causes?: Array<{ condition: string | null; reason: string; step: number | null; at: string }> };
+    conduct?: {
+        playbook: string;
+        signedBy?: string;
+        stage: string | null;
+        aborts: number;
+        aborted: boolean;
+        answer: string | null;
+        stages: Array<{ stage: string; at: string }>;
+        causes?: Array<{ condition: string | null; reason: string; step: number | null; at: string }>;
+        /** In a fork that learns: at each abort, the patterns read, the reflection's task, whether its adaptation was adopted. */
+        adaptations?: Array<{ at: string; patterns: string[]; taskId: string | null; state?: string; adopted?: boolean }>;
+    };
 }
 
 export interface PlayerDeps {
@@ -194,7 +205,7 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
         l.waitingFor = waitingFor;
         notify();
     };
-    type TaskStatus = { state: string; manifest?: { ended?: string; steps?: Array<{ capability: string | null; outcome: string }>; artifacts?: Array<{ kind: string; path: string }> } | null; run?: { builder?: string; ended?: string | null; handoff?: { codeTask?: string | null; replayTask?: string | null; stopped?: string | null } } | null };
+    type TaskStatus = { state: string; manifest?: { ended?: string; proposal?: { status: string } | null; steps?: Array<{ capability: string | null; outcome: string }>; artifacts?: Array<{ kind: string; path: string }> } | null; run?: { builder?: string; ended?: string | null; handoff?: { codeTask?: string | null; replayTask?: string | null; stopped?: string | null } } | null };
     /** A task followed to its end; with a label, Mother gives news of it every so often, from its steps as the manifest records them. */
     const taskEnded = async (taskId: string, label?: string): Promise<TaskStatus> => {
         const t0 = Date.now();
@@ -222,15 +233,29 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
     // nothing, and the run stops on it rather than go on without a conduct a person signed (2026-09-29).
     const playbookFile = run.options.playbook ?? doc.playbook ?? RECOVERY_PLAYBOOK;
     const fromLibrary = /^library:/.test(playbookFile) ? playbookFile.slice("library:".length) : null;
-    const repositoryPlaybook = fromLibrary ? null : loadPlaybook(playbookFile);
+    // A file of the context is read again at every event too: in a fork that learns, an adaptation adopted at this event conducts it.
     const conductNow = async (): Promise<{ playbook: Playbook; signedBy?: string }> => {
-        if (repositoryPlaybook) return { playbook: repositoryPlaybook };
+        if (!fromLibrary) return { playbook: loadPlaybook(playbookFile) };
         const read = await call<{ id: string; playbook: PlaybookFile; signed: { valid: boolean; by: string } | null }>("library", "playbook", { id: fromLibrary });
         const playbook = signedPlaybook(read);
         // Signed is not enough: it says the commissioning's words and does only what the player carries out.
         const problems = playbookProblems(read.playbook, playbookFile, { words: PROCESS_WORDS, actions: PROCESS_ACTIONS, capabilities: PROCESS_CAPABILITIES });
         if (problems.length) throw new Error(`${playbookFile} cannot conduct the commissioning: ${problems.join("; ")}`);
         return { playbook, signedBy: read.signed?.by };
+    };
+    // A fork that learns (npm run fork -- run <id> --learn scripted|reasoner, 2026-09-29): at every abort, the event, Mother reads the
+    // fork's traces and the reflection's adaptation, when there is one, is adopted before the playbook decides what follows.
+    const learning = forkId() && (process.env.FORK_LEARNING === "scripted" || process.env.FORK_LEARNING === "reasoner") ? process.env.FORK_LEARNING : null;
+    /** The run as it stands, kept in the workshop (the fork's, in a fork): a trace the reflection reads, beside the tasks' manifests. */
+    const keepRun = (): void => {
+        try {
+            const dir = path.join(WORKSHOP_ROOT, "runs");
+            mkdirSync(dir, { recursive: true });
+            writeFileSync(path.join(dir, `${run.startedAt.replace(/[:.]/g, "-")}-${run.id}.json`), `${JSON.stringify(run, null, 2)}
+`, "utf8");
+        } catch (e) {
+            log(`[scenario] ${run.id}: the run could not be kept: ${errorMessage(e)}`);
+        }
     };
     let fresh = false;
     try {
@@ -402,6 +427,21 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
                 position.aborts++;
                 // What stopped each test, kept with the run: what the reflection reads (2026-09-29, P4).
                 (position.causes ??= []).push({ condition: aborted?.condition ?? null, reason: why, step: aborted?.step ?? null, at: new Date().toISOString() });
+                // Learning: the abort is the event; the trace is kept now, the reflection asked, its adaptation adopted before the playbook decides.
+                if (learning) {
+                    keepRun();
+                    narrate(`Learning in the fork ${forkId()}: the test stopped on ${why}. I read this fork's traces for a pattern before deciding what follows.`);
+                    const reflected = await call<{ taskId: string | null; patterns: Array<{ id: string }> }>("station", "reflect", { builder: learning });
+                    const entry: { at: string; patterns: string[]; taskId: string | null; state?: string; adopted?: boolean } = { at: new Date().toISOString(), patterns: reflected.patterns.map((p) => p.id), taskId: reflected.taskId };
+                    (position.adaptations ??= []).push(entry);
+                    notify();
+                    if (reflected.taskId) {
+                        const t = await taskEnded(reflected.taskId, "The reflection");
+                        entry.state = t.state;
+                        entry.adopted = t.manifest?.proposal?.status === "adopted";
+                        notify();
+                    }
+                }
             }
             position.answer = null;
             const views = { aborted: () => ({ why, aborts: position.aborts }) };
@@ -632,15 +672,8 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
         run.endedAt = new Date().toISOString();
         for (const l of run.loops) if (l.status === "pending") l.status = "skipped";
         notify();
-        // The run as it ended, kept in the workshop (the fork's, in a fork): a trace the reflection reads, beside the tasks' manifests.
-        try {
-            const dir = path.join(WORKSHOP_ROOT, "runs");
-            mkdirSync(dir, { recursive: true });
-            writeFileSync(path.join(dir, `${run.startedAt.replace(/[:.]/g, "-")}-${run.id}.json`), `${JSON.stringify(run, null, 2)}
-`, "utf8");
-        } catch (e) {
-            log(`[scenario] ${run.id}: the run could not be kept: ${errorMessage(e)}`);
-        }
+        // The run as it ended: a trace the reflection reads.
+        keepRun();
         // The last lines are said before the session closes.
         await Promise.allSettled(said);
         await operator.close();
