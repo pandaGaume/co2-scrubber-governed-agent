@@ -155,6 +155,49 @@ describe("the commissioning chain played by the slot, the commander deciding", (
         assert.deepEqual(failed.loops.slice(4).map((l) => l.status), ["skipped", "skipped", "skipped", "skipped", "skipped", "skipped"]);
     });
 
+    it("a critical alarm aborts the test; the process playbook asks the commander, never a standing order; on a new test the factory analyses the abort first, and the second test runs through (2026-09-29, P1 bis)", async () => {
+        // The twin asked for without the leak: what is tested here ends at the report; the rest runs as in the first run, the hand-off aside.
+        const request = { ...REQUEST, objective: "reproduce the Lab CO2 during the decay test", outputs: [REQUEST.outputs[0]] };
+        const started = await ok<{ runId: string }>("scenario", "play", { id: "commissioning", builder: "scripted", request });
+        const waiting = await until("the authorisation", (r) => r.loops[3].status === "waiting");
+        assert.equal(waiting.status, "running", waiting.ended ?? "");
+        tasks.push(waiting.loops[1].taskId!);
+        // FE-1, in the Lab under test, is unwell: someone raises the alarm from the medical panel; the commander authorises all the same, and the test stops at its first reading.
+        await ok("biomed", "alarm", { subjectId: "fe-1", what: "chest pain", by: "the medical panel" });
+        await ok("station", "commissioning_authorise", { commissioningId: waiting.commissioningId, decision: "authorise", by: "commander-test" });
+        const asking = await until("the recover question", (r) => r.conduct?.stage === "ask");
+        assert.equal(asking.status, "running", asking.ended ?? "");
+        assert.deepEqual(
+            [asking.conduct?.playbook, asking.conduct?.aborts, asking.conduct?.aborted, asking.conduct?.answer],
+            ["specs/commissioning/recovery.playbook.json", 1, true, null],
+            "the position kept in the run between the two events: one abort, no answer yet",
+        );
+        assert.match(asking.loops[4].waitingFor ?? "", /the commander's decision after the abort/);
+        const q = await openQuestion("recover");
+        // Dealt with first: the alarm cleared; then the commander asks for a new test.
+        await ok("biomed", "alarm_clear", { subjectId: "fe-1", by: "the medical panel" });
+        await ok("station", "answer", { questionId: q.id, choice: "rewrite", by: "commander-test", how: "script" });
+        const again = await until("the second authorisation", (r) => r.loops[3].status === "waiting" && r.tasks.length === 2);
+        assert.equal(again.status, "running", again.ended ?? "");
+        assert.deepEqual(again.conduct?.stages.map((s) => s.stage), ["ask", "rewrite-test"]);
+        const second = again.loops[1].taskId!;
+        tasks.push(second);
+        // The second procedure task was told what stopped the first, and analysed it before any procedure.
+        const task = await ok<{ manifest?: { steps?: Array<{ capability?: string; outcome?: string }> } }>("factory", "task", { taskId: second });
+        const capabilities = (task.manifest?.steps ?? []).map((s) => s.capability);
+        assert.ok(capabilities.includes("procedure.analyse"), JSON.stringify(capabilities));
+        assert.ok(capabilities.indexOf("procedure.analyse") < capabilities.indexOf("procedure.submit"), "the analysis before the procedure");
+        await ok("station", "commissioning_authorise", { commissioningId: again.commissioningId, decision: "authorise", by: "commander-test" });
+        const report = await until("the report", (r) => r.loops[5].status === "done");
+        assert.equal(report.status, "running", report.ended ?? "");
+        assert.equal(report.conduct?.aborted, false);
+        assert.deepEqual(report.conduct?.stages.map((s) => s.stage), ["ask", "rewrite-test", "report"]);
+        assert.equal(started.runId, report.id);
+        const done = await until("the end", (r) => r.status !== "running", 300_000);
+        tasks.push(...done.tasks.filter((t) => !tasks.includes(t)));
+        assert.equal(done.status, "done", done.ended ?? "");
+        assert.match(done.ended ?? "", /^the twin proposed/);
+    });
 });
 
 describe("a run that starts with the library unsigned, the commander signing in Mother's chat", () => {

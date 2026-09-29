@@ -11,6 +11,9 @@
  *   3  relay            Mother relays the procedure and asks the commander (a question of the station's own)
  *   4  authorisation    WAITS for the commander (Mother's chat: a chip, a word typed or spoken, a standing order)
  *   5  execution        the executor runs the procedure one command at a time on the stand-in world
+ *                       once it ends, the process playbook conducts (specs/commissioning/recovery.playbook.json):
+ *                       on to the report, or after an abort the commander's decision (never a standing
+ *                       order's), then 2 to 5 again, the factory told what stopped the test
  *   6  report           the decay fit: the apparent volume
  *   7  observer         the Observer (a model) formulates what the twin must do, from the words the document holds
  *   8  graph factory    the graph factory (a model, or the script) builds the twin; a capability it
@@ -33,6 +36,12 @@ import { factoryContractOf, type TwinFactoryRequest } from "../../harness/observ
 import { inventoryOf } from "../factory/inventory.js";
 import type { Device } from "../station/registry.js";
 import { errorMessage } from "../../lib/files.js";
+import { loadPlaybook, sayingText, type Saying } from "../../harness/core/conduct.js";
+import { loadWords, say } from "../../harness/core/words.js";
+
+/** What the commissioning does once a test ended, unless the document names another playbook; and what that playbook says. */
+export const RECOVERY_PLAYBOOK = "specs/commissioning/recovery.playbook.json";
+const PROCESS_WORDS = loadWords("specs/commissioning/words.json");
 
 const VERSION = "0.1.0";
 
@@ -72,6 +81,8 @@ export interface CommissioningDocument {
     graph: { rmsePpmMax: number; budget: Record<string, number>; measured?: string };
     /** How the test is played on the stand-in world: seconds of real time per minute of the station's clock (0: as fast as it computes). */
     execution?: { secondsPerMinute?: number };
+    /** The process playbook of what follows a test (default `specs/commissioning/recovery.playbook.json`). */
+    playbook?: string;
     /** fresh: the run starts with signatures of its own, empty, whatever the repository signed (a demonstration of the signature). */
     library?: { signatures?: "repository" | "fresh"; safetyCard?: string };
     loops: Array<Pick<Loop, "name" | "nature" | "who">>;
@@ -93,6 +104,8 @@ export interface Run {
     /** With the scripted builder: the twin request the caller gave (no script stands in for the Observer), and observations for the scripts' hooks. */
     request?: TwinFactoryRequest;
     observations?: Record<string, unknown>;
+    /** The process playbook's position, kept between two events: the aborts so far, the last test's end, the commander's answer, the stages it went through. */
+    conduct?: { playbook: string; stage: string | null; aborts: number; aborted: boolean; answer: string | null; stages: Array<{ stage: string; at: string }> };
 }
 
 export interface PlayerDeps {
@@ -198,8 +211,9 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
     };
     const summary = (s: TaskStatus) => ({ state: s.state, ended: s.manifest?.ended ?? null, steps: s.manifest?.steps?.length ?? 0, builder: s.run?.builder ?? null, tools: [...new Set((s.manifest?.steps ?? []).map((x) => x.capability).filter(Boolean))] }) as JsonValue;
     const builder = run.options.builder;
-    // How many times an aborted test is written again before the commissioning ends.
-    const MAX_RECOVERIES = 2;
+    // What the commissioning does once a test ended: its process playbook, and its words.
+    const playbookFile = doc.playbook ?? RECOVERY_PLAYBOOK;
+    const recovery = loadPlaybook(playbookFile);
     let fresh = false;
     try {
         narrate(`Scenario: ${doc.title}. I will tell you where we are.`);
@@ -238,7 +252,7 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
         let previous: Record<string, unknown> | null = null;
         let executed!: Awaited<ReturnType<typeof runProcedure>>;
         let telemetry: TelemetryRow[] = [];
-        for (let attempt = 1; ; attempt++) {
+        for (;;) {
             // 2. the procedure factory.
             begin(2, builder === "scripted" ? "the script stands in for the model" : undefined);
             loop(2).nature = builder === "scripted" ? "script" : "model";
@@ -355,38 +369,60 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
                 },
             });
             end(5, { steps: executed.report?.steps?.length ?? 0, minutes: telemetry.length - 1, aborted: (executed as { aborted?: unknown }).aborted ?? null } as JsonValue);
-            if (executed.status !== "aborted") break;
 
-            // Recovery: the test stopped. The commander says, once what stopped it is dealt with (the alarm cleared, the module safe), whether the factory writes another.
+            // What follows a test is the process playbook's (2026-09-29, docs/comportement-en-donnees.fr.md, section 2): the event is the
+            // test's end; the position (the aborts so far, the commander's answer) is kept in the run between two events.
             const aborted = (executed.aborted ?? null) as { condition?: string; reason?: string; step?: number } | null;
             const why = aborted?.reason ?? aborted?.condition ?? "an abort condition";
-            if (attempt > MAX_RECOVERIES) throw new Error(`the test was aborted ${attempt} times; the last time: ${why}`);
-            narrate(`The test stopped: ${why}. Commander, when what stopped it is dealt with, tell me in my chat whether the procedure factory writes a new test.`);
-            const asked = await call<{ questionId: string; status: string; answer?: { choice?: string } | null }>("station", "ask", {
-                from: "scenario",
-                kind: "recover",
-                question: `The test was aborted: ${why}. When it is dealt with (the alarm cleared, the module safe), shall the procedure factory write a new test that accounts for it?`,
-                options: [{ id: "rewrite", label: "write a new test" }, { id: "stop", label: "stop the commissioning" }],
-                context: { commissioningId, aborted },
-            });
-            wait(5, "the commander's decision after the abort (Mother's question in her chat)");
-            let choice = asked.status === "auto" ? (asked.answer?.choice ?? null) : null;
-            const tAsk = Date.now();
-            while (!choice) {
-                if (Date.now() - tAsk > waitMs) throw new Error(`the commander did not decide after the abort in ${waitMs} ms`);
-                await sleep(1000);
-                const read = await (await operator.session("station")).request<{ contents: Array<{ text: string }> }>("resources/read", { uri: "station://questions" });
-                const mine = (JSON.parse(read.contents[0].text) as Array<{ id: string; status: string; answer?: { choice?: string } | null }>).find((x) => x.id === asked.questionId);
-                if (mine && mine.status !== "open") choice = mine.answer?.choice ?? "stop";
+            const position = (run.conduct ??= { playbook: playbookFile, stage: null, aborts: 0, aborted: false, answer: null, stages: [] });
+            position.aborted = executed.status === "aborted";
+            if (position.aborted) position.aborts++;
+            position.answer = null;
+            const views = { aborted: () => ({ why, aborts: position.aborts }) };
+            const says = (s: Saying, key?: string) => sayingText(s, (k, v) => say(PROCESS_WORDS, k, v), views, key);
+            let next: "report" | "rewrite" | null = null;
+            while (!next) {
+                const { stage, refusing } = recovery.evaluate({ aborted: position.aborted, answered: position.answer !== null, rewrite: position.answer === "rewrite", aborts: position.aborts });
+                position.stage = stage.id;
+                position.stages.push({ stage: stage.id, at: new Date().toISOString() });
+                notify();
+                if (stage.action === "go-on") next = "report";
+                else if (stage.action === "end") throw new Error(says(stage));
+                else if (stage.action === "ask") {
+                    // The commander says, once what stopped the test is dealt with (the alarm cleared, the module safe), whether the factory writes another.
+                    narrate(says(stage));
+                    const asked = await call<{ questionId: string; status: string; answer?: { choice?: string } | null }>("station", "ask", {
+                        from: "scenario",
+                        kind: String(stage.bag.kind),
+                        question: says(stage, String(stage.bag.questionSays)),
+                        options: stage.bag.options,
+                        context: { commissioningId, aborted },
+                    });
+                    wait(5, says(stage, String(stage.bag.waitingSays)));
+                    let choice = asked.status === "auto" ? (asked.answer?.choice ?? null) : null;
+                    const tAsk = Date.now();
+                    while (!choice) {
+                        if (Date.now() - tAsk > waitMs) throw new Error(`the commander did not decide after the abort in ${waitMs} ms`);
+                        await sleep(1000);
+                        const read = await (await operator.session("station")).request<{ contents: Array<{ text: string }> }>("resources/read", { uri: "station://questions" });
+                        const mine = (JSON.parse(read.contents[0].text) as Array<{ id: string; status: string; answer?: { choice?: string } | null }>).find((x) => x.id === asked.questionId);
+                        if (mine && mine.status !== "open") choice = mine.answer?.choice ?? "stop";
+                    }
+                    position.answer = choice;
+                } else if (stage.action === "reopen") {
+                    const refused = refusing.filter((g) => g.capabilities.includes("station.commissioning_reopen"));
+                    if (refused.length) throw new Error(refused.map((g) => says(g)).join("; "));
+                    await call("station", "commissioning_reopen", { commissioningId, reason: says(stage, String(stage.bag.reasonSays)) });
+                    previous = { procedureId: c1.commissioning.procedure?.procedureId ?? null, aborted: { condition: aborted?.condition ?? null, reason: why, step: aborted?.step ?? null }, minutesRun: telemetry.length - 1 };
+                    // The world where the abort left it: the next test starts from the CO2 measured now.
+                    await call("scrubber", "debug.set_co2", { state: "NOMINAL", ppm: Math.round(world.labPpm) });
+                    measured = { co2Ppm: Math.round(world.labPpm), source: sensor ? `${sensor} (co2)` : "scrubber.motor.state", at: new Date().toISOString() };
+                    if (sensor) await call("station", "registry_report", { path: sensor, readings: { co2: measured.co2Ppm } }).catch(() => undefined);
+                    narrate(says(stage));
+                    next = "rewrite";
+                } else throw new Error(`${playbookFile}: the stage "${stage.id}" does "${String(stage.action)}", which the commissioning does not know`);
             }
-            if (choice !== "rewrite") throw new Error(`the commander stopped the commissioning after the abort: ${why}`);
-            await call("station", "commissioning_reopen", { commissioningId, reason: `aborted: ${why}` });
-            previous = { procedureId: c1.commissioning.procedure?.procedureId ?? null, aborted: { condition: aborted?.condition ?? null, reason: why, step: aborted?.step ?? null }, minutesRun: telemetry.length - 1 };
-            // The world where the abort left it: the next test starts from the CO2 measured now.
-            await call("scrubber", "debug.set_co2", { state: "NOMINAL", ppm: Math.round(world.labPpm) });
-            measured = { co2Ppm: Math.round(world.labPpm), source: sensor ? `${sensor} (co2)` : "scrubber.motor.state", at: new Date().toISOString() };
-            if (sensor) await call("station", "registry_report", { path: sensor, readings: { co2: measured.co2Ppm } }).catch(() => undefined);
-            narrate("The procedure factory writes a new test, told what stopped the last one.");
+            if (next === "report") break;
         }
 
         // 6. the report.

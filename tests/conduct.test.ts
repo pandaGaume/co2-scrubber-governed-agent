@@ -13,8 +13,9 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { Playbook, type Evidence, type PlaybookFile } from "../harness/core/conduct.js";
-import { missingWords } from "../harness/core/words.js";
+import { loadPlaybook, Playbook, type Evidence, type PlaybookFile } from "../harness/core/conduct.js";
+import { loadWords, missingWords } from "../harness/core/words.js";
+import { RECOVERY_PLAYBOOK } from "../slots/scenario/commissioning.js";
 import { PLAYBOOK, WORDS } from "../harness/topics/procedure/index.js";
 
 const PROOFS = ["procedureAccepted", "installationRead", "methodRead", "planPhase", "previous", "analysisAccepted"] as const;
@@ -72,6 +73,37 @@ describe("the procedure factory's playbook", () => {
     });
 });
 
+describe("the commissioning's process playbook: what follows a test", () => {
+    const RECOVERY = loadPlaybook(RECOVERY_PLAYBOOK);
+    const events = (): Evidence[] => {
+        const out: Evidence[] = [];
+        for (let n = 0; n < 8; n++) for (let aborts = 0; aborts <= 4; aborts++) out.push({ aborted: Boolean(n & 1), answered: Boolean(n & 2), rewrite: Boolean(n & 4), aborts });
+        return out;
+    };
+    /** What the scenario player did until 2026-09-29, as an if-chain: at most two new tests after an abort, on the commander's word only. */
+    const byCode = (e: Evidence): string => {
+        if (!e.aborted) return "report";
+        if ((e.aborts as number) >= 3) return "give-up";
+        if (!e.answered) return "ask";
+        if (!e.rewrite) return "stopped";
+        return "rewrite-test";
+    };
+
+    it("does what the player did, for every answer and every count of aborts", () => {
+        for (const e of events()) {
+            const { stage, refusing } = RECOVERY.evaluate(e);
+            assert.equal(stage.id, byCode(e), JSON.stringify(e));
+            assert.equal(refusing.some((g) => g.capabilities.includes("station.commissioning_reopen")), !e.rewrite, `the reopen waits for the commander's word ${JSON.stringify(e)}`);
+        }
+    });
+
+    it("names what each stage does, and its bound says why", () => {
+        assert.deepEqual(Object.fromEntries(RECOVERY.stages.map((s) => [s.id, s.action])), { report: "go-on", "give-up": "end", ask: "ask", stopped: "end", "rewrite-test": "reopen" });
+        assert.equal(RECOVERY.stages.find((s) => s.id === "ask")?.bag.kind, "recover", "a question no standing order answers");
+        assert.deepEqual(missingWords(loadWords("specs/commissioning/words.json"), RECOVERY.words()), []);
+    });
+});
+
 describe("a playbook the runtime refuses to run", () => {
     const base = (): PlaybookFile => ({
         nodes: [
@@ -90,6 +122,12 @@ describe("a playbook the runtime refuses to run", () => {
         const doc = base();
         doc.nodes.push({ id: "x", type: "physics.quantity" });
         assert.throws(() => new Playbook("t", doc), /"x" has the type "physics.quantity", which is no conduct node/);
+    });
+
+    it("a bound that does not say why", () => {
+        const doc = base();
+        doc.nodes.push({ id: "b", type: "conduct.bound", bag: { count: "n", atLeast: 3 } });
+        assert.throws(() => new Playbook("t", doc), /bound "b" names its count, its bound and why/);
     });
 
     it("two entries", () => {

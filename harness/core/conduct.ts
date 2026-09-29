@@ -7,10 +7,18 @@
  *
  *   conduct.start      out next            the playbook's entry
  *   conduct.evidence   out value           a proof of the event, by name (what the runner recorded, never what a model says)
+ *   conduct.bound      out value           a count of the event reached a bound of the mechanism (bag: count, atLeast, why)
  *   conduct.not/all/any in..., out value   proofs combined
  *   conduct.stage      in entered, passes  active when entered and not passing; otherwise hands over on `next`
  *                      out next
  *   conduct.gate       in refuses          while it holds, the capabilities it names are refused, with its words
+ *
+ * The same nodes conduct at two levels (section 2 of the note): the step, in
+ * the runner, where a stage says the brief (`says`) and the position is
+ * read again from the task's progress at every step; and the process, above
+ * the tasks, where a stage also names what the process does (`action`, and
+ * whatever its bag says of it) and the position is the record the process
+ * keeps between two events, hours of the world apart.
  *
  * A playbook is read from a file (`specs/<topic>/playbook.json`): its nodes by
  * id and type, with their bag (what a stage or a gate says: a key of the
@@ -31,6 +39,7 @@ export const CONDUCT = {
     node: "conduct.node",
     start: "conduct.start",
     evidence: "conduct.evidence",
+    bound: "conduct.bound",
     not: "conduct.not",
     all: "conduct.all",
     any: "conduct.any",
@@ -43,10 +52,12 @@ for (const id of Object.values(CONDUCT)) if (!ONTOLOGY.has(id)) ONTOLOGY.registe
 /** A value a hole of the words is filled with: a literal, or another key of the words. */
 export type SayVar = string | number | { word: string };
 
-/** What a stage or a gate says: a key of the topic's words, the topic's view that fills its holes, and holes filled here. */
+/** What a stage or a gate says: a key of the topic's words, the topic's view that fills its holes, and holes filled here; at the process level, what it does (`action`), with the rest of its bag. */
 export interface Saying {
     id: string;
     says: string;
+    action?: string;
+    bag: Record<string, unknown>;
     view?: string;
     vars?: Record<string, SayVar>;
 }
@@ -61,8 +72,8 @@ export interface PlaybookFile {
     links: Array<{ from: string; to: string }>;
 }
 
-/** The event as the playbook reads it: each proof by name. */
-export type Evidence = Record<string, boolean>;
+/** The event as the playbook reads it: each proof by name, and the counts its bounds compare. */
+export type Evidence = Record<string, boolean | number>;
 
 class ConductSession extends Session {
     evidence: Evidence = {};
@@ -97,6 +108,20 @@ class EvidenceNode extends ConductNode {
     }
     override fire(session: ISession): void {
         this.out(session, "value", (session as ConductSession).evidence[this.evidence] === true);
+    }
+}
+
+class BoundNode extends ConductNode {
+    override outputPorts = [bool("value")];
+    constructor(
+        readonly count: string,
+        readonly atLeast: number,
+    ) {
+        super();
+    }
+    override fire(session: ISession): void {
+        const n = (session as ConductSession).evidence[this.count];
+        this.out(session, "value", typeof n === "number" && n >= this.atLeast);
     }
 }
 
@@ -146,7 +171,7 @@ class GateNode extends ConductNode {
 
 const sayingOf = (id: string, bag: Record<string, unknown>, file: string): Saying => {
     if (typeof bag.says !== "string") throw new Error(`${file}: "${id}" says nothing (bag.says, a key of the words)`);
-    return { id, says: bag.says, ...(typeof bag.view === "string" ? { view: bag.view } : {}), ...(bag.vars && typeof bag.vars === "object" ? { vars: bag.vars as Record<string, SayVar> } : {}) };
+    return { id, says: bag.says, bag, ...(typeof bag.action === "string" ? { action: bag.action } : {}), ...(typeof bag.view === "string" ? { view: bag.view } : {}), ...(bag.vars && typeof bag.vars === "object" ? { vars: bag.vars as Record<string, SayVar> } : {}) };
 };
 
 const portOf = (end: string, file: string): [string, string] => {
@@ -183,6 +208,9 @@ export class Playbook {
                     case CONDUCT.evidence:
                         if (typeof bag.evidence !== "string") throw new Error(`${file}: evidence "${n.id}" names no proof (bag.evidence)`);
                         return new EvidenceNode(bag.evidence);
+                    case CONDUCT.bound:
+                        if (typeof bag.count !== "string" || typeof bag.atLeast !== "number" || typeof bag.why !== "string") throw new Error(`${file}: bound "${n.id}" names its count, its bound and why (bag.count, bag.atLeast, bag.why)`);
+                        return new BoundNode(bag.count, bag.atLeast);
                     case CONDUCT.not:
                         return new NotNode();
                     case CONDUCT.all:
@@ -241,6 +269,7 @@ export class Playbook {
         const keys = new Set<string>();
         for (const s of [...this.stages, ...this.gates]) {
             keys.add(s.says);
+            for (const [k, v] of Object.entries(s.bag)) if (/^[a-z]+Says$/.test(k) && typeof v === "string") keys.add(v);
             for (const v of Object.values(s.vars ?? {})) if (typeof v === "object") keys.add(v.word);
         }
         return [...keys];
@@ -251,10 +280,13 @@ export function loadPlaybook(file: string): Playbook {
     return new Playbook(file, JSON.parse(readFileSync(fromRoot(...file.split("/")), "utf8")) as PlaybookFile);
 }
 
-/** A stage or a gate said: its holes filled by the topic's view, then by its own vars (a `{word}` var is another key, said without holes). */
-export function sayingText(saying: Saying, say: (key: string, vars?: Record<string, string | number>) => string, views: Record<string, () => Record<string, string | number>>): string {
+/**
+ * A stage or a gate said: its holes filled by the topic's view, then by its own vars (a `{word}` var is another key,
+ * said without holes). `key` says another of its words than `says`: a bag field named `<something>Says`.
+ */
+export function sayingText(saying: Saying, say: (key: string, vars?: Record<string, string | number>) => string, views: Record<string, () => Record<string, string | number>>, key: string = saying.says): string {
     const view = saying.view ? views[saying.view] : undefined;
     if (saying.view && !view) throw new Error(`the playbook's "${saying.id}" asks for the view "${saying.view}", which the topic does not give`);
     const own = Object.fromEntries(Object.entries(saying.vars ?? {}).map(([k, v]) => [k, typeof v === "object" ? say(v.word) : v]));
-    return say(saying.says, { ...(view ? view() : {}), ...own });
+    return say(key, { ...(view ? view() : {}), ...own });
 }

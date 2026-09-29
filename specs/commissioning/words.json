@@ -1,0 +1,14 @@
+{
+    "note": "What the commissioning's process playbook says (specs/commissioning/recovery.playbook.json): Mother's lines, the commander's question, the reasons a run ends.",
+    "recover": {
+        "ranThrough": "The test ran to its end.",
+        "exhausted": "the test was aborted {aborts} times; the last time: {why}",
+        "narrate": "The test stopped: {why}. Commander, when what stopped it is dealt with, tell me in my chat whether the procedure factory writes a new test.",
+        "question": "The test was aborted: {why}. When it is dealt with (the alarm cleared, the module safe), shall the procedure factory write a new test that accounts for it?",
+        "waiting": "the commander's decision after the abort (Mother's question in her chat)",
+        "stopped": "the commander stopped the commissioning after the abort: {why}",
+        "rewrite": "The procedure factory writes a new test, told what stopped the last one.",
+        "reopenReason": "aborted: {why}",
+        "reopenRefused": "the commissioning reopens only on the commander's decision to write a new test"
+    }
+}

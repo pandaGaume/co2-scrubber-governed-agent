@@ -1,0 +1,37 @@
+{
+    "title": "What the commissioning does once a test has ended (the process level, harness/core/conduct.ts): on to the report, or, after an abort, the commander's decision, then a new test the procedure factory writes told what stopped the last one, at most three aborts",
+    "nodes": [
+        { "id": "start", "type": "conduct.start" },
+
+        { "id": "aborted", "type": "conduct.evidence", "bag": { "evidence": "aborted" } },
+        { "id": "answered", "type": "conduct.evidence", "bag": { "evidence": "answered" } },
+        { "id": "rewrite", "type": "conduct.evidence", "bag": { "evidence": "rewrite" } },
+        { "id": "exhausted", "type": "conduct.bound", "bag": { "count": "aborts", "atLeast": 3, "why": "a test aborted three times does not hold the cause the analysis names: the commissioning ends, and a person looks at it before any other" } },
+        { "id": "not-exhausted", "type": "conduct.not" },
+        { "id": "not-rewrite", "type": "conduct.not" },
+
+        { "id": "report", "type": "conduct.stage", "bag": { "action": "go-on", "says": "recover.ranThrough" } },
+        { "id": "give-up", "type": "conduct.stage", "bag": { "action": "end", "says": "recover.exhausted", "view": "aborted" } },
+        { "id": "ask", "type": "conduct.stage", "bag": { "action": "ask", "says": "recover.narrate", "questionSays": "recover.question", "view": "aborted", "kind": "recover", "options": [{ "id": "rewrite", "label": "write a new test" }, { "id": "stop", "label": "stop the commissioning" }], "waitingSays": "recover.waiting" } },
+        { "id": "stopped", "type": "conduct.stage", "bag": { "action": "end", "says": "recover.stopped", "view": "aborted" } },
+        { "id": "rewrite-test", "type": "conduct.stage", "bag": { "action": "reopen", "says": "recover.rewrite", "reasonSays": "recover.reopenReason", "view": "aborted" } },
+
+        { "id": "reopen-on-decision", "type": "conduct.gate", "bag": { "capabilities": ["station.commissioning_reopen"], "says": "recover.reopenRefused" } }
+    ],
+    "links": [
+        { "from": "exhausted.value", "to": "not-exhausted.in" },
+        { "from": "rewrite.value", "to": "not-rewrite.in" },
+
+        { "from": "start.next", "to": "report.entered" },
+        { "from": "aborted.value", "to": "report.passes" },
+        { "from": "report.next", "to": "give-up.entered" },
+        { "from": "not-exhausted.value", "to": "give-up.passes" },
+        { "from": "give-up.next", "to": "ask.entered" },
+        { "from": "answered.value", "to": "ask.passes" },
+        { "from": "ask.next", "to": "stopped.entered" },
+        { "from": "rewrite.value", "to": "stopped.passes" },
+        { "from": "stopped.next", "to": "rewrite-test.entered" },
+
+        { "from": "not-rewrite.value", "to": "reopen-on-decision.refuses" }
+    ]
+}
