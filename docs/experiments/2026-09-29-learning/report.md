@@ -17,6 +17,15 @@ Files in this folder:
 
 Driver: `scripts/learning-experiment/run.mjs`; its task lists are `train-tasks.json` and `validation-tasks.json`.
 
+## Corrections after the memory audit (2026-09-29, the same day)
+
+Two statements of the first version of this report were wrong or overstated:
+
+- **There was no "submit before the plan".** All 13 pre-guard refusals of the experiment (8 in `exp-learn`, 5 in `exp-control`) are Sonnet answers cut at the output limit: `stop_reason: max_tokens`, exactly 4096 output tokens, while writing the procedure's `procedure.submit`. The harness turns a cut answer into a report to the crew (`crew.report`); the core refuses it as outside the factory's allowlist, and the model then reads "Your last submission was refused: Provider proposed a capability outside the allowlist". The true reason (the call was cut and not run) is lost, because the factories run in the `state` context mode, where the message carrying it is never delivered. This is a defect of the harness, not a behaviour of the model; the planning policy must not be changed because of it.
+- **The rule was in the guard's refusal.** The guard's refusal already says what the reflection wrote: "a safety constant cites a fact by its id, as library.facts lists them", then `cite it (source "library", reference "test.speedFloorPercent")`. The reflection received the refusals' text (the first judged refusal of each task), never the retry that succeeded in the same task, nor its arguments. What was shown is that the system turns a repeated refusal into a standing instruction that carries over to unseen tasks; not that it learned a behaviour from observing what succeeded.
+
+The numbers below are unchanged; the passages that relied on the two statements are corrected in place.
+
 ## 1. Context completeness (step 1)
 
 Commit `6a19c7f`.
@@ -35,7 +44,7 @@ What was not done:
 
 Two changes to the *recording* were made before the baseline (commit `1340881`, 263 tests pass). Neither touches the guard's decisions:
 
-- **Who refused.** The manifest now marks each submission `judged: "accepted" | "refused"` when the topic's own guard judged it. A submission stopped by the harness before the guard is left unmarked. That covers the step's allowlist ("Provider proposed a capability outside the allowlist", which is the submit-before-plan issue), a schema, or a repeated call. The reflection's "first try" is now the first judged submission. Before this, Sonnet's first refusal in every task was the pre-guard one, so the two issues were mixed.
+- **Who refused.** The manifest now marks each submission `judged: "accepted" | "refused"` when the topic's own guard judged it. A submission stopped by the harness before the guard is left unmarked. That covers the step's allowlist ("Provider proposed a capability outside the allowlist"; see the correction above: in this experiment every one of them was an answer cut at the output limit), a schema, or a repeated call. The reflection's "first try" is now the first judged submission. Before this, Sonnet's first refusal in every task was the pre-guard one, so the two issues were mixed.
 - **The form of a mistake.** `shapesOf` now takes quotes out before it cuts at the first clause. Sonnet's composite reference contains a `"; "` inside its quote, and the form used to be cut in the middle.
 
 ## 2. Clean learning state (step 2)
@@ -60,8 +69,8 @@ Each row records the first guard-evaluated submission. The reflection was asked 
 
 | Task | Variant | First judged submission | Guard problem | Reference for the offending field | Pre-guard refusals | Steps | Tokens | Adaptations in force |
 |---|---|---|---|---|---|---|---|---|
-| t1 | 1480 ppm, fe-1 + fe-2 | refused | `justification: steps.2.speedPercent … is not a fact of the library` | `steps.2.speedPercent = 100` ← `"test.speedFloorPercent (signed, at least 30 percent); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)"` | 1 (allowlist) | 11 | 88 757 | none |
-| t2 | 1100 ppm, fe-1 + fe-2 + cdr | refused | the same form, on `steps.1.speedPercent` and `steps.2.speedPercent` | `50` ← `"test.speedFloorPercent (…); scrubber.minimumSpeedElevated 40 percent (scrubber-1-datasheet)"`; `100` ← `"test.speedFloorPercent (…); scrubber.effectiveFlowAtFull 1 m3/min (…)"` | 1 (allowlist) | 11 | 97 511 | none |
+| t1 | 1480 ppm, fe-1 + fe-2 | refused | `justification: steps.2.speedPercent … is not a fact of the library` | `steps.2.speedPercent = 100` ← `"test.speedFloorPercent (signed, at least 30 percent); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)"` | 1 (truncated, labelled allowlist) | 11 | 88 757 | none |
+| t2 | 1100 ppm, fe-1 + fe-2 + cdr | refused | the same form, on `steps.1.speedPercent` and `steps.2.speedPercent` | `50` ← `"test.speedFloorPercent (…); scrubber.minimumSpeedElevated 40 percent (scrubber-1-datasheet)"`; `100` ← `"test.speedFloorPercent (…); scrubber.effectiveFlowAtFull 1 m3/min (…)"` | 1 (truncated, labelled allowlist) | 11 | 97 511 | none |
 
 All the other references cite the signed fact's id followed by a note in parentheses, and the guard accepts them. The one failure is a signed rule and a datasheet fact joined in one reference.
 
@@ -91,7 +100,7 @@ After t2, this form repeated at the first judged try, which met the reflection's
 - baseline 2 of 2 tasks with the mistake;
 - fork commit `e33094a9`.
 
-Nobody wrote this rule into C, the brief or the guard. The reflection derived it from the two refusals.
+Nobody wrote this rule into C or the brief. It was not invented, though: the guard's refusal already says it ("a safety constant cites a fact by its id, as library.facts lists them", then `cite it (source "library", reference "test.speedFloorPercent")`). The reflection turned the guard's words into a standing instruction; it did not observe the successful retry, which it never received (see the correction above).
 
 ## 5. Freeze (step 5)
 
@@ -132,7 +141,7 @@ The two runs ran in parallel on two servers (ports 3007 and 3008).
 | Categories (tasks) | justification 5, expected 1 | expected 1, shape 1 |
 | Tasks with no judged submission | 1 (v5, STUCK before submitting) | 0 |
 | Tasks ending with a proposed procedure | 5 | 6 |
-| Pre-guard refusals (submit before the plan, kept apart) | 5 | 5 |
+| Pre-guard refusals (all answers cut at the output limit, see the correction above) | 5 | 5 |
 | Average steps | 13.7 | 13.5 |
 | Average tokens | 106 111 | 108 013 |
 
@@ -151,12 +160,12 @@ The two runs ran in parallel on two servers (ports 3007 and 3008).
 - The failure it was learned from disappeared entirely (0 of 6, against 5 of 5).
 - It held across starting CO2 from 800 to 2000 ppm, one to four people in the Lab, and after a previous abort.
 
-The reflection wrote the rule itself, from two refusals, in one proposal, without being told the rule.
+The reflection wrote the standing rule itself, in one proposal, from two refusals whose text already stated it; it was not handed the rule through C or the brief.
 
 Limits:
 
 - **Sample size.** The sample is small (6 tasks per arm, one reflection, one model). The effect on the targeted failure is large and clean; the pass rate carries more noise.
 - **Facts were not varied.** Changing a signed fact would need a person's signature, so every task cites the same safety card. The validation varies values, occupancy and context, not the library.
 - **Scope of the validation.** The learned form concerned step speeds, and so did the validation's failures without the adaptation. No task tested a composite reference on another constant. The adaptation's wording is general ("a justification of a safety constant names one fact alone"), and no composite reference appeared on any constant with it.
-- **What remains after the adaptation.** Two failures of other kinds (`expected`, `shape`). The submit-before-plan issue (5 of 6 in both arms) was not learned and was kept apart, as the protocol requires.
+- **What remains after the adaptation.** Two failures of other kinds (`expected`, `shape`). The pre-guard refusals (5 of 6 in both arms) are not a behaviour of the model: they are answers cut at the 4096-token output limit, which the harness mislabelled (see the correction above).
 - **The adaptation has not been judged yet.** It is still `adopted`: learning froze before the station's own judgement after 3 tasks. By the station's rule (kept if the mistake shows less often), it would be kept.
