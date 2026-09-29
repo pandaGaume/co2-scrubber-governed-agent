@@ -1,0 +1,26 @@
+exp-learn t-2026-09-29-0001: submit:TRUNCATED -> revise:GUARD_REJECTED -> revise:ACCEPTED => ACCEPTED
+   steps.2.speedPercent [justification]  X "test.speedFloorPercent (signed, at least 30 percent); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)" -> REJECTED   Y "test.speedFloorPercent" -> ACCEPTED
+exp-learn t-2026-09-29-0002: submit:TRUNCATED -> revise:GUARD_REJECTED -> revise:ACCEPTED => ACCEPTED
+   steps.1.speedPercent [justification]  X "test.speedFloorPercent (commissioning-test-safety, signed); scrubber.minimumSpeedElevated 40 percent (scrubber-1-datasheet)" -> REJECTED   Y "test.speedFloorPercent" -> ACCEPTED
+   steps.2.speedPercent [justification]  X "test.speedFloorPercent (commissioning-test-safety, signed); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)" -> REJECTED   Y "test.speedFloorPercent" -> ACCEPTED
+exp-learn t-2026-09-29-0004: submit:TRUNCATED -> revise:ACCEPTED => ACCEPTED
+exp-learn t-2026-09-29-0005: submit:TRUNCATED -> revise:ACCEPTED => ACCEPTED
+exp-learn t-2026-09-29-0006: submit:TRUNCATED -> revise:GUARD_REJECTED -> revise:ACCEPTED => ACCEPTED
+exp-learn t-2026-09-29-0007: submit:TRUNCATED -> revise:ACCEPTED => ACCEPTED
+exp-learn t-2026-09-29-0008: submit:ACCEPTED => ACCEPTED
+exp-learn t-2026-09-29-0009: submit:TRUNCATED -> revise:GUARD_REJECTED -> revise:ACCEPTED => ACCEPTED
+exp-learn t-2026-09-29-0010: submit:TRUNCATED -> revise:ACCEPTED => ACCEPTED
+exp-control t-2026-09-29-0001: submit:TRUNCATED -> revise:GUARD_REJECTED -> revise:ACCEPTED => ACCEPTED
+   steps.2.speedPercent [justification]  X "test.speedFloorPercent (signed, at least 30 percent); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)" -> REJECTED   Y "test.speedFloorPercent" -> ACCEPTED
+exp-control t-2026-09-29-0002: submit:TRUNCATED -> revise:GUARD_REJECTED -> revise:ACCEPTED => ACCEPTED
+   steps.2.speedPercent [justification]  X "test.speedFloorPercent (signed, at least 30 percent); scrubber.effectiveFlowAtFull 1 m3/min at full speed" -> REJECTED   Y "test.speedFloorPercent" -> ACCEPTED
+exp-control t-2026-09-29-0003: submit:TRUNCATED -> revise:GUARD_REJECTED -> revise:ACCEPTED => ACCEPTED
+   steps.2.speedPercent [justification]  X "scrubber.effectiveFlowAtFull (scrubber-1-datasheet, signed) 1 m3/min; test.speedFloorPercent at least 30" -> REJECTED   Y "test.speedFloorPercent" -> ACCEPTED
+exp-control t-2026-09-29-0004: submit:TRUNCATED -> revise:GUARD_REJECTED -> revise:ACCEPTED => ACCEPTED
+   steps.2.speedPercent [justification]  X "test.speedFloorPercent (signed, at or above 30 percent); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)" -> REJECTED   Y "test.speedFloorPercent" -> ACCEPTED
+exp-control t-2026-09-29-0005: no attempt => NO_ATTEMPT
+exp-control t-2026-09-29-0006: submit:TRUNCATED -> revise:GUARD_REJECTED -> revise:ACCEPTED => ACCEPTED
+   steps.2.speedPercent [justification]  X "scrubber.effectiveFlowAtFull (scrubber-1-datasheet, signed) 1 m3/min; test.speedFloorPercent at least 30" -> REJECTED   Y "test.speedFloorPercent" -> ACCEPTED
+
+15 episodes; attempts: ACCEPTED 14, GUARD_REJECTED 9, PRE_GUARD_REJECTED 0, TRUNCATED 13, CAPABILITY_FAILED 0
+final: ACCEPTED 14, NOT_ACCEPTED 0, NO_ATTEMPT 1; contrasts 8

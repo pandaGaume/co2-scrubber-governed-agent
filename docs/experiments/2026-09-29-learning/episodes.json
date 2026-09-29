@@ -1,0 +1,1797 @@
+[
+  {
+    "fork": "exp-learn",
+    "id": "t-2026-09-29-0001#procedure",
+    "taskId": "t-2026-09-29-0001",
+    "topic": "procedure",
+    "at": "2026-09-29T18:51:24.621Z",
+    "intent": "procedure: V_lab (Volume, m3)",
+    "action": "procedure.submit",
+    "attempts": [
+      {
+        "step": 8,
+        "capability": "procedure.submit",
+        "arguments": {},
+        "outcome": "TRUNCATED",
+        "reason": "Provider proposed a capability outside the allowlist",
+        "problems": [
+          {
+            "says": "Provider proposed a capability outside the allowlist"
+          }
+        ]
+      },
+      {
+        "step": 9,
+        "capability": "procedure.revise",
+        "arguments": {
+          "monitoring.band.minBpm": {
+            "value": 45,
+            "source": "library",
+            "reference": "test.heartRateMinBpm (commissioning-test-safety, signed)"
+          },
+          "monitoring.band.maxBpm": {
+            "value": 120,
+            "source": "library",
+            "reference": "test.heartRateMaxBpm (commissioning-test-safety, signed)"
+          },
+          "limits.co2MaxPpm": {
+            "value": 2800,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm (commissioning-test-safety, signed, at most 3200 ppm)"
+          },
+          "limits.co2AbortPpm": {
+            "value": 3000,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm (commissioning-test-safety, signed, at most 3200 ppm)"
+          },
+          "limits.minSpeedPercent": {
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent (commissioning-test-safety, signed, at least 30 percent)"
+          },
+          "limits.maxMinutes": {
+            "value": 60,
+            "source": "library",
+            "reference": "test.maxMinutesCeiling (commissioning-test-safety, signed, at most 60 min)"
+          },
+          "steps.1.speedPercent": {
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent (commissioning-test-safety, signed, at least 30 percent)"
+          },
+          "steps.1.minutes": {
+            "value": 30,
+            "source": "derived",
+            "reference": "tau=V/Qe with V first guess 30 m3 (register default) and Qe 0.3 m3/min; 30 min plus 3.33 min lag fits the 60 min bound"
+          },
+          "steps.2.speedPercent": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent (signed, at least 30 percent); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)"
+          },
+          "steps.2.minutes": {
+            "value": 25,
+            "source": "derived",
+            "reference": "tau=V/Qe = 30 m3 / 1 m3/min = 30 min (first guess); 30+25=55 min under the 60 min ceiling"
+          },
+          "abort.co2.threshold": {
+            "value": 3000,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm (commissioning-test-safety, signed, at most 3200 ppm)"
+          },
+          "abort.battery.threshold": {
+            "value": 40,
+            "source": "library",
+            "reference": "test.batteryAbortMinPercent (commissioning-test-safety, signed, at least 35 percent)"
+          }
+        },
+        "outcome": "GUARD_REJECTED",
+        "reason": "procedure refused: justification: steps.2.speedPercent: \"test.speedFloorPercent (signed, at least 30 percent); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them); the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")",
+        "problems": [
+          {
+            "kind": "justification",
+            "path": "steps.2.speedPercent",
+            "says": "justification: steps.2.speedPercent: \"test.speedFloorPercent (signed, at least 30 percent); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+          },
+          {
+            "says": "the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")"
+          }
+        ]
+      },
+      {
+        "step": 10,
+        "capability": "procedure.revise",
+        "arguments": {
+          "steps.2.speedPercent": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          }
+        },
+        "outcome": "ACCEPTED",
+        "reason": null,
+        "problems": []
+      }
+    ],
+    "finalOutcome": "ACCEPTED",
+    "ended": "contract held after 11 step(s)",
+    "contrasts": [
+      {
+        "path": "steps.2.speedPercent",
+        "kind": "justification",
+        "rejected": {
+          "step": 9,
+          "argument": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent (signed, at least 30 percent); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)"
+          },
+          "says": "justification: steps.2.speedPercent: \"test.speedFloorPercent (signed, at least 30 percent); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+        },
+        "accepted": {
+          "step": 10,
+          "argument": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "fork": "exp-learn",
+    "id": "t-2026-09-29-0002#procedure",
+    "taskId": "t-2026-09-29-0002",
+    "topic": "procedure",
+    "at": "2026-09-29T18:52:37.187Z",
+    "intent": "procedure: V_lab (Volume, m3)",
+    "action": "procedure.submit",
+    "attempts": [
+      {
+        "step": 8,
+        "capability": "procedure.submit",
+        "arguments": {},
+        "outcome": "TRUNCATED",
+        "reason": "Provider proposed a capability outside the allowlist",
+        "problems": [
+          {
+            "says": "Provider proposed a capability outside the allowlist"
+          }
+        ]
+      },
+      {
+        "step": 9,
+        "capability": "procedure.revise",
+        "arguments": {
+          "limits.co2MaxPpm": {
+            "value": 2500,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm (commissioning-test-safety, signed)"
+          },
+          "limits.co2AbortPpm": {
+            "value": 3000,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm (commissioning-test-safety, signed)"
+          },
+          "limits.minSpeedPercent": {
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent (commissioning-test-safety, signed)"
+          },
+          "limits.maxMinutes": {
+            "value": 60,
+            "source": "library",
+            "reference": "test.maxMinutesCeiling (commissioning-test-safety, signed)"
+          },
+          "monitoring.band.minBpm": {
+            "value": 45,
+            "source": "library",
+            "reference": "test.heartRateMinBpm (commissioning-test-safety, signed)"
+          },
+          "monitoring.band.maxBpm": {
+            "value": 120,
+            "source": "library",
+            "reference": "test.heartRateMaxBpm (commissioning-test-safety, signed)"
+          },
+          "steps.1.speedPercent": {
+            "value": 50,
+            "source": "library",
+            "reference": "test.speedFloorPercent (commissioning-test-safety, signed); scrubber.minimumSpeedElevated 40 percent (scrubber-1-datasheet)"
+          },
+          "steps.1.minutes": {
+            "value": 25,
+            "source": "derived",
+            "reference": "method-concentration-decay rule 4; dC/dt = G/V with G=1.14 L/min, V~30 m3 first guess, Qe=0.5 m3/min"
+          },
+          "steps.2.speedPercent": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent (commissioning-test-safety, signed); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)"
+          },
+          "steps.2.minutes": {
+            "value": 30,
+            "source": "derived",
+            "reference": "tau = V/Qe = 30 m3 / 1 m3/min = 30 min (first guess); method rule 4; total 55 <= 60"
+          },
+          "abort.co2.threshold": {
+            "value": 3000,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm (commissioning-test-safety, signed)"
+          },
+          "abort.battery.threshold": {
+            "value": 40,
+            "source": "library",
+            "reference": "test.batteryAbortMinPercent (commissioning-test-safety, signed)"
+          }
+        },
+        "outcome": "GUARD_REJECTED",
+        "reason": "procedure refused: justification: steps.1.speedPercent: \"test.speedFloorPercent (commissioning-test-safety, signed); scrubber.minimumSpeedElevated 40 percent (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them); the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\"); justification: steps.2.speedPercent: \"test.speedFloorPercent (commissioning-test-safety, signed); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them); the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")",
+        "problems": [
+          {
+            "kind": "justification",
+            "path": "steps.1.speedPercent",
+            "says": "justification: steps.1.speedPercent: \"test.speedFloorPercent (commissioning-test-safety, signed); scrubber.minimumSpeedElevated 40 percent (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+          },
+          {
+            "says": "the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")"
+          },
+          {
+            "kind": "justification",
+            "path": "steps.2.speedPercent",
+            "says": "justification: steps.2.speedPercent: \"test.speedFloorPercent (commissioning-test-safety, signed); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+          },
+          {
+            "says": "the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")"
+          }
+        ]
+      },
+      {
+        "step": 10,
+        "capability": "procedure.revise",
+        "arguments": {
+          "steps.1.speedPercent": {
+            "value": 50,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          "steps.2.speedPercent": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          }
+        },
+        "outcome": "ACCEPTED",
+        "reason": null,
+        "problems": []
+      }
+    ],
+    "finalOutcome": "ACCEPTED",
+    "ended": "contract held after 11 step(s)",
+    "contrasts": [
+      {
+        "path": "steps.1.speedPercent",
+        "kind": "justification",
+        "rejected": {
+          "step": 9,
+          "argument": {
+            "value": 50,
+            "source": "library",
+            "reference": "test.speedFloorPercent (commissioning-test-safety, signed); scrubber.minimumSpeedElevated 40 percent (scrubber-1-datasheet)"
+          },
+          "says": "justification: steps.1.speedPercent: \"test.speedFloorPercent (commissioning-test-safety, signed); scrubber.minimumSpeedElevated 40 percent (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+        },
+        "accepted": {
+          "step": 10,
+          "argument": {
+            "value": 50,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          }
+        }
+      },
+      {
+        "path": "steps.2.speedPercent",
+        "kind": "justification",
+        "rejected": {
+          "step": 9,
+          "argument": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent (commissioning-test-safety, signed); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)"
+          },
+          "says": "justification: steps.2.speedPercent: \"test.speedFloorPercent (commissioning-test-safety, signed); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+        },
+        "accepted": {
+          "step": 10,
+          "argument": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "fork": "exp-learn",
+    "id": "t-2026-09-29-0004#procedure",
+    "taskId": "t-2026-09-29-0004",
+    "topic": "procedure",
+    "at": "2026-09-29T18:54:07.963Z",
+    "intent": "procedure: V_lab (Volume, m3)",
+    "action": "procedure.submit",
+    "attempts": [
+      {
+        "step": 8,
+        "capability": "procedure.submit",
+        "arguments": {},
+        "outcome": "TRUNCATED",
+        "reason": "Provider proposed a capability outside the allowlist",
+        "problems": [
+          {
+            "says": "Provider proposed a capability outside the allowlist"
+          }
+        ]
+      },
+      {
+        "step": 9,
+        "capability": "procedure.revise",
+        "arguments": {
+          "limits.co2MaxPpm": {
+            "value": 2800,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          },
+          "limits.co2AbortPpm": {
+            "value": 3200,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          },
+          "limits.minSpeedPercent": {
+            "value": 40,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          "limits.maxMinutes": {
+            "value": 60,
+            "source": "library",
+            "reference": "test.maxMinutesCeiling"
+          },
+          "steps.1.speedPercent": {
+            "value": 40,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          "steps.1.minutes": {
+            "value": 20,
+            "source": "derived",
+            "reference": "rise phase bounded by the CO2 ceiling: 12.7 ppm/min net of 0.4 m3/min removal from 1700 ppm start; total duration under 60 min"
+          },
+          "steps.2.speedPercent": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          "steps.2.minutes": {
+            "value": 35,
+            "source": "derived",
+            "reference": "tau = V/Qe = 30 m3 / 1 m3/min = 30 min (first guess V); 35 min about one tau; 20+35=55 <= 60"
+          },
+          "monitoring.band.minBpm": {
+            "value": 45,
+            "source": "library",
+            "reference": "test.heartRateMinBpm"
+          },
+          "monitoring.band.maxBpm": {
+            "value": 120,
+            "source": "library",
+            "reference": "test.heartRateMaxBpm"
+          },
+          "abort.co2.threshold": {
+            "value": 3200,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          },
+          "abort.battery.threshold": {
+            "value": 40,
+            "source": "library",
+            "reference": "test.batteryAbortMinPercent"
+          }
+        },
+        "outcome": "ACCEPTED",
+        "reason": null,
+        "problems": []
+      }
+    ],
+    "finalOutcome": "ACCEPTED",
+    "ended": "contract held after 10 step(s)",
+    "contrasts": []
+  },
+  {
+    "fork": "exp-learn",
+    "id": "t-2026-09-29-0005#procedure",
+    "taskId": "t-2026-09-29-0005",
+    "topic": "procedure",
+    "at": "2026-09-29T18:56:52.944Z",
+    "intent": "procedure: V_lab (Volume, m3)",
+    "action": "procedure.submit",
+    "attempts": [
+      {
+        "step": 9,
+        "capability": "procedure.submit",
+        "arguments": {},
+        "outcome": "TRUNCATED",
+        "reason": "Provider proposed a capability outside the allowlist",
+        "problems": [
+          {
+            "says": "Provider proposed a capability outside the allowlist"
+          }
+        ]
+      },
+      {
+        "step": 10,
+        "capability": "procedure.revise",
+        "arguments": {
+          "limits.co2MaxPpm": {
+            "value": 3000,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          },
+          "limits.co2AbortPpm": {
+            "value": 3200,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          },
+          "limits.minSpeedPercent": {
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          "limits.maxMinutes": {
+            "value": 60,
+            "source": "library",
+            "reference": "test.maxMinutesCeiling"
+          },
+          "steps.1.speedPercent": {
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          "steps.1.minutes": {
+            "value": 25,
+            "source": "derived",
+            "reference": "method-concentration-decay rule 4: phase about tau/… with first-guess V=30 m3, Qe(30%)=0.3 m3/min"
+          },
+          "steps.2.speedPercent": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          "steps.2.minutes": {
+            "value": 30,
+            "source": "derived",
+            "reference": "tau = V/Qe = 30 m3 / 1 m3/min = 30 min (first guess V)"
+          },
+          "monitoring.band.minBpm": {
+            "value": 45,
+            "source": "library",
+            "reference": "test.heartRateMinBpm"
+          },
+          "monitoring.band.maxBpm": {
+            "value": 120,
+            "source": "library",
+            "reference": "test.heartRateMaxBpm"
+          },
+          "abort.co2.threshold": {
+            "value": 3200,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          },
+          "abort.battery.threshold": {
+            "value": 40,
+            "source": "library",
+            "reference": "test.batteryAbortMinPercent"
+          }
+        },
+        "outcome": "ACCEPTED",
+        "reason": null,
+        "problems": []
+      }
+    ],
+    "finalOutcome": "ACCEPTED",
+    "ended": "contract held after 11 step(s)",
+    "contrasts": []
+  },
+  {
+    "fork": "exp-learn",
+    "id": "t-2026-09-29-0006#procedure",
+    "taskId": "t-2026-09-29-0006",
+    "topic": "procedure",
+    "at": "2026-09-29T18:58:05.687Z",
+    "intent": "procedure: V_lab (Volume, m3)",
+    "action": "procedure.submit",
+    "attempts": [
+      {
+        "step": 9,
+        "capability": "procedure.submit",
+        "arguments": {},
+        "outcome": "TRUNCATED",
+        "reason": "Provider proposed a capability outside the allowlist",
+        "problems": [
+          {
+            "says": "Provider proposed a capability outside the allowlist"
+          }
+        ]
+      },
+      {
+        "step": 10,
+        "capability": "procedure.revise",
+        "arguments": {
+          "limits.co2MaxPpm": {
+            "value": 3000,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          },
+          "limits.co2AbortPpm": {
+            "value": 3200,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          },
+          "limits.minSpeedPercent": {
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          "limits.maxMinutes": {
+            "value": 60,
+            "source": "library",
+            "reference": "test.maxMinutesCeiling"
+          },
+          "steps.1.speedPercent": {
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          "steps.2.speedPercent": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          "steps.1.minutes": {
+            "value": 10,
+            "source": "derived",
+            "reference": "maxMinutes 60 minus decay step 45 = 15 min available; 10 min chosen, tau=V/Qe=30/1=30 min first guess"
+          },
+          "steps.2.minutes": {
+            "value": 45,
+            "source": "derived",
+            "reference": "tau=V/Qe=30 m3/(1 m3/min)=30 min first guess; 45 min = 1.5 tau"
+          },
+          "abort.battery.threshold": {
+            "value": 35,
+            "source": "library",
+            "reference": "test.batteryAbortMinPercent"
+          },
+          "monitoring.band.minBpm": {
+            "value": 45,
+            "source": "library",
+            "reference": "test.heartRateMinBpm"
+          },
+          "monitoring.band.maxBpm": {
+            "value": 120,
+            "source": "library",
+            "reference": "test.heartRateMaxBpm"
+          }
+        },
+        "outcome": "GUARD_REJECTED",
+        "reason": "procedure refused: expected: expected says nothing: a test that does not say what it expects to see cannot be told from a fishing trip",
+        "problems": [
+          {
+            "kind": "expected",
+            "says": "expected: expected says nothing: a test that does not say what it expects to see cannot be told from a fishing trip"
+          }
+        ]
+      },
+      {
+        "step": 11,
+        "capability": "procedure.revise",
+        "arguments": {
+          "expected.step1_rise": {
+            "value": "Speed 30 percent (Qe about 0.3 m3/min): Lab CO2 rises slowly from 2000 ppm towards an equilibrium of about 2500 ppm (2 occupants x 0.38 L/min = 0.76 L/min; G/Qe = 0.76/300 = about 2530 ppm). With the first guess V=30 m3 the rise is about 25 ppm/min at first and the Lab ends step 1 near 2050 to 2250 ppm, always under co2MaxPpm 3000. It must never reach the 3200 ppm abort."
+          },
+          "expected.step2_decay": {
+            "value": "Speed 100 percent (Qe = 1 m3/min): Lab CO2 falls monotonically towards an equilibrium of about 760 ppm (0.76 L/min / 1000 L/min), fitted as C(t)=C_eq+(C_0-C_eq)exp(-t/tau) after the 3.33 min scrubber lag. For V=30 m3, tau = V/Qe about 30 min and the Lab falls from about 2100 ppm to about 1050 ppm by the end of the 45 min step."
+          },
+          "expected.result": {
+            "value": "tau is read from the fit and V_lab = Qe * tau. Expected V_lab about 30 m3 (plausible range 10 to 200 m3, the shelf band); it is a first guess, not a result, until the fit is made. Fit residuals within sensor noise and C_eq close to 760 ppm support the one-zone hypothesis."
+          },
+          "expected.hab_b_record": {
+            "value": "Hab-B CO2 (hatch closed) should stay roughly flat, without following the Lab's rise and fall."
+          },
+          "expected.refuted_if": {
+            "value": "The hypotheses are refuted if: C_eq fitted differs from about 760 ppm by more than 20 percent (source or Qe wrong); the curve is not a single exponential (not one well-mixed zone, or sensors disagree); Hab-B CO2 moves together with the Lab (the closed hatch exchanges air, so V=Qe*tau underestimates the volume); the Lab does not fall in step 2 (scrubber not accepting commands); or occupancy changes during the test (curve invalid, repeat)."
+          }
+        },
+        "outcome": "ACCEPTED",
+        "reason": null,
+        "problems": []
+      }
+    ],
+    "finalOutcome": "ACCEPTED",
+    "ended": "contract held after 12 step(s)",
+    "contrasts": []
+  },
+  {
+    "fork": "exp-learn",
+    "id": "t-2026-09-29-0007#procedure",
+    "taskId": "t-2026-09-29-0007",
+    "topic": "procedure",
+    "at": "2026-09-29T18:59:26.511Z",
+    "intent": "procedure: V_lab (Volume, m3)",
+    "action": "procedure.submit",
+    "attempts": [
+      {
+        "step": 9,
+        "capability": "procedure.submit",
+        "arguments": {},
+        "outcome": "TRUNCATED",
+        "reason": "Provider proposed a capability outside the allowlist",
+        "problems": [
+          {
+            "says": "Provider proposed a capability outside the allowlist"
+          }
+        ]
+      },
+      {
+        "step": 10,
+        "capability": "procedure.revise",
+        "arguments": {
+          "hypotheses": {
+            "value": [
+              "Exchange through the closed hatch to Hab-B is not measured; Hab-B CO2 is recorded to show whether it exchanges, and is not assumed zero.",
+              "The Lab is one well-mixed zone; the single occupant FE-3 keeps a steady activity (awake, about 0.38 L/min CO2) and nobody enters or leaves.",
+              "Qe is the datasheet effective flow (1 m3/min at full speed, scaling with speed); the first-guess V of 30 m3 is a default, not a measurement."
+            ]
+          },
+          "expected.rise": {
+            "value": "With the scrubber at 30 percent, Lab CO2 rises from about 1200 ppm by a few hundred ppm (about 12 ppm/min initially for V near 30 m3) and stays below 3000 ppm."
+          },
+          "expected.decay": {
+            "value": "At full speed, Lab CO2 falls towards its equilibrium with tau near V/Qe, about 30 min for V near 30 m3; the fit C(t)=Ceq+(C0-Ceq)exp(-t/tau) gives V = Qe*tau."
+          },
+          "expected.hypotheses_hold": {
+            "value": "Hab-B CO2 stays flat and the decay is a single exponential with small residuals."
+          },
+          "expected.hypotheses_fail": {
+            "value": "Hab-B CO2 moves with the Lab, the residuals show two time constants, or the fitted V lies outside 10 to 200 m3: the opening exchanges air or the zone is not well mixed, and V is not accepted."
+          },
+          "monitoring.band.minBpm": {
+            "value": 45,
+            "source": "library",
+            "reference": "test.heartRateMinBpm"
+          },
+          "monitoring.band.maxBpm": {
+            "value": 120,
+            "source": "library",
+            "reference": "test.heartRateMaxBpm"
+          },
+          "limits.co2MaxPpm": {
+            "value": 3000,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          },
+          "limits.co2AbortPpm": {
+            "value": 3200,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          },
+          "limits.minSpeedPercent": {
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          "limits.maxMinutes": {
+            "value": 60,
+            "source": "library",
+            "reference": "test.maxMinutesCeiling"
+          },
+          "steps.1.speedPercent": {
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          "steps.1.minutes": {
+            "value": 25,
+            "source": "derived",
+            "reference": "about 0.25 to 1 tau; tau = V/Qe with V first guess 30 m3 and Qe 0.3 m3/min at 30 percent"
+          },
+          "steps.2.speedPercent": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          "steps.2.minutes": {
+            "value": 30,
+            "source": "derived",
+            "reference": "tau = V/Qe = 30 m3 / 1 m3/min = 30 min, first guess of V"
+          },
+          "abort.battery.threshold": {
+            "value": 40,
+            "source": "library",
+            "reference": "test.batteryAbortMinPercent"
+          }
+        },
+        "outcome": "ACCEPTED",
+        "reason": null,
+        "problems": []
+      }
+    ],
+    "finalOutcome": "ACCEPTED",
+    "ended": "contract held after 11 step(s)",
+    "contrasts": []
+  },
+  {
+    "fork": "exp-learn",
+    "id": "t-2026-09-29-0008#procedure",
+    "taskId": "t-2026-09-29-0008",
+    "topic": "procedure",
+    "at": "2026-09-29T19:00:45.312Z",
+    "intent": "procedure: V_lab (Volume, m3)",
+    "action": "procedure.submit",
+    "attempts": [
+      {
+        "step": 16,
+        "capability": "procedure.submit",
+        "arguments": {
+          "limits.co2AbortPpm": {
+            "value": 3000,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          },
+          "limits.co2MaxPpm": {
+            "value": 2800,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          },
+          "limits.minSpeedPercent": {
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          "steps.1.speedPercent": {
+            "value": 40,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          "steps.2.speedPercent": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          "limits.maxMinutes": {
+            "value": 55,
+            "source": "library",
+            "reference": "test.maxMinutesCeiling"
+          },
+          "abort.battery.threshold": {
+            "value": 35,
+            "source": "library",
+            "reference": "test.batteryAbortMinPercent"
+          },
+          "monitoring.band.minBpm": {
+            "value": 45,
+            "source": "library",
+            "reference": "test.heartRateMinBpm"
+          },
+          "monitoring.band.maxBpm": {
+            "value": 120,
+            "source": "library",
+            "reference": "test.heartRateMaxBpm"
+          },
+          "steps.1.minutes": {
+            "value": 20,
+            "source": "derived",
+            "reference": "tau=V/Qe with V~30 m3 first guess, Qe=0.4 m3/min at 40% (rise ~ +300-500 ppm at ~25 ppm/min source)"
+          },
+          "steps.2.minutes": {
+            "value": 30,
+            "source": "derived",
+            "reference": "tau=V/Qe=30 m3 / 1 m3/min = 30 min"
+          }
+        },
+        "outcome": "ACCEPTED",
+        "reason": null,
+        "problems": []
+      }
+    ],
+    "finalOutcome": "ACCEPTED",
+    "ended": "contract held after 17 step(s)",
+    "contrasts": []
+  },
+  {
+    "fork": "exp-learn",
+    "id": "t-2026-09-29-0009#procedure",
+    "taskId": "t-2026-09-29-0009",
+    "topic": "procedure",
+    "at": "2026-09-29T19:02:14.277Z",
+    "intent": "procedure: V_lab (Volume, m3)",
+    "action": "procedure.submit",
+    "attempts": [
+      {
+        "step": 16,
+        "capability": "procedure.submit",
+        "arguments": {},
+        "outcome": "TRUNCATED",
+        "reason": "Provider proposed a capability outside the allowlist",
+        "problems": [
+          {
+            "says": "Provider proposed a capability outside the allowlist"
+          }
+        ]
+      },
+      {
+        "step": 17,
+        "capability": "procedure.revise",
+        "arguments": {
+          "monitoring.band.minBpm": {
+            "value": 45,
+            "source": "library",
+            "reference": "test.heartRateMinBpm"
+          },
+          "monitoring.band.maxBpm": {
+            "value": 120,
+            "source": "library",
+            "reference": "test.heartRateMaxBpm"
+          },
+          "limits.co2MaxPpm": {
+            "value": 1800,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          },
+          "limits.co2AbortPpm": {
+            "value": 2200,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          },
+          "limits.minSpeedPercent": {
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          "limits.maxMinutes": {
+            "value": 60,
+            "source": "library",
+            "reference": "test.maxMinutesCeiling"
+          },
+          "steps.1.speedPercent": {
+            "value": 50,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          "steps.2.speedPercent": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          "abort.battery.threshold": {
+            "value": 35,
+            "source": "library",
+            "reference": "test.batteryAbortMinPercent"
+          },
+          "steps.1.minutes": {
+            "value": 22,
+            "source": "derived",
+            "reference": "dC = (0.76 L/min / 0.5 m3/min)*(1-exp(-22/60)) ~ 233 ppm, tau_rise = V/Qe = 30/0.5 = 60 min"
+          },
+          "steps.2.minutes": {
+            "value": 30,
+            "source": "derived",
+            "reference": "tau_decay = V/Qe = 30 m3 / 1 m3/min = 30 min (first guess of V)"
+          }
+        },
+        "outcome": "GUARD_REJECTED",
+        "reason": "procedure refused: shape: quantity \"scrubber_speed\": no unit \"percent\" for Speed; its units are m/s (meter per second), mm/s (millimeter per second), km/h (kilometer per hour), [mi_i]/h (mile per hour), [kn_i] (knot) (UNKNOWN_UNIT)",
+        "problems": [
+          {
+            "kind": "shape",
+            "says": "shape: quantity \"scrubber_speed\": no unit \"percent\" for Speed"
+          },
+          {
+            "says": "its units are m/s (meter per second), mm/s (millimeter per second), km/h (kilometer per hour), [mi_i]/h (mile per hour), [kn_i] (knot) (UNKNOWN_UNIT)"
+          }
+        ]
+      },
+      {
+        "step": 18,
+        "capability": "procedure.revise",
+        "arguments": {
+          "quantities": {
+            "value": [
+              {
+                "name": "co2_lab",
+                "quantity": "Concentration",
+                "unit": "ppm"
+              },
+              {
+                "name": "V_lab",
+                "quantity": "Volume",
+                "unit": "m3"
+              }
+            ]
+          }
+        },
+        "outcome": "ACCEPTED",
+        "reason": null,
+        "problems": []
+      }
+    ],
+    "finalOutcome": "ACCEPTED",
+    "ended": "contract held after 20 step(s)",
+    "contrasts": []
+  },
+  {
+    "fork": "exp-learn",
+    "id": "t-2026-09-29-0010#procedure",
+    "taskId": "t-2026-09-29-0010",
+    "topic": "procedure",
+    "at": "2026-09-29T19:04:01.501Z",
+    "intent": "procedure: V_lab (Volume, m3)",
+    "action": "procedure.submit",
+    "attempts": [
+      {
+        "step": 8,
+        "capability": "procedure.submit",
+        "arguments": {},
+        "outcome": "TRUNCATED",
+        "reason": "Provider proposed a capability outside the allowlist",
+        "problems": [
+          {
+            "says": "Provider proposed a capability outside the allowlist"
+          }
+        ]
+      },
+      {
+        "step": 9,
+        "capability": "procedure.revise",
+        "arguments": {
+          "monitoring.band.minBpm": {
+            "value": 45,
+            "source": "library",
+            "reference": "test.heartRateMinBpm"
+          },
+          "monitoring.band.maxBpm": {
+            "value": 120,
+            "source": "library",
+            "reference": "test.heartRateMaxBpm"
+          },
+          "limits.co2MaxPpm": {
+            "value": 2800,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          },
+          "limits.co2AbortPpm": {
+            "value": 3000,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          },
+          "limits.minSpeedPercent": {
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          "limits.maxMinutes": {
+            "value": 60,
+            "source": "library",
+            "reference": "test.maxMinutesCeiling"
+          },
+          "steps.1.speedPercent": {
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          "steps.1.minutes": {
+            "value": 20,
+            "source": "derived",
+            "reference": "rise = (3 x 0.38 L/min / V - Qe(30%)*C/V) x t, V guess 30 m3, Qe 0.3 m3/min"
+          },
+          "steps.2.speedPercent": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          "steps.2.minutes": {
+            "value": 30,
+            "source": "derived",
+            "reference": "tau = V/Qe = 30 m3 / 1 m3/min = 30 min (first guess of V)"
+          },
+          "abort.co2.threshold": {
+            "value": 3000,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          },
+          "abort.battery.threshold": {
+            "value": 40,
+            "source": "library",
+            "reference": "test.batteryAbortMinPercent"
+          }
+        },
+        "outcome": "ACCEPTED",
+        "reason": null,
+        "problems": []
+      }
+    ],
+    "finalOutcome": "ACCEPTED",
+    "ended": "contract held after 10 step(s)",
+    "contrasts": []
+  },
+  {
+    "fork": "exp-control",
+    "id": "t-2026-09-29-0001#procedure",
+    "taskId": "t-2026-09-29-0001",
+    "topic": "procedure",
+    "at": "2026-09-29T18:56:53.022Z",
+    "intent": "procedure: V_lab (Volume, m3)",
+    "action": "procedure.submit",
+    "attempts": [
+      {
+        "step": 8,
+        "capability": "procedure.submit",
+        "arguments": {},
+        "outcome": "TRUNCATED",
+        "reason": "Provider proposed a capability outside the allowlist",
+        "problems": [
+          {
+            "says": "Provider proposed a capability outside the allowlist"
+          }
+        ]
+      },
+      {
+        "step": 9,
+        "capability": "procedure.revise",
+        "arguments": {
+          "limits.co2MaxPpm": {
+            "value": 2500,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm (commissioning-test-safety, signed, at most 3200 ppm)"
+          },
+          "limits.co2AbortPpm": {
+            "value": 3000,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm (commissioning-test-safety, signed, at most 3200 ppm)"
+          },
+          "limits.minSpeedPercent": {
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent (commissioning-test-safety, signed, at least 30 percent)"
+          },
+          "limits.maxMinutes": {
+            "value": 60,
+            "source": "library",
+            "reference": "test.maxMinutesCeiling (commissioning-test-safety, signed, at most 60 min)"
+          },
+          "steps.1.speedPercent": {
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent (commissioning-test-safety, signed, at least 30 percent)"
+          },
+          "steps.1.minutes": {
+            "value": 30,
+            "source": "derived",
+            "reference": "tau = V/Qe = 30 m3 / 1 m3/min = 30 min (method-concentration-decay rule 4; V=30 registry default guess)"
+          },
+          "steps.2.speedPercent": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent (signed, at least 30 percent); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)"
+          },
+          "steps.2.minutes": {
+            "value": 28,
+            "source": "derived",
+            "reference": "one tau (30 min guess) within limits.maxMinutes: 60 - 30 = 30 min max; 28 leaves 2 min margin"
+          },
+          "abort.co2.threshold": {
+            "value": 3000,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm (commissioning-test-safety, signed, at most 3200 ppm)"
+          },
+          "abort.battery.threshold": {
+            "value": 35,
+            "source": "library",
+            "reference": "test.batteryAbortMinPercent (commissioning-test-safety, signed, at least 35 percent)"
+          },
+          "monitoring.band.minBpm": {
+            "value": 45,
+            "source": "library",
+            "reference": "test.heartRateMinBpm (commissioning-test-safety, signed, at least 45 bpm)"
+          },
+          "monitoring.band.maxBpm": {
+            "value": 120,
+            "source": "library",
+            "reference": "test.heartRateMaxBpm (commissioning-test-safety, signed, at most 120 bpm)"
+          }
+        },
+        "outcome": "GUARD_REJECTED",
+        "reason": "procedure refused: justification: steps.2.speedPercent: \"test.speedFloorPercent (signed, at least 30 percent); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them); the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")",
+        "problems": [
+          {
+            "kind": "justification",
+            "path": "steps.2.speedPercent",
+            "says": "justification: steps.2.speedPercent: \"test.speedFloorPercent (signed, at least 30 percent); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+          },
+          {
+            "says": "the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")"
+          }
+        ]
+      },
+      {
+        "step": 10,
+        "capability": "procedure.revise",
+        "arguments": {
+          "steps.2.speedPercent": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          }
+        },
+        "outcome": "ACCEPTED",
+        "reason": null,
+        "problems": []
+      }
+    ],
+    "finalOutcome": "ACCEPTED",
+    "ended": "contract held after 11 step(s)",
+    "contrasts": [
+      {
+        "path": "steps.2.speedPercent",
+        "kind": "justification",
+        "rejected": {
+          "step": 9,
+          "argument": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent (signed, at least 30 percent); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)"
+          },
+          "says": "justification: steps.2.speedPercent: \"test.speedFloorPercent (signed, at least 30 percent); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+        },
+        "accepted": {
+          "step": 10,
+          "argument": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "fork": "exp-control",
+    "id": "t-2026-09-29-0002#procedure",
+    "taskId": "t-2026-09-29-0002",
+    "topic": "procedure",
+    "at": "2026-09-29T18:58:05.784Z",
+    "intent": "procedure: V_lab (Volume, m3)",
+    "action": "procedure.submit",
+    "attempts": [
+      {
+        "step": 8,
+        "capability": "procedure.submit",
+        "arguments": {},
+        "outcome": "TRUNCATED",
+        "reason": "Provider proposed a capability outside the allowlist",
+        "problems": [
+          {
+            "says": "Provider proposed a capability outside the allowlist"
+          }
+        ]
+      },
+      {
+        "step": 9,
+        "capability": "procedure.revise",
+        "arguments": {
+          "monitoring.band.minBpm": {
+            "value": 45,
+            "source": "library",
+            "reference": "test.heartRateMinBpm (commissioning-test-safety, signed)"
+          },
+          "monitoring.band.maxBpm": {
+            "value": 120,
+            "source": "library",
+            "reference": "test.heartRateMaxBpm (commissioning-test-safety, signed)"
+          },
+          "limits.co2MaxPpm": {
+            "value": 3000,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm (commissioning-test-safety, signed, at most 3200 ppm)"
+          },
+          "limits.co2AbortPpm": {
+            "value": 3200,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm (commissioning-test-safety, signed, at most 3200 ppm)"
+          },
+          "limits.minSpeedPercent": {
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent (commissioning-test-safety, signed, at least 30 percent)"
+          },
+          "limits.maxMinutes": {
+            "value": 60,
+            "source": "library",
+            "reference": "test.maxMinutesCeiling (commissioning-test-safety, signed, at most 60 min)"
+          },
+          "steps.1.speedPercent": {
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent (commissioning-test-safety, signed, at least 30 percent)"
+          },
+          "steps.1.minutes": {
+            "value": 20,
+            "source": "derived",
+            "reference": "method-concentration-decay rule 4; tau=V/Qe, first guess V=30 m3, Qe=1 m3/min (scrubber.effectiveFlowAtFull) gives 30 min"
+          },
+          "steps.2.speedPercent": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent (signed, at least 30 percent); scrubber.effectiveFlowAtFull 1 m3/min at full speed"
+          },
+          "steps.2.minutes": {
+            "value": 35,
+            "source": "derived",
+            "reference": "method-concentration-decay rule 4; about one tau (30 min for first guess 30 m3) plus margin; 20+35=55 min under 60"
+          },
+          "abort.co2.threshold": {
+            "value": 3200,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm (commissioning-test-safety, signed, at most 3200 ppm)"
+          },
+          "abort.battery.threshold": {
+            "value": 40,
+            "source": "library",
+            "reference": "test.batteryAbortMinPercent (commissioning-test-safety, signed, at least 35 percent)"
+          }
+        },
+        "outcome": "GUARD_REJECTED",
+        "reason": "procedure refused: justification: steps.2.speedPercent: \"test.speedFloorPercent (signed, at least 30 percent); scrubber.effectiveFlowAtFull 1 m3/min at full speed\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them); the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")",
+        "problems": [
+          {
+            "kind": "justification",
+            "path": "steps.2.speedPercent",
+            "says": "justification: steps.2.speedPercent: \"test.speedFloorPercent (signed, at least 30 percent); scrubber.effectiveFlowAtFull 1 m3/min at full speed\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+          },
+          {
+            "says": "the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")"
+          }
+        ]
+      },
+      {
+        "step": 10,
+        "capability": "procedure.revise",
+        "arguments": {
+          "steps.2.speedPercent": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          }
+        },
+        "outcome": "ACCEPTED",
+        "reason": null,
+        "problems": []
+      }
+    ],
+    "finalOutcome": "ACCEPTED",
+    "ended": "contract held after 12 step(s)",
+    "contrasts": [
+      {
+        "path": "steps.2.speedPercent",
+        "kind": "justification",
+        "rejected": {
+          "step": 9,
+          "argument": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent (signed, at least 30 percent); scrubber.effectiveFlowAtFull 1 m3/min at full speed"
+          },
+          "says": "justification: steps.2.speedPercent: \"test.speedFloorPercent (signed, at least 30 percent); scrubber.effectiveFlowAtFull 1 m3/min at full speed\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+        },
+        "accepted": {
+          "step": 10,
+          "argument": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "fork": "exp-control",
+    "id": "t-2026-09-29-0003#procedure",
+    "taskId": "t-2026-09-29-0003",
+    "topic": "procedure",
+    "at": "2026-09-29T18:59:24.488Z",
+    "intent": "procedure: V_lab (Volume, m3)",
+    "action": "procedure.submit",
+    "attempts": [
+      {
+        "step": 8,
+        "capability": "procedure.submit",
+        "arguments": {},
+        "outcome": "TRUNCATED",
+        "reason": "Provider proposed a capability outside the allowlist",
+        "problems": [
+          {
+            "says": "Provider proposed a capability outside the allowlist"
+          }
+        ]
+      },
+      {
+        "step": 9,
+        "capability": "procedure.revise",
+        "arguments": {
+          "limits.co2MaxPpm": {
+            "value": 2500,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm (commissioning-test-safety, signed): at most 3200 ppm"
+          },
+          "limits.co2AbortPpm": {
+            "value": 3000,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm (commissioning-test-safety, signed): at most 3200 ppm"
+          },
+          "limits.minSpeedPercent": {
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent (commissioning-test-safety, signed): at least 30 percent"
+          },
+          "limits.maxMinutes": {
+            "value": 60,
+            "source": "library",
+            "reference": "test.maxMinutesCeiling (commissioning-test-safety, signed): at most 60 min"
+          },
+          "steps.1.speedPercent": {
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent (commissioning-test-safety, signed): at least 30 percent"
+          },
+          "steps.1.minutes": {
+            "value": 15,
+            "source": "derived",
+            "reference": "rise rate = G/V = 0.38 L/min / 30 m3 (first guess, crew.co2Rate.awake, method card rule 4); bounded by maxMinutes"
+          },
+          "steps.2.speedPercent": {
+            "value": 100,
+            "source": "library",
+            "reference": "scrubber.effectiveFlowAtFull (scrubber-1-datasheet, signed) 1 m3/min; test.speedFloorPercent at least 30"
+          },
+          "steps.2.minutes": {
+            "value": 40,
+            "source": "derived",
+            "reference": "tau = V/Qe = 30 m3 / 1 m3/min = 30 min (first guess of V, method card rule 4); 15+40=55 <= 60"
+          },
+          "abort.battery.threshold": {
+            "value": 40,
+            "source": "library",
+            "reference": "test.batteryAbortMinPercent (commissioning-test-safety, signed): at least 35 percent"
+          },
+          "monitoring.band.minBpm": {
+            "value": 45,
+            "source": "library",
+            "reference": "test.heartRateMinBpm (commissioning-test-safety, signed): at least 45 bpm"
+          },
+          "monitoring.band.maxBpm": {
+            "value": 120,
+            "source": "library",
+            "reference": "test.heartRateMaxBpm (commissioning-test-safety, signed): at most 120 bpm"
+          }
+        },
+        "outcome": "GUARD_REJECTED",
+        "reason": "procedure refused: expected: expected says nothing: a test that does not say what it expects to see cannot be told from a fishing trip; justification: steps.2.speedPercent: \"scrubber.effectiveFlowAtFull (scrubber-1-datasheet, signed) 1 m3/min; test.speedFloorPercent at least 30\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them); the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")",
+        "problems": [
+          {
+            "kind": "expected",
+            "says": "expected: expected says nothing: a test that does not say what it expects to see cannot be told from a fishing trip"
+          },
+          {
+            "kind": "justification",
+            "path": "steps.2.speedPercent",
+            "says": "justification: steps.2.speedPercent: \"scrubber.effectiveFlowAtFull (scrubber-1-datasheet, signed) 1 m3/min; test.speedFloorPercent at least 30\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+          },
+          {
+            "says": "the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")"
+          }
+        ]
+      },
+      {
+        "step": 10,
+        "capability": "procedure.revise",
+        "arguments": {
+          "expected.rise": {
+            "value": "Step 1 (30 percent, Qe about 0.3 m3/min, hatch closed): Lab CO2 drifts up slowly from 1200 ppm toward an equilibrium near G/Qe = 0.38 L/min / 300 L/min, about 1270 ppm, with tau_rise = V/0.3 (about 100 min for V = 30 m3). Only a small rise (tens of ppm) is expected in 15 min, staying far under co2MaxPpm 2500. A rise of several hundred ppm would show a smaller V, a higher crew rate, or a leak-free assumption that is wrong."
+          },
+          "expected.decay": {
+            "value": "Step 2 (100 percent, Qe = 1 m3/min): Lab CO2 falls exponentially toward C_eq near 380 ppm (G/Qe), fitted as C_eq + (C0 - C_eq) exp(-t/tau) with the 3.33 min scrubber lag; tau about 30 min if V is near the first guess of 30 m3, so V = Qe * tau about 30 m3 (plausible range 10 to 200 m3, hence tau 10 to 200 min). 40 min covers about 1.3 tau."
+          },
+          "expected.hypotheses_hold": {
+            "value": "If the Lab is one well-mixed zone with a closed hatch, the fit residuals are small, the fitted C_eq agrees with G/Qe within the crew-rate band 0.26 to 0.45 L/min, and co2_habb stays flat."
+          },
+          "expected.falsifiers": {
+            "value": "co2_habb moving in step with co2_lab shows the closed hatch exchanges air (design flow 3 m3/min); a fitted C_eq far from 380 ppm, a non-exponential curve, or a step in the curve shows a change of occupancy or non-mixing and invalidates V; a refused speed command or an abort stops the test and no V is reported."
+          },
+          "steps.2.speedPercent": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          }
+        },
+        "outcome": "ACCEPTED",
+        "reason": null,
+        "problems": []
+      }
+    ],
+    "finalOutcome": "ACCEPTED",
+    "ended": "contract held after 11 step(s)",
+    "contrasts": [
+      {
+        "path": "steps.2.speedPercent",
+        "kind": "justification",
+        "rejected": {
+          "step": 9,
+          "argument": {
+            "value": 100,
+            "source": "library",
+            "reference": "scrubber.effectiveFlowAtFull (scrubber-1-datasheet, signed) 1 m3/min; test.speedFloorPercent at least 30"
+          },
+          "says": "justification: steps.2.speedPercent: \"scrubber.effectiveFlowAtFull (scrubber-1-datasheet, signed) 1 m3/min; test.speedFloorPercent at least 30\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+        },
+        "accepted": {
+          "step": 10,
+          "argument": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "fork": "exp-control",
+    "id": "t-2026-09-29-0004#procedure",
+    "taskId": "t-2026-09-29-0004",
+    "topic": "procedure",
+    "at": "2026-09-29T19:00:41.259Z",
+    "intent": "procedure: V_lab (Volume, m3)",
+    "action": "procedure.submit",
+    "attempts": [
+      {
+        "step": 17,
+        "capability": "procedure.submit",
+        "arguments": {},
+        "outcome": "TRUNCATED",
+        "reason": "Provider proposed a capability outside the allowlist",
+        "problems": [
+          {
+            "says": "Provider proposed a capability outside the allowlist"
+          }
+        ]
+      },
+      {
+        "step": 18,
+        "capability": "procedure.revise",
+        "arguments": {
+          "limits.co2MaxPpm": {
+            "value": 2800,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm (commissioning-test-safety, signed): at most 3200 ppm"
+          },
+          "limits.co2AbortPpm": {
+            "value": 3200,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm (commissioning-test-safety, signed): at most 3200 ppm"
+          },
+          "limits.minSpeedPercent": {
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent (commissioning-test-safety, signed): at least 30 percent"
+          },
+          "limits.maxMinutes": {
+            "value": 50,
+            "source": "library",
+            "reference": "test.maxMinutesCeiling (commissioning-test-safety, signed): at most 60 min"
+          },
+          "monitoring.band.minBpm": {
+            "value": 45,
+            "source": "library",
+            "reference": "test.heartRateMinBpm (commissioning-test-safety, signed)"
+          },
+          "monitoring.band.maxBpm": {
+            "value": 120,
+            "source": "library",
+            "reference": "test.heartRateMaxBpm (commissioning-test-safety, signed)"
+          },
+          "steps.1.speedPercent": {
+            "value": 50,
+            "source": "library",
+            "reference": "test.speedFloorPercent (commissioning-test-safety, signed): at least 30 percent"
+          },
+          "steps.1.minutes": {
+            "value": 15,
+            "source": "derived",
+            "reference": "rise = dC_eq*(1-exp(-t/tau)); dC_eq = 0.76 L/min / 500 L/min = 1520 ppm, tau = V/Qe about 60 min for 30 m3"
+          },
+          "steps.2.speedPercent": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent (signed, at or above 30 percent); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)"
+          },
+          "steps.2.minutes": {
+            "value": 32,
+            "source": "derived",
+            "reference": "method-concentration-decay rule 4: about one tau; tau = V/Qe = 30 m3 / 1 m3/min = 30 min; 15 + 32 = 47 <= 50"
+          },
+          "abort.battery.threshold": {
+            "value": 35,
+            "source": "library",
+            "reference": "test.batteryAbortMinPercent (commissioning-test-safety, signed): at least 35 percent"
+          }
+        },
+        "outcome": "GUARD_REJECTED",
+        "reason": "procedure refused: justification: steps.2.speedPercent: \"test.speedFloorPercent (signed, at or above 30 percent); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them); the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")",
+        "problems": [
+          {
+            "kind": "justification",
+            "path": "steps.2.speedPercent",
+            "says": "justification: steps.2.speedPercent: \"test.speedFloorPercent (signed, at or above 30 percent); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+          },
+          {
+            "says": "the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")"
+          }
+        ]
+      },
+      {
+        "step": 19,
+        "capability": "procedure.revise",
+        "arguments": {
+          "limits.co2MaxPpm": {
+            "value": 2800,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          },
+          "limits.co2AbortPpm": {
+            "value": 3200,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          },
+          "limits.minSpeedPercent": {
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          "limits.maxMinutes": {
+            "value": 50,
+            "source": "library",
+            "reference": "test.maxMinutesCeiling"
+          },
+          "monitoring.band.minBpm": {
+            "value": 45,
+            "source": "library",
+            "reference": "test.heartRateMinBpm"
+          },
+          "monitoring.band.maxBpm": {
+            "value": 120,
+            "source": "library",
+            "reference": "test.heartRateMaxBpm"
+          },
+          "steps.1.speedPercent": {
+            "value": 50,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          "steps.1.minutes": {
+            "value": 15,
+            "source": "derived",
+            "reference": "rise = dC_eq*(1-exp(-t/tau)); dC_eq = 0.76 L/min / 500 L/min = 1520 ppm, tau = V/Qe about 60 min for 30 m3"
+          },
+          "steps.2.speedPercent": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          "steps.2.minutes": {
+            "value": 32,
+            "source": "derived",
+            "reference": "method-concentration-decay rule 4: about one tau = V/Qe = 30 m3 / 1 m3/min = 30 min; 15 + 32 = 47 <= 50"
+          },
+          "abort.battery.threshold": {
+            "value": 35,
+            "source": "library",
+            "reference": "test.batteryAbortMinPercent"
+          }
+        },
+        "outcome": "ACCEPTED",
+        "reason": null,
+        "problems": []
+      }
+    ],
+    "finalOutcome": "ACCEPTED",
+    "ended": "contract held after 20 step(s)",
+    "contrasts": [
+      {
+        "path": "steps.2.speedPercent",
+        "kind": "justification",
+        "rejected": {
+          "step": 18,
+          "argument": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent (signed, at or above 30 percent); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)"
+          },
+          "says": "justification: steps.2.speedPercent: \"test.speedFloorPercent (signed, at or above 30 percent); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+        },
+        "accepted": {
+          "step": 19,
+          "argument": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "fork": "exp-control",
+    "id": "t-2026-09-29-0005#procedure",
+    "taskId": "t-2026-09-29-0005",
+    "topic": "procedure",
+    "at": "2026-09-29T19:02:58.787Z",
+    "intent": "procedure: V_lab (Volume, m3)",
+    "action": null,
+    "attempts": [],
+    "finalOutcome": "NO_ATTEMPT",
+    "ended": "STUCK: library.read refused 3 times in a row on the same point(s), library.read, the proposal: library.read with the same input was the previous step, and completed: its answer is in the state (lastAction, and evidence for a read); calling it again gives the same answer. Decide from what the state holds, or call something else.",
+    "contrasts": []
+  },
+  {
+    "fork": "exp-control",
+    "id": "t-2026-09-29-0006#procedure",
+    "taskId": "t-2026-09-29-0006",
+    "topic": "procedure",
+    "at": "2026-09-29T19:03:45.325Z",
+    "intent": "procedure: V_lab (Volume, m3)",
+    "action": "procedure.submit",
+    "attempts": [
+      {
+        "step": 8,
+        "capability": "procedure.submit",
+        "arguments": {},
+        "outcome": "TRUNCATED",
+        "reason": "Provider proposed a capability outside the allowlist",
+        "problems": [
+          {
+            "says": "Provider proposed a capability outside the allowlist"
+          }
+        ]
+      },
+      {
+        "step": 9,
+        "capability": "procedure.revise",
+        "arguments": {
+          "limits.co2MaxPpm": {
+            "value": 2800,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm (commissioning-test-safety, signed): at most 3200 ppm"
+          },
+          "limits.co2AbortPpm": {
+            "value": 3000,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm (commissioning-test-safety, signed): at most 3200 ppm"
+          },
+          "limits.minSpeedPercent": {
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent (commissioning-test-safety, signed): at least 30 percent"
+          },
+          "limits.maxMinutes": {
+            "value": 55,
+            "source": "library",
+            "reference": "test.maxMinutesCeiling (commissioning-test-safety, signed): at most 60 min"
+          },
+          "steps.1.speedPercent": {
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent (commissioning-test-safety, signed): at least 30 percent"
+          },
+          "steps.1.minutes": {
+            "value": 20,
+            "source": "derived",
+            "reference": "method-concentration-decay rules 3-4; rise ~ (G - Qe*C)/V with G=3*0.38 L/min (crew.co2Rate.awake), Qe=0.3 m3/min, V~30 m3 guess"
+          },
+          "steps.2.speedPercent": {
+            "value": 100,
+            "source": "library",
+            "reference": "scrubber.effectiveFlowAtFull (scrubber-1-datasheet, signed) 1 m3/min; test.speedFloorPercent at least 30"
+          },
+          "steps.2.minutes": {
+            "value": 30,
+            "source": "derived",
+            "reference": "method-concentration-decay rule 4: tau=V/Qe = 30 m3 / 1 m3/min = 30 min (first guess V=30, default), plus 3.33 min lag (scrubber.lagTimeConstant)"
+          },
+          "monitoring.band.minBpm": {
+            "value": 45,
+            "source": "library",
+            "reference": "test.heartRateMinBpm (commissioning-test-safety, signed): at least 45 bpm"
+          },
+          "monitoring.band.maxBpm": {
+            "value": 120,
+            "source": "library",
+            "reference": "test.heartRateMaxBpm (commissioning-test-safety, signed): at most 120 bpm"
+          },
+          "abort.co2.threshold": {
+            "value": 3000,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm (commissioning-test-safety, signed): at most 3200 ppm"
+          },
+          "abort.battery.threshold": {
+            "value": 35,
+            "source": "library",
+            "reference": "test.batteryAbortMinPercent (commissioning-test-safety, signed): at least 35 percent"
+          }
+        },
+        "outcome": "GUARD_REJECTED",
+        "reason": "procedure refused: justification: steps.2.speedPercent: \"scrubber.effectiveFlowAtFull (scrubber-1-datasheet, signed) 1 m3/min; test.speedFloorPercent at least 30\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them); the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")",
+        "problems": [
+          {
+            "kind": "justification",
+            "path": "steps.2.speedPercent",
+            "says": "justification: steps.2.speedPercent: \"scrubber.effectiveFlowAtFull (scrubber-1-datasheet, signed) 1 m3/min; test.speedFloorPercent at least 30\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+          },
+          {
+            "says": "the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")"
+          }
+        ]
+      },
+      {
+        "step": 10,
+        "capability": "procedure.revise",
+        "arguments": {
+          "steps.2.speedPercent": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          }
+        },
+        "outcome": "ACCEPTED",
+        "reason": null,
+        "problems": []
+      }
+    ],
+    "finalOutcome": "ACCEPTED",
+    "ended": "contract held after 11 step(s)",
+    "contrasts": [
+      {
+        "path": "steps.2.speedPercent",
+        "kind": "justification",
+        "rejected": {
+          "step": 9,
+          "argument": {
+            "value": 100,
+            "source": "library",
+            "reference": "scrubber.effectiveFlowAtFull (scrubber-1-datasheet, signed) 1 m3/min; test.speedFloorPercent at least 30"
+          },
+          "says": "justification: steps.2.speedPercent: \"scrubber.effectiveFlowAtFull (scrubber-1-datasheet, signed) 1 m3/min; test.speedFloorPercent at least 30\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+        },
+        "accepted": {
+          "step": 10,
+          "argument": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          }
+        }
+      }
+    ]
+  }
+]
