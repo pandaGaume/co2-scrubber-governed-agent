@@ -44,7 +44,7 @@ console.log("## training");
 for (const t of train.tasks) console.log(`${t.variant.id} ${t.taskId}: ${judged(t) ? (judged(t).accepted ? "ACCEPTED" : judged(t).problems.map((p) => `${p.kind}: ${p.path ?? ""}`).join("; ")) : "no judged submission"} | truncated ${t.truncations} | steps ${t.steps} | in ${t.inputTokens} out ${t.outputTokens} | memory seen ${t.memorySeenAtFirstJudged ? `${t.memorySeenAtFirstJudged.learned.map((e) => e.status).join(",") || "none"}` : "-"}`);
 for (const r of train.reflections.filter((x) => x.taskId)) console.log(`reflection after ${r.after}: ${r.state}; ${(r.proposals ?? []).map((p) => `${p.capability} ${p.outcome}${p.refused ? ` (${p.refused.slice(0, 160)})` : ""}`).join(" | ")}; memory ${JSON.stringify(r.memory?.map((e) => `${e.n}:${e.status}`))}`);
 console.log(`frozen: ${train.frozen ? `entry ${train.frozen.entry.n} consolidated after ${train.frozen.afterTask}: ${train.frozen.entry.memory.rule} (${train.frozen.entry.why})` : "never"}`);
-console.log("\n## validation, the first guard-evaluated submission of the same 6 unseen tasks");
+console.log(`\n## validation, the first guard-evaluated submission of the same ${conditions[Object.keys(conditions)[0]].tasks.length} unseen tasks`);
 const ids = Object.keys(conditions);
 console.log(`| Task | ${ids.join(" | ")} |`);
 console.log(`|---|${ids.map(() => "---").join("|")}|`);
