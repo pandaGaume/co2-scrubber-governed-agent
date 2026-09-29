@@ -27,7 +27,7 @@
  * measurement, what CO2 does to people, the installation. What to do with
  * it is the builder's to reason out, and the guard's to check.
  */
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
 import { fromRoot } from "../../../lib/paths.js";
 import { objectSchema, publishSlot, type PublishedSlot, type SlotTool } from "../../lib/slot-server.js";
@@ -38,6 +38,7 @@ import { documentDigest, signatureOf, signaturesDir, signDocument } from "../../
 import { execSync } from "node:child_process";
 import { WORKSHOP_ROOT } from "../lib/workshop.js";
 import { notHolder, roleOf, SIGNATORY } from "../../../lib/roles.js";
+import { Playbook, playbookProblems, type PlaybookFile } from "../../../harness/core/conduct.js";
 
 export interface LibraryDocument {
     id: string;
@@ -52,6 +53,11 @@ export interface LibraryDocument {
     facts: LibraryFact[];
     /** The rules a guard checks against these facts (`<id>.rules.json` beside it), signed with them; none when the document has none. */
     rules: { safety: string[]; rules: unknown[] } | null;
+    /** The playbook the document is (`<id>.playbook.json` beside it), signed with it: it conducts only once signed. */
+    playbook: boolean;
+    /** Where it is: the library's shelf, or the proposals' (a factory's work, unsigned until a signatory reads it). */
+    dir: string;
+    proposed: boolean;
 }
 
 export interface LibraryState {
@@ -66,9 +72,16 @@ export interface LibraryState {
 }
 
 export const LIBRARY_DIR = fromRoot("docs", "library");
+/** The proposals' shelf (2026-09-29): what a factory proposes for the library, beside the workshops, never in the repository's library; LIBRARY_PROPOSALS_DIR when set (the tests keep their own). */
+export const proposalsDir = (): string => process.env.LIBRARY_PROPOSALS_DIR || path.join(WORKSHOP_ROOT, "library-proposals");
+/** The library's documents and the proposals', a proposal never taking the id of a document of the library. */
+export const loadAll = (): LibraryDocument[] => {
+    const shelf = loadLibrary();
+    return [...shelf, ...loadLibrary(proposalsDir(), true).filter((d) => !shelf.some((x) => x.id === d.id))];
+};
 
 /** A document's title is its first heading, its summary the first paragraph after it. */
-export function loadLibrary(dir: string = LIBRARY_DIR): LibraryDocument[] {
+export function loadLibrary(dir: string = LIBRARY_DIR, proposed = false): LibraryDocument[] {
     if (!existsSync(dir)) return [];
     return readdirSync(dir)
         .filter((f) => f.endsWith(".md") && f.toLowerCase() !== "readme.md")
@@ -86,7 +99,7 @@ export function loadLibrary(dir: string = LIBRARY_DIR): LibraryDocument[] {
                 .map((q) => q.trim())
                 .filter(Boolean);
             const id = file.replace(/\.md$/, "");
-            return { id, title, summary, measures, sha256: sha256Of(bytes), bytes: bytes.length, text, facts: loadFacts(dir, id), rules: loadRules(dir, id) };
+            return { id, title, summary, measures, sha256: sha256Of(bytes), bytes: bytes.length, text, facts: loadFacts(dir, id), rules: loadRules(dir, id), playbook: existsSync(path.join(dir, `${id}.playbook.json`)), dir, proposed };
         });
 }
 
@@ -114,9 +127,9 @@ export function loadRules(dir: string, id: string): LibraryDocument["rules"] {
     }
 }
 
-/** The files a signature binds, as they are on disk now: the document, its facts, its rules (what a person reads before signing). */
+/** The files a signature binds, as they are on disk now: the document, its facts, its rules, its playbook (what a person reads before signing). */
 export function filesOf(dir: string, id: string): Array<{ name: string; text: string }> {
-    return [`${id}.md`, `${id}.facts.json`, `${id}.rules.json`].filter((name) => existsSync(path.join(dir, name))).map((name) => ({ name, text: readFileSync(path.join(dir, name), "utf8").replace(/\r\n/g, "\n") }));
+    return [`${id}.md`, `${id}.facts.json`, `${id}.rules.json`, `${id}.playbook.json`].filter((name) => existsSync(path.join(dir, name))).map((name) => ({ name, text: readFileSync(path.join(dir, name), "utf8").replace(/\r\n/g, "\n") }));
 }
 
 /** The documents a query's words appear in, the most matched first, with the lines they appear on. */
@@ -139,7 +152,7 @@ export function searchLibrary(documents: LibraryDocument[], query: string, limit
 }
 
 export function librarySlot(wsBase: string, log: (line: string) => void): PublishedSlot<LibraryState> {
-    const state: LibraryState = { dir: LIBRARY_DIR, sigDir: signaturesDir(), sigScope: { scope: "repository" }, documents: loadLibrary(), graphs: loadGraphLibrary(), reads: [] };
+    const state: LibraryState = { dir: LIBRARY_DIR, sigDir: signaturesDir(), sigScope: { scope: "repository" }, documents: loadAll(), graphs: loadGraphLibrary(), reads: [] };
     // Who signs from the control room: the person this machine's git names, as the commander.
     const person = (() => {
         try {
@@ -155,7 +168,7 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
             name: "list",
             inputSchema: objectSchema({}),
             handle: (_args, s) => ({
-                documents: s.documents.map(({ id, title, summary, measures, sha256, bytes, facts, rules }) => ({ id, title, summary, measures, sha256, bytes, facts: facts.length, rules: rules ? rules.rules.length : 0, signature: signatureOf(id, s.dir, s.sigDir) })),
+                documents: s.documents.map(({ id, title, summary, measures, sha256, bytes, facts, rules, playbook, dir, proposed }) => ({ id, title, summary, measures, sha256, bytes, facts: facts.length, rules: rules ? rules.rules.length : 0, playbook, proposed, signature: signatureOf(id, dir, s.sigDir) })),
                 // Who signs from the control room, and where the signatures go: what the library page says before a person signs.
                 signer: person || null,
                 // The role a signature is asked of, and who holds it now.
@@ -199,7 +212,7 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
                 const docs = typeof args.id === "string" && args.id ? s.documents.filter((d) => d.id === args.id) : s.documents;
                 if (typeof args.id === "string" && args.id && !docs.length) throw new Error(`no document "${String(args.id)}" in the library`);
                 // Each fact carries whether its document is signed and still as signed: a safety limit is justified only by a signed one (2026-09-28).
-                return { facts: docs.flatMap((d) => { const signature = signatureOf(d.id, s.dir, s.sigDir); return d.facts.map((f) => ({ ...f, source: d.id, signed: signature })); }) };
+                return { facts: docs.flatMap((d) => { const signature = signatureOf(d.id, d.dir, s.sigDir); return d.facts.map((f) => ({ ...f, source: d.id, signed: signature })); }) };
             },
         },
         {
@@ -210,7 +223,7 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
                 const d = s.documents.find((x) => x.id === args.id);
                 if (!d) throw new Error(`no document "${String(args.id)}" in the library`);
                 if (!d.rules) throw new Error(`the document "${d.id}" holds no rules`);
-                return { document: d.id, safety: d.rules.safety, rules: d.rules.rules, signed: signatureOf(d.id, s.dir, s.sigDir) };
+                return { document: d.id, safety: d.rules.safety, rules: d.rules.rules, signed: signatureOf(d.id, d.dir, s.sigDir) };
             },
         },
         {
@@ -220,7 +233,7 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
                 const d = s.documents.find((x) => x.id === args.id);
                 if (!d) throw new Error(`no document "${String(args.id)}" in the library (${s.documents.map((x) => x.id).join(", ")})`);
                 s.reads.push({ id: d.id, sha256: d.sha256, at: new Date().toISOString() });
-                return { id: d.id, title: d.title, sha256: d.sha256, text: d.text, facts: d.facts, signature: signatureOf(d.id, s.dir, s.sigDir) };
+                return { id: d.id, title: d.title, sha256: d.sha256, text: d.text, facts: d.facts, signature: signatureOf(d.id, d.dir, s.sigDir) };
             },
         },
         {
@@ -230,7 +243,7 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
             handle: (args, s) => {
                 const d = s.documents.find((x) => x.id === args.id);
                 if (!d) throw new Error(`no document "${String(args.id)}" in the library`);
-                return { id: d.id, title: d.title, files: filesOf(s.dir, d.id), facts: loadFacts(s.dir, d.id), rules: loadRules(s.dir, d.id), digest: documentDigest(d.id, s.dir), signature: signatureOf(d.id, s.dir, s.sigDir), signer: person || null, signatures: s.sigScope };
+                return { id: d.id, title: d.title, proposed: d.proposed, files: filesOf(d.dir, d.id), facts: loadFacts(d.dir, d.id), rules: loadRules(d.dir, d.id), digest: documentDigest(d.id, d.dir), signature: signatureOf(d.id, d.dir, s.sigDir), signer: person || null, signatures: s.sigScope };
             },
         },
         {
@@ -241,16 +254,79 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
                 const d = s.documents.find((x) => x.id === args.id);
                 if (!d) throw new Error(`no document "${String(args.id)}" in the library`);
                 // A person signs what they read: the digest of what the page showed, which a document changed since no longer has.
-                if (typeof args.digest === "string" && args.digest !== documentDigest(d.id, s.dir)) throw new Error(`the document "${d.id}" changed since it was read: read it again before signing`);
+                if (typeof args.digest === "string" && args.digest !== documentDigest(d.id, d.dir)) throw new Error(`the document "${d.id}" changed since it was read: read it again before signing`);
                 const answer = args.answer && typeof args.answer === "object" ? (args.answer as { choice?: string; by?: string }) : null;
                 if (answer && answer.choice !== "sign") return { id: d.id, signed: false, why: `the commander answered ${String(answer.choice)}` };
                 // Who signs: the person who answered the question, or who signs on the library page; an authorised signatory, or nobody (2026-09-29).
                 const who = typeof args.by === "string" && args.by.trim() ? args.by.trim() : answer?.by?.trim() || person;
                 const refused = notHolder(SIGNATORY, who);
                 if (refused) throw new Error(`${d.id} is not signed: ${refused}`);
-                const signature = signDocument(d.id, who, { dir: s.dir, sigDir: s.sigDir, note: `${s.sigScope.scope === "run" ? `scenario run ${s.sigScope.runId}` : "repository"}${args.questionId ? `, question ${String(args.questionId)}` : ""}` });
+                const signature = signDocument(d.id, who, { dir: d.dir, sigDir: s.sigDir, note: `${s.sigScope.scope === "run" ? `scenario run ${s.sigScope.runId}` : "repository"}${args.questionId ? `, question ${String(args.questionId)}` : ""}` });
                 log(`[library] ${d.id} signed by ${who} (${s.sigScope.scope === "run" ? `run ${s.sigScope.runId}'s own signatures` : "the repository's signatures"})`);
                 return { id: d.id, signed: true, by: signature.signedBy, at: signature.signedAt, scope: s.sigScope };
+            },
+        },
+        {
+            // A playbook a factory wrote, proposed to the library by the station (2026-09-29, level 2 of docs/comportement-en-donnees.fr.md):
+            // put on the proposals' shelf, never in the repository's library, with a document a person reads; unsigned, it conducts nothing.
+            // The station's, on a factory's proposal; never a model's (kept out of every harness's and the night agent's tools).
+            name: "propose",
+            inputSchema: objectSchema(
+                {
+                    id: { type: "string" },
+                    title: { type: "string" },
+                    summary: { type: "string" },
+                    change: { type: "string", description: "what was asked of the factory, in its words" },
+                    playbook: { type: "object" },
+                    from: { type: "object", description: "the task, the proposal and the sha256 of the file the factory's guard accepted" },
+                },
+                ["id", "title", "playbook", "from"],
+            ),
+            handle: (args, s) => {
+                const id = String(args.id ?? "");
+                if (!/^[a-z0-9][a-z0-9-]{2,63}$/.test(id)) throw new Error(`a proposed document's id is lowercase words and dashes, not "${id}"`);
+                if (s.documents.some((d) => d.id === id && !d.proposed)) throw new Error(`"${id}" is a document of the library: a proposal takes an id of its own, and the library's stays as signed`);
+                const problems = playbookProblems(args.playbook, id);
+                if (problems.length) throw new Error(`the playbook "${id}" does not run: ${problems.join("; ")}`);
+                const pb = new Playbook(id, args.playbook as PlaybookFile);
+                const from = (args.from ?? {}) as { taskId?: string; proposalId?: string; sha256?: string };
+                const dir = proposalsDir();
+                mkdirSync(dir, { recursive: true });
+                const line = (x: unknown) => String(x ?? "").replace(/\s+/g, " ").trim();
+                const code = (x: string) => "`" + x + "`";
+                const md = [
+                    `# ${line(args.title)}`,
+                    "",
+                    line(args.summary) || "A playbook proposed by a factory.",
+                    "",
+                    `**Proposed by:** the playbook factory, task ${line(from.taskId) || "?"}${from.proposalId ? `, proposal ${line(from.proposalId)}` : ""}, sha256 ${line(from.sha256) || "?"}. It is not signed: it conducts nothing until an authorised signatory reads it and signs it.`,
+                    "",
+                    ...(args.change ? [`**What was asked:** ${line(args.change)}`, ""] : []),
+                    "## Stages, in their order",
+                    "",
+                    ...pb.stages.map((st) => `- ${code(st.id)}${st.action ? ` does ${st.action}` : ""}, says ${code(st.says)}`),
+                    "",
+                    ...(pb.gates.length ? ["## What it refuses", "", ...pb.gates.map((g) => `- ${code(g.id)} refuses ${g.capabilities.map(code).join(", ")}, saying ${code(g.says)}`), ""] : []),
+                    ...(pb.bounds.length ? ["## Its bounds", "", ...pb.bounds.map((b) => `- ${code(b.id)}: ${b.count} at least ${b.atLeast}. ${line(b.why)}`), ""] : []),
+                    `The graph itself is the file beside this one, ${code(`${id}.playbook.json`)}: a signature binds both.`,
+                    "",
+                ].join("\n");
+                writeFileSync(path.join(dir, `${id}.md`), md, "utf8");
+                writeFileSync(path.join(dir, `${id}.playbook.json`), `${JSON.stringify(args.playbook, null, 4)}\n`, "utf8");
+                s.documents = loadAll();
+                log(`[library] ${id} proposed (task ${from.taskId ?? "?"}): unsigned`);
+                return { id, proposed: true, files: filesOf(dir, id).map((f) => f.name), digest: documentDigest(id, dir), signature: signatureOf(id, dir, s.sigDir) };
+            },
+        },
+        {
+            // A playbook of the library as it stands, with its signature: what conducts only once signed (conduct.ts, signedPlaybook).
+            name: "playbook",
+            inputSchema: objectSchema({ id: { type: "string" } }, ["id"]),
+            handle: (args, s) => {
+                const d = s.documents.find((x) => x.id === args.id);
+                if (!d) throw new Error(`no document "${String(args.id)}" in the library`);
+                if (!d.playbook) throw new Error(`the document "${d.id}" is no playbook`);
+                return { id: d.id, proposed: d.proposed, playbook: JSON.parse(readFileSync(path.join(d.dir, `${d.id}.playbook.json`), "utf8")), signed: signatureOf(d.id, d.dir, s.sigDir) };
             },
         },
         {

@@ -11,10 +11,12 @@ import { ScriptedCodeBuilder } from "./code.js";
 import { ScriptedGraphBuilder } from "./graph.js";
 import { ScriptedBuilder } from "./onnx.js";
 import { ScriptedProcedureBuilder } from "./procedure.js";
+import { ScriptedPlaybookBuilder } from "./playbook.js";
 
 export const SCRIPTED_BUILDERS: Partial<Record<Topic, (context: BuilderContext) => ScriptedBuilderBase>> = {
     onnx: (context) => new ScriptedBuilder(context),
     procedure: (context) => new ScriptedProcedureBuilder(context),
     graph: (context) => new ScriptedGraphBuilder(context),
     code: (context) => new ScriptedCodeBuilder(context),
+    playbook: (context) => new ScriptedPlaybookBuilder(context),
 };

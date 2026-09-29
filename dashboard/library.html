@@ -233,14 +233,16 @@ function renderWho() {
 
 function renderList() {
     const docs = catalogue?.documents ?? [];
-    // The documents a factory cites as limits first: those with facts or rules.
-    const cited = docs.filter((d) => d.facts > 0 || d.rules > 0);
-    const others = docs.filter((d) => !(d.facts > 0 || d.rules > 0));
+    // What a factory proposed first (a playbook waiting for a signatory), then the documents a factory cites as limits: those with facts or rules.
+    const proposed = docs.filter((d) => d.proposed);
+    const cited = docs.filter((d) => !d.proposed && (d.facts > 0 || d.rules > 0));
+    const others = docs.filter((d) => !d.proposed && !(d.facts > 0 || d.rules > 0));
     const row = (d) => `<button class="doc${current?.id === d.id ? " on" : ""}" type="button" data-id="${esc(d.id)}">
         <div class="id">${esc(d.id)}</div>
-        <div class="meta">${pill(d.signature)}${d.rules ? `<span class="tag">${d.rules} rules</span>` : ""}${d.facts ? `<span class="tag">${d.facts} facts</span>` : ""}</div>
+        <div class="meta">${pill(d.signature)}${d.proposed ? `<span class="tag">proposed</span>` : ""}${d.playbook ? `<span class="tag">playbook</span>` : ""}${d.rules ? `<span class="tag">${d.rules} rules</span>` : ""}${d.facts ? `<span class="tag">${d.facts} facts</span>` : ""}</div>
       </button>`;
     $("list").innerHTML =
+        (proposed.length ? `<h2>Proposed by a factory, to be signed</h2>${proposed.map(row).join("")}` : "") +
         (cited.length ? `<h2>Facts and rules a guard judges by</h2>${cited.map(row).join("")}` : "") +
         (others.length ? `<h2>Knowledge and methods</h2>${others.map(row).join("")}` : "") ||
         `<div class="empty">The library holds no document.</div>`;
@@ -360,6 +362,9 @@ function renderReview() {
           </tbody></table></div>
           <details class="raw"><summary>the file as signed</summary><pre>${esc(f?.text ?? "")}</pre></details></div>`);
     }
+    // A playbook: the graph a signature binds with the document, as it is on disk now.
+    const pbf = file(".playbook.json");
+    if (pbf) blocks.push(`<div class="block"><h3>The playbook <span class="file">${esc(pbf.name)}</span></h3><div class="dim">The graph the station runs once per event: its stages in their order and its bounds are said in the document below; this is the file itself.</div><details class="raw"><summary>the graph as it would be signed</summary><pre>${esc(pbf.text)}</pre></details></div>`);
     const md = file(".md");
     blocks.push(`<div class="block"><h3>The document <span class="file">${esc(md?.name ?? "")}</span></h3><div class="md">${markdown(md?.text ?? "")}</div></div>`);
     review.innerHTML = `<h1>${esc(r.title)}</h1><div class="sub">${esc(r.id)} · ${r.files.map((f) => esc(f.name)).join(" + ")}</div>${status}${blocks.join("")}`;

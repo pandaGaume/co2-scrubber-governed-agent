@@ -59,6 +59,12 @@ export function documentDigest(id: string, dir: string = LIBRARY_DOCS_DIR): stri
         hash.update("\n--rules--\n");
         hash.update(text(rules));
     }
+    // The playbook, when the document is one (2026-09-29): what conducts is signed as what judges is, and a stage changed voids the signature.
+    const playbook = path.join(dir, `${id}.playbook.json`);
+    if (existsSync(playbook)) {
+        hash.update("\n--playbook--\n");
+        hash.update(text(playbook));
+    }
     return hash.digest("hex");
 }
 

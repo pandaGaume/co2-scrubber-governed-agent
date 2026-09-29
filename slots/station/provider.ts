@@ -46,6 +46,7 @@
  * is written for the video.
  */
 import { notHolder, roleOf, ROLES_FILE, SIGNATORY } from "../../lib/roles.js";
+import { Playbook, playbookProblems, type PlaybookFile } from "../../harness/core/conduct.js";
 import { existsSync, readFileSync } from "node:fs";
 import * as path from "node:path";
 import { McpGrammar } from "@cyanmycelium/mcp-core";
@@ -83,7 +84,7 @@ export interface Proposal {
     artifacts: Array<{ kind: string; path: string; sha256: string; contractSha256?: string }>;
     manifestSha256: string;
     claims: Record<string, unknown>;
-    status: "received" | "judging" | "accepted" | "rejected" | "relayed";
+    status: "received" | "judging" | "accepted" | "rejected" | "relayed" | "awaiting-signature";
     reportId?: string;
     reason?: string;
     receivedAt: string;
@@ -308,6 +309,47 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
     };
 
     /** A procedure proposed by the factory: read, checked again with a presence read now, relayed to the commander or refused. */
+    /**
+     * A playbook a factory wrote (2026-09-29, levels 2 and 3 of docs/comportement-en-donnees.fr.md): checked again here (it runs, one
+     * stage at every event), put on the library's proposals shelf, and its signature asked of the role that signs. The station adopts
+     * nothing: unsigned, the playbook conducts nothing, and only a person the role names signs it.
+     */
+    const relayPlaybook = async (proposal: Proposal, artifact: Proposal["artifacts"][number]) => {
+        const file = path.join(taskDir(checkTaskId(proposal.taskId)), artifact.path);
+        if (!existsSync(file)) throw new Error(`playbook ${artifact.path} is not in the workshop of task ${proposal.taskId}`);
+        const text = readFileSync(file);
+        if (sha256Of(text) !== artifact.sha256) throw new Error(`playbook ${artifact.path}: the sha256 proposed is not the file's`);
+        const proposed = JSON.parse(text.toString("utf8")) as { id?: string; title?: string; summary?: string; change?: string; playbook?: unknown };
+        const id = String(proposed.id ?? "");
+        const problems = playbookProblems(proposed.playbook, id || artifact.path);
+        if (problems.length) {
+            proposal.status = "rejected";
+            proposal.reason = problems.join("; ");
+            return;
+        }
+        const put = await client().call("library", "propose", { id, title: proposed.title ?? id, summary: proposed.summary ?? "", change: proposed.change ?? "", playbook: proposed.playbook, from: { taskId: proposal.taskId, proposalId: proposal.proposalId, sha256: artifact.sha256 } });
+        if (!put.ok) {
+            proposal.status = "rejected";
+            proposal.reason = `the library did not take it: ${put.error ?? "refused"}`;
+            return;
+        }
+        const pb = new Playbook(id, proposed.playbook as PlaybookFile);
+        proposal.status = "awaiting-signature";
+        await askQuestion({
+            from: "station",
+            taskId: proposal.taskId,
+            kind: "sign",
+            role: SIGNATORY,
+            question: `The playbook factory proposes the playbook ${id} (${proposed.title ?? id})${proposed.change ? `, asked: ${proposed.change}` : ""}. Read it in the library and sign it, so that it may conduct?`,
+            options: [
+                { id: "sign", label: "sign it" },
+                { id: "not-now", label: "not now" },
+            ],
+            context: { document: id, proposed: true, stages: pb.stages.map((st) => `${st.id}${st.action ? ` (${st.action})` : ""}`), gates: pb.gates.map((g) => `${g.id}: ${g.capabilities.join(", ")}`), bounds: pb.bounds.map((b) => ({ id: b.id, count: b.count, atLeast: b.atLeast, why: b.why })) },
+            resume: { slot: "library", tool: "sign", args: { id } },
+        });
+    };
+
     const relayProcedure = async (proposal: Proposal, artifact: Proposal["artifacts"][number]) => {
         const file = path.join(taskDir(checkTaskId(proposal.taskId)), artifact.path);
         if (!existsSync(file)) throw new Error(`procedure ${artifact.path} is not in the workshop of task ${proposal.taskId}`);
@@ -390,7 +432,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                 inputSchema: obj(
                     {
                         taskId: { type: "string" },
-                        artifacts: { type: "array", items: { type: "object", properties: { kind: { type: "string", enum: ["graph", "model", "twin", "procedure", "plugin"] }, path: { type: "string" }, sha256: SHA, contractSha256: SHA }, required: ["kind", "path", "sha256"] } },
+                        artifacts: { type: "array", items: { type: "object", properties: { kind: { type: "string", enum: ["graph", "model", "twin", "procedure", "plugin", "playbook"] }, path: { type: "string" }, sha256: SHA, contractSha256: SHA }, required: ["kind", "path", "sha256"] } },
                         manifestSha256: { ...SHA },
                         claims: { type: "object" },
                     },
@@ -403,6 +445,11 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     const proposalId = `p${(s.proposals.length + 1).toString().padStart(4, "0")}-${String(manifestSha256).slice(0, 8)}`;
                     const proposal: Proposal = { proposalId, taskId: String(taskId), artifacts: list, manifestSha256: String(manifestSha256), claims: (claims as Record<string, unknown>) ?? {}, status: "received", receivedAt: new Date().toISOString() };
                     s.proposals.push(proposal);
+                    const playbook = list.find((a) => a.kind === "playbook");
+                    if (playbook) {
+                        await relayPlaybook(proposal, playbook);
+                        return { proposalId, status: proposal.status, ...(proposal.reason ? { reason: proposal.reason } : {}), note: proposal.status === "awaiting-signature" ? "on the library's proposals shelf, unsigned: an authorised signatory is asked to sign it" : "the playbook did not pass the station's check" };
+                    }
                     const procedure = list.find((a) => a.kind === "procedure");
                     if (procedure) {
                         await relayProcedure(proposal, procedure);

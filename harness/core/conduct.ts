@@ -185,6 +185,9 @@ export class Playbook {
     readonly graph: IRuntimeGraph;
     readonly stages: Saying[] = [];
     readonly gates: Gate[] = [];
+    /** The proofs its evidence nodes read, and the bounds of the mechanism it holds, each with why. */
+    readonly proofs: string[] = [];
+    readonly bounds: Array<{ id: string; count: string; atLeast: number; why: string }> = [];
     private readonly gateOrder = new Map<string, number>();
 
     constructor(
@@ -207,9 +210,11 @@ export class Playbook {
                         return new StartNode();
                     case CONDUCT.evidence:
                         if (typeof bag.evidence !== "string") throw new Error(`${file}: evidence "${n.id}" names no proof (bag.evidence)`);
+                        if (!this.proofs.includes(bag.evidence)) this.proofs.push(bag.evidence);
                         return new EvidenceNode(bag.evidence);
                     case CONDUCT.bound:
                         if (typeof bag.count !== "string" || typeof bag.atLeast !== "number" || typeof bag.why !== "string") throw new Error(`${file}: bound "${n.id}" names its count, its bound and why (bag.count, bag.atLeast, bag.why)`);
+                        this.bounds.push({ id: n.id, count: bag.count, atLeast: bag.atLeast, why: bag.why });
                         return new BoundNode(bag.count, bag.atLeast);
                     case CONDUCT.not:
                         return new NotNode();
@@ -289,4 +294,86 @@ export function sayingText(saying: Saying, say: (key: string, vars?: Record<stri
     if (saying.view && !view) throw new Error(`the playbook's "${saying.id}" asks for the view "${saying.view}", which the topic does not give`);
     const own = Object.fromEntries(Object.entries(saying.vars ?? {}).map(([k, v]) => [k, typeof v === "object" ? say(v.word) : v]));
     return say(key, { ...(view ? view() : {}), ...own });
+}
+
+/** What a playbook proposed is checked against: the words it may say, what a stage may do, what a gate may refuse, and cases it must hold. */
+export interface PlaybookExpectations {
+    words?: { file: string; templates: Record<string, string> };
+    /** What a stage may do (the process level): every stage names one of them. */
+    actions?: string[];
+    /** What a gate may refuse. */
+    capabilities?: string[];
+    /** Events and what the playbook must do at each: the stage, and the gates that refuse. */
+    cases?: Array<{ evidence: Evidence; stage: string; refusing?: string[] }>;
+}
+
+/** More events than this and a playbook is too wide to be checked whole: it is refused as such. */
+export const MAX_EVENTS = 4096;
+
+/**
+ * The problems of a playbook proposed (2026-09-29, level 2 of the note): it builds on the core's runtime; at every
+ * event its proofs and its counts can make (each proof true or false, each count from 0 to one past its bound) one
+ * stage and one only is active; it says only words its file holds; its stages do what the process knows and its gates
+ * refuse capabilities that exist; and it holds the cases it is given. What the factory's guard runs on every
+ * submission, and the station again on what is proposed to it.
+ */
+export function playbookProblems(doc: unknown, file: string, expect: PlaybookExpectations = {}): string[] {
+    let playbook: Playbook;
+    try {
+        const d = doc as PlaybookFile;
+        if (!d || typeof d !== "object" || !Array.isArray(d.nodes) || !Array.isArray(d.links)) return [`${file}: a playbook is { nodes: [{ id, type, bag }], links: [{ from: "node.port", to: "node.port" }] }`];
+        playbook = new Playbook(file, d);
+    } catch (e) {
+        return [e instanceof Error ? e.message : String(e)];
+    }
+    const problems: string[] = [];
+    const counts = [...new Set(playbook.bounds.map((b) => b.count))];
+    const axes: Array<{ name: string; values: Array<boolean | number> }> = [
+        ...playbook.proofs.map((name) => ({ name, values: [false, true] as Array<boolean | number> })),
+        ...counts.map((name) => ({ name, values: Array.from({ length: Math.max(...playbook.bounds.filter((b) => b.count === name).map((b) => b.atLeast)) + 2 }, (_, i) => i) as Array<boolean | number> })),
+    ];
+    const total = axes.reduce((n, a) => n * a.values.length, 1);
+    if (total > MAX_EVENTS) problems.push(`${file}: ${total} events to check (proofs ${playbook.proofs.join(", ")}; counts ${counts.join(", ") || "none"}), more than ${MAX_EVENTS}: a playbook is checked whole or not at all`);
+    else {
+        const faults: string[] = [];
+        for (let n = 0; n < total; n++) {
+            let rest = n;
+            const evidence: Evidence = {};
+            for (const a of axes) {
+                evidence[a.name] = a.values[rest % a.values.length];
+                rest = Math.floor(rest / a.values.length);
+            }
+            try {
+                playbook.evaluate(evidence);
+            } catch (e) {
+                faults.push(e instanceof Error ? e.message : String(e));
+            }
+        }
+        if (faults.length) problems.push(...faults.slice(0, 5), ...(faults.length > 5 ? [`and ${faults.length - 5} more events with no stage or two`] : []));
+    }
+    if (expect.words) for (const key of playbook.words()) if (expect.words.templates[key] === undefined) problems.push(`"${key}" is not a key of ${expect.words.file}: a playbook says only the words its file holds`);
+    if (expect.actions)
+        for (const s of playbook.stages) if (!s.action || !expect.actions.includes(s.action)) problems.push(`stage "${s.id}" does "${s.action ?? "nothing"}": a stage does one of ${expect.actions.join(", ")}`);
+    if (expect.capabilities)
+        for (const g of playbook.gates) for (const c of g.capabilities) if (!expect.capabilities.includes(c)) problems.push(`gate "${g.id}" refuses "${c}", which is not one of ${expect.capabilities.join(", ")}`);
+    for (const [i, c] of (expect.cases ?? []).entries()) {
+        try {
+            const { stage, refusing } = playbook.evaluate(c.evidence);
+            if (stage.id !== c.stage) problems.push(`case ${i + 1} (${JSON.stringify(c.evidence)}): the stage is "${stage.id}", not "${c.stage}"`);
+            if (c.refusing && JSON.stringify(refusing.map((g) => g.id).sort()) !== JSON.stringify([...c.refusing].sort())) problems.push(`case ${i + 1} (${JSON.stringify(c.evidence)}): the gates that refuse are [${refusing.map((g) => g.id).join(", ")}], not [${c.refusing.join(", ")}]`);
+        } catch (e) {
+            problems.push(`case ${i + 1}: ${e instanceof Error ? e.message : String(e)}`);
+        }
+    }
+    return problems;
+}
+
+/**
+ * A playbook of the library conducts only signed (level 3 of the note): what `library.playbook` answers, refused
+ * while no person signed it, or when it changed since.
+ */
+export function signedPlaybook(read: { id: string; playbook: PlaybookFile; signed: { valid: boolean; by?: string } | null }): Playbook {
+    if (!read.signed) throw new Error(`the playbook "${read.id}" is not signed: it conducts nothing until a person signs it`);
+    if (!read.signed.valid) throw new Error(`the playbook "${read.id}" changed since ${read.signed.by ?? "its signer"} signed it: it conducts nothing until a person signs it again`);
+    return new Playbook(`library:${read.id}`, read.playbook);
 }

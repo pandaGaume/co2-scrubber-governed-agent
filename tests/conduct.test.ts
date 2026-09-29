@@ -12,8 +12,10 @@
  *     node --test dist/tests/
  */
 import { describe, it } from "node:test";
+import { readFileSync } from "node:fs";
+import { fromRoot } from "../lib/paths.js";
 import assert from "node:assert/strict";
-import { loadPlaybook, Playbook, type Evidence, type PlaybookFile } from "../harness/core/conduct.js";
+import { loadPlaybook, Playbook, playbookProblems, type Evidence, type PlaybookFile } from "../harness/core/conduct.js";
 import { loadWords, missingWords } from "../harness/core/words.js";
 import { RECOVERY_PLAYBOOK } from "../slots/scenario/commissioning.js";
 import { PLAYBOOK, WORDS } from "../harness/topics/procedure/index.js";
@@ -151,5 +153,27 @@ describe("a playbook the runtime refuses to run", () => {
         const playbook = new Playbook("t", doc);
         assert.equal(playbook.evaluate({ done: false }).stage.id, "work");
         assert.throws(() => playbook.evaluate({ done: true }), /t: 0 stages are active \(none\), not one/);
+    });
+});
+
+describe("a playbook proposed, checked whole before anyone reads it (2026-09-29)", () => {
+    const recovery = (): PlaybookFile => JSON.parse(readFileSync(fromRoot(...RECOVERY_PLAYBOOK.split("/")), "utf8")) as PlaybookFile;
+    const words = loadWords("specs/commissioning/words.json");
+    const expect = { words, actions: ["go-on", "ask", "end", "reopen"], capabilities: ["station.commissioning_reopen"] };
+
+    it("the repository's recovery playbook passes every event, its words, its actions and its gates", () => {
+        assert.deepEqual(playbookProblems(recovery(), "recovery", expect), []);
+    });
+
+    it("an event with two stages active, a word its file does not hold, an action the process does not know, a case not held", () => {
+        const doc = recovery();
+        // "stopped" entered from the start rather than after the question: it is active beside another stage whenever no new test was asked.
+        doc.links = doc.links.map((l) => (l.to === "stopped.entered" ? { from: "start.next", to: "stopped.entered" } : l));
+        doc.nodes = doc.nodes.map((n) => (n.id === "ask" ? { ...n, bag: { ...n.bag, says: "recover.nowhere", action: "improvise" } } : n));
+        const problems = playbookProblems(doc, "broken", { ...expect, cases: [{ evidence: { aborted: false, answered: false, rewrite: false, aborts: 0 }, stage: "ask" }] });
+        assert.ok(problems.some((x) => /2 stages are active \(report, stopped\), not one/.test(x)), problems.join("\n"));
+        assert.ok(problems.some((x) => /"recover\.nowhere" is not a key of specs\/commissioning\/words\.json/.test(x)));
+        assert.ok(problems.some((x) => /stage "ask" does "improvise"/.test(x)));
+        assert.ok(problems.some((x) => /^case 1: /.test(x)), "the case is not held: at that event no single stage answers");
     });
 });

@@ -1,0 +1,9 @@
+{
+    "title": "The playbook factory: what it writes, and how it says it",
+    "note": "A factory that writes a playbook (2026-09-29, level 2 of docs/comportement-en-donnees.fr.md): a conduct graph run by the core's runtime (harness/core/conduct.ts), for a change a person asked. What it is given is the task's observations.playbook: the id and title of the document it proposes, the change asked, the playbook it changes (a repository path), the words file its stages may say, what a stage may do, what a gate may refuse, and cases it must hold. Its words are words.json, its prompt prompt.md, and its own stages playbook.json: the factory is conducted by a playbook too.",
+    "words": "specs/playbook/words.json",
+    "prompt": "specs/playbook/prompt.md",
+    "playbook": "specs/playbook/playbook.json",
+    "observation": "playbook",
+    "file": "playbooks/{id}.json"
+}

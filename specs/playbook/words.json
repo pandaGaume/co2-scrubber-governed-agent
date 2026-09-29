@@ -1,0 +1,31 @@
+{
+    "note": "What the playbook factory says to its model and in its refusals (2026-09-29): the code fills the holes {name} and says nothing of its own.",
+    "intention": "Write the playbook {id} ({title}): {change}. It is a proposal: it conducts nothing until an authorised signatory signs it.",
+    "capabilities": {
+        "submit": "Submit the playbook: its id, its title, a summary a signatory reads, the graph (nodes and links, as the base playbook in the state is written) and the justification of each bound's number. The guard runs it on every event its proofs and counts can make, checks its words, its actions, its gates and the task's cases; an accepted one is written to {file} for the station to propose."
+    },
+    "brief": {
+        "plan": "Stage 1 of 3, the plan. The change asked is in the state (hypothesis, field \"asked\"), with the playbook it changes (field \"base\"), the words its stages may say (field \"words\"), what a stage may do (field \"actions\"), what a gate may refuse (field \"capabilities\") and the cases it must hold (field \"cases\"). Declare with task.plan that the playbook is written here: no node of the catalogue, the output {name} missing, to the topic \"playbook\".",
+        "write": "Stage 2 of 3, the playbook. Write it from the base, changing only what the change asks, and submit it with playbook.submit: at every event one stage and one only is active, every key it says is a key of the words, every stage does one of the actions, every gate refuses one of the capabilities, and every case holds. A bound's number is justified (justifications: the change asked, the reason, said as such).{refused}",
+        "refused": " Your last submission was refused: {problems}. Correct what it says and submit the whole playbook again.",
+        "handOver": "Stage 3 of 3, hand over. The guard accepted {path}. End with task.done, the playbook as the artifact of kind \"playbook\"; the station puts it on the library's proposals shelf and asks an authorised signatory to sign it."
+    },
+    "requirements": {
+        "missing": "the plan needs {requirement} first: {how}"
+    },
+    "guard": {
+        "refused": "playbook refused: {problems}",
+        "id": "the playbook's id is \"{got}\", not the \"{id}\" the task asks for",
+        "accepted": "the playbook {path} is already accepted: end with task.done"
+    },
+    "openQuestions": {
+        "plan": "the plan: the playbook is written here (task.plan)",
+        "write": "the playbook, checked on every event (playbook.submit)",
+        "handOver": "hand the playbook over (task.done)"
+    },
+    "validate": {
+        "none": "no playbook among the claimed artifacts",
+        "notAccepted": "no playbook was accepted by the guard in this task (playbook.submit)",
+        "notTheFile": "claimed playbook \"{path}\" is not the file the guard accepted ({accepted})"
+    }
+}

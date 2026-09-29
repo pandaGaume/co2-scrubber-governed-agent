@@ -54,12 +54,12 @@
         },
         "sign": {
             "title": "Signer un document comme relu",
-            "description": "Le commandant signe un document de la bibliothèque comme relu, depuis la salle de contrôle : la station le rappelle avec la réponse à la question de Mother (kind sign). La signature lie le document et ses faits tels qu'ils sont ; les limites d'une procédure de sécurité ne se justifient que par les faits d'un document signé. Jamais appelé par un modèle.",
+            "description": "Un signataire autorisé signe un document de la bibliothèque comme relu, depuis la salle de contrôle : la station le rappelle avec la réponse à la question de Mother (kind sign, pour le rôle authorised-signatory), ou la page de la bibliothèque avec l'empreinte de ce qu'elle a montré. La signature lie le document, ses faits, ses règles et son playbook tels qu'ils sont ; les limites d'une procédure de sécurité ne se justifient que par les faits d'un document signé, et un playbook ne conduit qu'une fois signé. Refusé pour toute personne que le rôle ne nomme pas (specs/station/roles.json). Jamais appelé par un modèle.",
             "properties": {
                 "id": "le document",
-                "by": "qui signe ; le commandant nommé par le git de cette machine s'il est absent",
+                "by": "qui signe : un titulaire du rôle authorised-signatory ; celui qui a répondu à la question, ou la personne que nomme le git de cette machine, s'il est absent",
                 "questionId": "la question à laquelle on répond",
-                "answer": "la réponse du commandant : signer, ou non",
+                "answer": "la réponse du signataire : signer, ou non",
                 "digest": "l'empreinte de ce que la personne a lu (review) ; un document modifié depuis n'est pas signé"
             }
         },
@@ -81,6 +81,25 @@
         "review": {
             "title": "Relire un document avant de le signer",
             "description": "Tous les fichiers qu'une signature engage (le document, ses faits, ses règles), tels qu'ils sont maintenant, avec l'empreinte qu'une signature engagerait et la signature telle qu'elle est : ce que la page de la bibliothèque montre à une personne avant qu'elle signe.",
+            "properties": {
+                "id": "le document"
+            }
+        },
+        "propose": {
+            "title": "Proposer un playbook",
+            "description": "Celui de la station, sur la proposition d'une usine : un playbook déposé sur l'étagère des propositions de la bibliothèque (jamais dans la bibliothèque du dépôt), avec un document écrit pour le signataire qui le lira. Il est d'abord vérifié (il s'exécute, une seule étape active à chaque événement) ; non signé, il ne conduit rien. Jamais appelé par un modèle.",
+            "properties": {
+                "id": "l'identifiant propre du document proposé",
+                "title": "son titre",
+                "summary": "ce qu'il fait et ce qui a changé",
+                "change": "ce qui a été demandé à l'usine",
+                "playbook": "le graphe : nœuds et liens",
+                "from": "la tâche, la proposition et le sha256 du fichier accepté par la garde de l'usine"
+            }
+        },
+        "playbook": {
+            "title": "Un playbook, avec sa signature",
+            "description": "Un playbook de la bibliothèque ou de son étagère des propositions, entier, avec sa signature telle qu'elle est : il ne conduit que si une personne l'a signé et qu'il n'a pas changé depuis.",
             "properties": {
                 "id": "le document"
             }

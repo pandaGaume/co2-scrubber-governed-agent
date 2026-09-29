@@ -54,12 +54,12 @@
         },
         "sign": {
             "title": "Sign a document as reviewed",
-            "description": "The commander signs a library document as reviewed, from the control room: the station calls it back with the answer to Mother's question (kind sign), or the library page with the digest of what it showed. The signature binds the document, its facts and its rules as they are; a safety procedure's limits are justified only by the facts of a signed document. Not a model's to call.",
+            "description": "An authorised signatory signs a library document as reviewed, from the control room: the station calls it back with the answer to Mother's question (kind sign, for the role authorised-signatory), or the library page with the digest of what it showed. The signature binds the document, its facts, its rules and its playbook as they are; a safety procedure's limits are justified only by the facts of a signed document, and a playbook conducts only once signed. Refused for anyone the role does not name (specs/station/roles.json). Not a model's to call.",
             "properties": {
                 "id": "the document",
-                "by": "who signs; the commander named by this machine's git when absent",
+                "by": "who signs: a holder of the role authorised-signatory; the one who answered the question, or the person this machine's git names, when absent",
                 "questionId": "the question answered",
-                "answer": "the commander's answer: sign, or not",
+                "answer": "the signatory's answer: sign, or not",
                 "digest": "the digest of what the person read (review); a document changed since is not signed"
             }
         },
@@ -81,6 +81,25 @@
         "review": {
             "title": "Review a document before signing",
             "description": "Every file a signature binds (the document, its facts, its rules), as it is now, with the digest a signature would bind and the signature as it stands: what the library page shows a person before they sign.",
+            "properties": {
+                "id": "the document"
+            }
+        },
+        "propose": {
+            "title": "Propose a playbook",
+            "description": "The station's, on a factory's proposal: a playbook put on the library's proposals shelf (never in the repository's library), with a document written for the signatory who reads it. It is checked first (it runs, one stage at every event); unsigned, it conducts nothing. Not a model's to call.",
+            "properties": {
+                "id": "the proposed document's id, its own",
+                "title": "its title",
+                "summary": "what it does and what changed",
+                "change": "what was asked of the factory",
+                "playbook": "the graph: nodes and links",
+                "from": "the task, the proposal and the sha256 of the file the factory's guard accepted"
+            }
+        },
+        "playbook": {
+            "title": "A playbook, with its signature",
+            "description": "A playbook of the library or of its proposals' shelf, whole, with its signature as it stands: what conducts only when a person signed it and it has not changed since.",
             "properties": {
                 "id": "the document"
             }

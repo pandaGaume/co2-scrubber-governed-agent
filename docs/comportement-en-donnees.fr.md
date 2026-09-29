@@ -69,10 +69,10 @@ La règle de ce dépôt ne change pas : **celui qui décide n'est pas celui qui 
 | niveau | ce qui change | qui décide | déjà là ? |
 |---|---|---|---|
 | **1. libre** | ce que la boucle apprend dans les bornes signées : les recettes promues par l'évidence, les briefs qui changent après un refus, les hypothèses d'un candidat | la boucle elle-même | oui : recettes, `problems.ts`, les candidats du graphe |
-| **2. proposé** | le playbook, les mots, un seuil du mécanisme, une règle de la garde | une usine ou la forge écrit la proposition ; elle est vérifiée par les tests de conformité et par le rejeu des traces passées | à construire |
-| **3. adopté** | la proposition devient la conduite | une personne qui signe, comme pour la fiche de sécurité | le mécanisme de signature existe (page `library.html`) |
+| **2. proposé** | le playbook, les mots, un seuil du mécanisme, une règle de la garde | une usine ou la forge écrit la proposition ; elle est vérifiée par les tests de conformité et par le rejeu des traces passées | pour les playbooks, oui : l'usine `playbook` écrit la proposition, sa garde exécute le graphe à chaque événement possible et vérifie ses mots, ses actions, ses refus et les cas donnés ; la station la vérifie à nouveau et la dépose sur l'étagère des propositions de la bibliothèque, non signée. Le rejeu des traces reste à construire |
+| **3. adopté** | la proposition devient la conduite | une personne qui tient le rôle de signataire autorisé (`authorised-signatory`, `specs/station/roles.json`), comme pour la fiche de sécurité | oui : la signature est demandée au rôle, jamais au commandant ni à un ordre permanent ; la bibliothèque refuse toute personne que le rôle ne nomme pas ; un playbook de la bibliothèque ne conduit que signé, et plus du tout s'il a changé depuis |
 
-**Ce que rien ne change sans signature :** les règles de sécurité et leurs faits ; qui autorise, qui signe, qui rouvre (les questions `sign` et `recover`, auxquelles aucun ordre permanent ne répond) ; la frontière de la sandbox elle-même.
+**Ce que rien ne change sans signature :** les règles de sécurité et leurs faits ; qui autorise, qui signe, qui rouvre (les questions `sign` et `recover`, auxquelles aucun ordre permanent ne répond ; les rôles et leurs titulaires, dans `specs/station/roles.json`) ; la frontière de la sandbox elle-même.
 
 ## 5. Le mode apprentissage de Mother, dans sa sandbox, pour l'évaluation
 

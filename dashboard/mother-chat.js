@@ -103,7 +103,12 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
     function render() {
         // A signature asked: the card's values under the question, each with its safe side, its kind and its origin, so the commander signs what they read.
         const card = (q) => {
-            if (q.kind !== "sign" || !Array.isArray(q.context?.facts)) return "";
+            if (q.kind !== "sign") return "";
+            // A playbook proposed by a factory: its bounds, each with why; the whole on the library page.
+            if (!Array.isArray(q.context?.facts)) {
+                const bounds = Array.isArray(q.context?.bounds) ? q.context.bounds.map((b) => `<div class="line dim"><b>${esc(b.id)}</b> ${esc(b.count)} at least ${esc(b.atLeast)}: ${esc(b.why)}</div>`).join("") : "";
+                return q.context?.document ? `<div class="card">${bounds}<div class="line"><a class="badge link" href="./library.html#${encodeURIComponent(q.context.document)}" target="library">read it whole, with its graph</a></div></div>` : "";
+            }
             const side = (b) => (b === "upper" ? "at most" : b === "lower" ? "at least" : "exactly");
             // The whole document, its facts and its rules on the library page, where it can be read before the answer.
             const page = q.context.document ? `<div class="line"><a class="badge link" href="./library.html#${encodeURIComponent(q.context.document)}" target="library">read it whole, with its rules</a></div>` : "";

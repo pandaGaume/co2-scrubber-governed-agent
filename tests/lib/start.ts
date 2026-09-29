@@ -26,6 +26,8 @@ export async function startAllOrFail(port: number): Promise<{ broker: LocalBroke
         process.env.STATION_ROLES_FILE = path.join(mkdtempSync(path.join(tmpdir(), "roles-")), "roles.json");
         writeFileSync(process.env.STATION_ROLES_FILE, JSON.stringify({ roles: { "authorised-signatory": { does: "signs for the tests", holders: ["signatory-test", "a reviewer"] }, commander: { does: "decides for the tests", holders: ["commander-test"] } } }));
     }
+    // What a factory proposes to the library goes on the suite's own shelf, never beside the repository's workshops.
+    process.env.LIBRARY_PROPOSALS_DIR ??= mkdtempSync(path.join(tmpdir(), "library-proposals-"));
     // The suite signs the safety card in a directory of its own: the repository's signatures are a person's, never a test's.
     if (!process.env.LIBRARY_SIGNATURES_DIR) {
         process.env.LIBRARY_SIGNATURES_DIR = mkdtempSync(path.join(tmpdir(), "signatures-"));
