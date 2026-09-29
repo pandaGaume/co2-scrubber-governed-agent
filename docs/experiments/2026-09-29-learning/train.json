@@ -1,0 +1,347 @@
+{
+  "fork": "exp-learn",
+  "phase": "train",
+  "builder": "reasoner",
+  "startedAt": "2026-09-29T18:51:24.556Z",
+  "tasks": [
+    {
+      "variant": {
+        "id": "t1",
+        "co2Ppm": 1480,
+        "lab": [
+          "fe-1",
+          "fe-2"
+        ]
+      },
+      "taskId": "t-2026-09-29-0001",
+      "state": "proposed",
+      "firstGuardSubmission": {
+        "capability": "procedure.revise",
+        "accepted": false,
+        "problems": [
+          {
+            "kind": "justification",
+            "path": "steps.2.speedPercent",
+            "says": "justification: steps.2.speedPercent: \"test.speedFloorPercent (signed, at least 30 percent); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+          }
+        ],
+        "shapes": [
+          "justification: *: … is not a fact of the library"
+        ],
+        "references": [
+          {
+            "constant": "monitoring.band.minBpm",
+            "value": 45,
+            "source": "library",
+            "reference": "test.heartRateMinBpm (commissioning-test-safety, signed)"
+          },
+          {
+            "constant": "monitoring.band.maxBpm",
+            "value": 120,
+            "source": "library",
+            "reference": "test.heartRateMaxBpm (commissioning-test-safety, signed)"
+          },
+          {
+            "constant": "limits.co2MaxPpm",
+            "value": 2800,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm (commissioning-test-safety, signed, at most 3200 ppm)"
+          },
+          {
+            "constant": "limits.co2AbortPpm",
+            "value": 3000,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm (commissioning-test-safety, signed, at most 3200 ppm)"
+          },
+          {
+            "constant": "limits.minSpeedPercent",
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent (commissioning-test-safety, signed, at least 30 percent)"
+          },
+          {
+            "constant": "limits.maxMinutes",
+            "value": 60,
+            "source": "library",
+            "reference": "test.maxMinutesCeiling (commissioning-test-safety, signed, at most 60 min)"
+          },
+          {
+            "constant": "steps.1.speedPercent",
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent (commissioning-test-safety, signed, at least 30 percent)"
+          },
+          {
+            "constant": "steps.2.speedPercent",
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent (signed, at least 30 percent); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)"
+          },
+          {
+            "constant": "abort.co2.threshold",
+            "value": 3000,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm (commissioning-test-safety, signed, at most 3200 ppm)"
+          },
+          {
+            "constant": "abort.battery.threshold",
+            "value": 40,
+            "source": "library",
+            "reference": "test.batteryAbortMinPercent (commissioning-test-safety, signed, at least 35 percent)"
+          }
+        ]
+      },
+      "preGuardRefusals": [
+        {
+          "capability": "procedure.submit",
+          "reason": "Provider proposed a capability outside the allowlist"
+        }
+      ],
+      "steps": 11,
+      "tokens": 88757,
+      "adaptationsActive": []
+    },
+    {
+      "variant": {
+        "id": "t2",
+        "co2Ppm": 1100,
+        "lab": [
+          "fe-1",
+          "fe-2",
+          "cdr"
+        ]
+      },
+      "taskId": "t-2026-09-29-0002",
+      "state": "proposed",
+      "firstGuardSubmission": {
+        "capability": "procedure.revise",
+        "accepted": false,
+        "problems": [
+          {
+            "kind": "justification",
+            "path": "steps.1.speedPercent",
+            "says": "justification: steps.1.speedPercent: \"test.speedFloorPercent (commissioning-test-safety, signed); scrubber.minimumSpeedElevated 40 percent (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+          },
+          {
+            "kind": "justification",
+            "path": "steps.2.speedPercent",
+            "says": "justification: steps.2.speedPercent: \"test.speedFloorPercent (commissioning-test-safety, signed); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+          }
+        ],
+        "shapes": [
+          "justification: *: … is not a fact of the library"
+        ],
+        "references": [
+          {
+            "constant": "limits.co2MaxPpm",
+            "value": 2500,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm (commissioning-test-safety, signed)"
+          },
+          {
+            "constant": "limits.co2AbortPpm",
+            "value": 3000,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm (commissioning-test-safety, signed)"
+          },
+          {
+            "constant": "limits.minSpeedPercent",
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent (commissioning-test-safety, signed)"
+          },
+          {
+            "constant": "limits.maxMinutes",
+            "value": 60,
+            "source": "library",
+            "reference": "test.maxMinutesCeiling (commissioning-test-safety, signed)"
+          },
+          {
+            "constant": "monitoring.band.minBpm",
+            "value": 45,
+            "source": "library",
+            "reference": "test.heartRateMinBpm (commissioning-test-safety, signed)"
+          },
+          {
+            "constant": "monitoring.band.maxBpm",
+            "value": 120,
+            "source": "library",
+            "reference": "test.heartRateMaxBpm (commissioning-test-safety, signed)"
+          },
+          {
+            "constant": "steps.1.speedPercent",
+            "value": 50,
+            "source": "library",
+            "reference": "test.speedFloorPercent (commissioning-test-safety, signed); scrubber.minimumSpeedElevated 40 percent (scrubber-1-datasheet)"
+          },
+          {
+            "constant": "steps.2.speedPercent",
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent (commissioning-test-safety, signed); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)"
+          },
+          {
+            "constant": "abort.co2.threshold",
+            "value": 3000,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm (commissioning-test-safety, signed)"
+          },
+          {
+            "constant": "abort.battery.threshold",
+            "value": 40,
+            "source": "library",
+            "reference": "test.batteryAbortMinPercent (commissioning-test-safety, signed)"
+          }
+        ]
+      },
+      "preGuardRefusals": [
+        {
+          "capability": "procedure.submit",
+          "reason": "Provider proposed a capability outside the allowlist"
+        }
+      ],
+      "steps": 11,
+      "tokens": 97511,
+      "adaptationsActive": []
+    }
+  ],
+  "reflections": [
+    {
+      "after": "t-2026-09-29-0001",
+      "patterns": [],
+      "judged": [],
+      "taskId": null
+    },
+    {
+      "after": "t-2026-09-29-0002",
+      "patterns": [
+        {
+          "id": "first-try-shape:procedure:t-2026-09-29-0002:33231b94",
+          "family": "first-try-shape:procedure:33231b945eef",
+          "says": "the first submission of 2 tasks (procedure) was refused on the same form of mistake, \"justification: *: … is not a fact of the library\": t-2026-09-29-0001: justification: steps.2.speedPercent: \"test.speedFloorPercent (signed, at least 30 percent); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)\" is not | t-2026-09-29-0002: justification: steps.1.speedPercent: \"test.speedFloorPercent ("
+        },
+        {
+          "id": "first-try-category:procedure:justification:t-2026-09-29-0002",
+          "family": "first-try-category:procedure:justification",
+          "says": "the first submission of 2 tasks (procedure) was refused for justification, on a different field each time or not: t-2026-09-29-0001: justification: steps.2.speedPercent: \"test.speedFloorPercent (signed, at least 30 percent); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)\" is not | t-2026-09-29-0002: justification: steps.1.speedPercent: \"test.speedFloorPercent (commissioning-test-safe"
+        }
+      ],
+      "judged": [],
+      "taskId": "t-2026-09-29-0003",
+      "state": "proposed",
+      "ended": "contract held after 3 step(s)",
+      "proposals": [
+        {
+          "outcome": "completed",
+          "input": {
+            "target": "specs/procedure/words.json",
+            "ops": [
+              {
+                "op": "append",
+                "pointer": "/brief/procedure",
+                "value": " A justification of a safety constant names one fact alone: source \"library\", reference the bare fact id exactly as library.facts lists it (for a speed, the id of the signed rule that bounds it, test.speedFloorPercent), with no document name, no \"signed\" note, no datasheet fact joined to it with a semicolon; a datasheet fact is not the reference of a safety constant, so leave it out of the reference."
+              }
+            ],
+            "reason": "Both first submissions put several facts and prose in one reference for a step speed, which is not a fact id; the brief now says the reference is the single bare id of the bounding signed rule.",
+            "evidence": [
+              "first-try-shape:procedure:t-2026-09-29-0002:33231b94",
+              "first-try-category:procedure:justification:t-2026-09-29-0002"
+            ],
+            "justifications": []
+          },
+          "refused": null
+        }
+      ],
+      "proposal": {
+        "proposalId": "p0003-c49d6553",
+        "status": "adopted"
+      }
+    }
+  ],
+  "frozen": {
+    "at": "2026-09-29T18:54:07.932Z",
+    "afterTask": "t-2026-09-29-0002",
+    "adaptation": {
+      "n": 1,
+      "at": "2026-09-29T18:54:07.581Z",
+      "target": "specs/procedure/words.json",
+      "reason": "Both first submissions put several facts and prose in one reference for a step speed, which is not a fact id; the brief now says the reference is the single bare id of the bounding signed rule.",
+      "evidence": [
+        "first-try-shape:procedure:t-2026-09-29-0002:33231b94",
+        "first-try-category:procedure:justification:t-2026-09-29-0002"
+      ],
+      "families": [
+        "first-try-shape:procedure:33231b945eef",
+        "first-try-category:procedure:justification"
+      ],
+      "changes": [
+        {
+          "pointer": "/brief/procedure",
+          "op": "append",
+          "before": "Stage 4 of 5, the procedure. Write it by the rules of application of {method} (the card is in the state, under hypothesis, field \"method\"), for this installation (in the state under hypothesis, field \"installation\": its volumes, openings, unknowns and the device under commissioning) and {presence}; the medical monitor is there too (field \"monitor\") once read with biomed.describe: on standby now, which is how it waits between tests; the station starts it when the commander authorises the test, for the subjects your procedure names in monitoring. These are fields of the state, not files: read nothing the state already gives.{start} Every constant you set is justified in justifications. The safety constants (the CO2 limits, the minimum speed and every step's speed, the maximum duration, the abort thresholds, the heart-rate band) cite a fact of a library document a person signed (library.facts says which are signed, and each limit's safe side) and respect it{bounds}; the other constants (the steps' durations) cite what you read (field \"sources\"), the measurement, a calculation, or an assumption said as such. Submit with procedure.submit.{refused}{analysed}",
+          "after": "Stage 4 of 5, the procedure. Write it by the rules of application of {method} (the card is in the state, under hypothesis, field \"method\"), for this installation (in the state under hypothesis, field \"installation\": its volumes, openings, unknowns and the device under commissioning) and {presence}; the medical monitor is there too (field \"monitor\") once read with biomed.describe: on standby now, which is how it waits between tests; the station starts it when the commander authorises the test, for the subjects your procedure names in monitoring. These are fields of the state, not files: read nothing the state already gives.{start} Every constant you set is justified in justifications. The safety constants (the CO2 limits, the minimum speed and every step's speed, the maximum duration, the abort thresholds, the heart-rate band) cite a fact of a library document a person signed (library.facts says which are signed, and each limit's safe side) and respect it{bounds}; the other constants (the steps' durations) cite what you read (field \"sources\"), the measurement, a calculation, or an assumption said as such. Submit with procedure.submit.{refused}{analysed} A justification of a safety constant names one fact alone: source \"library\", reference the bare fact id exactly as library.facts lists it (for a speed, the id of the signed rule that bounds it, test.speedFloorPercent), with no document name, no \"signed\" note, no datasheet fact joined to it with a semicolon; a datasheet fact is not the reference of a safety constant, so leave it out of the reference."
+        }
+      ],
+      "judgedOn": [
+        "first-try-shape:procedure:33231b945eef"
+      ],
+      "baseline": {
+        "tasks": 2,
+        "withMistake": 2
+      },
+      "reflectionTask": "t-2026-09-29-0003",
+      "commit": "e33094a9211fab6f41512797768344f506ca66d9",
+      "status": "adopted"
+    }
+  },
+  "ledger": [
+    {
+      "n": 1,
+      "at": "2026-09-29T18:54:07.581Z",
+      "target": "specs/procedure/words.json",
+      "reason": "Both first submissions put several facts and prose in one reference for a step speed, which is not a fact id; the brief now says the reference is the single bare id of the bounding signed rule.",
+      "evidence": [
+        "first-try-shape:procedure:t-2026-09-29-0002:33231b94",
+        "first-try-category:procedure:justification:t-2026-09-29-0002"
+      ],
+      "families": [
+        "first-try-shape:procedure:33231b945eef",
+        "first-try-category:procedure:justification"
+      ],
+      "changes": [
+        {
+          "pointer": "/brief/procedure",
+          "op": "append",
+          "before": "Stage 4 of 5, the procedure. Write it by the rules of application of {method} (the card is in the state, under hypothesis, field \"method\"), for this installation (in the state under hypothesis, field \"installation\": its volumes, openings, unknowns and the device under commissioning) and {presence}; the medical monitor is there too (field \"monitor\") once read with biomed.describe: on standby now, which is how it waits between tests; the station starts it when the commander authorises the test, for the subjects your procedure names in monitoring. These are fields of the state, not files: read nothing the state already gives.{start} Every constant you set is justified in justifications. The safety constants (the CO2 limits, the minimum speed and every step's speed, the maximum duration, the abort thresholds, the heart-rate band) cite a fact of a library document a person signed (library.facts says which are signed, and each limit's safe side) and respect it{bounds}; the other constants (the steps' durations) cite what you read (field \"sources\"), the measurement, a calculation, or an assumption said as such. Submit with procedure.submit.{refused}{analysed}",
+          "after": "Stage 4 of 5, the procedure. Write it by the rules of application of {method} (the card is in the state, under hypothesis, field \"method\"), for this installation (in the state under hypothesis, field \"installation\": its volumes, openings, unknowns and the device under commissioning) and {presence}; the medical monitor is there too (field \"monitor\") once read with biomed.describe: on standby now, which is how it waits between tests; the station starts it when the commander authorises the test, for the subjects your procedure names in monitoring. These are fields of the state, not files: read nothing the state already gives.{start} Every constant you set is justified in justifications. The safety constants (the CO2 limits, the minimum speed and every step's speed, the maximum duration, the abort thresholds, the heart-rate band) cite a fact of a library document a person signed (library.facts says which are signed, and each limit's safe side) and respect it{bounds}; the other constants (the steps' durations) cite what you read (field \"sources\"), the measurement, a calculation, or an assumption said as such. Submit with procedure.submit.{refused}{analysed} A justification of a safety constant names one fact alone: source \"library\", reference the bare fact id exactly as library.facts lists it (for a speed, the id of the signed rule that bounds it, test.speedFloorPercent), with no document name, no \"signed\" note, no datasheet fact joined to it with a semicolon; a datasheet fact is not the reference of a safety constant, so leave it out of the reference."
+        }
+      ],
+      "judgedOn": [
+        "first-try-shape:procedure:33231b945eef"
+      ],
+      "baseline": {
+        "tasks": 2,
+        "withMistake": 2
+      },
+      "reflectionTask": "t-2026-09-29-0003",
+      "commit": "e33094a9211fab6f41512797768344f506ca66d9",
+      "status": "adopted"
+    }
+  ],
+  "excluded": [
+    {
+      "taskId": "t-2026-09-29-0004",
+      "variant": "t3",
+      "why": "started by the driver after the freeze, before it was stopped: run with adaptation 1, neither baseline nor validation",
+      "firstJudged": {
+        "capability": "procedure.revise",
+        "judged": "accepted",
+        "reason": "procedure.revise completed; the workshop changed"
+      },
+      "preGuard": 1,
+      "steps": 10,
+      "tokens": 90292
+    }
+  ],
+  "endedAt": "2026-09-29T18:56:14.378Z"
+}

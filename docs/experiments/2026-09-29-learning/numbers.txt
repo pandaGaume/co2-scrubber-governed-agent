@@ -1,0 +1,69 @@
+## baseline (training)
+t1 t-2026-09-29-0001: justification: steps.2.speedPercent | forms: justification: *: … is not a fact of the library | refs: monitoring.band.minBpm=45 <- test.heartRateMinBpm (commissioning-test-safety, signed) | monitoring.band.maxBpm=120 <- test.heartRateMaxBpm (commissioning-test-safety, signed) | limits.co2MaxPpm=2800 <- test.co2AbortCeilingPpm (commissioning-test-safety, signed, at most 3200 ppm) | limits.co2AbortPpm=3000 <- test.co2AbortCeilingPpm (commissioning-test-safety, signed, at most 3200 ppm) | limits.minSpeedPercent=30 <- test.speedFloorPercent (commissioning-test-safety, signed, at least 30 percent) | limits.maxMinutes=60 <- test.maxMinutesCeiling (commissioning-test-safety, signed, at most 60 min) | steps.1.speedPercent=30 <- test.speedFloorPercent (commissioning-test-safety, signed, at least 30 percent) | steps.2.speedPercent=100 <- test.speedFloorPercent (signed, at least 30 percent); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet) | abort.co2.threshold=3000 <- test.co2AbortCeilingPpm (commissioning-test-safety, signed, at most 3200 ppm) | abort.battery.threshold=40 <- test.batteryAbortMinPercent (commissioning-test-safety, signed, at least 35 percent) | pre-guard 1 | steps 11 | tokens 88757 | adaptations []
+t2 t-2026-09-29-0002: justification: steps.1.speedPercent; justification: steps.2.speedPercent | forms: justification: *: … is not a fact of the library | refs: limits.co2MaxPpm=2500 <- test.co2AbortCeilingPpm (commissioning-test-safety, signed) | limits.co2AbortPpm=3000 <- test.co2AbortCeilingPpm (commissioning-test-safety, signed) | limits.minSpeedPercent=30 <- test.speedFloorPercent (commissioning-test-safety, signed) | limits.maxMinutes=60 <- test.maxMinutesCeiling (commissioning-test-safety, signed) | monitoring.band.minBpm=45 <- test.heartRateMinBpm (commissioning-test-safety, signed) | monitoring.band.maxBpm=120 <- test.heartRateMaxBpm (commissioning-test-safety, signed) | steps.1.speedPercent=50 <- test.speedFloorPercent (commissioning-test-safety, signed); scrubber.minimumSpeedElevated 40 percent (scrubber-1-datasheet) | steps.2.speedPercent=100 <- test.speedFloorPercent (commissioning-test-safety, signed); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet) | abort.co2.threshold=3000 <- test.co2AbortCeilingPpm (commissioning-test-safety, signed) | abort.battery.threshold=40 <- test.batteryAbortMinPercent (commissioning-test-safety, signed) | pre-guard 1 | steps 11 | tokens 97511 | adaptations []
+{
+  "tasks": 2,
+  "first_guard_evaluated_submission_pass_rate": "0/2 (0 %)",
+  "problems_at_first_judged_submission": 3,
+  "tasks_by_category": {
+    "justification": 2
+  },
+  "tasks_by_form": {
+    "justification: *: … is not a fact of the library": 2
+  },
+  "pre_guard_refusals": 2,
+  "no_judged_submission": 0,
+  "average_steps": 11,
+  "average_tokens": 93134,
+  "ended_proposed": 2
+}
+
+## generalisation
+| Task | Without adaptation | With adaptation | Guard issue before | Guard issue after |
+|---|---|---|---|---|
+| v1 (800 ppm, fe-1+fe-2+cdr+fe-3) | fail | pass | justification: steps.2.speedPercent | accepted |
+| v2 (2000 ppm, fe-1+fe-2) | fail | fail | justification: steps.2.speedPercent | expected:  |
+| v3 (1200 ppm, fe-3) | fail | pass | expected: ; justification: steps.2.speedPercent | accepted |
+| v4 (1550 ppm, fe-1+fe-2, after a co2 abort) | fail | pass | justification: steps.2.speedPercent | accepted |
+| v5 (950 ppm, cdr+fe-3, after a heart-rate abort) | fail | fail | no judged submission | shape:  |
+| v6 (1800 ppm, fe-1+fe-3+cdr) | fail | pass | justification: steps.2.speedPercent | accepted |
+
+## metrics without / with
+{
+  "without": {
+    "tasks": 6,
+    "first_guard_evaluated_submission_pass_rate": "0/6 (0 %)",
+    "problems_at_first_judged_submission": 6,
+    "tasks_by_category": {
+      "justification": 5,
+      "expected": 1
+    },
+    "tasks_by_form": {
+      "justification: *: … is not a fact of the library": 5,
+      "expected: expected says nothing: a test that does not say what it expects to see cannot be told from a fishing trip": 1
+    },
+    "pre_guard_refusals": 5,
+    "no_judged_submission": 1,
+    "average_steps": 13.7,
+    "average_tokens": 106111,
+    "ended_proposed": 5
+  },
+  "with": {
+    "tasks": 6,
+    "first_guard_evaluated_submission_pass_rate": "4/6 (67 %)",
+    "problems_at_first_judged_submission": 2,
+    "tasks_by_category": {
+      "expected": 1,
+      "shape": 1
+    },
+    "tasks_by_form": {
+      "expected: expected says nothing: a test that does not say what it expects to see cannot be told from a fishing trip": 1,
+      "shape: quantity …: no unit … for Speed": 1
+    },
+    "pre_guard_refusals": 5,
+    "no_judged_submission": 0,
+    "average_steps": 13.5,
+    "average_tokens": 108013,
+    "ended_proposed": 6
+  }
+}

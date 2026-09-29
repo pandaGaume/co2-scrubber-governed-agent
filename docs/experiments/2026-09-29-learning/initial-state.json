@@ -1,0 +1,96 @@
+{
+  "recordedAt": "2026-09-29T18:50:50.952Z",
+  "fork": "exp-learn",
+  "repositoryCommit": "13408813b64a8f96368b3b5c935cad78b061dc22",
+  "fork_json": {
+    "id": "exp-learn",
+    "createdAt": "2026-09-29T18:50:50.503Z",
+    "origin": {
+      "commit": "13408813b64a8f96368b3b5c935cad78b061dc22",
+      "dirty": false
+    },
+    "parent": null
+  },
+  "model": "claude-sonnet-5-5 (profiles/anthropic-sonnet.json, the reasoner of the factory and of the reflection)",
+  "witnessC": true,
+  "reflection": {
+    "title": "The reflection: what it reads, what it may adapt, and what never",
+    "note": "The reflection factory (2026-09-29, P4 of docs/comportement-en-donnees.fr.md) proposes an adaptation of the conduct from the patterns the station reads in a fork's traces (lib/reflection.ts, observe). An adaptation is a patch on one file of `adaptable`, never on one of `never`, which holds what learning may not adapt even in a fork: the library and its signatures, the facts and the guard's rules, who decides, and the reflection's own bounds (this file). Applied, the file must still be what its reader needs (`consumers` for the playbooks; every key and hole for the words). The station adopts it in a fork only.",
+    "words": "specs/reflection/words.json",
+    "prompt": "specs/reflection/prompt.md",
+    "playbook": "specs/reflection/playbook.json",
+    "observation": "reflection",
+    "file": "adaptations/{n}.json",
+    "repeatAt": 2,
+    "evaluateAfter": 3,
+    "adaptable": [
+      "specs/*/playbook.json",
+      "specs/*/*.playbook.json",
+      "specs/*/words.json"
+    ],
+    "never": [
+      {
+        "pattern": "docs/library/**",
+        "why": "the library and its signatures are what a person reviewed and signed"
+      },
+      {
+        "pattern": "**/*.facts.json",
+        "why": "a fact is a person's reading of a source, signed"
+      },
+      {
+        "pattern": "**/*.rules.json",
+        "why": "the guard's rules judge the conduct; the conduct does not rewrite its judge"
+      },
+      {
+        "pattern": "specs/station/**",
+        "why": "who may decide (the roles) is not the learner's to change"
+      },
+      {
+        "pattern": "specs/reflection/**",
+        "why": "the reflection's own bounds and conduct: a learner that widens its own freedom is no longer measured"
+      },
+      {
+        "pattern": "specs/harness/**",
+        "why": "what the core knows of the application"
+      }
+    ],
+    "consumers": {
+      "specs/commissioning/recovery.playbook.json": {
+        "words": "specs/commissioning/words.json",
+        "actions": [
+          "go-on",
+          "ask",
+          "end",
+          "reopen"
+        ],
+        "capabilities": [
+          "station.commissioning_reopen"
+        ]
+      },
+      "specs/procedure/playbook.json": {
+        "words": "specs/procedure/words.json",
+        "capabilities": [
+          "task.plan",
+          "procedure.submit",
+          "procedure.revise"
+        ]
+      },
+      "specs/playbook/playbook.json": {
+        "words": "specs/playbook/words.json",
+        "capabilities": [
+          "playbook.submit"
+        ]
+      }
+    }
+  },
+  "ledger": [],
+  "tasksInWorkshop": 0,
+  "sha256": {
+    "specs/procedure/words.json": "976cba19c795bca264ca2cfe43f74bd80608a886fd4693d109df572833f892a1",
+    "specs/procedure/playbook.json": "f3af0484b58021e4af3d828c8119255d29e9112caa29b37de393cbfd2521982f",
+    "specs/procedure/prompt.md": "4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "harness/topics/procedure (guard, repository)": "205b5cc46033b70308cb3ad40345d0db0dff7461ed1e4f0dd2ebf880d732bda7"
+  },
+  "wordsEqualRepository": true,
+  "guardUnchanged": "the guard and its rules are the repository's at the commit above; never modified during the experiment"
+}

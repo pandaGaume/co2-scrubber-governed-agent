@@ -1,0 +1,69 @@
+{
+  "target": "specs/procedure/words.json",
+  "ops": [
+    {
+      "op": "append",
+      "pointer": "/brief/procedure",
+      "value": " A justification of a safety constant names one fact alone: source \"library\", reference the bare fact id exactly as library.facts lists it (for a speed, the id of the signed rule that bounds it, test.speedFloorPercent), with no document name, no \"signed\" note, no datasheet fact joined to it with a semicolon; a datasheet fact is not the reference of a safety constant, so leave it out of the reference."
+    }
+  ],
+  "reason": "Both first submissions put several facts and prose in one reference for a step speed, which is not a fact id; the brief now says the reference is the single bare id of the bounding signed rule.",
+  "evidence": [
+    "first-try-shape:procedure:t-2026-09-29-0002:33231b94",
+    "first-try-category:procedure:justification:t-2026-09-29-0002"
+  ],
+  "justifications": [],
+  "targetSha256": "976cba19c795bca264ca2cfe43f74bd80608a886fd4693d109df572833f892a1",
+  "patterns": [
+    {
+      "id": "first-try-shape:procedure:t-2026-09-29-0002:33231b94",
+      "kind": "first-try-shape",
+      "says": "the first submission of 2 tasks (procedure) was refused on the same form of mistake, \"justification: *: … is not a fact of the library\": t-2026-09-29-0001: justification: steps.2.speedPercent: \"test.speedFloorPercent (signed, at least 30 percent); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)\" is not | t-2026-09-29-0002: justification: steps.1.speedPercent: \"test.speedFloorPercent (commissioning-test-safety, signed); scrubber.minimumSpeedElevated 40 percent (scrubber-1-datasheet",
+      "count": 2,
+      "source": "t-2026-09-29-0001/manifest.json t-2026-09-29-0002/manifest.json",
+      "target": "specs/procedure/words.json",
+      "detail": {
+        "topic": "procedure",
+        "shape": "justification: *: … is not a fact of the library",
+        "capability": "procedure.revise",
+        "reason": "procedure refused: justification: steps.1.speedPercent: \"test.speedFloorPercent (commissioning-test-safety, signed); scrubber.minimumSpeedElevated 40 percent (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them); the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\"); justification: steps.2.speedPercent: \"test.speedFloorPercent (commissioning-test-safety, signed); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them); the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")",
+        "examples": [
+          {
+            "task": "t-2026-09-29-0001",
+            "reason": "procedure refused: justification: steps.2.speedPercent: \"test.speedFloorPercent (signed, at least 30 percent); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them); the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test"
+          },
+          {
+            "task": "t-2026-09-29-0002",
+            "reason": "procedure refused: justification: steps.1.speedPercent: \"test.speedFloorPercent (commissioning-test-safety, signed); scrubber.minimumSpeedElevated 40 percent (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them); the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", refere"
+          }
+        ]
+      },
+      "family": "first-try-shape:procedure:33231b945eef"
+    },
+    {
+      "id": "first-try-category:procedure:justification:t-2026-09-29-0002",
+      "kind": "first-try-category",
+      "says": "the first submission of 2 tasks (procedure) was refused for justification, on a different field each time or not: t-2026-09-29-0001: justification: steps.2.speedPercent: \"test.speedFloorPercent (signed, at least 30 percent); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)\" is not | t-2026-09-29-0002: justification: steps.1.speedPercent: \"test.speedFloorPercent (commissioning-test-safety, signed); scrubber.minimumSpeedElevated 40 percent (scrubber-1-datasheet",
+      "count": 2,
+      "source": "t-2026-09-29-0001/manifest.json t-2026-09-29-0002/manifest.json",
+      "target": "specs/procedure/words.json",
+      "detail": {
+        "topic": "procedure",
+        "kind": "justification",
+        "capability": "procedure.revise",
+        "reason": "procedure refused: justification: steps.1.speedPercent: \"test.speedFloorPercent (commissioning-test-safety, signed); scrubber.minimumSpeedElevated 40 percent (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them); the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\"); justification: steps.2.speedPercent: \"test.speedFloorPercent (commissioning-test-safety, signed); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them); the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")",
+        "examples": [
+          {
+            "task": "t-2026-09-29-0001",
+            "reason": "procedure refused: justification: steps.2.speedPercent: \"test.speedFloorPercent (signed, at least 30 percent); scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them); the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test"
+          },
+          {
+            "task": "t-2026-09-29-0002",
+            "reason": "procedure refused: justification: steps.1.speedPercent: \"test.speedFloorPercent (commissioning-test-safety, signed); scrubber.minimumSpeedElevated 40 percent (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them); the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", refere"
+          }
+        ]
+      },
+      "family": "first-try-category:procedure:justification"
+    }
+  ]
+}

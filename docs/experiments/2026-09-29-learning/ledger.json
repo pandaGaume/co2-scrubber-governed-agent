@@ -1,0 +1,34 @@
+[
+  {
+    "n": 1,
+    "at": "2026-09-29T18:54:07.581Z",
+    "target": "specs/procedure/words.json",
+    "reason": "Both first submissions put several facts and prose in one reference for a step speed, which is not a fact id; the brief now says the reference is the single bare id of the bounding signed rule.",
+    "evidence": [
+      "first-try-shape:procedure:t-2026-09-29-0002:33231b94",
+      "first-try-category:procedure:justification:t-2026-09-29-0002"
+    ],
+    "families": [
+      "first-try-shape:procedure:33231b945eef",
+      "first-try-category:procedure:justification"
+    ],
+    "changes": [
+      {
+        "pointer": "/brief/procedure",
+        "op": "append",
+        "before": "Stage 4 of 5, the procedure. Write it by the rules of application of {method} (the card is in the state, under hypothesis, field \"method\"), for this installation (in the state under hypothesis, field \"installation\": its volumes, openings, unknowns and the device under commissioning) and {presence}; the medical monitor is there too (field \"monitor\") once read with biomed.describe: on standby now, which is how it waits between tests; the station starts it when the commander authorises the test, for the subjects your procedure names in monitoring. These are fields of the state, not files: read nothing the state already gives.{start} Every constant you set is justified in justifications. The safety constants (the CO2 limits, the minimum speed and every step's speed, the maximum duration, the abort thresholds, the heart-rate band) cite a fact of a library document a person signed (library.facts says which are signed, and each limit's safe side) and respect it{bounds}; the other constants (the steps' durations) cite what you read (field \"sources\"), the measurement, a calculation, or an assumption said as such. Submit with procedure.submit.{refused}{analysed}",
+        "after": "Stage 4 of 5, the procedure. Write it by the rules of application of {method} (the card is in the state, under hypothesis, field \"method\"), for this installation (in the state under hypothesis, field \"installation\": its volumes, openings, unknowns and the device under commissioning) and {presence}; the medical monitor is there too (field \"monitor\") once read with biomed.describe: on standby now, which is how it waits between tests; the station starts it when the commander authorises the test, for the subjects your procedure names in monitoring. These are fields of the state, not files: read nothing the state already gives.{start} Every constant you set is justified in justifications. The safety constants (the CO2 limits, the minimum speed and every step's speed, the maximum duration, the abort thresholds, the heart-rate band) cite a fact of a library document a person signed (library.facts says which are signed, and each limit's safe side) and respect it{bounds}; the other constants (the steps' durations) cite what you read (field \"sources\"), the measurement, a calculation, or an assumption said as such. Submit with procedure.submit.{refused}{analysed} A justification of a safety constant names one fact alone: source \"library\", reference the bare fact id exactly as library.facts lists it (for a speed, the id of the signed rule that bounds it, test.speedFloorPercent), with no document name, no \"signed\" note, no datasheet fact joined to it with a semicolon; a datasheet fact is not the reference of a safety constant, so leave it out of the reference."
+      }
+    ],
+    "judgedOn": [
+      "first-try-shape:procedure:33231b945eef"
+    ],
+    "baseline": {
+      "tasks": 2,
+      "withMistake": 2
+    },
+    "reflectionTask": "t-2026-09-29-0003",
+    "commit": "e33094a9211fab6f41512797768344f506ca66d9",
+    "status": "adopted"
+  }
+]
