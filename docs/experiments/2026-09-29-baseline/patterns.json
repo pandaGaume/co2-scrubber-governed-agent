@@ -1,0 +1,1083 @@
+{
+  "summary": {
+    "forks": [
+      "exp3-baseline"
+    ],
+    "tasks": 10,
+    "firstJudged": {
+      "accepted": 2,
+      "refused": 8,
+      "none": 0
+    },
+    "truncations": 0,
+    "preGuardOrCut": 0,
+    "finalAccepted": 10,
+    "cleanTasks": {
+      "avgSteps": 11,
+      "avgInputTokens": 78207,
+      "avgOutputTokens": 8529
+    },
+    "compositeReference": {
+      "occurrences": 17,
+      "tasks": 8
+    }
+  },
+  "patterns": [
+    {
+      "form": "justification: *: … is not a fact of the library",
+      "kind": "justification",
+      "fields": [
+        "limits.minSpeedPercent",
+        "limits.co2MaxPpm",
+        "steps.*.speedPercent",
+        "limits.co2AbortPpm"
+      ],
+      "occurrences": 17,
+      "tasksAffected": 8,
+      "correctedInTask": "8/8",
+      "contrastExtracted": "8/8",
+      "sameCorrectionRepeated": [
+        "reference \"test.speedFloorPercent\" (x12)",
+        "reference \"test.co2AbortCeilingPpm\" (x5)"
+      ],
+      "corrections": [
+        {
+          "y": "reference \"test.speedFloorPercent\"",
+          "n": 12
+        },
+        {
+          "y": "reference \"test.co2AbortCeilingPpm\"",
+          "n": 5
+        }
+      ],
+      "retriesToAccept": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "avgSteps": 11,
+      "avgInputTokens": 72243,
+      "avgOutputTokens": 7105,
+      "harnessSigns": "none seen",
+      "compositeReference": 17,
+      "examples": [
+        {
+          "task": "exp3-baseline/t-2026-09-29-0002",
+          "field": "limits.minSpeedPercent",
+          "says": "justification: limits.minSpeedPercent: \"test.speedFloorPercent (signed); scrubber.minimumSpeedElevated 40\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts list",
+          "refused": {
+            "value": 40,
+            "source": "library",
+            "reference": "test.speedFloorPercent (signed); scrubber.minimumSpeedElevated 40"
+          },
+          "accepted": {
+            "value": 40,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          }
+        },
+        {
+          "task": "exp3-baseline/t-2026-09-29-0004",
+          "field": "limits.minSpeedPercent",
+          "says": "justification: limits.minSpeedPercent: \"test.speedFloorPercent (commissioning-test-safety, signed); scrubber.minimumSpeedElevated 40\" is not a fact of the library (a safety constant cites a fact by it",
+          "refused": {
+            "value": 40,
+            "source": "library",
+            "reference": "test.speedFloorPercent (commissioning-test-safety, signed); scrubber.minimumSpeedElevated 40"
+          },
+          "accepted": {
+            "value": 40,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          }
+        },
+        {
+          "task": "exp3-baseline/t-2026-09-29-0005",
+          "field": "limits.co2MaxPpm",
+          "says": "justification: limits.co2MaxPpm: \"test.co2AbortCeilingPpm (at most 3200, signed); habitat.co2.elevatedPpm 3500\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts",
+          "refused": {
+            "value": 2500,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm (at most 3200, signed); habitat.co2.elevatedPpm 3500"
+          },
+          "accepted": {
+            "value": 2500,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          }
+        }
+      ],
+      "criteria": {
+        "naturally": true,
+        "repeatedAcrossTasks": true,
+        "correctedAfterGuard": true,
+        "correctionObserved": true,
+        "notHarness": true
+      },
+      "target": true
+    },
+    {
+      "form": "justification: * = # is a safety constant with no justification: cite the fact of a signed library document it respects",
+      "kind": "justification",
+      "fields": [
+        "steps.*.speedPercent"
+      ],
+      "occurrences": 1,
+      "tasksAffected": 1,
+      "correctedInTask": "1/1",
+      "contrastExtracted": "1/1",
+      "sameCorrectionRepeated": "no",
+      "corrections": [
+        {
+          "y": "reference \"test.speedFloorPercent\"",
+          "n": 1
+        }
+      ],
+      "retriesToAccept": [
+        1
+      ],
+      "avgSteps": 10,
+      "avgInputTokens": 50437,
+      "avgOutputTokens": 7101,
+      "harnessSigns": "none seen",
+      "compositeReference": 0,
+      "examples": [
+        {
+          "task": "exp3-baseline/t-2026-09-29-0010",
+          "field": "steps.2.speedPercent",
+          "says": "justification: steps.2.speedPercent = 100 is a safety constant with no justification (a justification names it by its path, constant \"steps.2.speedPercent\"): cite the fact of a signed library document",
+          "refused": null,
+          "accepted": {
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          }
+        }
+      ],
+      "criteria": {
+        "naturally": true,
+        "repeatedAcrossTasks": false,
+        "correctedAfterGuard": true,
+        "correctionObserved": true,
+        "notHarness": true
+      },
+      "target": false
+    },
+    {
+      "form": "justification: *: the justification says #, what you sent sets #",
+      "kind": "justification",
+      "fields": [
+        "steps.*.minutes"
+      ],
+      "occurrences": 1,
+      "tasksAffected": 1,
+      "correctedInTask": "1/1",
+      "contrastExtracted": "1/1",
+      "sameCorrectionRepeated": "no",
+      "corrections": [
+        {
+          "y": "reference \"rise dC/dt=(G-Qe*C)/V, G=0.76 L/min, Qe=0.3 m3/min at 30 percent, V=30 m3 first guess; start 1650 ppm measured\"",
+          "n": 1
+        }
+      ],
+      "retriesToAccept": [
+        1
+      ],
+      "avgSteps": 10,
+      "avgInputTokens": 50437,
+      "avgOutputTokens": 7101,
+      "harnessSigns": "none seen",
+      "compositeReference": 0,
+      "examples": [
+        {
+          "task": "exp3-baseline/t-2026-09-29-0010",
+          "field": "steps.1.minutes",
+          "says": "justification: steps.1.minutes: the justification says 30, what you sent sets 25",
+          "refused": {
+            "value": 30,
+            "source": "derived",
+            "reference": "tau=V/Qe=30 m3/(1 m3/min)=30 min (first guess of V, assumed); 25+30=55 min under 60"
+          },
+          "accepted": {
+            "value": 25,
+            "source": "derived",
+            "reference": "rise dC/dt=(G-Qe*C)/V, G=0.76 L/min, Qe=0.3 m3/min at 30 percent, V=30 m3 first guess; start 1650 ppm measured"
+          }
+        }
+      ],
+      "criteria": {
+        "naturally": true,
+        "repeatedAcrossTasks": false,
+        "correctedAfterGuard": true,
+        "correctionObserved": true,
+        "notHarness": true
+      },
+      "target": false
+    },
+    {
+      "form": "justification: * = # has no justification: say its source and why",
+      "kind": "justification",
+      "fields": [
+        "steps.*.minutes"
+      ],
+      "occurrences": 1,
+      "tasksAffected": 1,
+      "correctedInTask": "1/1",
+      "contrastExtracted": "1/1",
+      "sameCorrectionRepeated": "no",
+      "corrections": [
+        {
+          "y": "reference \"tau=V/Qe=30 m3/(1 m3/min)=30 min (V first guess, assumed; Qe from scrubber.effectiveFlowAtFull)\"",
+          "n": 1
+        }
+      ],
+      "retriesToAccept": [
+        1
+      ],
+      "avgSteps": 10,
+      "avgInputTokens": 50437,
+      "avgOutputTokens": 7101,
+      "harnessSigns": "none seen",
+      "compositeReference": 0,
+      "examples": [
+        {
+          "task": "exp3-baseline/t-2026-09-29-0010",
+          "field": "steps.2.minutes",
+          "says": "justification: steps.2.minutes = 30 has no justification (a justification names it by its path, constant \"steps.2.minutes\"): say its source (a library document or fact read, a web page found, the meas",
+          "refused": null,
+          "accepted": {
+            "value": 30,
+            "source": "derived",
+            "reference": "tau=V/Qe=30 m3/(1 m3/min)=30 min (V first guess, assumed; Qe from scrubber.effectiveFlowAtFull)"
+          }
+        }
+      ],
+      "criteria": {
+        "naturally": true,
+        "repeatedAcrossTasks": false,
+        "correctedAfterGuard": true,
+        "correctionObserved": true,
+        "notHarness": true
+      },
+      "target": false
+    }
+  ],
+  "tasks": [
+    {
+      "fork": "exp3-baseline",
+      "taskId": "t-2026-09-29-0001",
+      "attempts": [
+        {
+          "capability": "procedure.submit",
+          "outcome": "ACCEPTED",
+          "problems": []
+        }
+      ],
+      "contrasts": [],
+      "finalOutcome": "ACCEPTED",
+      "steps": 10,
+      "inputTokens": 64267,
+      "outputTokens": 7979,
+      "truncations": 0,
+      "ended": "contract held after 10 step(s)"
+    },
+    {
+      "fork": "exp3-baseline",
+      "taskId": "t-2026-09-29-0002",
+      "attempts": [
+        {
+          "capability": "procedure.submit",
+          "outcome": "GUARD_REJECTED",
+          "problems": [
+            {
+              "kind": "justification",
+              "path": "limits.minSpeedPercent",
+              "says": "justification: limits.minSpeedPercent: \"test.speedFloorPercent (signed); scrubber.minimumSpeedElevated 40\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+            },
+            {
+              "says": "the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")"
+            }
+          ]
+        },
+        {
+          "capability": "procedure.revise",
+          "outcome": "ACCEPTED",
+          "problems": []
+        }
+      ],
+      "contrasts": [
+        {
+          "path": "limits.minSpeedPercent",
+          "kind": "justification",
+          "rejected": {
+            "step": 8,
+            "argument": {
+              "value": 40,
+              "source": "library",
+              "reference": "test.speedFloorPercent (signed); scrubber.minimumSpeedElevated 40"
+            },
+            "says": "justification: limits.minSpeedPercent: \"test.speedFloorPercent (signed); scrubber.minimumSpeedElevated 40\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+          },
+          "accepted": {
+            "step": 9,
+            "argument": {
+              "value": 40,
+              "source": "library",
+              "reference": "test.speedFloorPercent"
+            }
+          }
+        }
+      ],
+      "finalOutcome": "ACCEPTED",
+      "steps": 10,
+      "inputTokens": 76842,
+      "outputTokens": 6884,
+      "truncations": 0,
+      "ended": "contract held after 10 step(s)"
+    },
+    {
+      "fork": "exp3-baseline",
+      "taskId": "t-2026-09-29-0003",
+      "attempts": [
+        {
+          "capability": "procedure.submit",
+          "outcome": "ACCEPTED",
+          "problems": []
+        }
+      ],
+      "contrasts": [],
+      "finalOutcome": "ACCEPTED",
+      "steps": 11,
+      "inputTokens": 92146,
+      "outputTokens": 9078,
+      "truncations": 0,
+      "ended": "contract held after 11 step(s)"
+    },
+    {
+      "fork": "exp3-baseline",
+      "taskId": "t-2026-09-29-0004",
+      "attempts": [
+        {
+          "capability": "procedure.submit",
+          "outcome": "GUARD_REJECTED",
+          "problems": [
+            {
+              "kind": "justification",
+              "path": "limits.minSpeedPercent",
+              "says": "justification: limits.minSpeedPercent: \"test.speedFloorPercent (commissioning-test-safety, signed); scrubber.minimumSpeedElevated 40\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+            },
+            {
+              "says": "the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")"
+            }
+          ]
+        },
+        {
+          "capability": "procedure.revise",
+          "outcome": "ACCEPTED",
+          "problems": []
+        }
+      ],
+      "contrasts": [
+        {
+          "path": "limits.minSpeedPercent",
+          "kind": "justification",
+          "rejected": {
+            "step": 8,
+            "argument": {
+              "value": 40,
+              "source": "library",
+              "reference": "test.speedFloorPercent (commissioning-test-safety, signed); scrubber.minimumSpeedElevated 40"
+            },
+            "says": "justification: limits.minSpeedPercent: \"test.speedFloorPercent (commissioning-test-safety, signed); scrubber.minimumSpeedElevated 40\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+          },
+          "accepted": {
+            "step": 9,
+            "argument": {
+              "value": 40,
+              "source": "library",
+              "reference": "test.speedFloorPercent"
+            }
+          }
+        }
+      ],
+      "finalOutcome": "ACCEPTED",
+      "steps": 10,
+      "inputTokens": 87688,
+      "outputTokens": 6553,
+      "truncations": 0,
+      "ended": "contract held after 10 step(s)"
+    },
+    {
+      "fork": "exp3-baseline",
+      "taskId": "t-2026-09-29-0005",
+      "attempts": [
+        {
+          "capability": "procedure.submit",
+          "outcome": "GUARD_REJECTED",
+          "problems": [
+            {
+              "kind": "justification",
+              "path": "limits.co2MaxPpm",
+              "says": "justification: limits.co2MaxPpm: \"test.co2AbortCeilingPpm (at most 3200, signed); habitat.co2.elevatedPpm 3500\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+            },
+            {
+              "says": "the signed rules bound it by test.co2AbortCeilingPpm = 3200 ppm (at or below it): cite it (source \"library\", reference \"test.co2AbortCeilingPpm\")"
+            },
+            {
+              "kind": "justification",
+              "path": "steps.2.speedPercent",
+              "says": "justification: steps.2.speedPercent: \"test.speedFloorPercent; scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+            },
+            {
+              "says": "the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")"
+            }
+          ]
+        },
+        {
+          "capability": "procedure.revise",
+          "outcome": "ACCEPTED",
+          "problems": []
+        }
+      ],
+      "contrasts": [
+        {
+          "path": "limits.co2MaxPpm",
+          "kind": "justification",
+          "rejected": {
+            "step": 8,
+            "argument": {
+              "value": 2500,
+              "source": "library",
+              "reference": "test.co2AbortCeilingPpm (at most 3200, signed); habitat.co2.elevatedPpm 3500"
+            },
+            "says": "justification: limits.co2MaxPpm: \"test.co2AbortCeilingPpm (at most 3200, signed); habitat.co2.elevatedPpm 3500\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+          },
+          "accepted": {
+            "step": 9,
+            "argument": {
+              "value": 2500,
+              "source": "library",
+              "reference": "test.co2AbortCeilingPpm"
+            }
+          }
+        },
+        {
+          "path": "steps.2.speedPercent",
+          "kind": "justification",
+          "rejected": {
+            "step": 8,
+            "argument": {
+              "value": 100,
+              "source": "library",
+              "reference": "test.speedFloorPercent; scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)"
+            },
+            "says": "justification: steps.2.speedPercent: \"test.speedFloorPercent; scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+          },
+          "accepted": {
+            "step": 9,
+            "argument": {
+              "value": 100,
+              "source": "library",
+              "reference": "test.speedFloorPercent"
+            }
+          }
+        }
+      ],
+      "finalOutcome": "ACCEPTED",
+      "steps": 10,
+      "inputTokens": 91374,
+      "outputTokens": 6444,
+      "truncations": 0,
+      "ended": "contract held after 10 step(s)"
+    },
+    {
+      "fork": "exp3-baseline",
+      "taskId": "t-2026-09-29-0006",
+      "attempts": [
+        {
+          "capability": "procedure.submit",
+          "outcome": "GUARD_REJECTED",
+          "problems": [
+            {
+              "kind": "justification",
+              "path": "steps.2.speedPercent",
+              "says": "justification: steps.2.speedPercent: \"test.speedFloorPercent; scrubber.effectiveFlowAtFull (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+            },
+            {
+              "says": "the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")"
+            }
+          ]
+        },
+        {
+          "capability": "procedure.revise",
+          "outcome": "ACCEPTED",
+          "problems": []
+        }
+      ],
+      "contrasts": [
+        {
+          "path": "steps.2.speedPercent",
+          "kind": "justification",
+          "rejected": {
+            "step": 11,
+            "argument": {
+              "value": 100,
+              "source": "library",
+              "reference": "test.speedFloorPercent; scrubber.effectiveFlowAtFull (scrubber-1-datasheet)"
+            },
+            "says": "justification: steps.2.speedPercent: \"test.speedFloorPercent; scrubber.effectiveFlowAtFull (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+          },
+          "accepted": {
+            "step": 12,
+            "argument": {
+              "value": 100,
+              "source": "library",
+              "reference": "test.speedFloorPercent"
+            }
+          }
+        }
+      ],
+      "finalOutcome": "ACCEPTED",
+      "steps": 13,
+      "inputTokens": 108496,
+      "outputTokens": 9016,
+      "truncations": 0,
+      "ended": "contract held after 13 step(s)"
+    },
+    {
+      "fork": "exp3-baseline",
+      "taskId": "t-2026-09-29-0007",
+      "attempts": [
+        {
+          "capability": "procedure.submit",
+          "outcome": "GUARD_REJECTED",
+          "problems": [
+            {
+              "kind": "justification",
+              "path": "limits.co2MaxPpm",
+              "says": "justification: limits.co2MaxPpm: \"test.co2AbortCeilingPpm (<=3200); test.startHeadroomPpm (>=200 above 1000 start)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+            },
+            {
+              "says": "the signed rules bound it by test.co2AbortCeilingPpm = 3200 ppm (at or below it): cite it (source \"library\", reference \"test.co2AbortCeilingPpm\")"
+            },
+            {
+              "kind": "justification",
+              "path": "limits.minSpeedPercent",
+              "says": "justification: limits.minSpeedPercent: \"test.speedFloorPercent (commissioning-test-safety, signed); scrubber.minimumSpeedElevated\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+            },
+            {
+              "says": "the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")"
+            },
+            {
+              "kind": "justification",
+              "path": "steps.1.speedPercent",
+              "says": "justification: steps.1.speedPercent: \"test.speedFloorPercent (>=30 percent); scrubber.minimumSpeedElevated 40\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+            },
+            {
+              "says": "the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")"
+            },
+            {
+              "kind": "justification",
+              "path": "steps.2.speedPercent",
+              "says": "justification: steps.2.speedPercent: \"test.speedFloorPercent (>=30 percent); scrubber.effectiveFlowAtFull\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+            },
+            {
+              "says": "the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")"
+            }
+          ]
+        },
+        {
+          "capability": "procedure.revise",
+          "outcome": "ACCEPTED",
+          "problems": []
+        }
+      ],
+      "contrasts": [
+        {
+          "path": "limits.co2MaxPpm",
+          "kind": "justification",
+          "rejected": {
+            "step": 9,
+            "argument": {
+              "value": 2500,
+              "source": "library",
+              "reference": "test.co2AbortCeilingPpm (<=3200); test.startHeadroomPpm (>=200 above 1000 start)"
+            },
+            "says": "justification: limits.co2MaxPpm: \"test.co2AbortCeilingPpm (<=3200); test.startHeadroomPpm (>=200 above 1000 start)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+          },
+          "accepted": {
+            "step": 10,
+            "argument": {
+              "value": 2500,
+              "source": "library",
+              "reference": "test.co2AbortCeilingPpm"
+            }
+          }
+        },
+        {
+          "path": "limits.minSpeedPercent",
+          "kind": "justification",
+          "rejected": {
+            "step": 9,
+            "argument": {
+              "value": 40,
+              "source": "library",
+              "reference": "test.speedFloorPercent (commissioning-test-safety, signed); scrubber.minimumSpeedElevated"
+            },
+            "says": "justification: limits.minSpeedPercent: \"test.speedFloorPercent (commissioning-test-safety, signed); scrubber.minimumSpeedElevated\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+          },
+          "accepted": {
+            "step": 10,
+            "argument": {
+              "value": 40,
+              "source": "library",
+              "reference": "test.speedFloorPercent"
+            }
+          }
+        },
+        {
+          "path": "steps.1.speedPercent",
+          "kind": "justification",
+          "rejected": {
+            "step": 9,
+            "argument": {
+              "value": 40,
+              "source": "library",
+              "reference": "test.speedFloorPercent (>=30 percent); scrubber.minimumSpeedElevated 40"
+            },
+            "says": "justification: steps.1.speedPercent: \"test.speedFloorPercent (>=30 percent); scrubber.minimumSpeedElevated 40\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+          },
+          "accepted": {
+            "step": 10,
+            "argument": {
+              "value": 40,
+              "source": "library",
+              "reference": "test.speedFloorPercent"
+            }
+          }
+        },
+        {
+          "path": "steps.2.speedPercent",
+          "kind": "justification",
+          "rejected": {
+            "step": 9,
+            "argument": {
+              "value": 100,
+              "source": "library",
+              "reference": "test.speedFloorPercent (>=30 percent); scrubber.effectiveFlowAtFull"
+            },
+            "says": "justification: steps.2.speedPercent: \"test.speedFloorPercent (>=30 percent); scrubber.effectiveFlowAtFull\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+          },
+          "accepted": {
+            "step": 10,
+            "argument": {
+              "value": 100,
+              "source": "library",
+              "reference": "test.speedFloorPercent"
+            }
+          }
+        }
+      ],
+      "finalOutcome": "ACCEPTED",
+      "steps": 11,
+      "inputTokens": 62820,
+      "outputTokens": 8249,
+      "truncations": 0,
+      "ended": "contract held after 11 step(s)"
+    },
+    {
+      "fork": "exp3-baseline",
+      "taskId": "t-2026-09-29-0008",
+      "attempts": [
+        {
+          "capability": "procedure.submit",
+          "outcome": "GUARD_REJECTED",
+          "problems": [
+            {
+              "kind": "justification",
+              "path": "limits.co2MaxPpm",
+              "says": "justification: limits.co2MaxPpm: \"test.co2AbortCeilingPpm (at most 3200); test.startHeadroomPpm 200\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+            },
+            {
+              "says": "the signed rules bound it by test.co2AbortCeilingPpm = 3200 ppm (at or below it): cite it (source \"library\", reference \"test.co2AbortCeilingPpm\")"
+            },
+            {
+              "kind": "justification",
+              "path": "limits.co2AbortPpm",
+              "says": "justification: limits.co2AbortPpm: \"test.co2AbortCeilingPpm (at most 3200); habitat.co2.elevatedPpm 3500\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+            },
+            {
+              "says": "the signed rules bound it by test.co2AbortCeilingPpm = 3200 ppm (at or below it): cite it (source \"library\", reference \"test.co2AbortCeilingPpm\")"
+            },
+            {
+              "kind": "justification",
+              "path": "limits.minSpeedPercent",
+              "says": "justification: limits.minSpeedPercent: \"test.speedFloorPercent (30, at or above); scrubber.minimumSpeedElevated 40\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+            },
+            {
+              "says": "the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")"
+            },
+            {
+              "kind": "justification",
+              "path": "steps.1.speedPercent",
+              "says": "justification: steps.1.speedPercent: \"test.speedFloorPercent; scrubber.minimumSpeedElevated\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+            },
+            {
+              "says": "the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")"
+            },
+            {
+              "kind": "justification",
+              "path": "steps.2.speedPercent",
+              "says": "justification: steps.2.speedPercent: \"test.speedFloorPercent; scrubber.effectiveFlowAtFull\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+            },
+            {
+              "says": "the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")"
+            }
+          ]
+        },
+        {
+          "capability": "procedure.revise",
+          "outcome": "ACCEPTED",
+          "problems": []
+        }
+      ],
+      "contrasts": [
+        {
+          "path": "limits.co2MaxPpm",
+          "kind": "justification",
+          "rejected": {
+            "step": 8,
+            "argument": {
+              "value": 2500,
+              "source": "library",
+              "reference": "test.co2AbortCeilingPpm (at most 3200); test.startHeadroomPpm 200"
+            },
+            "says": "justification: limits.co2MaxPpm: \"test.co2AbortCeilingPpm (at most 3200); test.startHeadroomPpm 200\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+          },
+          "accepted": {
+            "step": 9,
+            "argument": {
+              "value": 2500,
+              "source": "library",
+              "reference": "test.co2AbortCeilingPpm"
+            }
+          }
+        },
+        {
+          "path": "limits.co2AbortPpm",
+          "kind": "justification",
+          "rejected": {
+            "step": 8,
+            "argument": {
+              "value": 3000,
+              "source": "library",
+              "reference": "test.co2AbortCeilingPpm (at most 3200); habitat.co2.elevatedPpm 3500"
+            },
+            "says": "justification: limits.co2AbortPpm: \"test.co2AbortCeilingPpm (at most 3200); habitat.co2.elevatedPpm 3500\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+          },
+          "accepted": {
+            "step": 9,
+            "argument": {
+              "value": 3000,
+              "source": "library",
+              "reference": "test.co2AbortCeilingPpm"
+            }
+          }
+        },
+        {
+          "path": "limits.minSpeedPercent",
+          "kind": "justification",
+          "rejected": {
+            "step": 8,
+            "argument": {
+              "value": 40,
+              "source": "library",
+              "reference": "test.speedFloorPercent (30, at or above); scrubber.minimumSpeedElevated 40"
+            },
+            "says": "justification: limits.minSpeedPercent: \"test.speedFloorPercent (30, at or above); scrubber.minimumSpeedElevated 40\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+          },
+          "accepted": {
+            "step": 9,
+            "argument": {
+              "value": 40,
+              "source": "library",
+              "reference": "test.speedFloorPercent"
+            }
+          }
+        },
+        {
+          "path": "steps.1.speedPercent",
+          "kind": "justification",
+          "rejected": {
+            "step": 8,
+            "argument": {
+              "value": 40,
+              "source": "library",
+              "reference": "test.speedFloorPercent; scrubber.minimumSpeedElevated"
+            },
+            "says": "justification: steps.1.speedPercent: \"test.speedFloorPercent; scrubber.minimumSpeedElevated\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+          },
+          "accepted": {
+            "step": 9,
+            "argument": {
+              "value": 40,
+              "source": "library",
+              "reference": "test.speedFloorPercent"
+            }
+          }
+        },
+        {
+          "path": "steps.2.speedPercent",
+          "kind": "justification",
+          "rejected": {
+            "step": 8,
+            "argument": {
+              "value": 100,
+              "source": "library",
+              "reference": "test.speedFloorPercent; scrubber.effectiveFlowAtFull"
+            },
+            "says": "justification: steps.2.speedPercent: \"test.speedFloorPercent; scrubber.effectiveFlowAtFull\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+          },
+          "accepted": {
+            "step": 9,
+            "argument": {
+              "value": 100,
+              "source": "library",
+              "reference": "test.speedFloorPercent"
+            }
+          }
+        }
+      ],
+      "finalOutcome": "ACCEPTED",
+      "steps": 10,
+      "inputTokens": 51109,
+      "outputTokens": 6311,
+      "truncations": 0,
+      "ended": "contract held after 10 step(s)"
+    },
+    {
+      "fork": "exp3-baseline",
+      "taskId": "t-2026-09-29-0009",
+      "attempts": [
+        {
+          "capability": "procedure.submit",
+          "outcome": "GUARD_REJECTED",
+          "problems": [
+            {
+              "kind": "justification",
+              "path": "limits.co2MaxPpm",
+              "says": "justification: limits.co2MaxPpm: \"test.co2AbortCeilingPpm (at most 3200); habitat.co2.elevatedPpm 3500\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+            },
+            {
+              "says": "the signed rules bound it by test.co2AbortCeilingPpm = 3200 ppm (at or below it): cite it (source \"library\", reference \"test.co2AbortCeilingPpm\")"
+            },
+            {
+              "kind": "justification",
+              "path": "steps.2.speedPercent",
+              "says": "justification: steps.2.speedPercent: \"scrubber.flowAtFull / test.speedFloorPercent\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+            },
+            {
+              "says": "the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")"
+            }
+          ]
+        },
+        {
+          "capability": "procedure.revise",
+          "outcome": "ACCEPTED",
+          "problems": []
+        }
+      ],
+      "contrasts": [
+        {
+          "path": "limits.co2MaxPpm",
+          "kind": "justification",
+          "rejected": {
+            "step": 8,
+            "argument": {
+              "value": 2500,
+              "source": "library",
+              "reference": "test.co2AbortCeilingPpm (at most 3200); habitat.co2.elevatedPpm 3500"
+            },
+            "says": "justification: limits.co2MaxPpm: \"test.co2AbortCeilingPpm (at most 3200); habitat.co2.elevatedPpm 3500\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+          },
+          "accepted": {
+            "step": 9,
+            "argument": {
+              "value": 2500,
+              "source": "library",
+              "reference": "test.co2AbortCeilingPpm"
+            }
+          }
+        },
+        {
+          "path": "steps.2.speedPercent",
+          "kind": "justification",
+          "rejected": {
+            "step": 8,
+            "argument": {
+              "value": 100,
+              "source": "library",
+              "reference": "scrubber.flowAtFull / test.speedFloorPercent"
+            },
+            "says": "justification: steps.2.speedPercent: \"scrubber.flowAtFull / test.speedFloorPercent\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+          },
+          "accepted": {
+            "step": 9,
+            "argument": {
+              "value": 100,
+              "source": "library",
+              "reference": "test.speedFloorPercent"
+            }
+          }
+        }
+      ],
+      "finalOutcome": "ACCEPTED",
+      "steps": 10,
+      "inputTokens": 49175,
+      "outputTokens": 6284,
+      "truncations": 0,
+      "ended": "contract held after 10 step(s)"
+    },
+    {
+      "fork": "exp3-baseline",
+      "taskId": "t-2026-09-29-0010",
+      "attempts": [
+        {
+          "capability": "procedure.submit",
+          "outcome": "GUARD_REJECTED",
+          "problems": [
+            {
+              "kind": "justification",
+              "path": "steps.1.speedPercent",
+              "says": "justification: steps.1.speedPercent: \"test.speedFloorPercent; scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+            },
+            {
+              "says": "the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")"
+            },
+            {
+              "kind": "justification",
+              "path": "steps.2.speedPercent",
+              "says": "justification: steps.2.speedPercent = 100 is a safety constant with no justification (a justification names it by its path, constant \"steps.2.speedPercent\"): cite the fact of a signed library document it respects (source \"library\", the fact's id as reference)"
+            },
+            {
+              "says": "the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source \"library\", reference \"test.speedFloorPercent\")"
+            },
+            {
+              "kind": "justification",
+              "path": "steps.1.minutes",
+              "says": "justification: steps.1.minutes: the justification says 30, what you sent sets 25"
+            },
+            {
+              "kind": "justification",
+              "path": "steps.2.minutes",
+              "says": "justification: steps.2.minutes = 30 has no justification (a justification names it by its path, constant \"steps.2.minutes\"): say its source (a library document or fact read, a web page found, the measurement given, the guard's envelope, a calculation from other constants, or an assumption said as such) and why"
+            }
+          ]
+        },
+        {
+          "capability": "procedure.revise",
+          "outcome": "ACCEPTED",
+          "problems": []
+        }
+      ],
+      "contrasts": [
+        {
+          "path": "steps.1.speedPercent",
+          "kind": "justification",
+          "rejected": {
+            "step": 8,
+            "argument": {
+              "value": 100,
+              "source": "library",
+              "reference": "test.speedFloorPercent; scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)"
+            },
+            "says": "justification: steps.1.speedPercent: \"test.speedFloorPercent; scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)"
+          },
+          "accepted": {
+            "step": 9,
+            "argument": {
+              "value": 30,
+              "source": "library",
+              "reference": "test.speedFloorPercent"
+            }
+          }
+        },
+        {
+          "path": "steps.2.speedPercent",
+          "kind": "justification",
+          "rejected": {
+            "step": 8,
+            "argument": null,
+            "says": "justification: steps.2.speedPercent = 100 is a safety constant with no justification (a justification names it by its path, constant \"steps.2.speedPercent\"): cite the fact of a signed library document it respects (source \"library\", the fact's id as reference)"
+          },
+          "accepted": {
+            "step": 9,
+            "argument": {
+              "value": 100,
+              "source": "library",
+              "reference": "test.speedFloorPercent"
+            }
+          }
+        },
+        {
+          "path": "steps.1.minutes",
+          "kind": "justification",
+          "rejected": {
+            "step": 8,
+            "argument": {
+              "value": 30,
+              "source": "derived",
+              "reference": "tau=V/Qe=30 m3/(1 m3/min)=30 min (first guess of V, assumed); 25+30=55 min under 60"
+            },
+            "says": "justification: steps.1.minutes: the justification says 30, what you sent sets 25"
+          },
+          "accepted": {
+            "step": 9,
+            "argument": {
+              "value": 25,
+              "source": "derived",
+              "reference": "rise dC/dt=(G-Qe*C)/V, G=0.76 L/min, Qe=0.3 m3/min at 30 percent, V=30 m3 first guess; start 1650 ppm measured"
+            }
+          }
+        },
+        {
+          "path": "steps.2.minutes",
+          "kind": "justification",
+          "rejected": {
+            "step": 8,
+            "argument": null,
+            "says": "justification: steps.2.minutes = 30 has no justification (a justification names it by its path, constant \"steps.2.minutes\"): say its source (a library document or fact read, a web page found, the measurement given, the guard's envelope, a calculation from other constants, or an assumption said as such) and why"
+          },
+          "accepted": {
+            "step": 9,
+            "argument": {
+              "value": 30,
+              "source": "derived",
+              "reference": "tau=V/Qe=30 m3/(1 m3/min)=30 min (V first guess, assumed; Qe from scrubber.effectiveFlowAtFull)"
+            }
+          }
+        }
+      ],
+      "finalOutcome": "ACCEPTED",
+      "steps": 10,
+      "inputTokens": 50437,
+      "outputTokens": 7101,
+      "truncations": 0,
+      "ended": "contract held after 10 step(s)"
+    }
+  ]
+}

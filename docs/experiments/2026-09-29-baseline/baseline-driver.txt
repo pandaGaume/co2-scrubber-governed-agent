@@ -1,0 +1,11 @@
+t1 t-2026-09-29-0001: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 10; tokens in 64267 out 7979 (max 5124); memory seen: 0 learned, 0 previous episode(s)
+t2 t-2026-09-29-0002: first guard-judged refused (justification: *: … is not a fact of the library); pre-guard 0; truncated 0; steps 10; tokens in 76842 out 6884 (max 5618); memory seen: 0 learned, 0 previous episode(s)
+t3 t-2026-09-29-0003: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 11; tokens in 92146 out 9078 (max 4843); memory seen: 0 learned, 0 previous episode(s)
+t4 t-2026-09-29-0004: first guard-judged refused (justification: *: … is not a fact of the library); pre-guard 0; truncated 0; steps 10; tokens in 87688 out 6553 (max 5207); memory seen: 0 learned, 0 previous episode(s)
+t5 t-2026-09-29-0005: first guard-judged refused (justification: *: … is not a fact of the library); pre-guard 0; truncated 0; steps 10; tokens in 91374 out 6444 (max 5035); memory seen: 0 learned, 0 previous episode(s)
+t6 t-2026-09-29-0006: first guard-judged refused (justification: *: … is not a fact of the library); pre-guard 0; truncated 0; steps 13; tokens in 108496 out 9016 (max 5593); memory seen: 0 learned, 0 previous episode(s)
+t7 t-2026-09-29-0007: first guard-judged refused (justification: *: … is not a fact of the library); pre-guard 0; truncated 0; steps 11; tokens in 62820 out 8249 (max 5143); memory seen: 0 learned, 0 previous episode(s)
+t8 t-2026-09-29-0008: first guard-judged refused (justification: *: … is not a fact of the library); pre-guard 0; truncated 0; steps 10; tokens in 51109 out 6311 (max 4779); memory seen: 0 learned, 0 previous episode(s)
+t9 t-2026-09-29-0009: first guard-judged refused (justification: *: … is not a fact of the library); pre-guard 0; truncated 0; steps 10; tokens in 49175 out 6284 (max 5355); memory seen: 0 learned, 0 previous episode(s)
+t10 t-2026-09-29-0010: first guard-judged refused (justification: *: … is not a fact of the library + justification: * = # is a safety constant with no justification: cite the fact of a signed library document it respects + justification: *: the justification says #, what you sent sets # + justification: * = # has no justification: say its source and why); pre-guard 0; truncated 0; steps 10; tokens in 50437 out 7101 (max 5066); memory seen: 0 learned, 0 previous episode(s)
+exit 0

@@ -1,0 +1,40 @@
+{
+  "forks": [
+    "exp3-baseline"
+  ],
+  "tasks": 10,
+  "firstJudged": {
+    "accepted": 2,
+    "refused": 8,
+    "none": 0
+  },
+  "truncations": 0,
+  "preGuardOrCut": 0,
+  "finalAccepted": 10,
+  "cleanTasks": {
+    "avgSteps": 11,
+    "avgInputTokens": 78207,
+    "avgOutputTokens": 8529
+  },
+  "compositeReference": {
+    "occurrences": 17,
+    "tasks": 8
+  }
+}
+
+| # | Form of the first guard failure | Kind | Occurrences | Tasks | Corrected in task | X/Y extracted | Same correction repeated | Avg steps / in / out | Harness signs | Target? |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | justification: *: … is not a fact of the library | justification | 17 | 8 | 8/8 | 8/8 | reference "test.speedFloorPercent" (x12); reference "test.co2AbortCeilingPpm" (x5) | 11 / 72243 / 7105 | none seen | yes |
+| 2 | justification: * = # is a safety constant with no justification: cite the fact of a signed library document it respects | justification | 1 | 1 | 1/1 | 1/1 | no | 10 / 50437 / 7101 | none seen | no (repeatedAcrossTasks) |
+| 3 | justification: *: the justification says #, what you sent sets # | justification | 1 | 1 | 1/1 | 1/1 | no | 10 / 50437 / 7101 | none seen | no (repeatedAcrossTasks) |
+| 4 | justification: * = # has no justification: say its source and why | justification | 1 | 1 | 1/1 | 1/1 | no | 10 / 50437 / 7101 | none seen | no (repeatedAcrossTasks) |
+exp3-baseline/t-2026-09-29-0001: submit:ACCEPTED => ACCEPTED; steps 10, in 64267, out 7979, truncations 0
+exp3-baseline/t-2026-09-29-0002: submit:GUARD_REJECTED -> revise:ACCEPTED => ACCEPTED; steps 10, in 76842, out 6884, truncations 0
+exp3-baseline/t-2026-09-29-0003: submit:ACCEPTED => ACCEPTED; steps 11, in 92146, out 9078, truncations 0
+exp3-baseline/t-2026-09-29-0004: submit:GUARD_REJECTED -> revise:ACCEPTED => ACCEPTED; steps 10, in 87688, out 6553, truncations 0
+exp3-baseline/t-2026-09-29-0005: submit:GUARD_REJECTED -> revise:ACCEPTED => ACCEPTED; steps 10, in 91374, out 6444, truncations 0
+exp3-baseline/t-2026-09-29-0006: submit:GUARD_REJECTED -> revise:ACCEPTED => ACCEPTED; steps 13, in 108496, out 9016, truncations 0
+exp3-baseline/t-2026-09-29-0007: submit:GUARD_REJECTED -> revise:ACCEPTED => ACCEPTED; steps 11, in 62820, out 8249, truncations 0
+exp3-baseline/t-2026-09-29-0008: submit:GUARD_REJECTED -> revise:ACCEPTED => ACCEPTED; steps 10, in 51109, out 6311, truncations 0
+exp3-baseline/t-2026-09-29-0009: submit:GUARD_REJECTED -> revise:ACCEPTED => ACCEPTED; steps 10, in 49175, out 6284, truncations 0
+exp3-baseline/t-2026-09-29-0010: submit:GUARD_REJECTED -> revise:ACCEPTED => ACCEPTED; steps 10, in 50437, out 7101, truncations 0
