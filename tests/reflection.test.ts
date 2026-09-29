@@ -44,6 +44,27 @@ describe("the patterns of the traces, and an adaptation checked before anything 
         assert.match(patterns[0].says, /the condition vitals stopped 2 tests of the same commissioning \(run R001\)/);
     });
 
+    it("reads the same mistake at the first try of several tasks, what a model corrects within a task and makes again at the next", () => {
+        const shop = mkdtempSync(path.join(tmpdir(), "reflection-first-"));
+        try {
+            const wrong = { capability: "procedure.submit", outcome: "refused", reason: "procedure refused: justification: steps.1.speedPercent = 40 cites scrubber.minimumSpeedElevated (40 percent), which the signed rules do not bound it by" };
+            const other = { capability: "procedure.submit", outcome: "refused", reason: "procedure refused: floor: steps.1.speedPercent = 0 is not above 0" };
+            const task = (id: string, first: object) => {
+                mkdirSync(path.join(shop, id), { recursive: true });
+                writeFileSync(path.join(shop, id, "manifest.json"), JSON.stringify({ topic: "procedure", ended: "contract held", steps: [{ capability: "library.read", outcome: "completed", reason: null }, first, { capability: "procedure.revise", outcome: "completed", reason: null }] }));
+            };
+            task("t-2026-09-29-0001", wrong);
+            task("t-2026-09-29-0002", other);
+            assert.deepEqual(observe(shop, { repeatAt: 2 }).filter((p) => p.kind === "first-try-repeat"), [], "two tasks, two different first mistakes: no pattern");
+            task("t-2026-09-29-0003", { ...wrong, reason: wrong.reason.replace("40", "45") });
+            const [p] = observe(shop, { repeatAt: 2 }).filter((x) => x.kind === "first-try-repeat");
+            assert.deepEqual([p?.count, p?.target, (p?.detail as { tasks: string[] }).tasks], [2, "specs/procedure/words.json", ["t-2026-09-29-0001", "t-2026-09-29-0003"]]);
+            assert.ok(p.source.includes("t-2026-09-29-0003"), "a reflection focused on the last task reads it");
+        } finally {
+            rmSync(shop, { recursive: true, force: true });
+        }
+    });
+
     it("patches by JSON Pointer, a list's element picked by its id", () => {
         const doc = { nodes: [{ id: "a", bag: { n: 1 } }, { id: "b", bag: { n: 2 } }] };
         assert.deepEqual(applyPatch(doc, [{ op: "replace", pointer: "/nodes/[id=b]/bag/n", value: 5 }]), { nodes: [{ id: "a", bag: { n: 1 } }, { id: "b", bag: { n: 5 } }] });

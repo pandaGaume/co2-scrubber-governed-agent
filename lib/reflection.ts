@@ -3,7 +3,8 @@
  * agents leave, and how an adaptation of their conduct is checked before it is adopted.
  *
  *   observe   the patterns of the traces, by code: the same cause stopping a commissioning's tests again, a factory
- *             refused on the same points again and again, a task that ended STUCK. Each pattern has an id the
+ *             refused on the same points again and again, a task that ended STUCK, the same mistake at the first try of
+ *             several tasks (a model corrects itself within a task, and makes it again at the next, 2026-09-29). Each pattern has an id the
  *             adaptation cites, and the file its fix would touch.
  *   adapt     an adaptation is a patch (JSON Pointer operations, a segment `[id=x]` picking the element of a list by
  *             its id) on one file of the context the spec says may adapt, never on one it says may not (the library,
@@ -43,7 +44,7 @@ export const reflectionFormat = (): ReflectionFormat => JSON.parse(readFileSync(
 /** A pattern of the traces, with what it rests on and the file its fix would touch. */
 export interface Pattern {
     id: string;
-    kind: "abort-repeat" | "refusal-streak" | "stuck";
+    kind: "abort-repeat" | "refusal-streak" | "stuck" | "first-try-repeat";
     says: string;
     count: number;
     /** The run or the task it was read in. */
@@ -84,7 +85,8 @@ export function observe(workshop: string, format: Pick<ReflectionFormat, "repeat
                         detail: { run: run!.id, condition, reasons, playbook: run?.conduct?.playbook ?? null },
                     });
         }
-    // The factories' tasks: a capability refused on the same points again and again; a task that ended STUCK.
+    // The factories' tasks: a capability refused on the same points again and again; a task that ended STUCK; the first refusal of each, by topic.
+    const firstTries = new Map<string, { topic: string; capability: string; reason: string; tasks: string[] }>();
     if (existsSync(workshop))
         for (const task of readdirSync(workshop).filter((d) => /^t-/.test(d)).sort()) {
             const m = readJson<{ topic: string; ended: string | null; steps: Array<{ capability: string | null; outcome: string; reason: string | null }> }>(path.join(workshop, task, "manifest.json"));
@@ -109,9 +111,30 @@ export function observe(workshop: string, format: Pick<ReflectionFormat, "repeat
                     target: existsSync(fromRoot("specs", m.topic, "words.json")) ? `specs/${m.topic}/words.json` : null,
                     detail: { task, topic: m.topic, capability: longest.capability, reason: longest.reason },
                 });
+            const first = m.steps.find((s) => s.outcome === "refused" && s.capability);
+            if (first) {
+                // The same mistake: the same kind of refusal on the same fields (a justification and a floor on one step are two mistakes).
+                const k = `${m.topic}|${[...new Set(problemsOfReason(first.reason ?? "").map((x) => `${x.kind ?? ""}:${x.path ?? x.says.replace(/[\d.]+/g, "#").slice(0, 120)}`))].sort().join("|")}`;
+                const seen = firstTries.get(k) ?? { topic: m.topic, capability: first.capability!, reason: first.reason ?? "", tasks: [] };
+                seen.tasks.push(task);
+                firstTries.set(k, seen);
+            }
             if (/^STUCK/.test(m.ended ?? ""))
                 patterns.push({ id: `stuck:${task}`, kind: "stuck", says: `task ${task} (${m.topic}) ended ${String(m.ended).slice(0, 300)}`, count: 1, source: `${task}/manifest.json`, target: existsSync(fromRoot("specs", m.topic, "words.json")) ? `specs/${m.topic}/words.json` : null, detail: { task, topic: m.topic, ended: m.ended } });
         }
+    // The same mistake at the first try of several tasks: what a model does again at each new task, whatever it corrects within one.
+    for (const f of firstTries.values())
+        if (f.tasks.length >= at)
+            patterns.push({
+                id: `first-try-repeat:${f.topic}:${f.tasks.at(-1)}`,
+                kind: "first-try-repeat",
+                says: `the first submission of ${f.tasks.length} tasks (${f.topic}) was refused on the same point(s): ${f.reason.slice(0, 300)}`,
+                count: f.tasks.length,
+                // Every task it rests on: a reflection focused on any of them reads it.
+                source: f.tasks.map((x) => `${x}/manifest.json`).join(" "),
+                target: existsSync(fromRoot("specs", f.topic, "words.json")) ? `specs/${f.topic}/words.json` : null,
+                detail: { topic: f.topic, capability: f.capability, reason: f.reason, tasks: f.tasks },
+            });
     return patterns;
 }
 

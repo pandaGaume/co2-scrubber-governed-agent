@@ -77,6 +77,8 @@ export async function waitForBroker(httpBase: string, timeoutMs = 15_000): Promi
 /** Starts the broker on `port` and waits until it answers; `stdio` "inherit" shows its banner, "ignore" keeps a test quiet. */
 export async function startBroker(port: number, stdio: "inherit" | "ignore" = "inherit"): Promise<LocalBroker> {
     const httpBase = `http://localhost:${port}`;
+    // This process says where its broker listens too: what its slots give as addresses (the QR codes) follows the port.
+    process.env.MCP_BROKER_PORT = String(port);
     const lanBases = lanAddresses().map((ip) => `http://${ip}:${port}`);
     // The browser origins follow the port: the config file names 3001, a page served on another port would get 403 on every call.
     // The local network addresses go in too, so a tablet on the same wifi can open the monitoring page and be answered.

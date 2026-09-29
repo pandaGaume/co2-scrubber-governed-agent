@@ -36,7 +36,8 @@ export interface QrState {
 }
 
 /** The port the broker serves on; the slot is published by the same process. */
-const PORT = Number(process.env.MCP_BROKER_PORT ?? 3001);
+/** The port this process's broker listens on, read at each request (startBroker records it): a server on 3003 gives codes for 3003 (2026-09-29). */
+const port = (): number => Number(process.env.MCP_BROKER_PORT ?? 3001);
 
 /** The room's near-black on its pale face, so a code sits in the page rather
     than punching a white hole through it. The contrast is about seventeen to
@@ -64,8 +65,8 @@ export function qrSlot(wsBase: string, log: (line: string) => void): PublishedSl
     /** Every address this machine answers on, the LAN ones first: a phone
         cannot use loopback, so it is offered last and only as a fallback. */
     const addresses = (): string[] => {
-        const lan = lanAddresses().map((ip) => `http://${ip}:${PORT}`);
-        return [...lan, `http://localhost:${PORT}`];
+        const lan = lanAddresses().map((ip) => `http://${ip}:${port()}`);
+        return [...lan, `http://localhost:${port()}`];
     };
 
     const remember = (text: string): void => {
@@ -136,7 +137,7 @@ export function qrSlot(wsBase: string, log: (line: string) => void): PublishedSl
             title: "Where this machine answers",
             description: "Every address this machine serves the dashboard on, the local network ones first and loopback last.",
             inputSchema: obj({}),
-            handle: () => ({ addresses: addresses(), port: PORT }),
+            handle: () => ({ addresses: addresses(), port: port() }),
         },
     ];
 
@@ -158,7 +159,7 @@ export function qrSlot(wsBase: string, log: (line: string) => void): PublishedSl
                 uri: "qr://addresses",
                 name: "Addresses",
                 description: "Every address this machine serves the dashboard on, the local network ones first",
-                read: () => ({ addresses: addresses(), port: PORT }),
+                read: () => ({ addresses: addresses(), port: port() }),
             },
         ],
     });
