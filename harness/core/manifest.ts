@@ -28,6 +28,8 @@ export interface ManifestStep {
     reason: string | null;
     ms: number;
     tokens: { prompt: number; completion: number; total: number } | null;
+    /** A submission the topic's guard judged (`judges`): accepted, or refused by the guard itself; absent when the harness stopped it before the guard. */
+    judged?: "accepted" | "refused";
 }
 
 export interface ManifestArtifact {

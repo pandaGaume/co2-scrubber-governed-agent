@@ -120,7 +120,7 @@ export function observe(workshop: string, format: Pick<ReflectionFormat, "repeat
                     target: existsSync(fromRoot("specs", m.topic, "words.json")) ? `specs/${m.topic}/words.json` : null,
                     detail: { task, topic: m.topic, capability: longest.capability, reason: longest.reason },
                 });
-            const first = m.steps.find((s) => s.outcome === "refused" && s.capability);
+            const first = firstTryRefused(m.steps);
             if (first) {
                 // The same mistake: the same kind of refusal on the same fields (a justification and a floor on one step are two mistakes).
                 const k = mistakeKey(m.topic, first.reason);
@@ -194,9 +194,10 @@ function mistakeKey(topic: string, reason: string | null): string {
 export function shapesOf(reason: string | null): string[] {
     // A problem with a kind is a mistake; a clause without one ("the signed rules bound it by ...") is what the guard adds to it.
     const shapes = problemsOfReason(reason ?? "").filter((x) => x.kind).map((x) =>
+        // Quotes out first: a quote may hold a "; " (a reference that joins two facts), which is not the end of the first clause.
         x.says
-            .split(";")[0]
             .replace(/"[^"]*"/g, "…")
+            .split(";")[0]
             .replace(/\([^)]*\)/g, "")
             .replace(/\b[A-Za-z_][\w-]*(\.[\w*-]+)+\b/g, "*")
             .replace(/-?\d+(\.\d+)?/g, "#")
@@ -241,7 +242,19 @@ export interface TaskTrace {
     topic: string;
     startedAt?: string;
     ended: string | null;
-    steps: Array<{ capability: string | null; outcome: string; reason: string | null }>;
+    steps: Array<{ capability: string | null; outcome: string; reason: string | null; judged?: "accepted" | "refused" }>;
+}
+
+/**
+ * A task's first try, when it was refused: the first submission its topic's guard judged (2026-09-29, the learning experiment: a
+ * submit the harness stopped before the guard, outside the step's allowlist, is not a mistake of the submission, and the two were
+ * read as one). None when the guard accepted it. A manifest that marks no judgement (an older one, a topic that names no
+ * submission) has its first refusal as its first try, as before.
+ */
+export function firstTryRefused(steps: TaskTrace["steps"]): TaskTrace["steps"][number] | null {
+    const judged = steps.find((s) => s.judged);
+    if (judged) return judged.judged === "refused" ? judged : null;
+    return steps.find((s) => s.outcome === "refused" && s.capability) ?? null;
 }
 
 /** The tasks of a workshop, oldest first, with their manifests. */
@@ -261,7 +274,7 @@ export function tasksOf(workshop: string): Array<{ task: string; manifest: TaskT
 export function showsFamily(m: TaskTrace, family: string): boolean | null {
     const [kind, topic, rest] = family.split(":");
     if (!["first-try-shape", "first-try-category", "first-try-repeat", "stuck", "refusal-streak"].includes(kind) || m.topic !== topic) return null;
-    const first = m.steps.find((s) => s.outcome === "refused" && s.capability);
+    const first = firstTryRefused(m.steps);
     if (kind === "stuck") return /^STUCK/.test(m.ended ?? "");
     if (kind === "first-try-shape") return Boolean(first && shapesOf(first.reason).some((s) => createHash("sha256").update(s).digest("hex").slice(0, 12) === rest));
     if (kind === "first-try-category") return Boolean(first && problemsOfReason(first.reason ?? "").some((x) => x.kind === rest));

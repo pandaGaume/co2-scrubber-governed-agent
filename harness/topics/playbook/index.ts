@@ -254,6 +254,7 @@ export const PLAYBOOK_TOPIC: TopicDefinition = {
     tools: PLAYBOOK_TOOLS,
     // A playbook is written for this task's change, never replayed from another's.
     neverReplayed: [/^playbook\.submit$/, /^task\.done$/],
+    judges: [/^playbook\.submit$/],
     replayedActions: [/^task\.plan$/],
     justified: PLAYBOOK_JUSTIFIED,
     validate: (claim, files, progress) => validatePlaybook(claim, files, progress),

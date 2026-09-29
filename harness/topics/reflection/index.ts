@@ -210,6 +210,7 @@ export const REFLECTION_TOPIC: TopicDefinition = {
     tools: REFLECTION_TOOLS,
     // An adaptation answers this task's patterns, never replayed from another's.
     neverReplayed: [/^reflection\.propose$/, /^task\.done$/],
+    judges: [/^reflection\.propose$/],
     replayedActions: [/^task\.plan$/],
     justified: REFLECTION_JUSTIFIED,
     validate: (claim, files, progress) => validateReflection(claim, files, progress),

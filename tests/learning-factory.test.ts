@@ -46,7 +46,7 @@ describe("the procedure factory learns from its refusals, in a fork", () => {
             };
             const read = async <T>(slot: string, uri: string): Promise<T> => JSON.parse((await (await operator.session(slot)).request<{ contents: Array<{ text: string }> }>("resources/read", { uri })).contents[0].text) as T;
             type Run = { status: string; ended: string | null; commissioningId: string | null; tasks: string[]; loops: Array<{ status: string }>; learning?: Array<{ patterns: string[]; taskId: string | null; adopted?: boolean; after: string }> };
-            type Task = { state: string; manifest?: { ended?: string | null; steps?: Array<{ capability: string | null; outcome: string }> } };
+            type Task = { state: string; manifest?: { ended?: string | null; steps?: Array<{ capability: string | null; outcome: string; judged?: string }> } };
 
             await ok("scenario", "play", { id: "commissioning-learning", builder: "scripted", request: {} });
             let run: Run | null = null;
@@ -62,6 +62,8 @@ describe("the procedure factory learns from its refusals, in a fork", () => {
             const before = await ok<Task>("factory", "task", { taskId: first });
             assert.match(String(before.manifest?.ended), /^STUCK: procedure\.(submit|revise) refused 3 times in a row on the same point/);
             assert.equal((before.manifest?.steps ?? []).filter((s) => s.outcome === "refused").length, 3);
+            // Each refusal is the guard's judgement of a submission, and the manifest says so (2026-09-29, the learning experiment).
+            assert.deepEqual((before.manifest?.steps ?? []).filter((s) => s.outcome === "refused").map((s) => s.judged), ["refused", "refused", "refused"]);
 
             // The event, and what the fork learned from it.
             const learned = run!.learning ?? [];
@@ -79,6 +81,7 @@ describe("the procedure factory learns from its refusals, in a fork", () => {
             assert.equal(after.state, "proposed");
             const submissions = (after.manifest?.steps ?? []).filter((s) => s.capability === "procedure.submit" || s.capability === "procedure.revise");
             assert.deepEqual(submissions.map((s) => s.outcome), ["completed"], "one submission, accepted");
+            assert.deepEqual(submissions.map((s) => s.judged), ["accepted"]);
 
             await ok("station", "commissioning_authorise", { commissioningId: run!.commissioningId, decision: "refuse", by: "commander-test" });
         } finally {

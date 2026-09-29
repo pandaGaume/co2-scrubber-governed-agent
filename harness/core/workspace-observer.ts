@@ -88,6 +88,8 @@ export interface Progress {
     justify: JustificationHelp | null;
     /** The safety constants the topic's guard found justified by no fact the signed rules bound them by, for the runner to put in `justify` with the refusal. */
     misjustified?: Misjustified[] | null;
+    /** The refusal of the topic's own guard at this step (its checks, the justifications'), for the runner to tell it from one the harness made before the guard. */
+    guardRefused?: { capability: string; reason: string } | null;
     /** The problems of a refusal as the guard knew them (path, expected, sent), left for the runner; read from the refusal's text when a guard leaves none (`problems.ts`). */
     pendingProblems?: Problem[] | null;
     /** The refusals in a row on the same points, and the last one's problems: what the brief opens on (`problems.ts`). */

@@ -441,7 +441,10 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
                 reason: trace.evaluation.reason ?? null,
                 ms,
                 tokens: exchange?.tokens ?? null,
+                // A submission that ran went through the topic's guard: it accepted it.
+                ...(topic.judges?.some((r) => r.test(trace.decision.invocation.capabilityId)) ? { judged: "accepted" as const } : {}),
             });
+            progress.guardRefused = null;
             if (trace.source === "policy") manifest.recipes.replayedSteps++;
             noteProposal(trace.decision.invocation.capabilityId, trace.decision.invocation.input);
             made.add(proposalKey(trace.decision.invocation.capabilityId, trace.decision.invocation.input));
@@ -483,7 +486,10 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             const refusedTimes = (refusedCounts.get(refusedKey) ?? 0) + 1;
             refusedCounts.set(refusedKey, refusedTimes);
             progress.repeats = Math.max(progress.repeats, refusedTimes - 1);
-            manifest.steps.push({ n, decisionId: exchange.decisionId ?? null, source: "refused", capability: exchange.proposedCapabilityId, input: exchange.proposedInput, outcome: "refused", summary: failed, reward: null, reason: failed, ms, tokens: exchange.tokens });
+            // Refused by the topic's guard, or by the harness before it (the step's allowlist, a schema, a call repeated): only the first is the guard's judgement.
+            const byGuard = topic.judges?.some((r) => r.test(exchange.proposedCapabilityId)) && progress.guardRefused?.capability === exchange.proposedCapabilityId && String(failed ?? "").includes(progress.guardRefused.reason);
+            progress.guardRefused = null;
+            manifest.steps.push({ n, decisionId: exchange.decisionId ?? null, source: "refused", capability: exchange.proposedCapabilityId, input: exchange.proposedInput, outcome: "refused", summary: failed, reward: null, reason: failed, ms, tokens: exchange.tokens, ...(byGuard ? { judged: "refused" as const } : {}) });
             lines.push({ n, decisionId: exchange.decisionId ?? null, source: "refused", trace: null, failed, exchange, call: null, ms });
             log(`[factory] step ${n}: ${exchange.proposedCapabilityId} -> stopped by the harness (${failed})`);
             // The same points refused STUCK_AFTER times in a row, whatever the input changed: the task ends, naming them, rather than spend its budget (2026-09-28: nineteen refusals of one speed).

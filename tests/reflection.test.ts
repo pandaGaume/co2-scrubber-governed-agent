@@ -73,6 +73,32 @@ describe("the patterns of the traces, and an adaptation checked before anything 
         }
     });
 
+    it("the first try is the first submission the guard judged: a submit the harness stopped before the guard is not a mistake of the submission (2026-09-29, the learning experiment)", () => {
+        const shop = mkdtempSync(path.join(tmpdir(), "reflection-judged-"));
+        try {
+            const early = { capability: "procedure.submit", outcome: "refused", reason: "Provider proposed a capability outside the allowlist" };
+            const wrong = { capability: "procedure.revise", outcome: "refused", judged: "refused", reason: "procedure refused: justification: steps.2.speedPercent: \"a; b\" is not a fact of the library" };
+            const accepted = { capability: "procedure.submit", outcome: "completed", judged: "accepted", reason: null };
+            const task = (id: string, steps: object[]) => {
+                mkdirSync(path.join(shop, id), { recursive: true });
+                writeFileSync(path.join(shop, id, "manifest.json"), JSON.stringify({ topic: "procedure", ended: "contract held", steps }));
+            };
+            task("t-2026-09-29-0001", [early, wrong]);
+            task("t-2026-09-29-0002", [early, accepted]);
+            task("t-2026-09-29-0003", [early, wrong]);
+            const shapes = observe(shop, { repeatAt: 2 }).filter((p) => p.kind === "first-try-shape");
+            assert.deepEqual(shapes.map((p) => (p.detail as { shape: string }).shape), ["justification: *: … is not a fact of the library"], "the guard's refusal, not the allowlist's, whose '; ' in a quote is not the end of the clause");
+            assert.deepEqual((shapes[0].detail as { examples: Array<{ task: string }> }).examples.map((e) => e.task), ["t-2026-09-29-0001", "t-2026-09-29-0003"], "nothing from the task whose judged submission was accepted");
+            // Older manifests, with no judgement marked: their first refusal, as before.
+            const floor = { capability: "procedure.submit", outcome: "refused", reason: "procedure refused: floor: steps.1.speedPercent = 0 is not above 0" };
+            task("t-2026-09-29-0004", [floor]);
+            task("t-2026-09-29-0005", [floor]);
+            assert.ok(observe(shop, { repeatAt: 2 }).some((p) => p.kind === "first-try-category" && (p.detail as { kind: string }).kind === "floor"));
+        } finally {
+            rmSync(shop, { recursive: true, force: true });
+        }
+    });
+
     it("a patch whose ops are not a list sets no number: the schema refuses it, the loop does not crash on it (2026-09-29, the replays)", () => {
         assert.deepEqual(numbersOfPatch({ ops: { op: "append" } }), []);
         assert.deepEqual(numbersOfPatch({ ops: [{ op: "replace", value: 2 }, { op: "append", value: "x" }] }), [{ constant: "ops.0.value", value: 2 }]);

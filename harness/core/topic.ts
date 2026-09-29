@@ -53,6 +53,12 @@ export interface TopicDefinition {
     replayedActions?: ReadonlyArray<RegExp>;
     /** Where the topic's constants are, and which are safety constants: every one is justified (`justify.ts`). */
     justified?: Justified;
+    /**
+     * The capabilities whose input the topic's guard judges: the builder's submissions (2026-09-29, the learning experiment). The
+     * manifest says of each whether the guard accepted or refused it; one the harness stopped before the guard (outside the step's
+     * allowlist, a schema, a call repeated) is judged by nobody, and is not the submission's first try.
+     */
+    judges?: ReadonlyArray<RegExp>;
     /** Is the contract held: the artifacts claimed, the files of the workshop, what the steps recorded. */
     validate(claim: DoneClaim, files: WorkshopFile[], progress: Progress, task: TaskFile["task"]): Validation;
     /** Capabilities in process the topic adds to the task's three. */

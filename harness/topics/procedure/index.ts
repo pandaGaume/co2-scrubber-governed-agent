@@ -744,6 +744,7 @@ export const PROCEDURE_TOPIC: TopicDefinition = {
     tools: PROCEDURE_TOOLS,
     // A proposal is written from this task's device, presence, measurement and signed library: never copied from the memory of another task, nor the claim that names its file.
     neverReplayed: [/^procedure\.(submit|revise|analyse)$/, /^task\.done$/],
+    judges: [/^procedure\.(submit|revise)$/],
     justified: PROCEDURE_JUSTIFIED,
     // The plan says what is measured, from the task's required outputs; the guard checks it again.
     replayedActions: [/^task\.plan$/],
