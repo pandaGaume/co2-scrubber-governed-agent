@@ -79,8 +79,11 @@ export const PROPOSE_SCHEMA = {
 } as const;
 
 /** The numbers a patch sets, by path: the constants an adaptation sets, each justified. */
-export const numbersOfPatch = (input: unknown): Array<{ constant: string; value: number }> =>
-    (((input as { ops?: Array<{ value?: unknown }> } | null)?.ops ?? []) as Array<{ value?: unknown }>).flatMap((o, i) => (typeof o?.value === "number" ? [{ constant: `ops.${i}.value`, value: o.value }] : []));
+export const numbersOfPatch = (input: unknown): Array<{ constant: string; value: number }> => {
+    // Whatever a model sends: ops that are not a list set no number here, and the schema says what is wrong with them (2026-09-29: two reflections crashed the loop on it).
+    const ops = (input as { ops?: unknown } | null)?.ops;
+    return Array.isArray(ops) ? ops.flatMap((o: { value?: unknown } | null, i) => (typeof o?.value === "number" ? [{ constant: `ops.${i}.value`, value: o.value }] : [])) : [];
+};
 
 export const REFLECTION_JUSTIFIED: Justified = {
     capability: /^reflection\.propose$/,

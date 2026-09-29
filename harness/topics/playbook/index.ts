@@ -134,8 +134,10 @@ export const SUBMIT_SCHEMA = {
 
 /** The bounds' numbers, by path: the constants a playbook sets, each justified. */
 export const boundsOf = (input: unknown): Array<{ constant: string; value: number }> => {
-    const nodes = ((input as { playbook?: PlaybookFile } | null)?.playbook?.nodes ?? []) as PlaybookFile["nodes"];
-    return nodes.filter((n) => n?.type === "conduct.bound" && typeof n.bag?.atLeast === "number").map((n) => ({ constant: `nodes.${n.id}.atLeast`, value: n.bag!.atLeast as number }));
+    const nodes = (input as { playbook?: { nodes?: unknown } } | null)?.playbook?.nodes;
+    // Whatever a model sends: nodes that are not a list set no bound here, and the schema says what is wrong with them.
+    if (!Array.isArray(nodes)) return [];
+    return (nodes as PlaybookFile["nodes"]).filter((n) => n?.type === "conduct.bound" && typeof n.bag?.atLeast === "number").map((n) => ({ constant: `nodes.${n.id}.atLeast`, value: n.bag!.atLeast as number }));
 };
 
 export const PLAYBOOK_JUSTIFIED: Justified = {

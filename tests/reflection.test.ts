@@ -18,6 +18,8 @@ import { adaptationProblems, applyPatch, globMatches, observe, placesOf, reflect
 import { createFork, forkHistory, forkPath } from "../lib/fork.js";
 import { fromRepository } from "../lib/paths.js";
 import { Broker } from "../harness/lib/broker.js";
+import { numbersOfPatch } from "../harness/topics/reflection/index.js";
+import { boundsOf } from "../harness/topics/playbook/index.js";
 
 const PORT = 3171;
 const RECOVERY = "specs/commissioning/recovery.playbook.json";
@@ -69,6 +71,12 @@ describe("the patterns of the traces, and an adaptation checked before anything 
         } finally {
             rmSync(shop, { recursive: true, force: true });
         }
+    });
+
+    it("a patch whose ops are not a list sets no number: the schema refuses it, the loop does not crash on it (2026-09-29, the replays)", () => {
+        assert.deepEqual(numbersOfPatch({ ops: { op: "append" } }), []);
+        assert.deepEqual(numbersOfPatch({ ops: [{ op: "replace", value: 2 }, { op: "append", value: "x" }] }), [{ constant: "ops.0.value", value: 2 }]);
+        assert.deepEqual(boundsOf({ playbook: { nodes: "none" } }), []);
     });
 
     it("says where a factory reads what it is told about a capability: the brief of the stage that calls it, the tool's description", () => {
