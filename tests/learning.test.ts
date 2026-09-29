@@ -95,7 +95,7 @@ describe("a fork that learns: an abort is the event, the fork adapts itself at i
             await started.stop();
         }
         // The evolution: the adaptation, a snapshot of its own in the fork's history; the repository's playbook as it was.
-        const snapshot = forkHistory("live").find((c) => c.label.startsWith(`adaptation of ${RECOVERY}`));
+        const snapshot = forkHistory("live").find((c) => c.label.startsWith(`adaptation 1 of ${RECOVERY}`));
         assert.ok(snapshot?.files.includes(RECOVERY));
         delete process.env.FORK_DIR;
         assert.equal(readFileSync(fromRepository(...RECOVERY.split("/")), "utf8"), repositoryPlaybook);

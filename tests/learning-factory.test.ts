@@ -86,7 +86,7 @@ describe("the procedure factory learns from its refusals, in a fork", () => {
             await started.stop();
         }
         // The evolution in the fork's history; the repository's instructions as they were.
-        const snapshot = forkHistory("factory-learns").find((c) => c.label.startsWith(`adaptation of ${WORDS}`));
+        const snapshot = forkHistory("factory-learns").find((c) => c.label.startsWith(`adaptation 1 of ${WORDS}`));
         assert.ok(snapshot?.files.includes(WORDS));
         delete process.env.FORK_DIR;
         assert.equal(readFileSync(fromRepository(...WORDS.split("/")), "utf8"), repositoryWords);

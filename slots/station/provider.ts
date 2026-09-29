@@ -48,7 +48,8 @@
 import { notHolder, roleOf, ROLES_FILE, SIGNATORY } from "../../lib/roles.js";
 import { Playbook, playbookProblems, type PlaybookFile } from "../../harness/core/conduct.js";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { adaptationProblems, observe, type Adaptation } from "../../lib/reflection.js";
+import { adaptationProblems, observe, reflectionFormat, type Adaptation } from "../../lib/reflection.js";
+import { enterAdoption, historyOf, judge, mistakeRate, readLedger, underJudgement, undo, writeLedger } from "../../lib/adaptations.js";
 import { snapshotAt } from "../../lib/fork.js";
 import * as path from "node:path";
 import { McpGrammar } from "@cyanmycelium/mcp-core";
@@ -374,7 +375,8 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
             say("mother.adaptation.outside", null, () => ({ target: a.target }));
             return;
         }
-        const { problems, after } = adaptationProblems(a, observe(WORKSHOP_ROOT));
+        const patterns = observe(WORKSHOP_ROOT);
+        const { problems, before, after } = adaptationProblems(a, patterns);
         const target = fromRoot(...String(a.target).split("/"));
         if (!problems.length && existsSync(target) && a.targetSha256 && sha256Of(readFileSync(target)) !== a.targetSha256) problems.push(`${a.target} changed since the reflection checked the adaptation`);
         if (problems.length) {
@@ -384,14 +386,18 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
             return;
         }
         writeFileSync(target, `${JSON.stringify(after, null, 4)}\n`, "utf8");
+        // Entered in the fork's ledger, with what its judgement and its undo need: the families it answers, each place before and after.
+        const families = patterns.filter((p) => a.evidence.includes(p.id) && p.family).map((p) => p.family!);
+        const entry = enterAdoption(WORKSHOP_ROOT, a, families, before, proposal.taskId, null);
         const snapshot = (() => {
             try {
-                return snapshotAt(dir, `adaptation of ${a.target}: ${a.reason} (${a.evidence.join(", ")})`);
+                return snapshotAt(dir, `adaptation ${entry.n} of ${a.target}: ${a.reason} (${a.evidence.join(", ")})`);
             } catch (e) {
                 log(`[station] the fork's snapshot of the adaptation failed: ${errorMessage(e)}`);
                 return null;
             }
         })();
+        if (snapshot) writeLedger(WORKSHOP_ROOT, readLedger(WORKSHOP_ROOT).map((x) => (x.n === entry.n ? { ...x, commit: snapshot.commit } : x)));
         proposal.status = "adopted";
         if (snapshot) proposal.reason = `snapshot ${snapshot.commit.slice(0, 12)}`;
         say("mother.adaptation.adopted", null, () => ({ fork, target: a.target, reason: a.reason }));
@@ -484,19 +490,50 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                 handle: async (args) => {
                     const fork = forkId();
                     if (!fork) throw new Error("the reflection runs in a fork only: its adaptations are adopted and measured there, never in the repository's context");
+                    const dir = forkDir()!;
+                    const evaluateAfter = reflectionFormat().evaluateAfter ?? 2;
+                    // First the judgement of what was adopted (B): kept when its mistake shows less often since, undone otherwise.
+                    const ledger = readLedger(WORKSHOP_ROOT);
+                    const judged = judge(WORKSHOP_ROOT, evaluateAfter, ledger);
+                    for (const { entry, decision } of judged) {
+                        if (decision === "keep") {
+                            say("mother.adaptation.kept", null, () => ({ fork, n: entry.n, target: entry.target, why: entry.why ?? "" }));
+                            continue;
+                        }
+                        const { left } = undo(entry);
+                        entry.status = left.length ? "not undone" : "undone";
+                        if (left.length) entry.why = `${entry.why}; not undone at ${left.join(", ")}, changed since`;
+                        say("mother.adaptation.undone", null, () => ({ fork, n: entry.n, target: entry.target, why: entry.why ?? "" }));
+                    }
+                    if (judged.length) {
+                        writeLedger(WORKSHOP_ROOT, ledger);
+                        try {
+                            snapshotAt(dir, judged.map(({ entry }) => `adaptation ${entry.n} ${entry.status}: ${entry.why}`).join("; "));
+                        } catch (e) {
+                            log(`[station] the fork's snapshot of the judgement failed: ${errorMessage(e)}`);
+                        }
+                    }
                     const focus = typeof args.focus === "string" && args.focus ? args.focus : null;
-                    const patterns = observe(WORKSHOP_ROOT).filter((p) => !focus || p.source.includes(focus));
+                    // No new adaptation of a family while one of it is being judged: one change at a time, measured, never stacked.
+                    const judging = underJudgement(WORKSHOP_ROOT, evaluateAfter);
+                    const waiting = new Set(judging.flatMap((e) => e.families));
+                    for (const e of judging) say("mother.adaptation.judging", null, () => ({ n: e.n, target: e.target, since: mistakeRate(WORKSHOP_ROOT, e.families, "after", e.at).tasks, needed: evaluateAfter }));
+                    const read = observe(WORKSHOP_ROOT).filter((p) => !focus || p.source.includes(focus));
+                    const patterns = read.filter((p) => !p.family || !waiting.has(p.family));
                     say("mother.reflection.read", null, () => ({ fork, count: patterns.length }));
-                    if (!patterns.length) return { fork, patterns, taskId: null, note: "no pattern in the traces: nothing to adapt" };
+                    const judgedNow = judged.map(({ entry }) => ({ n: entry.n, status: entry.status, why: entry.why ?? null }));
+                    if (!patterns.length) return { fork, patterns, judged: judgedNow, judging: judging.map((e) => e.n), taskId: null, note: read.length ? "the patterns read are those of an adaptation being judged: nothing new meanwhile" : "no pattern in the traces: nothing to adapt" };
+                    // What was already tried for these patterns, and what it did (A): the reflection tries something else.
+                    const history = historyOf(WORKSHOP_ROOT, patterns.map((p) => p.family!).filter(Boolean));
                     const r = await client().call("factory", "request", {
                         objective: { required_outputs: [{ name: "adaptation", quantity: "Adaptation" }] },
-                        observations: { reflection: { patterns } },
+                        observations: { reflection: { patterns, history } },
                         topics: ["reflection"],
                         ...(args.builder === "scripted" || args.builder === "reasoner" ? { builder: args.builder } : {}),
                         requestedBy: "station (reflection)",
                     });
                     if (!r.ok) throw new Error(`the reflection factory did not take the task: ${r.error ?? r.outcome}`);
-                    return { fork, patterns, taskId: (r.output as { taskId: string }).taskId };
+                    return { fork, patterns, judged: judgedNow, judging: judging.map((e) => e.n), taskId: (r.output as { taskId: string }).taskId };
                 },
             },
             {

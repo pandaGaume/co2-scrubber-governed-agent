@@ -14,6 +14,7 @@
  *
  * Nothing here adopts anything: the station does, in a fork only (`slots/station`), after checking again.
  */
+import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import * as path from "node:path";
 import { fromRoot } from "./paths.js";
@@ -37,6 +38,8 @@ export interface ReflectionFormat {
     consumers: Record<string, { words?: string; actions?: string[]; capabilities?: string[] }>;
     /** How many times in a row makes a pattern. */
     repeatAt: number;
+    /** After how many tasks of its topic an adaptation is judged: kept if its mistake shows less often, undone otherwise. */
+    evaluateAfter?: number;
 }
 
 export const reflectionFormat = (): ReflectionFormat => JSON.parse(readFileSync(fromRoot(...REFLECTION_FORMAT_FILE.split("/")), "utf8")) as ReflectionFormat;
@@ -52,6 +55,8 @@ export interface Pattern {
     /** The file of the context its fix would touch, when one is known. */
     target: string | null;
     detail: Record<string, unknown>;
+    /** What stays the same from one reading to the next (the id names the last task or run): an adaptation answers a family, and is judged on it. */
+    family?: string;
 }
 
 const readJson = <T>(file: string): T | null => {
@@ -86,7 +91,7 @@ export function observe(workshop: string, format: Pick<ReflectionFormat, "repeat
                     });
         }
     // The factories' tasks: a capability refused on the same points again and again; a task that ended STUCK; the first refusal of each, by topic.
-    const firstTries = new Map<string, { topic: string; capability: string; reason: string; tasks: string[] }>();
+    const firstTries = new Map<string, { topic: string; capability: string; reason: string; tasks: string[]; key: string }>();
     // The same kind of mistake at the first try, whatever the field (2026-09-29, the replays: four tasks of four refused at their first
     // submission on a safety constant's justification, each on another field): by topic and kind of refusal, with what each task was told.
     const firstKinds = new Map<string, { topic: string; kind: string; capability: string; examples: Array<{ task: string; reason: string }> }>();
@@ -117,8 +122,8 @@ export function observe(workshop: string, format: Pick<ReflectionFormat, "repeat
             const first = m.steps.find((s) => s.outcome === "refused" && s.capability);
             if (first) {
                 // The same mistake: the same kind of refusal on the same fields (a justification and a floor on one step are two mistakes).
-                const k = `${m.topic}|${[...new Set(problemsOfReason(first.reason ?? "").map((x) => `${x.kind ?? ""}:${x.path ?? x.says.replace(/[\d.]+/g, "#").slice(0, 120)}`))].sort().join("|")}`;
-                const seen = firstTries.get(k) ?? { topic: m.topic, capability: first.capability!, reason: first.reason ?? "", tasks: [] };
+                const k = mistakeKey(m.topic, first.reason);
+                const seen = firstTries.get(k) ?? { topic: m.topic, capability: first.capability!, reason: first.reason ?? "", tasks: [], key: k };
                 seen.tasks.push(task);
                 firstTries.set(k, seen);
                 for (const kind of new Set(problemsOfReason(first.reason ?? "").map((x) => x.kind).filter((x): x is string => Boolean(x)))) {
@@ -152,9 +157,74 @@ export function observe(workshop: string, format: Pick<ReflectionFormat, "repeat
                 // Every task it rests on: a reflection focused on any of them reads it.
                 source: f.tasks.map((x) => `${x}/manifest.json`).join(" "),
                 target: existsSync(fromRoot("specs", f.topic, "words.json")) ? `specs/${f.topic}/words.json` : null,
-                detail: { topic: f.topic, capability: f.capability, reason: f.reason, tasks: f.tasks },
+                detail: { topic: f.topic, capability: f.capability, reason: f.reason, tasks: f.tasks, key: f.key },
             });
-    return patterns;
+    return patterns.map((p) => ({ ...p, family: familyOf(p) }));
+}
+
+/** A mistake, as a first refusal says it: its topic, and the kind of refusal on each field (a justification and a floor on one step are two mistakes). */
+function mistakeKey(topic: string, reason: string | null): string {
+    const parts = problemsOfReason(reason ?? "").map((x) => `${x.kind ?? ""}:${x.path ?? x.says.replace(/[\d.]+/g, "#").slice(0, 120)}`);
+    return `${topic}|${[...new Set(parts)].sort().join("|")}`;
+}
+
+/** A pattern's family: its kind and what it is about, without the task or run it was last read in. */
+export function familyOf(p: Pick<Pattern, "kind" | "detail">): string {
+    const d = p.detail as { topic?: string; capability?: string; kind?: string; condition?: string; key?: string };
+    switch (p.kind) {
+        case "abort-repeat":
+            return `abort-repeat:${d.condition}`;
+        case "refusal-streak":
+            return `refusal-streak:${d.topic}:${d.capability}`;
+        case "stuck":
+            return `stuck:${d.topic}`;
+        case "first-try-category":
+            return `first-try-category:${d.topic}:${d.kind}`;
+        case "first-try-repeat":
+            return `first-try-repeat:${d.topic}:${createHash("sha256").update(String(d.key)).digest("hex").slice(0, 12)}`;
+    }
+}
+
+/** A task's manifest, as the traces hold it. */
+export interface TaskTrace {
+    topic: string;
+    startedAt?: string;
+    ended: string | null;
+    steps: Array<{ capability: string | null; outcome: string; reason: string | null }>;
+}
+
+/** The tasks of a workshop, oldest first, with their manifests. */
+export function tasksOf(workshop: string): Array<{ task: string; manifest: TaskTrace }> {
+    if (!existsSync(workshop)) return [];
+    return readdirSync(workshop)
+        .filter((d) => /^t-/.test(d))
+        .sort()
+        .map((task) => ({ task, manifest: readJson<TaskTrace>(path.join(workshop, task, "manifest.json")) }))
+        .filter((x): x is { task: string; manifest: TaskTrace } => x.manifest !== null);
+}
+
+/**
+ * Whether a task shows a family's mistake: what an adaptation of that family is judged on, task by task. Null when the family
+ * is not read in a task (a cause of abort is read in the runs) or the task is not of its topic.
+ */
+export function showsFamily(m: TaskTrace, family: string): boolean | null {
+    const [kind, topic, rest] = family.split(":");
+    if (!["first-try-category", "first-try-repeat", "stuck", "refusal-streak"].includes(kind) || m.topic !== topic) return null;
+    const first = m.steps.find((s) => s.outcome === "refused" && s.capability);
+    if (kind === "stuck") return /^STUCK/.test(m.ended ?? "");
+    if (kind === "first-try-category") return Boolean(first && problemsOfReason(first.reason ?? "").some((x) => x.kind === rest));
+    if (kind === "first-try-repeat") {
+        if (!first) return false;
+        return createHash("sha256").update(mistakeKey(m.topic, first.reason)).digest("hex").slice(0, 12) === rest;
+    }
+    // A streak: the same points refused twice in a row, whatever the capability.
+    let last = "";
+    for (const s of m.steps.filter((x) => x.outcome === "refused")) {
+        const k = refusalKey(problemsOfReason(s.reason ?? ""));
+        if (k === last) return true;
+        last = k;
+    }
+    return false;
 }
 
 /** A glob of the repository's paths: `**` any depth, `*` within a segment. */
@@ -219,6 +289,38 @@ export function applyPatch(doc: unknown, ops: PatchOp[]): unknown {
         } else throw new Error(`${where}: its parent is not an object or a list`);
     }
     return out;
+}
+
+/** The value a pointer names in a document, or undefined when it names nothing. */
+export function pointerGet(doc: unknown, pointer: string): unknown {
+    try {
+        let v: unknown = doc;
+        for (const s of segmentsOf(pointer)) v = step(v, s, pointer);
+        return v;
+    } catch {
+        return undefined;
+    }
+}
+
+const wordsIn = (s: string): Set<string> => new Set(s.toLowerCase().match(/[a-z][a-z0-9._-]{2,}/g) ?? []);
+const sentencesIn = (s: string): string[] => s.split(/(?<=[.!?])\s+/).filter((x) => x.trim().length > 20);
+
+/**
+ * The passage of a text an added sentence says again, if any: most of the added sentence's words (seven in ten) are already
+ * in one sentence of the text or two in a row. Containment, not likeness: a short sentence repeating a long one is a repeat.
+ */
+export function repeated(existing: string, added: string): string | null {
+    const have = sentencesIn(existing);
+    const windows = [...have, ...have.slice(1).map((s, i) => `${have[i]} ${s}`)];
+    for (const a of sentencesIn(added)) {
+        const wa = wordsIn(a);
+        if (wa.size < 6) continue;
+        for (const e of windows) {
+            const we = wordsIn(e);
+            if ([...wa].filter((w) => we.has(w)).length / wa.size >= 0.7) return e;
+        }
+    }
+    return null;
 }
 
 function indexOf(list: unknown[], seg: string, where: string): number {
@@ -293,6 +395,13 @@ export function adaptationProblems(input: unknown, patterns: Pattern[], format: 
         // What an adaptation writes never copies a value of the library (2026-09-29, the replays: the reflection wrote the signed facts'
         // values into the factory's instructions, a second source for the same number, which lies once the card is changed and signed
         // again): it cites the fact by its id, and the value is read from the library.
+        // An instruction is not said twice (2026-09-29, the replays: four near-identical paragraphs appended, one per run, none of which helped).
+        for (const o of (a.ops ?? []) as PatchOp[]) {
+            if (o.op !== "append" || typeof o.value !== "string") continue;
+            const prior = pointerGet(before, String(o.pointer ?? ""));
+            const again = typeof prior === "string" ? repeated(prior, o.value) : null;
+            if (again) problems.push(`${target}: the sentence appended at ${o.pointer} says again what it already says ("${again.slice(0, 160)}"): change or remove what is there, or say something else`);
+        }
         for (const [key, text] of Object.entries(is)) {
             const added = was[key] === undefined ? text : text.startsWith(was[key]) ? text.slice(was[key].length) : text === was[key] ? "" : text;
             for (const copy of copiedFacts(added)) problems.push(`${target}: "${key}" writes ${copy.id} = ${copy.value} ${copy.unit}, the value of a fact of the library: cite ${copy.id} by its id, never its value (the library is the one source of it)`);

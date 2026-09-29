@@ -7,18 +7,64 @@
     "observation": "reflection",
     "file": "adaptations/{n}.json",
     "repeatAt": 2,
-    "adaptable": ["specs/*/playbook.json", "specs/*/*.playbook.json", "specs/*/words.json"],
+    "evaluateAfter": 2,
+    "adaptable": [
+        "specs/*/playbook.json",
+        "specs/*/*.playbook.json",
+        "specs/*/words.json"
+    ],
     "never": [
-        { "pattern": "docs/library/**", "why": "the library and its signatures are what a person reviewed and signed" },
-        { "pattern": "**/*.facts.json", "why": "a fact is a person's reading of a source, signed" },
-        { "pattern": "**/*.rules.json", "why": "the guard's rules judge the conduct; the conduct does not rewrite its judge" },
-        { "pattern": "specs/station/**", "why": "who may decide (the roles) is not the learner's to change" },
-        { "pattern": "specs/reflection/**", "why": "the reflection's own bounds and conduct: a learner that widens its own freedom is no longer measured" },
-        { "pattern": "specs/harness/**", "why": "what the core knows of the application" }
+        {
+            "pattern": "docs/library/**",
+            "why": "the library and its signatures are what a person reviewed and signed"
+        },
+        {
+            "pattern": "**/*.facts.json",
+            "why": "a fact is a person's reading of a source, signed"
+        },
+        {
+            "pattern": "**/*.rules.json",
+            "why": "the guard's rules judge the conduct; the conduct does not rewrite its judge"
+        },
+        {
+            "pattern": "specs/station/**",
+            "why": "who may decide (the roles) is not the learner's to change"
+        },
+        {
+            "pattern": "specs/reflection/**",
+            "why": "the reflection's own bounds and conduct: a learner that widens its own freedom is no longer measured"
+        },
+        {
+            "pattern": "specs/harness/**",
+            "why": "what the core knows of the application"
+        }
     ],
     "consumers": {
-        "specs/commissioning/recovery.playbook.json": { "words": "specs/commissioning/words.json", "actions": ["go-on", "ask", "end", "reopen"], "capabilities": ["station.commissioning_reopen"] },
-        "specs/procedure/playbook.json": { "words": "specs/procedure/words.json", "capabilities": ["task.plan", "procedure.submit", "procedure.revise"] },
-        "specs/playbook/playbook.json": { "words": "specs/playbook/words.json", "capabilities": ["playbook.submit"] }
+        "specs/commissioning/recovery.playbook.json": {
+            "words": "specs/commissioning/words.json",
+            "actions": [
+                "go-on",
+                "ask",
+                "end",
+                "reopen"
+            ],
+            "capabilities": [
+                "station.commissioning_reopen"
+            ]
+        },
+        "specs/procedure/playbook.json": {
+            "words": "specs/procedure/words.json",
+            "capabilities": [
+                "task.plan",
+                "procedure.submit",
+                "procedure.revise"
+            ]
+        },
+        "specs/playbook/playbook.json": {
+            "words": "specs/playbook/words.json",
+            "capabilities": [
+                "playbook.submit"
+            ]
+        }
     }
 }

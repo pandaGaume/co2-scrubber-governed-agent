@@ -25,7 +25,7 @@ import { FORK_DATA, fromRepository } from "./paths.js";
 export const COPIED = FORK_DATA.filter((d) => d !== "outputs");
 
 /** What a fork's history keeps of its outputs: what the agents learn and propose, and the scenario runs, not every task's workshop. */
-const IGNORE = ["/outputs/*", "!/outputs/factory/", "/outputs/factory/*", "!/outputs/factory/_recipes/", "!/outputs/factory/library-proposals/", "!/outputs/factory/runs/", ""].join("\n");
+const IGNORE = ["/outputs/*", "!/outputs/factory/", "/outputs/factory/*", "!/outputs/factory/_recipes/", "!/outputs/factory/library-proposals/", "!/outputs/factory/runs/", "!/outputs/factory/adaptations/", ""].join("\n");
 
 export interface ForkRecord {
     id: string;

@@ -161,6 +161,8 @@ export function stateOfTopic(progress: Progress, task: TaskFile["task"]): TopicS
     return {
         hypothesis: {
             patterns: patterns as unknown as JsonValue,
+            // What was already tried for these patterns in the fork, and what it did (kept, undone, being judged): try something else.
+            history: ((((task.observations ?? {}) as Record<string, unknown>)[REFLECTION_FORMAT.observation] as { history?: unknown } | undefined)?.history ?? []) as JsonValue,
             files,
             adaptable: REFLECTION_FORMAT.adaptable,
             never: REFLECTION_FORMAT.never as unknown as JsonValue,

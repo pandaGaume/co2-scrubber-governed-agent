@@ -209,7 +209,7 @@ describe("the reflection in a fork: the agents at work, Mother reading their tra
 
         // The evolution, in the fork's history: the adaptation is a snapshot of its own, with its reason; the repository's conduct is as it was.
         const history = forkHistory(id);
-        const snapshot = history.find((c) => c.label.startsWith(`adaptation of ${RECOVERY}`));
+        const snapshot = history.find((c) => c.label.startsWith(`adaptation 1 of ${RECOVERY}`));
         assert.ok(snapshot, history.map((c) => c.label).join(" | "));
         assert.ok(snapshot.files.includes(RECOVERY));
         assert.match(snapshot.label, /abort-repeat:/);
