@@ -5,6 +5,7 @@
     "words": "specs/procedure/words.json",
     "prompt": "specs/procedure/prompt.md",
     "rulesDocument": "commissioning-test-safety",
+    "safetyBounds": true,
     "keys": {
         "steps": "n",
         "abort": "id"

@@ -4,7 +4,8 @@
  *
  *   npm run fork -- create <id> [--from <fork>]   the context as it is now (or another fork, with its history)
  *   npm run fork -- run <id> [--port 3003] [--learn scripted|reasoner]   a server of its own on the fork's data; a snapshot when it starts and when it stops;
- *                                                 with --learn, at every abort Mother reflects and the fork adapts itself (the reflection's builder)
+ *                                                 with --learn, at every abort Mother reflects and the fork adapts itself (the reflection's builder);
+ *                                                 with --profile, the model behind the reasoner (factories and reflection) is that profile's
  *   npm run fork -- snapshot <id> [label]         what changed since the last snapshot, as a commit of the fork
  *   npm run fork -- reflect <id> [--port 3003] [--builder scripted]   Mother reads the fork's traces (its server must run) and asks the reflection for an adaptation
  *   npm run fork -- log <id>                      the fork's evolution, snapshot by snapshot
@@ -25,7 +26,7 @@ import { createFork, forkDivergence, forkHistory, forkPath, listForks, readFork,
 const OUTSIDE = ["FORK_DIR", "FORK_LEARNING", "WORKSHOP_DIR", "FACTORY_RECIPES_DIR", "LIBRARY_SIGNATURES_DIR", "LIBRARY_PROPOSALS_DIR", "STATION_ROLES_FILE"];
 
 /** The repository's .env (the keys of the models), without what would send the fork's data out of it. */
-function environmentOf(id: string, learn: string | undefined): NodeJS.ProcessEnv {
+function environmentOf(id: string, learn: string | undefined, profile: string | undefined): NodeJS.ProcessEnv {
     const env: NodeJS.ProcessEnv = { ...process.env };
     const file = fromRepository(".env");
     if (existsSync(file))
@@ -36,15 +37,17 @@ function environmentOf(id: string, learn: string | undefined): NodeJS.ProcessEnv
     for (const k of OUTSIDE) delete env[k];
     env.FORK_DIR = forkPath(id);
     if (learn) env.FORK_LEARNING = learn;
+    // The model behind the reasoner (the factories and the reflection): a profile of the repository, to compare models fork by fork.
+    if (profile) env.REASONER_PROFILE = profile;
     return env;
 }
 
-function run(id: string, port: number, learn: string | undefined): void {
+function run(id: string, port: number, learn: string | undefined, profile: string | undefined): void {
     readFork(id);
     if (learn && learn !== "scripted" && learn !== "reasoner") throw new Error(`--learn is scripted (the reflection's script, no key) or reasoner (a model), not "${learn}"`);
     const start = snapshotFork(id, "the server starts");
     console.log(start ? `snapshot ${start.commit.slice(0, 12)}: ${start.files.length} file(s) changed since the last` : "nothing changed since the last snapshot");
-    const child = spawn(process.execPath, [fromRepository("dist", "slots", "run-all.js"), "--port", String(port), "--no-open"], { cwd: fromRepository(), env: environmentOf(id, learn), stdio: "inherit" });
+    const child = spawn(process.execPath, [fromRepository("dist", "slots", "run-all.js"), "--port", String(port), "--no-open"], { cwd: fromRepository(), env: environmentOf(id, learn, profile), stdio: "inherit" });
     const stop = () => child.kill("SIGTERM");
     process.on("SIGINT", stop);
     process.on("SIGTERM", stop);
@@ -93,7 +96,7 @@ function main(): void {
             return;
         }
         case "run":
-            return run(id, Number(option("--port") ?? 3003), option("--learn"));
+            return run(id, Number(option("--port") ?? 3003), option("--learn"), option("--profile"));
         case "snapshot": {
             const s = snapshotFork(id, rest.filter((x) => !x.startsWith("--")).join(" ") || "snapshot");
             console.log(s ? `snapshot ${s.commit.slice(0, 12)}\n${s.files.map((f) => `  ${f.status} ${f.path}`).join("\n")}` : "nothing changed since the last snapshot");
@@ -124,7 +127,7 @@ function main(): void {
             console.log(`fork ${id} removed`);
             return;
         default:
-            console.log("npm run fork -- create <id> [--from <fork>] | run <id> [--port 3003] [--learn scripted|reasoner] | snapshot <id> [label] | reflect <id> [--port 3003] [--builder scripted] | log <id> | diff <id> | list | remove <id>");
+            console.log("npm run fork -- create <id> [--from <fork>] | run <id> [--port 3003] [--learn scripted|reasoner] [--profile profiles/<name>.json] | snapshot <id> [label] | reflect <id> [--port 3003] [--builder scripted] | log <id> | diff <id> | list | remove <id>");
     }
 }
 

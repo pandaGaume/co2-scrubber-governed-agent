@@ -57,6 +57,8 @@ export interface ProcedureFormat extends ProposalFormat {
     history?: string;
     /** The analysis a stopped test calls for before any new proposal: its schema, and the workshop file it is kept in. */
     analysis?: { schema: string; file: string };
+    /** Show the factory, before its first submission, each safety constant and the signed facts its rules bound it by (a fork may turn it off to compare). */
+    safetyBounds?: boolean;
 }
 
 export const PROCEDURE_FORMAT_FILE = "specs/procedure/format.json";

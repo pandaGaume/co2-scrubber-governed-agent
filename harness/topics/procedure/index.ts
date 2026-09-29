@@ -50,7 +50,8 @@ import type { TaskFile } from "../../core/task.js";
 import type { TopicState } from "../../core/reasoning-state.js";
 import type { TopicContext, TopicDefinition, Validation } from "../../core/topic.js";
 import type { DoneClaim, Progress, WorkshopFile } from "../../core/workspace-observer.js";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
+import * as path from "node:path";
 import { fromRoot } from "../../../lib/paths.js";
 import { checkProcedure, constantsOf, envelopeOf, FORMAT, problemLines, rulesAndFacts, safetyOf, type MeasuredStart, type PresenceRead, type ProcedureCheck } from "./check.js";
 import { checkJustifications, JUSTIFICATIONS_SCHEMA, justificationProblems as commonJustificationProblems, type Justified, type ReadSources } from "../../core/justify.js";
@@ -73,7 +74,7 @@ export const PROCEDURE_WORD_KEYS = [
     "intention", "intentionDevice", "requirements.missing", ...FORMAT.requirements.map((r) => `requirements.${r}Read`), "requirements.methodRead",
     ...FORMAT.requirements.map((r) => `openQuestions.${r}`), "openQuestions.method",
     "brief.handOver", "brief.situation", "brief.method", "brief.methodListed", "brief.methodFind", "brief.methodNotACard", "brief.plan", "brief.planOutput", "brief.planUnit",
-    "brief.procedure", "brief.presenceRead", "brief.presenceUnread", "brief.measured", "brief.measuredSource", "brief.refused", "brief.refusedKept", "brief.refusedWhole",
+    "brief.procedure", "brief.safetyBounds", "brief.presenceRead", "brief.presenceUnread", "brief.measured", "brief.measuredSource", "brief.refused", "brief.refusedKept", "brief.refusedWhole",
     "intentionPrevious", "requirements.analysisAccepted", "brief.analysis", "brief.analysed", "analysis.first", "analysis.noPrevious", "analysis.cause", "analysis.path", "analysis.unchanged", "analysis.done", "capabilities.analyse",
     "draft.none", "draft.noneAtExecution", "draft.accepted", "draft.kept", "capabilities.submit", "capabilities.revise", "capabilities.reviseChanges", "guard.refused", "guard.id", "guard.quantity",
 ];
@@ -513,6 +514,36 @@ const quantitiesOf = (task: TaskFile["task"]): string => [...new Set(task.object
  * need it whole), the method card, the measurement, the submissions with their reasons and the draft kept whole, the
  * requirements of the stages. What is here is not read again.
  */
+/**
+ * The safety constants of the signed card's rules, each with the facts it is justified by (the facts its rules bound it by, as the
+ * guard reads them, `factsBounding`), their values and their safe side: read from the library's files (the fork's, in a fork), so
+ * what the state shows is what the guard will judge by. The values are the library's, shown, never written anywhere else.
+ */
+export function safetyBoundsOf(): Array<{ constant: string; cite: Array<{ fact: string; value: number | null; unit: string | null; side: string | null }> }> {
+    const dir = fromRoot("docs", "library");
+    let doc: RulesDocument;
+    try {
+        doc = { ...(JSON.parse(readFileSync(path.join(dir, `${FORMAT.rulesDocument}.rules.json`), "utf8")) as Omit<RulesDocument, "document" | "signed">), document: FORMAT.rulesDocument, signed: null } as RulesDocument;
+    } catch {
+        return [];
+    }
+    const facts = new Map<string, { value: number; unit: string; bound?: string }>();
+    for (const f of readdirSync(dir).filter((x) => x.endsWith(".facts.json")))
+        try {
+            for (const x of (JSON.parse(readFileSync(path.join(dir, f), "utf8")) as { facts?: Array<{ id: string; value: number; unit: string; bound?: string }> }).facts ?? []) facts.set(x.id, x);
+        } catch {
+            // a sidecar that does not parse is the library's to say
+        }
+    const subjects = [...new Set(doc.rules.flatMap((r) => ("compare" in r && r.compare.subject ? [r.compare.subject] : [])))].filter((s) => doc.safety.some((p) => matches(s, p)));
+    return subjects.map((constant) => ({
+        constant,
+        cite: factsBounding(doc, constant).map((id) => {
+            const f = facts.get(id);
+            return { fact: id, value: f?.value ?? null, unit: f?.unit ?? null, side: f?.bound === "upper" ? "at or below it" : f?.bound === "lower" ? "at or above it" : null };
+        }),
+    }));
+}
+
 export function stateOfTopic(progress: Progress, task: TaskFile["task"]): TopicState {
     const state = noteMethod(progress);
     const measured = measuredOf(task);
@@ -541,6 +572,10 @@ export function stateOfTopic(progress: Progress, task: TaskFile["task"]): TopicS
             // What the task measured when it opened: the test starts from it.
             measured: measured as unknown as JsonValue,
             accepted: state.accepted,
+            // Each safety constant and the signed facts its rules bound it by, before the first submission (2026-09-29, the replays:
+            // the factory cited a fact of the card that does not bound the constant, at the first try of every task, and learned which
+            // one only from the refusal); shown when the spec says so, so a fork can run without it to compare.
+            ...(FORMAT.safetyBounds ? { safetyBounds: safetyBoundsOf() as unknown as JsonValue } : {}),
         } as JsonValue,
         // The last refused submission stays whole in the evaluation until one is accepted: the model corrects it, whatever it read in between.
         // The proposal shown is the draft kept whole, which a revision applies to; the refused input only when no draft is kept (a refusal before the topic's check: the schema).
@@ -636,6 +671,8 @@ function viewsOf(progress: Progress, task: TaskFile["task"]): Record<string, () 
                 refused: refused(),
                 // Once the analysis of an aborted test is accepted: the changes the proposal must make.
                 analysed: state.analysis ? w("brief.analysed", { paths: state.analysis.changes.map((c) => c.path).join(", ") }) : "",
+                // Where the facts to cite are, when the state shows them.
+                bounds: FORMAT.safetyBounds ? w("brief.safetyBounds") : "",
             };
         },
     };
