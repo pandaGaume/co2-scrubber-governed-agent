@@ -410,10 +410,13 @@ function templatesOf(value: unknown): Record<string, string> {
 }
 
 /** An adaptation's problems: the file it may change, the patterns it cites, the patch applied, the file still what its reader needs. */
-export function adaptationProblems(input: unknown, patterns: Pattern[], format: ReflectionFormat = reflectionFormat()): { problems: string[]; before?: unknown; after?: unknown } {
+export function adaptationProblems(input: unknown, patterns: Pattern[], format: ReflectionFormat = reflectionFormat(), locked: string[] = []): { problems: string[]; before?: unknown; after?: unknown } {
     const a = (input ?? {}) as Partial<Adaptation>;
     const problems: string[] = [];
     const target = String(a.target ?? "").replace(/\\/g, "/");
+    // One adaptation of a file at a time (2026-09-29, the replays: adaptations for different mistakes rewrote the same instruction while
+    // one was being judged; none could be undone, and what helped could not be told from what did not).
+    if (locked.includes(target)) return { problems: [`${target} has an adaptation being judged: no other change of it until it is kept or undone`] };
     const never = format.never.find((n) => globMatches(n.pattern, target));
     if (never) return { problems: [`${target} never adapts: ${never.why}`] };
     if (!format.adaptable.some((g) => globMatches(g, target))) return { problems: [`${target} is not a file an adaptation may change (${format.adaptable.join(", ")})`] };
@@ -447,6 +450,19 @@ export function adaptationProblems(input: unknown, patterns: Pattern[], format: 
         // What an adaptation writes never copies a value of the library (2026-09-29, the replays: the reflection wrote the signed facts'
         // values into the factory's instructions, a second source for the same number, which lies once the card is changed and signed
         // again): it cites the fact by its id, and the value is read from the library.
+        // A replace in an instruction changes a passage, it does not rewrite the instruction (2026-09-29, the replays: whole briefs rewritten,
+        // which could not be undone once another change had come): what it takes out is at most 200 characters; to add, append.
+        for (const o of (a.ops ?? []) as PatchOp[]) {
+            if (o.op !== "replace" || typeof o.value !== "string") continue;
+            const prior = pointerGet(before, String(o.pointer ?? ""));
+            if (typeof prior !== "string") continue;
+            let head = 0;
+            while (head < prior.length && head < o.value.length && prior[head] === o.value[head]) head++;
+            let tail = 0;
+            while (tail < prior.length - head && tail < o.value.length - head && prior[prior.length - 1 - tail] === o.value[o.value.length - 1 - tail]) tail++;
+            const removed = prior.length - head - tail;
+            if (removed > 200) problems.push(`${target}: the replace at ${o.pointer} takes out ${removed} characters of the instruction: change a passage of at most 200, or append what is to be added`);
+        }
         // An instruction is not said twice (2026-09-29, the replays: four near-identical paragraphs appended, one per run, none of which helped).
         for (const o of (a.ops ?? []) as PatchOp[]) {
             if (o.op !== "append" || typeof o.value !== "string") continue;

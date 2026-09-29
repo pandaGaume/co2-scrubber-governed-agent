@@ -482,6 +482,24 @@ function reveal(line, text) {
     };
     requestAnimationFrame(tick);
 }
+/**
+ * Follows a line already written as the voice says it: a band under the words, as far as the audio is, the text left as it is.
+ * Said, the line keeps a mark, so the same sentence said again later lights the next one written, not this one.
+ */
+function follow(line) {
+    const tick = () => {
+        const shape = audio.wave();
+        if (!shape) {
+            line.style.setProperty("--said", "100%");
+            line.classList.add("said");
+            return;
+        }
+        line.style.setProperty("--said", `${Math.round(100 * shape.progress)}%`);
+        requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+}
+
 function voiceLine(text, cls = "") {
     const el = document.createElement("div");
     el.className = `line ${cls}`;
@@ -498,13 +516,14 @@ const audio = new AudioOutput(
     `board-${Math.random().toString(36).slice(2, 8)}`,
     {
         onPlay: (u) => {
-            // Mother's own lines are drawn as the station says them (mother-chat.js); the voice lights the one it plays instead of adding it again.
-            const drawn = [...voiceLog.querySelectorAll(".line[data-said]")].find((l) => l.dataset.said === (u.text ?? ""));
+            // Mother's own lines are drawn as the station says them (mother-chat.js), in their order; the voice lights the one it plays
+            // where it is, a band following the voice, instead of moving it to the end and writing it again (2026-09-29: a line the voice
+            // played late jumped below newer ones and was typed a second time, in the middle of the log).
+            const drawn = [...voiceLog.querySelectorAll(".line[data-said]")].reverse().find((l) => l.dataset.said === (u.text ?? "") && !l.classList.contains("said"));
             if (drawn) {
                 for (const l of voiceLog.querySelectorAll(".line.now")) l.classList.remove("now");
                 drawn.classList.add("now");
-                voiceLog.prepend(drawn);
-                reveal(drawn, u.text ?? "");
+                follow(drawn);
                 startMeter?.();
                 return;
             }

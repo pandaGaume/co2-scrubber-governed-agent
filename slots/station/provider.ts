@@ -376,7 +376,8 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
             return;
         }
         const patterns = observe(WORKSHOP_ROOT);
-        const { problems, before, after } = adaptationProblems(a, patterns);
+        const locked = underJudgement(WORKSHOP_ROOT, reflectionFormat().evaluateAfter ?? 2).map((e) => e.target);
+        const { problems, before, after } = adaptationProblems(a, patterns, reflectionFormat(), locked);
         const target = fromRoot(...String(a.target).split("/"));
         if (!problems.length && existsSync(target) && a.targetSha256 && sha256Of(readFileSync(target)) !== a.targetSha256) problems.push(`${a.target} changed since the reflection checked the adaptation`);
         if (problems.length) {
@@ -517,9 +518,11 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     // No new adaptation of a family while one of it is being judged: one change at a time, measured, never stacked.
                     const judging = underJudgement(WORKSHOP_ROOT, evaluateAfter);
                     const waiting = new Set(judging.flatMap((e) => e.families));
+                    // One adaptation of a file at a time: the patterns whose fix would touch a file being judged wait with it.
+                    const locked = [...new Set(judging.map((e) => e.target))];
                     for (const e of judging) say("mother.adaptation.judging", null, () => ({ n: e.n, target: e.target, since: mistakeRate(WORKSHOP_ROOT, judgedFamilies(e), "after", e.at).tasks, needed: evaluateAfter }));
                     const read = observe(WORKSHOP_ROOT).filter((p) => !focus || p.source.includes(focus));
-                    const patterns = read.filter((p) => !p.family || !waiting.has(p.family));
+                    const patterns = read.filter((p) => (!p.family || !waiting.has(p.family)) && (!p.target || !locked.includes(p.target)));
                     say("mother.reflection.read", null, () => ({ fork, count: patterns.length }));
                     const judgedNow = judged.map(({ entry }) => ({ n: entry.n, status: entry.status, why: entry.why ?? null }));
                     if (!patterns.length) return { fork, patterns, judged: judgedNow, judging: judging.map((e) => e.n), taskId: null, note: read.length ? "the patterns read are those of an adaptation being judged: nothing new meanwhile" : "no pattern in the traces: nothing to adapt" };
@@ -527,7 +530,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     const history = historyOf(WORKSHOP_ROOT, patterns.map((p) => p.family!).filter(Boolean));
                     const r = await client().call("factory", "request", {
                         objective: { required_outputs: [{ name: "adaptation", quantity: "Adaptation" }] },
-                        observations: { reflection: { patterns, history } },
+                        observations: { reflection: { patterns, history, locked } },
                         topics: ["reflection"],
                         ...(args.builder === "scripted" || args.builder === "reasoner" ? { builder: args.builder } : {}),
                         requestedBy: "station (reflection)",

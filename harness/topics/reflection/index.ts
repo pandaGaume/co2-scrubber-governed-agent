@@ -114,7 +114,8 @@ async function guardReflection(capabilityId: string, input: JsonValue, context: 
         .refusing.filter((g) => g.capabilities.includes(capabilityId))
         .map((g) => sayingText(g, w, views));
     if (refused.length || capabilityId !== "reflection.propose") return refused;
-    const { problems } = adaptationProblems(input, patternsOf(context.task), REFLECTION_FORMAT);
+    const locked = ((((context.task.observations ?? {}) as Record<string, unknown>)[REFLECTION_FORMAT.observation] as { locked?: string[] } | undefined)?.locked ?? []) as string[];
+    const { problems } = adaptationProblems(input, patternsOf(context.task), REFLECTION_FORMAT, locked);
     if (!problems.length) return [];
     const state = stateOf(context.progress);
     state.submissions.push({ n: state.submissions.length + 1, ok: false, problems });

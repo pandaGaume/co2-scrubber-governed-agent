@@ -108,6 +108,18 @@ describe("the adaptations of a fork: entered, judged, kept or undone, remembered
         assert.match(d.entry.why ?? "", /^kept: the mistake showed in 0 of the 2 task\(s\) of procedure since it was adopted, against 2 of 2 before/);
     });
 
+    it("one adaptation of a file at a time, and a replace changes a passage, never the whole instruction (2026-09-29, the replays: whole briefs rewritten while another was judged, none could be undone)", () => {
+        const patterns = [{ id: "p1", kind: "first-try-shape" as const, says: "", count: 2, source: "", target: "specs/procedure/words.json", detail: {} }];
+        const words = JSON.parse(readFileSync(path.join(process.cwd(), "specs", "procedure", "words.json"), "utf8")) as { brief: { procedure: string } };
+        const append = { target: "specs/procedure/words.json", ops: [{ op: "append", pointer: "/brief/procedure", value: " A step's speed is bounded by test.speedFloorPercent, never by a property of the device." }], reason: "x", evidence: ["p1"] };
+        assert.deepEqual(adaptationProblems(append, patterns, reflectionFormat()).problems, []);
+        assert.match(adaptationProblems(append, patterns, reflectionFormat(), ["specs/procedure/words.json"]).problems.join(), /has an adaptation being judged: no other change of it until it is kept or undone/);
+        const rewrite = { ...append, ops: [{ op: "replace", pointer: "/brief/procedure", value: "Stage 4 of 5. Write the procedure. {method} {presence} {start} {refused} {analysed}" }] };
+        assert.match(adaptationProblems(rewrite, patterns, reflectionFormat()).problems.join(), /takes out \d+ characters of the instruction: change a passage of at most 200, or append/);
+        const passage = { ...append, ops: [{ op: "replace", pointer: "/brief/procedure", value: words.brief.procedure.replace("Submit with procedure.submit.", "Submit it with procedure.submit, once its safety constants cite the facts that bound them.") }] };
+        assert.deepEqual(adaptationProblems(passage, patterns, reflectionFormat()).problems, [], "a passage changed: allowed");
+    });
+
     it("an adaptation that says again what the instruction already says is refused", () => {
         const said = "Every safety constant cites a fact of a signed library document by its id, never by a value or a calculation.";
         assert.ok(repeated(`Stage 4. ${said}`, " Each safety constant must cite a fact of a signed library document by its id, never a value or a calculation."));

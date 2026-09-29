@@ -7,7 +7,7 @@
     "observation": "reflection",
     "file": "adaptations/{n}.json",
     "repeatAt": 2,
-    "evaluateAfter": 2,
+    "evaluateAfter": 3,
     "adaptable": [
         "specs/*/playbook.json",
         "specs/*/*.playbook.json",

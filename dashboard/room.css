@@ -471,6 +471,8 @@ button.badge { font-family: var(--mono); cursor: pointer; }
 .voice-log .line { color: var(--teal-soft); text-wrap: pretty; }
 .voice-log .line .who { color: var(--muted-2); letter-spacing: 0.14em; text-transform: uppercase; font-size: 9px; margin-right: 7px; }
 .voice-log .line.now { color: var(--text); }
+/* A line of Mother's being said where it is written: a band under it, as far as the voice is. */
+.voice-log .line[data-said].now { background: linear-gradient(90deg, var(--line) var(--said, 0%), transparent var(--said, 0%)); border-radius: 3px; }
 .voice-log .line.info { color: var(--muted-2); font-family: var(--sans); font-size: 10.5px; }
 
 /* The slots as board.js polls them: a LED, a name, a version. Liveness, not a
