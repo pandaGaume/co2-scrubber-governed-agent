@@ -1,9 +1,9 @@
 {
-    "title": "Commissioning of the Lab's scrubber: the procedure factory learns from its refusals (play it in a fork started with --learn)",
+    "title": "Commissioning, the learning mechanics under test: a scripted factory that ignores its refusals, a scripted reflection (play it in a fork started with --learn scripted)",
     "version": 1,
     "status": "draft, not yet reviewed",
     "kind": "commissioning",
-    "note": "The learning scenario (2026-09-29): the same chain, but the procedure factory played by the scripts does not understand its refusals; it follows its written instructions. It writes a first step that stops the scrubber, is refused on the floor, and sends the same again, three times: the task ends STUCK. In a fork started with npm run fork -- run <id> --learn scripted, that end is the event: Mother reads the task's traces, the reflection writes the rule the factory kept breaking into its instructions (specs/procedure/words.json, the fork's copy), the station adopts it in the fork, and the factory, asked again, holds the floor from its first submission. Played with the models, the factories are the models, and what they learn is theirs to show.",
+    "note": "A test of the learning's mechanics, not a demonstration of learning (2026-09-29): both sides are scripts. The procedure factory's script does not understand its refusals and follows its written instructions: it sends a first step that stops the scrubber three times and its task ends STUCK. In a fork started with npm run fork -- run <id> --learn scripted, that end is the event: Mother reads the task's traces, the reflection's script writes the rule the factory kept breaking into its instructions (the fork's copy of specs/procedure/words.json), the station adopts it in the fork, and the factory, asked again, holds the floor from its first submission. What it proves is the chain (event, traces, pattern, proposal, guard, adoption in the fork, instructions read again); what a model learns is observed with the models, never scripted.",
     "world": "lab",
     "leak": false,
     "devices": "specs/commissioning-devices.json",

@@ -366,10 +366,15 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
                 notify();
                 p = await taskEnded(again.taskId, "The procedure factory");
             }
-            // Learning: a factory task that failed is the event (2026-09-29): Mother reads its traces, the reflection's adaptation of the
-            // factory's conduct is adopted in the fork, and the factory writes again, once, with its instructions as they now are.
-            if (learning && p.state !== "proposed") {
-                narrate(`Learning in the fork ${forkId()}: the procedure factory ended without a procedure (${String(p.manifest?.ended ?? p.state).slice(0, 140)}). I read its traces for a pattern.`);
+            // Learning: the end of a factory task is the event (2026-09-29): Mother reads its traces; the reflection's adaptation of the
+            // factory's conduct, when there is one, is adopted in the fork; a task that failed is asked again, once, with its instructions as they now are.
+            if (learning) {
+                const refused = (p.manifest?.steps ?? []).filter((x) => x.outcome === "refused").length;
+                narrate(
+                    p.state === "proposed"
+                        ? `Learning in the fork ${forkId()}: the procedure factory's task is over, with ${refused} refusal(s) on the way. I read its traces for a pattern.`
+                        : `Learning in the fork ${forkId()}: the procedure factory ended without a procedure (${String(p.manifest?.ended ?? p.state).slice(0, 140)}). I read its traces for a pattern.`,
+                );
                 const lastTask = loop(2).taskId!;
                 const reflected = await call<{ taskId: string | null; patterns: Array<{ id: string }> }>("station", "reflect", { builder: learning, focus: lastTask });
                 const entry: { at: string; patterns: string[]; taskId: string | null; state?: string; adopted?: boolean; after: string } = { at: new Date().toISOString(), patterns: reflected.patterns.map((x) => x.id), taskId: reflected.taskId, after: lastTask };
@@ -381,7 +386,7 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
                     entry.adopted = r.manifest?.proposal?.status === "adopted";
                     notify();
                 }
-                if (entry.adopted) {
+                if (entry.adopted && p.state !== "proposed") {
                     narrate("The procedure factory writes again, with its instructions as the fork adapted them.");
                     loop(2).status = "running";
                     notify();
