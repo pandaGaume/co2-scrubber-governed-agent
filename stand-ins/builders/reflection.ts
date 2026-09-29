@@ -59,7 +59,7 @@ export class ScriptedReflectionBuilder extends ScriptedBuilderBase {
                 // A factory refused again and again on the same points: the rule it broke goes into the instructions of the stage that
                 // calls the capability (the template of its words that names it), said once, so it is held from the first submission.
                 for (const p of patternsOf(task)) {
-                    if ((p.kind !== "refusal-streak" && p.kind !== "first-try-repeat" && p.kind !== "first-try-category") || !p.target) continue;
+                    if ((p.kind !== "refusal-streak" && p.kind !== "first-try-repeat" && p.kind !== "first-try-shape" && p.kind !== "first-try-category") || !p.target) continue;
                     const capability = String(p.detail.capability ?? "");
                     const words = JSON.parse(readFileSync(fromRoot(...p.target.split("/")), "utf8")) as Record<string, unknown>;
                     const found = templateNaming(words, capability);

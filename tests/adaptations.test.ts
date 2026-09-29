@@ -10,7 +10,10 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { enterAdoption, historyOf, judge, mistakeRate, readLedger, underJudgement, undo, writeLedger } from "../lib/adaptations.js";
-import { adaptationProblems, repeated, reflectionFormat, showsFamily } from "../lib/reflection.js";
+import { createHash } from "node:crypto";
+import { adaptationProblems, judgedOn, repeated, reflectionFormat, shapesOf, showsFamily } from "../lib/reflection.js";
+
+const familyHash = (s: string): string => createHash("sha256").update(s).digest("hex").slice(0, 12);
 
 const FAMILY = "first-try-category:procedure:justification";
 const wrong = { capability: "procedure.submit", outcome: "refused", reason: "procedure refused: justification: steps.1.speedPercent = 40 cites scrubber.minimumSpeedElevated (40 percent), which the signed rules do not bound it by" };
@@ -78,6 +81,31 @@ describe("the adaptations of a fork: entered, judged, kept or undone, remembered
         const kept = judge(workshop, 2).find((x) => x.entry.n === 2);
         assert.equal(kept?.decision, "keep");
         assert.match(kept?.entry.why ?? "", /^kept: the mistake showed in 2 of the 4 task\(s\) of procedure since it was adopted, against 2 of 2 before/);
+    });
+
+    it("judges on the form of the mistake it answers, not its whole category (2026-09-29, the replays: an adaptation that cured a wrong fact's citation was undone for a justification missing)", () => {
+        const wrongOther = { capability: "procedure.submit", outcome: "refused", reason: "procedure refused: justification: limits.co2MaxPpm = 3000 cites test.startHeadroomPpm (200 ppm), which the signed rules do not bound it by; the signed rules bound it by test.co2AbortCeilingPpm = 3200 ppm (at or below it)" };
+        const missing = { capability: "procedure.submit", outcome: "refused", reason: 'procedure refused: justification: steps.2.speedPercent = 100 is a safety constant with no justification (a justification names it by its path, constant "steps.2.speedPercent"): cite the fact' };
+        assert.deepEqual(shapesOf(wrong.reason), ["justification: * = # cites *, which the signed rules do not bound it by"]);
+        assert.deepEqual(shapesOf(wrongOther.reason), shapesOf(wrong.reason), "another field, another fact: the same form of mistake");
+        assert.notDeepEqual(shapesOf(missing.reason), shapesOf(wrong.reason), "a justification missing is another mistake");
+        const shape = `first-try-shape:procedure:${familyHash(shapesOf(wrong.reason)[0])}`;
+        assert.deepEqual(judgedOn([FAMILY, shape]), [shape], "judged on the most precise it cites");
+        const shop = path.join(root, "shape");
+        const at = (s: number) => new Date(Date.now() + s * 1000).toISOString();
+        const put = (id: string, first: object, startedAt: string) => {
+            mkdirSync(path.join(shop, id), { recursive: true });
+            writeFileSync(path.join(shop, id, "manifest.json"), JSON.stringify({ topic: "procedure", startedAt, ended: "contract held", steps: [first, right] }));
+        };
+        put("t-0001", wrong, past(20));
+        put("t-0002", wrongOther, past(10));
+        const entry = enterAdoption(shop, { target: "specs/procedure/words.json", ops: [{ op: "append", pointer: "/brief/procedure", value: " x." }], reason: "the fact each constant is bounded by", evidence: ["p"] }, [FAMILY, shape], { brief: { procedure: "y." } }, null, null);
+        assert.deepEqual(entry.judgedOn, [shape]);
+        put("t-0003", missing, at(5));
+        put("t-0004", { capability: "procedure.submit", outcome: "refused", reason: 'procedure refused: shape: quantity "Air change rate": no quantity "AirChange" in the unit system' }, at(6));
+        const [d] = judge(shop, 2);
+        assert.equal(d.decision, "keep", "other mistakes came, not the one it answers");
+        assert.match(d.entry.why ?? "", /^kept: the mistake showed in 0 of the 2 task\(s\) of procedure since it was adopted, against 2 of 2 before/);
     });
 
     it("an adaptation that says again what the instruction already says is refused", () => {

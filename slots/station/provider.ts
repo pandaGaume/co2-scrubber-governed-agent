@@ -49,7 +49,7 @@ import { notHolder, roleOf, ROLES_FILE, SIGNATORY } from "../../lib/roles.js";
 import { Playbook, playbookProblems, type PlaybookFile } from "../../harness/core/conduct.js";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { adaptationProblems, observe, reflectionFormat, type Adaptation } from "../../lib/reflection.js";
-import { enterAdoption, historyOf, judge, mistakeRate, readLedger, underJudgement, undo, writeLedger } from "../../lib/adaptations.js";
+import { enterAdoption, historyOf, judge, judgedFamilies, mistakeRate, readLedger, underJudgement, undo, writeLedger } from "../../lib/adaptations.js";
 import { snapshotAt } from "../../lib/fork.js";
 import * as path from "node:path";
 import { McpGrammar } from "@cyanmycelium/mcp-core";
@@ -517,7 +517,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     // No new adaptation of a family while one of it is being judged: one change at a time, measured, never stacked.
                     const judging = underJudgement(WORKSHOP_ROOT, evaluateAfter);
                     const waiting = new Set(judging.flatMap((e) => e.families));
-                    for (const e of judging) say("mother.adaptation.judging", null, () => ({ n: e.n, target: e.target, since: mistakeRate(WORKSHOP_ROOT, e.families, "after", e.at).tasks, needed: evaluateAfter }));
+                    for (const e of judging) say("mother.adaptation.judging", null, () => ({ n: e.n, target: e.target, since: mistakeRate(WORKSHOP_ROOT, judgedFamilies(e), "after", e.at).tasks, needed: evaluateAfter }));
                     const read = observe(WORKSHOP_ROOT).filter((p) => !focus || p.source.includes(focus));
                     const patterns = read.filter((p) => !p.family || !waiting.has(p.family));
                     say("mother.reflection.read", null, () => ({ fork, count: patterns.length }));

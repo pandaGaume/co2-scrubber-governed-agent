@@ -16,7 +16,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
 import { fromRoot } from "./paths.js";
-import { applyPatch, pointerGet, showsFamily, tasksOf, type PatchOp } from "./reflection.js";
+import { applyPatch, judgedOn, pointerGet, showsFamily, tasksOf, type PatchOp } from "./reflection.js";
 
 export interface LedgerEntry {
     n: number;
@@ -25,6 +25,8 @@ export interface LedgerEntry {
     reason: string;
     evidence: string[];
     families: string[];
+    /** What it is judged on: the most precise of its families (the same form of mistake rather than its category). */
+    judgedOn?: string[];
     changes: Array<{ pointer: string; op: PatchOp["op"]; before: unknown; after: unknown }>;
     /** How often the families' mistake showed in the tasks of the topic before it was adopted. */
     baseline: { tasks: number; withMistake: number };
@@ -56,6 +58,9 @@ export function writeLedger(workshop: string, entries: LedgerEntry[]): void {
 
 const topicOf = (family: string): string => family.split(":")[1] ?? "";
 
+/** What an adoption is judged on: the families fixed when it was adopted, or the most precise of its families. */
+export const judgedFamilies = (e: Pick<LedgerEntry, "families" | "judgedOn">): string[] => e.judgedOn ?? judgedOn(e.families);
+
 /** How often a family's mistake shows in the workshop's tasks of its topic, before or after a moment. */
 export function mistakeRate(workshop: string, families: string[], side: "before" | "after", at: string): { tasks: number; withMistake: number } {
     const t = Date.parse(at);
@@ -82,14 +87,14 @@ export function enterAdoption(workshop: string, a: { target: string; ops: PatchO
         doc = applyPatch(doc, [o]);
         return { pointer: o.pointer, op: o.op, before: was, after: pointerGet(doc, o.pointer) };
     });
-    const entry: LedgerEntry = { n: entries.length + 1, at, target: a.target, reason: a.reason, evidence: a.evidence, families, changes, baseline: mistakeRate(workshop, families, "before", at), reflectionTask, commit, status: "adopted" };
+    const entry: LedgerEntry = { n: entries.length + 1, at, target: a.target, reason: a.reason, evidence: a.evidence, families, changes, judgedOn: judgedOn(families), baseline: mistakeRate(workshop, judgedOn(families), "before", at), reflectionTask, commit, status: "adopted" };
     writeLedger(workshop, [...entries, entry]);
     return entry;
 }
 
 /** The adoptions being judged: adopted, not yet decided, with fewer tasks of their topic since than the judgement needs. */
 export function underJudgement(workshop: string, evaluateAfter: number): LedgerEntry[] {
-    return readLedger(workshop).filter((e) => e.status === "adopted" && mistakeRate(workshop, e.families, "after", e.at).tasks < evaluateAfter);
+    return readLedger(workshop).filter((e) => e.status === "adopted" && mistakeRate(workshop, judgedFamilies(e), "after", e.at).tasks < evaluateAfter);
 }
 
 /**
@@ -100,8 +105,8 @@ export function underJudgement(workshop: string, evaluateAfter: number): LedgerE
 export function judge(workshop: string, evaluateAfter: number, entries: LedgerEntry[] = readLedger(workshop)): Array<{ entry: LedgerEntry; decision: "keep" | "undo" }> {
     const out: Array<{ entry: LedgerEntry; decision: "keep" | "undo" }> = [];
     for (const e of entries) {
-        if (e.status !== "adopted" || !e.families.some((f) => ["first-try-category", "first-try-repeat", "stuck", "refusal-streak"].includes(f.split(":")[0]))) continue;
-        const since = mistakeRate(workshop, e.families, "after", e.at);
+        if (e.status !== "adopted" || !judgedFamilies(e).some((f) => ["first-try-shape", "first-try-category", "first-try-repeat", "stuck", "refusal-streak"].includes(f.split(":")[0]))) continue;
+        const since = mistakeRate(workshop, judgedFamilies(e), "after", e.at);
         if (since.tasks < evaluateAfter) continue;
         const before = e.baseline.tasks ? e.baseline.withMistake / e.baseline.tasks : 1;
         const after = since.withMistake / since.tasks;

@@ -47,7 +47,7 @@ export const reflectionFormat = (): ReflectionFormat => JSON.parse(readFileSync(
 /** A pattern of the traces, with what it rests on and the file its fix would touch. */
 export interface Pattern {
     id: string;
-    kind: "abort-repeat" | "refusal-streak" | "stuck" | "first-try-repeat" | "first-try-category";
+    kind: "abort-repeat" | "refusal-streak" | "stuck" | "first-try-repeat" | "first-try-shape" | "first-try-category";
     says: string;
     count: number;
     /** The run or the task it was read in. */
@@ -95,6 +95,7 @@ export function observe(workshop: string, format: Pick<ReflectionFormat, "repeat
     // The same kind of mistake at the first try, whatever the field (2026-09-29, the replays: four tasks of four refused at their first
     // submission on a safety constant's justification, each on another field): by topic and kind of refusal, with what each task was told.
     const firstKinds = new Map<string, { topic: string; kind: string; capability: string; examples: Array<{ task: string; reason: string }> }>();
+    const firstShapes = new Map<string, { topic: string; shape: string; capability: string; examples: Array<{ task: string; reason: string }> }>();
     if (existsSync(workshop))
         for (const task of readdirSync(workshop).filter((d) => /^t-/.test(d)).sort()) {
             const m = readJson<{ topic: string; ended: string | null; steps: Array<{ capability: string | null; outcome: string; reason: string | null }> }>(path.join(workshop, task, "manifest.json"));
@@ -131,10 +132,28 @@ export function observe(workshop: string, format: Pick<ReflectionFormat, "repeat
                     c.examples.push({ task, reason: first.reason ?? "" });
                     firstKinds.set(`${m.topic}|${kind}`, c);
                 }
+                for (const shape of shapesOf(first.reason)) {
+                    const c = firstShapes.get(`${m.topic}|${shape}`) ?? { topic: m.topic, shape, capability: first.capability!, examples: [] };
+                    c.examples.push({ task, reason: first.reason ?? "" });
+                    firstShapes.set(`${m.topic}|${shape}`, c);
+                }
             }
             if (/^STUCK/.test(m.ended ?? ""))
                 patterns.push({ id: `stuck:${task}`, kind: "stuck", says: `task ${task} (${m.topic}) ended ${String(m.ended).slice(0, 300)}`, count: 1, source: `${task}/manifest.json`, target: existsSync(fromRoot("specs", m.topic, "words.json")) ? `specs/${m.topic}/words.json` : null, detail: { task, topic: m.topic, ended: m.ended } });
         }
+    // The same form of mistake at the first try, whatever the field (2026-09-29, the replays: the category mixed a wrong fact cited with a
+    // justification missing, and an adaptation that cured the first was judged on the second): what a precise adaptation answers.
+    for (const c of firstShapes.values())
+        if (c.examples.length >= at)
+            patterns.push({
+                id: `first-try-shape:${c.topic}:${c.examples.at(-1)!.task}:${createHash("sha256").update(c.shape).digest("hex").slice(0, 8)}`,
+                kind: "first-try-shape",
+                says: `the first submission of ${c.examples.length} tasks (${c.topic}) was refused on the same form of mistake, "${c.shape}": ${c.examples.map((e) => `${e.task}: ${e.reason.replace(/^[a-z]+ refused:\s*/i, "").slice(0, 160)}`).join(" | ")}`,
+                count: c.examples.length,
+                source: c.examples.map((e) => `${e.task}/manifest.json`).join(" "),
+                target: existsSync(fromRoot("specs", c.topic, "words.json")) ? `specs/${c.topic}/words.json` : null,
+                detail: { topic: c.topic, shape: c.shape, capability: c.capability, reason: c.examples.at(-1)!.reason, examples: c.examples.map((e) => ({ task: e.task, reason: e.reason.slice(0, 400) })) },
+            });
     for (const c of firstKinds.values())
         if (c.examples.length >= at)
             patterns.push({
@@ -168,10 +187,42 @@ function mistakeKey(topic: string, reason: string | null): string {
     return `${topic}|${[...new Set(parts)].sort().join("|")}`;
 }
 
+/**
+ * The forms of the mistakes a refusal says: each problem's words, its fields, ids, quotes and numbers taken out, up to its first
+ * clause ("justification: * = # cites *, which the signed rules do not bound it by"): the same form, whatever the field.
+ */
+export function shapesOf(reason: string | null): string[] {
+    // A problem with a kind is a mistake; a clause without one ("the signed rules bound it by ...") is what the guard adds to it.
+    const shapes = problemsOfReason(reason ?? "").filter((x) => x.kind).map((x) =>
+        x.says
+            .split(";")[0]
+            .replace(/"[^"]*"/g, "…")
+            .replace(/\([^)]*\)/g, "")
+            .replace(/\b[A-Za-z_][\w-]*(\.[\w*-]+)+\b/g, "*")
+            .replace(/-?\d+(\.\d+)?/g, "#")
+            .replace(/\s+/g, " ")
+            .replace(/\s+([,:])/g, "$1")
+            .trim()
+            .slice(0, 160),
+    );
+    return [...new Set(shapes.filter(Boolean))];
+}
+
+/** The most precise of an adaptation's families, what it is judged on: the same form of mistake over the same field, the category last. */
+export function judgedOn(families: string[]): string[] {
+    for (const kind of ["first-try-shape", "first-try-repeat", "first-try-category", "refusal-streak", "stuck"]) {
+        const found = families.filter((f) => f.startsWith(`${kind}:`));
+        if (found.length) return found;
+    }
+    return families;
+}
+
 /** A pattern's family: its kind and what it is about, without the task or run it was last read in. */
 export function familyOf(p: Pick<Pattern, "kind" | "detail">): string {
-    const d = p.detail as { topic?: string; capability?: string; kind?: string; condition?: string; key?: string };
+    const d = p.detail as { topic?: string; capability?: string; kind?: string; condition?: string; key?: string; shape?: string };
     switch (p.kind) {
+        case "first-try-shape":
+            return `first-try-shape:${d.topic}:${createHash("sha256").update(String(d.shape)).digest("hex").slice(0, 12)}`;
         case "abort-repeat":
             return `abort-repeat:${d.condition}`;
         case "refusal-streak":
@@ -209,9 +260,10 @@ export function tasksOf(workshop: string): Array<{ task: string; manifest: TaskT
  */
 export function showsFamily(m: TaskTrace, family: string): boolean | null {
     const [kind, topic, rest] = family.split(":");
-    if (!["first-try-category", "first-try-repeat", "stuck", "refusal-streak"].includes(kind) || m.topic !== topic) return null;
+    if (!["first-try-shape", "first-try-category", "first-try-repeat", "stuck", "refusal-streak"].includes(kind) || m.topic !== topic) return null;
     const first = m.steps.find((s) => s.outcome === "refused" && s.capability);
     if (kind === "stuck") return /^STUCK/.test(m.ended ?? "");
+    if (kind === "first-try-shape") return Boolean(first && shapesOf(first.reason).some((s) => createHash("sha256").update(s).digest("hex").slice(0, 12) === rest));
     if (kind === "first-try-category") return Boolean(first && problemsOfReason(first.reason ?? "").some((x) => x.kind === rest));
     if (kind === "first-try-repeat") {
         if (!first) return false;
