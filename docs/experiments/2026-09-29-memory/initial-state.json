@@ -1,0 +1,45 @@
+{
+  "recordedAt": "2026-09-29T19:59:54.732Z",
+  "fork": "exp2-train",
+  "repositoryCommit": "6e8badb9c0d3e87c0a46df1f92c1e532fd903e29",
+  "model": "claude-sonnet-5-5, maxTokens 8192",
+  "witnessC": true,
+  "memorySettings": {
+    "title": "The memory of the factories: episodes, the working memory, consolidation, the long-term memory",
+    "note": "2026-09-29, the memory audit (lib/memory.ts, lib/working-memory.ts, harness/core/episodes.ts). The manifests are the ground truth; an episode is a task's submissions read from them; the working memory is the last episodes of a topic, rebuilt from the manifests; the long-term memory is what was learned from them, consolidated: a file per domain in the fork's workshop (file), never the topic's words. A factory reads, at the stage that calls a capability, the episodes and the learned entries about it (shown); previousTasks false shows it only this task's episode, and longTerm.read false keeps the learned entries out of its state (ablations). A reflection's entry is a candidate until the working memory holds enough failures of its form and enough successes that answered it (trial); in trial it is in force, and after judgeAfter tasks of its topic it is consolidated when its mistake shows less often than before, rejected otherwise. Never adaptable by the reflection (specs/harness/**).",
+    "workingMemory": {
+      "size": 10,
+      "shown": 5,
+      "previousTasks": false
+    },
+    "longTerm": {
+      "read": true
+    },
+    "consolidation": {
+      "trial": {
+        "failures": 2,
+        "successes": 1
+      },
+      "judgeAfter": 3
+    },
+    "file": "memory/{topic}.json",
+    "domains": {
+      "procedure": "procedure_authoring",
+      "playbook": "playbook_authoring",
+      "graph": "twin_building",
+      "code": "node_writing",
+      "onnx": "model_fitting"
+    }
+  },
+  "ledger": [],
+  "memoryFile": false,
+  "tasks": 0,
+  "sha256": {
+    "specs/procedure/words.json": "976cba19c795bca264ca2cfe43f74bd80608a886fd4693d109df572833f892a1",
+    "specs/procedure/prompt.md": "4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "harness/core/socle.md": "d7cee0fbcdf6d13fb437980eef7f44dfbca33986a69bf0b118da9bd8b83b7ecc",
+    "guard (dist/harness/topics/procedure/check.js)": "7593d238c767385f4faf4a173bfcc0c3e03fa0b9deb651002a2d8bfc585dccd3"
+  },
+  "wordsEqualRepository": true,
+  "trainingDuring": "previous tasks working memory OFF (so the baseline failures are not corrected in context), long-term memory read ON (the trial is measured), reflection after each task (station.reflect, Sonnet)"
+}

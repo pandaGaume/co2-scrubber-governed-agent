@@ -1,0 +1,78 @@
+[
+  {
+    "variant": "t1",
+    "task": "t-2026-09-29-0001",
+    "firstJudged": {
+      "capability": "procedure.submit",
+      "judged": "accepted",
+      "reason": null,
+      "outputTokens": 4357
+    },
+    "steps": 11,
+    "inputTokens": 73919,
+    "outputTokens": 5763,
+    "maxOutputInOneStep": 4357,
+    "truncations": 0,
+    "speedReferences": [
+      "steps.1.speedPercent <- test.speedFloorPercent",
+      "steps.2.speedPercent <- test.speedFloorPercent"
+    ]
+  },
+  {
+    "variant": "t2",
+    "task": "t-2026-09-29-0002",
+    "firstJudged": {
+      "capability": "procedure.submit",
+      "judged": "accepted",
+      "reason": null,
+      "outputTokens": 6037
+    },
+    "steps": 9,
+    "inputTokens": 59276,
+    "outputTokens": 7006,
+    "maxOutputInOneStep": 6037,
+    "truncations": 0,
+    "speedReferences": [
+      "steps.1.speedPercent <- test.speedFloorPercent (commissioning-test-safety, signed)",
+      "steps.2.speedPercent <- test.speedFloorPercent (commissioning-test-safety, signed)"
+    ]
+  },
+  {
+    "variant": "t3",
+    "task": "t-2026-09-29-0003",
+    "firstJudged": {
+      "capability": "procedure.submit",
+      "judged": "accepted",
+      "reason": null,
+      "outputTokens": 4814
+    },
+    "steps": 10,
+    "inputTokens": 79284,
+    "outputTokens": 6822,
+    "maxOutputInOneStep": 4814,
+    "truncations": 0,
+    "speedReferences": [
+      "steps.1.speedPercent <- test.speedFloorPercent",
+      "steps.2.speedPercent <- test.speedFloorPercent"
+    ]
+  },
+  {
+    "variant": "t4",
+    "task": "t-2026-09-29-0004",
+    "firstJudged": {
+      "capability": "procedure.submit",
+      "judged": "refused",
+      "reason": "procedure refused: justification: limits.co2MaxPpm: \"test.co2AbortCeilingPpm (at most 3200); test.startHeadroomPpm (start 900 needs 200 headroom)\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them); the signed rules bound it by test.co2AbortCeilingPp",
+      "outputTokens": 4901
+    },
+    "steps": 10,
+    "inputTokens": 89120,
+    "outputTokens": 6286,
+    "maxOutputInOneStep": 4901,
+    "truncations": 0,
+    "speedReferences": [
+      "steps.1.speedPercent <- test.speedFloorPercent",
+      "steps.2.speedPercent <- test.speedFloorPercent; scrubber.effectiveFlowAtFull 1 m3/min"
+    ]
+  }
+]

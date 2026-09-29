@@ -1,0 +1,7 @@
+t1 t-2026-09-29-0001: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 11; tokens in 73919 out 5763 (max 4357); memory seen: 0 learned, 0 previous episode(s)
+   reflection: 0 pattern(s); memory []
+t2 t-2026-09-29-0002: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 9; tokens in 59276 out 7006 (max 6037); memory seen: 0 learned, 0 previous episode(s)
+   reflection: 0 pattern(s); memory []
+t3 t-2026-09-29-0003: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 10; tokens in 79284 out 6822 (max 4814); memory seen: 0 learned, 0 previous episode(s)
+   reflection: 0 pattern(s); memory []
+exit 127
