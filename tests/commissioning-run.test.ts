@@ -200,7 +200,7 @@ describe("the commissioning chain played by the slot, the commander deciding", (
     });
 });
 
-describe("a run that starts with the library unsigned, the commander signing in Mother's chat", () => {
+describe("a run that starts with the library unsigned, an authorised signatory signing in Mother's chat", () => {
     let local: LocalBroker;
     let slots: PublishedSlot<object>[];
     let operator: Broker;
@@ -252,7 +252,7 @@ describe("a run that starts with the library unsigned, the commander signing in 
         rmSync(recipesDir, { recursive: true, force: true });
     });
 
-    it("a run with the library unsigned: the procedure is refused, Mother asks the commander to sign the safety card with its values, no standing order signs it; signed, the factory writes again; the repository's signatures are given back at the end", async () => {
+    it("a run with the library unsigned: the procedure is refused, Mother asks the role authorised-signatory to sign the safety card with its values, no standing order signs it and the commander may not; signed, the factory writes again; the repository's signatures are given back at the end", async () => {
         type Facts = { facts: Array<{ id: string; signed: { by: string; valid: boolean } | null }> };
         const card = async () => (await ok<Facts>("library", "facts", { id: "commissioning-test-safety" })).facts[0].signed;
         assert.equal((await card())?.by, "the test suite", "the suite's own signature, before the run");
@@ -268,8 +268,14 @@ describe("a run that starts with the library unsigned, the commander signing in 
         assert.equal(q.context.document, "commissioning-test-safety");
         assert.ok(q.context.facts.some((f) => f.id === "test.co2AbortCeilingPpm" && f.value === 3200 && f.bound === "upper"), "the card's values are shown to the commander");
         await ok("station", "questions_policy", { mode: "ask" });
-        await ok("station", "answer", { questionId: q.id, choice: "sign", by: "commander-test", how: "script" });
-        assert.match((await card())?.by ?? "", /commander, from the control room/);
+        // The question is the role's: its holders said with it, the commander refused, a signatory's answer signs in their name.
+        assert.equal((q as Question & { role?: string }).role, "authorised-signatory");
+        assert.deepEqual((q as Question & { holders?: string[] }).holders, ["signatory-test", "a reviewer"]);
+        const commander = await operator.call("station", "answer", { questionId: q.id, choice: "sign", by: "commander-test", how: "script" });
+        assert.equal(commander.ok, false);
+        assert.match(String(commander.error), /"commander-test" does not hold the role authorised-signatory/);
+        await ok("station", "answer", { questionId: q.id, choice: "sign", by: "signatory-test", how: "script" });
+        assert.equal((await card())?.by, "signatory-test");
         // Signed: the factory writes again, the procedure passes, the run waits for the authorisation.
         const waiting = await until("the authorisation", (r) => r.loops[3].status === "waiting");
         assert.equal(waiting.status, "running", waiting.ended ?? "");

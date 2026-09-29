@@ -1,0 +1,13 @@
+{
+    "note": "Who may decide what (2026-09-29): a question the station asks goes to a role, not to whoever answers first, and a signature is a signatory's. A role says what it does and who holds it, by name; a person answering a question for a role, or signing, is refused unless the role names them. No standing order answers for a role. Changing a holder is a reviewed change of this file.",
+    "roles": {
+        "authorised-signatory": {
+            "does": "signs a library document as reviewed: a safety card with its facts and rules, a playbook that conducts the factories or the commissioning",
+            "holders": ["Guillaume Pelletier"]
+        },
+        "commander": {
+            "does": "authorises a test, decides after an aborted test, answers the factories' questions",
+            "holders": []
+        }
+    }
+}

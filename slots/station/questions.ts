@@ -49,6 +49,9 @@ export interface Question {
     kind: string;
     question: string;
     options: QuestionOption[];
+    /** The role the question is for (`specs/station/roles.json`): only a person it names answers, and no standing order does; its holders as they were when asked. */
+    role: string | null;
+    holders?: string[];
     /** What the commander needs to decide: the contract, the artifact, the reason. */
     context: JsonValue;
     resume: Resume | null;
@@ -68,7 +71,9 @@ export interface QuestionsPolicy {
 export const DEFAULT_POLICY: QuestionsPolicy = { mode: "ask", byKind: {} };
 
 /** What the policy says for a question of this kind: wait, or answer with which choice. */
-export function standingOrder(policy: QuestionsPolicy, kind: string, options: QuestionOption[]): { mode: "ask" } | { mode: "auto"; choice: string } {
+export function standingOrder(policy: QuestionsPolicy, kind: string, options: QuestionOption[], role: string | null = null): { mode: "ask" } | { mode: "auto"; choice: string } {
+    // A question for a role is answered by a person who holds it (2026-09-29): a standing order holds no role.
+    if (role) return { mode: "ask" };
     // A signature is a person's act: no standing order signs a document (2026-09-28). Nor does one send a test back after it was aborted:
     // a person decides it, with the analysis of what stopped it (2026-09-29).
     if (kind === "sign" || kind === "recover") return { mode: "ask" };

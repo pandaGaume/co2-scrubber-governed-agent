@@ -220,6 +220,11 @@ describe("the library's typed facts, through the broker", () => {
         assert.ok(!stale.ok);
         assert.match(String(stale.error), /changed since it was read: read it again before signing/);
         assert.equal((await review("station-topology")).signature, null);
+        // A person the role authorised-signatory does not name signs nothing, whatever they read (2026-09-29).
+        const outsider = await broker.call("library", "sign", { id: "station-topology", by: "a passer-by", digest: topology.digest });
+        assert.ok(!outsider.ok);
+        assert.match(String(outsider.error), /"a passer-by" does not hold the role authorised-signatory/);
+        assert.equal((await review("station-topology")).signature, null);
         const signed = await broker.call("library", "sign", { id: "station-topology", by: "a reviewer", digest: topology.digest });
         assert.ok(signed.ok, signed.error);
         assert.deepEqual([(await review("station-topology")).signature?.by, (await review("station-topology")).signature?.valid], ["a reviewer", true]);

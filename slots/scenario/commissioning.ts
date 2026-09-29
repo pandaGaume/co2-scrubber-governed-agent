@@ -38,6 +38,7 @@ import type { Device } from "../station/registry.js";
 import { errorMessage } from "../../lib/files.js";
 import { loadPlaybook, sayingText, type Saying } from "../../harness/core/conduct.js";
 import { loadWords, say } from "../../harness/core/words.js";
+import { SIGNATORY } from "../../lib/roles.js";
 
 /** What the commissioning does once a test ended, unless the document names another playbook; and what that playbook says. */
 export const RECOVERY_PLAYBOOK = "specs/commissioning/recovery.playbook.json";
@@ -262,7 +263,7 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
             notify();
             narrate(`The procedure factory is writing the test for the scrubber: ${builder === "scripted" ? "the script" : "a model"} at work, the harness checking each step.`);
             let p = await taskEnded(reqP.taskId, "The procedure factory");
-            // A procedure refused because its safety limits cite unsigned documents: Mother asks the commander to sign each, then the factory writes again (2026-09-28, the signature's demonstration).
+            // A procedure refused because its safety limits cite unsigned documents: Mother asks an authorised signatory to sign each (the role, 2026-09-29), then the factory writes again (2026-09-28, the signature's demonstration).
             // The documents are the safety card when it is unsigned, and every one the task's refusals and its end named as unsigned (a model may cite the scrubber's datasheet): up to three rounds.
             const unsignedOf = async (s: TaskStatus): Promise<string[]> => {
                 const steps = (s.manifest?.steps ?? []) as Array<{ reason?: string | null }>;
@@ -277,24 +278,25 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
             };
             const askToSign = async (id: string): Promise<void> => {
                 const facts = (await call<{ facts: Array<{ id: string; value: number; unit: string; bound?: string; kind?: string; reference?: string; says?: string }> }>("library", "facts", { id })).facts;
-                narrate(`The procedure factory could not justify its safety limits: the document ${id} is not signed. Commander, review it in my chat and sign it, or not.`);
+                narrate(`The procedure factory could not justify its safety limits: the document ${id} is not signed. It waits for an authorised signatory, who reviews it in my chat or on the library page and signs it, or not.`);
                 const asked = await call<{ questionId: string }>("station", "ask", {
                     from: "scenario",
                     kind: "sign",
                     question: `The document ${id} is not signed: no procedure's safety limits can be justified by it. Review its values and sign it as valid?`,
                     options: [{ id: "sign", label: "sign it as valid" }, { id: "not-now", label: "not now" }],
+                    role: SIGNATORY,
                     context: { document: id, facts: facts.map((f) => ({ id: f.id, value: f.value, unit: f.unit, bound: f.bound ?? null, kind: f.kind ?? null, reference: f.reference ?? null, says: f.says ?? null })) },
                     resume: { slot: "library", tool: "sign", args: { id } },
                 });
-                wait(2, `the commander's signature of ${id} (Mother's question in her chat)`);
+                wait(2, `an authorised signatory's signature of ${id} (Mother's question in her chat)`);
                 const t0 = Date.now();
                 for (;;) {
                     const f = await call<{ facts: Array<{ signed?: { valid: boolean } | null }> }>("library", "facts", { id }).catch(() => ({ facts: [] }));
                     if (f.facts[0]?.signed?.valid) break;
                     const read = await (await operator.session("station")).request<{ contents: Array<{ text: string }> }>("resources/read", { uri: "station://questions" });
                     const mine = (JSON.parse(read.contents[0].text) as Array<{ id: string; status: string; answer?: { choice?: string } | null }>).find((x) => x.id === asked.questionId);
-                    if (mine && mine.status !== "open" && mine.answer?.choice !== "sign") throw new Error(`the commander did not sign ${id}: no procedure can pass`);
-                    if (Date.now() - t0 > waitMs) throw new Error(`the commander did not decide on ${id} in ${waitMs} ms`);
+                    if (mine && mine.status !== "open" && mine.answer?.choice !== "sign") throw new Error(`the authorised signatory did not sign ${id}: no procedure can pass`);
+                    if (Date.now() - t0 > waitMs) throw new Error(`no authorised signatory decided on ${id} in ${waitMs} ms`);
                     await sleep(1000);
                 }
                 narrate(`The document ${id} is signed.`);

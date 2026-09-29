@@ -4,7 +4,7 @@
  * so the runner ends with the message instead of waiting. The server itself
  * treats the same case as a degraded mode (`slots/run-all.ts`).
  */
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { startAll } from "../../slots/run-all.js";
@@ -21,6 +21,11 @@ export async function startAllOrFail(port: number): Promise<{ broker: LocalBroke
     process.env.STATION_VOICE ??= "off";
     process.env.SCENARIO_SECONDS_PER_MINUTE ??= "0";
     process.env.STATION_REMIND_SECONDS ??= "0";
+    // The suite's roles are its own: the signatories and commanders its tests answer as, never the repository's people.
+    if (!process.env.STATION_ROLES_FILE) {
+        process.env.STATION_ROLES_FILE = path.join(mkdtempSync(path.join(tmpdir(), "roles-")), "roles.json");
+        writeFileSync(process.env.STATION_ROLES_FILE, JSON.stringify({ roles: { "authorised-signatory": { does: "signs for the tests", holders: ["signatory-test", "a reviewer"] }, commander: { does: "decides for the tests", holders: ["commander-test"] } } }));
+    }
     // The suite signs the safety card in a directory of its own: the repository's signatures are a person's, never a test's.
     if (!process.env.LIBRARY_SIGNATURES_DIR) {
         process.env.LIBRARY_SIGNATURES_DIR = mkdtempSync(path.join(tmpdir(), "signatures-"));

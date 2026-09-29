@@ -37,6 +37,7 @@ import type { LibraryFact } from "../../../harness/core/contracts.js";
 import { documentDigest, signatureOf, signaturesDir, signDocument } from "../../../harness/lib/signatures.js";
 import { execSync } from "node:child_process";
 import { WORKSHOP_ROOT } from "../lib/workshop.js";
+import { notHolder, roleOf, SIGNATORY } from "../../../lib/roles.js";
 
 export interface LibraryDocument {
     id: string;
@@ -157,6 +158,8 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
                 documents: s.documents.map(({ id, title, summary, measures, sha256, bytes, facts, rules }) => ({ id, title, summary, measures, sha256, bytes, facts: facts.length, rules: rules ? rules.rules.length : 0, signature: signatureOf(id, s.dir, s.sigDir) })),
                 // Who signs from the control room, and where the signatures go: what the library page says before a person signs.
                 signer: person || null,
+                // The role a signature is asked of, and who holds it now.
+                role: { id: SIGNATORY, ...(roleOf(SIGNATORY) ?? { does: "", holders: [] }) },
                 signatures: s.sigScope,
             }),
         },
@@ -231,7 +234,7 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
             },
         },
         {
-            // The commander signs a document as reviewed, from the control room: called back by the station with the answer to Mother's question (kind sign), or from the library page. Never a model's: kept out of every harness's and the night agent's tools.
+            // An authorised signatory signs a document as reviewed, from the control room: called back by the station with the answer to Mother's question (kind sign), or from the library page. Never a model's: kept out of every harness's and the night agent's tools.
             name: "sign",
             inputSchema: objectSchema({ id: { type: "string" }, by: { type: "string" }, questionId: { type: "string" }, answer: { type: "object" }, digest: { type: "string" } }, ["id"]),
             handle: (args, s) => {
@@ -241,7 +244,10 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
                 if (typeof args.digest === "string" && args.digest !== documentDigest(d.id, s.dir)) throw new Error(`the document "${d.id}" changed since it was read: read it again before signing`);
                 const answer = args.answer && typeof args.answer === "object" ? (args.answer as { choice?: string; by?: string }) : null;
                 if (answer && answer.choice !== "sign") return { id: d.id, signed: false, why: `the commander answered ${String(answer.choice)}` };
-                const who = typeof args.by === "string" && args.by.trim() ? args.by.trim() : `${person || "the commander"} (commander, from the control room)`;
+                // Who signs: the person who answered the question, or who signs on the library page; an authorised signatory, or nobody (2026-09-29).
+                const who = typeof args.by === "string" && args.by.trim() ? args.by.trim() : answer?.by?.trim() || person;
+                const refused = notHolder(SIGNATORY, who);
+                if (refused) throw new Error(`${d.id} is not signed: ${refused}`);
                 const signature = signDocument(d.id, who, { dir: s.dir, sigDir: s.sigDir, note: `${s.sigScope.scope === "run" ? `scenario run ${s.sigScope.runId}` : "repository"}${args.questionId ? `, question ${String(args.questionId)}` : ""}` });
                 log(`[library] ${d.id} signed by ${who} (${s.sigScope.scope === "run" ? `run ${s.sigScope.runId}'s own signatures` : "the repository's signatures"})`);
                 return { id: d.id, signed: true, by: signature.signedBy, at: signature.signedAt, scope: s.sigScope };

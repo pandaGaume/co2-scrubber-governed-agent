@@ -45,6 +45,7 @@
  * commissionings in `station://commissionings`. The voice reads them; none
  * is written for the video.
  */
+import { notHolder, roleOf, ROLES_FILE, SIGNATORY } from "../../lib/roles.js";
 import { existsSync, readFileSync } from "node:fs";
 import * as path from "node:path";
 import { McpGrammar } from "@cyanmycelium/mcp-core";
@@ -198,6 +199,9 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
     /** A question to the commander (Tier 4): kept, said by Mother unless she just asked it in her own words, answered on the control post or by a standing order; on the answer the asker is called back. */
     const askQuestion = async (args: Record<string, unknown>): Promise<{ questionId: string; status: Question["status"]; answer?: QuestionAnswer | null; resumed?: Question["resumed"] }> => {
         const problems = questionProblems(args as never);
+        // A signature is asked of the role that signs (2026-09-29: an authorised signatory, not the commander); any other question for the role it names, if any.
+        const role = str(args.role) || (str(args.kind) === "sign" ? SIGNATORY : "");
+        if (role && !roleOf(role)) problems.push(`no role "${role}" in ${ROLES_FILE}`);
         if (problems.length) throw new Error(problems.join("; "));
         const q: Question = {
             id: `q${(state.questions.length + 1).toString().padStart(4, "0")}`,
@@ -207,6 +211,8 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
             kind: str(args.kind),
             question: str(args.question),
             options: (args.options as Array<{ id: string; label: string }>).map((o) => ({ id: String(o.id), label: String(o.label ?? o.id) })),
+            role: role || null,
+            ...(role ? { holders: roleOf(role)?.holders ?? [] } : {}),
             context: (args.context ?? null) as never,
             resume: args.resume ? ({ slot: str((args.resume as Resume).slot), tool: str((args.resume as Resume).tool), args: (((args.resume as Resume).args ?? {}) as Record<string, never>) } as Resume) : null,
             status: "open",
@@ -214,7 +220,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
             resumed: null,
         };
         state.questions.push(q);
-        const order = standingOrder(state.questionsPolicy, q.kind, q.options);
+        const order = standingOrder(state.questionsPolicy, q.kind, q.options, q.role);
         if (order.mode === "auto") {
             // The standing order answers: said as such, and the asker called back at once.
             const choice = q.options.find((o) => o.id === order.choice)!;
@@ -226,7 +232,8 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
             return { questionId: q.id, status: q.status, answer: q.answer, resumed: q.resumed };
         }
         // The authorisation is asked in Mother's own words just before (mother.authorisation.request): not said twice.
-        if (q.kind !== "authorise") say("mother.question.asked", null, () => ({ question: q.question, options: q.options.map((o) => o.label).join(" / ") }));
+        if (q.role) say("mother.question.askedRole", null, () => ({ role: q.role ?? "", holders: q.holders?.length ? q.holders.join(", ") : "nobody holds it yet", question: q.question, options: q.options.map((o) => o.label).join(" / ") }));
+        else if (q.kind !== "authorise") say("mother.question.asked", null, () => ({ question: q.question, options: q.options.map((o) => o.label).join(" / ") }));
         notify(QUESTIONS_URI, { [META_QUESTION]: q });
         return { questionId: q.id, status: q.status };
     };
@@ -643,6 +650,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                         options: { type: "array", items: { type: "object", properties: { id: { type: "string" }, label: { type: "string" } }, required: ["id", "label"] }, minItems: 2 },
                         context: { type: "object", description: "what the commander needs to decide: the contract, the artifact, the reason" },
                         resume: { type: "object", properties: { slot: { type: "string" }, tool: { type: "string" }, args: { type: "object" } }, required: ["slot", "tool"], description: "who to call back with the answer, and with what" },
+                        role: { type: "string", description: "the role the question is for (specs/station/roles.json): only a person it names answers; a signature is the authorised-signatory's" },
                     },
                     ["from", "kind", "question", "options"],
                 ),
@@ -670,6 +678,12 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     if (!option) throw new Error(`"${String(choice)}" is not an option of question ${q.id} (${q.options.map((o) => o.id).join(", ")})`);
                     // Who answers is the commander unless the caller says otherwise (2026-09-27: an answer without by was recorded as "undefined").
                     const who = str(by) || "commander";
+                    // A question for a role is answered by a person it names, whoever else is at the chat.
+                    const refused = q.role ? notHolder(q.role, who) : null;
+                    if (refused) {
+                        say("mother.question.notHolder", null, () => ({ why: refused }));
+                        throw new Error(`question ${q.id} is for the role ${q.role}: ${refused}`);
+                    }
                     q.answer = { choice: option.id, by: who, at: new Date().toISOString(), note: str(note) || null, how: (how === "voice" || how === "script" || how === "typed" ? how : "click") as QuestionAnswer["how"], ...(amendments && typeof amendments === "object" ? { amendments: amendments as never } : {}) };
                     q.status = "answered";
                     say("mother.question.answered", null, () => ({ choice: option.label, by: who }));

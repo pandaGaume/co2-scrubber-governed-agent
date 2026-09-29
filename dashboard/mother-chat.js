@@ -10,6 +10,11 @@
  * commander, and the station calls back whoever asked. The page decides
  * nothing.
  *
+ * A question for a role (2026-09-29: a signature is asked of an authorised
+ * signatory, not of the commander) says the role and its holders, and is
+ * answered in the name of the holder chosen under it: the station refuses
+ * anyone else, and no standing order answers it.
+ *
  * Mother's own lines (station://mother: a device registered, a procedure
  * refused and corrected, the request for authorisation) are the station's,
  * kept by the station and never sent to the speech slot, so the panel would
@@ -60,6 +65,8 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
         else if (lastLine < 0) lastLine = 0;
     };
     const heard = new Map();
+    /** The holder a question for a role is answered as, by question. */
+    const chosenAs = new Map();
     const notes = [];
     let open = [];
     let awaiting = [];
@@ -106,8 +113,12 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
             const h = heard.get(q.id);
             const options = q.options.map((o) => `<button class="badge link" data-q="${esc(q.id)}" data-choice="${esc(o.id)}" type="button">${esc(o.label)}</button>`).join(" ");
             const text = q.from === "station" ? "" : `<div class="line ask"><span class="dim">${esc(q.from)}${q.taskId ? `, ${esc(q.taskId)}` : ""}: </span>${esc(q.question)}</div>`;
+            // A question for a role: answered as one of its holders, chosen here; a role nobody holds is said, and its chips wait.
+            const as = q.role
+                ? `<div class="line dim">for the role <b>${esc(q.role)}</b>: ${q.holders?.length ? `answer as <select data-as="${esc(q.id)}">${q.holders.map((n) => `<option${chosenAs.get(q.id) === n ? " selected" : ""}>${esc(n)}</option>`).join("")}</select>` : "nobody holds it yet (specs/station/roles.json)"}</div>`
+                : "";
             const said = h ? `<div class="line dim">heard: "${esc(h.text)}"${h.option ? ` : ${esc(h.option.label)}` : ", no option matches: say one of the words above, or click"}</div>` : "";
-            return `${text}${card(q)}<div class="chips"><span class="t">${esc(q.id)}</span>${options}<button class="badge link" data-voice="${esc(q.id)}" type="button" title="answer by voice">mic</button></div>${said}`;
+            return `${text}${card(q)}${as}<div class="chips"><span class="t">${esc(q.id)}</span>${options}<button class="badge link" data-voice="${esc(q.id)}" type="button" title="answer by voice">mic</button></div>${said}`;
         });
         const direct = awaiting.map((c) => `<div class="chips"><span class="t">${esc(c.id)}</span><button class="badge link" data-authorise="${esc(c.id)}" data-decision="authorise" type="button">authorise the test</button><button class="badge link" data-authorise="${esc(c.id)}" data-decision="refuse" type="button">refuse it</button></div>`);
         const said = notes.filter((n) => Date.now() - n.at < 15000).map((n) => `<div class="line dim">${esc(n.text)}</div>`);
@@ -173,9 +184,15 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
         render();
     }
 
+    /** Who answers a question: the holder chosen under it when it is for a role, the commander otherwise. */
+    const answererOf = (questionId) => {
+        const q = open.find((x) => x.id === questionId);
+        if (!q?.role) return "commander";
+        return chosenAs.get(questionId) ?? q.holders?.[0] ?? "";
+    };
     const answer = async (questionId, choice, how, text) => {
         try {
-            await call("answer", { questionId, choice, by: "commander", how, ...(text ? { note: text } : {}) });
+            await call("answer", { questionId, choice, by: answererOf(questionId), how, ...(text ? { note: text } : {}) });
         } catch (e) {
             note(`not recorded: ${e.message}`);
         }
@@ -231,6 +248,10 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
         rec.start();
     };
 
+    box.addEventListener("change", (ev) => {
+        const s = ev.target.closest("select[data-as]");
+        if (s) chosenAs.set(s.dataset.as, s.value);
+    });
     box.addEventListener("click", async (ev) => {
         const b = ev.target.closest("button");
         if (!b) return;

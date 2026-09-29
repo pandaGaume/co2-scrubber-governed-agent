@@ -168,7 +168,7 @@
       <form class="sign" id="sign" hidden>
         <div class="row">
           <label class="check"><input type="checkbox" id="read-it"><span id="read-label">I have read this document, its facts and its rules as shown above, and they hold.</span></label>
-          <input type="text" id="signer" placeholder="your name" autocomplete="name" aria-label="who signs">
+          <input type="text" id="signer" list="signers" placeholder="an authorised signatory" autocomplete="name" aria-label="who signs: an authorised signatory"><datalist id="signers"></datalist>
           <button class="btn primary" id="sign-btn" type="submit" disabled>sign</button>
         </div>
         <div class="digest" id="digest"></div>
@@ -220,9 +220,15 @@ function renderWho() {
     if (!catalogue) return (who.textContent = "");
     const run = catalogue.signatures?.scope === "run";
     who.className = `who${run ? " run" : ""}`;
+    // Who may sign: the role a signature is asked of, and its holders (specs/station/roles.json); the library refuses anyone else.
+    const role = catalogue.role;
+    const holders = role?.holders?.length ? role.holders.map(esc).join(", ") : "nobody yet";
+    const signatory = role ? ` · signed by the role <b>${esc(role.id)}</b>: ${holders}` : "";
     who.innerHTML = run
-        ? `signatures: <b>scenario run ${esc(catalogue.signatures.runId)}</b>, its own, not the repository's`
-        : `signatures: <b>the repository's</b>${catalogue.signer ? ` · signing as <b>${esc(catalogue.signer)}</b>` : ""}`;
+        ? `signatures: <b>scenario run ${esc(catalogue.signatures.runId)}</b>, its own, not the repository's${signatory}`
+        : `signatures: <b>the repository's</b>${signatory}`;
+    const list = $("signers");
+    if (list) list.innerHTML = (role?.holders ?? []).map((n) => `<option value="${esc(n)}"></option>`).join("");
 }
 
 function renderList() {
@@ -363,7 +369,9 @@ function renderReview() {
     $("read-it").checked = false;
     const parts = ["this document", r.facts.length ? "its facts" : null, r.rules ? "its rules" : null].filter(Boolean);
     $("read-label").textContent = `I have read ${parts.length > 1 ? `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}` : parts[0]} as shown above, and they hold.`;
-    if (!$("signer").value) $("signer").value = r.signer ?? "";
+    // The person at this machine when they hold the role, else the role's first holder: whoever signs must be one of them.
+    const holders = catalogue?.role?.holders ?? [];
+    if (!$("signer").value) $("signer").value = (holders.includes(r.signer) ? r.signer : holders[0]) ?? "";
     $("sign-btn").textContent = s === "valid" ? "sign again" : "sign";
     $("digest").textContent = `a signature binds these files as they are: sha256 ${r.digest}`;
     $("said").textContent = "";
