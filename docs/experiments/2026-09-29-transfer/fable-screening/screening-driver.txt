@@ -1,0 +1,6 @@
+t1 t-2026-09-29-0007: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 8; tokens in 43009 out 5821 (max 4170); memory seen: 0 learned, 0 previous episode(s)
+t2 t-2026-09-29-0008: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 8; tokens in 48088 out 6013 (max 4541); memory seen: 0 learned, 0 previous episode(s)
+t3 t-2026-09-29-0009: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 8; tokens in 55028 out 6300 (max 4778); memory seen: 0 learned, 0 previous episode(s)
+t4 t-2026-09-29-0010: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 8; tokens in 56585 out 6048 (max 4532); memory seen: 0 learned, 0 previous episode(s)
+t5 t-2026-09-29-0011: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 8; tokens in 58235 out 5695 (max 4232); memory seen: 0 learned, 0 previous episode(s)
+exit 0

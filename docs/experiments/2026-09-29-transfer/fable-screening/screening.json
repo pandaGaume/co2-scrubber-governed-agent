@@ -1,0 +1,600 @@
+{
+  "fork": "exp5-fable-screen-a",
+  "phase": "validate",
+  "builder": "reasoner",
+  "settings": {
+    "workingMemory": {
+      "size": 10,
+      "shown": 5,
+      "previousTasks": false
+    },
+    "longTerm": {
+      "read": false
+    }
+  },
+  "startedAt": "2026-09-29T21:38:11.418Z",
+  "fingerprintBefore": {
+    "ledger": "681df344362ed00638490ea60028c51fabeaee7bc49717bf94df7edda17fe62e",
+    "memory": "c7e1e1d5f7642d96bed9f9de1166ea5f901e6d7f414f4aad06625c327cc1881d",
+    "settings": "d8c087b808b632537f5152632093b685c9635f62b7cd3a7f846e77dc8c7f88df"
+  },
+  "memoryBefore": {
+    "domain": "procedure_authoring",
+    "topic": "procedure",
+    "entries": [
+      {
+        "id": "m-e26243b3d5",
+        "kind": "constraint",
+        "rule": "In the justification of each safety constant, cite as reference only the bare id of the single signed fact that bounds it (test.speedFloorPercent for every speed field, test.co2AbortCeilingPpm for the CO2 limit), never a second fact, a datasheet, a comparison sign or a value in the same reference.",
+        "appliesTo": [
+          "procedure.submit",
+          "procedure.revise"
+        ],
+        "status": "consolidated",
+        "confidence": {
+          "rate": 1,
+          "tasks": 3
+        },
+        "evidence": {
+          "failures": [
+            "t-2026-09-29-0001#procedure",
+            "t-2026-09-29-0002#procedure"
+          ],
+          "successes": [
+            "t-2026-09-29-0001#procedure",
+            "t-2026-09-29-0002#procedure"
+          ]
+        },
+        "judgedOn": [
+          "first-try-shape:procedure:33231b945eef"
+        ],
+        "since": "2026-09-29T20:52:29.753Z",
+        "ledger": 1
+      }
+    ]
+  },
+  "tasks": [
+    {
+      "variant": {
+        "id": "t1",
+        "co2Ppm": 1480,
+        "lab": [
+          "fe-1",
+          "fe-2"
+        ]
+      },
+      "taskId": "t-2026-09-29-0007",
+      "state": "proposed",
+      "firstGuardSubmission": {
+        "capability": "procedure.submit",
+        "accepted": true,
+        "problems": [],
+        "shapes": [],
+        "references": [
+          {
+            "constant": "limits.co2MaxPpm",
+            "value": 2800,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          },
+          {
+            "constant": "limits.co2AbortPpm",
+            "value": 3000,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          },
+          {
+            "constant": "limits.minSpeedPercent",
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          {
+            "constant": "limits.maxMinutes",
+            "value": 60,
+            "source": "library",
+            "reference": "test.maxMinutesCeiling"
+          },
+          {
+            "constant": "steps.1.speedPercent",
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          {
+            "constant": "steps.2.speedPercent",
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          {
+            "constant": "abort.battery.threshold",
+            "value": 40,
+            "source": "library",
+            "reference": "test.batteryAbortMinPercent"
+          },
+          {
+            "constant": "monitoring.band.minBpm",
+            "value": 45,
+            "source": "library",
+            "reference": "test.heartRateMinBpm"
+          },
+          {
+            "constant": "monitoring.band.maxBpm",
+            "value": 120,
+            "source": "library",
+            "reference": "test.heartRateMaxBpm"
+          }
+        ]
+      },
+      "preGuardRefusals": [],
+      "steps": 8,
+      "tokens": 48830,
+      "inputTokens": 43009,
+      "outputTokens": 5821,
+      "maxOutputTokensInOneStep": 4170,
+      "truncations": 0,
+      "memorySeenAtFirstJudged": {
+        "learned": [],
+        "episodes": 0,
+        "previousEpisodes": 0
+      },
+      "adaptationsActive": []
+    },
+    {
+      "variant": {
+        "id": "t2",
+        "co2Ppm": 1100,
+        "lab": [
+          "fe-1",
+          "fe-2",
+          "cdr"
+        ]
+      },
+      "taskId": "t-2026-09-29-0008",
+      "state": "proposed",
+      "firstGuardSubmission": {
+        "capability": "procedure.submit",
+        "accepted": true,
+        "problems": [],
+        "shapes": [],
+        "references": [
+          {
+            "constant": "limits.co2MaxPpm",
+            "value": 2500,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          },
+          {
+            "constant": "limits.co2AbortPpm",
+            "value": 3000,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          },
+          {
+            "constant": "limits.minSpeedPercent",
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          {
+            "constant": "limits.maxMinutes",
+            "value": 60,
+            "source": "library",
+            "reference": "test.maxMinutesCeiling"
+          },
+          {
+            "constant": "steps.1.speedPercent",
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          {
+            "constant": "steps.2.speedPercent",
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          {
+            "constant": "abort.battery.threshold",
+            "value": 40,
+            "source": "library",
+            "reference": "test.batteryAbortMinPercent"
+          },
+          {
+            "constant": "monitoring.band.minBpm",
+            "value": 45,
+            "source": "library",
+            "reference": "test.heartRateMinBpm"
+          },
+          {
+            "constant": "monitoring.band.maxBpm",
+            "value": 120,
+            "source": "library",
+            "reference": "test.heartRateMaxBpm"
+          }
+        ]
+      },
+      "preGuardRefusals": [],
+      "steps": 8,
+      "tokens": 54101,
+      "inputTokens": 48088,
+      "outputTokens": 6013,
+      "maxOutputTokensInOneStep": 4541,
+      "truncations": 0,
+      "memorySeenAtFirstJudged": {
+        "learned": [],
+        "episodes": 0,
+        "previousEpisodes": 0
+      },
+      "adaptationsActive": []
+    },
+    {
+      "variant": {
+        "id": "t3",
+        "co2Ppm": 1700,
+        "lab": [
+          "fe-1"
+        ]
+      },
+      "taskId": "t-2026-09-29-0009",
+      "state": "proposed",
+      "firstGuardSubmission": {
+        "capability": "procedure.submit",
+        "accepted": true,
+        "problems": [],
+        "shapes": [],
+        "references": [
+          {
+            "constant": "limits.co2MaxPpm",
+            "value": 2800,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          },
+          {
+            "constant": "limits.co2AbortPpm",
+            "value": 3000,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          },
+          {
+            "constant": "limits.minSpeedPercent",
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          {
+            "constant": "steps.1.speedPercent",
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          {
+            "constant": "steps.2.speedPercent",
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          {
+            "constant": "limits.maxMinutes",
+            "value": 50,
+            "source": "library",
+            "reference": "test.maxMinutesCeiling"
+          },
+          {
+            "constant": "abort.battery.threshold",
+            "value": 40,
+            "source": "library",
+            "reference": "test.batteryAbortMinPercent"
+          },
+          {
+            "constant": "monitoring.band.minBpm",
+            "value": 45,
+            "source": "library",
+            "reference": "test.heartRateMinBpm"
+          },
+          {
+            "constant": "monitoring.band.maxBpm",
+            "value": 120,
+            "source": "library",
+            "reference": "test.heartRateMaxBpm"
+          }
+        ]
+      },
+      "preGuardRefusals": [],
+      "steps": 8,
+      "tokens": 61328,
+      "inputTokens": 55028,
+      "outputTokens": 6300,
+      "maxOutputTokensInOneStep": 4778,
+      "truncations": 0,
+      "memorySeenAtFirstJudged": {
+        "learned": [],
+        "episodes": 0,
+        "previousEpisodes": 0
+      },
+      "adaptationsActive": []
+    },
+    {
+      "variant": {
+        "id": "t4",
+        "co2Ppm": 900,
+        "lab": [
+          "fe-1",
+          "fe-2"
+        ]
+      },
+      "taskId": "t-2026-09-29-0010",
+      "state": "proposed",
+      "firstGuardSubmission": {
+        "capability": "procedure.submit",
+        "accepted": true,
+        "problems": [],
+        "shapes": [],
+        "references": [
+          {
+            "constant": "limits.co2MaxPpm",
+            "value": 2500,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          },
+          {
+            "constant": "limits.co2AbortPpm",
+            "value": 3000,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          },
+          {
+            "constant": "limits.minSpeedPercent",
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          {
+            "constant": "limits.maxMinutes",
+            "value": 55,
+            "source": "library",
+            "reference": "test.maxMinutesCeiling"
+          },
+          {
+            "constant": "steps.1.speedPercent",
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          {
+            "constant": "steps.2.speedPercent",
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          {
+            "constant": "abort.battery.threshold",
+            "value": 40,
+            "source": "library",
+            "reference": "test.batteryAbortMinPercent"
+          },
+          {
+            "constant": "monitoring.band.minBpm",
+            "value": 45,
+            "source": "library",
+            "reference": "test.heartRateMinBpm"
+          },
+          {
+            "constant": "monitoring.band.maxBpm",
+            "value": 120,
+            "source": "library",
+            "reference": "test.heartRateMaxBpm"
+          }
+        ]
+      },
+      "preGuardRefusals": [],
+      "steps": 8,
+      "tokens": 62633,
+      "inputTokens": 56585,
+      "outputTokens": 6048,
+      "maxOutputTokensInOneStep": 4532,
+      "truncations": 0,
+      "memorySeenAtFirstJudged": {
+        "learned": [],
+        "episodes": 0,
+        "previousEpisodes": 0
+      },
+      "adaptationsActive": []
+    },
+    {
+      "variant": {
+        "id": "t5",
+        "co2Ppm": 1300,
+        "lab": [
+          "fe-2",
+          "cdr"
+        ]
+      },
+      "taskId": "t-2026-09-29-0011",
+      "state": "proposed",
+      "firstGuardSubmission": {
+        "capability": "procedure.submit",
+        "accepted": true,
+        "problems": [],
+        "shapes": [],
+        "references": [
+          {
+            "constant": "limits.co2MaxPpm",
+            "value": 2800,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          },
+          {
+            "constant": "limits.co2AbortPpm",
+            "value": 3100,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm"
+          },
+          {
+            "constant": "limits.minSpeedPercent",
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          {
+            "constant": "limits.maxMinutes",
+            "value": 58,
+            "source": "library",
+            "reference": "test.maxMinutesCeiling"
+          },
+          {
+            "constant": "steps.1.speedPercent",
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          {
+            "constant": "steps.2.speedPercent",
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent"
+          },
+          {
+            "constant": "abort.battery.threshold",
+            "value": 35,
+            "source": "library",
+            "reference": "test.batteryAbortMinPercent"
+          },
+          {
+            "constant": "monitoring.band.minBpm",
+            "value": 45,
+            "source": "library",
+            "reference": "test.heartRateMinBpm"
+          },
+          {
+            "constant": "monitoring.band.maxBpm",
+            "value": 120,
+            "source": "library",
+            "reference": "test.heartRateMaxBpm"
+          }
+        ]
+      },
+      "preGuardRefusals": [],
+      "steps": 8,
+      "tokens": 63930,
+      "inputTokens": 58235,
+      "outputTokens": 5695,
+      "maxOutputTokensInOneStep": 4232,
+      "truncations": 0,
+      "memorySeenAtFirstJudged": {
+        "learned": [],
+        "episodes": 0,
+        "previousEpisodes": 0
+      },
+      "adaptationsActive": []
+    }
+  ],
+  "reflections": [],
+  "frozen": null,
+  "endedAt": "2026-09-29T21:47:24.147Z",
+  "ledger": [
+    {
+      "n": 1,
+      "at": "2026-09-29T20:52:29.737Z",
+      "target": "memory/procedure.json",
+      "reason": "Every first submission was refused because the reference of a safety constant held several facts, comparators or a datasheet, so it was not a fact id. Each retry citing only the bare signed id was accepted with the same value.",
+      "evidence": [
+        "first-try-shape:procedure:t-2026-09-29-0002:33231b94",
+        "first-try-category:procedure:justification:t-2026-09-29-0002"
+      ],
+      "families": [
+        "first-try-shape:procedure:33231b945eef",
+        "first-try-category:procedure:justification"
+      ],
+      "judgedOn": [
+        "first-try-shape:procedure:33231b945eef"
+      ],
+      "changes": [],
+      "baseline": {
+        "tasks": 2,
+        "withMistake": 2
+      },
+      "reflectionTask": "t-2026-09-29-0003",
+      "commit": "2cb6afc25f0e29d122564433e29540d94d685139",
+      "status": "consolidated",
+      "memory": {
+        "topic": "procedure",
+        "kind": "constraint",
+        "rule": "In the justification of each safety constant, cite as reference only the bare id of the single signed fact that bounds it (test.speedFloorPercent for every speed field, test.co2AbortCeilingPpm for the CO2 limit), never a second fact, a datasheet, a comparison sign or a value in the same reference.",
+        "appliesTo": [
+          "procedure.submit",
+          "procedure.revise"
+        ],
+        "cited": {
+          "failures": [
+            "t-2026-09-29-0001#procedure",
+            "t-2026-09-29-0002#procedure"
+          ],
+          "successes": [
+            "t-2026-09-29-0001#procedure",
+            "t-2026-09-29-0002#procedure"
+          ]
+        }
+      },
+      "observed": {
+        "failures": [
+          "t-2026-09-29-0001#procedure",
+          "t-2026-09-29-0002#procedure"
+        ],
+        "successes": [
+          "t-2026-09-29-0001#procedure",
+          "t-2026-09-29-0002#procedure"
+        ]
+      },
+      "trialAt": "2026-09-29T20:52:29.753Z",
+      "since": {
+        "tasks": 3,
+        "withMistake": 0
+      },
+      "decidedAt": "2026-09-29T20:55:39.054Z",
+      "why": "consolidated: the mistake showed in 0 of the 3 task(s) since its trial, against 2 of 2 before"
+    }
+  ],
+  "fingerprintAfter": {
+    "ledger": "681df344362ed00638490ea60028c51fabeaee7bc49717bf94df7edda17fe62e",
+    "memory": "c7e1e1d5f7642d96bed9f9de1166ea5f901e6d7f414f4aad06625c327cc1881d",
+    "settings": "d8c087b808b632537f5152632093b685c9635f62b7cd3a7f846e77dc8c7f88df"
+  },
+  "memoryAfter": {
+    "domain": "procedure_authoring",
+    "topic": "procedure",
+    "entries": [
+      {
+        "id": "m-e26243b3d5",
+        "kind": "constraint",
+        "rule": "In the justification of each safety constant, cite as reference only the bare id of the single signed fact that bounds it (test.speedFloorPercent for every speed field, test.co2AbortCeilingPpm for the CO2 limit), never a second fact, a datasheet, a comparison sign or a value in the same reference.",
+        "appliesTo": [
+          "procedure.submit",
+          "procedure.revise"
+        ],
+        "status": "consolidated",
+        "confidence": {
+          "rate": 1,
+          "tasks": 3
+        },
+        "evidence": {
+          "failures": [
+            "t-2026-09-29-0001#procedure",
+            "t-2026-09-29-0002#procedure"
+          ],
+          "successes": [
+            "t-2026-09-29-0001#procedure",
+            "t-2026-09-29-0002#procedure"
+          ]
+        },
+        "judgedOn": [
+          "first-try-shape:procedure:33231b945eef"
+        ],
+        "since": "2026-09-29T20:52:29.753Z",
+        "ledger": 1
+      }
+    ]
+  },
+  "memoryUnchanged": true
+}
