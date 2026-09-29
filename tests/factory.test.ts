@@ -34,6 +34,7 @@ import { newProgress } from "../harness/core/workspace-observer.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
 import { sha256Of } from "../slots/tools/lib/workshop.js";
 import { endSentence, loadWords, stageSentence, stepSentence } from "../ui/factory-voice.js";
+import { truncatedDecision } from "../harness/lib/llm-common.js";
 
 const PORT = 3120;
 
@@ -262,6 +263,34 @@ describe("the constructor's loop (F4), through the broker", () => {
         assert.match(String(done.reason), /contract not held.*not a file of the workshop/);
         assert.equal(result.proposalId, null);
         assert.equal(((await broker.call("factory", "task", { taskId })).output as { state: string }).state, "failed");
+    });
+
+    it("a call the output limit cut is refused as cut, not as a capability outside the allowlist, and the model reads why at its next step (2026-09-29, the memory audit)", async () => {
+        const taskId = await request({ budget: { iterations: 2 } });
+        const read: unknown[] = [];
+        // What an adapter makes of an answer cut at the limit: a report instead of the call, the raw answer saying max_tokens.
+        const exchanges: ProviderExchange[] = [];
+        const cut = {
+            name: "scripted:cut",
+            model: "scripted/cut",
+            family: "scripted",
+            contextMode: "state",
+            exchanges,
+            async resolve(input: PolicyFallbackInput): Promise<PolicyDecision> {
+                read.push((input.state.features.state as { lastRefusal?: unknown } | null)?.lastRefusal ?? null);
+                const decision = truncatedDecision("task.plan");
+                exchanges.push({ decisionId: input.decisionId, model: "scripted/cut", request: null, response: { stop_reason: "max_tokens" }, decision, proposedCapabilityId: "task.plan", proposedInput: { selected_nodes: ["Physics"] }, latencyMs: 0, tokens: { prompt: 10, completion: 4096, total: 4106 } });
+                return decision;
+            },
+        } as unknown as Provider;
+        const result = await runTask({ broker, taskId, recipesDir: mkdtempSync(path.join(tmpdir(), "recipes-cut-")), provider: cut });
+        const [first] = result.manifest.steps;
+        assert.equal(first.source, "refused");
+        assert.equal(first.truncated, true);
+        assert.equal(first.judged, undefined, "no guard judged it");
+        assert.match(String(first.reason), /^task\.plan was not run: your answer was cut at the output limit \(4096 tokens\) before this call was complete/);
+        assert.doesNotMatch(String(first.reason), /allowlist/);
+        assert.match(String((read[1] as { reason?: string } | null)?.reason), /cut at the output limit/, "the next step's state says why");
     });
 
     it("the front runs the task by itself: a request with the telemetry's rows starts the loop, and factory.task follows it to the proposal", async () => {

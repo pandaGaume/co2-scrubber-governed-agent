@@ -33,6 +33,7 @@ import { intentionFor, loadRecipes, saveRecipes, taskSignature } from "./recipes
 import { NEVER_REPLAYED, proposalKey, restrictReplays } from "./replay.js";
 import { justificationHelp, noteSources } from "./justify.js";
 import { noteRefusal, STUCK_AFTER } from "./problems.js";
+import { cutAtOutputLimit, truncatedRefusal } from "../lib/llm-common.js";
 import { READ_CAPABILITIES } from "./replay.js";
 import { createTaskEvaluator } from "./task-evaluator.js";
 import { taskCapabilities } from "./task-capabilities.js";
@@ -464,6 +465,9 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             continue;
         }
         if (exchange) {
+            // A call the output limit cut was never judged: it became a report the step's allowlist refuses; the model reads why it went nowhere, not that refusal.
+            const truncated = cutAtOutputLimit(exchange.response);
+            if (truncated) failed = truncatedRefusal(exchange.proposedCapabilityId, exchange.tokens?.completion ?? null);
             // The harness stopped the step (the guard, the schema, a capability outside the list, a timeout): the model reads the reason at the next step.
             progress.lastRefusal = { capability: exchange.proposedCapabilityId, reason: failed ?? "refused", input: (exchange.proposedInput ?? null) as JsonValue };
             progress.refusals[exchange.proposedCapabilityId] = { reason: failed ?? "refused", input: (exchange.proposedInput ?? null) as JsonValue, at: new Date().toISOString() };
@@ -489,7 +493,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             // Refused by the topic's guard, or by the harness before it (the step's allowlist, a schema, a call repeated): only the first is the guard's judgement.
             const byGuard = topic.judges?.some((r) => r.test(exchange.proposedCapabilityId)) && progress.guardRefused?.capability === exchange.proposedCapabilityId && String(failed ?? "").includes(progress.guardRefused.reason);
             progress.guardRefused = null;
-            manifest.steps.push({ n, decisionId: exchange.decisionId ?? null, source: "refused", capability: exchange.proposedCapabilityId, input: exchange.proposedInput, outcome: "refused", summary: failed, reward: null, reason: failed, ms, tokens: exchange.tokens, ...(byGuard ? { judged: "refused" as const } : {}) });
+            manifest.steps.push({ n, decisionId: exchange.decisionId ?? null, source: "refused", capability: exchange.proposedCapabilityId, input: exchange.proposedInput, outcome: "refused", summary: failed, reward: null, reason: failed, ms, tokens: exchange.tokens, ...(byGuard ? { judged: "refused" as const } : {}), ...(truncated ? { truncated: true } : {}) });
             lines.push({ n, decisionId: exchange.decisionId ?? null, source: "refused", trace: null, failed, exchange, call: null, ms });
             log(`[factory] step ${n}: ${exchange.proposedCapabilityId} -> stopped by the harness (${failed})`);
             // The same points refused STUCK_AFTER times in a row, whatever the input changed: the task ends, naming them, rather than spend its budget (2026-09-28: nineteen refusals of one speed).

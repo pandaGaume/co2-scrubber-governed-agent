@@ -77,6 +77,21 @@ export function decisionFrom(name: string | null, args: JsonValue, text: string,
  */
 export const TRUNCATED_RESULT = "not executed: your answer was cut at the output limit before this call was complete, so its arguments are unfinished; send the call again, complete (shorter text around it if needed)";
 
+/** Whether a model's raw answer was cut at the output limit: `stop_reason: "max_tokens"` (Anthropic), `finish_reason: "length"` (OpenAI-compatible). */
+export function cutAtOutputLimit(response: unknown): boolean {
+    const r = response as { stop_reason?: unknown; choices?: Array<{ finish_reason?: unknown }> } | null;
+    return r?.stop_reason === "max_tokens" || r?.choices?.[0]?.finish_reason === "length";
+}
+
+/**
+ * The reason a cut call is refused for, as the model reads it at the next step (2026-09-29, the memory audit): in the state
+ * mode the conversation is not replayed, so the tool result that said so never arrived, and the refusal read "a capability
+ * outside the allowlist" (the report the cut call became), which the model took for a submission refused.
+ */
+export function truncatedRefusal(capabilityId: string, outputTokens: number | null): string {
+    return `${capabilityId} was not run: your answer was cut at the output limit${outputTokens ? ` (${outputTokens} tokens)` : ""} before this call was complete, so its arguments are unfinished and no guard judged them; send it again, complete, with less text around it`;
+}
+
 export function truncatedDecision(capabilityId: string): PolicyDecision {
     return report(`My call to ${capabilityId} was cut at the output limit before it was complete; it was not run.`);
 }

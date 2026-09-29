@@ -30,6 +30,8 @@ export interface ManifestStep {
     tokens: { prompt: number; completion: number; total: number } | null;
     /** A submission the topic's guard judged (`judges`): accepted, or refused by the guard itself; absent when the harness stopped it before the guard. */
     judged?: "accepted" | "refused";
+    /** A call the model's answer did not finish (the output limit): not run, judged by nobody. */
+    truncated?: boolean;
 }
 
 export interface ManifestArtifact {
