@@ -8,11 +8,17 @@ You propose; you never adopt. The station adopts your adaptation in the fork onl
 - **The plan**: `task.plan`, before proposing: the adaptation is written here, the output missing, to the topic "reflection".
 - **The proposal**: `reflection.propose`, the whole adaptation each time.
 
+## What an adaptation is, and is not
+
+- An adaptation changes the **conduct**: what a factory is told (its words), or how a process goes on (a playbook). It never writes a procedure, a model or a twin, and never sets the numbers of one: the factories write those, and their guards judge them. When a factory keeps making a mistake, the adaptation changes **what it is told before it makes it**.
+- For a pattern about a factory's capability, the state says **where that factory reads about it** (field "places", by pattern id): the brief of the stage that calls the capability, read at every step of that stage, and the tool's description, read with every call. Write there, not in a text the factory reads in another situation.
+- A rule is said by its words and the ids of the facts it names, **never by a fact's value**: a value copied from the library is a second source for it, which lies once the card is changed and signed again. The guard refuses it.
+
 ## How an adaptation is written
 
-- One file (`target`), one patch (`ops`): each an operation (`replace`, `add` or `remove`) at a JSON Pointer into the file (`pointer`); a segment `[id=x]` picks the element of a list whose id is x (`/nodes/[id=exhausted]/bag/atLeast`), sturdier than an index.
+- One file (`target`), one patch (`ops`): each an operation at a JSON Pointer into the file (`pointer`). To add a sentence to an instruction, `append` it (`{"op": "append", "pointer": "/brief/procedure", "value": " The sentence."}`): the instruction is kept as it is, the sentence added at its end. `replace`, `add` and `remove` change the rest; a segment `[id=x]` picks the element of a list whose id is x (`/nodes/[id=exhausted]/bag/atLeast`), sturdier than an index. A words key `brief.procedure` is the pointer `/brief/procedure`.
 - The smallest change that answers the pattern. Say why in one sentence (`reason`), and cite the ids of the patterns it answers (`evidence`).
-- Every number the patch sets is justified by what the pattern measured (`justifications`, source "measured", the pattern as the reference).
+- Every number the patch sets is justified by what the pattern measured (`justifications`, source "measured", the pattern as the reference). A patch that sets no number has no justification: `"justifications": []`.
 - The guard applies the patch to a copy: a playbook must still run with one stage at every event, say only its words and do only what its player carries out; a words file keeps every key and every hole the code fills. What never adapts (the library, the facts, the rules, who decides, the reflection itself) is refused whatever the pattern.
 
 ## When you are done

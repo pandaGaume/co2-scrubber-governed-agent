@@ -64,14 +64,20 @@ export class ScriptedReflectionBuilder extends ScriptedBuilderBase {
                     const words = JSON.parse(readFileSync(fromRoot(...p.target.split("/")), "utf8")) as Record<string, unknown>;
                     const found = templateNaming(words, capability);
                     if (!found) continue;
-                    const rule = String(p.detail.reason ?? "").replace(/^[a-z]+ refused:\s*/i, "").replace(/[{}]/g, "").slice(0, 300);
+                    // The rule by its words and the ids it names, never a value: "= 30 percent" and "(40 percent)" go, the library holds them.
+                    const rule = String(p.detail.reason ?? "")
+                        .replace(/^[a-z]+ refused:\s*/i, "")
+                        .replace(/\s*=\s*-?[\d.]+(\s*(percent|ppm|min|bpm|%|m3\/min|L\/min))?/gi, "")
+                        .replace(/\s*\(-?[\d.]+\s*[^)]*\)/g, "")
+                        .replace(/[{}]/g, "")
+                        .slice(0, 300);
                     const learned = p.kind !== "refusal-streak" ? ` Learned in this fork, after ${p.count} tasks whose first ${capability} was refused on the same point: ${rule}. Hold it from the first submission.` : ` Learned in this fork, after ${p.count} refusals in a row of ${capability} on the same point: ${rule}. Hold it from the first submission.`;
                     if (found.template.includes("Learned in this fork")) continue;
                     return decide(
                         "reflection.propose",
                         {
                             target: p.target,
-                            ops: [{ op: "replace", pointer: `/${found.key.split(".").join("/")}`, value: found.template + learned }],
+                            ops: [{ op: "append", pointer: `/${found.key.split(".").join("/")}`, value: learned }],
                             reason: `${capability} was refused ${p.count} times in a row on the same point: its instructions now say the rule it broke, before it submits`,
                             evidence: [p.id],
                             justifications: [],

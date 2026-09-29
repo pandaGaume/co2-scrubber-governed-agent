@@ -17,7 +17,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import * as path from "node:path";
 import { fromRoot } from "./paths.js";
-import { playbookProblems, type PlaybookExpectations } from "../harness/core/conduct.js";
+import { loadPlaybook, playbookProblems, type PlaybookExpectations } from "../harness/core/conduct.js";
 import { loadWords } from "../harness/core/words.js";
 import { problemsOfReason, refusalKey } from "../harness/core/problems.js";
 
@@ -168,7 +168,8 @@ export function globMatches(glob: string, file: string): boolean {
 
 /** One operation of an adaptation: JSON Pointer paths, a segment `[id=x]` picking the element of a list whose id is x. */
 export interface PatchOp {
-    op: "replace" | "add" | "remove";
+    /** `append` adds its value at the end of the text the pointer names: a sentence added to an instruction without copying it. */
+    op: "replace" | "add" | "remove" | "append";
     /** A JSON Pointer (not `path`: a path, for the socle, is a file of the task). */
     pointer: string;
     value?: unknown;
@@ -200,17 +201,21 @@ export function applyPatch(doc: unknown, ops: PatchOp[]): unknown {
         for (const s of segs.slice(0, -1)) parent = step(parent, s, `${i + 1}: ${o.pointer}`);
         const last = segs.at(-1)!;
         const where = `operation ${i + 1} (${o.op} ${o.pointer})`;
+        const appended = (current: unknown): string => {
+            if (typeof current !== "string" || typeof o.value !== "string") throw new Error(`${where}: append adds text to a text`);
+            return current + o.value;
+        };
         if (Array.isArray(parent)) {
             const idx = last === "-" ? parent.length : indexOf(parent, last, where);
             if (o.op === "add") parent.splice(idx, 0, o.value);
             else if (idx >= parent.length) throw new Error(`${where}: no element ${last}`);
             else if (o.op === "remove") parent.splice(idx, 1);
-            else parent[idx] = o.value;
+            else parent[idx] = o.op === "append" ? appended(parent[idx]) : o.value;
         } else if (parent && typeof parent === "object") {
             const obj = parent as Record<string, unknown>;
             if (o.op !== "add" && !(last in obj)) throw new Error(`${where}: no field "${last}"`);
             if (o.op === "remove") delete obj[last];
-            else obj[last] = o.value;
+            else obj[last] = o.op === "append" ? appended(obj[last]) : o.value;
         } else throw new Error(`${where}: its parent is not an object or a list`);
     }
     return out;
@@ -285,6 +290,60 @@ export function adaptationProblems(input: unknown, patterns: Pattern[], format: 
             if (is[key] === undefined) problems.push(`${target}: the key "${key}" is gone, and the code says it`);
             else if (holesOf(is[key]) !== holesOf(template)) problems.push(`${target}: "${key}" has the holes {${holesOf(is[key])}}, not the {${holesOf(template)}} the code fills`);
         }
+        // What an adaptation writes never copies a value of the library (2026-09-29, the replays: the reflection wrote the signed facts'
+        // values into the factory's instructions, a second source for the same number, which lies once the card is changed and signed
+        // again): it cites the fact by its id, and the value is read from the library.
+        for (const [key, text] of Object.entries(is)) {
+            const added = was[key] === undefined ? text : text.startsWith(was[key]) ? text.slice(was[key].length) : text === was[key] ? "" : text;
+            for (const copy of copiedFacts(added)) problems.push(`${target}: "${key}" writes ${copy.id} = ${copy.value} ${copy.unit}, the value of a fact of the library: cite ${copy.id} by its id, never its value (the library is the one source of it)`);
+        }
     }
     return { problems, before, after };
+}
+
+/** The keys of a factory's words its stages say, from its playbook (`specs/<topic>/format.json`, field playbook); null when it has none. */
+export function stageKeysOf(topic: string): string[] | null {
+    const format = readJson<{ playbook?: string }>(fromRoot("specs", topic, "format.json"));
+    if (!format?.playbook) return null;
+    try {
+        return loadPlaybook(format.playbook).stages.map((s) => s.says);
+    } catch {
+        return null;
+    }
+}
+
+/** How a unit of the library's facts may be written in a sentence. */
+const UNIT_WORDS: Record<string, string[]> = { percent: ["percent", "%"], min: ["min", "minute", "minutes"], ppm: ["ppm"], bpm: ["bpm"] };
+const escapeRe = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** The facts of the library (the fork's, in a fork) whose value a text copies: its id and its value, or its value and its unit. */
+export function copiedFacts(text: string): Array<{ id: string; value: number; unit: string }> {
+    if (!text.trim()) return [];
+    const dir = fromRoot("docs", "library");
+    if (!existsSync(dir)) return [];
+    const facts = readdirSync(dir)
+        .filter((f) => f.endsWith(".facts.json"))
+        .flatMap((f) => (readJson<{ facts?: Array<{ id: string; value: number; unit: string }> }>(path.join(dir, f))?.facts ?? []).filter((x) => typeof x.value === "number"));
+    const out: Array<{ id: string; value: number; unit: string }> = [];
+    for (const f of facts) {
+        const number = new RegExp(`(^|[^\\d.])${escapeRe(String(f.value))}(?![\\d.]*\\d)`);
+        const withUnit = new RegExp(`(^|[^\\d.])${escapeRe(String(f.value))}\\s*(${(UNIT_WORDS[f.unit] ?? [f.unit]).map(escapeRe).join("|")})(?![A-Za-z])`, "i");
+        if ((text.includes(f.id) && number.test(text)) || withUnit.test(text)) out.push({ id: f.id, value: f.value, unit: f.unit });
+    }
+    return out;
+}
+
+/**
+ * Where a factory reads what it is told about a capability, in its words file: the brief of the stage that calls it (read at
+ * every step of that stage) and the tool's own description (read with every call); what the reflection is shown with a pattern.
+ */
+export function placesOf(words: Record<string, unknown>, capability: string, stageKeys: string[] | null = null): Array<{ key: string; read: string; text: string }> {
+    const flat = templatesOf(words);
+    const places: Array<{ key: string; read: string; text: string }> = [];
+    // The stages' briefs, as the factory's playbook says them (a text read only after a refusal is no stage's brief); every brief when no playbook says.
+    for (const [key, text] of Object.entries(flat))
+        if ((stageKeys ? stageKeys.includes(key) : key.startsWith("brief.")) && capability && text.includes(capability)) places.push({ key, read: `the brief of the stage that calls ${capability}: the factory reads it at every step of that stage, before it submits`, text });
+    const tool = `capabilities.${capability.split(".").pop()}`;
+    if (flat[tool] !== undefined) places.push({ key: tool, read: `the description of the tool ${capability}: the factory reads it with every call`, text: flat[tool] });
+    return places;
 }

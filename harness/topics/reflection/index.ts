@@ -12,7 +12,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import type { CapabilityResult, Intention, JsonValue } from "@spiky-panda/harness";
 import { fromRoot } from "../../../lib/paths.js";
-import { adaptationProblems, reflectionFormat, type Adaptation, type Pattern } from "../../../lib/reflection.js";
+import { adaptationProblems, placesOf, reflectionFormat, stageKeysOf, type Adaptation, type Pattern } from "../../../lib/reflection.js";
 import { withBase } from "../../core/base.js";
 import type { LocalCapability } from "../../core/capabilities.js";
 import { loadPlaybook, sayingText, type Evidence } from "../../core/conduct.js";
@@ -69,7 +69,7 @@ export const PROPOSE_SCHEMA = {
         ops: {
             type: "array",
             minItems: 1,
-            items: { type: "object", properties: { op: { type: "string", enum: ["replace", "add", "remove"] }, pointer: { type: "string", description: "a JSON Pointer into the file; a segment [id=x] picks the element of a list whose id is x" }, value: {} }, required: ["op", "pointer"] },
+            items: { type: "object", properties: { op: { type: "string", enum: ["append", "replace", "add", "remove"], description: "append: the value (a text) is added at the end of the text the pointer names, the way a sentence is added to an instruction" }, pointer: { type: "string", description: "a JSON Pointer into the file (a words key brief.procedure is /brief/procedure); a segment [id=x] picks the element of a list whose id is x" }, value: {} }, required: ["op", "pointer"] },
         },
         reason: { type: "string" },
         evidence: { type: "array", items: { type: "string" }, minItems: 1 },
@@ -164,6 +164,16 @@ export function stateOfTopic(progress: Progress, task: TaskFile["task"]): TopicS
             files,
             adaptable: REFLECTION_FORMAT.adaptable,
             never: REFLECTION_FORMAT.never as unknown as JsonValue,
+            // For each pattern about a factory's capability: where that factory reads what it is told about it, with the text as it is now.
+            places: Object.fromEntries(
+                patterns
+                    .filter((p) => p.target && /words\.json$/.test(p.target) && typeof p.detail.capability === "string")
+                    .map((p) => {
+                        const file = fromRoot(...p.target!.split("/"));
+                        const words = existsSync(file) ? (JSON.parse(readFileSync(file, "utf8")) as Record<string, unknown>) : {};
+                        return [p.id, { file: p.target, places: placesOf(words, String(p.detail.capability), stageKeysOf(String(p.detail.topic ?? ""))) }];
+                    }),
+            ) as unknown as JsonValue,
             accepted: state.accepted as unknown as JsonValue,
         },
         evaluation: last ? ({ submission: last.n, ok: last.ok, problems: last.problems } as JsonValue) : null,

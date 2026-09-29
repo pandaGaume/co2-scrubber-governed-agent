@@ -70,7 +70,9 @@ describe("a fork that learns: an abort is the event, the fork adapts itself at i
             const asking = await until("the recover question", (r) => r.conduct?.stage === "ask");
             assert.deepEqual(asking.conduct?.adaptations?.map((a) => [a.patterns.length, a.taskId]), [[0, null]], "at the first abort, Mother read the traces and found nothing repeated");
             await ok("biomed", "alarm_clear", { subjectId: "fe-1", by: "the medical panel" });
-            const q = (await read<Array<{ id: string; kind: string; status: string }>>("station", "station://questions")).find((x) => x.kind === "recover" && x.status === "open");
+            // The stage is said before the station has asked: the question is waited for.
+            let q: { id: string } | undefined;
+            for (let t0 = Date.now(); !q && Date.now() - t0 < 30_000; await new Promise((x) => setTimeout(x, 200))) q = (await read<Array<{ id: string; kind: string; status: string }>>("station", "station://questions")).find((x) => x.kind === "recover" && x.status === "open");
             await ok("station", "answer", { questionId: q!.id, choice: "rewrite", by: "commander-test", how: "script" });
 
             // The second abort on the same cause: the fork adapts itself at this event, and the adapted playbook ends the commissioning.

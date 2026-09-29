@@ -14,7 +14,7 @@ import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
-import { adaptationProblems, applyPatch, globMatches, observe, reflectionFormat, type Pattern } from "../lib/reflection.js";
+import { adaptationProblems, applyPatch, globMatches, observe, placesOf, reflectionFormat, stageKeysOf, type Pattern } from "../lib/reflection.js";
 import { createFork, forkHistory, forkPath } from "../lib/fork.js";
 import { fromRepository } from "../lib/paths.js";
 import { Broker } from "../harness/lib/broker.js";
@@ -71,6 +71,13 @@ describe("the patterns of the traces, and an adaptation checked before anything 
         }
     });
 
+    it("says where a factory reads what it is told about a capability: the brief of the stage that calls it, the tool's description", () => {
+        const words = JSON.parse(readFileSync(fromRepository("specs", "procedure", "words.json"), "utf8")) as Record<string, unknown>;
+        const places = placesOf(words, "procedure.submit", stageKeysOf("procedure"));
+        assert.deepEqual(places.map((p) => p.key), ["brief.procedure", "capabilities.submit"]);
+        assert.match(places[0].read, /reads it at every step of that stage, before it submits/);
+    });
+
     it("patches by JSON Pointer, a list's element picked by its id", () => {
         const doc = { nodes: [{ id: "a", bag: { n: 1 } }, { id: "b", bag: { n: 2 } }] };
         assert.deepEqual(applyPatch(doc, [{ op: "replace", pointer: "/nodes/[id=b]/bag/n", value: 5 }]), { nodes: [{ id: "a", bag: { n: 1 } }, { id: "b", bag: { n: 5 } }] });
@@ -98,6 +105,15 @@ describe("the patterns of the traces, and an adaptation checked before anything 
         assert.match(adaptationProblems(bound(3), patterns, format).problems.join(), /the patch changes nothing/);
         const unlinked = { target: RECOVERY, ops: [{ op: "remove", pointer: "/links/0" }], reason: "x", evidence: ["p1"] };
         assert.match(adaptationProblems(unlinked, patterns, format).problems.join(), /is fed by 0 channels, not one/);
+        // A sentence appended to an instruction; the one the reflection wrote in the replays, copying the signed facts' values, refused.
+        const procedureWords = { target: "specs/procedure/words.json", reason: "x", evidence: ["p1"] };
+        const cite = " A safety constant cites the fact the signed rules bound it by: a step's speed, test.speedFloorPercent.";
+        assert.deepEqual(adaptationProblems({ ...procedureWords, ops: [{ op: "append", pointer: "/capabilities/submit", value: cite }] }, patterns, format).problems, []);
+        const copied = " Every safety constant must cite a fact by its exact fact id: test.speedFloorPercent (at least 30 percent), test.co2AbortCeilingPpm (at most 3200 ppm).";
+        const refusedCopy = adaptationProblems({ ...procedureWords, ops: [{ op: "append", pointer: "/capabilities/submit", value: copied }] }, patterns, format).problems.join(" | ");
+        assert.match(refusedCopy, /"capabilities.submit" writes test.speedFloorPercent = 30 percent, the value of a fact of the library: cite test.speedFloorPercent by its id, never its value/);
+        assert.match(refusedCopy, /test.co2AbortCeilingPpm = 3200 ppm/);
+        assert.match(adaptationProblems({ ...procedureWords, ops: [{ op: "append", pointer: "/capabilities/submit", value: 5 }] }, patterns, format).problems.join(), /append adds text to a text/);
         const words = { target: "specs/commissioning/words.json", reason: "x", evidence: ["p1"] };
         assert.match(adaptationProblems({ ...words, ops: [{ op: "remove", pointer: "/recover/ask" }] }, patterns, format).problems.join(), /no field "ask"|the key "recover.ask" is gone/);
         assert.match(adaptationProblems({ ...words, ops: [{ op: "replace", pointer: "/recover/stopped", value: "stopped" }] }, patterns, format).problems.join(), /"recover.stopped" has the holes \{\}, not the \{why\}/);
