@@ -60,6 +60,12 @@ describe("the patterns of the traces, and an adaptation checked before anything 
             const [p] = observe(shop, { repeatAt: 2 }).filter((x) => x.kind === "first-try-repeat");
             assert.deepEqual([p?.count, p?.target, (p?.detail as { tasks: string[] }).tasks], [2, "specs/procedure/words.json", ["t-2026-09-29-0001", "t-2026-09-29-0003"]]);
             assert.ok(p.source.includes("t-2026-09-29-0003"), "a reflection focused on the last task reads it");
+            // The category: the same kind of refusal at the first try, on another field (the replays' finding): justification twice, floor once.
+            task("t-2026-09-29-0004", { ...wrong, reason: "procedure refused: justification: limits.co2MaxPpm: \"commissioning-test-safety\" is not a fact of the library" });
+            const categories = observe(shop, { repeatAt: 2 }).filter((x) => x.kind === "first-try-category");
+            assert.deepEqual(categories.map((c) => [c.count, (c.detail as { kind: string }).kind]), [[3, "justification"]]);
+            assert.match(categories[0].says, /the first submission of 3 tasks \(procedure\) was refused for justification/);
+            assert.deepEqual((categories[0].detail as { examples: Array<{ task: string }> }).examples.map((e) => e.task), ["t-2026-09-29-0001", "t-2026-09-29-0003", "t-2026-09-29-0004"]);
         } finally {
             rmSync(shop, { recursive: true, force: true });
         }

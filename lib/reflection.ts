@@ -44,7 +44,7 @@ export const reflectionFormat = (): ReflectionFormat => JSON.parse(readFileSync(
 /** A pattern of the traces, with what it rests on and the file its fix would touch. */
 export interface Pattern {
     id: string;
-    kind: "abort-repeat" | "refusal-streak" | "stuck" | "first-try-repeat";
+    kind: "abort-repeat" | "refusal-streak" | "stuck" | "first-try-repeat" | "first-try-category";
     says: string;
     count: number;
     /** The run or the task it was read in. */
@@ -87,6 +87,9 @@ export function observe(workshop: string, format: Pick<ReflectionFormat, "repeat
         }
     // The factories' tasks: a capability refused on the same points again and again; a task that ended STUCK; the first refusal of each, by topic.
     const firstTries = new Map<string, { topic: string; capability: string; reason: string; tasks: string[] }>();
+    // The same kind of mistake at the first try, whatever the field (2026-09-29, the replays: four tasks of four refused at their first
+    // submission on a safety constant's justification, each on another field): by topic and kind of refusal, with what each task was told.
+    const firstKinds = new Map<string, { topic: string; kind: string; capability: string; examples: Array<{ task: string; reason: string }> }>();
     if (existsSync(workshop))
         for (const task of readdirSync(workshop).filter((d) => /^t-/.test(d)).sort()) {
             const m = readJson<{ topic: string; ended: string | null; steps: Array<{ capability: string | null; outcome: string; reason: string | null }> }>(path.join(workshop, task, "manifest.json"));
@@ -118,10 +121,26 @@ export function observe(workshop: string, format: Pick<ReflectionFormat, "repeat
                 const seen = firstTries.get(k) ?? { topic: m.topic, capability: first.capability!, reason: first.reason ?? "", tasks: [] };
                 seen.tasks.push(task);
                 firstTries.set(k, seen);
+                for (const kind of new Set(problemsOfReason(first.reason ?? "").map((x) => x.kind).filter((x): x is string => Boolean(x)))) {
+                    const c = firstKinds.get(`${m.topic}|${kind}`) ?? { topic: m.topic, kind, capability: first.capability!, examples: [] };
+                    c.examples.push({ task, reason: first.reason ?? "" });
+                    firstKinds.set(`${m.topic}|${kind}`, c);
+                }
             }
             if (/^STUCK/.test(m.ended ?? ""))
                 patterns.push({ id: `stuck:${task}`, kind: "stuck", says: `task ${task} (${m.topic}) ended ${String(m.ended).slice(0, 300)}`, count: 1, source: `${task}/manifest.json`, target: existsSync(fromRoot("specs", m.topic, "words.json")) ? `specs/${m.topic}/words.json` : null, detail: { task, topic: m.topic, ended: m.ended } });
         }
+    for (const c of firstKinds.values())
+        if (c.examples.length >= at)
+            patterns.push({
+                id: `first-try-category:${c.topic}:${c.kind}:${c.examples.at(-1)!.task}`,
+                kind: "first-try-category",
+                says: `the first submission of ${c.examples.length} tasks (${c.topic}) was refused for ${c.kind}, on a different field each time or not: ${c.examples.map((e) => `${e.task}: ${e.reason.replace(/^[a-z]+ refused:\s*/i, "").slice(0, 160)}`).join(" | ")}`,
+                count: c.examples.length,
+                source: c.examples.map((e) => `${e.task}/manifest.json`).join(" "),
+                target: existsSync(fromRoot("specs", c.topic, "words.json")) ? `specs/${c.topic}/words.json` : null,
+                detail: { topic: c.topic, kind: c.kind, capability: c.capability, reason: c.examples.at(-1)!.reason, examples: c.examples.map((e) => ({ task: e.task, reason: e.reason.slice(0, 400) })) },
+            });
     // The same mistake at the first try of several tasks: what a model does again at each new task, whatever it corrects within one.
     for (const f of firstTries.values())
         if (f.tasks.length >= at)
