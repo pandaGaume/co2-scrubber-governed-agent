@@ -1,0 +1,21 @@
+{
+    "name": "anthropic-fable",
+    "tier3": {
+        "wire": "anthropic-messages",
+        "model": "claude-fable-5-1",
+        "apiKey": {
+            "env": "ANTHROPIC_API_KEY"
+        },
+        "capabilities": [
+            "tools",
+            "json"
+        ],
+        "maxTokens": 8192
+    },
+    "gateway": {
+        "host": "laptop"
+    },
+    "factory": {
+        "runner": "local"
+    }
+}
