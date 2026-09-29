@@ -11,8 +11,8 @@
         { "id": "plan", "type": "conduct.stage", "bag": { "says": "brief.plan", "view": "plan" } },
         { "id": "propose", "type": "conduct.stage", "bag": { "says": "brief.propose", "view": "propose" } },
 
-        { "id": "plan-first", "type": "conduct.gate", "bag": { "capabilities": ["reflection.propose"], "says": "requirements.missing", "vars": { "requirement": "planDeclared", "how": { "word": "openQuestions.plan" } } } },
-        { "id": "already-accepted", "type": "conduct.gate", "bag": { "capabilities": ["reflection.propose"], "says": "guard.accepted", "view": "accepted" } }
+        { "id": "plan-first", "type": "conduct.gate", "bag": { "capabilities": ["reflection.propose", "reflection.remember"], "says": "requirements.missing", "vars": { "requirement": "planDeclared", "how": { "word": "openQuestions.plan" } } } },
+        { "id": "already-accepted", "type": "conduct.gate", "bag": { "capabilities": ["reflection.propose", "reflection.remember"], "says": "guard.accepted", "view": "accepted" } }
     ],
     "links": [
         { "from": "accepted.value", "to": "not-accepted.in" },

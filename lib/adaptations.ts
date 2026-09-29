@@ -32,7 +32,14 @@ export interface LedgerEntry {
     baseline: { tasks: number; withMistake: number };
     reflectionTask: string | null;
     commit: string | null;
-    status: "adopted" | "kept" | "undone" | "not undone";
+    /** A patch: adopted, then kept or undone. An entry of the memory (`memory.ts`): a candidate, in trial, then consolidated or rejected. */
+    status: "adopted" | "kept" | "undone" | "not undone" | "candidate" | "trial" | "consolidated" | "rejected";
+    /** An entry of the memory: its topic, what it says, what it applies to, the episodes the reflection cited. */
+    memory?: { topic: string; kind: "constraint" | "workflow"; rule: string; appliesTo: string[]; cited: { failures: string[]; successes: string[] } };
+    /** The evidence the working memory held for it, counted by the station: failures of its form, and successes that answered them. */
+    observed?: { failures: string[]; successes: string[] };
+    /** When it was put in trial. */
+    trialAt?: string;
     decidedAt?: string;
     /** Why it was kept or undone, with what the tasks since showed. */
     why?: string;

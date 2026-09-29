@@ -50,6 +50,10 @@ import { Playbook, playbookProblems, type PlaybookFile } from "../../harness/cor
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { adaptationProblems, observe, reflectionFormat, type Adaptation } from "../../lib/reflection.js";
 import { enterAdoption, historyOf, judge, judgedFamilies, mistakeRate, readLedger, underJudgement, undo, writeLedger } from "../../lib/adaptations.js";
+import { answeredByMemory, enterCandidate, judgeTrials, memoryConfig, memoryProblems, promote, readMemory, topicOfPatterns, type Remembered } from "../../lib/memory.js";
+import { workingMemory } from "../../lib/working-memory.js";
+import { TOPIC_DEFINITIONS } from "../../harness/core/runner.js";
+import type { Episode } from "../../harness/core/episodes.js";
 import { snapshotAt } from "../../lib/fork.js";
 import * as path from "node:path";
 import { McpGrammar } from "@cyanmycelium/mcp-core";
@@ -87,7 +91,7 @@ export interface Proposal {
     artifacts: Array<{ kind: string; path: string; sha256: string; contractSha256?: string }>;
     manifestSha256: string;
     claims: Record<string, unknown>;
-    status: "received" | "judging" | "accepted" | "rejected" | "relayed" | "awaiting-signature" | "adopted";
+    status: "received" | "judging" | "accepted" | "rejected" | "relayed" | "awaiting-signature" | "adopted" | "candidate";
     reportId?: string;
     reason?: string;
     receivedAt: string;
@@ -361,12 +365,69 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
      * (a file changed since the reflection checked it is not patched); written to the fork's copy, a snapshot of the fork
      * taken with its reason, and said by Mother. Outside a fork, a change of conduct is a proposal a signatory signs: refused.
      */
+    /** A topic's working memory, rebuilt from the workshop's manifests (2026-09-29, the memory audit). */
+    const episodesFor = (topic: string): Episode[] => {
+        const def = TOPIC_DEFINITIONS[topic as keyof typeof TOPIC_DEFINITIONS];
+        return def?.judges ? workingMemory(WORKSHOP_ROOT, topic, { judges: def.judges, digest: def.digest }, memoryConfig().workingMemory.size) : [];
+    };
+    /** The patterns of the traces, the first tries read in the working memory, each form of mistake with what then answered it. */
+    const patternsNow = () => observe(WORKSHOP_ROOT, reflectionFormat(), { window: memoryConfig().workingMemory.size, episodesOf: episodesFor });
+    const domainOf = (topic: string): string => memoryConfig().domains[topic] ?? topic;
+
+    /**
+     * An entry the reflection proposes for a factory's memory (2026-09-29, the memory audit): checked again against the patterns
+     * and the working memory as they are now, entered in the ledger as a candidate, and put in trial at once when the recent
+     * episodes already hold enough failures of its form and successes that answered it. In a fork only.
+     */
+    const relayMemory = async (proposal: Proposal, r: Remembered) => {
+        const fork = forkId();
+        const dir = forkDir();
+        if (!fork || !dir) {
+            proposal.status = "rejected";
+            proposal.reason = "a factory's memory is written in a fork only; outside one, what is learned is a proposal an authorised signatory signs";
+            say("mother.adaptation.outside", null, () => ({ target: "memory" }));
+            return;
+        }
+        const patterns = patternsNow();
+        const topic = topicOfPatterns(patterns, r.evidence ?? []);
+        const episodes = episodesFor(topic);
+        const problems = memoryProblems(r, patterns, episodes, readMemory(WORKSHOP_ROOT, topic).entries);
+        if (problems.length) {
+            proposal.status = "rejected";
+            proposal.reason = problems.join("; ");
+            say("mother.memory.refused", null, () => ({ domain: domainOf(topic), problems: problems.join("; ").slice(0, 300) }));
+            return;
+        }
+        const families = patterns.filter((p) => r.evidence.includes(p.id) && p.family).map((p) => p.family!);
+        const entry = enterCandidate(WORKSHOP_ROOT, topic, r, families, episodes, proposal.taskId);
+        const tried = promote(WORKSHOP_ROOT, episodesFor).some((e) => e.n === entry.n);
+        const now = readLedger(WORKSHOP_ROOT).find((e) => e.n === entry.n) ?? entry;
+        const observed = now.observed ?? { failures: [], successes: [] };
+        const snapshot = (() => {
+            try {
+                return snapshotAt(dir, `memory ${entry.n} of ${domainOf(topic)}, ${tried ? "in trial" : "a candidate"}: ${r.memory.rule} (${observed.failures.length} failure(s), ${observed.successes.length} success(es); ${r.evidence.join(", ")})`);
+            } catch (e) {
+                log(`[station] the fork's snapshot of the memory entry failed: ${errorMessage(e)}`);
+                return null;
+            }
+        })();
+        if (snapshot) writeLedger(WORKSHOP_ROOT, readLedger(WORKSHOP_ROOT).map((x) => (x.n === entry.n ? { ...x, commit: snapshot.commit } : x)));
+        // In trial, it is in force from the next task: for the one who asked, the same as adopted.
+        proposal.status = tried ? "adopted" : "candidate";
+        proposal.reason = `${tried ? "in trial" : "a candidate"}${snapshot ? `, snapshot ${snapshot.commit.slice(0, 12)}` : ""}`;
+        const trial = memoryConfig().consolidation.trial;
+        if (tried) say("mother.memory.trial", null, () => ({ fork, domain: domainOf(topic), rule: r.memory.rule, failures: observed.failures.length, successes: observed.successes.length }));
+        else say("mother.memory.candidate", null, () => ({ fork, domain: domainOf(topic), rule: r.memory.rule, failures: observed.failures.length, successes: observed.successes.length, needFailures: trial.failures, needSuccesses: trial.successes }));
+    };
+
     const relayAdaptation = async (proposal: Proposal, artifact: Proposal["artifacts"][number]) => {
         const file = path.join(taskDir(checkTaskId(proposal.taskId)), artifact.path);
         if (!existsSync(file)) throw new Error(`adaptation ${artifact.path} is not in the workshop of task ${proposal.taskId}`);
         const text = readFileSync(file);
         if (sha256Of(text) !== artifact.sha256) throw new Error(`adaptation ${artifact.path}: the sha256 proposed is not the file's`);
-        const a = JSON.parse(text.toString("utf8")) as Adaptation & { targetSha256?: string };
+        const a = JSON.parse(text.toString("utf8")) as Adaptation & { targetSha256?: string; memory?: unknown };
+        // An entry of a factory's memory, not a patch: its own way in.
+        if (a.memory) return relayMemory(proposal, a as unknown as Remembered);
         const fork = forkId();
         const dir = forkDir();
         if (!fork || !dir) {
@@ -375,7 +436,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
             say("mother.adaptation.outside", null, () => ({ target: a.target }));
             return;
         }
-        const patterns = observe(WORKSHOP_ROOT);
+        const patterns = patternsNow();
         const locked = underJudgement(WORKSHOP_ROOT, reflectionFormat().evaluateAfter ?? 2).map((e) => e.target);
         const { problems, before, after } = adaptationProblems(a, patterns, reflectionFormat(), locked);
         const target = fromRoot(...String(a.target).split("/"));
@@ -514,15 +575,29 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                             log(`[station] the fork's snapshot of the judgement failed: ${errorMessage(e)}`);
                         }
                     }
+                    // The memory's entries (2026-09-29, the memory audit): those in trial that have had their tasks consolidated or rejected;
+                    // the candidates the recent episodes now support put in trial.
+                    const decided = judgeTrials(WORKSHOP_ROOT);
+                    for (const e of decided) say(e.status === "consolidated" ? "mother.memory.consolidated" : "mother.memory.rejected", null, () => ({ fork, domain: domainOf(e.memory!.topic), rule: e.memory!.rule, why: e.why ?? "" }));
+                    const tried = promote(WORKSHOP_ROOT, episodesFor);
+                    for (const e of tried) say("mother.memory.trial", null, () => ({ fork, domain: domainOf(e.memory!.topic), rule: e.memory!.rule, failures: e.observed?.failures.length ?? 0, successes: e.observed?.successes.length ?? 0 }));
+                    if (decided.length || tried.length)
+                        try {
+                            snapshotAt(dir, [...decided.map((e) => `memory ${e.n} ${e.status}: ${e.why}`), ...tried.map((e) => `memory ${e.n} in trial: ${e.memory!.rule}`)].join("; "));
+                        } catch (e) {
+                            log(`[station] the fork's snapshot of the memory failed: ${errorMessage(e)}`);
+                        }
                     const focus = typeof args.focus === "string" && args.focus ? args.focus : null;
                     // No new adaptation of a family while one of it is being judged: one change at a time, measured, never stacked.
                     const judging = underJudgement(WORKSHOP_ROOT, evaluateAfter);
+                    // An entry of the memory waiting for its evidence, or in trial, holds its families the same way.
                     const waiting = new Set(judging.flatMap((e) => e.families));
                     // One adaptation of a file at a time: the patterns whose fix would touch a file being judged wait with it.
                     const locked = [...new Set(judging.map((e) => e.target))];
                     for (const e of judging) say("mother.adaptation.judging", null, () => ({ n: e.n, target: e.target, since: mistakeRate(WORKSHOP_ROOT, judgedFamilies(e), "after", e.at).tasks, needed: evaluateAfter }));
-                    const read = observe(WORKSHOP_ROOT).filter((p) => !focus || p.source.includes(focus));
-                    const patterns = read.filter((p) => (!p.family || !waiting.has(p.family)) && (!p.target || !locked.includes(p.target)));
+                    const read = patternsNow().filter((p) => !focus || p.source.includes(focus));
+                    // And what the memory answers: an entry waiting or in trial holds its families; failures already answered are not read again.
+                    const patterns = read.filter((p) => (!p.family || !waiting.has(p.family)) && (!p.target || !locked.includes(p.target)) && !answeredByMemory(WORKSHOP_ROOT, episodesFor, p));
                     say("mother.reflection.read", null, () => ({ fork, count: patterns.length }));
                     const judgedNow = judged.map(({ entry }) => ({ n: entry.n, status: entry.status, why: entry.why ?? null }));
                     if (!patterns.length) return { fork, patterns, judged: judgedNow, judging: judging.map((e) => e.n), taskId: null, note: read.length ? "the patterns read are those of an adaptation being judged: nothing new meanwhile" : "no pattern in the traces: nothing to adapt" };
@@ -530,7 +605,11 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     const history = historyOf(WORKSHOP_ROOT, patterns.map((p) => p.family!).filter(Boolean));
                     const r = await client().call("factory", "request", {
                         objective: { required_outputs: [{ name: "adaptation", quantity: "Adaptation" }] },
-                        observations: { reflection: { patterns, history, locked } },
+                        // With the working memory of the factories the patterns are about, and what their memory holds.
+                        observations: { reflection: { patterns, history, locked, ...(() => {
+                            const topics = [...new Set(patterns.map((p) => String(p.detail.topic ?? "")).filter(Boolean))];
+                            return { episodes: topics.flatMap(episodesFor), memory: topics.flatMap((t) => readMemory(WORKSHOP_ROOT, t).entries) };
+                        })() } },
                         topics: ["reflection"],
                         ...(args.builder === "scripted" || args.builder === "reasoner" ? { builder: args.builder } : {}),
                         requestedBy: "station (reflection)",

@@ -4,8 +4,9 @@
  *
  * The pattern it knows how to answer is the same cause stopping a commissioning's tests again (`abort-repeat`): the
  * bound of the playbook that ends the commissioning after so many aborts comes down to the number of aborts seen on
- * that cause, when it is higher. A factory refused again and again on the same points (`refusal-streak`): the rule
- * it broke goes into the instructions of the stage that calls the capability. Any other pattern is left to a model.
+ * that cause, when it is higher. A factory that makes the same mistake at its first try of several tasks, and whose
+ * retries were then accepted (`first-try-shape` with its successes): what the accepted retries did is proposed for the
+ * factory's memory (`reflection.remember`), never written into its words. Any other pattern is left to a model.
  *
  *   plan, nothing done     task.plan: the adaptation is written here, the output missing, to the topic "reflection";
  *   build, after the plan  reflection.propose: the bound, justified by what the pattern measured;
@@ -15,7 +16,7 @@ import { readFileSync } from "node:fs";
 import type { JsonValue, PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
 import { fromRoot } from "../../lib/paths.js";
 import { decide, ScriptedBuilderBase, valueOf, type ScriptContext } from "../../harness/core/scripted-base.js";
-import { patternsOf } from "../../harness/topics/reflection/index.js";
+import { episodesOfTask, patternsOf } from "../../harness/topics/reflection/index.js";
 import type { PlaybookFile } from "../../harness/core/conduct.js";
 
 export class ScriptedReflectionBuilder extends ScriptedBuilderBase {
@@ -56,33 +57,31 @@ export class ScriptedReflectionBuilder extends ScriptedBuilderBase {
                         `the bound ${bound.id} from ${atLeast} to ${p.count}`,
                     );
                 }
-                // A factory refused again and again on the same points: the rule it broke goes into the instructions of the stage that
-                // calls the capability (the template of its words that names it), said once, so it is held from the first submission.
+                // A factory that keeps making the same mistake at its first try, and whose retries were then accepted (2026-09-29, the memory
+                // audit): what was accepted is remembered for its memory, never written into its words. The script says it by the field and
+                // the reference the accepted attempt cited, never a value; it reads the contrast, it does not know the rule.
                 for (const p of patternsOf(task)) {
-                    if ((p.kind !== "refusal-streak" && p.kind !== "first-try-repeat" && p.kind !== "first-try-shape" && p.kind !== "first-try-category") || !p.target) continue;
-                    const capability = String(p.detail.capability ?? "");
-                    const words = JSON.parse(readFileSync(fromRoot(...p.target.split("/")), "utf8")) as Record<string, unknown>;
-                    const found = templateNaming(words, capability);
-                    if (!found) continue;
-                    // The rule by its words and the ids it names, never a value: "= 30 percent" and "(40 percent)" go, the library holds them.
-                    const rule = String(p.detail.reason ?? "")
-                        .replace(/^[a-z]+ refused:\s*/i, "")
-                        .replace(/\s*=\s*-?[\d.]+(\s*(percent|ppm|min|bpm|%|m3\/min|L\/min))?/gi, "")
-                        .replace(/\s*\(-?[\d.]+\s*[^)]*\)/g, "")
-                        .replace(/[{}]/g, "")
-                        .slice(0, 300);
-                    const learned = p.kind !== "refusal-streak" ? ` Learned in this fork, after ${p.count} tasks whose first ${capability} was refused on the same point: ${rule}. Hold it from the first submission.` : ` Learned in this fork, after ${p.count} refusals in a row of ${capability} on the same point: ${rule}. Hold it from the first submission.`;
-                    if (found.template.includes("Learned in this fork")) continue;
+                    if (p.kind !== "first-try-shape") continue;
+                    const successes = (p.detail.successes ?? []) as Array<{ episode: string; field: string; refused: { reference?: unknown } | null; accepted: { reference?: unknown } | null }>;
+                    if (!successes.length) continue;
+                    const topic = String(p.detail.topic ?? "");
+                    const field = successes[0].field.replace(/\.\d+\./g, ".*.");
+                    const cited = typeof successes[0].accepted?.reference === "string" ? `, as the accepted attempts did (${successes[0].accepted.reference})` : ", as the accepted attempts did";
+                    const failures = ((p.detail.examples ?? []) as Array<{ task: string }>).map((e) => `${e.task}#${topic}`);
+                    const attempted = [...new Set(episodesOfTask(task).filter((e) => failures.includes(e.id)).flatMap((e) => e.attempts.map((a) => a.capability)))];
                     return decide(
-                        "reflection.propose",
+                        "reflection.remember",
                         {
-                            target: p.target,
-                            ops: [{ op: "append", pointer: `/${found.key.split(".").join("/")}`, value: learned }],
-                            reason: `${capability} was refused ${p.count} times in a row on the same point: its instructions now say the rule it broke, before it submits`,
+                            memory: {
+                                kind: "constraint",
+                                rule: `For ${field}, send from the first attempt what the guard then accepted${cited}, not what it refused: ${String(p.detail.shape ?? "").slice(0, 160)}.`,
+                                appliesTo: attempted.length ? attempted : [String(p.detail.capability ?? "")],
+                                evidence: { failures, successes: [...new Set(successes.map((x) => x.episode))] },
+                            },
+                            reason: `the same form of mistake at the first try of ${p.count} tasks, then accepted after a retry ${successes.length} time(s): what the retries changed is remembered`,
                             evidence: [p.id],
-                            justifications: [],
                         } as unknown as JsonValue,
-                        `the rule of ${capability}'s refusals into ${found.key}`,
+                        `remember what the accepted retries of ${field} did`,
                     );
                 }
                 return decide("task.fail", { reason: "no pattern the script knows how to answer (it answers a cause of abort repeated, when the playbook's bound is higher): a model reads the others" }, "nothing the script answers");
@@ -95,19 +94,4 @@ export class ScriptedReflectionBuilder extends ScriptedBuilderBase {
             }
         }
     }
-}
-
-/** The template of a words file that names a capability (the stage that calls it), by its dotted key. */
-function templateNaming(words: Record<string, unknown>, capability: string): { key: string; template: string } | null {
-    const walk = (v: unknown, key: string): { key: string; template: string } | null => {
-        if (typeof v === "string") return capability && v.includes(capability) && key.startsWith("brief.") ? { key, template: v } : null;
-        if (v && typeof v === "object" && !Array.isArray(v))
-            for (const [k, x] of Object.entries(v)) {
-                if (k === "note") continue;
-                const hit = walk(x, key ? `${key}.${k}` : k);
-                if (hit) return hit;
-            }
-        return null;
-    };
-    return walk(words, "");
 }

@@ -84,6 +84,8 @@ export interface ReasoningState extends Record<string, JsonValue> {
     requirements: Record<string, boolean>;
     openQuestions: string[];
     nextActions: string[];
+    /** What earlier attempts taught, at the stage that calls what they concern (`lib/memory.ts`): the learned entries, and the recent episodes with what was refused and what was then accepted. */
+    memory: JsonValue;
 }
 
 /** What a topic adds to the state at a step: its hypothesis, its last evaluation, its open questions, the evidence its phases need. */
@@ -109,6 +111,8 @@ export interface StateInputs {
     /** The runs already spent by the topic, when it counts them. */
     runsSpent?: number;
     topic?: TopicState;
+    /** The memory this step reads, when there is any (the runner's context builder). */
+    memory?: JsonValue | null;
 }
 
 const str = (v: unknown): string => (typeof v === "string" ? v : v === undefined || v === null ? "" : JSON.stringify(v));
@@ -210,6 +214,7 @@ export function reasoningStateOf(inputs: StateInputs): ReasoningState {
         requirements: topic.requirements ?? {},
         openQuestions: topic.openQuestions ?? [],
         nextActions,
+        memory: inputs.memory ?? null,
     };
 }
 

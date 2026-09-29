@@ -12,7 +12,9 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import type { CapabilityResult, Intention, JsonValue } from "@spiky-panda/harness";
 import { fromRoot } from "../../../lib/paths.js";
-import { adaptationProblems, placesOf, reflectionFormat, stageKeysOf, type Adaptation, type Pattern } from "../../../lib/reflection.js";
+import { adaptationProblems, reflectionFormat, type Adaptation, type Pattern } from "../../../lib/reflection.js";
+import { episodeView, memoryProblems, type MemoryEntry, type Remembered } from "../../../lib/memory.js";
+import type { Episode } from "../../core/episodes.js";
 import { withBase } from "../../core/base.js";
 import type { LocalCapability } from "../../core/capabilities.js";
 import { loadPlaybook, sayingText, type Evidence } from "../../core/conduct.js";
@@ -31,18 +33,48 @@ const w = (key: string, vars?: Record<string, string | number>): string => say(R
 export const REFLECTION_CONDUCT = loadPlaybook(REFLECTION_FORMAT.playbook);
 
 export const REFLECTION_WORD_KEYS = [
-    "intention", "capabilities.propose", "brief.plan", "brief.propose", "brief.refused", "brief.handOver", "requirements.missing",
+    "intention", "capabilities.propose", "capabilities.remember", "brief.plan", "brief.propose", "brief.refused", "brief.handOver", "requirements.missing",
     "guard.refused", "guard.accepted", "openQuestions.plan", "openQuestions.propose", "openQuestions.handOver",
     "validate.none", "validate.notAccepted", "validate.notTheFile",
 ];
 
-export const REFLECTION_TOOLS: ReadonlyArray<RegExp> = withBase([/^reflection\.propose$/]);
+export const REFLECTION_TOOLS: ReadonlyArray<RegExp> = withBase([/^reflection\.(propose|remember)$/]);
 
 /** The patterns the task is given. */
 export const patternsOf = (task: TaskFile["task"]): Pattern[] => {
     const r = ((task.observations ?? {}) as Record<string, unknown>)[REFLECTION_FORMAT.observation] as { patterns?: Pattern[] } | undefined;
     return Array.isArray(r?.patterns) ? r.patterns : [];
 };
+
+/** The working memory the task is given (2026-09-29, the memory audit): the recent episodes of the patterns' factories, and what their memory holds. */
+export const episodesOfTask = (task: TaskFile["task"]): Episode[] => {
+    const r = ((task.observations ?? {}) as Record<string, unknown>)[REFLECTION_FORMAT.observation] as { episodes?: Episode[] } | undefined;
+    return Array.isArray(r?.episodes) ? r.episodes : [];
+};
+export const memoryOfTask = (task: TaskFile["task"]): MemoryEntry[] => {
+    const r = ((task.observations ?? {}) as Record<string, unknown>)[REFLECTION_FORMAT.observation] as { memory?: MemoryEntry[] } | undefined;
+    return Array.isArray(r?.memory) ? r.memory : [];
+};
+
+/** What the reflection proposes to remember: a rule for a factory's memory, not a change of its words. */
+export const REMEMBER_SCHEMA = {
+    type: "object",
+    properties: {
+        memory: {
+            type: "object",
+            properties: {
+                kind: { type: "string", enum: ["constraint", "workflow"], description: "constraint: what a submission must hold; workflow: how the work goes" },
+                rule: { type: "string", description: "one sentence, by its words and the ids of the facts it names, never their values" },
+                appliesTo: { type: "array", items: { type: "string" }, minItems: 1, description: "the capabilities it concerns, as the episodes name them" },
+                evidence: { type: "object", properties: { failures: { type: "array", items: { type: "string" } }, successes: { type: "array", items: { type: "string" } } }, required: ["failures", "successes"] },
+            },
+            required: ["kind", "rule", "appliesTo", "evidence"],
+        },
+        reason: { type: "string" },
+        evidence: { type: "array", items: { type: "string" }, minItems: 1 },
+    },
+    required: ["memory", "reason", "evidence"],
+} as const;
 
 interface Submission {
     n: number;
@@ -113,7 +145,15 @@ async function guardReflection(capabilityId: string, input: JsonValue, context: 
     const refused = REFLECTION_CONDUCT.evaluate(evidenceOf(context.progress))
         .refusing.filter((g) => g.capabilities.includes(capabilityId))
         .map((g) => sayingText(g, w, views));
-    if (refused.length || capabilityId !== "reflection.propose") return refused;
+    if (refused.length || !/^reflection\.(propose|remember)$/.test(capabilityId)) return refused;
+    if (capabilityId === "reflection.remember") {
+        const problems = memoryProblems(input, patternsOf(context.task), episodesOfTask(context.task), memoryOfTask(context.task));
+        if (!problems.length) return [];
+        const state = stateOf(context.progress);
+        state.submissions.push({ n: state.submissions.length + 1, ok: false, problems });
+        context.progress.pendingProblems = problems.map((says) => ({ says, kind: "memory" }));
+        return [w("guard.refused", { problems: problems.join("; ") })];
+    }
     const locked = ((((context.task.observations ?? {}) as Record<string, unknown>)[REFLECTION_FORMAT.observation] as { locked?: string[] } | undefined)?.locked ?? []) as string[];
     const { problems } = adaptationProblems(input, patternsOf(context.task), REFLECTION_FORMAT, locked);
     if (!problems.length) return [];
@@ -147,6 +187,26 @@ function proposeCapability(context: TopicContext): LocalCapability {
     };
 }
 
+function rememberCapability(context: TopicContext): LocalCapability {
+    return {
+        id: "reflection.remember",
+        description: w("capabilities.remember", { file: REFLECTION_FORMAT.file.replace("{n}", "<n>") }),
+        inputSchema: REMEMBER_SCHEMA as unknown as JsonValue,
+        async execute(input: JsonValue): Promise<CapabilityResult> {
+            const r = input as unknown as Remembered;
+            const state = stateOf(context.progress);
+            const path = REFLECTION_FORMAT.file.replace("{n}", String(state.submissions.filter((s) => s.ok).length + 1));
+            // What the station enters as a candidate: the entry, why, the patterns it answers.
+            const text = JSON.stringify({ memory: r.memory, reason: r.reason, evidence: r.evidence, patterns: patternsOf(context.task).filter((p) => r.evidence.includes(p.id)) }, null, 2) + "\n";
+            const written = await context.broker.call("workspace", "write", { taskId: context.taskId, path, text });
+            if (!written.ok) return { ok: false, error: written.error ?? `could not write ${path}`, output: { outcome: written.outcome } };
+            state.submissions.push({ n: state.submissions.length + 1, ok: true, problems: [] });
+            state.accepted = { path, sha256: (written.output as { sha256: string }).sha256 };
+            return { ok: true, output: { outcome: "completed", value: { accepted: true, path, sha256: state.accepted.sha256, memory: r.memory.rule } } };
+        },
+    };
+}
+
 export function stateOfTopic(progress: Progress, task: TaskFile["task"]): TopicState {
     const patterns = patternsOf(task);
     const state = stateOf(progress);
@@ -170,16 +230,10 @@ export function stateOfTopic(progress: Progress, task: TaskFile["task"]): TopicS
             files,
             adaptable: REFLECTION_FORMAT.adaptable,
             never: REFLECTION_FORMAT.never as unknown as JsonValue,
-            // For each pattern about a factory's capability: where that factory reads what it is told about it, with the text as it is now.
-            places: Object.fromEntries(
-                patterns
-                    .filter((p) => p.target && /words\.json$/.test(p.target) && typeof p.detail.capability === "string")
-                    .map((p) => {
-                        const file = fromRoot(...p.target!.split("/"));
-                        const words = existsSync(file) ? (JSON.parse(readFileSync(file, "utf8")) as Record<string, unknown>) : {};
-                        return [p.id, { file: p.target, places: placesOf(words, String(p.detail.capability), stageKeysOf(String(p.detail.topic ?? ""))) }];
-                    }),
-            ) as unknown as JsonValue,
+            // The working memory of the patterns' factories (2026-09-29, the memory audit): the recent episodes, each attempt with who
+            // decided it, and what was refused then accepted; and what their memory already holds.
+            episodes: episodesOfTask(task).map((e) => episodeView(e)) as JsonValue,
+            memory: memoryOfTask(task).map((e) => ({ rule: e.rule, appliesTo: e.appliesTo, status: e.status })) as unknown as JsonValue,
             accepted: state.accepted as unknown as JsonValue,
         },
         evaluation: last ? ({ submission: last.n, ok: last.ok, problems: last.problems } as JsonValue) : null,
@@ -209,12 +263,12 @@ export const REFLECTION_TOPIC: TopicDefinition = {
     name: "reflection",
     tools: REFLECTION_TOOLS,
     // An adaptation answers this task's patterns, never replayed from another's.
-    neverReplayed: [/^reflection\.propose$/, /^task\.done$/],
-    judges: [/^reflection\.propose$/],
+    neverReplayed: [/^reflection\.(propose|remember)$/, /^task\.done$/],
+    judges: [/^reflection\.(propose|remember)$/],
     replayedActions: [/^task\.plan$/],
     justified: REFLECTION_JUSTIFIED,
     validate: (claim, files, progress) => validateReflection(claim, files, progress),
-    local: (context) => [proposeCapability(context)],
+    local: (context) => [proposeCapability(context), rememberCapability(context)],
     guard: guardReflection,
     state: stateOfTopic,
     key: (progress) => stateOf(progress).submissions.map((s) => (s.ok ? "ok" : "refused")).join(","),

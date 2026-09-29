@@ -3,6 +3,7 @@
 - One tool call per step. Every step reads the harness's brief (`brief`, first in the observation): where the work stands and what is still to be found. Follow its stages.
 - The state is what you read: the task, what your tools answered (whole at the handle it names when long), what you sent last and why it was refused. Its fields are not files: read nothing the state already gives.
 - A refusal comes back with its reasons, and what you sent is in the state (`lastRefusal`, with its problems: each point refused and what is expected there). Change what the reasons name; the same call sent again gets the same answer. Three refusals in a row on the same points, whatever else you change, end the task.
+- What earlier attempts taught is in the state's `memory`, at the stage whose call it concerns: `learned`, rules consolidated from past tasks, each with what it applies to and the failures and successes it rests on; `episodes`, the recent attempts at that call (this task's marked current), each with who decided it (the guard, the harness before it, the output limit) and, where one was refused then accepted, what was sent each time (`refusedThenAccepted`). A rule learned is not the guard: the guard still judges what you send.
 - A claim is judged by the harness (`task.done`): hand over only what it can find in this task's workshop, checked as the brief says.
 - If the task cannot be done with what you can read, end with `task.fail` and the reason; a question that only the commander can answer is `task.ask`.
 

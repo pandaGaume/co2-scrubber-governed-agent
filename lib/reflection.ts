@@ -21,6 +21,7 @@ import { fromRoot } from "./paths.js";
 import { loadPlaybook, playbookProblems, type PlaybookExpectations } from "../harness/core/conduct.js";
 import { loadWords } from "../harness/core/words.js";
 import { problemsOfReason, refusalKey } from "../harness/core/problems.js";
+import type { Episode } from "../harness/core/episodes.js";
 
 export const REFLECTION_FORMAT_FILE = "specs/reflection/format.json";
 
@@ -67,10 +68,27 @@ const readJson = <T>(file: string): T | null => {
     }
 };
 
+/**
+ * What the working memory adds to a reading of the traces (2026-09-29, the memory audit): the first tries read in the last
+ * `window` tasks of each topic, not in the whole history; and, for a form of mistake, the episodes where it was refused and a
+ * retry then accepted, with what was sent each time (`episodesOf`, `lib/working-memory.ts`): the X refused and the Y accepted.
+ */
+export interface WorkingMemoryReading {
+    window?: number;
+    episodesOf?: (topic: string) => Episode[];
+}
+
 /** The patterns of a workshop's traces (the fork's, in a fork): its scenario runs, its tasks' manifests. */
-export function observe(workshop: string, format: Pick<ReflectionFormat, "repeatAt"> = reflectionFormat()): Pattern[] {
+export function observe(workshop: string, format: Pick<ReflectionFormat, "repeatAt"> = reflectionFormat(), memory: WorkingMemoryReading = {}): Pattern[] {
     const patterns: Pattern[] = [];
     const at = Math.max(2, format.repeatAt);
+    // The last tasks of each topic: the first tries the working memory holds.
+    const recent = new Set<string>();
+    if (existsSync(workshop)) {
+        const byTopic = new Map<string, string[]>();
+        for (const { task, manifest } of tasksOf(workshop)) byTopic.set(manifest.topic, [...(byTopic.get(manifest.topic) ?? []), task]);
+        for (const tasks of byTopic.values()) for (const t of tasks.slice(-(memory.window ?? tasks.length))) recent.add(t);
+    }
     // The commissioning's runs: the same condition stopping its tests again.
     const runs = path.join(workshop, "runs");
     if (existsSync(runs))
@@ -120,7 +138,7 @@ export function observe(workshop: string, format: Pick<ReflectionFormat, "repeat
                     target: existsSync(fromRoot("specs", m.topic, "words.json")) ? `specs/${m.topic}/words.json` : null,
                     detail: { task, topic: m.topic, capability: longest.capability, reason: longest.reason },
                 });
-            const first = firstTryRefused(m.steps);
+            const first = recent.has(task) ? firstTryRefused(m.steps) : null;
             if (first) {
                 // The same mistake: the same kind of refusal on the same fields (a justification and a floor on one step are two mistakes).
                 const k = mistakeKey(m.topic, first.reason);
@@ -144,16 +162,20 @@ export function observe(workshop: string, format: Pick<ReflectionFormat, "repeat
     // The same form of mistake at the first try, whatever the field (2026-09-29, the replays: the category mixed a wrong fact cited with a
     // justification missing, and an adaptation that cured the first was judged on the second): what a precise adaptation answers.
     for (const c of firstShapes.values())
-        if (c.examples.length >= at)
+        if (c.examples.length >= at) {
+            // What answered the mistake, when a retry was then accepted: the field, what was refused there, what was accepted.
+            const successes = (memory.episodesOf?.(c.topic) ?? []).flatMap((e) => e.contrasts.filter((x) => x.accepted && shapesOf(x.rejected.says).includes(c.shape)).map((x) => ({ episode: e.id, field: x.path, refused: x.rejected.argument, accepted: x.accepted!.argument })));
+            const answered = successes.length ? `; then accepted after a retry ${successes.length} time(s), e.g. ${successes[0].field}: ${JSON.stringify(successes[0].refused).slice(0, 160)} refused, ${JSON.stringify(successes[0].accepted).slice(0, 160)} accepted` : "";
             patterns.push({
                 id: `first-try-shape:${c.topic}:${c.examples.at(-1)!.task}:${createHash("sha256").update(c.shape).digest("hex").slice(0, 8)}`,
                 kind: "first-try-shape",
-                says: `the first submission of ${c.examples.length} tasks (${c.topic}) was refused on the same form of mistake, "${c.shape}": ${c.examples.map((e) => `${e.task}: ${e.reason.replace(/^[a-z]+ refused:\s*/i, "").slice(0, 160)}`).join(" | ")}`,
+                says: `the first submission of ${c.examples.length} tasks (${c.topic}) was refused on the same form of mistake, "${c.shape}": ${c.examples.map((e) => `${e.task}: ${e.reason.replace(/^[a-z]+ refused:\s*/i, "").slice(0, 160)}`).join(" | ")}${answered}`,
                 count: c.examples.length,
                 source: c.examples.map((e) => `${e.task}/manifest.json`).join(" "),
                 target: existsSync(fromRoot("specs", c.topic, "words.json")) ? `specs/${c.topic}/words.json` : null,
-                detail: { topic: c.topic, shape: c.shape, capability: c.capability, reason: c.examples.at(-1)!.reason, examples: c.examples.map((e) => ({ task: e.task, reason: e.reason.slice(0, 400) })) },
+                detail: { topic: c.topic, shape: c.shape, capability: c.capability, reason: c.examples.at(-1)!.reason, examples: c.examples.map((e) => ({ task: e.task, reason: e.reason.slice(0, 400) })), successes },
             });
+        }
     for (const c of firstKinds.values())
         if (c.examples.length >= at)
             patterns.push({

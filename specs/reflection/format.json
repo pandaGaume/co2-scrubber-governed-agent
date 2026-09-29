@@ -10,10 +10,13 @@
     "evaluateAfter": 3,
     "adaptable": [
         "specs/*/playbook.json",
-        "specs/*/*.playbook.json",
-        "specs/*/words.json"
+        "specs/*/*.playbook.json"
     ],
     "never": [
+        {
+            "pattern": "specs/*/words.json",
+            "why": "what a factory is told is what a person wrote; what it learns goes to its memory (specs/harness/memory.json), never into its instructions"
+        },
         {
             "pattern": "docs/library/**",
             "why": "the library and its signatures are what a person reviewed and signed"
@@ -37,6 +40,10 @@
         {
             "pattern": "specs/harness/**",
             "why": "what the core knows of the application"
+        },
+        {
+            "pattern": "outputs/factory/memory/**",
+            "why": "the memory is written by the station's consolidation, from the evidence of the episodes, never by a patch"
         }
     ],
     "consumers": {

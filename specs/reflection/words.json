@@ -1,14 +1,15 @@
 {
     "note": "What the reflection factory says to its model and in its refusals (2026-09-29): the code fills the holes {name} and says nothing of its own.",
-    "intention": "Read the patterns of the traces ({count}) and propose one adaptation of the conduct that answers them: a patch on one file the spec lets adapt, with why and the patterns it answers. It is adopted in a fork only, and measured there.",
+    "intention": "Read the patterns of the traces ({count}) and the recent episodes they come from, and answer them with one thing: an entry of a factory's memory (a rule learned from what was refused and what was then accepted), or an adaptation of a playbook's conduct. It is taken in a fork only, and measured there.",
     "capabilities": {
-        "propose": "Propose the adaptation: the file (target), the patch (ops: each an op and a JSON Pointer, pointer; append adds a sentence at the end of an instruction; a segment [id=x] picks the element of a list by its id), why (reason), the ids of the patterns it answers (evidence), and the justification of each number the patch sets ([] when it sets none). It changes what a factory is told, never a procedure's numbers, and names a fact by its id, never its value. The guard applies it to a copy and checks the file is still what its reader needs; an accepted one is written to {file} for the station."
+        "propose": "Propose an adaptation of a playbook (a process's or a factory's conduct): the file (target), the patch (ops: each an op and a JSON Pointer, pointer; a segment [id=x] picks the element of a list by its id), why (reason), the ids of the patterns it answers (evidence), and the justification of each number the patch sets ([] when it sets none). It never writes what a factory is told (its words): what a factory learns goes to its memory, with reflection.remember. The guard applies it to a copy and checks the file is still what its reader needs; an accepted one is written to {file} for the station.",
+        "remember": "Propose an entry of a factory's memory: the rule (memory.rule, one sentence, by its words and the ids of the facts it names, never their values), its kind (constraint: what a submission must hold; workflow: how the work goes), what it applies to (memory.appliesTo: the capabilities it concerns, as the episodes name them), the episodes it rests on (memory.evidence: failures, where the mistake was made; successes, where a retry was then accepted), why (reason) and the ids of the patterns it answers (evidence). The station enters it as a candidate; it is tried once the recent episodes hold enough failures and successes, and kept only if the mistake then shows less often. An accepted one is written to {file} for the station."
     },
     "brief": {
         "plan": "Stage 1 of 3, the plan. The patterns are in the state (hypothesis, field \"patterns\"), each with its id, what it says, how many times, and the file its fix would touch; the files are there whole (field \"files\"), with what may adapt and what never (fields \"adaptable\" and \"never\"). Declare with task.plan that the adaptation is written here: no node of the catalogue, the output {name} missing, to the topic \"reflection\".",
-        "propose": "Stage 2 of 3, the adaptation. Choose the pattern a change of conduct answers best. Read what was already tried for it (field \"history\"): an adaptation undone had no effect, say something else, more precise, from what the pattern's examples show the factory confuses. For a factory that keeps making a mistake, add to what it reads before it makes it (field \"places\": the brief of the stage that calls the capability, the tool's description) the rule it breaks, said by its words and the ids of the facts it names, never their values. Propose the smallest patch with reflection.propose: one file, the ops (append to add a sentence), the reason in a sentence, the ids of the patterns as evidence (the most precise first: the same form of mistake rather than its category, since the adaptation is judged on the most precise it cites), and the justifications of the numbers it sets ([] when none).{refused}",
+        "propose": "Stage 2 of 3, the answer. For a factory that keeps making a mistake, read its recent episodes (field \"episodes\": each attempt with who decided it, and, where one was refused then accepted, what was sent each time, refusedThenAccepted) and the pattern's successes: what the accepted attempts did that the refused ones did not is the rule to remember; say it with reflection.remember, citing the episodes it rests on (failures and successes) and the patterns, the most precise first (the same form of mistake rather than its category). Do not say again what its memory holds (field \"memory\"), nor what was already tried and had no effect (field \"history\"). For a process that keeps stopping on the same cause, propose the smallest patch of its playbook with reflection.propose.{refused}",
         "refused": " Your last adaptation was refused: {problems}. Correct what it says and propose it again, whole.",
-        "handOver": "Stage 3 of 3, hand over. The guard accepted {path}. End with task.done, the adaptation as the artifact of kind \"adaptation\"; the station adopts it in the fork and says so."
+        "handOver": "Stage 3 of 3, hand over. The guard accepted {path}. End with task.done, it as the artifact of kind \"adaptation\"; the station takes it in the fork and says so."
     },
     "requirements": {
         "missing": "the plan needs {requirement} first: {how}"
@@ -19,12 +20,12 @@
     },
     "openQuestions": {
         "plan": "the plan: the adaptation is written here (task.plan)",
-        "propose": "the adaptation, applied to a copy and checked (reflection.propose)",
+        "propose": "the answer: an entry of the memory (reflection.remember) or a patch of a playbook (reflection.propose), checked",
         "handOver": "hand the adaptation over (task.done)"
     },
     "validate": {
         "none": "no adaptation among the claimed artifacts",
-        "notAccepted": "no adaptation was accepted by the guard in this task (reflection.propose)",
+        "notAccepted": "nothing was accepted by the guard in this task (reflection.remember or reflection.propose)",
         "notTheFile": "claimed adaptation \"{path}\" is not the file the guard accepted ({accepted})"
     }
 }

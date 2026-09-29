@@ -1,0 +1,24 @@
+{
+    "title": "The memory of the factories: episodes, the working memory, consolidation, the long-term memory",
+    "note": "2026-09-29, the memory audit (lib/memory.ts, lib/working-memory.ts, harness/core/episodes.ts). The manifests are the ground truth; an episode is a task's submissions read from them; the working memory is the last episodes of a topic, rebuilt from the manifests; the long-term memory is what was learned from them, consolidated: a file per domain in the fork's workshop (file), never the topic's words. A factory reads, at the stage that calls a capability, the episodes and the learned entries about it (shown); previousTasks false shows it only this task's episode (an ablation). A reflection's entry is a candidate until the working memory holds enough failures of its form and enough successes that answered it (trial); in trial it is in force, and after judgeAfter tasks of its topic it is consolidated when its mistake shows less often than before, rejected otherwise. Never adaptable by the reflection (specs/harness/**).",
+    "workingMemory": {
+        "size": 10,
+        "shown": 5,
+        "previousTasks": true
+    },
+    "consolidation": {
+        "trial": {
+            "failures": 2,
+            "successes": 1
+        },
+        "judgeAfter": 3
+    },
+    "file": "memory/{topic}.json",
+    "domains": {
+        "procedure": "procedure_authoring",
+        "playbook": "playbook_authoring",
+        "graph": "twin_building",
+        "code": "node_writing",
+        "onnx": "model_fitting"
+    }
+}

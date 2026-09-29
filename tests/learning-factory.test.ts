@@ -1,16 +1,18 @@
 /**
- * The factory learns from its refusals, in a fork (2026-09-29; Guillaume: "montre-moi un scénario un peu plus explicite
- * que ne plus demander"): the learning scenario (`specs/scenario-commissioning-learning.json`) played in a fork started
- * to learn. The procedure factory's script does not understand its refusals but follows its written instructions: it
- * sends a first step that stops the scrubber three times, and its task ends STUCK. That end is the event: Mother reads
- * the task's traces, the reflection writes the rule it kept breaking into its instructions (the fork's copy of
- * specs/procedure/words.json), the station adopts it, and the factory, asked again, is accepted at its first submission.
+ * The factory learns from its episodes, in a fork (2026-09-29, the memory audit; it replaces the test where a reflection
+ * wrote a rule into the factory's words, which learning no longer touches). Both sides are scripts: what is proved is the
+ * chain, never what a model learns. The procedure factory's script sends a first step that stops the scrubber, is refused
+ * by the guard, and revises it to the floor, accepted: two tasks, two episodes, each a refusal then an accepted retry.
+ * Mother reads them; the reflection's script proposes, for the factory's memory, what the accepted retries did; the station
+ * enters it as a candidate, and puts it in trial at once, the working memory holding the failures and the successes it
+ * needs. The next tasks read it in their state at the stage that submits, and are accepted at their first attempt; after
+ * three of them the entry is consolidated, with its confidence. The factory's words are never written.
  *
  *     node --test dist/tests/
  */
 import { after, before, describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { createFork, forkHistory, forkPath } from "../lib/fork.js";
@@ -20,7 +22,7 @@ import { Broker } from "../harness/lib/broker.js";
 const PORT = 3191;
 const WORDS = "specs/procedure/words.json";
 
-describe("the procedure factory learns from its refusals, in a fork", () => {
+describe("the procedure factory learns from its episodes, in a fork: a memory, not its words", () => {
     const forks = mkdtempSync(path.join(tmpdir(), "forks-learning-factory-"));
     before(() => {
         process.env.FORKS_DIR = forks;
@@ -30,14 +32,16 @@ describe("the procedure factory learns from its refusals, in a fork", () => {
         rmSync(forks, { recursive: true, force: true });
     });
 
-    it("three refusals on the floor end the first task STUCK; the fork adds the rule to the factory's instructions; the second task is accepted at its first submission", async () => {
-        createFork("factory-learns");
-        const dir = forkPath("factory-learns");
+    it("two refusals answered by accepted retries become a candidate, then a trial the next tasks read and pass with, then a consolidated entry", async () => {
+        createFork("factory-remembers");
+        const dir = forkPath("factory-remembers");
         const repositoryWords = readFileSync(fromRepository(...WORDS.split("/")), "utf8");
-        Object.assign(process.env, { FORK_DIR: dir, FORK_LEARNING: "scripted", SPEECH_PROVIDER: "silent", STATION_VOICE: "off", BIOMED_PROVIDER: "simulated", SCENARIO_SECONDS_PER_MINUTE: "0", STATION_REMIND_SECONDS: "0", CAD_MCP_URL: "http://127.0.0.1:1/mcp" });
+        Object.assign(process.env, { FORK_DIR: dir, SPEECH_PROVIDER: "silent", STATION_VOICE: "off", BIOMED_PROVIDER: "simulated", STATION_REMIND_SECONDS: "0", CAD_MCP_URL: "http://127.0.0.1:1/mcp" });
+        delete process.env.FORK_LEARNING;
         const { startAll } = await import("../slots/run-all.js");
         const started = await startAll(PORT, () => undefined, "ignore");
         const operator = new Broker(started.broker.httpBase, { name: "learning-factory-test", version: "0", locale: "en" });
+        const workshop = path.join(dir, "outputs", "factory");
         try {
             const ok = async <T>(slot: string, tool: string, args: Record<string, unknown> = {}): Promise<T> => {
                 const x = await operator.call(slot, tool, args);
@@ -45,53 +49,91 @@ describe("the procedure factory learns from its refusals, in a fork", () => {
                 return x.output as T;
             };
             const read = async <T>(slot: string, uri: string): Promise<T> => JSON.parse((await (await operator.session(slot)).request<{ contents: Array<{ text: string }> }>("resources/read", { uri })).contents[0].text) as T;
-            type Run = { status: string; ended: string | null; commissioningId: string | null; tasks: string[]; loops: Array<{ status: string }>; learning?: Array<{ patterns: string[]; taskId: string | null; adopted?: boolean; after: string }> };
-            type Task = { state: string; manifest?: { ended?: string | null; steps?: Array<{ capability: string | null; outcome: string; judged?: string }> } };
+            type Step = { n: number; capability: string | null; outcome: string; judged?: string };
+            type Task = { state: string; run?: { ended?: string | null }; manifest?: { ended?: string | null; steps?: Step[]; proposal?: { status?: string } | null } };
+            const ended = async (taskId: string): Promise<Task> => {
+                for (let t0 = Date.now(); Date.now() - t0 < 120_000; await new Promise((x) => setTimeout(x, 200))) {
+                    const t = await ok<Task>("factory", "task", { taskId });
+                    if (t.run?.ended) return t;
+                }
+                throw new Error(`task ${taskId} did not end`);
+            };
+            // One procedure task on a commissioning of its own (the scene under a suffix of its own); the procedure relayed is refused.
+            const scene = JSON.parse(readFileSync(fromRepository("specs", "commissioning-devices.json"), "utf8")) as { devices: Array<{ path: string; descriptor: Record<string, unknown> }> };
+            let k = 0;
+            const procedureTask = async (): Promise<{ taskId: string; task: Task }> => {
+                const suffix = `-m${++k}`;
+                const devices = scene.devices.map((d) => ({ ...d, path: d.path.replace(/(\/[a-z0-9-]+)$/, `$1${suffix}`), descriptor: { ...d.descriptor, links: ((d.descriptor.links as Array<{ href: string }> | undefined) ?? []).map((l) => ({ ...l, href: l.href.replace(/(\/[a-z0-9-]+)$/, `$1${suffix}`) })) } as Record<string, unknown> }));
+                let commissioningId: string | null = null;
+                for (const d of devices) commissioningId = (await ok<{ commissioning: string | null }>("station", "registry_register", d)).commissioning ?? commissioningId;
+                await ok("station", "registry_report", { path: devices.find((d) => d.descriptor["@type"] === "Battery")!.path, readings: { stateOfCharge: 80 } });
+                const scrubber = devices.find((d) => d.descriptor["@type"] === "Scrubber")!.path;
+                const { taskId } = await ok<{ taskId: string }>("factory", "request", { objective: { required_outputs: [{ name: "V_lab", quantity: "Volume", unit: "m3" }] }, observations: { device: scrubber }, topics: ["procedure"], builder: "scripted", requestedBy: "learning-factory-test" });
+                const task = await ended(taskId);
+                const c = (await ok<{ commissioning: { status: string } }>("station", "commissioning_state", { commissioningId })).commissioning;
+                if (c.status === "awaiting-authorisation") await ok("station", "commissioning_authorise", { commissioningId, decision: "refuse", by: "commander-test" });
+                return { taskId, task };
+            };
+            const judged = (t: Task) => (t.manifest?.steps ?? []).filter((s) => s.judged).map((s) => `${s.capability}:${s.judged}`);
 
-            await ok("scenario", "play", { id: "commissioning-learning", builder: "scripted", request: {} });
-            let run: Run | null = null;
-            for (let t0 = Date.now(); Date.now() - t0 < 180_000; await new Promise((x) => setTimeout(x, 300))) {
-                run = await read<Run | null>("scenario", "scenario://run");
-                if (run && (run.loops[3].status === "waiting" || run.status !== "running")) break;
+            // Two tasks: the first submission refused by the guard, the revision accepted. Two episodes, X refused then Y accepted.
+            const one = await procedureTask();
+            const two = await procedureTask();
+            for (const t of [one, two]) {
+                assert.equal(t.task.state, "proposed", t.task.manifest?.ended ?? "");
+                assert.deepEqual(judged(t.task), ["procedure.submit:refused", "procedure.revise:accepted"]);
             }
-            assert.equal(run?.status, "running", `${run?.ended ?? ""} | learning ${JSON.stringify(run?.learning)} | tasks ${JSON.stringify(run?.tasks)} | fork words learned: ${readFileSync(path.join(dir, ...WORDS.split("/")), "utf8").includes("Learned in this fork")}`);
-            assert.equal(run?.loops[3].status, "waiting", "the second procedure passed and was relayed: the run waits for the authorisation");
 
-            // Before: the first task, refused three times on the same point, ended STUCK.
-            const [first, second] = run!.tasks;
-            const before = await ok<Task>("factory", "task", { taskId: first });
-            assert.match(String(before.manifest?.ended), /^STUCK: procedure\.(submit|revise) refused 3 times in a row on the same point/);
-            assert.equal((before.manifest?.steps ?? []).filter((s) => s.outcome === "refused").length, 3);
-            // Each refusal is the guard's judgement of a submission, and the manifest says so (2026-09-29, the learning experiment).
-            assert.deepEqual((before.manifest?.steps ?? []).filter((s) => s.outcome === "refused").map((s) => s.judged), ["refused", "refused", "refused"]);
+            // Mother reflects: the same form of mistake at the first try of two tasks, answered by an accepted retry both times.
+            const reflected = await ok<{ taskId: string | null; patterns: Array<{ kind: string; detail: { successes?: unknown[] } }> }>("station", "reflect", { builder: "scripted" });
+            const shape = reflected.patterns.find((p) => p.kind === "first-try-shape" && (p.detail.successes ?? []).length);
+            assert.ok(shape, JSON.stringify(reflected.patterns.map((p) => p.kind)));
+            assert.equal((shape!.detail.successes ?? []).length >= 2, true, "each task's retry answered the mistake");
+            const reflection = await ended(reflected.taskId!);
+            assert.equal(reflection.manifest?.proposal?.status, "adopted", "in trial: in force from the next task");
 
-            // The event, and what the fork learned from it.
-            const learned = run!.learning ?? [];
-            assert.equal(learned.length, 1);
-            assert.equal(learned[0].after, first);
-            assert.ok(learned[0].patterns.some((p) => p === `refusal-streak:${first}:procedure.submit`), learned[0].patterns.join(", "));
-            assert.equal(learned[0].adopted, true);
-            const words = JSON.parse(readFileSync(path.join(dir, ...WORDS.split("/")), "utf8")) as { brief: { procedure: string } };
-            assert.match(words.brief.procedure, /Learned in this fork, after 3 refusals in a row of procedure\.submit on the same point: floor: .*Hold it from the first submission\./);
+            // The memory of the domain: one entry in trial, with its evidence; the ledger says how it got there; the words untouched.
+            const memoryFile = path.join(workshop, "memory", "procedure.json");
+            const memory = JSON.parse(readFileSync(memoryFile, "utf8")) as { domain: string; entries: Array<{ rule: string; status: string; appliesTo: string[]; evidence: { failures: string[]; successes: string[] }; confidence: unknown }> };
+            assert.equal(memory.domain, "procedure_authoring");
+            assert.equal(memory.entries.length, 1);
+            const [entry] = memory.entries;
+            assert.equal(entry.status, "trial");
+            assert.match(entry.rule, /^For \S+, send from the first attempt what the guard then accepted, as the accepted attempts did \(test\.speedFloorPercent\)/);
+            assert.ok(entry.appliesTo.includes("procedure.submit"));
+            assert.deepEqual([entry.evidence.failures.length, entry.evidence.successes.length], [2, 2]);
+            assert.equal(readFileSync(path.join(dir, ...WORDS.split("/")), "utf8"), repositoryWords, "learning does not write the factory's words");
             const mother = await read<Array<{ key: string; text: { en: string } }>>("station", "station://mother");
-            assert.ok(mother.some((l) => l.key === "mother.adaptation.adopted" && /In the fork factory-learns, I adopted a change of specs\/procedure\/words\.json/.test(l.text.en)));
+            assert.ok(mother.some((l) => l.key === "mother.memory.trial" && /In the fork factory-remembers, I put on trial in the memory of procedure_authoring/.test(l.text.en)));
 
-            // After: the second task, with its instructions as the fork adapted them, accepted at its first submission.
-            const after = await ok<Task>("factory", "task", { taskId: second });
-            assert.equal(after.state, "proposed");
-            const submissions = (after.manifest?.steps ?? []).filter((s) => s.capability === "procedure.submit" || s.capability === "procedure.revise");
-            assert.deepEqual(submissions.map((s) => s.outcome), ["completed"], "one submission, accepted");
-            assert.deepEqual(submissions.map((s) => s.judged), ["accepted"]);
+            // The next tasks read it at the stage that submits, and are accepted at their first attempt.
+            for (let i = 0; i < 3; i++) {
+                const t = await procedureTask();
+                assert.deepEqual(judged(t.task), ["procedure.submit:accepted"], `task ${t.taskId}`);
+                if (i === 0) {
+                    const trace = readFileSync(path.join(workshop, t.taskId, "trace.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l) as { exchange?: { proposedCapabilityId?: string; request?: { state?: { features?: { state?: { memory?: { learned?: Array<{ rule: string; status: string }> } } } } } } });
+                    const submit = trace.find((l) => l.exchange?.proposedCapabilityId === "procedure.submit");
+                    assert.equal(submit?.exchange?.request?.state?.features?.state?.memory?.learned?.[0]?.status, "trial", "the entry is in the state it decided on");
+                }
+            }
 
-            await ok("station", "commissioning_authorise", { commissioningId: run!.commissioningId, decision: "refuse", by: "commander-test" });
+            // Three tasks since its trial, the mistake in none: consolidated, with its confidence.
+            const again = await ok<{ taskId: string | null }>("station", "reflect", { builder: "scripted" });
+            assert.equal(again.taskId, null, "the failures the memory answers are not read again: nothing new to reflect on");
+            const consolidated = JSON.parse(readFileSync(memoryFile, "utf8")) as typeof memory;
+            assert.equal(consolidated.entries[0].status, "consolidated");
+            assert.deepEqual(consolidated.entries[0].confidence, { rate: 1, tasks: 3 });
+            const ledger = JSON.parse(readFileSync(path.join(workshop, "adaptations", "ledger.json"), "utf8")) as Array<{ status: string; why?: string }>;
+            assert.equal(ledger[0].status, "consolidated");
+            assert.match(String(ledger[0].why), /the mistake showed in 0 of the 3 task\(s\) since its trial, against 2 of 2 before/);
         } finally {
             await operator.close();
             await started.stop();
         }
-        // The evolution in the fork's history; the repository's instructions as they were.
-        const snapshot = forkHistory("factory-learns").find((c) => c.label.startsWith(`adaptation 1 of ${WORDS}`));
-        assert.ok(snapshot?.files.includes(WORDS));
+        // The memory in the fork's history, never in the repository.
+        assert.ok(forkHistory("factory-remembers").some((c) => /memory 1 of procedure_authoring, in trial/.test(c.label)));
         delete process.env.FORK_DIR;
+        assert.equal(existsSync(fromRepository("outputs", "factory", "memory", "procedure.json")) && readFileSync(fromRepository("outputs", "factory", "memory", "procedure.json"), "utf8").includes("factory-remembers"), false);
         assert.equal(readFileSync(fromRepository(...WORDS.split("/")), "utf8"), repositoryWords);
     });
 });

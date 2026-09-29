@@ -21,6 +21,12 @@ import { Broker } from "../harness/lib/broker.js";
 import { numbersOfPatch } from "../harness/topics/reflection/index.js";
 import { boundsOf } from "../harness/topics/playbook/index.js";
 
+/** A fork that lets a factory's words adapt: not the repository's policy since the memory audit (2026-09-29), where what a factory learns goes to its memory; the rules of a words patch still hold where one does. */
+const wordsAdaptable = () => {
+    const f = reflectionFormat();
+    return { ...f, adaptable: [...f.adaptable, "specs/*/words.json"], never: f.never.filter((n) => n.pattern !== "specs/*/words.json") };
+};
+
 const PORT = 3171;
 const RECOVERY = "specs/commissioning/recovery.playbook.json";
 
@@ -139,18 +145,21 @@ describe("the patterns of the traces, and an adaptation checked before anything 
         assert.match(adaptationProblems(bound(3), patterns, format).problems.join(), /the patch changes nothing/);
         const unlinked = { target: RECOVERY, ops: [{ op: "remove", pointer: "/links/0" }], reason: "x", evidence: ["p1"] };
         assert.match(adaptationProblems(unlinked, patterns, format).problems.join(), /is fed by 0 channels, not one/);
-        // A sentence appended to an instruction; the one the reflection wrote in the replays, copying the signed facts' values, refused.
+        // A factory's words never adapt in the repository's policy (2026-09-29, the memory audit): what it learns goes to its memory.
         const procedureWords = { target: "specs/procedure/words.json", reason: "x", evidence: ["p1"] };
+        assert.match(adaptationProblems({ ...procedureWords, ops: [{ op: "append", pointer: "/capabilities/submit", value: " x." }] }, patterns, format).problems.join(), /what a factory is told is what a person wrote/);
+        // Where a fork lets them adapt: a sentence appended to an instruction; the one the reflection wrote in the replays, copying the signed facts' values, refused.
+        const words = wordsAdaptable();
         const cite = " A safety constant cites the fact the signed rules bound it by: a step's speed, test.speedFloorPercent.";
-        assert.deepEqual(adaptationProblems({ ...procedureWords, ops: [{ op: "append", pointer: "/capabilities/submit", value: cite }] }, patterns, format).problems, []);
+        assert.deepEqual(adaptationProblems({ ...procedureWords, ops: [{ op: "append", pointer: "/capabilities/submit", value: cite }] }, patterns, words).problems, []);
         const copied = " Every safety constant must cite a fact by its exact fact id: test.speedFloorPercent (at least 30 percent), test.co2AbortCeilingPpm (at most 3200 ppm).";
-        const refusedCopy = adaptationProblems({ ...procedureWords, ops: [{ op: "append", pointer: "/capabilities/submit", value: copied }] }, patterns, format).problems.join(" | ");
+        const refusedCopy = adaptationProblems({ ...procedureWords, ops: [{ op: "append", pointer: "/capabilities/submit", value: copied }] }, patterns, words).problems.join(" | ");
         assert.match(refusedCopy, /"capabilities.submit" writes test.speedFloorPercent = 30 percent, the value of a fact of the library: cite test.speedFloorPercent by its id, never its value/);
         assert.match(refusedCopy, /test.co2AbortCeilingPpm = 3200 ppm/);
-        assert.match(adaptationProblems({ ...procedureWords, ops: [{ op: "append", pointer: "/capabilities/submit", value: 5 }] }, patterns, format).problems.join(), /append adds text to a text/);
-        const words = { target: "specs/commissioning/words.json", reason: "x", evidence: ["p1"] };
-        assert.match(adaptationProblems({ ...words, ops: [{ op: "remove", pointer: "/recover/ask" }] }, patterns, format).problems.join(), /no field "ask"|the key "recover.ask" is gone/);
-        assert.match(adaptationProblems({ ...words, ops: [{ op: "replace", pointer: "/recover/stopped", value: "stopped" }] }, patterns, format).problems.join(), /"recover.stopped" has the holes \{\}, not the \{why\}/);
+        assert.match(adaptationProblems({ ...procedureWords, ops: [{ op: "append", pointer: "/capabilities/submit", value: 5 }] }, patterns, words).problems.join(), /append adds text to a text/);
+        const commissioningWords = { target: "specs/commissioning/words.json", reason: "x", evidence: ["p1"] };
+        assert.match(adaptationProblems({ ...commissioningWords, ops: [{ op: "remove", pointer: "/recover/ask" }] }, patterns, words).problems.join(), /no field "ask"|the key "recover.ask" is gone/);
+        assert.match(adaptationProblems({ ...commissioningWords, ops: [{ op: "replace", pointer: "/recover/stopped", value: "stopped" }] }, patterns, words).problems.join(), /"recover.stopped" has the holes \{\}, not the \{why\}/);
     });
 });
 

@@ -13,6 +13,12 @@ import { enterAdoption, historyOf, judge, mistakeRate, readLedger, underJudgemen
 import { createHash } from "node:crypto";
 import { adaptationProblems, judgedOn, repeated, reflectionFormat, shapesOf, showsFamily } from "../lib/reflection.js";
 
+/** A fork that lets a factory's words adapt: not the repository's policy since the memory audit (2026-09-29), where what a factory learns goes to its memory; the rules of a words patch still hold where one does. */
+const wordsAdaptable = () => {
+    const f = reflectionFormat();
+    return { ...f, adaptable: [...f.adaptable, "specs/*/words.json"], never: f.never.filter((n) => n.pattern !== "specs/*/words.json") };
+};
+
 const familyHash = (s: string): string => createHash("sha256").update(s).digest("hex").slice(0, 12);
 
 const FAMILY = "first-try-category:procedure:justification";
@@ -112,12 +118,13 @@ describe("the adaptations of a fork: entered, judged, kept or undone, remembered
         const patterns = [{ id: "p1", kind: "first-try-shape" as const, says: "", count: 2, source: "", target: "specs/procedure/words.json", detail: {} }];
         const words = JSON.parse(readFileSync(path.join(process.cwd(), "specs", "procedure", "words.json"), "utf8")) as { brief: { procedure: string } };
         const append = { target: "specs/procedure/words.json", ops: [{ op: "append", pointer: "/brief/procedure", value: " A step's speed is bounded by test.speedFloorPercent, never by a property of the device." }], reason: "x", evidence: ["p1"] };
-        assert.deepEqual(adaptationProblems(append, patterns, reflectionFormat()).problems, []);
-        assert.match(adaptationProblems(append, patterns, reflectionFormat(), ["specs/procedure/words.json"]).problems.join(), /has an adaptation being judged: no other change of it until it is kept or undone/);
+        assert.match(adaptationProblems(append, patterns, reflectionFormat()).problems.join(), /what a factory is told is what a person wrote; what it learns goes to its memory/, "the repository's policy: never a factory's words");
+        assert.deepEqual(adaptationProblems(append, patterns, wordsAdaptable()).problems, []);
+        assert.match(adaptationProblems(append, patterns, wordsAdaptable(), ["specs/procedure/words.json"]).problems.join(), /has an adaptation being judged: no other change of it until it is kept or undone/);
         const rewrite = { ...append, ops: [{ op: "replace", pointer: "/brief/procedure", value: "Stage 4 of 5. Write the procedure. {method} {presence} {start} {refused} {analysed}" }] };
-        assert.match(adaptationProblems(rewrite, patterns, reflectionFormat()).problems.join(), /takes out \d+ characters of the instruction: change a passage of at most 200, or append/);
+        assert.match(adaptationProblems(rewrite, patterns, wordsAdaptable()).problems.join(), /takes out \d+ characters of the instruction: change a passage of at most 200, or append/);
         const passage = { ...append, ops: [{ op: "replace", pointer: "/brief/procedure", value: words.brief.procedure.replace("Submit with procedure.submit.", "Submit it with procedure.submit, once its safety constants cite the facts that bound them.") }] };
-        assert.deepEqual(adaptationProblems(passage, patterns, reflectionFormat()).problems, [], "a passage changed: allowed");
+        assert.deepEqual(adaptationProblems(passage, patterns, wordsAdaptable()).problems, [], "a passage changed: allowed");
     });
 
     it("an adaptation that says again what the instruction already says is refused", () => {
@@ -125,7 +132,7 @@ describe("the adaptations of a fork: entered, judged, kept or undone, remembered
         assert.ok(repeated(`Stage 4. ${said}`, " Each safety constant must cite a fact of a signed library document by its id, never a value or a calculation."));
         assert.equal(repeated(`Stage 4. ${said}`, " A step's speed is bounded by test.speedFloorPercent in the signed rules, whatever other fact of the card has the same number."), null);
         const patterns = [{ id: "p1", kind: "first-try-category" as const, says: "", count: 2, source: "", target: "specs/procedure/words.json", detail: {} }];
-        const problems = adaptationProblems({ target: "specs/procedure/words.json", ops: [{ op: "append", pointer: "/brief/procedure", value: " Every constant you set is justified in justifications, and the safety constants cite a fact of a library document a person signed." }], reason: "x", evidence: ["p1"] }, patterns, reflectionFormat()).problems;
+        const problems = adaptationProblems({ target: "specs/procedure/words.json", ops: [{ op: "append", pointer: "/brief/procedure", value: " Every constant you set is justified in justifications, and the safety constants cite a fact of a library document a person signed." }], reason: "x", evidence: ["p1"] }, patterns, wordsAdaptable()).problems;
         assert.match(problems.join(), /says again what it already says/);
     });
 });

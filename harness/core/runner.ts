@@ -34,6 +34,9 @@ import { NEVER_REPLAYED, proposalKey, restrictReplays } from "./replay.js";
 import { justificationHelp, noteSources } from "./justify.js";
 import { noteRefusal, STUCK_AFTER } from "./problems.js";
 import { cutAtOutputLimit, truncatedRefusal } from "../lib/llm-common.js";
+import { episodeOf, type Episode, type StepLike } from "./episodes.js";
+import { workingMemory } from "../../lib/working-memory.js";
+import { entryView, episodeView, memoryConfig, readMemory, relevantTo } from "../../lib/memory.js";
 import { READ_CAPABILITIES } from "./replay.js";
 import { createTaskEvaluator } from "./task-evaluator.js";
 import { taskCapabilities } from "./task-capabilities.js";
@@ -274,6 +277,24 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             } else progress.lastArtifact = null;
         },
     });
+    // The memory this task reads (2026-09-29, the memory audit, lib/memory.ts): the domain's learned entries and the working memory's
+    // episodes of the previous tasks, read once at the start (they change between tasks, when the station decides); this task's own
+    // episode rebuilt at every step from its steps, so a refusal then an accepted retry is seen as such. Shown only at the stage whose
+    // brief calls what they concern.
+    const memorySettings = memoryConfig();
+    const reading = topic.judges ? { judges: topic.judges, digest: topic.digest } : null;
+    const previousEpisodes = reading && memorySettings.workingMemory.previousTasks ? workingMemory(WORKSHOP_ROOT, topicId, reading, memorySettings.workingMemory.size).filter((e) => e.taskId !== taskId && e.attempts.length) : [];
+    const learnedEntries = reading ? readMemory(WORKSHOP_ROOT, topicId, memorySettings).entries : [];
+    const intent = `${topicId}: ${task.objective.required_outputs.map((o) => `${o.name} (${o.quantity}${o.unit ? `, ${o.unit}` : ""})`).join(", ")}`;
+    const memoryNow = (): JsonValue | null => {
+        if (!reading) return null;
+        const stage = topic.brief?.(progress, task) ?? "";
+        const current = episodeOf({ taskId, topic: topicId, startedAt: startedAt.toISOString(), intent, steps: manifest.steps as StepLike[] }, reading.judges, reading.digest);
+        const calls = (e: Episode) => e.attempts.map((a) => a.capability);
+        const episodes = [...previousEpisodes.filter((e) => relevantTo(stage, calls(e))).slice(-memorySettings.workingMemory.shown).map((e) => episodeView(e)), ...(current.attempts.length && relevantTo(stage, calls(current)) ? [episodeView(current, true)] : [])];
+        const learned = learnedEntries.filter((e) => relevantTo(stage, e.appliesTo)).map(entryView);
+        return learned.length || episodes.length ? ({ ...(learned.length ? { learned } : {}), ...(episodes.length ? { episodes } : {}) } as JsonValue) : null;
+    };
     const agent = createAgent({
         broker,
         provider,
@@ -283,7 +304,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             taskId,
             progress,
             () => topic.brief?.(progress, task) ?? "",
-            () => reasoningStateOf({ task, progress, budget, nextActions: capabilities.catalogue.map((c) => c.id), shelf: topic.shelf === false ? [] : progress.context.shelf, telemetry: progress.context.telemetry, contracts: progress.context.contracts, runsSpent: topic.runsSpent?.(progress), topic: topic.state?.(progress, task) }),
+            () => reasoningStateOf({ task, progress, budget, nextActions: capabilities.catalogue.map((c) => c.id), shelf: topic.shelf === false ? [] : progress.context.shelf, telemetry: progress.context.telemetry, contracts: progress.context.contracts, runsSpent: topic.runsSpent?.(progress), topic: topic.state?.(progress, task), memory: memoryNow() }),
             () => topic.key?.(progress) ?? "",
             contextMode,
         ),
