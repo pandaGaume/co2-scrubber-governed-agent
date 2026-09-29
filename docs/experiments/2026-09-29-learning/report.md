@@ -13,7 +13,7 @@ Files in this folder:
 | `validation-with.json` | the 6 unseen tasks with the adaptation (step 6) |
 | `validation-without.json` | the same 6 tasks without it (step 7) |
 | `numbers.txt` | the output of `scripts/learning-experiment/report.mjs` |
-| `fork-*.log` | the forks' histories |
+| `fork-*.txt` | the forks' histories |
 
 Driver: `scripts/learning-experiment/run.mjs`; its task lists are `train-tasks.json` and `validation-tasks.json`.
 

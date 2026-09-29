@@ -1,0 +1,10 @@
+acecb6aba36a 2026-09-29T20:50:50+02:00 fork exp-learn, the context as taken from 13408813b64a
+  (97 files: the context copied)
+e33094a9211f 2026-09-29T20:54:07+02:00 adaptation 1 of specs/procedure/words.json: Both first submissions put several facts and prose in one reference for a step speed, which is not a fact id; the brief now says the reference is the single bare id of the bounding signed rule. (first-try-shape:procedure:t-2026-09-29-0002:33231b94, first-try-category:procedure:justification:t-2026-09-29-0002)
+  outputs/factory/_recipes/procedure.json
+  outputs/factory/adaptations/ledger.json
+  specs/procedure/words.json
+a0332ad372b1 2026-09-29T20:56:27+02:00 learning frozen after adaptation 1 (the experiment's step 5)
+  outputs/factory/_recipes/procedure.json
+  outputs/factory/_recipes/reflection.json
+  outputs/factory/adaptations/ledger.json
