@@ -41,6 +41,8 @@ export interface ManifestArtifact {
 export interface Manifest {
     version: 1;
     taskId: string;
+    /** The fork the task ran in, when it ran in one: what it produced is the fork's (2026-09-29). */
+    fork?: string;
     state: TaskState;
     topic: string;
     signature: TaskSignature;

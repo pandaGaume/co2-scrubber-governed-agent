@@ -13,7 +13,7 @@
  *   node dist/slots/run-all.js --no-forge      the forge is started apart (`npm run forge`), in its own process
  */
 import { exec } from "node:child_process";
-import { isMain } from "../lib/paths.js";
+import { isMain, forkDir, forkId } from "../lib/paths.js";
 import { startBroker, type LocalBroker } from "./lib/local-broker.js";
 import { scrubberSlot } from "./scrubber/provider.js";
 import { twinSlot } from "./twin/provider.js";
@@ -127,6 +127,9 @@ async function main(): Promise<void> {
         return i >= 0 && args[i + 1] ? args[i + 1] : fallback;
     };
     const port = Number(option("--port", String(DEFAULT_PORT)));
+    // In a fork (FORK_DIR, npm run fork -- run <id>): the context's data is the fork's own, and the server says so first.
+    const fork = forkId();
+    if (fork) log(`FORK ${fork}: the library, the specs, the graphs and the outputs are the fork's, in ${forkDir()}; nothing here reaches the repository's`);
     const httpBase = `http://localhost:${port}`;
     const wsBase = `ws://localhost:${port}`;
 
@@ -153,7 +156,8 @@ async function main(): Promise<void> {
         log(`a screen of the room (or run scripts/screen.mjs on it): ${base}/screen.html`);
     }
     // The room's other machines find this one by asking on the network (`scripts/screen.mjs`), not by an address typed in.
-    const discovery = broker ? startDiscovery(port, log) : null;
+    // A fork does not answer for the room: its screens find the repository's server, not it.
+    const discovery = broker && !fork ? startDiscovery(port, log) : null;
     // The board opens the factory's window itself, beside it, on the key press that ends its boot (a second window opened
     // here would cover the board, and a covered page is a hidden page: its timers slow down and the sound with them).
     if (!flag("--no-open") && !flag("--no-broker")) openBrowser(`${httpBase}/`);

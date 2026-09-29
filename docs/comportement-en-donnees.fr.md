@@ -78,12 +78,13 @@ La règle de ce dépôt ne change pas : **celui qui décide n'est pas celui qui 
 
 **Le principe.** Mother peut passer en mode apprentissage pour une série de runs d'évaluation. Dans ce mode, elle a le droit d'adopter elle-même, **dans sa sandbox seulement**, les propositions du niveau 2, sans signature, pour mesurer ce qu'elles changent. Rien de ce qu'elle adopte ne sort de la sandbox sans passer par le niveau 3.
 
-**La sandbox.** Le mécanisme existe à moitié : un run de scénario peut déjà signer dans un répertoire à lui (`library.signatures_scope run`), vide au départ, sans toucher aux signatures du dépôt. Le mode apprentissage l'étend à tout ce qu'une adaptation peut toucher :
+**La sandbox est un fork.** Un environnement volontairement mis à part, comme un conteneur : les agents y modifient librement la bibliothèque, les specs, les graphes et leurs propres sorties, on observe comment ils évoluent, et rien n'atteint les données du dépôt. Construit le 29 septembre (P3) :
 
-- une copie de la bibliothèque et des `specs/` propre au run (`outputs/sandbox/<run>/`), que le serveur lit à la place des originaux pour ce run seulement ;
-- une copie des recettes (c'est déjà le cas avec `FACTORY_RECIPES_DIR`) ;
-- une marque « sandbox » sur tout ce qui en sort : les traces, les propositions, les lignes de Mother (« en apprentissage ») ;
-- aucun accès en écriture aux originaux, vérifié par un test.
+- **une copie des données du contexte** par fork, dans `outputs/forks/<id>/` : la bibliothèque et ses signatures, les `specs/`, les graphes, et ses propres sorties (ateliers, recettes, propositions à la bibliothèque) ;
+- **un serveur à part**, un autre processus sur un autre port (`npm run fork -- run <id>`), qui lit et écrit cette copie seulement : toutes les données passent par `fromRoot`, qui les envoie dans le fork, et le code reste celui du dépôt ; les variables d'environnement qui enverraient des données ailleurs y sont ignorées ;
+- **un dépôt git par fork**, pour observer l'évolution : le premier commit est le contexte tel qu'il a été pris, avec le commit du dépôt d'où il vient ; chaque instantané est un commit de ce qui a changé (au démarrage et à l'arrêt du serveur, ou à la demande) ; `log` donne l'évolution, `diff` la divergence avec le contexte du dépôt tel qu'il est ; un fork de fork est un clone, avec l'histoire de son parent. Les commits d'un fork sont les siens (auteur « fork <id> »), jamais signés avec la clé d'une personne : ce que les agents ont changé, personne ne l'a fait ;
+- **une marque « fork » sur tout ce qui en sort** : les manifestes des tâches, les signatures, les lignes de Mother, l'en-tête de la salle de contrôle et la page de la bibliothèque ;
+- **l'étanchéité vérifiée par un test** : un serveur dans un fork, ses agents qui changent ses rôles, une usine qui y écrit un playbook, la station qui le propose, un signataire du fork qui le signe ; tout est dans le fork, marqué comme tel, et la bibliothèque, les specs et les graphes du dépôt restent identiques à l'octet près.
 
 **La boucle d'apprentissage**, un run après l'autre :
 
@@ -104,7 +105,7 @@ La règle de ce dépôt ne change pas : **celui qui décide n'est pas celui qui 
 | P1 | les nœuds `conduct.*` dans l'ontologie du cœur, le format du playbook, son exécution par le runtime ; le playbook de l'usine de procédures au niveau du pas (ses étapes, l'analyse d'un arrêt, ses refus de conduite), porté depuis le code, les tests inchangés | le runtime du cœur (`RuntimeGraphBuilder`, le scheduler), le graphe de connaissances (`slots/physics/knowledge.ts`) |
 | P1 bis | le niveau du processus : la reprise après un arrêt (arrêt, `recover`, réouverture, analyse, relais) en playbook, sa position gardée entre deux événements, à la place du lecteur de scénario | P1, `slots/scenario/commissioning.ts` |
 | P2 | les playbooks du graphe, du code et de l'onnx ; `briefOf` retiré du code des usines, qui ne gardent que leurs capteurs et leurs vues | P1, les `specs/<usine>/` |
-| P3 | la sandbox complète : copie de la bibliothèque et des specs par run, marque sandbox, test d'étanchéité | `signatures_scope`, `FACTORY_RECIPES_DIR` |
+| P3 (fait) | la sandbox comme fork : une copie des données du contexte par fork, un serveur à part, l'histoire git de ce qui change, la marque « fork », le test d'étanchéité | `fromRoot`, `lib/fork.ts`, `npm run fork` |
 | P4 | l'agent de réflexion : lecture des traces, propositions en diff, conformité sur la copie | `problems.ts` (les séries), les manifestes |
 | P5 | le banc d'évaluation : les scénarios de référence rejoués avant et après, le tableau, la disqualification par la sécurité, le rapport publié | le lecteur de scénario, le scorecard |
 | P6 | la forge écrit un vérificateur d'étape contre un contrat, proposé au playbook | l'usine de code, la forge |

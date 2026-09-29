@@ -20,7 +20,7 @@
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
-import { fromRoot, relativeToRoot } from "../../lib/paths.js";
+import { fromRoot, pathFromEnv, relativeToRoot } from "../../lib/paths.js";
 import { errorMessage, sha256File } from "../../lib/files.js";
 import { objectSchema as obj, publishSlot, type PublishedSlot, type SlotTool } from "../lib/slot-server.js";
 import { checkTaskId, listTaskFiles, safeRelative, sha256Of, taskDir, WORKSHOP_ROOT } from "../tools/lib/workshop.js";
@@ -333,7 +333,7 @@ function launch(httpBase: string, taskId: string, topic: Topic, builder: Builder
             runtimeSlot,
             ...(supervisor ? { supervisor } : {}),
             // The recipes of the topics: `_recipes/` next to the workshops unless the host says where (the tests keep their own).
-            ...(process.env.FACTORY_RECIPES_DIR ? { recipesDir: path.resolve(process.env.FACTORY_RECIPES_DIR) } : {}),
+            ...(pathFromEnv("FACTORY_RECIPES_DIR") ? { recipesDir: pathFromEnv("FACTORY_RECIPES_DIR")! } : {}),
             log,
             onStage: (e) => {
                 if (e.status === "complete") run.lastStage = e.stage;

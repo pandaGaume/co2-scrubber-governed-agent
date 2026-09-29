@@ -19,7 +19,7 @@ import { existsSync } from "node:fs";
 import * as path from "node:path";
 import type { DecisionTrace, Intention, JsonValue, StageEvent } from "@spiky-panda/harness";
 import { errorMessage, sha256File } from "../../lib/files.js";
-import { fromRoot } from "../../lib/paths.js";
+import { forkId, fromRoot } from "../../lib/paths.js";
 import { WORKSHOP_ROOT } from "../../slots/tools/lib/workshop.js";
 import type { Broker } from "../lib/broker.js";
 import type { Provider, ProviderExchange } from "../lib/provider.js";
@@ -309,6 +309,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         budget: { iterations: budget.iterations, minutes: budget.minutes },
         steps: [],
         artifacts: [],
+        ...(forkId() ? { fork: forkId()! } : {}),
         sandbox: null,
         proposal: null,
         verdict: null,

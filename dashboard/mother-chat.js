@@ -161,7 +161,24 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
         }
         busy = lines;
     }
+    /** The fork this station runs in, said once in the header: what is done here stays in it. */
+    let environmentRead = false;
+    async function readEnvironment() {
+        if (environmentRead) return;
+        try {
+            const env = await read("station://environment");
+            environmentRead = true;
+            const badge = document.getElementById("top-fork");
+            if (badge && env?.fork) {
+                badge.textContent = `fork ${env.fork.id}`;
+                badge.hidden = false;
+            }
+        } catch {
+            // an older station says nothing of where it runs: read again next time
+        }
+    }
     async function refresh() {
+        await readEnvironment();
         await readBusy();
         // Each read stands alone: one the station does not serve must not empty the others.
         try {

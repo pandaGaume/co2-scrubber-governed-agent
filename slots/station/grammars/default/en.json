@@ -173,6 +173,10 @@
         },
         "station://questions-policy": {
             "description": "The standing orders: which questions wait, which are answered at once and with what."
+        },
+        "station://environment": {
+            "name": "Environment",
+            "description": "Where the station runs: in a fork (an environment set apart, whose library, specs and graphs are its own), with its id, or on the repository's context"
         }
     },
     "phrases": {

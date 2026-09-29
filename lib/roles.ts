@@ -7,7 +7,7 @@
  * decides waits.
  */
 import { existsSync, readFileSync } from "node:fs";
-import { fromRoot } from "./paths.js";
+import { fromRoot, pathFromEnv } from "./paths.js";
 
 export const ROLES_FILE = "specs/station/roles.json";
 /** The role a signature of the library is asked of. */
@@ -18,7 +18,7 @@ export interface Role {
     holders: string[];
 }
 
-const file = (): string => process.env.STATION_ROLES_FILE || fromRoot(...ROLES_FILE.split("/"));
+const file = (): string => pathFromEnv("STATION_ROLES_FILE") ?? fromRoot(...ROLES_FILE.split("/"));
 
 /** The roles as the file says them now: a holder changed is read at the next decision. */
 export function loadRoles(): Record<string, Role> {

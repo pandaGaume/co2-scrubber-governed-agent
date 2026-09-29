@@ -19,12 +19,12 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
-import { fromRoot } from "../../lib/paths.js";
+import { forkId, fromRoot, pathFromEnv } from "../../lib/paths.js";
 
 export const LIBRARY_DOCS_DIR = fromRoot("docs", "library");
 
 /** Where the signatures are kept: LIBRARY_SIGNATURES_DIR when set (the tests sign in their own), the library's own directory otherwise. */
-export const signaturesDir = (): string => process.env.LIBRARY_SIGNATURES_DIR || path.join(LIBRARY_DOCS_DIR, "signatures");
+export const signaturesDir = (): string => pathFromEnv("LIBRARY_SIGNATURES_DIR") ?? path.join(fromRoot("docs", "library"), "signatures");
 
 export interface Signature {
     document: string;
@@ -33,6 +33,8 @@ export interface Signature {
     signedAt: string;
     scope: string;
     note?: string;
+    /** The fork it was made in, when it was: it binds nothing outside it. */
+    fork?: string;
 }
 
 export interface SignatureStatus {
@@ -73,7 +75,9 @@ export function signDocument(id: string, signedBy: string, options: { dir?: stri
     if (!signedBy.trim()) throw new Error("a signature names the person who signs");
     const dir = options.dir ?? LIBRARY_DOCS_DIR;
     const sigDir = options.sigDir ?? signaturesDir();
-    const signature: Signature = { document: id, digest: documentDigest(id, dir), signedBy: signedBy.trim(), signedAt: new Date().toISOString(), scope: options.scope ?? "safety", ...(options.note ? { note: options.note } : {}) };
+    // A signature made in a fork is the fork's: said on it, and kept in the fork's library only.
+    const fork = forkId();
+    const signature: Signature = { document: id, digest: documentDigest(id, dir), signedBy: signedBy.trim(), signedAt: new Date().toISOString(), scope: options.scope ?? "safety", ...(options.note || fork ? { note: [options.note, fork ? `in the fork ${fork}` : ""].filter(Boolean).join(", ") } : {}), ...(fork ? { fork } : {}) };
     mkdirSync(sigDir, { recursive: true });
     writeFileSync(path.join(sigDir, `${id}.json`), `${JSON.stringify(signature, null, 4)}\n`, "utf8");
     return signature;

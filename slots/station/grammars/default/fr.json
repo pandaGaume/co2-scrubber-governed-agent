@@ -195,6 +195,10 @@
         },
         "station://questions-policy": {
             "description": "Les consignes permanentes : quelles questions attendent, lesquelles reçoivent aussitôt une réponse et laquelle."
+        },
+        "station://environment": {
+            "name": "Environnement",
+            "description": "Où tourne la station : dans un fork (un environnement mis à part, dont la bibliothèque, les specs et les graphes sont les siens), avec son identifiant, ou sur le contexte du dépôt"
         }
     },
     "phrases": {

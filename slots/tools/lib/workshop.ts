@@ -13,9 +13,9 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
 import type { IDocumentStore } from "@spiky-panda/mcp/runtime";
-import { fromRoot } from "../../../lib/paths.js";
+import { fromRoot, pathFromEnv } from "../../../lib/paths.js";
 
-export const WORKSHOP_ROOT = process.env.WORKSHOP_DIR ? path.resolve(process.env.WORKSHOP_DIR) : fromRoot("outputs", "factory");
+export const WORKSHOP_ROOT = pathFromEnv("WORKSHOP_DIR") ?? fromRoot("outputs", "factory");
 
 const TASK_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 

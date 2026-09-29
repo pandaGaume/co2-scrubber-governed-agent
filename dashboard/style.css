@@ -74,6 +74,8 @@ body.room { overflow: hidden; }
 .stage { width: 1280px; height: 720px; flex: none; transform-origin: center center; background: var(--bg); padding: 10px; display: flex; flex-direction: column; gap: 8px; border-top: 2px solid var(--bevel); border-left: 2px solid var(--bevel); border-right: 2px solid var(--well); border-bottom: 2px solid var(--well); }
 .top { height: 44px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 10px; background: var(--panel); border-top: 2px solid var(--bevel); border-left: 2px solid var(--bevel); border-right: 2px solid var(--well); border-bottom: 2px solid var(--well); }
 .brand { font-family: var(--font-title); font-size: 16px; color: var(--text); white-space: nowrap; }
+/* A server in a fork says so, always in sight: what is done here is the fork's. */
+.badge.fork { color: var(--warn); border-color: var(--warn); font-weight: 600; }
 .top .hint { white-space: nowrap; }
 .top .mission { font-size: 18px; color: var(--warn); white-space: nowrap; }
 .top .spacer { flex: 1; }

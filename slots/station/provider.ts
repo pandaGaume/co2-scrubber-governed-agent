@@ -51,7 +51,7 @@ import { existsSync, readFileSync } from "node:fs";
 import * as path from "node:path";
 import { McpGrammar } from "@cyanmycelium/mcp-core";
 import { errorMessage } from "../../lib/files.js";
-import { fromRoot } from "../../lib/paths.js";
+import { forkDir, forkId, fromRoot } from "../../lib/paths.js";
 import { objectSchema as obj, publishSlot, type PublishedSlot } from "../lib/slot-server.js";
 import { checkTaskId, sha256Of, taskDir } from "../tools/lib/workshop.js";
 import { Broker } from "../../harness/lib/broker.js";
@@ -121,6 +121,8 @@ export interface MotherLine {
     text: { en: string; fr: string };
     commissioningId: string | null;
     at: string;
+    /** The fork the station runs in: a line said there is the fork's, not the station's (2026-09-29). */
+    fork?: string;
 }
 
 export interface StationState {
@@ -183,7 +185,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
     /** Mother says one line: filled per language (a hole may itself be a phrase), kept, pushed, logged. */
     const say = (key: string, commissioning: Commissioning | null, params: (w: McpGrammar) => Record<string, string | number> = () => ({})) => {
         const en = params(words.en);
-        return emit({ n: state.mother.length + 1, key, params: en, text: { en: words.en.phrase(key, en), fr: words.fr.phrase(key, params(words.fr)) }, commissioningId: commissioning?.id ?? null, at: new Date().toISOString() });
+        return emit({ n: state.mother.length + 1, key, params: en, text: { en: words.en.phrase(key, en), fr: words.fr.phrase(key, params(words.fr)) }, commissioningId: commissioning?.id ?? null, at: new Date().toISOString(), ...(forkId() ? { fork: forkId()! } : {}) });
     };
 
     /** A line of Mother's: kept, pushed to whoever reads her, logged, spoken. */
@@ -858,6 +860,8 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
             { uri: QUESTIONS_URI, read: (s) => s.questions },
             { uri: QUESTIONS_POLICY_URI, read: (s) => s.questionsPolicy },
             { uri: "station://proposals", read: (s) => s.proposals },
+            // Where this station runs: in a fork (an environment set apart, its data its own), or on the repository's context.
+            { uri: "station://environment", read: () => ({ fork: forkId() ? { id: forkId(), dir: forkDir() } : null }) },
             { uri: "station://artifacts", name: "Registered artifacts", description: "sha256 -> registration", read: (s) => s.artifacts },
             { uri: "station://registry", read: (s) => Object.values(s.devices) },
             { uri: COMMISSIONINGS_URI, read: (s) => s.commissionings },

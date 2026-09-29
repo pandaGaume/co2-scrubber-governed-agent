@@ -29,7 +29,7 @@
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
-import { fromRoot } from "../../../lib/paths.js";
+import { forkId, fromRoot, pathFromEnv } from "../../../lib/paths.js";
 import { objectSchema, publishSlot, type PublishedSlot, type SlotTool } from "../../lib/slot-server.js";
 import { sha256Of } from "../lib/workshop.js";
 import { describeGraph, loadGraphLibrary, type GraphLibraryEntry } from "../../../lib/graph-library.js";
@@ -73,7 +73,7 @@ export interface LibraryState {
 
 export const LIBRARY_DIR = fromRoot("docs", "library");
 /** The proposals' shelf (2026-09-29): what a factory proposes for the library, beside the workshops, never in the repository's library; LIBRARY_PROPOSALS_DIR when set (the tests keep their own). */
-export const proposalsDir = (): string => process.env.LIBRARY_PROPOSALS_DIR || path.join(WORKSHOP_ROOT, "library-proposals");
+export const proposalsDir = (): string => pathFromEnv("LIBRARY_PROPOSALS_DIR") ?? path.join(WORKSHOP_ROOT, "library-proposals");
 /** The library's documents and the proposals', a proposal never taking the id of a document of the library. */
 export const loadAll = (): LibraryDocument[] => {
     const shelf = loadLibrary();
@@ -171,6 +171,8 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
                 documents: s.documents.map(({ id, title, summary, measures, sha256, bytes, facts, rules, playbook, dir, proposed }) => ({ id, title, summary, measures, sha256, bytes, facts: facts.length, rules: rules ? rules.rules.length : 0, playbook, proposed, signature: signatureOf(id, dir, s.sigDir) })),
                 // Who signs from the control room, and where the signatures go: what the library page says before a person signs.
                 signer: person || null,
+                // The fork the library is, when it runs in one: a signature made here binds nothing outside it.
+                fork: forkId(),
                 // The role a signature is asked of, and who holds it now.
                 role: { id: SIGNATORY, ...(roleOf(SIGNATORY) ?? { does: "", holders: [] }) },
                 signatures: s.sigScope,
