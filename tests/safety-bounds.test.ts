@@ -21,6 +21,17 @@ describe("the safety constants and the facts they are justified by, in the proce
         assert.deepEqual(bounds["monitoring.band.maxBpm"], ["test.heartRateMaxBpm at or below it"]);
     });
 
+    it("every safety constant a procedure may carry, those no rule binds too, with the signed facts the guard accepts for them (2026-09-29: abort.co2.threshold was missing, and went unjustified in six tasks of six)", () => {
+        const all = safetyBoundsOf();
+        const abort = all.find((b) => b.constant === "abort.*.threshold");
+        assert.ok(abort, all.map((b) => b.constant).join(", "));
+        assert.deepEqual(abort.cite, []);
+        assert.ok(abort.respects?.some((f) => f.fact === "test.co2AbortCeilingPpm" && f.side === "at or below it"), "a CO2 abort threshold may cite the signed ceiling");
+        assert.match(abort.note ?? "", /no signed rule binds it to one fact: the guard accepts a fact of a signed document whose safe side the value respects \(abort\.battery\.threshold has its own rule, above\)/);
+        // Every numeric field of the schema the safety patterns cover is in the map, by its rule or as one no rule binds.
+        for (const c of ["limits.co2MaxPpm", "limits.co2AbortPpm", "limits.minSpeedPercent", "limits.maxMinutes", "steps.*.speedPercent", "abort.*.threshold", "monitoring.band.minBpm", "monitoring.band.maxBpm"]) assert.ok(all.some((b) => b.constant === c), c);
+    });
+
     it("in the state and said by the brief when the spec shows it", () => {
         assert.equal(FORMAT.safetyBounds, true);
         const task = { objective: { required_outputs: [{ name: "V_lab", quantity: "Volume", unit: "m3" }], constraints: {} }, observations: {}, data: [] } as unknown as TaskFile["task"];
@@ -28,6 +39,6 @@ describe("the safety constants and the facts they are justified by, in the proce
         assert.ok(Array.isArray((state.hypothesis as { safetyBounds?: unknown[] }).safetyBounds));
         // The procedure's brief holds the hole the spec's flag fills, and its words say where the facts are.
         assert.match(WORDS.templates["brief.procedure"], /and respect it\{bounds\};/);
-        assert.match(WORDS.templates["brief.safetyBounds"], /the fact its signed rules bound it by and on which side \(field "safetyBounds"\), and that is the fact to cite/);
+        assert.match(WORDS.templates["brief.safetyBounds"], /the fact its signed rules bound it by and on which side, which is the fact to cite, or, for one no rule binds, the signed facts the guard accepts when the value respects their side \(field "safetyBounds"\)/);
     });
 });

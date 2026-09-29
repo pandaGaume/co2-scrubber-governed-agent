@@ -59,6 +59,7 @@ import { factsBounding, leavesOf, matches, valueAt, type RulesDocument } from ".
 import { loadWords, say, viewOf } from "../../core/words.js";
 import { problemOf } from "../../core/problems.js";
 import { physics } from "../../core/physics.js";
+import { signatureOf } from "../../lib/signatures.js";
 import { loadPlaybook, sayingText, type Evidence } from "../../core/conduct.js";
 export { constantsOf } from "./check.js";
 
@@ -519,7 +520,38 @@ const quantitiesOf = (task: TaskFile["task"]): string => [...new Set(task.object
  * guard reads them, `factsBounding`), their values and their safe side: read from the library's files (the fork's, in a fork), so
  * what the state shows is what the guard will judge by. The values are the library's, shown, never written anywhere else.
  */
-export function safetyBoundsOf(): Array<{ constant: string; cite: Array<{ fact: string; value: number | null; unit: string | null; side: string | null }> }> {
+type BoundFact = { fact: string; value: number | null; unit: string | null; side: string | null };
+export interface SafetyBound {
+    constant: string;
+    /** The facts the signed rules bound it by: the one to cite. */
+    cite: BoundFact[];
+    /** No signed rule binds it to one fact: the guard accepts a fact of a signed document whose safe side the value respects, one of these. */
+    respects?: BoundFact[];
+    note?: string;
+}
+
+/** The numeric fields of the procedure's schema, by path ("*" for an element of a list, as the rules write it). */
+function schemaNumbers(): string[] {
+    const out: string[] = [];
+    const walk = (v: unknown, at: string) => {
+        const s = (v ?? {}) as { type?: unknown; properties?: Record<string, unknown>; items?: unknown };
+        if (s.properties) for (const [k, x] of Object.entries(s.properties)) walk(x, at ? `${at}.${k}` : k);
+        else if (s.items) walk(s.items, `${at}.*`);
+        else if (s.type === "number" || s.type === "integer") out.push(at);
+    };
+    walk(PROCEDURE_SCHEMA, "");
+    return out;
+}
+
+/**
+ * Every safety constant a procedure may carry, and what the guard takes as its justification (2026-09-29, the witness C, completed:
+ * the map listed only the constants a rule binds to a fact, and abort.co2.threshold, which none does, was left out; the factory did not
+ * justify it in six tasks of six). A constant a signed rule binds: the facts it binds it by (`factsBounding`), the one to cite. A safety
+ * constant no rule binds: the facts of the signed documents with a safe side, any of which the guard accepts when the value respects
+ * its side. Read from the library's files (the fork's, in a fork), as the guard reads them; the values are the library's, shown here,
+ * never written anywhere else.
+ */
+export function safetyBoundsOf(): SafetyBound[] {
     const dir = fromRoot("docs", "library");
     let doc: RulesDocument;
     try {
@@ -527,21 +559,36 @@ export function safetyBoundsOf(): Array<{ constant: string; cite: Array<{ fact: 
     } catch {
         return [];
     }
-    const facts = new Map<string, { value: number; unit: string; bound?: string }>();
+    const side = (bound?: string): string | null => (bound === "upper" ? "at or below it" : bound === "lower" ? "at or above it" : null);
+    const facts = new Map<string, { value: number; unit: string; bound?: string; document: string }>();
     for (const f of readdirSync(dir).filter((x) => x.endsWith(".facts.json")))
         try {
-            for (const x of (JSON.parse(readFileSync(path.join(dir, f), "utf8")) as { facts?: Array<{ id: string; value: number; unit: string; bound?: string }> }).facts ?? []) facts.set(x.id, x);
+            const document = f.replace(/\.facts\.json$/, "");
+            for (const x of (JSON.parse(readFileSync(path.join(dir, f), "utf8")) as { facts?: Array<{ id: string; value: number; unit: string; bound?: string }> }).facts ?? []) facts.set(x.id, { ...x, document });
         } catch {
             // a sidecar that does not parse is the library's to say
         }
-    const subjects = [...new Set(doc.rules.flatMap((r) => ("compare" in r && r.compare.subject ? [r.compare.subject] : [])))].filter((s) => doc.safety.some((p) => matches(s, p)));
-    return subjects.map((constant) => ({
-        constant,
-        cite: factsBounding(doc, constant).map((id) => {
-            const f = facts.get(id);
-            return { fact: id, value: f?.value ?? null, unit: f?.unit ?? null, side: f?.bound === "upper" ? "at or below it" : f?.bound === "lower" ? "at or above it" : null };
-        }),
-    }));
+    const shown = (id: string): BoundFact => {
+        const f = facts.get(id);
+        return { fact: id, value: f?.value ?? null, unit: f?.unit ?? null, side: side(f?.bound) };
+    };
+    const isSafety = (c: string) => doc.safety.some((p) => matches(c, p));
+    const subjects = [...new Set(doc.rules.flatMap((r) => ("compare" in r && r.compare.subject ? [r.compare.subject] : [])))].filter(isSafety);
+    const bound: SafetyBound[] = subjects.map((constant) => ({ constant, cite: factsBounding(doc, constant).map(shown) }));
+    // The safety constants of the schema no rule is written for: any fact of a signed document with a safe side, as the guard accepts.
+    const signed = [...facts.entries()].filter(([, f]) => (f.bound === "upper" || f.bound === "lower") && signatureOf(f.document, dir)?.valid).map(([id]) => shown(id));
+    const unbound = schemaNumbers()
+        .filter((c) => isSafety(c) && !subjects.includes(c))
+        .map((constant) => {
+            const ruled = subjects.filter((s) => matches(s, constant));
+            return {
+                constant,
+                cite: [],
+                respects: signed,
+                note: `no signed rule binds it to one fact: the guard accepts a fact of a signed document whose safe side the value respects${ruled.length ? ` (${ruled.join(", ")} has its own rule, above)` : ""}`,
+            };
+        });
+    return [...bound, ...unbound];
 }
 
 export function stateOfTopic(progress: Progress, task: TaskFile["task"]): TopicState {
