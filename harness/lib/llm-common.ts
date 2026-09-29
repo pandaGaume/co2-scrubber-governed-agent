@@ -79,8 +79,9 @@ export const TRUNCATED_RESULT = "not executed: your answer was cut at the output
 
 /** Whether a model's raw answer was cut at the output limit: `stop_reason: "max_tokens"` (Anthropic), `finish_reason: "length"` (OpenAI-compatible). */
 export function cutAtOutputLimit(response: unknown): boolean {
-    const r = response as { stop_reason?: unknown; choices?: Array<{ finish_reason?: unknown }> } | null;
-    return r?.stop_reason === "max_tokens" || r?.choices?.[0]?.finish_reason === "length";
+    const r = response as { stop_reason?: unknown; choices?: Array<{ finish_reason?: unknown }>; status?: unknown; incomplete_details?: { reason?: unknown } | null } | null;
+    // The Responses API says an answer the limit cut is incomplete, for max_output_tokens.
+    return r?.stop_reason === "max_tokens" || r?.choices?.[0]?.finish_reason === "length" || (r?.status === "incomplete" && r?.incomplete_details?.reason === "max_output_tokens");
 }
 
 /**

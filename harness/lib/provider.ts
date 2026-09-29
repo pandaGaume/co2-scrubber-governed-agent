@@ -41,14 +41,14 @@ export interface Provider extends PolicyFallback {
 /**
  * A profile file (`profiles/*.json`, see `profiles/README.md`): the vendor
  * is a profile, not a branch. `tier3` binds the language model: the wire
- * (`openai-compatible` or `anthropic-messages`), the endpoint, the model,
+ * (`openai-compatible`, `openai-responses` or `anthropic-messages`), the endpoint, the model,
  * the environment variable of the key (never the key), and optionally the
  * family the slots' grammars should see and the locale.
  */
 export interface ProviderProfile {
     name?: string;
     tier3?: {
-        wire?: "openai-compatible" | "anthropic-messages";
+        wire?: "openai-compatible" | "anthropic-messages" | "openai-responses";
         baseUrl?: string;
         model?: string;
         apiKey?: { env?: string };
@@ -59,6 +59,8 @@ export interface ProviderProfile {
         maxTokensParam?: "max_tokens" | "max_completion_tokens";
         /** The sampling temperature sent; null sends none, for a model that takes only its own (0.2 when absent). */
         temperature?: number | null;
+        /** The reasoning effort asked of a model that reasons (the Responses API: low, medium, high); the model's own default when absent. */
+        reasoningEffort?: string;
         /** How long one answer may take, in milliseconds (60000 when absent): a model that reasons long is not cut by the harness's clock. */
         timeoutMs?: number;
         /** The family as the slots' grammars key it (nemotron, gpt, claude, gemini); inferred from the model name when absent. */

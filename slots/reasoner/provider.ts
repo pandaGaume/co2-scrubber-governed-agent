@@ -87,7 +87,10 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
         // The context mode is the conversation's: `state` for a loop whose harness rebuilds the reasoning state at every step, the transcript replayed otherwise.
         const mode = contextMode === "state" ? "state" : "conversation";
         try {
-            if (wire === "anthropic-messages") {
+            if (wire === "openai-responses") {
+                const { OpenAiResponsesProvider } = await import("../../harness/providers/openai-responses.js");
+                provider = new OpenAiResponsesProvider(profile, { systemPrompt: prompt, contextMode: mode });
+            } else if (wire === "anthropic-messages") {
                 const { AnthropicProvider } = await import("../../harness/providers/anthropic.js");
                 provider = new AnthropicProvider(profile, { systemPrompt: prompt, contextMode: mode });
             } else {
