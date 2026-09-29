@@ -197,6 +197,28 @@ un candidat qui manque, le diagnostic, un candidat révisé.
   précédent, sa réponse brute) ; l'exemple l'écrit lui-même sous
   `outputs/examples/<horodatage>/trace/`, l'Observateur compris.
 
+## 7 bis. Signer, et travailler dans un fork (29 septembre)
+
+**Signer un document de la bibliothèque**, depuis le terminal (seul un titulaire du rôle `authorised-signatory` de `specs/station/roles.json` peut signer) :
+
+```bash
+npm run library:sign                                                   # où en est chaque signature, et qui peut signer
+npm run library:sign -- commissioning-test-safety "Guillaume Pelletier"
+```
+
+On peut aussi signer depuis la page bibliothèque (bouton « library » de la salle de contrôle), ou en répondant à la question de Mother.
+
+**Un fork** est un bac à sable où les agents modifient la bibliothèque, les specs et les graphes sans toucher au dépôt, avec l'histoire de ce qui a changé :
+
+```bash
+npm run fork -- create essai
+npm run fork -- run essai --port 3003     # le seul qui démarre un serveur
+npm run fork -- log essai                 # l'évolution, en lecture seule
+npm run fork -- diff essai                # la divergence avec le dépôt, en lecture seule
+```
+
+Tout le détail : `docs/forks.fr.md`.
+
 ## 8. Ce qui n'existe pas
 
 - **Le sujet `code`** : aucune usine n'écrit de nœud. Quand un plan déclare
