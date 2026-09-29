@@ -55,6 +55,12 @@ export interface ProviderProfile {
         capabilities?: string[];
         /** The output limit per answer, in tokens; the provider's default when absent (4096 on the Anthropic wire, the server's own on an OpenAI-compatible one). */
         maxTokens?: number;
+        /** How an OpenAI-compatible server names the output limit (2026-09-29: recent OpenAI models refuse max_tokens and take max_completion_tokens); max_tokens when absent. */
+        maxTokensParam?: "max_tokens" | "max_completion_tokens";
+        /** The sampling temperature sent; null sends none, for a model that takes only its own (0.2 when absent). */
+        temperature?: number | null;
+        /** How long one answer may take, in milliseconds (60000 when absent): a model that reasons long is not cut by the harness's clock. */
+        timeoutMs?: number;
         /** The family as the slots' grammars key it (nemotron, gpt, claude, gemini); inferred from the model name when absent. */
         family?: string;
         locale?: string;

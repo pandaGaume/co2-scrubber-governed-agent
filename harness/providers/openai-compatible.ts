@@ -52,6 +52,9 @@ export class OpenAiCompatibleProvider implements Provider {
     private pendingCalls: Array<{ id: string; executed: boolean; truncated: boolean }> = [];
     /** The profile's `tier3.maxTokens`, sent only when given: the server's own limit otherwise. A cut answer (`finish_reason: "length"`) is never run. */
     private readonly maxTokens: number | null;
+    private readonly maxTokensParam: "max_tokens" | "max_completion_tokens";
+    private readonly profileTemperature: number | null | undefined;
+    private readonly profileTimeoutMs: number | undefined;
 
     constructor(
         profile: ProviderProfile | null,
@@ -64,6 +67,9 @@ export class OpenAiCompatibleProvider implements Provider {
         this.baseUrl = (p.baseUrl ?? process.env.OPENAI_BASE_URL ?? "https://api.tokenfactory.nebius.com/v1").replace(/\/$/, "");
         this.apiKey = apiKeyFor(profile, ["NEBIUS_API_KEY", "OPENAI_API_KEY"]);
         this.maxTokens = p.maxTokens ?? null;
+        this.maxTokensParam = p.maxTokensParam ?? "max_tokens";
+        this.profileTemperature = p.temperature;
+        this.profileTimeoutMs = p.timeoutMs;
         this.family = familyOf(profile, this.model);
         this.messages = [{ role: "system", content: options.systemPrompt }];
     }
@@ -98,10 +104,12 @@ export class OpenAiCompatibleProvider implements Provider {
 
         const tools = input.allowedCapabilities.map((c) => ({ type: "function", function: { name: toApiName(c.id), description: c.description, parameters: c.inputSchema ?? { type: "object" } } }));
         // One action per step: the harness executes one decision, so the model is asked for one call at a time.
-        const body = { model: this.model, messages: this.messages, tools, tool_choice: this.contextMode === "state" ? "required" : "auto", parallel_tool_calls: false, temperature: this.options.temperature ?? 0.2, ...(this.maxTokens ? { max_tokens: this.maxTokens } : {}) };
+        // The output limit under the name the server takes, and a temperature only when the profile does not say the model takes none.
+        const temperature = this.options.temperature ?? (this.profileTemperature === undefined ? 0.2 : this.profileTemperature);
+        const body = { model: this.model, messages: this.messages, tools, tool_choice: this.contextMode === "state" ? "required" : "auto", parallel_tool_calls: false, ...(temperature === null ? {} : { temperature }), ...(this.maxTokens ? { [this.maxTokensParam]: this.maxTokens } : {}) };
         const started = Date.now();
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), this.options.timeoutMs ?? 60000);
+        const timer = setTimeout(() => controller.abort(), this.options.timeoutMs ?? this.profileTimeoutMs ?? 60000);
         input.signal?.addEventListener("abort", () => controller.abort(), { once: true });
         let completion: ChatCompletion;
         try {

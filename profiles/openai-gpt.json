@@ -1,0 +1,26 @@
+{
+    "name": "openai-gpt",
+    "tier3": {
+        "wire": "openai-compatible",
+        "baseUrl": "https://api.openai.com/v1",
+        "model": "gpt-5.6-sol",
+        "apiKey": {
+            "env": "OPENAI_API_KEY"
+        },
+        "capabilities": [
+            "tools",
+            "json"
+        ],
+        "maxTokens": 8192,
+        "maxTokensParam": "max_completion_tokens",
+        "temperature": null,
+        "timeoutMs": 180000,
+        "family": "gpt"
+    },
+    "gateway": {
+        "host": "laptop"
+    },
+    "factory": {
+        "runner": "local"
+    }
+}

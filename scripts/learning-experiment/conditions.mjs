@@ -10,14 +10,18 @@
 // Learning stays off in every one: their servers run without --learn and the driver never reflects in a validation.
 //
 //   npm run build
-//   node scripts/learning-experiment/conditions.mjs <trained fork> <prefix> [A B C D]
+//   node scripts/learning-experiment/conditions.mjs <trained fork> <prefix> [A B C D] [--fresh-recipes]
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { cpSync, existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import * as path from "node:path";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const { createFork, forkPath, snapshotFork } = await import(pathToFileURL(path.join(ROOT, "dist", "lib", "fork.js")).href);
-const [trained, prefix, ...only] = process.argv.slice(2);
+const args = process.argv.slice(2);
+// --fresh-recipes: every condition starts with no recipe (the steps a model's tasks taught the policy are replayed otherwise, a
+// memory of its own; a model under test starts from none, 2026-09-29, the transfer to another provider).
+const freshRecipes = args.includes("--fresh-recipes");
+const [trained, prefix, ...only] = args.filter((a) => !a.startsWith("--"));
 const CONDITIONS = {
     A: { previousTasks: false, read: false, what: "control: no previous tasks' episodes, no long-term memory" },
     B: { previousTasks: true, read: false, what: "working memory: the previous tasks' episodes, no long-term memory" },
@@ -34,6 +38,7 @@ for (const [id, c] of Object.entries(CONDITIONS)) {
     const dir = forkPath(fork);
     // The training tasks, whose manifests the working memory reads (the fork's history does not carry them).
     for (const t of readdirSync(from).filter((d) => /^t-/.test(d))) cpSync(path.join(from, t), path.join(dir, "outputs", "factory", t), { recursive: true });
+    if (freshRecipes) rmSync(path.join(dir, "outputs", "factory", "_recipes"), { recursive: true, force: true });
     const file = path.join(dir, "specs", "harness", "memory.json");
     const settings = JSON.parse(readFileSync(file, "utf8"));
     settings.workingMemory.previousTasks = c.previousTasks;
