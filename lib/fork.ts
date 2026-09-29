@@ -24,8 +24,8 @@ import { FORK_DATA, fromRepository } from "./paths.js";
 /** The data a fork copies from the repository: its context, less its outputs, which a fork starts without. */
 export const COPIED = FORK_DATA.filter((d) => d !== "outputs");
 
-/** What a fork's history keeps of its outputs: what the agents learn and propose, not every task's workshop. */
-const IGNORE = ["/outputs/*", "!/outputs/factory/", "/outputs/factory/*", "!/outputs/factory/_recipes/", "!/outputs/factory/library-proposals/", ""].join("\n");
+/** What a fork's history keeps of its outputs: what the agents learn and propose, and the scenario runs, not every task's workshop. */
+const IGNORE = ["/outputs/*", "!/outputs/factory/", "/outputs/factory/*", "!/outputs/factory/_recipes/", "!/outputs/factory/library-proposals/", "!/outputs/factory/runs/", ""].join("\n");
 
 export interface ForkRecord {
     id: string;
@@ -96,8 +96,13 @@ export function createFork(id: string, options: { from?: string } = {}): ForkRec
 
 /** A snapshot: what changed in the fork since the last one, as a commit; none when nothing changed. */
 export function snapshotFork(id: string, label: string): { commit: string; files: Array<{ status: string; path: string }> } | null {
-    const dir = forkPath(id);
     readFork(id);
+    return snapshotAt(forkPath(id), label);
+}
+
+/** A snapshot of the fork at a directory: what a server in a fork takes of itself (the station, on an adaptation it adopts). */
+export function snapshotAt(dir: string, label: string): { commit: string; files: Array<{ status: string; path: string }> } | null {
+    if (!existsSync(path.join(dir, "fork.json"))) throw new Error(`${dir} is no fork`);
     git(dir, ["add", "-A"]);
     const staged = git(dir, ["diff", "--cached", "--name-status"]);
     if (!staged) return null;

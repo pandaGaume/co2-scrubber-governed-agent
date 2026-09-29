@@ -1,0 +1,247 @@
+/**
+ * The reflection (2026-09-29, P4 of docs/comportement-en-donnees.fr.md): what the station reads in the traces a fork's
+ * agents leave, and how an adaptation of their conduct is checked before it is adopted.
+ *
+ *   observe   the patterns of the traces, by code: the same cause stopping a commissioning's tests again, a factory
+ *             refused on the same points again and again, a task that ended STUCK. Each pattern has an id the
+ *             adaptation cites, and the file its fix would touch.
+ *   adapt     an adaptation is a patch (JSON Pointer operations, a segment `[id=x]` picking the element of a list by
+ *             its id) on one file of the context the spec says may adapt, never on one it says may not (the library,
+ *             its facts, the guard's rules, the roles, the reflection's own bounds); applied, the file is still what
+ *             its reader needs: a playbook runs at every event, says only its words and does only what its player
+ *             carries out; a words file keeps every key and every hole.
+ *
+ * Nothing here adopts anything: the station does, in a fork only (`slots/station`), after checking again.
+ */
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import * as path from "node:path";
+import { fromRoot } from "./paths.js";
+import { playbookProblems, type PlaybookExpectations } from "../harness/core/conduct.js";
+import { loadWords } from "../harness/core/words.js";
+import { problemsOfReason, refusalKey } from "../harness/core/problems.js";
+
+export const REFLECTION_FORMAT_FILE = "specs/reflection/format.json";
+
+export interface ReflectionFormat {
+    words: string;
+    prompt: string;
+    playbook: string;
+    observation: string;
+    file: string;
+    /** The files an adaptation may change (globs of the repository's paths). */
+    adaptable: string[];
+    /** What never adapts, with why, even when a pattern of `adaptable` names it. */
+    never: Array<{ pattern: string; why: string }>;
+    /** What reads each adaptable playbook: its words, its actions, its gates' capabilities. */
+    consumers: Record<string, { words?: string; actions?: string[]; capabilities?: string[] }>;
+    /** How many times in a row makes a pattern. */
+    repeatAt: number;
+}
+
+export const reflectionFormat = (): ReflectionFormat => JSON.parse(readFileSync(fromRoot(...REFLECTION_FORMAT_FILE.split("/")), "utf8")) as ReflectionFormat;
+
+/** A pattern of the traces, with what it rests on and the file its fix would touch. */
+export interface Pattern {
+    id: string;
+    kind: "abort-repeat" | "refusal-streak" | "stuck";
+    says: string;
+    count: number;
+    /** The run or the task it was read in. */
+    source: string;
+    /** The file of the context its fix would touch, when one is known. */
+    target: string | null;
+    detail: Record<string, unknown>;
+}
+
+const readJson = <T>(file: string): T | null => {
+    try {
+        return JSON.parse(readFileSync(file, "utf8")) as T;
+    } catch {
+        return null;
+    }
+};
+
+/** The patterns of a workshop's traces (the fork's, in a fork): its scenario runs, its tasks' manifests. */
+export function observe(workshop: string, format: Pick<ReflectionFormat, "repeatAt"> = reflectionFormat()): Pattern[] {
+    const patterns: Pattern[] = [];
+    const at = Math.max(2, format.repeatAt);
+    // The commissioning's runs: the same condition stopping its tests again.
+    const runs = path.join(workshop, "runs");
+    if (existsSync(runs))
+        for (const file of readdirSync(runs).filter((f) => f.endsWith(".json")).sort()) {
+            const run = readJson<{ id: string; startedAt: string; conduct?: { playbook?: string; causes?: Array<{ condition: string | null; reason: string }> } }>(path.join(runs, file));
+            const byCondition = new Map<string, string[]>();
+            for (const c of run?.conduct?.causes ?? []) byCondition.set(c.condition ?? "unknown", [...(byCondition.get(c.condition ?? "unknown") ?? []), c.reason]);
+            for (const [condition, reasons] of byCondition)
+                if (reasons.length >= at)
+                    patterns.push({
+                        id: `abort-repeat:${file.replace(/\.json$/, "")}:${condition}`,
+                        kind: "abort-repeat",
+                        says: `the condition ${condition} stopped ${reasons.length} tests of the same commissioning (run ${run!.id}): ${reasons.join("; ")}`,
+                        count: reasons.length,
+                        source: `runs/${file}`,
+                        target: run?.conduct?.playbook && !run.conduct.playbook.startsWith("library:") ? run.conduct.playbook : null,
+                        detail: { run: run!.id, condition, reasons, playbook: run?.conduct?.playbook ?? null },
+                    });
+        }
+    // The factories' tasks: a capability refused on the same points again and again; a task that ended STUCK.
+    if (existsSync(workshop))
+        for (const task of readdirSync(workshop).filter((d) => /^t-/.test(d)).sort()) {
+            const m = readJson<{ topic: string; ended: string | null; steps: Array<{ capability: string | null; outcome: string; reason: string | null }> }>(path.join(workshop, task, "manifest.json"));
+            if (!m) continue;
+            type Streak = { capability: string; key: string; times: number; reason: string };
+            let streak: Streak | null = null as Streak | null;
+            let longest: Streak | null = null as Streak | null;
+            for (const s of m.steps) {
+                if (s.outcome !== "refused" || !s.capability) continue;
+                const key = refusalKey(problemsOfReason(s.reason ?? ""));
+                streak = streak && streak.capability === s.capability && streak.key === key ? { ...streak, times: streak.times + 1 } : { capability: s.capability, key, times: 1, reason: s.reason ?? "" };
+                if (!longest || streak.times > longest.times) longest = streak;
+            }
+            if (longest && longest.times >= at)
+                patterns.push({
+                    id: `refusal-streak:${task}:${longest.capability}`,
+                    kind: "refusal-streak",
+                    says: `${longest.capability} was refused ${longest.times} times in a row on the same point(s) in task ${task} (${m.topic}): ${longest.reason.slice(0, 300)}`,
+                    count: longest.times,
+                    source: `${task}/manifest.json`,
+                    target: existsSync(fromRoot("specs", m.topic, "words.json")) ? `specs/${m.topic}/words.json` : null,
+                    detail: { task, topic: m.topic, capability: longest.capability, reason: longest.reason },
+                });
+            if (/^STUCK/.test(m.ended ?? ""))
+                patterns.push({ id: `stuck:${task}`, kind: "stuck", says: `task ${task} (${m.topic}) ended ${String(m.ended).slice(0, 300)}`, count: 1, source: `${task}/manifest.json`, target: existsSync(fromRoot("specs", m.topic, "words.json")) ? `specs/${m.topic}/words.json` : null, detail: { task, topic: m.topic, ended: m.ended } });
+        }
+    return patterns;
+}
+
+/** A glob of the repository's paths: `**` any depth, `*` within a segment. */
+export function globMatches(glob: string, file: string): boolean {
+    const re = glob
+        .split("**")
+        .map((part) => part.split("*").map((x) => x.replace(/[.+?^${}()|[\]\\]/g, "\\$&")).join("[^/]*"))
+        .join(".*");
+    return new RegExp(`^${re}$`).test(file);
+}
+
+/** One operation of an adaptation: JSON Pointer paths, a segment `[id=x]` picking the element of a list whose id is x. */
+export interface PatchOp {
+    op: "replace" | "add" | "remove";
+    /** A JSON Pointer (not `path`: a path, for the socle, is a file of the task). */
+    pointer: string;
+    value?: unknown;
+}
+
+export interface Adaptation {
+    target: string;
+    ops: PatchOp[];
+    reason: string;
+    /** The ids of the patterns it answers. */
+    evidence: string[];
+    justifications?: unknown[];
+}
+
+const segmentsOf = (pointer: string): string[] => {
+    if (!pointer.startsWith("/")) throw new Error(`"${pointer}" is no JSON Pointer (it starts with /)`);
+    return pointer
+        .slice(1)
+        .split("/")
+        .map((s) => s.replace(/~1/g, "/").replace(/~0/g, "~"));
+};
+
+/** A patch applied to a copy of a document: the copy, or why it cannot be applied. */
+export function applyPatch(doc: unknown, ops: PatchOp[]): unknown {
+    const out = JSON.parse(JSON.stringify(doc)) as unknown;
+    for (const [i, o] of ops.entries()) {
+        const segs = segmentsOf(String(o.pointer ?? ""));
+        let parent: unknown = out;
+        for (const s of segs.slice(0, -1)) parent = step(parent, s, `${i + 1}: ${o.pointer}`);
+        const last = segs.at(-1)!;
+        const where = `operation ${i + 1} (${o.op} ${o.pointer})`;
+        if (Array.isArray(parent)) {
+            const idx = last === "-" ? parent.length : indexOf(parent, last, where);
+            if (o.op === "add") parent.splice(idx, 0, o.value);
+            else if (idx >= parent.length) throw new Error(`${where}: no element ${last}`);
+            else if (o.op === "remove") parent.splice(idx, 1);
+            else parent[idx] = o.value;
+        } else if (parent && typeof parent === "object") {
+            const obj = parent as Record<string, unknown>;
+            if (o.op !== "add" && !(last in obj)) throw new Error(`${where}: no field "${last}"`);
+            if (o.op === "remove") delete obj[last];
+            else obj[last] = o.value;
+        } else throw new Error(`${where}: its parent is not an object or a list`);
+    }
+    return out;
+}
+
+function indexOf(list: unknown[], seg: string, where: string): number {
+    const byId = /^\[id=(.+)\]$/.exec(seg);
+    if (byId) {
+        const i = list.findIndex((x) => x && typeof x === "object" && (x as { id?: unknown }).id === byId[1]);
+        if (i < 0) throw new Error(`${where}: no element with the id "${byId[1]}"`);
+        return i;
+    }
+    if (!/^\d+$/.test(seg)) throw new Error(`${where}: "${seg}" is no index of a list (a number, or [id=...])`);
+    return Number(seg);
+}
+
+function step(value: unknown, seg: string, where: string): unknown {
+    if (Array.isArray(value)) {
+        const i = indexOf(value, seg, `operation ${where}`);
+        if (i >= value.length) throw new Error(`operation ${where}: no element ${seg}`);
+        return value[i];
+    }
+    if (value && typeof value === "object" && seg in (value as Record<string, unknown>)) return (value as Record<string, unknown>)[seg];
+    throw new Error(`operation ${where}: no "${seg}" on the way`);
+}
+
+const holesOf = (template: string): string => [...template.matchAll(/\{([A-Za-z][A-Za-z0-9_.]*)\}/g)].map((m) => m[1]).sort().join(",");
+
+/** The keys of a words file, flattened as the words are read (`words.ts`). */
+function templatesOf(value: unknown): Record<string, string> {
+    const out: Record<string, string> = {};
+    const walk = (v: unknown, prefix: string) => {
+        if (typeof v === "string") out[prefix] = v;
+        else if (v && typeof v === "object" && !Array.isArray(v)) for (const [k, x] of Object.entries(v)) if (k !== "note") walk(x, prefix ? `${prefix}.${k}` : k);
+    };
+    walk(value, "");
+    return out;
+}
+
+/** An adaptation's problems: the file it may change, the patterns it cites, the patch applied, the file still what its reader needs. */
+export function adaptationProblems(input: unknown, patterns: Pattern[], format: ReflectionFormat = reflectionFormat()): { problems: string[]; before?: unknown; after?: unknown } {
+    const a = (input ?? {}) as Partial<Adaptation>;
+    const problems: string[] = [];
+    const target = String(a.target ?? "").replace(/\\/g, "/");
+    const never = format.never.find((n) => globMatches(n.pattern, target));
+    if (never) return { problems: [`${target} never adapts: ${never.why}`] };
+    if (!format.adaptable.some((g) => globMatches(g, target))) return { problems: [`${target} is not a file an adaptation may change (${format.adaptable.join(", ")})`] };
+    const file = fromRoot(...target.split("/"));
+    if (!existsSync(file) || !statSync(file).isFile()) return { problems: [`${target} is not a file of the context`] };
+    if (!String(a.reason ?? "").trim()) problems.push("an adaptation says why (reason)");
+    const cited = Array.isArray(a.evidence) ? a.evidence.map(String) : [];
+    if (!cited.length) problems.push("an adaptation cites the patterns it answers (evidence, their ids)");
+    for (const id of cited) if (!patterns.some((p) => p.id === id)) problems.push(`"${id}" is not a pattern of the traces (${patterns.map((p) => p.id).join(", ") || "none"})`);
+    if (!Array.isArray(a.ops) || !a.ops.length) return { problems: [...problems, "an adaptation changes something (ops)"] };
+    const before = JSON.parse(readFileSync(file, "utf8")) as unknown;
+    let after: unknown;
+    try {
+        after = applyPatch(before, a.ops as PatchOp[]);
+    } catch (e) {
+        return { problems: [...problems, e instanceof Error ? e.message : String(e)] };
+    }
+    if (JSON.stringify(after) === JSON.stringify(before)) problems.push("the patch changes nothing");
+    // The file is still what its reader needs.
+    if (/playbook\.json$/.test(target)) {
+        const consumer = format.consumers[target] ?? {};
+        const expect: PlaybookExpectations = { ...(consumer.words ? { words: loadWords(consumer.words) } : {}), ...(consumer.actions ? { actions: consumer.actions } : {}), ...(consumer.capabilities ? { capabilities: consumer.capabilities } : {}) };
+        problems.push(...playbookProblems(after, target, expect));
+    } else if (/words\.json$/.test(target)) {
+        const was = templatesOf(before);
+        const is = templatesOf(after);
+        for (const [key, template] of Object.entries(was)) {
+            if (is[key] === undefined) problems.push(`${target}: the key "${key}" is gone, and the code says it`);
+            else if (holesOf(is[key]) !== holesOf(template)) problems.push(`${target}: "${key}" has the holes {${holesOf(is[key])}}, not the {${holesOf(template)}} the code fills`);
+        }
+    }
+    return { problems, before, after };
+}

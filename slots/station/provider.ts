@@ -47,13 +47,15 @@
  */
 import { notHolder, roleOf, ROLES_FILE, SIGNATORY } from "../../lib/roles.js";
 import { Playbook, playbookProblems, type PlaybookFile } from "../../harness/core/conduct.js";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { adaptationProblems, observe, type Adaptation } from "../../lib/reflection.js";
+import { snapshotAt } from "../../lib/fork.js";
 import * as path from "node:path";
 import { McpGrammar } from "@cyanmycelium/mcp-core";
 import { errorMessage } from "../../lib/files.js";
 import { forkDir, forkId, fromRoot } from "../../lib/paths.js";
 import { objectSchema as obj, publishSlot, type PublishedSlot } from "../lib/slot-server.js";
-import { checkTaskId, sha256Of, taskDir } from "../tools/lib/workshop.js";
+import { checkTaskId, sha256Of, taskDir, WORKSHOP_ROOT } from "../tools/lib/workshop.js";
 import { Broker } from "../../harness/lib/broker.js";
 import { checkProcedure, FORMAT as PROCEDURE_FORMAT, rulesAndFacts, type PresenceRead, type ProblemKind, type ProcedureProblem, safetyProblems } from "../../harness/topics/procedure/check.js";
 import { moduleOf, totalMinutes, type Procedure } from "../../lib/procedure/format.js";
@@ -84,7 +86,7 @@ export interface Proposal {
     artifacts: Array<{ kind: string; path: string; sha256: string; contractSha256?: string }>;
     manifestSha256: string;
     claims: Record<string, unknown>;
-    status: "received" | "judging" | "accepted" | "rejected" | "relayed" | "awaiting-signature";
+    status: "received" | "judging" | "accepted" | "rejected" | "relayed" | "awaiting-signature" | "adopted";
     reportId?: string;
     reason?: string;
     receivedAt: string;
@@ -352,6 +354,49 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
         });
     };
 
+    /**
+     * An adaptation the reflection proposed (2026-09-29, P4 of docs/comportement-en-donnees.fr.md): adopted in a fork only,
+     * where it is measured; checked again first, against the patterns of the traces as they are now and the file as it is
+     * (a file changed since the reflection checked it is not patched); written to the fork's copy, a snapshot of the fork
+     * taken with its reason, and said by Mother. Outside a fork, a change of conduct is a proposal a signatory signs: refused.
+     */
+    const relayAdaptation = async (proposal: Proposal, artifact: Proposal["artifacts"][number]) => {
+        const file = path.join(taskDir(checkTaskId(proposal.taskId)), artifact.path);
+        if (!existsSync(file)) throw new Error(`adaptation ${artifact.path} is not in the workshop of task ${proposal.taskId}`);
+        const text = readFileSync(file);
+        if (sha256Of(text) !== artifact.sha256) throw new Error(`adaptation ${artifact.path}: the sha256 proposed is not the file's`);
+        const a = JSON.parse(text.toString("utf8")) as Adaptation & { targetSha256?: string };
+        const fork = forkId();
+        const dir = forkDir();
+        if (!fork || !dir) {
+            proposal.status = "rejected";
+            proposal.reason = "an adaptation is adopted in a fork only; outside one, a change of conduct is a proposal an authorised signatory signs";
+            say("mother.adaptation.outside", null, () => ({ target: a.target }));
+            return;
+        }
+        const { problems, after } = adaptationProblems(a, observe(WORKSHOP_ROOT));
+        const target = fromRoot(...String(a.target).split("/"));
+        if (!problems.length && existsSync(target) && a.targetSha256 && sha256Of(readFileSync(target)) !== a.targetSha256) problems.push(`${a.target} changed since the reflection checked the adaptation`);
+        if (problems.length) {
+            proposal.status = "rejected";
+            proposal.reason = problems.join("; ");
+            say("mother.adaptation.refused", null, () => ({ target: a.target, problems: problems.join("; ").slice(0, 300) }));
+            return;
+        }
+        writeFileSync(target, `${JSON.stringify(after, null, 4)}\n`, "utf8");
+        const snapshot = (() => {
+            try {
+                return snapshotAt(dir, `adaptation of ${a.target}: ${a.reason} (${a.evidence.join(", ")})`);
+            } catch (e) {
+                log(`[station] the fork's snapshot of the adaptation failed: ${errorMessage(e)}`);
+                return null;
+            }
+        })();
+        proposal.status = "adopted";
+        if (snapshot) proposal.reason = `snapshot ${snapshot.commit.slice(0, 12)}`;
+        say("mother.adaptation.adopted", null, () => ({ fork, target: a.target, reason: a.reason }));
+    };
+
     const relayProcedure = async (proposal: Proposal, artifact: Proposal["artifacts"][number]) => {
         const file = path.join(taskDir(checkTaskId(proposal.taskId)), artifact.path);
         if (!existsSync(file)) throw new Error(`procedure ${artifact.path} is not in the workshop of task ${proposal.taskId}`);
@@ -430,11 +475,35 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
         state,
         tools: [
             {
+                // Mother reflects on what the fork's agents did (2026-09-29, P4): the patterns of the traces, read by code, and the
+                // reflection factory asked for an adaptation that answers them. In a fork only: its adaptations are adopted and measured there.
+                name: "reflect",
+                title: "Reflect on the fork's traces",
+                description: "In a fork only: the patterns of the traces its agents left (a cause stopping tests again, a factory refused on the same points again, a task stuck), and, when there are some, a task of the reflection factory for an adaptation of the conduct that answers them; the station adopts it in the fork when it arrives.",
+                inputSchema: obj({ builder: { type: "string", enum: ["reasoner", "scripted"], description: "the reflection's builder: a model (default), or its script" } }),
+                handle: async (args) => {
+                    const fork = forkId();
+                    if (!fork) throw new Error("the reflection runs in a fork only: its adaptations are adopted and measured there, never in the repository's context");
+                    const patterns = observe(WORKSHOP_ROOT);
+                    say("mother.reflection.read", null, () => ({ fork, count: patterns.length }));
+                    if (!patterns.length) return { fork, patterns, taskId: null, note: "no pattern in the traces: nothing to adapt" };
+                    const r = await client().call("factory", "request", {
+                        objective: { required_outputs: [{ name: "adaptation", quantity: "Adaptation" }] },
+                        observations: { reflection: { patterns } },
+                        topics: ["reflection"],
+                        ...(args.builder === "scripted" || args.builder === "reasoner" ? { builder: args.builder } : {}),
+                        requestedBy: "station (reflection)",
+                    });
+                    if (!r.ok) throw new Error(`the reflection factory did not take the task: ${r.error ?? r.outcome}`);
+                    return { fork, patterns, taskId: (r.output as { taskId: string }).taskId };
+                },
+            },
+            {
                 name: "propose",
                 inputSchema: obj(
                     {
                         taskId: { type: "string" },
-                        artifacts: { type: "array", items: { type: "object", properties: { kind: { type: "string", enum: ["graph", "model", "twin", "procedure", "plugin", "playbook"] }, path: { type: "string" }, sha256: SHA, contractSha256: SHA }, required: ["kind", "path", "sha256"] } },
+                        artifacts: { type: "array", items: { type: "object", properties: { kind: { type: "string", enum: ["graph", "model", "twin", "procedure", "plugin", "playbook", "adaptation"] }, path: { type: "string" }, sha256: SHA, contractSha256: SHA }, required: ["kind", "path", "sha256"] } },
                         manifestSha256: { ...SHA },
                         claims: { type: "object" },
                     },
@@ -447,6 +516,11 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     const proposalId = `p${(s.proposals.length + 1).toString().padStart(4, "0")}-${String(manifestSha256).slice(0, 8)}`;
                     const proposal: Proposal = { proposalId, taskId: String(taskId), artifacts: list, manifestSha256: String(manifestSha256), claims: (claims as Record<string, unknown>) ?? {}, status: "received", receivedAt: new Date().toISOString() };
                     s.proposals.push(proposal);
+                    const adaptation = list.find((a) => a.kind === "adaptation");
+                    if (adaptation) {
+                        await relayAdaptation(proposal, adaptation);
+                        return { proposalId, status: proposal.status, ...(proposal.reason ? { reason: proposal.reason } : {}), note: proposal.status === "adopted" ? "adopted in the fork, and a snapshot taken" : "not adopted" };
+                    }
                     const playbook = list.find((a) => a.kind === "playbook");
                     if (playbook) {
                         await relayPlaybook(proposal, playbook);

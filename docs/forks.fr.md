@@ -16,6 +16,7 @@ Un fork est une copie des données du contexte (la bibliothèque et ses signatur
 | `npm run fork -- create <id> --from <autre>` | fork d'un fork : un clone, qui garde l'histoire de son parent |
 | `npm run fork -- run <id> --port 3003` | démarre le serveur du fork (tableau de bord sur http://localhost:3003/) ; instantané au démarrage et à l'arrêt (Ctrl+C) |
 | `npm run fork -- snapshot <id> <texte>` | enregistre ce qui a changé depuis le dernier instantané, sous ce libellé ; ne fait rien si rien n'a changé |
+| `npm run fork -- reflect <id> --port 3003` | le serveur du fork doit tourner : Mother lit les traces du fork (motifs), et s'il y en a, l'usine de réflexion propose une adaptation que la station adopte dans le fork ; `--builder scripted` pour son script, sans clé |
 | `npm run fork -- log <id>` | l'évolution : chaque instantané, sa date, son libellé et les fichiers qu'il a changés |
 | `npm run fork -- diff <id>` | la divergence avec le dépôt tel qu'il est maintenant : fichiers ajoutés, changés, supprimés |
 | `npm run fork -- list` | les forks existants et leur origine |
@@ -53,7 +54,13 @@ Un fork a ses propres rôles (`specs/station/roles.json` copié). Pour qu'un age
 
 Les commits d'un fork ont pour auteur « fork <id> » et ne sont pas signés avec ta clé git : ce sont les modifications des agents, pas les tiennes.
 
+## Laisser les agents se modifier : la réflexion (P4)
+
+Quand les agents ont travaillé dans un fork (des scénarios joués, des tâches d'usine), `npm run fork -- reflect <id>` demande à Mother de relire leurs traces. Elle y cherche des motifs : une même cause qui arrête plusieurs essais d'une mise en service, une capacité refusée plusieurs fois de suite sur les mêmes points, une tâche finie STUCK. S'il y en a, l'usine de réflexion propose une adaptation : un patch sur un playbook ou un fichier de mots, avec sa raison et les motifs qu'il corrige. La station la revérifie, l'applique dans le fork seulement, prend un instantané libellé de la raison, et Mother le dit. `npm run fork -- log <id>` montre alors l'adaptation comme une étape de l'évolution.
+
+Ce qui ne s'adapte jamais, même dans un fork : la bibliothèque, les faits, les règles de la garde, les rôles, et les bornes de la réflexion elle-même (`specs/reflection/format.json`, qui dit pourquoi pour chacun).
+
 ## Ce qui n'existe pas encore
 
 - faire remonter un changement d'un fork vers le dépôt : il passera par une proposition et une signature (niveaux 2 et 3 de `comportement-en-donnees.fr.md`) ;
-- l'agent de réflexion qui propose des adaptations dans un fork (P4) et le banc qui compare un fork à l'original sur les scénarios de référence (P5).
+- le banc qui compare un fork à l'original sur les scénarios de référence (P5), et la réflexion lancée d'elle-même après chaque run.

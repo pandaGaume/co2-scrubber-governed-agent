@@ -26,7 +26,9 @@
  * nature (code, a model, the script, the human), the tasks opened, what it
  * waits for. The story list of the control page shows it under the step.
  */
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import * as path from "node:path";
+import { WORKSHOP_ROOT } from "../tools/lib/workshop.js";
 import type { JsonValue } from "@spiky-panda/harness";
 import { fromRoot } from "../../lib/paths.js";
 import { Broker } from "../../harness/lib/broker.js";
@@ -109,7 +111,7 @@ export interface Run {
     request?: TwinFactoryRequest;
     observations?: Record<string, unknown>;
     /** The process playbook's position, kept between two events: the aborts so far, the last test's end, the commander's answer, the stages it went through. */
-    conduct?: { playbook: string; signedBy?: string; stage: string | null; aborts: number; aborted: boolean; answer: string | null; stages: Array<{ stage: string; at: string }> };
+    conduct?: { playbook: string; signedBy?: string; stage: string | null; aborts: number; aborted: boolean; answer: string | null; stages: Array<{ stage: string; at: string }>; causes?: Array<{ condition: string | null; reason: string; step: number | null; at: string }> };
 }
 
 export interface PlayerDeps {
@@ -396,7 +398,11 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
             const why = aborted?.reason ?? aborted?.condition ?? "an abort condition";
             const position = (run.conduct ??= { playbook: playbookFile, ...(conduct.signedBy ? { signedBy: conduct.signedBy } : {}), stage: null, aborts: 0, aborted: false, answer: null, stages: [] });
             position.aborted = executed.status === "aborted";
-            if (position.aborted) position.aborts++;
+            if (position.aborted) {
+                position.aborts++;
+                // What stopped each test, kept with the run: what the reflection reads (2026-09-29, P4).
+                (position.causes ??= []).push({ condition: aborted?.condition ?? null, reason: why, step: aborted?.step ?? null, at: new Date().toISOString() });
+            }
             position.answer = null;
             const views = { aborted: () => ({ why, aborts: position.aborts }) };
             const says = (s: Saying, key?: string) => sayingText(s, (k, v) => say(PROCESS_WORDS, k, v), views, key);
@@ -626,6 +632,15 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
         run.endedAt = new Date().toISOString();
         for (const l of run.loops) if (l.status === "pending") l.status = "skipped";
         notify();
+        // The run as it ended, kept in the workshop (the fork's, in a fork): a trace the reflection reads, beside the tasks' manifests.
+        try {
+            const dir = path.join(WORKSHOP_ROOT, "runs");
+            mkdirSync(dir, { recursive: true });
+            writeFileSync(path.join(dir, `${run.startedAt.replace(/[:.]/g, "-")}-${run.id}.json`), `${JSON.stringify(run, null, 2)}
+`, "utf8");
+        } catch (e) {
+            log(`[scenario] ${run.id}: the run could not be kept: ${errorMessage(e)}`);
+        }
         // The last lines are said before the session closes.
         await Promise.allSettled(said);
         await operator.close();

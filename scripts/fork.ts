@@ -5,6 +5,7 @@
  *   npm run fork -- create <id> [--from <fork>]   the context as it is now (or another fork, with its history)
  *   npm run fork -- run <id> [--port 3003]        a server of its own on the fork's data; a snapshot when it starts and when it stops
  *   npm run fork -- snapshot <id> [label]         what changed since the last snapshot, as a commit of the fork
+ *   npm run fork -- reflect <id> [--port 3003] [--builder scripted]   Mother reads the fork's traces (its server must run) and asks the reflection for an adaptation
  *   npm run fork -- log <id>                      the fork's evolution, snapshot by snapshot
  *   npm run fork -- diff <id>                     its divergence from the repository's context as it is now
  *   npm run fork -- list
@@ -16,6 +17,7 @@
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { fromRepository, isMain } from "../lib/paths.js";
+import { Broker } from "../harness/lib/broker.js";
 import { createFork, forkDivergence, forkHistory, forkPath, listForks, readFork, removeFork, snapshotFork } from "../lib/fork.js";
 
 /** What never goes into a fork's server: where the data would be read or written instead of the fork's. */
@@ -50,6 +52,30 @@ function run(id: string, port: number): void {
     });
 }
 
+/** Mother reflects in a running fork: the patterns of its traces, and the reflection's task when there are some. */
+async function reflect(id: string, port: number, builder: string | undefined): Promise<void> {
+    readFork(id);
+    const broker = new Broker(`http://localhost:${port}`, { name: "fork-cli", version: "0", locale: "en" });
+    try {
+        const env = await broker
+            .session("station")
+            .then((s) => s.request<{ contents: Array<{ text: string }> }>("resources/read", { uri: "station://environment" }))
+            .catch((e: unknown) => {
+                throw new Error(`no station answers on port ${port} (${e instanceof Error ? e.message : String(e)}): start the fork's server first, npm run fork -- run ${id} --port ${port}`);
+            });
+        const fork = (JSON.parse(env.contents[0].text) as { fork: { id: string } | null }).fork;
+        if (fork?.id !== id) throw new Error(`the server on port ${port} runs ${fork ? `the fork ${fork.id}` : "the repository's context"}, not the fork ${id}: npm run fork -- run ${id} --port ${port}`);
+        const r = await broker.call("station", "reflect", builder ? { builder } : {});
+        if (!r.ok) throw new Error(String(r.error ?? r.outcome));
+        const out = r.output as { patterns: Array<{ id: string; says: string }>; taskId: string | null };
+        console.log(`${out.patterns.length} pattern(s) in the traces${out.patterns.map((p) => `
+  ${p.id}: ${p.says}`).join("")}`);
+        console.log(out.taskId ? `the reflection's task: ${out.taskId}; the station adopts its adaptation in the fork when it arrives (npm run fork -- log ${id})` : "nothing to adapt");
+    } finally {
+        await broker.close();
+    }
+}
+
 function main(): void {
     const [command, id, ...rest] = process.argv.slice(2);
     const option = (name: string): string | undefined => {
@@ -70,6 +96,12 @@ function main(): void {
             console.log(s ? `snapshot ${s.commit.slice(0, 12)}\n${s.files.map((f) => `  ${f.status} ${f.path}`).join("\n")}` : "nothing changed since the last snapshot");
             return;
         }
+        case "reflect":
+            void reflect(id, Number(option("--port") ?? 3003), option("--builder")).catch((e) => {
+                console.error(e instanceof Error ? e.message : String(e));
+                process.exit(1);
+            });
+            return;
         case "log":
             for (const c of forkHistory(id)) console.log(`${c.commit.slice(0, 12)} ${c.at} ${c.label}\n${c.files.map((f) => `  ${f}`).join("\n")}`);
             return;
@@ -89,7 +121,7 @@ function main(): void {
             console.log(`fork ${id} removed`);
             return;
         default:
-            console.log("npm run fork -- create <id> [--from <fork>] | run <id> [--port 3003] | snapshot <id> [label] | log <id> | diff <id> | list | remove <id>");
+            console.log("npm run fork -- create <id> [--from <fork>] | run <id> [--port 3003] | snapshot <id> [label] | reflect <id> [--port 3003] [--builder scripted] | log <id> | diff <id> | list | remove <id>");
     }
 }
 

@@ -143,6 +143,12 @@ describe("a factory writes a playbook, and an authorised signatory is asked to s
         assert.throws(() => signedPlaybook(changed), /changed since signatory-test signed it/);
     });
 
+    it("outside a fork, Mother does not reflect: an adaptation is adopted and measured in a fork only (2026-09-29, P4)", async () => {
+        const r = await operator.call("station", "reflect", { builder: "scripted" });
+        assert.equal(r.ok, false);
+        assert.match(String(r.error), /the reflection runs in a fork only/);
+    });
+
     it("a playbook that breaks a case the task gives is refused by the guard, and never proposed", async () => {
         const id = "commissioning-recovery-never-asks";
         const { taskId } = await ok<{ taskId: string }>("factory", "request", request(id, 1));

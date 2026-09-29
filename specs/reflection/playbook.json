@@ -1,0 +1,30 @@
+{
+    "title": "The reflection's own conduct, step by step (harness/core/conduct.ts): the plan, the adaptation, the hand-over",
+    "nodes": [
+        { "id": "start", "type": "conduct.start" },
+        { "id": "accepted", "type": "conduct.evidence", "bag": { "evidence": "adaptationAccepted" } },
+        { "id": "planned", "type": "conduct.evidence", "bag": { "evidence": "planDeclared" } },
+        { "id": "not-accepted", "type": "conduct.not" },
+        { "id": "not-planned", "type": "conduct.not" },
+
+        { "id": "hand-over", "type": "conduct.stage", "bag": { "says": "brief.handOver", "view": "accepted" } },
+        { "id": "plan", "type": "conduct.stage", "bag": { "says": "brief.plan", "view": "plan" } },
+        { "id": "propose", "type": "conduct.stage", "bag": { "says": "brief.propose", "view": "propose" } },
+
+        { "id": "plan-first", "type": "conduct.gate", "bag": { "capabilities": ["reflection.propose"], "says": "requirements.missing", "vars": { "requirement": "planDeclared", "how": { "word": "openQuestions.plan" } } } },
+        { "id": "already-accepted", "type": "conduct.gate", "bag": { "capabilities": ["reflection.propose"], "says": "guard.accepted", "view": "accepted" } }
+    ],
+    "links": [
+        { "from": "accepted.value", "to": "not-accepted.in" },
+        { "from": "planned.value", "to": "not-planned.in" },
+
+        { "from": "start.next", "to": "hand-over.entered" },
+        { "from": "not-accepted.value", "to": "hand-over.passes" },
+        { "from": "hand-over.next", "to": "plan.entered" },
+        { "from": "planned.value", "to": "plan.passes" },
+        { "from": "plan.next", "to": "propose.entered" },
+
+        { "from": "not-planned.value", "to": "plan-first.refuses" },
+        { "from": "accepted.value", "to": "already-accepted.refuses" }
+    ]
+}
