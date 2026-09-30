@@ -1,0 +1,36 @@
+forks exp-learn, exp-control, exp3-baseline, exp4-train, exp4-sonnet-a, exp4-gpt-a, exp4-sonnet-c, exp4-gpt-c, exp5-fable-screen-a, exp6-contract, exp7-fixes, exp8-paths: {"tasks":107,"models":{"claude-sonnet-5-5":82,"gpt-5.6-sol":20,"claude-fable-5-1":5},"forms":13,"ignored":{}}
+D3 contract-gap (to settle: D1 (E2): which statement the two models read two ways)
+    justification: *: … is not a fact of the library: 6 of 10 tasks of claude-sonnet-5-5, 0 of 10 of gpt-5.6-sol, on the same 10 cases, under the same reading: the same text read two ways
+D2 contract-gap
+    justification: *: … is not a fact of the library: answered the same way (reference:narrowed) in 22 tasks, at the first retry 100 % of the time: a rule the models learn by being refused, which models read two ways (D3)
+D2 contract-gap
+    justification: *: … is not a fact of the library: answered the same way (reference:narrowed,value:replaced) in 2 tasks, at the first retry 100 % of the time: a rule the models learn by being refused, which models read two ways (D3)
+D2 contract-gap-or-policy (to settle: D1 (E2): a gap of the contract if no statement the models read states the rule, a learned policy otherwise)
+    justification: * = # is a safety constant with no justification: cite the fact of a signed library document it respects: answered the same way (added) in 6 tasks, at the first retry 78 % of the time: a rule the models learn by being refused
+D2 contract-gap-or-policy (to settle: D1 (E2): a gap of the contract if no statement the models read states the rule, a learned policy otherwise)
+    justification: *: the justification says #, what you sent sets #: answered the same way (reference:replaced,value:replaced) in 3 tasks, at the first retry 100 % of the time: a rule the models learn by being refused
+D2 contract-gap-or-policy (to settle: D1 (E2): a gap of the contract if no statement the models read states the rule, a learned policy otherwise)
+    justification: * = # has no justification: say its source and why: answered the same way (added) in 5 tasks, at the first retry 100 % of the time: a rule the models learn by being refused
+D4 harness-artefact
+    13 call(s) cut at the output limit in 13 task(s) (procedure.submit): unfinished arguments no guard judged
+D4 harness-artefact
+    the harness refused "* with the same input was the previous step, and completed" 25 times in 19 tasks, before any guard (library.read, workspace.read)
+D4 harness-artefact
+    the harness refused "Invalid capability arguments: data/evidence must be array" 10 times in 10 tasks, before any guard (procedure.analyse)
+D4 harness-artefact
+    the harness refused "Invalid capability arguments: data must have required property 'changes'" 2 times in 2 tasks, before any guard (procedure.analyse)
+D4 harness-artefact
+    2 task(s) ended in a loop of the harness's refusals: "* with the same input was the previous step, and completed"
+D5 regression
+    justification: *: … is not a fact of the library: 2 of 9 tasks of claude-sonnet-5-5 before, 5 of 6 after the harness changed: prompt:specs/procedure/prompt.md
+D5 improvement (nothing to recommend)
+    cut at the output limit: 5 of 6 tasks of claude-sonnet-5-5 before, 0 of 10 after the harness changed: prompt:specs/procedure/prompt.md, file:slots/station/grammars/default/en.json, file:slots/station/grammars/default/fr.json, file:specs/harness/memory.json, file:specs/reflection/format.json, file:specs/reflection/playbook.json, file:specs/reflection/prompt.md, file:specs/reflection/words.json, file:specs/scenario-commissioning-learning.json, run:profiles/anthropic-sonnet.json, 17 file(s) of code
+D5 improvement (nothing to recommend)
+    justification: *: … is not a fact of the library: 6 of 10 tasks of claude-sonnet-5-5 before, 0 of 10 after the harness changed: prompt:specs/procedure/prompt.md, file:specs/procedure/words.json, run:profiles/anthropic-fable.json, run:profiles/openai-gpt.json, 5 file(s) of code
+D8 model-error (to settle: D1 (E2): that a statement the model read states the rule) (nothing to recommend)
+    shape: quantity …: no quantity … in the unit system (Timespan, Temperature, Mass, Power, Voltage, Current, Luminosity, Volume, Area, VolumetricFlow, Angle, Leng: in one task (experiment validate v7), answered by no common correction and read no differently by another model: the model's own mistake
+D8 model-error (to settle: D1 (E2): that a statement the model read states the rule) (nothing to recommend)
+    analysis: the analysis says device changes, and the new procedure keeps it as it was: the prevention is not in the test: in one task (experiment validate v4), answered by no common correction and read no differently by another model: the model's own mistake
+unclassified, 2 task(s): expected: expected says nothing: a test that does not say what it expects to see cannot be told from a fishing trip
+unclassified, 3 task(s): shape: quantity …: no unit … for Speed
+unclassified, 2 task(s): analysis: the analysis says * changes, and the new procedure keeps it as it was: the prevention is not in the test
