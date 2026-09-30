@@ -1,0 +1,129 @@
+## training
+t1 t-2026-09-29-0001: justification: steps.2.speedPercent | truncated 0 | steps 11 | in 81427 out 6670 | memory seen none
+t2 t-2026-09-29-0002: justification: limits.co2MaxPpm; justification: limits.minSpeedPercent; justification: steps.1.speedPercent; justification: steps.2.speedPercent | truncated 0 | steps 10 | in 80369 out 6678 | memory seen none
+t3 t-2026-09-29-0004: ACCEPTED | truncated 0 | steps 9 | in 67789 out 6094 | memory seen trial
+t4 t-2026-09-29-0005: justification: steps.2.speedPercent; justification: steps.2.minutes | truncated 0 | steps 10 | in 88347 out 6541 | memory seen trial
+t5 t-2026-09-29-0006: ACCEPTED | truncated 0 | steps 9 | in 71489 out 5927 | memory seen trial
+reflection after t-2026-09-29-0002: proposed; reflection.remember refused (adaptation refused: memory.rule: 457 characters; a rule is one sentence of 20 to 400) | reflection.remember completed; memory ["1:trial"]
+frozen: entry 1 consolidated after t-2026-09-29-0006: In the justification of each safety constant, cite as reference only the bare id of the single signed fact that bounds it (test.speedFloorPercent for every speed field, test.co2AbortCeilingPpm for the CO2 limit), never a second fact, a datasheet, a comparison sign or a value in the same reference. (consolidated: the mistake showed in 0 of the 3 task(s) since its trial, against 2 of 2 before)
+
+## validation, the first guard-evaluated submission of the same 10 unseen tasks
+| Task | Original | Contract | Fixes |
+|---|---|---|---|
+| v1: 800 ppm, fe-1+fe-2+cdr+fe-3 | fail (composite) | pass | pass |
+| v2: 2000 ppm, fe-1+fe-2 | fail (composite) | pass | pass |
+| v3: 1200 ppm, fe-3 | fail (composite) | pass | pass |
+| v4: 1550 ppm, fe-1+fe-2, after a co2 abort | pass | no submission | pass |
+| v5: 950 ppm, cdr+fe-3, after a heart-rate abort | fail (composite) | pass | pass |
+| v6: 1800 ppm, fe-1+fe-3+cdr | fail (composite) | pass | pass |
+| v7: 1050 ppm, fe-2+fe-3+cdr | pass | pass | pass |
+| v8: 1900 ppm, fe-1 | fail (justification, shape) | fail (shape) | pass |
+| v9: 1250 ppm, fe-1+fe-2+fe-3, after a co2 abort | pass | pass | fail (justification, analysis) |
+| v10: 1450 ppm, cdr | fail (composite) | pass | pass |
+
+## metrics
+{
+  "Original": {
+    "settings": {
+      "workingMemory": {
+        "size": 10,
+        "shown": 5,
+        "previousTasks": false
+      },
+      "longTerm": {
+        "read": false
+      }
+    },
+    "pass": "3/10",
+    "passRate": 30,
+    "guardProblems": 18,
+    "compositeRefused": 6,
+    "compositeSent": 6,
+    "tasksByKind": {
+      "justification": 7,
+      "shape": 1
+    },
+    "tasksByForm": {
+      "justification: *: … is not a fact of the library": 6,
+      "justification: * = # is a safety constant with no justification: cite the fact of a signed library document it respects": 2,
+      "justification: *: the justification says #, what you sent sets #": 2,
+      "justification: * = # has no justification: say its source and why": 2,
+      "shape: quantity …: no unit … for Speed": 1
+    },
+    "noJudgedSubmission": 0,
+    "truncations": 0,
+    "preGuard": 0,
+    "avgSteps": 12.7,
+    "avgInputTokens": 103889,
+    "avgOutputTokens": 8394,
+    "maxOutputInOneStep": 6673,
+    "memorySeen": "0L/0E 0L/0E 0L/0E 0L/0E 0L/0E 0L/0E 0L/0E 0L/0E 0L/0E 0L/0E",
+    "memoryUnchanged": true
+  },
+  "Contract": {
+    "settings": {
+      "workingMemory": {
+        "size": 10,
+        "shown": 5,
+        "previousTasks": false
+      },
+      "longTerm": {
+        "read": false
+      }
+    },
+    "pass": "8/10",
+    "passRate": 80,
+    "guardProblems": 1,
+    "compositeRefused": 0,
+    "compositeSent": 0,
+    "tasksByKind": {
+      "shape": 1
+    },
+    "tasksByForm": {
+      "shape: quantity …: no unit … for Speed": 1
+    },
+    "noJudgedSubmission": 1,
+    "truncations": 0,
+    "preGuard": 0,
+    "avgSteps": 12.2,
+    "avgInputTokens": 89444,
+    "avgOutputTokens": 7421,
+    "maxOutputInOneStep": 6589,
+    "memorySeen": "0L/0E 0L/0E 0L/0E - 0L/0E 0L/0E 0L/0E 0L/0E 0L/0E 0L/0E",
+    "memoryUnchanged": true
+  },
+  "Fixes": {
+    "settings": {
+      "workingMemory": {
+        "size": 10,
+        "shown": 5,
+        "previousTasks": false
+      },
+      "longTerm": {
+        "read": false
+      }
+    },
+    "pass": "9/10",
+    "passRate": 90,
+    "guardProblems": 3,
+    "compositeRefused": 0,
+    "compositeSent": 0,
+    "tasksByKind": {
+      "justification": 1,
+      "analysis": 1
+    },
+    "tasksByForm": {
+      "justification: * = # is a safety constant with no justification: cite the fact of a signed library document it respects": 1,
+      "analysis: the analysis says * changes, and the new procedure keeps it as it was: the prevention is not in the test": 1
+    },
+    "noJudgedSubmission": 0,
+    "truncations": 0,
+    "preGuard": 0,
+    "avgSteps": 10.9,
+    "avgInputTokens": 92256,
+    "avgOutputTokens": 8553,
+    "maxOutputInOneStep": 5340,
+    "memorySeen": "0L/0E 0L/0E 0L/0E 0L/0E 0L/0E 0L/0E 0L/0E 0L/0E 0L/0E 0L/0E",
+    "memoryUnchanged": true
+  }
+}

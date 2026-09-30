@@ -1,0 +1,11 @@
+v1 t-2026-09-30-0001: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 10; tokens in 63750 out 7575 (max 5144); memory seen: 0 learned, 0 previous episode(s)
+v2 t-2026-09-30-0002: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 9; tokens in 59414 out 6289 (max 5340); memory seen: 0 learned, 0 previous episode(s)
+v3 t-2026-09-30-0003: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 10; tokens in 79352 out 6392 (max 5167); memory seen: 0 learned, 0 previous episode(s)
+v4 t-2026-09-30-0004: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 10; tokens in 136015 out 10571 (max 4151); memory seen: 0 learned, 0 previous episode(s)
+v5 t-2026-09-30-0005: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 15; tokens in 232192 out 11897 (max 4870); memory seen: 0 learned, 0 previous episode(s)
+v6 t-2026-09-30-0006: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 11; tokens in 74002 out 6801 (max 4393); memory seen: 0 learned, 0 previous episode(s)
+v7 t-2026-09-30-0007: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 9; tokens in 28577 out 5647 (max 5050); memory seen: 0 learned, 0 previous episode(s)
+v8 t-2026-09-30-0008: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 10; tokens in 41015 out 5913 (max 5154); memory seen: 0 learned, 0 previous episode(s)
+v9 t-2026-09-30-0009: first guard-judged refused (justification: * = # is a safety constant with no justification: cite the fact of a signed library document it respects + analysis: the analysis says * changes, and the new procedure keeps it as it was: the prevention is not in the test); pre-guard 0; truncated 0; steps 14; tokens in 154805 out 18430 (max 4604); memory seen: 0 learned, 0 previous episode(s)
+v10 t-2026-09-30-0010: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 11; tokens in 53433 out 6017 (max 4954); memory seen: 0 learned, 0 previous episode(s)
+exit 0
