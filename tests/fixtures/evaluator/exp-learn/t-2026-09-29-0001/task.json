@@ -1,0 +1,1 @@
+{"task":{"id":"t-2026-09-29-0001","topics":["procedure"],"objective":{"required_outputs":[{"name":"V_lab","quantity":"Volume","unit":"m3"}],"constraints":{}},"observations":{"device":"/habitat/lab/eclss/scrubber-1-t1","measured":{"co2Ppm":1480,"source":"/habitat/lab/eclss/co2-1-t1 (co2)","at":"2026-09-29T18:51:24.593Z"}},"requestedBy":"experiment train t1"}}

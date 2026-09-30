@@ -1,0 +1,236 @@
+/**
+ * The post-procedure evaluator's first detectors (2026-09-30, docs/evaluateur.fr.md, E1), on its corpus: the real tasks of the
+ * experiments of 29 and 30 September (tests/fixtures/evaluator, copied from their forks by scripts/evaluator/corpus.mjs), which a
+ * human and a model read by hand for two days. The evaluator must reach the same conclusions alone, with the path that justifies
+ * each, and recommend nothing on a model's own mistake. What E1 cannot settle yet is said, and left to D1 and the register (E2).
+ *
+ * One case is reconstituted: the example `/steps/0/reason` in workspace.read's description, whose fork was removed with its traces.
+ * Its texts are the real ones (git, 287f5bc and 86e03ab, the example put back as the README of 2026-09-30-fixes tells it); its tasks
+ * are written here from that account, and say so.
+ *
+ *     node --test dist/tests/
+ */
+import { after, describe, it } from "node:test";
+import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import * as path from "node:path";
+import { H, HarnessGraph, harnessShapeOf } from "../lib/harness-graph.js";
+import { correctionSignature, evaluate, type Finding } from "../lib/evaluator.js";
+import { fromRepository } from "../lib/paths.js";
+import { guardWordsOf } from "../lib/working-memory.js";
+import { PROCEDURE_TOPIC } from "../harness/topics/procedure/index.js";
+
+const READINGS = { procedure: { judges: PROCEDURE_TOPIC.judges ?? [], digest: PROCEDURE_TOPIC.digest, guardWords: guardWordsOf(fromRepository("specs", "procedure", "words.json")) } };
+const CORPUS = fromRepository("tests", "fixtures", "evaluator");
+const forks = readdirSync(CORPUS, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .map((d) => ({ name: d.name, dir: path.join(CORPUS, d.name), createdAt: (JSON.parse(readFileSync(path.join(CORPUS, d.name, "fork.json"), "utf8")) as { createdAt: string }).createdAt }))
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+/** Whether git holds a commit: the files a change of fingerprint touched are read from it, which a shallow clone may not have. */
+const known = (commit: string): boolean => {
+    try {
+        execFileSync("git", ["cat-file", "-e", `${commit}^{commit}`], { cwd: fromRepository(), stdio: "ignore" });
+        return true;
+    } catch {
+        return false;
+    }
+};
+
+describe("the evaluator on its corpus: the tasks of 29 and 30 September, classed as they were by hand", () => {
+    const g = new HarnessGraph(forks, READINGS);
+    const e = evaluate(g);
+    const of = (detector: Finding["detector"], shape: RegExp, cls?: Finding["class"]) => e.findings.filter((f) => f.detector === detector && shape.test(f.form?.shape ?? f.title) && (!cls || f.class === cls));
+    const requestOf = (taskId: string) => String(g.get(taskId)?.bag?.requestedBy);
+
+    it("reads 9 forks, 90 tasks once each (a task a fork inherited is the one it was made from), three models' worth of manifests", () => {
+        assert.equal(forks.length, 9);
+        assert.equal(e.counts.tasks, 90);
+        assert.deepEqual(e.counts.models, { "claude-sonnet-5-5": 70, "gpt-5.6-sol": 20 });
+    });
+
+    it("the cut at 4096 tokens: an artefact of the harness (D4), 13 calls in 13 tasks; gone at the next fingerprint, where the model's profile changed (D5)", () => {
+        const [cut] = of("D4", /^cut at the output limit$/);
+        assert.equal(cut.class, "harness-artefact");
+        assert.equal(cut.tasks.length, 13);
+        assert.deepEqual(cut.evidence.capabilities, ["procedure.submit"]);
+        const [gone] = of("D5", /^cut at the output limit$/, "improvement");
+        assert.deepEqual([gone.evidence.before, gone.evidence.after].map((x) => (x as { withForm: number; tasks: number }).withForm), [5, 0]);
+        if (known("13408813b64a8f96368b3b5c935cad78b061dc22") && known("4e3458b732ebb757929df0cfc9e36a8c010329a8")) assert.ok((gone.evidence.changed as Array<{ slot: string }>).some((c) => c.slot === "run:profiles/anthropic-sonnet.json"), JSON.stringify(gone.evidence.changed));
+    });
+
+    it("the composite reference: answered by narrowing it in 22 tasks at the first retry (D2), 6 of 10 under Sonnet and 0 of 10 under GPT on the same cases (D3): a gap of the contract; gone after the contract said it (D5)", () => {
+        const [narrowed] = e.findings.filter((f) => f.detector === "D2" && f.evidence.signature === "reference:narrowed");
+        assert.equal(narrowed.form?.shape, "justification: *: … is not a fact of the library");
+        assert.equal(narrowed.class, "contract-gap");
+        assert.equal(narrowed.settledBy, null);
+        assert.equal(narrowed.tasks.length, 22);
+        assert.equal(narrowed.evidence.firstRetryShare, 1);
+        assert.equal((narrowed.evidence.example as { accepted: { reference: string } }).accepted.reference, "test.speedFloorPercent");
+        const [divergence] = of("D3", /is not a fact of the library/);
+        assert.deepEqual([divergence.evidence.frequent, divergence.evidence.rare], [
+            { model: "claude-sonnet-5-5", rate: 0.6, tasks: 10 },
+            { model: "gpt-5.6-sol", rate: 0, tasks: 10 },
+        ]);
+        const [fixed] = of("D5", /is not a fact of the library/, "improvement").filter((f) => (f.evidence.before as { withForm: number }).withForm === 6);
+        assert.equal((fixed.evidence.after as { withForm: number }).withForm, 0);
+        if (known("08a954e557281e4701ceb4ebb0f72da5a1fdee2c") && known("287f5bcc1d3be2439ee45d5107360f13349813d7")) assert.ok((fixed.evidence.changed as Array<{ slot: string }>).some((c) => c.slot === "file:specs/procedure/words.json"), JSON.stringify(fixed.evidence.changed));
+    });
+
+    it("the speed in percent declared a Speed: recurring (3 tasks, 2 cases), classed by nothing yet: the guard's refusal names no path, so no correction is tied to it; D1 reads it (E2)", () => {
+        const speed = e.unclassified.find((u) => /no unit … for Speed/.test(u.shape));
+        assert.equal(speed?.tasks, 3);
+        assert.equal(e.findings.filter((f) => /for Speed/.test(f.form?.shape ?? "")).length, 0);
+    });
+
+    it("the read loops: two tasks ended stuck on the harness's refusal of a repeated read, an artefact of the harness (D4), with the refused reads that made them", () => {
+        const [loop] = e.findings.filter((f) => f.detector === "D4" && "loops" in f.evidence);
+        assert.equal(loop.class, "harness-artefact");
+        assert.deepEqual(loop.tasks.sort(), ["task:exp-control/t-2026-09-29-0005", "task:exp6-contract/t-2026-09-30-0004"]);
+        assert.deepEqual((loop.evidence.loops as Record<string, number[]>)["task:exp6-contract/t-2026-09-30-0004"], [13, 15, 17]);
+        assert.match(loop.form?.shape ?? "", /with the same input was the previous step/);
+    });
+
+    it("GPT's steps indexed from 0: a safety constant left without a justification, answered by adding it (D2), in Sonnet's tasks and GPT's; whether a rule no text states or a policy: D1 settles it (E2)", () => {
+        const [added] = e.findings.filter((f) => f.detector === "D2" && f.evidence.signature === "added" && /is a safety constant with no justification/.test(f.form?.shape ?? ""));
+        assert.equal(added.class, "contract-gap-or-policy");
+        assert.match(String(added.settledBy), /^D1 \(E2\)/);
+        assert.ok(added.tasks.some((t) => requestOf(t) === "experiment validate v10" && /exp4-gpt-c/.test(t)), JSON.stringify(added.tasks));
+        assert.deepEqual(Object.keys(added.models).sort(), ["claude-sonnet-5-5", "gpt-5.6-sol"]);
+    });
+
+    it("v4, the analysis and the procedure at odds: the model's own mistake (D8), counted, nothing recommended on it", () => {
+        const [v4] = of("D8", /the analysis says device changes/);
+        assert.equal(v4.class, "model-error");
+        assert.equal(v4.recommend, false);
+        assert.equal(v4.evidence.requestedBy, "experiment validate v4");
+        // Nothing recommended on the analysis at odds with its procedure, and nothing on v4 alone: what the harness did in the same
+        // case (the read loop of exp6-contract) is recommended with the other loop like it, as the harness's.
+        assert.equal(e.findings.filter((f) => f.recommend && /the analysis says/.test(f.form?.shape ?? "")).length, 0);
+        assert.equal(e.findings.filter((f) => f.recommend && f.tasks.length && f.tasks.every((t) => requestOf(t) === "experiment validate v4")).length, 0);
+    });
+
+    it("what nobody had read: procedure.analyse refused by its schema in 7 tasks, and 22 reads refused as repeats in 16 (D4)", () => {
+        const [schema] = of("D4", /^Invalid capability arguments: data\/evidence must be array$/);
+        assert.equal(schema.tasks.length, 7);
+        assert.deepEqual(schema.evidence.capabilities, ["procedure.analyse"]);
+        const [repeats] = of("D4", /with the same input was the previous step/);
+        assert.deepEqual([repeats.evidence.refusals, repeats.tasks.length], [22, 16]);
+    });
+
+    it("derived only: the same sources give the same findings", () => {
+        assert.deepEqual(evaluate(new HarnessGraph(forks, READINGS)).findings.map((f) => f.id), e.findings.map((f) => f.id));
+    });
+});
+
+describe("the example that primed Sonnet (reconstituted: the fork was removed, its traces lost)", () => {
+    const workshop = mkdtempSync(path.join(tmpdir(), "evaluator-primed-"));
+    after(() => rmSync(workshop, { recursive: true, force: true }));
+    const sha = (t: string) => createHash("sha256").update(t).digest("hex");
+    // workspace.read's description and schema as a model read them: before the pointer (287f5bc), with the example that primed
+    // (the pointer of 86e03ab, its example as it first was), and with the example that replaced it (86e03ab).
+    const read = (pointer: string | null) => {
+        const description = pointer
+            ? "The content of one file of the task, as text (or base64 for a binary), with its size and sha256; or, with pointer, one field of a JSON file (its value). 256 KB at most per read; a bigger file is refused with its size."
+            : "The content of one file of the task, as text (or base64 for a binary), with its size and sha256. 256 KB at most per read; a bigger file is refused with its size.";
+        const inputSchema = { type: "object", properties: { taskId: { type: "string", description: "the task" }, path: { type: "string", description: "a path relative to the task's directory" }, ...(pointer ? { pointer: { type: "string", description: `one field of a JSON file, by a JSON Pointer (${pointer}; ~1 for a slash in a key): its value alone, for a detail of a file whose whole the state does not show` } } : {}) } };
+        const statement = { id: "workspace.read", description, inputSchema };
+        return { sha: sha(JSON.stringify(statement)), statement };
+    };
+    const versions = [read(null), read("/steps/0/reason"), read("/field/subfield")];
+    mkdirSync(path.join(workshop, "_statements"), { recursive: true });
+    for (const v of versions) writeFileSync(path.join(workshop, "_statements", `${v.sha}.json`), JSON.stringify({ kind: "tool", ...v.statement }));
+    const refusal = 'procedure refused: justification: steps.2.speedPercent = 100 is a safety constant with no justification (a justification names it by its path, constant "steps.2.speedPercent"): cite the fact of a signed library document it respects (source "library", the fact\'s id as reference); the signed rules bound it by test.speedFloorPercent = 30 percent (at or above it): cite it (source "library", reference "test.speedFloorPercent")';
+    const justification = (at: string) => ({ constant: at, value: at.endsWith("1.speedPercent") ? 30 : 100, source: "library", reference: "test.speedFloorPercent" });
+    let k = 0;
+    // Three tasks under each version; under the example, Sonnet named steps.0 and steps.1 in all three, and two were refused.
+    versions.forEach((v, i) => {
+        for (let j = 0; j < 3; j++) {
+            const id = `t-2026-09-30-${String(++k).padStart(4, "0")}`;
+            const primed = i === 1;
+            const refused = primed && j < 2;
+            const named = primed ? ["steps.0.speedPercent", "steps.1.speedPercent"] : ["steps.1.speedPercent", "steps.2.speedPercent"];
+            const steps = [
+                { n: 1, capability: "workspace.read", input: {}, outcome: "completed", reason: null },
+                { n: 2, capability: "procedure.submit", input: { justifications: named.map(justification) }, outcome: refused ? "refused" : "completed", judged: refused ? "refused" : "accepted", reason: refused ? refusal : null },
+                ...(refused ? [{ n: 3, capability: "procedure.revise", input: { changes: {}, justifications: ["steps.1.speedPercent", "steps.2.speedPercent"].map(justification) }, outcome: "completed", judged: "accepted", reason: null }] : []),
+            ];
+            mkdirSync(path.join(workshop, id), { recursive: true });
+            writeFileSync(
+                path.join(workshop, id, "manifest.json"),
+                JSON.stringify({
+                    note: "reconstituted from docs/experiments/2026-09-30-fixes/README.md: the traces of this run were lost with its fork",
+                    taskId: id,
+                    topic: "procedure",
+                    state: "proposed",
+                    startedAt: `2026-09-30T1${i}:${String(10 * j).padStart(2, "0")}:00Z`,
+                    ended: "contract held",
+                    provider: { name: "reasoner:claude", model: "claude-sonnet-5-5", family: "claude" },
+                    tools: { sha256: `v${i}`, contract: `contract-${v.sha}`, list: [{ id: "procedure.submit", sha256: "submit" }, { id: "workspace.read", sha256: v.sha }] },
+                    words: { file: "specs/procedure/words.json", sha256: "words" },
+                    prompt: { file: "specs/procedure/prompt.md", sha256: "prompt" },
+                    steps,
+                }),
+            );
+            writeFileSync(path.join(workshop, id, "task.json"), JSON.stringify({ task: { requestedBy: `experiment validate v${j + 1}`, objective: { required_outputs: [] } } }));
+        }
+    });
+
+    it("a regression after the fingerprint changed, and the text that changed named: workspace.read's description, its example kept in the store", () => {
+        const e = evaluate(new HarnessGraph(workshop, READINGS));
+        const d5 = e.findings.filter((f) => f.detector === "D5");
+        const regression = d5.find((f) => f.class === "regression")!;
+        assert.equal(regression.form?.shape, "justification: * = # is a safety constant with no justification: cite the fact of a signed library document it respects");
+        assert.deepEqual([regression.evidence.before, regression.evidence.after].map((x) => (x as { withForm: number }).withForm), [0, 2]);
+        const changed = regression.evidence.changed as Array<{ slot: string; stored: string | null; statement: string }>;
+        assert.deepEqual(changed.map((c) => c.slot), ["tool:workspace.read"]);
+        assert.match(readFileSync(path.join(workshop, changed[0].stored!), "utf8"), /\/steps\/0\/reason/);
+        assert.equal(regression.recommend, true);
+        // And the next fingerprint, the example replaced: the form gone, the same text named again.
+        const improvement = d5.find((f) => f.class === "improvement")!;
+        assert.deepEqual((improvement.evidence.changed as Array<{ slot: string }>).map((c) => c.slot), ["tool:workspace.read"]);
+    });
+});
+
+describe("the evaluator's reading of a refusal and of a correction", () => {
+    it("the harness's refusals by their form: a cut, a label and its first detail, ids and numbers out", () => {
+        assert.equal(harnessShapeOf("TRUNCATED", "anything"), "cut at the output limit");
+        assert.equal(harnessShapeOf("PRE_GUARD_REJECTED", "Invalid capability arguments: data/evidence must be array, data/changes must be array"), "Invalid capability arguments: data/evidence must be array");
+        assert.equal(harnessShapeOf("PRE_GUARD_REJECTED", "library.read with the same input was the previous step, and completed: its answer is in the state"), "* with the same input was the previous step, and completed");
+    });
+
+    it("a correction by what it did, whatever the values: narrowed, added, removed, replaced", () => {
+        assert.equal(correctionSignature({ refused: { value: 100, reference: "a.b; c.d 1 m3/min" }, accepted: { value: 100, reference: "a.b" } }), "reference:narrowed");
+        assert.equal(correctionSignature({ refused: null, accepted: { value: 1 } }), "added");
+        assert.equal(correctionSignature({ removed: true, refused: { quantity: "Speed" }, accepted: null }), "removed");
+        assert.equal(correctionSignature({ refused: { value: 30, reference: "x" }, accepted: { value: 25, reference: "y" } }), "reference:replaced,value:replaced");
+    });
+
+    it("a manifest written before the judged mark: the guard's refusal told by its words, the harness's schema refusal left the harness's", () => {
+        const workshop = mkdtempSync(path.join(tmpdir(), "evaluator-unmarked-"));
+        try {
+            mkdirSync(path.join(workshop, "t-2026-09-28-0001"));
+            const steps = [
+                { n: 1, capability: "procedure.submit", input: {}, outcome: "refused", reason: "Invalid capability arguments: data must have required property 'version'" },
+                { n: 2, capability: "procedure.submit", input: {}, outcome: "refused", reason: "procedure refused: floor: steps.1.speedPercent = 0 stops the scrubber" },
+                { n: 3, capability: "procedure.submit", input: {}, outcome: "completed", reason: null },
+            ];
+            writeFileSync(path.join(workshop, "t-2026-09-28-0001", "manifest.json"), JSON.stringify({ taskId: "t-2026-09-28-0001", topic: "procedure", startedAt: "2026-09-28T10:00:00Z", steps }));
+            const g = new HarnessGraph(workshop, READINGS);
+            assert.deepEqual(g.nodesOf(H.attempt).map((a) => a.bag?.outcome), ["PRE_GUARD_REJECTED", "GUARD_REJECTED", "ACCEPTED"]);
+            assert.deepEqual(g.nodesOf(H.form).map((f) => `${f.bag?.by}: ${f.bag?.shape}`).sort(), ["guard: floor: * = # stops the scrubber", "harness: Invalid capability arguments: data must have required property 'version'"]);
+        } finally {
+            rmSync(workshop, { recursive: true, force: true });
+        }
+    });
+
+    it("the graph holds the steps a harness refused outside the guard's capabilities, and the memory a state held", () => {
+        const g = new HarnessGraph(forks.filter((f) => ["exp6-contract", "exp4-gpt-c"].includes(f.name)), READINGS);
+        assert.ok(g.nodesOf(H.step).some((s) => s.bag?.capability === "workspace.read" && s.bag?.outcome === "PRE_GUARD_REJECTED"));
+        const memory = g.nodesOf(H.statement).filter((s) => s.bag?.kind === "memory");
+        assert.equal(memory.length, 1);
+        assert.match(String(memory[0].bag?.text), /^In the justification of each safety constant, cite as reference only the bare id/);
+    });
+});

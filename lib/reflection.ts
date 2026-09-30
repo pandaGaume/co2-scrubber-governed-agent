@@ -215,12 +215,18 @@ function mistakeKey(topic: string, reason: string | null): string {
  */
 export function shapesOf(reason: string | null): string[] {
     // A problem with a kind is a mistake; a clause without one ("the signed rules bound it by ...") is what the guard adds to it.
+    // A parenthesis out with what it holds, nested ones too: the guard quotes a model's own text between parentheses, and that text
+    // may hold some ("The total (8+30) stays under the cap."), which left its end behind as part of the form (2026-09-30).
+    const unbracket = (s: string): string => {
+        for (let t = s; ; s = t) if ((t = s.replace(/\([^()]*\)/g, "")) === s) return s;
+    };
     const shapes = problemsOfReason(reason ?? "").filter((x) => x.kind).map((x) =>
         // Quotes out first: a quote may hold a "; " (a reference that joins two facts), which is not the end of the first clause.
-        x.says
-            .replace(/"[^"]*"/g, "…")
-            .split(";")[0]
-            .replace(/\([^)]*\)/g, "")
+        unbracket(
+            x.says
+                .replace(/"[^"]*"/g, "…")
+                .split(";")[0],
+        )
             .replace(/\b[A-Za-z_][\w-]*(\.[\w*-]+)+\b/g, "*")
             .replace(/-?\d+(\.\d+)?/g, "#")
             .replace(/\s+/g, " ")

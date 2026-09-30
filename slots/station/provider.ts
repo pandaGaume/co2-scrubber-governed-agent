@@ -51,11 +51,12 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { adaptationProblems, observe, reflectionFormat, type Adaptation } from "../../lib/reflection.js";
 import { enterAdoption, historyOf, judge, judgedFamilies, mistakeRate, readLedger, underJudgement, undo, writeLedger } from "../../lib/adaptations.js";
 import { answeredByMemory, enterCandidate, judgeTrials, memoryConfig, memoryProblems, promote, readMemory, topicOfPatterns, type Remembered } from "../../lib/memory.js";
-import { workingMemory } from "../../lib/working-memory.js";
+import { guardWordsOf, workingMemory } from "../../lib/working-memory.js";
 import { HarnessGraph } from "../../lib/harness-graph.js";
+import { evaluate } from "../../lib/evaluator.js";
 import { TOPIC_DEFINITIONS } from "../../harness/core/runner.js";
 import type { Episode } from "../../harness/core/episodes.js";
-import { snapshotAt } from "../../lib/fork.js";
+import { forkPath, listForks, readFork, snapshotAt } from "../../lib/fork.js";
 import * as path from "node:path";
 import { McpGrammar } from "@cyanmycelium/mcp-core";
 import { errorMessage } from "../../lib/files.js";
@@ -531,6 +532,20 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
         reminder.unref?.();
     }
 
+    const HARNESS_FORKS = { type: "array", items: { type: "string" }, description: "forks to read together, by id (their tasks in the order the forks were made); none: this workshop" };
+    /** The harness's graph of this workshop, or of forks together, for the topics whose guard judges their submissions. */
+    const harnessGraphOf = (forks: unknown): HarnessGraph => {
+        const readings = Object.fromEntries(
+            Object.entries(TOPIC_DEFINITIONS)
+                .filter(([, d]) => d?.judges)
+                .map(([t, d]) => [t, { judges: d!.judges!, digest: d!.digest, guardWords: d!.words ? guardWordsOf(fromRoot(...d!.words.words.file.split("/"))) : undefined }]),
+        );
+        const ids = Array.isArray(forks) ? forks.filter((f): f is string => typeof f === "string" && f.length > 0) : [];
+        if (!ids.length) return new HarnessGraph(WORKSHOP_ROOT, readings);
+        const records = ids.map((id) => readFork(id)).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+        return new HarnessGraph(records.map((r) => ({ name: r.id, dir: path.join(forkPath(r.id), "outputs", "factory") })), readings);
+    };
+
     const published = publishSlot<StationState>({
         slot: "station",
         description: "The site station, Mother: the register of the devices and their commissioning, artifact registration under the evaluate rule, validated push, journal of stable operating points",
@@ -544,20 +559,15 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
         state,
         tools: [
             {
-                // The harness's graph (2026-09-30, docs/evaluateur.fr.md, E0): what the tasks of this workshop did and under what, rebuilt
-                // from their manifests at each call, read the way physics.units_knowledge reads the physics graph. Read only.
+                // The harness's graph (2026-09-30, docs/evaluateur.fr.md, E0): what the tasks of this workshop (or of forks) did and under
+                // what, rebuilt from their manifests at each call, read the way physics.units_knowledge reads the physics graph. Read only.
                 name: "harness_graph",
                 title: "The harness's graph",
                 description:
-                    "The graph of what this workshop's factory tasks did and under what, rebuilt from their manifests at each call (never stored): tasks, their episodes and attempts, the forms of failure the guard refused them for, the corrections that answered them (X refused, Y accepted), the models, the fingerprints they ran under (the tools as given, the words, the prompt, the commits) and the texts each read, with what a fingerprint changed from the one before it. With id: a node and its typed links in and out; with type: the nodes of that type; with nothing: how many nodes and links of each type.",
-                inputSchema: obj({ id: { type: "string", description: "a node's id (task:t-..., form:procedure:..., fingerprint:...)" }, type: { type: "string", description: "a node type (harness.form, harness.fingerprint, ...)" } }),
+                    "The graph of what factory tasks did and under what, rebuilt from their manifests at each call (never stored): tasks, their episodes and attempts, the steps the harness refused outside them, the forms of failure they were refused for, the corrections that answered them (X refused, Y accepted), the models, the fingerprints they ran under (the tools as given, the words, the prompt, the commits) and the texts each read, the memory's entries included, with what a fingerprint changed from the one before it. With id: a node and its typed links in and out; with type: the nodes of that type; with nothing: how many nodes and links of each type. With forks: the tasks of those forks, together.",
+                inputSchema: obj({ id: { type: "string", description: "a node's id (task:t-..., form:procedure:..., fingerprint:...)" }, type: { type: "string", description: "a node type (harness.form, harness.fingerprint, ...)" }, forks: HARNESS_FORKS }),
                 handle: (args) => {
-                    const readings = Object.fromEntries(
-                        Object.entries(TOPIC_DEFINITIONS)
-                            .filter(([, d]) => d?.judges)
-                            .map(([t, d]) => [t, { judges: d!.judges!, digest: d!.digest }]),
-                    );
-                    const g = new HarnessGraph(WORKSHOP_ROOT, readings);
+                    const g = harnessGraphOf(args.forks);
                     const brief = (n: { id?: unknown; type?: string; bag?: unknown }) => ({ id: String(n.id), type: n.type ?? null, ...(n.bag && typeof n.bag === "object" && Object.keys(n.bag).length ? { bag: n.bag } : {}) });
                     if (typeof args.id === "string" && args.id) {
                         const n = g.get(args.id);
@@ -570,6 +580,21 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     }
                     if (typeof args.type === "string" && args.type) return { type: args.type, nodes: g.nodesOf(args.type).map(brief) };
                     return g.summary();
+                },
+            },
+            {
+                // The post-procedure evaluator's first detectors (2026-09-30, docs/evaluateur.fr.md, E1): deterministic queries on the
+                // harness's graph, no model. It reads only: it changes nothing and recommends nothing yet (E3).
+                name: "harness_evaluate",
+                title: "Evaluate the factories' tasks",
+                description:
+                    "What the post-procedure evaluator finds in factory tasks, read from the harness's graph by deterministic detectors (no model): artefacts of the harness (a call cut at the output limit, a task stuck in a loop, a refusal before any guard in several tasks; D4), a form of failure whose rate changed with the harness and the texts that changed (D5), a rule the models learn by being refused, answered the same way at the first retry (D2), a form one model makes and another does not on the same cases (D3), a model's own mistake (D8, nothing to recommend). Each finding with its class, the nodes it is about and the path that justifies it; a class a later detector settles says which. The forms no detector classes yet are listed apart. Read only: it changes nothing. With forks: the tasks of those forks, together (the list of forks comes with the answer).",
+                inputSchema: obj({ forks: HARNESS_FORKS }),
+                handle: (args) => {
+                    const g = harnessGraphOf(args.forks);
+                    const evaluation = evaluate(g);
+                    for (const f of evaluation.findings) g.addFinding(f.id, { detector: f.detector, class: f.class, title: f.title }, f.about);
+                    return { ...evaluation, forks: listForks().map((f) => ({ id: f.id, createdAt: f.createdAt, parent: f.parent })).sort((a, b) => a.createdAt.localeCompare(b.createdAt)) };
                 },
             },
             {

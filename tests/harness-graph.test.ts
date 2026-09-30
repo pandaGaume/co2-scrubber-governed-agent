@@ -56,7 +56,9 @@ describe("the harness's graph, rebuilt from a workshop's manifests", () => {
         assert.deepEqual(g.nodesOf(H.attempt).map((a) => `${a.bag?.capability}:${a.bag?.outcome}`).sort(), ["procedure.revise:ACCEPTED", "procedure.revise:ACCEPTED", "procedure.revise:ACCEPTED", "procedure.submit:GUARD_REJECTED", "procedure.submit:GUARD_REJECTED", "procedure.submit:GUARD_REJECTED"]);
         const model = g.get("model:claude-sonnet-5-5")!;
         assert.equal(g.in(model, H.ranBy).length, 3);
-        assert.deepEqual(g.get("task:t-2026-09-30-0001")?.bag, { taskId: "t-2026-09-30-0001", topic: "procedure", state: "proposed", startedAt: "2026-09-30T10:00:00Z", ended: "contract held", steps: 3, inputTokens: 12000, outputTokens: 4400 });
+        const { case: request, ...bag } = g.get("task:t-2026-09-30-0001")!.bag as Record<string, unknown>;
+        assert.match(String(request), /^[0-9a-f]{12}$/);
+        assert.deepEqual(bag, { taskId: "t-2026-09-30-0001", topic: "procedure", state: "proposed", startedAt: "2026-09-30T10:00:00Z", ended: "contract held", intent: "procedure: ?", requestedBy: null, profile: null, steps: 3, inputTokens: 12000, outputTokens: 4400 });
     });
 
     it("one form of failure, refused three times and answered three times by the same correction", () => {

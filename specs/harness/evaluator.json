@@ -1,0 +1,37 @@
+{
+    "note": "The post-procedure evaluator's thresholds (2026-09-30, docs/evaluateur.fr.md, E1): its detectors are queries on the harness's graph (lib/evaluator.ts), deterministic, with no model; what each counts as recurring, divergent or changed is said here, not in the code. Never adaptable by the reflection (specs/harness/**).",
+    "recurrence": {
+        "note": "a form is recurring from this many tasks, the memory's own threshold (specs/harness/memory.json)",
+        "minTasks": 2
+    },
+    "firstRetry": {
+        "note": "D2: the share of a correction's tasks where the accepted attempt was the first retry",
+        "minShare": 0.5
+    },
+    "divergence": {
+        "note": "D3: two models on the same cases (the same request, its measurements and times out), under the same reading (fingerprint and memory), each with at least minTasks tasks on them: a form is frequent under one from this rate, rare under the other up to this one",
+        "minTasks": 5,
+        "frequent": 0.3,
+        "rare": 0.1
+    },
+    "change": {
+        "note": "D5: one model, the same memory, two fingerprints in a row, each with at least minTasks tasks: a form whose rate of tasks changed by minChange or more, in at least minWithForm tasks on the side it is frequent",
+        "minTasks": 3,
+        "minChange": 0.5,
+        "minWithForm": 2
+    },
+    "commits": {
+        "note": "D5, for fingerprints before E0 (no text of the tools kept): the files changed between the two commits, from git; the texts a model is given and the settings a model is run with (its output limit, its effort) are named, the rest counted as code, those of no run left out",
+        "texts": ["^specs/", "/grammars/"],
+        "run": ["^profiles/"],
+        "ignore": ["^docs/", "^tests/", "^scripts/"]
+    },
+    "models": {
+        "note": "the tasks the evaluator does not read, by their model: a script is a stand-in whose mistakes are written on purpose (a test's), not a model's",
+        "ignore": ["^scripted/"]
+    },
+    "stuck": {
+        "note": "D4: how the harness ends a task stuck in a loop (harness/core/runner.ts)",
+        "endedPattern": "^STUCK"
+    }
+}

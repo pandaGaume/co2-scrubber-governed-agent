@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#04090c">
+<title>Harness evaluation</title>
+<!--
+  The evaluator's page (2026-09-30, docs/evaluateur.fr.md, E1): what the
+  post-procedure evaluator finds in the factories' tasks, each finding with its
+  class, the path of the harness's graph that justifies it, and what a later
+  detector settles. A node of a path opens with its links, and a link opens the
+  node it leads to: the graph read the way the physics graph is.
+
+  It reads only (`station.harness_evaluate`, `station.harness_graph`): it
+  changes nothing and signs nothing. `#forks=a,b` reads those forks together;
+  none, the repository's workshop.
+
+  Style: dashboard/room.css's tokens, restated, as the other slot pages do.
+-->
+<style>
+  :root {
+    --bg: #04090c;
+    --bg-2: #061218;
+    --panel: rgba(10, 28, 34, 0.66);
+    --line: rgba(64, 214, 200, 0.16);
+    --line-strong: rgba(64, 214, 200, 0.34);
+    --teal: #2fe0c8;
+    --teal-soft: #7ad6cc;
+    --text: #d3ecea;
+    --muted: #6d908e;
+    --muted-2: #4d6f6e;
+    --amber: #ffb648;
+    --red: #ff5064;
+    --green: #7be38a;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(800px 500px at 30% 0%, rgba(47, 224, 200, 0.07), transparent 60%),
+      linear-gradient(180deg, var(--bg-2), var(--bg) 55%);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .shell { height: 100%; display: grid; grid-template-rows: auto auto 1fr; }
+  header { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; padding: 14px 20px; border-bottom: 1px solid var(--line); }
+  header .brand { font-size: 14px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; }
+  header .brand span { color: var(--teal); }
+  header .who { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  header .who b { color: var(--teal-soft); font-weight: 500; }
+  header .spacer { flex: 1; }
+  a.link { color: var(--teal-soft); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; text-decoration: none; }
+  a.link:hover { color: var(--teal); }
+  .btn {
+    font: inherit; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--teal-soft); background: transparent; border: 1px solid var(--line-strong); border-radius: 999px;
+    padding: 6px 12px; cursor: pointer;
+  }
+  .btn:hover { border-color: var(--teal); color: var(--teal); }
+
+  .forks { padding: 10px 20px; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 12px; color: var(--muted); }
+  .forks label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+  .forks input { accent-color: var(--teal); }
+
+  main { min-height: 0; display: grid; grid-template-columns: minmax(280px, 420px) 1fr; }
+  @media (max-width: 760px) {
+    main { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    nav { max-height: 42vh; border-right: none !important; border-bottom: 1px solid var(--line); }
+  }
+  nav { min-height: 0; overflow-y: auto; border-right: 1px solid var(--line); padding: 12px 10px 20px; }
+  nav h2 { margin: 14px 8px 6px; font-size: 9.5px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted-2); }
+  nav h2:first-child { margin-top: 2px; }
+  .finding {
+    display: block; width: 100%; text-align: left; font: inherit; color: inherit; background: transparent;
+    border: 1px solid transparent; border-radius: 10px; padding: 8px 10px; cursor: pointer;
+  }
+  .finding:hover { background: rgba(47, 224, 200, 0.05); }
+  .finding.on { border-color: var(--line-strong); background: var(--panel); }
+  .finding .t { font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+  .finding .meta { margin-top: 5px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+  .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .pill.harness-artefact { color: var(--amber); }
+  .pill.contract-gap { color: var(--teal); }
+  .pill.contract-gap-or-policy { color: var(--teal-soft); }
+  .pill.regression { color: var(--red); }
+  .pill.improvement { color: var(--green); }
+  .pill.model-error { color: var(--muted); }
+  .tag { font-size: 10px; letter-spacing: 0.1em; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; }
+
+  section.detail { min-height: 0; overflow-y: auto; padding: 18px 24px 40px; }
+  .detail h1 { margin: 0 0 10px; font-size: 15px; font-weight: 500; line-height: 1.5; overflow-wrap: anywhere; }
+  .detail h3 { margin: 22px 0 8px; font-size: 10px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted-2); }
+  .detail .settle { margin-top: 8px; font-size: 12px; color: var(--amber); }
+  .detail ol.path { margin: 0; padding-left: 20px; font-size: 12.5px; line-height: 1.7; overflow-wrap: anywhere; }
+  .node { font: inherit; font-size: 12px; color: var(--teal-soft); background: rgba(47, 224, 200, 0.06); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; margin: 2px 4px 2px 0; cursor: pointer; overflow-wrap: anywhere; text-align: left; }
+  .node:hover { border-color: var(--teal); color: var(--teal); }
+  pre { margin: 0; padding: 12px; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--line); border-radius: 10px; font-size: 11.5px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--teal-soft); }
+  table.links { border-collapse: collapse; width: 100%; font-size: 12px; }
+  table.links td { padding: 4px 8px 4px 0; border-bottom: 1px solid var(--line); vertical-align: top; overflow-wrap: anywhere; }
+  table.links td.type { color: var(--muted); white-space: nowrap; }
+  .empty { color: var(--muted); font-size: 12.5px; padding: 12px 8px; line-height: 1.6; }
+  .err { color: var(--red); }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div class="brand">Harness <span>evaluation</span></div>
+    <div class="who" id="who"></div>
+    <div class="spacer"></div>
+    <a class="link" href="./library.html">library</a>
+    <button class="btn" id="refresh" type="button" title="rebuild the graph and evaluate again">evaluate</button>
+  </header>
+  <div class="forks" id="forks"></div>
+  <main>
+    <nav id="list"><div class="empty">Reading the tasks…</div></nav>
+    <section class="detail" id="detail"><div class="empty">Choose a finding: its class, the path of the harness's graph that justifies it, and the nodes it is about, each with its links.</div></section>
+  </main>
+</div>
+<script type="module">
+import { connectMcp, toolText } from "./vendor/mcp-http-client.js";
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+let session = null;
+async function call(tool, args = {}) {
+    session ??= await connectMcp(location.origin, "station", { headers: {}, clientInfo: { name: "evaluator-page", version: "0" } }).catch((e) => {
+        session = null;
+        throw e;
+    });
+    const r = await session.callTool(tool, args);
+    const text = toolText(r);
+    let body;
+    try {
+        body = JSON.parse(text);
+    } catch {
+        body = null;
+    }
+    if (r?.isError || body?.refused) throw new Error(body?.refused ?? text);
+    return body?.result ?? body;
+}
+
+/** The forks read together, from the address: #forks=a,b. */
+const chosen = () => {
+    const m = /(?:^|[#&])forks=([^&]*)/.exec(location.hash);
+    return m ? decodeURIComponent(m[1]).split(",").filter(Boolean) : [];
+};
+const forksArg = () => (chosen().length ? { forks: chosen() } : {});
+
+const CLASSES = [
+    ["regression", "Regressions: a form that came with a change of the harness"],
+    ["harness-artefact", "Artefacts of the harness"],
+    ["contract-gap", "Gaps of the contract"],
+    ["contract-gap-or-policy", "Learned by being refused: a gap or a policy, D1 settles it"],
+    ["improvement", "Improvements: a form a change of the harness took away"],
+    ["model-error", "A model's own mistakes: counted, nothing to recommend"],
+];
+const label = (c) => c.replace(/-/g, " ");
+
+let evaluation = null;
+let current = null;
+
+function renderForks(forks) {
+    const on = new Set(chosen());
+    $("forks").innerHTML =
+        `<span>read</span><label><input type="radio" name="scope" value="here"${on.size ? "" : " checked"}> the repository's workshop</label>` +
+        `<span>or the forks</span>` +
+        forks.map((f) => `<label title="made ${esc(f.createdAt)}${f.parent ? `, from ${esc(f.parent)}` : ""}"><input type="checkbox" value="${esc(f.id)}"${on.has(f.id) ? " checked" : ""}> ${esc(f.id)}</label>`).join("");
+    $("forks").onchange = (ev) => {
+        const t = ev.target;
+        if (t.name === "scope") [...$("forks").querySelectorAll("input[type=checkbox]")].forEach((c) => (c.checked = false));
+        const ids = [...$("forks").querySelectorAll("input[type=checkbox]:checked")].map((c) => c.value);
+        location.hash = ids.length ? `forks=${ids.map(encodeURIComponent).join(",")}` : "";
+    };
+}
+
+function renderList() {
+    const fs = evaluation?.findings ?? [];
+    const groups = CLASSES.map(([c, title]) => [title, fs.filter((f) => f.class === c)]).filter(([, xs]) => xs.length);
+    const row = (f) => `<button class="finding${current?.id === f.id ? " on" : ""}" type="button" data-id="${esc(f.id)}">
+        <div class="t">${esc(f.title)}</div>
+        <div class="meta"><span class="pill ${esc(f.class)}">${esc(label(f.class))}</span><span class="tag">${esc(f.detector)}</span><span class="tag">${f.tasks.length} task(s)</span>${f.settledBy ? `<span class="tag">to settle</span>` : ""}</div>
+      </button>`;
+    const unclassified = evaluation?.unclassified ?? [];
+    $("list").innerHTML =
+        groups.map(([title, xs]) => `<h2>${esc(title)}</h2>${xs.map(row).join("")}`).join("") +
+        (unclassified.length ? `<h2>Forms no detector of this stage classes (for D1)</h2>${unclassified.map((u) => `<button class="finding" type="button" data-node="${esc(u.form)}"><div class="t">${esc(u.shape)}</div><div class="meta"><span class="tag">${u.tasks} task(s)</span></div></button>`).join("")}` : "") ||
+        `<div class="empty">Nothing found in these tasks.</div>`;
+    $("list").onclick = (ev) => {
+        const b = ev.target.closest("button");
+        if (!b) return;
+        if (b.dataset.node) return openNode(b.dataset.node);
+        current = fs.find((f) => f.id === b.dataset.id) ?? null;
+        renderList();
+        renderFinding();
+    };
+}
+
+const nodeButton = (id) => `<button class="node" type="button" data-node="${esc(id)}">${esc(id)}</button>`;
+
+function renderFinding() {
+    const f = current;
+    if (!f) return;
+    $("detail").innerHTML = `
+      <h1>${esc(f.title)}</h1>
+      <div class="meta"><span class="pill ${esc(f.class)}">${esc(label(f.class))}</span> <span class="tag">${esc(f.detector)}</span> ${f.recommend ? "" : `<span class="tag">nothing to recommend</span>`}</div>
+      ${f.settledBy ? `<div class="settle">to settle: ${esc(f.settledBy)}</div>` : ""}
+      <h3>The path that justifies it</h3>
+      <ol class="path">${f.path.map((p) => `<li>${esc(p)}</li>`).join("")}</ol>
+      <h3>What it is about</h3>
+      <div>${f.about.map(nodeButton).join("")}</div>
+      <h3>Models</h3>
+      <div>${Object.entries(f.models).map(([m, n]) => `<span class="tag">${esc(m)}: ${n}</span>`).join(" ")}</div>
+      <h3>Tasks</h3>
+      <div>${f.tasks.slice(0, 40).map(nodeButton).join("")}${f.tasks.length > 40 ? ` <span class="tag">and ${f.tasks.length - 40} more</span>` : ""}</div>
+      <h3>Evidence</h3>
+      <pre>${esc(JSON.stringify(f.evidence, null, 2))}</pre>`;
+}
+
+async function openNode(id) {
+    $("detail").innerHTML = `<div class="empty">Reading ${esc(id)}…</div>`;
+    try {
+        const n = await call("harness_graph", { id, ...forksArg() });
+        const rows = (links, dir) => links.map((l) => `<tr><td class="type">${esc(dir)} ${esc(String(l.type).replace(/^harness\./, ""))}</td><td>${nodeButton(l.to ?? l.from)}${l.bag ? ` <span class="tag">${esc(JSON.stringify(l.bag))}</span>` : ""}</td></tr>`).join("");
+        $("detail").innerHTML = `
+          ${current ? `<button class="btn" type="button" id="back">back to the finding</button>` : ""}
+          <h1>${esc(n.id)}</h1>
+          <div class="meta"><span class="tag">${esc(n.type)}</span></div>
+          ${n.bag ? `<h3>What it holds</h3><pre>${esc(JSON.stringify(n.bag, null, 2))}</pre>` : ""}
+          <h3>Its links</h3>
+          <table class="links">${rows(n.out, "→")}${rows(n.in, "←")}</table>`;
+        $("back")?.addEventListener("click", renderFinding);
+    } catch (e) {
+        $("detail").innerHTML = `<div class="empty err">${esc(e.message)}</div>`;
+    }
+}
+
+$("detail").addEventListener("click", (ev) => {
+    const b = ev.target.closest("button.node");
+    if (b) openNode(b.dataset.node);
+});
+
+async function load() {
+    $("list").innerHTML = `<div class="empty">Reading the tasks…</div>`;
+    try {
+        evaluation = await call("harness_evaluate", forksArg());
+        const c = evaluation.counts;
+        $("who").innerHTML = `${chosen().length ? `forks <b>${esc(chosen().join(", "))}</b>` : "<b>the repository's workshop</b>"} · ${c.tasks} task(s) · ${Object.entries(c.models).map(([m, n]) => `${esc(m)} ${n}`).join(", ")}`;
+        renderForks(evaluation.forks ?? []);
+        current = evaluation.findings.find((f) => f.id === current?.id) ?? null;
+        renderList();
+        if (current) renderFinding();
+    } catch (e) {
+        $("list").innerHTML = `<div class="empty err">${esc(e.message)}</div>`;
+    }
+}
+
+$("refresh").addEventListener("click", load);
+window.addEventListener("hashchange", load);
+load();
+</script>
+</body>
+</html>

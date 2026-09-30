@@ -4,7 +4,8 @@
  * structured reading (`harness/core/episodes.ts`), the working memory a window of episodes.
  *
  * A manifest written before the harness marked a cut call (`truncated`) has the mark read from its trace: the raw answer
- * of that step said the output limit stopped it.
+ * of that step said the output limit stopped it. One written before it marked the guard's judgement (`judged`, 2026-09-29)
+ * has it read from the refusal's words, when the reading gives how the topic's guard words one (`guardWords`).
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import * as path from "node:path";
@@ -29,7 +30,7 @@ interface ManifestLike {
 }
 
 /** The steps of a refused call whose raw answer says the output limit cut it, read from a task's trace. */
-function cutSteps(dir: string): Set<number> {
+export function cutSteps(dir: string): Set<number> {
     const out = new Set<number>();
     const file = path.join(dir, "trace.jsonl");
     if (!existsSync(file)) return out;
@@ -55,6 +56,15 @@ function intentOf(dir: string, topic: string): string {
 export interface EpisodeReading {
     judges: ReadonlyArray<RegExp>;
     digest?: (capability: string, input: JsonValue) => ArgumentDigest;
+    /** How the topic's guard words a refusal: tells the guard's refusals in a manifest written before the `judged` mark. */
+    guardWords?: RegExp;
+}
+
+/** How a topic's guard words a refusal, from its words (`guard.refused`, "procedure refused: {problems}"): what comes before the problems. */
+export function guardWordsOf(wordsFile: string): RegExp | undefined {
+    const template = readJson<{ guard?: { refused?: string } }>(wordsFile)?.guard?.refused;
+    const head = template?.split("{problems}")[0];
+    return head ? new RegExp(`^${head.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`) : undefined;
 }
 
 /** Every episode of a topic in a workshop, oldest first. */
@@ -67,7 +77,9 @@ export function episodesOf(workshop: string, topic: string, reading: EpisodeRead
         if (!m || m.topic !== topic || !Array.isArray(m.steps)) continue;
         const marked = m.steps.some((s) => s.truncated !== undefined);
         const cut = marked ? new Set<number>() : cutSteps(dir);
-        const steps = m.steps.map((s) => (cut.has(s.n) ? { ...s, truncated: true } : s));
+        const judgedMarked = m.steps.some((s) => s.judged !== undefined);
+        const byGuard = (s: StepLike) => !judgedMarked && reading.guardWords && s.outcome === "refused" && !cut.has(s.n) && s.capability && reading.judges.some((r) => r.test(s.capability!)) && reading.guardWords.test(s.reason ?? "");
+        const steps = m.steps.map((s) => (cut.has(s.n) ? { ...s, truncated: true } : byGuard(s) ? { ...s, judged: "refused" as const } : s));
         out.push(episodeOf({ taskId: m.taskId ?? task, topic, startedAt: m.startedAt ?? null, ended: m.ended ?? null, intent: intentOf(dir, topic), steps }, reading.judges, reading.digest));
     }
     return out.sort((a, b) => String(a.at ?? a.taskId).localeCompare(String(b.at ?? b.taskId)));

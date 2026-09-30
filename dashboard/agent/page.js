@@ -972,8 +972,8 @@ var EXCLUDED = [
   // A health alarm is raised and cleared by a person (the crew, the medical panel), and an aborted commissioning reopened by the commander (2026-09-29).
   /^biomed\.(monitor_start|monitor_stop|report|move|alarm|alarm_clear)$/,
   /^station\.(registry_register|registry_report|procedure_checked|candidate_evaluated|commissioning_authorise|commissioning_reopen|procedure_run|reflect)$/,
-  // The harness's graph is the evaluator's reading of the factories' traces (2026-09-30), not something the habitat's agent acts on.
-  /^station\.harness_graph$/
+  // The harness's graph and its evaluation are the evaluator's reading of the factories' traces (2026-09-30), not something the habitat's agent acts on.
+  /^station\.harness_(graph|evaluate)$/
 ];
 function replayPolicyFor(id, guardMode) {
   if (APPROVAL_REQUIRED.some((r) => r.test(id))) return "approval-required";

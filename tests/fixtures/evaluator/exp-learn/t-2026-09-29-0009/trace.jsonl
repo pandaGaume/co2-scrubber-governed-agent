@@ -1,0 +1,4 @@
+{"n":13,"source":"refused","exchange":{"response":{"stop_reason":"tool_use"}}}
+{"n":14,"source":"refused","exchange":{"response":{"stop_reason":"tool_use"}}}
+{"n":16,"source":"refused","exchange":{"response":{"stop_reason":"max_tokens"}}}
+{"n":17,"source":"refused","exchange":{"response":{"stop_reason":"tool_use"}}}

@@ -1,0 +1,9 @@
+{
+ "id": "exp4-sonnet-a",
+ "createdAt": "2026-09-29T20:56:04.311Z",
+ "origin": {
+  "commit": "08a954e557281e4701ceb4ebb0f72da5a1fdee2c",
+  "dirty": false
+ },
+ "parent": "exp4-train"
+}

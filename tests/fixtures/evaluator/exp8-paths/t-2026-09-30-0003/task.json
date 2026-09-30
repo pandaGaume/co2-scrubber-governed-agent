@@ -1,0 +1,1 @@
+{"task":{"id":"t-2026-09-30-0003","topics":["procedure"],"objective":{"required_outputs":[{"name":"V_lab","quantity":"Volume","unit":"m3"}],"constraints":{}},"observations":{"device":"/habitat/lab/eclss/scrubber-1-v3","measured":{"co2Ppm":1200,"source":"/habitat/lab/eclss/co2-1-v3 (co2)","at":"2026-09-30T11:11:49.746Z"}},"requestedBy":"experiment validate v3"}}

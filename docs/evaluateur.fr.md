@@ -183,4 +183,45 @@ C'est le test de non-régression de l'évaluateur lui-même, sans modèle pour l
 - **E3. L'usine de recommandation.** Elle lit le graphe. Son guard vérifie qu'un exemple ne contredit aucune convention. Ajoutent aussi D7 et les propositions pour la bibliothèque.
 - **E4. La boucle de vérification.** La proposition signée est appliquée dans un fork, mesurée, puis intégrée ou rejetée avec sa mesure.
 
+## E1, fait (2026-09-30)
+
+- **Les détecteurs** sont dans `lib/evaluator.ts` (D4, D5, D2, D3, D8). Ce sont des requêtes sur le graphe, sans modèle, et leurs seuils sont dans `specs/harness/evaluator.json`.
+- **L'outil** `station.harness_evaluate` les lance sur l'atelier du dépôt ou sur plusieurs forks ensemble. La page `dashboard/evaluator.html` (ouverte depuis la bibliothèque) montre les constats par classe, avec leur chemin, et permet de parcourir le graphe de nœud en nœud.
+- **Le corpus** : `tests/fixtures/evaluator` contient les tâches réelles de neuf forks, copiées allégées par `scripts/evaluator/corpus.mjs`. `tests/evaluator.test.ts` y vérifie chacun des huit cas.
+
+Ce qu'E1 a dû ajouter au graphe :
+
+- **Plusieurs ateliers.** Un graphe peut lire plusieurs ateliers à la fois. Une tâche héritée d'un fork parent n'est comptée qu'une fois.
+- **Les refus du harnais.** Ceux qui précèdent le guard (troncature, schéma, répétition) sont des formes à part, et les étapes refusées hors des capacités jugées deviennent des nœuds `step`.
+- **La mémoire lue**, prise dans la trace. Deux tâches ne sont comparées que si elles ont lu les mêmes textes, mémoire comprise.
+- **L'origine du fork dans l'empreinte.** Avant E0, le `tools.sha256` d'un manifeste ne couvrait pas les schémas d'entrée : exp3 et exp6 avaient la même empreinte alors que le contrat avait changé entre les deux. Pour ces manifestes, le commit d'origine du fork fait partie de l'empreinte, et D5 lit dans git les fichiers changés entre deux commits : textes, réglages du modèle (`profiles/`), code.
+- **Le jugement du guard dans les vieux manifestes.** Un manifeste écrit avant la marque `judged` retrouve le jugement du guard à partir des mots de son refus (`guard.refused` du topic).
+- **Le cas** d'une tâche est sa requête, sans les mesures ni les dates. D3 compare deux modèles sur les mêmes cas.
+- **Les tâches scriptées sont écartées.** Ce sont des doublures dont les erreurs sont écrites exprès (`models.ignore`).
+- **Les parenthèses imbriquées.** `shapesOf` les retire désormais : le texte d'un modèle cité par le guard en contient parfois.
+
+Ce qu'E1 retrouve des huit cas :
+
+| Cas | E1 | Détecteur |
+|---|---|---|
+| Troncature à 4096 | artefact du harnais, 13 appels ; disparue à l'empreinte suivante, qui change `profiles/anthropic-sonnet.json` | D4, D5 |
+| Référence composite | trou de contrat : même correction (`reference:narrowed`) dans 22 tâches, au premier retry ; 6 sur 10 chez Sonnet, 0 sur 10 chez GPT sur les mêmes cas ; disparue après la correction du contrat, `specs/procedure/words.json` nommé | D2, D3, D5 |
+| `Speed` en percent | récurrent (3 tâches), non classé : le refus du guard ne nomme pas de chemin, donc aucune correction ne s'y rattache | pour D1 |
+| Boucle de lecture | artefact du harnais : deux tâches finies en boucle sur la relecture refusée | D4 |
+| Historique fictif | non vu : aucun détecteur d'E1 ne compare ce qu'un brief promet avec ce que l'état contient | à venir |
+| `steps.0` (GPT) | une constante sans justification, corrigée en l'ajoutant, chez Sonnet et chez GPT ; trou de contrat ou politique, D1 tranchera | D2 |
+| `/steps/0/reason` | régression, avec le texte changé désigné (la description de `workspace.read`, conservée) ; cas **reconstitué** dans le test, les traces ayant été perdues avec le fork | D5 |
+| v4 | erreur du modèle, sans recommandation | D8 |
+
+Deux choses que personne n'avait lues sont apparues dans les forks :
+
+- `procedure.analyse` est refusé par son schéma dans 10 tâches de Sonnet (`evidence` envoyé autrement qu'en liste) ;
+- 25 relectures ont été refusées comme répétitions, dans 19 tâches.
+
+Les limites d'E1 :
+
+- Deux conditions parallèles (exp-learn puis exp-control) sont vues comme deux états successifs du harnais. D5 les compare donc comme un avant et un après.
+- Les réglages du modèle (sa limite de sortie) ne sont pas dans le manifeste d'une usine. On ne les retrouve que par git, pour les runs d'avant E0.
+- Une même forme peut couvrir deux causes. « L'analyse dit que * change » réunit v4 (erreur du modèle) et v9 (la convention de chemin). E1 la laisse non classée ; la convention du registre (E2) les séparera.
+
 E0 à E2 suffisent à retrouver les huit cas sans modèle. E3 et E4 ferment la boucle que nous avons faite à la main pendant deux jours. Plus tard, les mêmes nœuds accueilleront la connaissance du domaine (le comportement de l'épurateur, les causes d'abort, les écarts du jumeau), reliée aux faits signés et aux paramètres du jumeau.
