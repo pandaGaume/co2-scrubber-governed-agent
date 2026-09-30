@@ -11,6 +11,8 @@ import { safetyBoundsOf, stateOfTopic, WORDS } from "../harness/topics/procedure
 import { FORMAT } from "../harness/topics/procedure/check.js";
 import { newProgress } from "../harness/core/workspace-observer.js";
 import type { TaskFile } from "../harness/core/task.js";
+import { readFileSync } from "node:fs";
+import { fromRepository } from "../lib/paths.js";
 
 describe("the safety constants and the facts they are justified by, in the procedure factory's state", () => {
     it("each safety constant of the signed rules with the fact its rules bound it by, and its side", () => {
@@ -30,6 +32,15 @@ describe("the safety constants and the facts they are justified by, in the proce
         assert.match(abort.note ?? "", /no signed rule binds it to one fact: the guard accepts a fact of a signed document whose safe side the value respects \(abort\.battery\.threshold has its own rule, above\)/);
         // Every numeric field of the schema the safety patterns cover is in the map, by its rule or as one no rule binds.
         for (const c of ["limits.co2MaxPpm", "limits.co2AbortPpm", "limits.minSpeedPercent", "limits.maxMinutes", "steps.*.speedPercent", "abort.*.threshold", "monitoring.band.minBpm", "monitoring.band.maxBpm"]) assert.ok(all.some((b) => b.constant === c), c);
+    });
+
+    it("the path convention of a list's element said where the model writes paths, as the format names them (2026-09-30: steps indexed from 0 and abort conditions by position, where the guard names them by n and by id)", () => {
+        assert.deepEqual(FORMAT.keys, { steps: "n", abort: "id" });
+        const schema = JSON.parse(readFileSync(fromRepository("specs", "procedure", "procedure.schema.json"), "utf8")) as { properties: Record<string, { items: { properties: Record<string, { description?: string }> } }> };
+        for (const [list, key] of Object.entries(FORMAT.keys)) assert.match(String(schema.properties[list].items.properties[key].description), /A path names a (step|condition) by it, never by its position in the list/, `${list}.${key}`);
+        assert.match(WORDS.templates["brief.safetyBounds"], /a path names a step by its n and an abort condition by its id, never by its position in the list/);
+        const analysis = readFileSync(fromRepository("specs", "procedure", "analysis.schema.json"), "utf8");
+        assert.match(analysis, /a step is named by its n and an abort condition by its id, never by its position in the list/);
     });
 
     it("in the state and said by the brief when the spec shows it", () => {

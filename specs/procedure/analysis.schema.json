@@ -10,7 +10,7 @@
             "items": {
                 "type": "object",
                 "properties": {
-                    "path": { "type": "string", "description": "The field of the procedure that changes, by its path (monitoring.band.maxBpm, steps.1.minutes, abort, occupancy...)." },
+                    "path": { "type": "string", "description": "The field of the procedure that changes, by its path (monitoring.band.maxBpm, steps.1.minutes, abort.co2.threshold, occupancy...): a step is named by its n and an abort condition by its id, never by its position in the list." },
                     "change": { "type": "string", "description": "What it becomes, in words." },
                     "prevents": { "type": "string", "description": "How that keeps the cause from coming back, or stops the test sooner if it does." }
                 },
