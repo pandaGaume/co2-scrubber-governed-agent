@@ -39,6 +39,7 @@ describe("the safety constants and the facts they are justified by, in the proce
         assert.ok(Array.isArray((state.hypothesis as { safetyBounds?: unknown[] }).safetyBounds));
         // The procedure's brief holds the hole the spec's flag fills, and its words say where the facts are.
         assert.match(WORDS.templates["brief.procedure"], /and respect it\{bounds\};/);
-        assert.match(WORDS.templates["brief.safetyBounds"], /the fact its signed rules bound it by and on which side, which is the fact to cite, or, for one no rule binds, the signed facts the guard accepts when the value respects their side \(field "safetyBounds"\)/);
+        // The contract said whole (2026-09-29): one fact, its id alone, what supports it in reason.
+        assert.match(WORDS.templates["brief.safetyBounds"], /the fact its signed rules bound it by and on which side, which is the single fact to cite, by its id alone as the reference \(the facts that support the value and the engineering rationale go in reason\), or, for one no rule binds, the signed facts the guard accepts when the value respects their side \(field "safetyBounds"\)/);
     });
 });

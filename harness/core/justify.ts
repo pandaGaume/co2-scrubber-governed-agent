@@ -156,8 +156,9 @@ export const JUSTIFICATIONS_SCHEMA = {
             constant: { type: "string" },
             value: { anyOf: [{ type: "number" }, { type: "array", items: { type: "number" }, minItems: 2, maxItems: 2 }] },
             source: { type: "string", enum: [...JUSTIFICATION_SOURCES] },
-            reference: { type: "string" },
-            reason: { type: "string", description: "Why, in a few words (a dozen at most): the reviewer reads the source, not an essay." },
+            // The contract said, not tightened (2026-09-29, the baseline: 17 references naming two facts, a rule said nowhere before the refusal): what the guard accepts is unchanged.
+            reference: { type: "string", description: "Exactly one: for library, one id as library.facts lists it (a safety constant's is the one signed fact that bounds it), nothing joined to it; for web, one URL; for derived, the formula; else what was observed or assumed. The facts that support it and the engineering rationale go in reason." },
+            reason: { type: "string", description: "Why, in a few words (a dozen at most), with any fact that supports it: the reviewer reads the source, not an essay." },
         },
         required: ["constant", "value", "source", "reference", "reason"],
     },
@@ -265,8 +266,13 @@ export function justificationProblems(constants: Constant[], given: unknown[], r
 export function factOf(facts: SignedFact[], reference: string): SignedFact | undefined {
     const exact = facts.find((f) => f.id === reference);
     if (exact) return exact;
-    const named = facts.filter((f) => new RegExp(`(^|[^A-Za-z0-9_.])${f.id.replace(/\./g, "\\.")}($|[^A-Za-z0-9_])`).test(reference));
+    const named = factsNamedIn(facts, reference);
     return named.length === 1 ? named[0] : undefined;
+}
+
+/** The facts of the library a reference names by their ids, whatever text surrounds them. */
+export function factsNamedIn(facts: SignedFact[], reference: string): SignedFact[] {
+    return facts.filter((f) => new RegExp(`(^|[^A-Za-z0-9_.])${f.id.replace(/\./g, "\\.")}($|[^A-Za-z0-9_])`).test(reference));
 }
 
 /** A fact's safe side, in words. */
@@ -310,7 +316,14 @@ export function safetyReview(constants: Constant[], given: unknown[], facts: Sig
         const fact = factOf(facts, String(j.reference));
         if (!fact) {
             wrong(null);
-            problems.push(`${c.constant}: "${String(j.reference)}" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)${cite}`);
+            // Refused the same way whatever the cause, and said by what it is (2026-09-29, the baseline: references naming two facts of
+            // the library were told they were "no fact of the library").
+            const named = factsNamedIn(facts, String(j.reference));
+            problems.push(
+                named.length > 1
+                    ? `${c.constant}: "${String(j.reference)}" names ${named.length} facts of the library (${named.map((f) => f.id).join(", ")}), not one (INVALID_REFERENCE_CARDINALITY): a reference is exactly one signed library fact, by its id; the facts that support it and the engineering rationale go in reason${cite}`
+                    : `${c.constant}: "${String(j.reference)}" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)${cite}`,
+            );
             continue;
         }
         // A fact the rules do not bound this constant by is not its justification, whatever its value (another quantity, another unit).

@@ -162,6 +162,13 @@ describe("the justification of constants, common to every factory", () => {
         assert.deepEqual(review.misjustified, [{ constant: "steps.2.speedPercent", value: 100, unit: "percent", expected: [{ id: "test.speedFloorPercent", value: 30, unit: "percent", side: "at or above it" }], cited: { id: "scrubber.effectiveFlowAtFull", value: 1, unit: "m3/min" } }]);
         // The fact the rules name, cited: accepted.
         assert.deepEqual(safetyReview(constants, [{ constant: "steps.2.speedPercent", value: 100, source: "library", reference: "test.speedFloorPercent", reason: "above the floor" }], facts, boundBy), { problems: [], misjustified: [] });
+        // One fact named among other words: accepted, as before (the contract said, not tightened).
+        assert.deepEqual(safetyReview(constants, [{ constant: "steps.2.speedPercent", value: 100, source: "library", reference: "test.speedFloorPercent (commissioning-test-safety, signed)", reason: "above the floor" }], facts, boundBy).problems, []);
+        // Two facts in one reference: refused as before, and said by what it is (2026-09-29, the baseline).
+        const two = safetyReview(constants, [{ constant: "steps.2.speedPercent", value: 100, source: "library", reference: "test.speedFloorPercent; scrubber.effectiveFlowAtFull 1 m3/min", reason: "full flow" }], facts, boundBy);
+        assert.equal(two.problems.length, 1);
+        assert.match(two.problems[0], /names 2 facts of the library \(test\.speedFloorPercent, scrubber\.effectiveFlowAtFull\), not one \(INVALID_REFERENCE_CARDINALITY\): a reference is exactly one signed library fact, by its id; the facts that support it and the engineering rationale go in reason/);
+        assert.doesNotMatch(two.problems[0], /is not a fact of the library/);
         // The next prompt: the unit, the fact to cite, the wrong one named as another quantity.
         const help = { capability: "procedure.revise", times: 2, missing: [], unmatched: [], misjustified: review.misjustified };
         assert.match(justificationNote(help), /steps\.2\.speedPercent = 100 is in percent: cite test\.speedFloorPercent \(30 percent, at or above it\), not scrubber\.effectiveFlowAtFull \(1 m3\/min: another unit, another quantity\)/);

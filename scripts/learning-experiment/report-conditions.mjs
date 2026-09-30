@@ -9,7 +9,8 @@ const train = load(trainFile);
 const conditions = Object.fromEntries(rest.map((a) => a.split("=")).map(([k, f]) => [k, load(f)]));
 const judged = (t) => t.firstGuardSubmission;
 // The original error: a safety constant's reference joining facts ("…; …"), refused as no fact of the library.
-const composite = (t) => (judged(t)?.problems ?? []).some((p) => p.kind === "justification" && /is not a fact of the library/.test(p.says) && /;/.test(p.says));
+// Said since 2026-09-29 by its own code (INVALID_REFERENCE_CARDINALITY); before, as "no fact of the library" with a ";" in the quote.
+const composite = (t) => (judged(t)?.problems ?? []).some((p) => p.kind === "justification" && (/INVALID_REFERENCE_CARDINALITY/.test(p.says) || (/is not a fact of the library/.test(p.says) && /;/.test(p.says))));
 const compositeSent = (t) => (judged(t)?.references ?? []).some((r) => /;/.test(String(r.reference)));
 const sum = (tasks, f) => tasks.reduce((a, t) => a + f(t), 0);
 const metrics = (o) => {

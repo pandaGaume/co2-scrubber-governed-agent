@@ -79,7 +79,7 @@ for (const t of tasks) {
 
 /** A reference that names two facts or more ("a.b (...); c.d", "c.d / a.b"): the composite reference, whatever joins them. */
 const factIds = (text) => String(text ?? "").match(/\b[a-z][A-Za-z0-9]*(?:\.[A-Za-z0-9]+)+\b/g) ?? [];
-const composite = (o) => /is not a fact of the library/.test(o.says) && new Set(factIds(o.contrast?.refused?.reference ?? o.says.split(" is not a fact")[0])).size >= 2;
+const composite = (o) => /INVALID_REFERENCE_CARDINALITY/.test(o.says) || (/is not a fact of the library/.test(o.says) && new Set(factIds(o.contrast?.refused?.reference ?? o.says.split(" is not a fact")[0])).size >= 2);
 const clean = tasks.filter((t) => firstJudged(t.episode)?.outcome === "ACCEPTED");
 const avg = (xs, f) => (xs.length ? Math.round(xs.reduce((a, x) => a + f(x), 0) / xs.length) : null);
 const ranked = [...patterns.values()]
