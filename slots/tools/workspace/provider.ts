@@ -19,9 +19,9 @@ export interface WorkspaceState {
 
 const MAX_READ = 256 * 1024;
 
-/** The value at a JSON Pointer (RFC 6901: /steps/0/reason; ~1 is a slash, ~0 a tilde), or an error naming what the document holds there. */
+/** The value at a JSON Pointer (RFC 6901: /field/subfield; ~1 is a slash, ~0 a tilde), or an error naming what the document holds there. */
 export function fieldAt(doc: unknown, pointer: string, path: string): unknown {
-    if (!pointer.startsWith("/")) throw new Error(`pointer "${pointer}": a JSON Pointer starts with / (/steps/0/reason)`);
+    if (!pointer.startsWith("/")) throw new Error(`pointer "${pointer}": a JSON Pointer starts with / (/field/subfield)`);
     let at: unknown = doc;
     const walked: string[] = [];
     for (const raw of pointer.slice(1).split("/")) {

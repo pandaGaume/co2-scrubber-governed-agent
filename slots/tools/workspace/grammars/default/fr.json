@@ -19,7 +19,7 @@
                 "taskId": "la tâche",
                 "path": "un chemin relatif au répertoire de la tâche",
                 "maxBytes": "refuser au-delà de ce nombre d'octets (256 Ko au plus)",
-                "pointer": "un champ d'un fichier JSON, par un JSON Pointer (/steps/0/reason ; ~1 pour une barre oblique dans une clé) : sa valeur seule, pour un détail d'un fichier que l'état ne montre pas en entier"
+                "pointer": "un champ d'un fichier JSON, par un JSON Pointer (/field/subfield ; ~1 pour une barre oblique dans une clé) : sa valeur seule, pour un détail d'un fichier que l'état ne montre pas en entier"
             }
         },
         "write": {

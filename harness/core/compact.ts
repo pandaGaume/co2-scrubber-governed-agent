@@ -98,7 +98,7 @@ const COMPACTORS: Record<string, (v: unknown, input: JsonValue) => JsonValue> = 
             sha256: o.sha256 ?? null,
             bytes: text.length,
             content: shape,
-            note: parsed && typeof parsed === "object" ? "the harness already put what the task holds into the state (task, telemetry, shelf); for a detail it does not give, read one field with pointer (a JSON Pointer: /steps/0/reason): read whole again, a JSON file shows its keys again" : "the whole file is in the task's workshop; the harness already put what it holds into the state (task, telemetry, shelf); read it again only for a detail the state does not give",
+            note: parsed && typeof parsed === "object" ? "the harness already put what the task holds into the state (task, telemetry, shelf); for a detail it does not give, read one field with pointer (a JSON Pointer: /field/subfield): read whole again, a JSON file shows its keys again" : "the whole file is in the task's workshop; the harness already put what it holds into the state (task, telemetry, shelf); read it again only for a detail the state does not give",
         } as JsonValue;
     },
     "workspace.list": (v) => {

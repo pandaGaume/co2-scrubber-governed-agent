@@ -19,7 +19,7 @@
                 "taskId": "the task",
                 "path": "a path relative to the task's directory",
                 "maxBytes": "refuse above this many bytes (256 KB at most)",
-                "pointer": "one field of a JSON file, by a JSON Pointer (/steps/0/reason; ~1 for a slash in a key): its value alone, for a detail of a file whose whole the state does not show"
+                "pointer": "one field of a JSON file, by a JSON Pointer (/field/subfield; ~1 for a slash in a key): its value alone, for a detail of a file whose whole the state does not show"
             }
         },
         "write": {

@@ -25,7 +25,10 @@ describe("a detail of a JSON file, read by pointer", () => {
         const field = compactOutput("workspace.read", { path: "manifest.json", pointer: "/steps/1" }, { path: "manifest.json", pointer: "/steps/1", value: { n: 2, reason: "decay" } });
         assert.deepEqual((field.summary as { value: unknown }).value, { n: 2, reason: "decay" });
         const whole = compactOutput("workspace.read", { path: "manifest.json" }, { path: "manifest.json", text: JSON.stringify({ steps: [], state: "x" }) });
-        assert.match(String((whole.summary as { note: string }).note), /read one field with pointer \(a JSON Pointer: \/steps\/0\/reason\)/);
+        assert.match(String((whole.summary as { note: string }).note), /read one field with pointer \(a JSON Pointer: \/field\/subfield\)/);
+        // No example of a list index in what a model reads with every call (2026-09-30: "/steps/0/reason" there, and Sonnet justified
+        // steps.0 and steps.1 where the guard names the steps by their numbers, steps.1 and steps.2).
+        assert.doesNotMatch(String((whole.summary as { note: string }).note), /\/\d+\//);
     });
 });
 
