@@ -3,7 +3,7 @@
  * copied from their forks (outputs/forks/<id>/outputs/factory, which git does not keep) into tests/fixtures/evaluator/<id>/, lighter:
  *
  *   manifest.json  what the graph reads (the task, its provider, tools, words, prompt, context, its steps without their summaries,
- *                  and without their inputs but for the capabilities a guard judged);
+ *                  and without their inputs but for the capabilities a guard judged and the short ones, a read's document);
  *   task.json      who asked and what for (requestedBy, the objective, the observations);
  *   trace.jsonl    only the lines the graph reads: a refused call's stop reason (a cut, before the manifest marked it), and the
  *                  memory's entries a state held (their rule and status);
@@ -71,6 +71,12 @@ for (const { id, record } of forks) {
     rmSync(to, { recursive: true, force: true });
     mkdirSync(to, { recursive: true });
     writeFileSync(path.join(to, "fork.json"), JSON.stringify({ id, createdAt: record.createdAt, origin: record.origin, parent: record.parent ?? null }, null, 1) + "\n");
+    // The memory of the fork, as it is: its entries and the episodes their evidence names (D6).
+    const memory = path.join(from, "memory");
+    if (existsSync(memory)) {
+        mkdirSync(path.join(to, "memory"), { recursive: true });
+        for (const f of readdirSync(memory).filter((x) => x.endsWith(".json"))) writeFileSync(path.join(to, "memory", f), readFileSync(path.join(memory, f), "utf8"));
+    }
     for (const t of readdirSync(from).filter((d) => d.startsWith("t-")).sort()) {
         const file = path.join(from, t, "manifest.json");
         if (!existsSync(file)) continue;
@@ -82,7 +88,7 @@ for (const { id, record } of forks) {
         mkdirSync(dir, { recursive: true });
         // The inputs of the capabilities a guard judged in this task (what its episode digests); the others' are not read.
         const judged = new Set((m.steps ?? []).filter((s) => s.judged).map((s) => s.capability));
-        const steps = (m.steps ?? []).map((s) => pick(judged.has(s.capability) ? s : { ...s, input: undefined }, STEP_KEYS));
+        const steps = (m.steps ?? []).map((s) => pick(judged.has(s.capability) || JSON.stringify(s.input ?? null).length <= 300 ? s : { ...s, input: undefined }, STEP_KEYS));
         writeFileSync(path.join(dir, "manifest.json"), JSON.stringify({ ...pick(m, MANIFEST_KEYS), steps }) + "\n");
         const task = JSON.parse(readFileSync(path.join(from, t, "task.json"), "utf8"));
         writeFileSync(path.join(dir, "task.json"), JSON.stringify({ task: { id: task.task?.id, topics: task.task?.topics, objective: task.task?.objective ?? null, observations: task.task?.observations ?? null, requestedBy: task.task?.requestedBy ?? null } }) + "\n");

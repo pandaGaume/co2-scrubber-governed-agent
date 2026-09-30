@@ -58,7 +58,7 @@ describe("the harness's graph, rebuilt from a workshop's manifests", () => {
         assert.equal(g.in(model, H.ranBy).length, 3);
         const { case: request, ...bag } = g.get("task:t-2026-09-30-0001")!.bag as Record<string, unknown>;
         assert.match(String(request), /^[0-9a-f]{12}$/);
-        assert.deepEqual(bag, { taskId: "t-2026-09-30-0001", topic: "procedure", state: "proposed", startedAt: "2026-09-30T10:00:00Z", ended: "contract held", intent: "procedure: ?", requestedBy: null, profile: null, steps: 3, inputTokens: 12000, outputTokens: 4400 });
+        assert.deepEqual(bag, { taskId: "t-2026-09-30-0001", topic: "procedure", state: "proposed", startedAt: "2026-09-30T10:00:00Z", ended: "contract held", intent: "procedure: ?", requestedBy: null, profile: null, version: { commit: "abc1234", where: "repository" }, steps: 3, inputTokens: 12000, outputTokens: 4400 });
     });
 
     it("one form of failure, refused three times and answered three times by the same correction", () => {

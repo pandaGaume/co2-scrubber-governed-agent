@@ -10,7 +10,8 @@ node scripts/evaluator/corpus.mjs exp-learn exp-control exp3-baseline exp4-sonne
 
 Nothing is rewritten, fields are only dropped:
 
-- **manifests:** step summaries are dropped, and so are the inputs of every capability no guard judged;
+- **manifests:** step summaries are dropped, and so are the long inputs of every capability no guard judged (a read keeps its document: what the register asks a task read before submitting);
+- **memory:** a fork's `memory/<topic>.json` is copied as it is (D6 reads its entries);
 - **task files:** only who asked, the objective and the observations are kept;
 - **traces:** only the lines the graph reads are kept (a refused call's stop reason, and the memory's entries a state held);
 - **inherited tasks:** a task a fork inherited from its parent is copied once, under the first fork that holds it.

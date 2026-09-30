@@ -1,0 +1,35 @@
+{
+  "domain": "procedure_authoring",
+  "topic": "procedure",
+  "entries": [
+    {
+      "id": "m-e26243b3d5",
+      "kind": "constraint",
+      "rule": "In the justification of each safety constant, cite as reference only the bare id of the single signed fact that bounds it (test.speedFloorPercent for every speed field, test.co2AbortCeilingPpm for the CO2 limit), never a second fact, a datasheet, a comparison sign or a value in the same reference.",
+      "appliesTo": [
+        "procedure.submit",
+        "procedure.revise"
+      ],
+      "status": "consolidated",
+      "confidence": {
+        "rate": 1,
+        "tasks": 3
+      },
+      "evidence": {
+        "failures": [
+          "t-2026-09-29-0001#procedure",
+          "t-2026-09-29-0002#procedure"
+        ],
+        "successes": [
+          "t-2026-09-29-0001#procedure",
+          "t-2026-09-29-0002#procedure"
+        ]
+      },
+      "judgedOn": [
+        "first-try-shape:procedure:33231b945eef"
+      ],
+      "since": "2026-09-29T20:52:29.753Z",
+      "ledger": 1
+    }
+  ]
+}

@@ -94,6 +94,9 @@
   .pill.regression { color: var(--red); }
   .pill.improvement { color: var(--green); }
   .pill.model-error { color: var(--muted); }
+  .pill.learned-policy { color: #9fb8ff; }
+  .pill.stated-not-followed { color: #d9a5ff; }
+  .pill.domain-knowledge { color: var(--teal-soft); }
   .tag { font-size: 10px; letter-spacing: 0.1em; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; }
 
   section.detail { min-height: 0; overflow-y: auto; padding: 18px 24px 40px; }
@@ -160,8 +163,11 @@ const forksArg = () => (chosen().length ? { forks: chosen() } : {});
 const CLASSES = [
     ["regression", "Regressions: a form that came with a change of the harness"],
     ["harness-artefact", "Artefacts of the harness"],
-    ["contract-gap", "Gaps of the contract"],
-    ["contract-gap-or-policy", "Learned by being refused: a gap or a policy, D1 settles it"],
+    ["contract-gap", "Gaps of the contract: a rule no text the tasks were given stated"],
+    ["contract-gap-or-policy", "Learned by being refused: a gap or a policy, not settled"],
+    ["stated-not-followed", "Stated, read, and refused all the same"],
+    ["learned-policy", "Policies learned: the rule was stated"],
+    ["domain-knowledge", "Knowledge of the domain"],
     ["improvement", "Improvements: a form a change of the harness took away"],
     ["model-error", "A model's own mistakes: counted, nothing to recommend"],
 ];
@@ -194,7 +200,7 @@ function renderList() {
     const unclassified = evaluation?.unclassified ?? [];
     $("list").innerHTML =
         groups.map(([title, xs]) => `<h2>${esc(title)}</h2>${xs.map(row).join("")}`).join("") +
-        (unclassified.length ? `<h2>Forms no detector of this stage classes (for D1)</h2>${unclassified.map((u) => `<button class="finding" type="button" data-node="${esc(u.form)}"><div class="t">${esc(u.shape)}</div><div class="meta"><span class="tag">${u.tasks} task(s)</span></div></button>`).join("")}` : "") ||
+        (unclassified.length ? `<h2>Forms no detector classes</h2>${unclassified.map((u) => `<button class="finding" type="button" data-node="${esc(u.form)}"><div class="t">${esc(u.shape)}</div><div class="meta"><span class="tag">${u.tasks} task(s)</span>${(u.rules ?? []).map((c) => `<span class="tag">${esc(c)}</span>`).join("")}${(u.tasksTold ?? []).map((t) => `<span class="tag">${esc(t.requestedBy ?? t.task)}: ${t.missing.length ? `not told ${esc(t.missing.join(", "))}` : "told"}</span>`).join("")}</div></button>`).join("")}` : "") ||
         `<div class="empty">Nothing found in these tasks.</div>`;
     $("list").onclick = (ev) => {
         const b = ev.target.closest("button");

@@ -1,0 +1,261 @@
+{
+    "note": "The register of the procedure guard's rules (2026-09-30, docs/evaluateur.fr.md, E2): each check the guard makes, by a stable code, how its refusal is recognised (match: patterns over one problem of the refusal, kind included, which read the manifests of before as of now; the model reads nothing new), the texts of the contract that state it to the model before it submits (states), the conventions it assumes (applies), and its status: stated (a statement says it, checked by its phrase), tacit (intended: the model cannot act on it, or it goes without saying), gap (stated nowhere before a refusal, found by the register, awaiting a person's decision). The rules of the signed document (format.json rulesDocument) keep the document's ids and are recognised by their own words (says); what states them is written here, with the patterns of the words the guard used before the rules were the document's (older, 2026-09-28), each with an example. A statement is a file of the contract at the version a task ran under (git at its commit, the words file from the workshop's store), a JSON Pointer into it when it is JSON, and a phrase it must hold; or a library document, stated to a task only if it read it (library.read) before its first submission. tests/rules-register.test.ts holds this file to the contract as it is now. Never adaptable by the reflection.",
+    "topic": "procedure",
+    "conventions": {
+        "path-keys": {
+            "note": "a path names a list's element by the key format.json gives the list (steps by n, abort conditions by id), never by its position",
+            "states": [
+                { "file": "specs/procedure/procedure.schema.json", "pointer": "/properties/steps/items/properties/n/description", "phrase": "A path names a step by it, never by its position in the list" },
+                { "file": "specs/procedure/procedure.schema.json", "pointer": "/properties/abort/items/properties/id/description", "phrase": "A path names a condition by it, never by its position in the list" },
+                { "file": "specs/procedure/words.json", "pointer": "/brief/safetyBounds", "phrase": "a path names a step by its n and an abort condition by its id" }
+            ]
+        }
+    },
+    "signed": {
+        "floor.own": { "states": [{ "library": "commissioning-test-safety", "phrase": "every step's `speedPercent` are at or above `test.speedFloorPercent`" }] },
+        "floor.stop": { "states": [{ "library": "commissioning-test-safety", "phrase": "never stops it" }], "older": ["^floor: step \\d+ stops the scrubber"], "examples": ["floor: step 1 stops the scrubber: a test never stops the only scrubber of a volume, it does not restart at once"] },
+        "floor.step": { "states": [{ "library": "commissioning-test-safety", "phrase": "every step's `speedPercent` are at or above `test.speedFloorPercent`" }], "older": ["^floor: step \\d+ commands .*, below the floor of"], "examples": ["floor: step 1 commands 20 %, below the floor of 30 %"] },
+        "floor.stepOwn": { "states": [{ "file": "specs/procedure/procedure.schema.json", "pointer": "/properties/limits/description", "phrase": "The bounds the test stays within" }], "older": ["^floor: step \\d+ commands .*, below the procedure's own minimum"], "examples": ["floor: step 2 commands 25 %, below the procedure's own minimum of 30 %"] },
+        "bounds.fullSpeed": { "status": "tacit", "note": "a speed in percent is at most 100" },
+        "bounds.abortCeiling": { "states": [{ "library": "commissioning-test-safety", "phrase": "are at or below `test.co2AbortCeilingPpm`" }], "older": ["^bounds: the CO2 abort limit .* is above the ceiling"], "examples": ["bounds: the CO2 abort limit 3500 ppm is above the ceiling of 3200 ppm"] },
+        "bounds.maxBelowAbort": { "states": [{ "library": "commissioning-test-safety", "phrase": "and its `limits.co2MaxPpm` under it" }], "older": ["^bounds: the CO2 maximum .* is not below the abort limit"], "examples": ["bounds: the CO2 maximum 3000 ppm is not below the abort limit 3000 ppm"] },
+        "start.abort": { "states": [{ "library": "commissioning-test-safety", "phrase": "above the CO2 measured at the start" }] },
+        "start.headroom": { "states": [{ "library": "commissioning-test-safety", "phrase": "at least `test.startHeadroomPpm` above the CO2 measured at the start" }] },
+        "duration.step": { "status": "tacit", "note": "a step lasts: a duration of zero is no step" },
+        "duration.ceiling": { "states": [{ "library": "commissioning-test-safety", "phrase": "`limits.maxMinutes` is at or below `test.maxMinutesCeiling`" }], "older": ["^duration: the maximum duration .* is above the ceiling"], "examples": ["duration: the maximum duration 120 min is above the ceiling of 60 min"] },
+        "duration.total": { "states": [{ "file": "specs/procedure/procedure.schema.json", "pointer": "/properties/limits/description", "phrase": "The bounds the test stays within" }], "older": ["^duration: the steps last .* more than the procedure's maximum"], "examples": ["duration: the steps last 145 min, more than the procedure's maximum of 120 min"] },
+        "abort.required": { "status": "gap", "note": "which conditions every test must stop on (its CO2, a refused command) is said nowhere before the refusal: the schema says an abort is read by the executor, not which ones are owed", "older": ["^abort: no \"(co2|refused)\" abort condition", "^abort: no abort condition with id \"(co2|refused)\""], "examples": ["abort: no \"co2\" abort condition", "abort: no abort condition with id \"refused\" (scrubber.motor.set_speed: the device refused a step's command)"] },
+        "abort.readable": { "states": [{ "file": "specs/procedure/procedure.schema.json", "pointer": "/properties/abort/description", "phrase": "A condition that cannot be read stops the test" }] },
+        "abort.battery": { "states": [{ "library": "commissioning-test-safety", "phrase": "A battery abort's `threshold` is at or above" }] },
+        "expected": {
+            "states": [
+                { "file": "specs/procedure/procedure.schema.json", "pointer": "/properties/expected/description", "phrase": "written before it runs" },
+                { "library": "method-concentration-decay", "phrase": "the predictions" }
+            ]
+        },
+        "monitoring.occupied": { "status": "gap", "note": "that an occupied volume names every occupant in monitoring.subjects and stops on their vitals is said nowhere before the refusal: the prompt says only that the station watches the subjects a procedure names", "older": ["^monitoring: \\S+ is occupied and no abort condition reads", "^monitoring: \\S+ is occupied \\(\\d+\\) and the procedure asks for no monitoring", "^monitoring: \\S+ is occupied and .* would not be monitored"], "examples": ["monitoring: lab is occupied and no abort condition reads biomed.verdict", "monitoring: lab is occupied (2) and the procedure asks for no monitoring of its occupants (its \"monitoring\" names no subject)", "monitoring: lab is occupied and FE-1, FE-2 would not be monitored"] },
+        "monitoring.occupied.unread": { "states": [{ "file": "specs/procedure/words.json", "pointer": "/openQuestions/presence", "phrase": "a procedure on a volume whose occupancy was not read is refused" }] },
+        "monitoring.occupied.blocked": { "status": "tacit", "note": "a person under a critical health alarm: the model cannot change it, the refusal says to wait" },
+        "monitoring.bandMin": { "states": [{ "library": "commissioning-test-safety", "phrase": "A monitoring band's `minBpm` is at or above" }] },
+        "monitoring.bandMax": { "states": [{ "library": "commissioning-test-safety", "phrase": "its `maxBpm` at or below" }] },
+        "shape.place": { "states": [{ "file": "specs/procedure/procedure.schema.json", "pointer": "/properties/volume/description", "phrase": "ISA-95 path of the volume under test" }] },
+        "shape.device": { "states": [{ "file": "specs/procedure/procedure.schema.json", "pointer": "/properties/device/description", "phrase": "ISA-95 path of the device the steps command" }] },
+        "shape.limits": { "states": [{ "file": "specs/procedure/prompt.md", "phrase": "`limits.co2MaxPpm`, `limits.co2AbortPpm`, `limits.minSpeedPercent`, `limits.maxMinutes`" }] },
+        "shape.steps": { "states": [{ "file": "specs/procedure/procedure.schema.json", "pointer": "/properties/steps/items/required", "phrase": "speedPercent" }] }
+    },
+    "rules": [
+        {
+            "code": "SAFETY_UNJUSTIFIED",
+            "match": ["^justification: \\S+ = .+ is a safety constant with no justification"],
+            "example": "justification: steps.2.speedPercent = 100 is a safety constant with no justification (a justification names it by its path, constant \"steps.2.speedPercent\"): cite the fact of a signed library document it respects (source \"library\", the fact's id as reference)",
+            "states": [{ "file": "specs/procedure/words.json", "pointer": "/brief/procedure", "phrase": "cite a fact of a library document a person signed" }],
+            "applies": ["path-keys"]
+        },
+        {
+            "code": "SAFETY_SOURCE_NOT_LIBRARY",
+            "match": ["^justification: \\S+ = .+ is a safety constant: it is justified by a fact of a signed library document, not by"],
+            "example": "justification: limits.maxMinutes = 45 is a safety constant: it is justified by a fact of a signed library document, not by a calculation (steps total)",
+            "states": [{ "file": "specs/procedure/words.json", "pointer": "/brief/procedure", "phrase": "cite a fact of a library document a person signed" }]
+        },
+        {
+            "code": "INVALID_REFERENCE_CARDINALITY",
+            "match": ["^justification: \\S+: \".*\" names \\d+ facts of the library"],
+            "example": "justification: steps.2.speedPercent: \"test.speedFloorPercent; scrubber.effectiveFlowAtFull\" names 2 facts of the library (test.speedFloorPercent, scrubber.effectiveFlowAtFull), not one (INVALID_REFERENCE_CARDINALITY): a reference is exactly one signed library fact, by its id",
+            "states": [
+                { "file": "specs/procedure/words.json", "pointer": "/brief/safetyBounds", "phrase": "which is the single fact to cite, by its id alone as the reference" },
+                { "file": "harness/core/justify.ts", "phrase": "Exactly one: for library, one id as library.facts lists it" }
+            ]
+        },
+        {
+            "code": "REFERENCE_NOT_A_FACT",
+            "match": ["^justification: \\S+: \".*\" is not a fact of the library"],
+            "example": "justification: steps.2.speedPercent: \"test.speedFloorPercent; scrubber.effectiveFlowAtFull 1 m3/min\" is not a fact of the library (a safety constant cites a fact by its id, as library.facts lists them)",
+            "states": [
+                { "file": "specs/procedure/words.json", "pointer": "/brief/safetyBounds", "phrase": "which is the single fact to cite, by its id alone as the reference" },
+                { "file": "harness/core/justify.ts", "phrase": "Exactly one: for library, one id as library.facts lists it" }
+            ],
+            "note": "the safety card says to cite \"the fact's id as its reference\", which a model read as allowing two ids joined; what the guard accepts, one id and nothing else, is stated by these two since 287f5bc"
+        },
+        {
+            "code": "FACT_NOT_BOUNDING",
+            "match": ["^justification: \\S+ = .+ cites \\S+ .*which the signed rules do not bound it by"],
+            "example": "justification: limits.co2MaxPpm = 2500 cites habitat.co2.elevatedPpm (3500 ppm), which the signed rules do not bound it by",
+            "states": [{ "file": "specs/procedure/words.json", "pointer": "/brief/safetyBounds", "phrase": "the fact its signed rules bound it by" }]
+        },
+        {
+            "code": "FACT_UNSIGNED",
+            "match": ["^justification: \\S+: the fact \\S+ is in \".*\", which no person has signed as valid"],
+            "example": "justification: steps.1.speedPercent: the fact scrubber.minimumSpeedElevated is in \"scrubber-1-datasheet\", which no person has signed as valid: cite instead a fact of a signed document that bounds this constant",
+            "states": [{ "file": "specs/procedure/words.json", "pointer": "/brief/procedure", "phrase": "library.facts says which are signed" }]
+        },
+        {
+            "code": "FACT_CHANGED_SINCE_SIGNED",
+            "match": ["^justification: \\S+: \".*\" was signed by .* and has changed since"],
+            "example": "justification: limits.co2AbortPpm: \"commissioning-test-safety\" was signed by A. Person and has changed since",
+            "status": "tacit",
+            "note": "a document changed after its signature: only a person can sign it again, the model cannot act on it"
+        },
+        {
+            "code": "FACT_NOT_RESPECTED",
+            "match": ["^justification: \\S+ = .+ does not respect \\S+ = "],
+            "example": "justification: limits.co2AbortPpm = 3500 does not respect test.co2AbortCeilingPpm = 3200 ppm (at or below)",
+            "states": [
+                { "file": "specs/procedure/words.json", "pointer": "/brief/procedure", "phrase": "and respect it" },
+                { "file": "specs/procedure/words.json", "pointer": "/brief/safetyBounds", "phrase": "and on which side" }
+            ]
+        },
+        {
+            "code": "CONSTANT_UNJUSTIFIED",
+            "match": ["^justification: \\S+ = .+ has no justification"],
+            "example": "justification: steps.2.minutes = 30 has no justification (a justification names it by its path, constant \"steps.2.minutes\"): say its source and why",
+            "states": [{ "file": "specs/procedure/words.json", "pointer": "/brief/procedure", "phrase": "Every constant you set is justified in justifications" }],
+            "applies": ["path-keys"]
+        },
+        {
+            "code": "JUSTIFIED_VALUE_MISMATCH",
+            "match": ["^justification: \\S+: the justification says .+, what you sent sets "],
+            "example": "justification: steps.1.minutes: the justification says 30, what you sent sets 25",
+            "states": [{ "file": "harness/core/justify.ts", "phrase": "its value (a number, or [min, max] for bounds)" }]
+        },
+        {
+            "code": "JUSTIFICATION_NO_REASON",
+            "match": ["^justification: \\S+: the justification gives no reason"],
+            "example": "justification: steps.1.minutes: the justification gives no reason",
+            "states": [{ "file": "harness/core/justify.ts", "phrase": "Why, in a few words" }]
+        },
+        {
+            "code": "LIBRARY_REF_NOT_READ",
+            "match": ["^justification: \\S+: \".*\" is not a library document or fact read in this task"],
+            "example": "justification: steps.1.minutes: \"co2-scrubbers\" is not a library document or fact read in this task (method-concentration-decay): read it, or cite another source",
+            "states": [{ "file": "specs/procedure/words.json", "pointer": "/brief/procedure", "phrase": "cite what you read" }]
+        },
+        {
+            "code": "WEB_REF_NOT_RETURNED",
+            "match": ["^justification: \\S+: \".*\" is not a page a web search returned in this task"],
+            "example": "justification: steps.1.minutes: \"https://example.org\" is not a page a web search returned in this task: search, and cite a URL it returned",
+            "states": [{ "file": "harness/core/justify.ts", "phrase": "web: a URL a search returned" }]
+        },
+        {
+            "code": "NO_MEASUREMENT",
+            "match": ["^justification: \\S+: the task gives no measurement to cite"],
+            "example": "justification: steps.1.minutes: the task gives no measurement to cite",
+            "states": [{ "file": "harness/core/justify.ts", "phrase": "measured: what the task observed" }]
+        },
+        {
+            "code": "NOT_AN_ENVELOPE_BOUND",
+            "match": ["^justification: \\S+: \".*\" is not a bound of the guard's envelope"],
+            "example": "justification: steps.1.minutes: \"maxMinutes\" is not a bound of the guard's envelope (this factory has none)",
+            "states": [{ "file": "harness/core/justify.ts", "phrase": "envelope: a bound of the guard's envelope" }]
+        },
+        {
+            "code": "DERIVED_WITHOUT_FORMULA",
+            "match": ["^justification: \\S+: a derived value gives its formula as the reference"],
+            "example": "justification: steps.1.minutes: a derived value gives its formula as the reference",
+            "states": [{ "file": "harness/core/justify.ts", "phrase": "derived: the formula" }]
+        },
+        {
+            "code": "UNKNOWN_SOURCE",
+            "match": ["^justification: \\S+: source \".*\" is not one of"],
+            "example": "justification: steps.1.minutes: source \"datasheet\" is not one of library, web, measured, envelope, derived, assumed",
+            "states": [{ "file": "harness/core/justify.ts", "phrase": "library: a document or fact id read in this task" }]
+        },
+        {
+            "code": "INVALID_ID",
+            "match": ["^shape: id \".*\" must be lower case letters, digits and dashes"],
+            "example": "shape: id \"Decay_01\" must be lower case letters, digits and dashes (it names the file)",
+            "status": "gap",
+            "note": "the schema gives an example of an id (decay-2026-10-14-01), not the rule its characters follow"
+        },
+        {
+            "code": "ANALYSIS_NOT_APPLIED",
+            "match": ["^analysis: the analysis says .* changes"],
+            "example": "analysis: the analysis says steps.2.minutes changes (to 35), and the new procedure keeps it as it was (30): the prevention is not in the test",
+            "states": [
+                { "file": "specs/procedure/words.json", "pointer": "/capabilities/analyse", "phrase": "the new procedure must make these changes" },
+                { "file": "specs/procedure/words.json", "pointer": "/brief/analysed", "phrase": "the procedure must change what it names" }
+            ],
+            "applies": ["path-keys"]
+        },
+        {
+            "code": "UNKNOWN_UNIT",
+            "match": ["^shape: quantity \".*\": no unit"],
+            "example": "shape: quantity \"scrubber_speed_command\": no unit \"percent\" for Speed",
+            "states": [{ "file": "specs/procedure/procedure.schema.json", "pointer": "/properties/quantities/description", "phrase": "the quantity and the unit its register declares" }]
+        },
+        {
+            "code": "UNKNOWN_QUANTITY",
+            "match": ["^shape: quantity \".*\": no quantity"],
+            "example": "shape: quantity \"co2\": no quantity \"CO2Concentration\" in the unit system (Timespan, Temperature)",
+            "states": [{ "file": "specs/procedure/procedure.schema.json", "pointer": "/properties/quantities/description", "phrase": "each a quantity of the unit system with one of its units" }]
+        },
+        {
+            "code": "AMBIGUOUS_UNIT",
+            "match": ["^shape: quantity \".*\": \".*\" is a unit of .* and of"],
+            "example": "shape: quantity \"t\": \"min\" is a unit of Timespan and of Angle: say the quantity (AMBIGUOUS_UNIT)",
+            "states": [{ "file": "specs/procedure/procedure.schema.json", "pointer": "/properties/quantities/items/properties/quantity/description", "phrase": "a quantity of the unit system" }]
+        },
+        {
+            "code": "RULES_UNREADABLE",
+            "match": ["^rules: the guard's rules \\(.*\\) could not be read"],
+            "example": "rules: the guard's rules (commissioning-test-safety) could not be read: no proposal is judged without them",
+            "status": "tacit",
+            "note": "the harness's own state: the model cannot act on it"
+        },
+        {
+            "code": "RULES_UNSIGNED",
+            "match": ["^rules: the guard's rules are in \".*\", which no person has signed as valid"],
+            "example": "rules: the guard's rules are in \"commissioning-test-safety\", which no person has signed as valid: no proposal is judged by rules nobody signed",
+            "status": "tacit",
+            "note": "a person's signature: the model cannot act on it"
+        },
+        {
+            "code": "RULE_FACT_MISSING",
+            "match": ["^shape: rule \\S+ cites the fact \\S+, which the library does not hold"],
+            "example": "shape: rule floor.step cites the fact test.speedFloorPercent, which the library does not hold",
+            "status": "tacit",
+            "note": "the rules document's own fault, not the model's"
+        },
+        {
+            "code": "ANALYSIS_OWED",
+            "match": ["^the last test of this commissioning was aborted .*: analyse why with procedure\\.analyse before submitting"],
+            "example": "the last test of this commissioning was aborted (co2 above 3200 ppm): analyse why with procedure.analyse before submitting a new procedure",
+            "states": [{ "file": "specs/procedure/words.json", "pointer": "/brief/analysis", "phrase": "Before any new procedure, analyse it with procedure.analyse" }]
+        },
+        {
+            "code": "ALREADY_ACCEPTED",
+            "match": ["^the procedure is already accepted"],
+            "example": "the procedure is already accepted (procedures/decay-01.json): nothing more to revise or submit; end with task.done, procedures/decay-01.json as the artifact",
+            "states": [{ "file": "specs/procedure/words.json", "pointer": "/brief/handOver", "phrase": "End with task.done" }]
+        },
+        {
+            "code": "PLAN_NEEDS_READS",
+            "match": ["^the plan needs "],
+            "example": "the plan needs methodRead: find the method that measures the missing quantity (library.methods) and read its card (library.read)",
+            "states": [{ "file": "specs/procedure/words.json", "pointer": "/brief/methodFind", "phrase": "read the card of the one you choose" }]
+        },
+        {
+            "code": "NO_DRAFT",
+            "match": ["^no procedure is kept to revise"],
+            "example": "no procedure is kept to revise (none checked yet in this task, or kept longer than 10 minutes): submit the whole procedure with procedure.submit",
+            "states": [{ "file": "specs/procedure/words.json", "pointer": "/capabilities/revise", "phrase": "When nothing is kept" }]
+        },
+        {
+            "code": "NOTHING_TO_ANALYSE",
+            "match": ["^no test of this commissioning was aborted: there is nothing to analyse"],
+            "example": "no test of this commissioning was aborted: there is nothing to analyse",
+            "states": [{ "file": "specs/procedure/words.json", "pointer": "/capabilities/analyse", "phrase": "Analyse why the last test was aborted" }]
+        },
+        {
+            "code": "CAUSE_NOT_NAMED",
+            "match": ["^the cause does not say what stopped the test"],
+            "example": "the cause does not say what stopped the test: it names co2, from the abort (co2 above 3200 ppm)",
+            "states": [{ "file": "specs/procedure/words.json", "pointer": "/capabilities/analyse", "phrase": "the cause" }]
+        },
+        {
+            "code": "CHANGE_NOT_A_FIELD",
+            "match": ["^change \\d+: \".*\" is not a field of the procedure"],
+            "example": "change 1: \"steps[1].minutes\" is not a field of the procedure (its fields: id, method, steps)",
+            "states": [{ "file": "specs/procedure/words.json", "pointer": "/capabilities/analyse", "phrase": "each a field of the procedure" }]
+        }
+    ]
+}

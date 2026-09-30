@@ -54,6 +54,7 @@ import { answeredByMemory, enterCandidate, judgeTrials, memoryConfig, memoryProb
 import { guardWordsOf, workingMemory } from "../../lib/working-memory.js";
 import { HarnessGraph } from "../../lib/harness-graph.js";
 import { evaluate } from "../../lib/evaluator.js";
+import { loadRegister } from "../../lib/rules-register.js";
 import { TOPIC_DEFINITIONS } from "../../harness/core/runner.js";
 import type { Episode } from "../../harness/core/episodes.js";
 import { forkPath, listForks, readFork, snapshotAt } from "../../lib/fork.js";
@@ -538,7 +539,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
         const readings = Object.fromEntries(
             Object.entries(TOPIC_DEFINITIONS)
                 .filter(([, d]) => d?.judges)
-                .map(([t, d]) => [t, { judges: d!.judges!, digest: d!.digest, guardWords: d!.words ? guardWordsOf(fromRoot(...d!.words.words.file.split("/"))) : undefined }]),
+                .map(([t, d]) => [t, { judges: d!.judges!, digest: d!.digest, guardWords: d!.words ? guardWordsOf(fromRoot(...d!.words.words.file.split("/"))) : undefined, register: loadRegister(t) }]),
         );
         const ids = Array.isArray(forks) ? forks.filter((f): f is string => typeof f === "string" && f.length > 0) : [];
         if (!ids.length) return new HarnessGraph(WORKSHOP_ROOT, readings);

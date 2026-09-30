@@ -224,4 +224,58 @@ Les limites d'E1 :
 - Les réglages du modèle (sa limite de sortie) ne sont pas dans le manifeste d'une usine. On ne les retrouve que par git, pour les runs d'avant E0.
 - Une même forme peut couvrir deux causes. « L'analyse dit que * change » réunit v4 (erreur du modèle) et v9 (la convention de chemin). E1 la laisse non classée ; la convention du registre (E2) les séparera.
 
-E0 à E2 suffisent à retrouver les huit cas sans modèle. E3 et E4 ferment la boucle que nous avons faite à la main pendant deux jours. Plus tard, les mêmes nœuds accueilleront la connaissance du domaine (le comportement de l'épurateur, les causes d'abort, les écarts du jumeau), reliée aux faits signés et aux paramètres du jumeau.
+## E2, fait (2026-09-30)
+
+**Le registre des règles du guard** est dans `specs/procedure/rules.contract.json` (et le code qui le lit, dans `lib/rules-register.ts`). Chaque vérification y a :
+
+- **un code stable.** Les règles du document signé gardent leur identifiant (`floor.stop`, `bounds.abortCeiling`…) et sont reconnues à leurs propres mots ; les vérifications écrites dans le code reçoivent un code (`REFERENCE_NOT_A_FACT`, `SAFETY_UNJUSTIFIED`, `UNKNOWN_UNIT`…) ;
+- **un motif qui reconnaît son refus.** Aucun code n'a été ajouté au texte des refus : ce que lisent les modèles ne change pas, ce qui évite de reproduire l'amorçage de `/steps/0`, et les vieux manifestes sont lus comme les nouveaux ;
+- **les énoncés qui la disent.** Un énoncé est un fichier du contrat (avec un pointeur JSON quand c'est du JSON) et une phrase qu'il doit contenir, ou un document de la bibliothèque ;
+- **les conventions qu'elle suppose.** Par exemple `path-keys` : un élément de liste se nomme par sa clé ;
+- **un statut.** Une règle est *énoncée*, *tacite* (voulue : le modèle n'y peut rien, ou cela va de soi), ou *lacune* (dite nulle part avant un refus, en attente d'une décision).
+
+**Le test de conformité** est `tests/rules-register.test.ts`. Il vérifie que :
+
+- chaque énoncé contient aujourd'hui sa phrase ;
+- chaque règle du document signé est dans le registre ;
+- l'exemple de chaque code n'est reconnu que par ce code ;
+- chacun des 66 problèmes de refus du corpus est reconnu par un code et un seul.
+
+Les refus du 28 septembre, rédigés avant que les règles passent dans le document signé, sont reconnus par des motifs anciens, chacun avec son exemple. Les 671 problèmes de l'atelier du dépôt sont ainsi tous reconnus par un code unique.
+
+**Qu'une tâche ait lu un énoncé** se juge sur le texte de la version sous laquelle elle a tourné :
+
+- les mots conservés dans le stockage de l'atelier, sinon git au commit du fork ou du dépôt ;
+- pour un document de la bibliothèque, le fait qu'elle l'a lu (`library.read`) avant sa première soumission ;
+- pour les manifestes d'avant E0 hors d'un fork, la version n'est pas connue, et l'évaluateur le dit au lieu de deviner.
+
+**Les nouveaux détecteurs :**
+
+- **D1** : une règle refusée au premier essai de plusieurs tâches dont aucun texte ne l'énonçait (lacune de contrat, avec ce qui l'énonce depuis). Il signale aussi une règle énoncée, lue, et refusée quand même (`stated-not-followed`).
+- **D6** : ce qu'est une entrée de mémoire, d'après les règles des refus sur lesquels elle repose. Une règle non énoncée donne une lacune de contrat compensée ; une règle énoncée, une politique apprise ; aucune règle, de la connaissance du domaine.
+- **Les classes qu'E1 laissait ouvertes** sont maintenant tranchées : D2 (lacune ou politique), D3 (quel texte), D8 (erreur du modèle confirmée ou non).
+
+**Les lacunes que le registre fait apparaître**, dites nulle part avant un refus :
+
+- les conditions d'arrêt obligatoires (`abort.required` : le CO2 et une commande refusée) ;
+- la surveillance d'un volume occupé (`monitoring.occupied` : nommer chaque occupant et s'arrêter sur ses signes vitaux) ;
+- la forme de l'identifiant d'une procédure (`INVALID_ID`).
+
+Elles attendent la décision d'une personne (E3).
+
+**Les huit cas, avec E2 :**
+
+| Cas | E2 |
+|---|---|
+| Troncature à 4096 | inchangé (D4, D5) |
+| Référence composite | `REFERENCE_NOT_A_FACT` refusée au premier essai de 23 tâches dont aucun texte ne disait « un seul identifiant » ; énoncé depuis par `words.json` et le schéma de `justify.ts` (D1) ; D3 : dit à aucun des deux modèles |
+| `Speed` en percent | `UNKNOWN_UNIT` au premier essai de 3 tâches dont le schéma ne disait pas que la grandeur d'une propriété est celle du registre ; énoncé depuis (D1) |
+| Boucle de lecture | inchangé (D4) |
+| Historique fictif | toujours non vu |
+| `steps.0` (GPT) | la règle de justification était dite, pas la convention de chemin qu'elle suppose : lacune de contrat (D1, D2) |
+| `/steps/0/reason` | inchangé (D5, reconstitué) |
+| v4 | erreur du modèle confirmée : la règle était dite et lue. La forme partagée avec v9 se sépare tâche par tâche : v9 n'avait pas reçu la convention de chemin, v4 avait reçu tout |
+
+**D6 sur l'entrée apprise par Sonnet** : elle compense `REFERENCE_NOT_A_FACT`, qu'aucun texte reçu par ses échecs n'énonçait. C'est une lacune du contrat, apprise au lieu d'être écrite, et devenue redondante depuis que le contrat l'énonce.
+
+E0 à E2 suffisent à retrouver sans modèle les huit cas, sauf l'historique fictif. E3 et E4 ferment la boucle que nous avons faite à la main pendant deux jours. Plus tard, les mêmes nœuds accueilleront la connaissance du domaine (le comportement de l'épurateur, les causes d'abort, les écarts du jumeau), reliée aux faits signés et aux paramètres du jumeau.

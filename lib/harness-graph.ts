@@ -26,6 +26,8 @@ import { fromRoot } from "./paths.js";
 import { cutSteps, episodesOf, type EpisodeReading } from "./working-memory.js";
 import { shapesOf } from "./reflection.js";
 import { outcomeOf, type AttemptOutcome, type StepLike } from "../harness/core/episodes.js";
+import { codesOf, stated, statementKey, type Register, type Statement, type TextVersion } from "./rules-register.js";
+import { readMemory } from "./memory.js";
 
 export const HARNESS_GRAPH_FILE = "specs/harness/graph.json";
 
@@ -42,6 +44,9 @@ export const H = {
     fingerprint: "harness.fingerprint",
     statement: "harness.statement",
     finding: "harness.finding",
+    rule: "harness.rule",
+    convention: "harness.convention",
+    memoryEntry: "harness.memory-entry",
     link: "harness.link",
     of: "harness.of",
     calls: "harness.calls",
@@ -54,7 +59,13 @@ export const H = {
     after: "harness.after",
     changed: "harness.changed",
     about: "harness.about",
+    states: "harness.states",
+    applies: "harness.applies",
+    restsOn: "harness.rests-on",
 } as const;
+
+/** How a topic's tasks are read: their episodes, and the register of its guard's rules when it has one (E2). */
+export type HarnessReading = EpisodeReading & { register?: Register | null };
 
 type Bag = Record<string, unknown>;
 export type HarnessNode = GraphNode<Bag>;
@@ -145,11 +156,39 @@ export class HarnessGraph {
     private readonly links: HarnessLink[] = [];
 
     /** Built from the tasks of a workshop (or of several), for the topics given with how their episodes are read (their judges and digest). */
-    constructor(workshops: string | Workshop[], readings: Record<string, EpisodeReading>) {
+    constructor(workshops: string | Workshop[], readings: Record<string, HarnessReading>) {
         registerOntology();
         const list: Workshop[] = typeof workshops === "string" ? [{ name: "", dir: workshops }] : workshops;
         const fingerprints: Array<{ node: HarnessNode; first: string; slots: Map<string, string> }> = [];
-        const seen = new Set<string>();
+        // A task by its id and start, and by the workshop that holds it (a fork's inherited tasks too): what a memory's evidence names.
+        const seen = new Map<string, string>();
+        const aliases = new Map<string, string>();
+        // The register of each topic's rules (E2): its rules, the conventions they assume, and the texts of the contract that state them.
+        const contract = new Map<string, Array<{ stmt: Statement; node: HarnessNode }>>();
+        for (const [topic, reading] of Object.entries(readings)) {
+            const register = reading.register;
+            if (!register) continue;
+            const stmts: Array<{ stmt: Statement; node: HarnessNode }> = [];
+            const stmtNode = (s: Statement): HarnessNode => {
+                const n = this.node(`statement:contract:${shortSha(statementKey(s))}`, H.statement, { kind: "contract", ...(s.library ? { library: s.library } : { file: s.file }), ...(s.pointer ? { pointer: s.pointer } : {}), phrase: s.phrase });
+                if (!stmts.some((x) => x.node === n)) stmts.push({ stmt: s, node: n });
+                return n;
+            };
+            for (const [name, c] of Object.entries(register.conventions)) {
+                const cn = this.node(`convention:${topic}:${name}`, H.convention, { topic, name, note: c.note ?? null });
+                for (const s of c.states) this.link(stmtNode(s), cn, H.states);
+            }
+            for (const r of register.rules) {
+                const rn = this.node(`rule:${topic}:${r.code}`, H.rule, { topic, code: r.code, status: r.status, signed: r.signed, ...(r.kind ? { kind: r.kind } : {}), ...(r.note ? { note: r.note } : {}) });
+                for (const s of r.states) this.link(stmtNode(s), rn, H.states);
+                for (const c of r.applies) {
+                    const cn = this.byId.get(`convention:${topic}:${c}`);
+                    if (cn) this.link(rn, cn, H.applies);
+                }
+            }
+            contract.set(topic, stmts);
+        }
+        const memories: Array<{ name: string; dir: string; topic: string }> = [];
         for (const { name, dir: workshop } of list) {
             // The commit a fork was made from: before E0 a manifest's digest of the tools left their input schemas out, so the fork's
             // origin is what tells two states of the contract apart (a fork's record is two levels up, <fork>/outputs/factory, or beside
@@ -157,16 +196,31 @@ export class HarnessGraph {
             const record = [path.join(workshop, "..", "..", "fork.json"), path.join(workshop, "fork.json")].map((f) => readJson<{ origin?: { commit?: string } }>(f)).find(Boolean);
             const origin = record?.origin?.commit ?? null;
             for (const [topic, reading] of Object.entries(readings)) {
+                memories.push({ name, dir: workshop, topic });
                 for (const e of episodesOf(workshop, topic, reading)) {
                     // A task a fork inherited is the one it was made from: counted once, under the first workshop that holds it.
                     const same = `${e.taskId}|${e.at ?? ""}`;
-                    if (seen.has(same)) continue;
-                    seen.add(same);
+                    const known = seen.get(same);
+                    if (known) {
+                        aliases.set(`${name}|${e.taskId}`, known);
+                        continue;
+                    }
                     const q = name ? `${name}/${e.taskId}` : e.taskId;
+                    seen.set(same, q);
+                    aliases.set(`${name}|${e.taskId}`, q);
                     const dir = path.join(workshop, e.taskId);
                     const m = readJson<ManifestLike>(path.join(dir, "manifest.json"));
                     const request = readJson<{ task?: { requestedBy?: string; objective?: unknown; observations?: unknown } }>(path.join(dir, "task.json"));
                     const steps = m?.steps ?? [];
+                    // The texts the task was given, at the version it ran under; the library documents it read before its first submission.
+                    const version = versionOf(workshop, m, origin);
+                    const firstJudged = e.attempts.find((a) => a.outcome === "ACCEPTED" || a.outcome === "GUARD_REJECTED")?.step ?? Infinity;
+                    const libraryRead = new Set(
+                        steps
+                            .filter((s) => s.capability === "library.read" && s.outcome === "completed" && s.n < firstJudged)
+                            .map((s) => (s.input as { id?: unknown } | null)?.id)
+                            .filter((x): x is string => typeof x === "string"),
+                    );
                     const task = this.node(`task:${q}`, H.task, {
                         taskId: e.taskId,
                         ...(name ? { workshop: name } : {}),
@@ -181,6 +235,8 @@ export class HarnessGraph {
                         case: shortSha(JSON.stringify([request?.task?.requestedBy ?? null, request?.task?.objective ?? null, request?.task?.observations ?? null], (_k, v: unknown) => (typeof v === "number" || (typeof v === "string" && /^\d{4}-\d\d-\d\dT/.test(v)) ? undefined : v))),
                         // How the model was run (its output limit, its effort): not a text it read, so not in the fingerprint.
                         profile: m?.profile?.sha256 ? { file: m.profile.file, sha256: m.profile.sha256 } : null,
+                        // The version of the contract it ran under (null: not known, a manifest of a workshop that is no fork, before E0).
+                        version: version ? { commit: version.commit, where: version.cwd === fromRoot() ? "repository" : "fork" } : null,
                         steps: steps.length,
                         inputTokens: steps.reduce((a, s) => a + (s.tokens?.prompt ?? 0), 0),
                         outputTokens: steps.reduce((a, s) => a + (s.tokens?.completion ?? 0), 0),
@@ -204,6 +260,8 @@ export class HarnessGraph {
                     }
                     this.link(task, fp, H.ranUnder);
                     for (const [slot, sha] of slots) this.link(task, this.statement(workshop, slot, sha), H.read);
+                    // The register's statements the texts it was given held (a library document's only if it read it before submitting).
+                    if (version) for (const { stmt, node } of contract.get(topic) ?? []) if (stated(stmt, version, libraryRead)) this.link(task, node, H.read, { contract: true });
                     // The memory's entries in its state: texts it read too, which no fingerprint holds.
                     for (const r of memoryRead(dir)) this.link(task, this.node(`statement:memory:${shortSha(r.rule)}`, H.statement, { slot: `memory:${topic}`, kind: "memory", of: topic, text: r.rule.slice(0, 400) }), H.read, { status: r.status });
                     // The episode, its attempts, the forms they were refused for, and what answered each.
@@ -219,7 +277,7 @@ export class HarnessGraph {
                         for (const p of a.problems.filter((x) => x.kind)) {
                             const shape = shapesOf(p.says)[0];
                             if (!shape) continue;
-                            this.link(attempt, this.guardForm(topic, shape, p.kind!), H.refusedFor, { by: "guard", path: p.path ?? null });
+                            this.link(attempt, this.guardForm(topic, shape, p.kind!, p.says), H.refusedFor, { by: "guard", path: p.path ?? null });
                         }
                     }
                     for (const c of e.contrasts) {
@@ -235,7 +293,7 @@ export class HarnessGraph {
                         });
                         this.link(episode, correction, H.correctedBy);
                         const shape = shapesOf(c.rejected.says)[0];
-                        if (shape) this.link(correction, this.guardForm(topic, shape, c.kind ?? null), H.answers);
+                        if (shape) this.link(correction, this.guardForm(topic, shape, c.kind ?? null, c.rejected.says), H.answers);
                     }
                     // The steps refused or failed outside the capabilities the guard judges: a read refused as a repeat, a schema refusal, a cut.
                     const judged = new Set(e.attempts.map((a) => a.step));
@@ -251,6 +309,28 @@ export class HarnessGraph {
                 }
             }
         }
+        // Each guard's form, of the rule of the register its refusal is recognised as.
+        for (const [topic, reading] of Object.entries(readings)) {
+            if (!reading.register) continue;
+            for (const f of this.nodes.filter((n) => n.type === H.form && n.bag?.topic === topic && n.bag?.by === "guard"))
+                for (const code of codesOf(reading.register, String(f.bag?.sample ?? ""))) {
+                    const rule = this.byId.get(`rule:${topic}:${code}`);
+                    if (rule) this.link(f, rule, H.of);
+                }
+        }
+        // The memory's entries of each workshop, on the episodes their evidence names (an entry a fork inherited, once).
+        const rests = new Set<string>();
+        for (const { name, dir, topic } of memories)
+            for (const entry of readMemory(dir, topic).entries) {
+                const mn = this.node(`memory:${topic}:${entry.id}`, H.memoryEntry, { id: entry.id, topic, rule: entry.rule.slice(0, 400), kind: entry.kind, status: entry.status, confidence: entry.confidence as unknown, since: entry.since, judgedOn: entry.judgedOn });
+                for (const failure of entry.evidence?.failures ?? []) {
+                    const q = aliases.get(`${name}|${failure.split("#")[0]}`);
+                    const episode = q ? this.byId.get(`episode:${q}`) : undefined;
+                    if (!episode || rests.has(`${mn.id}|${episode.id}`)) continue;
+                    rests.add(`${mn.id}|${episode.id}`);
+                    this.link(mn, episode, H.restsOn);
+                }
+            }
         // The fingerprints in the order tasks first ran under them; what each changed from the one before it.
         fingerprints.sort((a, b) => a.first.localeCompare(b.first));
         for (let i = 1; i < fingerprints.length; i++) {
@@ -278,8 +358,9 @@ export class HarnessGraph {
         return this.node(`capability:${id}`, H.capability, { id });
     }
 
-    private guardForm(topic: string, shape: string, kind: string | null): HarnessNode {
-        return this.node(`form:${topic}:${shortSha(shape)}`, H.form, { topic, shape, kind, by: "guard" });
+    private guardForm(topic: string, shape: string, kind: string | null, sample: string): HarnessNode {
+        // One problem it was made of, whole: what the register recognises the rule by.
+        return this.node(`form:${topic}:${shortSha(shape)}`, H.form, { topic, shape, kind, by: "guard", sample: sample.slice(0, 400) });
     }
 
     private harnessForm(topic: string, outcome: AttemptOutcome, reason: string | null): HarnessNode {
@@ -342,6 +423,19 @@ export class HarnessGraph {
         const count = (xs: Array<{ type?: string }>): Record<string, number> => xs.reduce<Record<string, number>>((m, x) => ({ ...m, [String(x.type)]: (m[String(x.type)] ?? 0) + 1 }), {});
         return { nodes: count(this.graph.nodes), links: count(this.links) };
     }
+}
+
+/**
+ * Where a task's texts are read at the version it ran under: its fork's git at the fork's commit (E0 on), the repository at its commit
+ * or at the commit the fork was made from, and its words as the workshop's store kept them. Null when nothing says which version.
+ */
+function versionOf(workshop: string, m: ManifestLike | null, origin: string | null): TextVersion | null {
+    const stored = m?.words?.sha256 ? readJson<{ text?: string }>(path.join(workshop, "_statements", `${m.words.sha256}.json`)) : null;
+    const words = stored?.text && m?.words ? { words: { file: m.words.file, text: stored.text } } : {};
+    const forkGit = path.join(workshop, "..", "..");
+    if (m?.context?.fork && existsSync(path.join(forkGit, ".git"))) return { cwd: forkGit, commit: m.context.fork, ...words };
+    const commit = m?.context?.repository ?? origin;
+    return commit ? { cwd: fromRoot(), commit, ...words } : null;
 }
 
 function readJson<T>(file: string): T | null {

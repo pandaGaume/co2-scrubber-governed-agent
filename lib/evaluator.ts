@@ -14,6 +14,17 @@
  *   D3  divergence                a form frequent under one model and rare under another, on the same cases, under the same reading
  *   D8  a model's mistake         a form seen in one task only, not otherwise explained
  *
+ * With the register of a guard's rules (E2, specs/<topic>/rules.contract.json), each form is of a rule, and each task was told a rule
+ * or not: a text it was given, at the version it ran under, held a statement of it and of the conventions it assumes.
+ *
+ *   D1  a rule said nowhere       a rule refused at the first try of several tasks none of whose texts stated it; a rule stated,
+ *                                 read, and refused anyway in several tasks no other detector explains
+ *   D6  what a memory entry is    the rules the failures it rests on were refused for: said nowhere to them, a gap of the
+ *                                 contract the memory compensates; said, a policy learned; none, knowledge of the domain
+ *
+ * and the classes the first detectors left to D1 are settled: learned by refusal, a gap or a policy; a model's own mistake confirmed
+ * or not; the same text read two ways, or a text neither read.
+ *
  * Thresholds: specs/harness/evaluator.json.
  */
 import { execFileSync } from "node:child_process";
@@ -21,6 +32,7 @@ import { readFileSync } from "node:fs";
 import type { JsonValue } from "@spiky-panda/harness";
 import { fromRoot } from "./paths.js";
 import { H, shortSha, type HarnessGraph, type HarnessNode } from "./harness-graph.js";
+import { stated, type Statement } from "./rules-register.js";
 
 export const EVALUATOR_FILE = "specs/harness/evaluator.json";
 
@@ -36,11 +48,11 @@ export interface EvaluatorConfig {
 
 export const evaluatorConfig = (): EvaluatorConfig => JSON.parse(readFileSync(fromRoot(...EVALUATOR_FILE.split("/")), "utf8")) as EvaluatorConfig;
 
-export type FindingClass = "harness-artefact" | "regression" | "improvement" | "contract-gap" | "contract-gap-or-policy" | "model-error";
+export type FindingClass = "harness-artefact" | "regression" | "improvement" | "contract-gap" | "contract-gap-or-policy" | "learned-policy" | "stated-not-followed" | "domain-knowledge" | "model-error";
 
 export interface Finding {
     id: string;
-    detector: "D2" | "D3" | "D4" | "D5" | "D8";
+    detector: "D1" | "D2" | "D3" | "D4" | "D5" | "D6" | "D8";
     class: FindingClass;
     /** What settles a class this detector cannot: a later detector and its stage. */
     settledBy: string | null;
@@ -61,7 +73,7 @@ export interface Finding {
 export interface Evaluation {
     findings: Finding[];
     /** The guard's forms no detector of this stage classes: those D1 (E2) reads, with the register. */
-    unclassified: Array<{ form: string; shape: string; tasks: number }>;
+    unclassified: Array<{ form: string; shape: string; tasks: number; rules?: string[]; tasksTold?: Array<{ task: string; requestedBy: string | null; missing: string[] }> }>;
     counts: { tasks: number; models: Record<string, number>; forms: number; ignored: Record<string, number> };
 }
 
@@ -125,11 +137,56 @@ class Reader {
         if (!task) return out;
         for (const l of this.g.out(task, H.read)) {
             const s = l.ofin as HarnessNode;
-            if (s.bag?.kind !== "memory") out.set(String(s.bag?.slot), s);
+            if (s.bag?.kind !== "memory" && s.bag?.kind !== "contract") out.set(String(s.bag?.slot), s);
         }
         return out;
     }
+    /** The rules of the register a form is of. */
+    rulesOf(form: HarnessNode): HarnessNode[] {
+        return this.g
+            .out(form, H.of)
+            .map((l) => l.ofin as HarnessNode)
+            .filter((n) => n.type === H.rule);
+    }
+    /**
+     * Whether a task was told a rule: a statement of it among the texts it was given at its version, and one of every convention it
+     * applies. Null when its version is not known; tacit when the register says so. What was missing: the rule, or a convention.
+     */
+    told(task: HarnessNode, rule: HarnessNode): { told: boolean | null | "tacit"; missing: string[] } {
+        if (rule.bag?.status === "tacit") return { told: "tacit", missing: [] };
+        if (!task.bag?.version) return { told: null, missing: [] };
+        const reads = new Set(this.g.out(task, H.read).map((l) => String(l.ofin?.id)));
+        const saidBy = (n: HarnessNode) => this.g.in(n, H.states).some((l) => reads.has(String(l.oini?.id)));
+        const missing = [...(saidBy(rule) ? [] : [String(rule.id)]), ...this.g.out(rule, H.applies).map((l) => l.ofin as HarnessNode).filter((c) => !saidBy(c)).map((c) => String(c.id))];
+        return { told: missing.length === 0, missing };
+    }
+    /** The tasks whose first submission the guard judged was refused for a form. */
+    firstTried(form: HarnessNode): HarnessNode[] {
+        const out = new Map<string, HarnessNode>();
+        for (const l of this.g.in(form, H.refusedFor)) {
+            const attempt = l.oini as HarnessNode;
+            if (attempt.type !== H.attempt) continue;
+            const episode = byType(this.g, attempt, H.of);
+            if (!episode) continue;
+            const first = this.g
+                .in(episode, H.of)
+                .map((x) => x.oini as HarnessNode)
+                .filter((a) => a.bag?.outcome === "ACCEPTED" || a.bag?.outcome === "GUARD_REJECTED")
+                .sort((a, b) => Number(a.bag?.step) - Number(b.bag?.step))[0];
+            const task = first?.id === attempt.id ? byType(this.g, episode, H.of) : undefined;
+            if (this.live(task)) out.set(String(task.id), task);
+        }
+        return [...out.values()];
+    }
 }
+
+/** A statement of the register, as its node holds it. */
+const statementOf = (n: HarnessNode): Statement => ({ ...(n.bag?.library ? { library: String(n.bag.library) } : { file: String(n.bag?.file) }), ...(n.bag?.pointer ? { pointer: String(n.bag.pointer) } : {}), phrase: String(n.bag?.phrase) });
+/** Whether a statement holds in the contract as it is now (the working tree, every document read). */
+const holdsNow = (n: HarnessNode): boolean => stated(statementOf(n), { cwd: fromRoot(), commit: null }, new Set([String(n.bag?.library ?? "")])) === true;
+/** A rule or a convention by its name alone: a rule by its code, a convention by its name and what it is. */
+const named = (id: string): string => id.replace(/^rule:[^:]+:/, "").replace(/^convention:[^:]+:(.*)$/, "the convention $1");
+const describe = (n: HarnessNode): string => `${n.bag?.library ? `library ${n.bag.library}` : `${n.bag?.file}${n.bag?.pointer ? ` ${n.bag.pointer}` : ""}`}: "${n.bag?.phrase}"`;
 
 /** How a correction changed a value: the field taken out, supplied, narrowed to a part of what was sent, or replaced. */
 function relation(x: JsonValue | undefined, y: JsonValue | undefined): string {
@@ -398,7 +455,140 @@ export function evaluate(g: HarnessGraph, cfg: EvaluatorConfig = evaluatorConfig
         });
     }
 
-    return { findings, unclassified, counts: { tasks: tasks.length, models: r.models(tasks), forms: forms.length, ignored: r.models(all.filter((t) => !r.live(t))) } };
+    // The register (E2): each finding on a guard's form settled by whether its tasks were told the rule the form is of.
+    const verdict = (ts: HarnessNode[], rules: HarnessNode[]) => {
+        const per = ts.map((t) => rules.map((rule) => r.told(t, rule)));
+        const told = per.filter((xs) => xs.length && xs.every((x) => x.told === true || x.told === "tacit")).length;
+        const untold = per.filter((xs) => xs.some((x) => x.told === false)).length;
+        const missing = [...new Set(per.flatMap((xs) => xs.flatMap((x) => x.missing)))];
+        return { told, untold, unknown: ts.length - told - untold, missing };
+    };
+    const byId = new Map(tasks.map((t) => [String(t.id), t]));
+    for (const f of findings) {
+        const form = f.form ? g.get(f.form.id) : undefined;
+        if (!form || form.bag?.by !== "guard") continue;
+        const rules = r.rulesOf(form);
+        if (!rules.length) continue;
+        const v = verdict(f.tasks.map((t) => byId.get(t)).filter((t): t is HarnessNode => Boolean(t)), rules);
+        f.evidence.register = { rules: rules.map((x) => String(x.bag?.code)), told: v.told, untold: v.untold, unknown: v.unknown, missing: v.missing };
+        f.about.push(...rules.map((x) => String(x.id)));
+        const all = v.told + v.untold > 0 && v.unknown === 0;
+        // No version known for any of them (a workshop that is no fork, before E0): what the texts said then cannot be read.
+        if (v.unknown === f.tasks.length && f.settledBy) {
+            f.settledBy = "D1 cannot: the version of the contract these tasks ran under is not known (manifests before E0, outside a fork)";
+            continue;
+        }
+        const none = v.untold > 0 && v.told === 0;
+        const every = v.told > 0 && v.untold === 0;
+        if (f.detector === "D2" && f.class === "contract-gap-or-policy") {
+            if (none) Object.assign(f, { class: "contract-gap", settledBy: null, title: `${f.title}; no text these tasks were given stated ${v.missing.map(named).join(", ")} (D1)` });
+            else if (every) Object.assign(f, { class: "learned-policy", settledBy: null, title: `${f.title}; stated in what they read: a policy learned (D1)` });
+            else f.settledBy = `D1: ${v.told} task(s) told the rule, ${v.untold} not, ${v.unknown} of a version not known`;
+        } else if (f.detector === "D3" && f.settledBy) {
+            if (all || none || every) Object.assign(f, { settledBy: null, title: `${f.title}; ${every ? "the rule stated in what both read" : `stated to neither (${v.missing.map(named).join(", ")})`} (D1)` });
+        } else if (f.detector === "D8" && f.settledBy) {
+            if (every) f.settledBy = null;
+            else if (none) Object.assign(f, { class: "contract-gap", settledBy: null, recommend: true, title: `${f.form?.shape}: in one task, whose texts did not state ${v.missing.map(named).join(", ")} (D1): not the model's own mistake` });
+        } else if (f.detector === "D4" && f.class === "contract-gap-or-policy") {
+            if (none) Object.assign(f, { class: "contract-gap", settledBy: null });
+            else if (every) Object.assign(f, { class: "stated-not-followed", settledBy: null });
+        }
+    }
+
+    // D1: a rule refused at the first try of several tasks none of whose texts stated it; one stated, and refused anyway, that no other
+    // detector explains.
+    const settled = new Set(findings.map((f) => f.form?.id).filter(Boolean) as string[]);
+    const saidByD1 = new Set<string>();
+    for (const rule of g.nodesOf(H.rule)) {
+        const ruleForms = g.in(rule, H.of).map((l) => l.oini as HarnessNode).filter((n) => n.type === H.form);
+        const ts = [...new Map(ruleForms.flatMap((f) => r.firstTried(f)).map((t) => [String(t.id), t])).values()];
+        if (!ts.length || rule.bag?.status === "tacit") continue;
+        const untold = ts.filter((t) => r.told(t, rule).told === false);
+        const told = ts.filter((t) => r.told(t, rule).told === true);
+        const statements = g.in(rule, H.states).map((l) => l.oini as HarnessNode);
+        const conventions = g.out(rule, H.applies).map((l) => l.ofin as HarnessNode);
+        const missing = [...new Set(untold.flatMap((t) => r.told(t, rule).missing))];
+        // What states now what those tasks were not told: the rule's statements, or those of the conventions they missed.
+        const now = [...(missing.includes(String(rule.id)) ? statements : []), ...conventions.filter((c) => missing.includes(String(c.id))).flatMap((c) => g.in(c, H.states).map((l) => l.oini as HarnessNode))].filter(holdsNow).map(describe);
+        const code = String(rule.bag?.code);
+        if (untold.length >= cfg.recurrence.minTasks) {
+            ruleForms.forEach((f) => saidByD1.add(String(f.id)));
+            findings.push({
+                id: `D1:${shortSha(String(rule.id))}`,
+                detector: "D1",
+                class: "contract-gap",
+                settledBy: null,
+                title: `${code}: refused at the first try of ${untold.length} task(s) whose texts did not state ${missing.map(named).join(", ")}${rule.bag?.status === "gap" ? `: a gap of the register (${String(rule.bag?.note ?? "")})` : now.length ? `; stated since, by ${now.join("; ")}` : ""}`,
+                form: ruleForms.length === 1 ? formRef(ruleForms[0]) : null,
+                tasks: ids(untold),
+                models: r.models(untold),
+                about: [String(rule.id), ...missing, ...ruleForms.map((f) => String(f.id))],
+                path: [`${rule.id} <-of- ${ruleForms.map((f) => f.id).join(", ")}`, `<-refused-for- the first attempt of ${untold.length} task(s)`, `no statement read: ${missing.join(", ")}`, ...(now.length ? [`stated now by ${now.join("; ")}`] : [])],
+                evidence: { code, status: String(rule.bag?.status), untold: untold.length, told: told.length, unknown: ts.length - untold.length - told.length, missing, statedNow: now },
+                recommend: true,
+            });
+        } else if (told.length >= cfg.recurrence.minTasks && ruleForms.every((f) => !settled.has(String(f.id)))) {
+            ruleForms.forEach((f) => saidByD1.add(String(f.id)));
+            findings.push({
+                id: `D1:${shortSha(`${rule.id}|told`)}`,
+                detector: "D1",
+                class: "stated-not-followed",
+                settledBy: null,
+                title: `${code}: stated in what ${told.length} task(s) read, and refused at their first try all the same`,
+                form: ruleForms.length === 1 ? formRef(ruleForms[0]) : null,
+                tasks: ids(told),
+                models: r.models(told),
+                about: [String(rule.id), ...statements.map((s) => String(s.id)), ...ruleForms.map((f) => String(f.id))],
+                path: [`${rule.id} <-of- ${ruleForms.map((f) => f.id).join(", ")}`, `<-refused-for- the first attempt of ${told.length} task(s)`, `which read ${statements.map(describe).join("; ")}`],
+                evidence: { code, status: String(rule.bag?.status), untold: untold.length, told: told.length },
+                recommend: true,
+            });
+        }
+    }
+    // What is left: each form with its rules and, task by task, whether it was told them (one form may cover two causes).
+    const stillUnclassified = unclassified
+        .filter((u) => !saidByD1.has(u.form))
+        .map((u) => {
+            const form = g.get(u.form)!;
+            const rules = r.rulesOf(form);
+            const per = r.tasksOf(form).map((t) => ({ task: String(t.id), requestedBy: (t.bag?.requestedBy ?? null) as string | null, missing: rules.flatMap((x) => r.told(t, x).missing).map(named) }));
+            return { ...u, rules: rules.map((x) => String(x.bag?.code)), tasksTold: per };
+        });
+
+    // D6: what each memory entry is, by the rules the failures it rests on were refused for, and whether they were told them.
+    for (const entry of g.nodesOf(H.memoryEntry)) {
+        const episodes = g.out(entry, H.restsOn).map((l) => l.ofin as HarnessNode);
+        const ts = episodes.map((ep) => byType(g, ep, H.of)).filter((t): t is HarnessNode => r.live(t));
+        const rules = [...new Map(episodes.flatMap((ep) => g.in(ep, H.of).map((l) => l.oini as HarnessNode)).flatMap((a) => g.out(a, H.refusedFor).map((l) => l.ofin as HarnessNode)).flatMap((f) => r.rulesOf(f)).map((x) => [String(x.id), x])).values()];
+        const v = verdict(ts, rules);
+        const codes = rules.map((x) => String(x.bag?.code));
+        const statedNow = rules.flatMap((x) => g.in(x, H.states).map((l) => l.oini as HarnessNode)).filter(holdsNow).map(describe);
+        const cls: FindingClass = !rules.length ? "domain-knowledge" : v.untold > 0 && v.told === 0 ? "contract-gap" : v.told > 0 && v.untold === 0 ? "learned-policy" : "contract-gap-or-policy";
+        const text = String(entry.bag?.rule ?? "");
+        findings.push({
+            id: `D6:${shortSha(String(entry.id))}`,
+            detector: "D6",
+            class: cls,
+            settledBy: cls === "contract-gap-or-policy" ? `D1: ${v.told} of its failures told the rule, ${v.untold} not, ${v.unknown} of a version not known` : null,
+            title:
+                cls === "contract-gap"
+                    ? `the memory entry "${text.slice(0, 120)}…" compensates ${codes.join(", ")}, which no text its failures were given stated: a gap of the contract, learned instead of written${statedNow.length ? `; stated since, by ${statedNow.join("; ")}: the entry is now redundant` : ""}`
+                    : cls === "learned-policy"
+                      ? `the memory entry "${text.slice(0, 120)}…" rests on refusals of ${codes.join(", ")}, stated in what its failures read: a policy learned`
+                      : cls === "domain-knowledge"
+                        ? `the memory entry "${text.slice(0, 120)}…" rests on no refusal of a rule of the register: knowledge of the domain`
+                        : `the memory entry "${text.slice(0, 120)}…" rests on refusals of ${codes.join(", ")}`,
+            form: null,
+            tasks: ids(ts),
+            models: r.models(ts),
+            about: [String(entry.id), ...episodes.map((e) => String(e.id)), ...rules.map((x) => String(x.id))],
+            path: [`${entry.id} -rests-on-> ${episodes.map((e) => e.id).join(", ")}`, `<-of- attempts -refused-for-> forms -of-> ${rules.map((x) => x.id).join(", ") || "no rule"}`, `told: ${v.told}, not: ${v.untold}, not known: ${v.unknown}`],
+            evidence: { entry: String(entry.bag?.id), status: String(entry.bag?.status), rules: codes, told: v.told, untold: v.untold, unknown: v.unknown, missing: v.missing, statedNow },
+            recommend: cls !== "domain-knowledge",
+        });
+    }
+
+    return { findings, unclassified: stillUnclassified, counts: { tasks: tasks.length, models: r.models(tasks), forms: forms.length, ignored: r.models(all.filter((t) => !r.live(t))) } };
 }
 
 /** The files changed between two commits, from git, less those no run reads; none when git or a commit is not there. */

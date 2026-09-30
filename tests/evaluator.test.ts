@@ -1,8 +1,12 @@
 /**
- * The post-procedure evaluator's first detectors (2026-09-30, docs/evaluateur.fr.md, E1), on its corpus: the real tasks of the
- * experiments of 29 and 30 September (tests/fixtures/evaluator, copied from their forks by scripts/evaluator/corpus.mjs), which a
- * human and a model read by hand for two days. The evaluator must reach the same conclusions alone, with the path that justifies
- * each, and recommend nothing on a model's own mistake. What E1 cannot settle yet is said, and left to D1 and the register (E2).
+ * The post-procedure evaluator (2026-09-30, docs/evaluateur.fr.md, E1 and E2), on its corpus: the real tasks of the experiments of
+ * 29 and 30 September (tests/fixtures/evaluator, copied from their forks by scripts/evaluator/corpus.mjs), which a human and a model
+ * read by hand for two days. The evaluator must reach the same conclusions alone, with the path that justifies each, and recommend
+ * nothing on a model's own mistake. With the register of the guard's rules (E2), it says which rule no text a task was given stated,
+ * and what the memory's entry really is. What it cannot settle is said.
+ *
+ * Whether a task was told a rule is read from the contract at the commit it ran under (git): the assertions that need a text of
+ * before to be found there are made only when git holds those commits.
  *
  * One case is reconstituted: the example `/steps/0/reason` in workspace.read's description, whose fork was removed with its traces.
  * Its texts are the real ones (git, 287f5bc and 86e03ab, the example put back as the README of 2026-09-30-fixes tells it); its tasks
@@ -21,9 +25,10 @@ import { H, HarnessGraph, harnessShapeOf } from "../lib/harness-graph.js";
 import { correctionSignature, evaluate, type Finding } from "../lib/evaluator.js";
 import { fromRepository } from "../lib/paths.js";
 import { guardWordsOf } from "../lib/working-memory.js";
+import { loadRegister } from "../lib/rules-register.js";
 import { PROCEDURE_TOPIC } from "../harness/topics/procedure/index.js";
 
-const READINGS = { procedure: { judges: PROCEDURE_TOPIC.judges ?? [], digest: PROCEDURE_TOPIC.digest, guardWords: guardWordsOf(fromRepository("specs", "procedure", "words.json")) } };
+const READINGS = { procedure: { judges: PROCEDURE_TOPIC.judges ?? [], digest: PROCEDURE_TOPIC.digest, guardWords: guardWordsOf(fromRepository("specs", "procedure", "words.json")), register: loadRegister("procedure") } };
 const CORPUS = fromRepository("tests", "fixtures", "evaluator");
 const forks = readdirSync(CORPUS, { withFileTypes: true })
     .filter((d) => d.isDirectory())
@@ -79,10 +84,24 @@ describe("the evaluator on its corpus: the tasks of 29 and 30 September, classed
         if (known("08a954e557281e4701ceb4ebb0f72da5a1fdee2c") && known("287f5bcc1d3be2439ee45d5107360f13349813d7")) assert.ok((fixed.evidence.changed as Array<{ slot: string }>).some((c) => c.slot === "file:specs/procedure/words.json"), JSON.stringify(fixed.evidence.changed));
     });
 
-    it("the speed in percent declared a Speed: recurring (3 tasks, 2 cases), classed by nothing yet: the guard's refusal names no path, so no correction is tied to it; D1 reads it (E2)", () => {
-        const speed = e.unclassified.find((u) => /no unit … for Speed/.test(u.shape));
-        assert.equal(speed?.tasks, 3);
-        assert.equal(e.findings.filter((f) => /for Speed/.test(f.form?.shape ?? "")).length, 0);
+    it("the composite reference, by the register: REFERENCE_NOT_A_FACT refused at the first try of 23 tasks none of whose texts said a reference is one id alone (D1), stated since by the words and the justification's schema", () => {
+        const [d1] = e.findings.filter((f) => f.detector === "D1" && f.evidence.code === "REFERENCE_NOT_A_FACT");
+        assert.equal(d1.class, "contract-gap");
+        assert.equal(d1.evidence.untold, 23);
+        assert.deepEqual(d1.evidence.missing, ["rule:procedure:REFERENCE_NOT_A_FACT"]);
+        assert.deepEqual(d1.evidence.statedNow, ['specs/procedure/words.json /brief/safetyBounds: "which is the single fact to cite, by its id alone as the reference"', 'harness/core/justify.ts: "Exactly one: for library, one id as library.facts lists it"']);
+        // D3's text read two ways was said to neither model.
+        const [divergence] = of("D3", /is not a fact of the library/);
+        assert.equal(divergence.settledBy, null);
+        assert.deepEqual((divergence.evidence.register as { rules: string[] }).rules, ["REFERENCE_NOT_A_FACT"]);
+    });
+
+    it("the speed in percent declared a Speed: UNKNOWN_UNIT refused at the first try of 3 tasks whose schema did not say a property's quantity is the register's (D1), stated since", () => {
+        const [d1] = e.findings.filter((f) => f.detector === "D1" && f.evidence.code === "UNKNOWN_UNIT");
+        assert.equal(d1.class, "contract-gap");
+        assert.equal(d1.evidence.untold, 3);
+        assert.deepEqual(d1.evidence.statedNow, ['specs/procedure/procedure.schema.json /properties/quantities/description: "the quantity and the unit its register declares"']);
+        assert.equal(e.unclassified.filter((u) => /for Speed/.test(u.shape)).length, 0);
     });
 
     it("the read loops: two tasks ended stuck on the harness's refusal of a repeated read, an artefact of the harness (D4), with the refused reads that made them", () => {
@@ -93,12 +112,15 @@ describe("the evaluator on its corpus: the tasks of 29 and 30 September, classed
         assert.match(loop.form?.shape ?? "", /with the same input was the previous step/);
     });
 
-    it("GPT's steps indexed from 0: a safety constant left without a justification, answered by adding it (D2), in Sonnet's tasks and GPT's; whether a rule no text states or a policy: D1 settles it (E2)", () => {
+    it("GPT's steps indexed from 0: a safety constant left without a justification, answered by adding it (D2); the rule was said, the path convention it assumes was not (D1): a gap of the contract", () => {
         const [added] = e.findings.filter((f) => f.detector === "D2" && f.evidence.signature === "added" && /is a safety constant with no justification/.test(f.form?.shape ?? ""));
-        assert.equal(added.class, "contract-gap-or-policy");
-        assert.match(String(added.settledBy), /^D1 \(E2\)/);
         assert.ok(added.tasks.some((t) => requestOf(t) === "experiment validate v10" && /exp4-gpt-c/.test(t)), JSON.stringify(added.tasks));
         assert.deepEqual(Object.keys(added.models).sort(), ["claude-sonnet-5-5", "gpt-5.6-sol"]);
+        assert.equal(added.class, "contract-gap");
+        assert.equal(added.settledBy, null);
+        const [d1] = e.findings.filter((f) => f.detector === "D1" && f.evidence.code === "SAFETY_UNJUSTIFIED");
+        assert.deepEqual(d1.evidence.missing, ["convention:procedure:path-keys"]);
+        assert.ok(d1.tasks.includes("task:exp4-gpt-c/t-2026-09-29-0016"));
     });
 
     it("v4, the analysis and the procedure at odds: the model's own mistake (D8), counted, nothing recommended on it", () => {
@@ -106,6 +128,16 @@ describe("the evaluator on its corpus: the tasks of 29 and 30 September, classed
         assert.equal(v4.class, "model-error");
         assert.equal(v4.recommend, false);
         assert.equal(v4.evidence.requestedBy, "experiment validate v4");
+        // The rule was said to it, and it read it: the mistake is its own (D1).
+        if (known("43e1fe8")) {
+            assert.equal(v4.settledBy, null);
+            assert.deepEqual((v4.evidence.register as { told: number }).told, 1);
+            // The form the analysis shares with v9 covers two causes, which the register tells apart: v9 was not given the path
+            // convention, v4 was given everything.
+            const [shared] = e.unclassified.filter((u) => /the analysis says \* changes/.test(u.shape));
+            assert.deepEqual(shared.rules, ["ANALYSIS_NOT_APPLIED"]);
+            assert.deepEqual(Object.fromEntries((shared.tasksTold ?? []).map((t) => [t.requestedBy, t.missing])), { "experiment validate v9": ["the convention path-keys"], "experiment validate v4": [] });
+        }
         // Nothing recommended on the analysis at odds with its procedure, and nothing on v4 alone: what the harness did in the same
         // case (the read loop of exp6-contract) is recommended with the other loop like it, as the harness's.
         assert.equal(e.findings.filter((f) => f.recommend && /the analysis says/.test(f.form?.shape ?? "")).length, 0);
@@ -118,6 +150,22 @@ describe("the evaluator on its corpus: the tasks of 29 and 30 September, classed
         assert.deepEqual(schema.evidence.capabilities, ["procedure.analyse"]);
         const [repeats] = of("D4", /with the same input was the previous step/);
         assert.deepEqual([repeats.evidence.refusals, repeats.tasks.length], [22, 16]);
+    });
+
+    it("the memory's entry, what it really is: it compensates REFERENCE_NOT_A_FACT, which no text its failures were given stated, and the contract states it now (D6)", () => {
+        const [d6] = e.findings.filter((f) => f.detector === "D6");
+        assert.equal(d6.class, "contract-gap");
+        assert.deepEqual(d6.evidence.rules, ["REFERENCE_NOT_A_FACT"]);
+        assert.equal(d6.evidence.entry, "m-e26243b3d5");
+        assert.equal((d6.evidence.statedNow as string[]).length, 2);
+        assert.match(d6.title, /learned instead of written; stated since.*the entry is now redundant/);
+        assert.deepEqual(d6.tasks.sort(), ["task:exp4-sonnet-a/t-2026-09-29-0001", "task:exp4-sonnet-a/t-2026-09-29-0002"]);
+    });
+
+    it("a rule said and refused all the same, in two tasks no other detector explains: what a test expects (D1)", () => {
+        const [expected] = e.findings.filter((f) => f.detector === "D1" && f.evidence.code === "expected");
+        assert.equal(expected.class, "stated-not-followed");
+        assert.equal(expected.evidence.told, 2);
     });
 
     it("derived only: the same sources give the same findings", () => {

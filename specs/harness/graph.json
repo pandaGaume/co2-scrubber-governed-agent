@@ -11,10 +11,13 @@
         { "id": "harness.correction", "superType": "harness.item", "note": "a field a submission was refused on, what was sent there (X) and what the next accepted submission sent (Y), or that it no longer sent it (removed); retries, how many attempts later" },
         { "id": "harness.model", "superType": "harness.item", "note": "the model behind a task, and its provider" },
         { "id": "harness.fingerprint", "superType": "harness.item", "note": "what a task ran under: the tools as given (their descriptions and schemas), the topic's words, the prompt, the commits of the code and of the context" },
-        { "id": "harness.statement", "superType": "harness.item", "note": "a text a model read: a tool (its description and its input schema), a words file, a prompt, by the sha256 of its content; or an entry of the memory its state held (kind memory, read from the trace)" },
+        { "id": "harness.statement", "superType": "harness.item", "note": "a text a model read: a tool (its description and its input schema), a words file, a prompt, by the sha256 of its content; an entry of the memory its state held (kind memory, read from the trace); or a statement of the register, where a rule is said (kind contract: a file and a pointer, or a library document, and the phrase it must hold), read by a task when the text at its version held it" },
+        { "id": "harness.rule", "superType": "harness.item", "note": "a check of a guard, by its stable code in the topic's register (specs/<topic>/rules.contract.json; a signed rule by its document's id): its status, stated, tacit or a gap (E2)" },
+        { "id": "harness.convention", "superType": "harness.item", "note": "a convention of form a rule assumes (a list's element named by its key), from the register" },
+        { "id": "harness.memory-entry", "superType": "harness.item", "note": "an entry of a workshop's memory (memory/<topic>.json): its rule, its status, the episodes its evidence names" },
         { "id": "harness.finding", "superType": "harness.item", "note": "the evaluator's own writing: what a detector found, its class, and whether a later detector settles it (lib/evaluator.ts)" },
         { "id": "harness.link" },
-        { "id": "harness.of", "superType": "harness.link", "note": "attempt of episode, episode of task" },
+        { "id": "harness.of", "superType": "harness.link", "note": "attempt of episode, episode of task, step of task, form of the rule the register recognises it as" },
         { "id": "harness.calls", "superType": "harness.link", "note": "attempt calls capability" },
         { "id": "harness.ran-by", "superType": "harness.link", "note": "task ran by model" },
         { "id": "harness.ran-under", "superType": "harness.link", "note": "task ran under fingerprint" },
@@ -24,6 +27,9 @@
         { "id": "harness.answers", "superType": "harness.link", "note": "correction answers form" },
         { "id": "harness.after", "superType": "harness.link", "note": "fingerprint after fingerprint: the one the tasks ran under before it" },
         { "id": "harness.changed", "superType": "harness.link", "note": "fingerprint changed statement: a text it holds that the fingerprint before it held in another version (bag: was, the sha256 before)" },
-        { "id": "harness.about", "superType": "harness.link", "note": "finding about any node: the path that justifies it" }
+        { "id": "harness.about", "superType": "harness.link", "note": "finding about any node: the path that justifies it" },
+        { "id": "harness.states", "superType": "harness.link", "note": "statement states rule or convention: a text of the contract that says it, by the phrase it must hold (kind contract)" },
+        { "id": "harness.applies", "superType": "harness.link", "note": "rule applies convention" },
+        { "id": "harness.rests-on", "superType": "harness.link", "note": "memory-entry rests on episode: the failures its evidence names" }
     ]
 }

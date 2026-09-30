@@ -17,6 +17,7 @@ const { HarnessGraph } = await load("lib/harness-graph.js");
 const { evaluate } = await load("lib/evaluator.js");
 const { guardWordsOf } = await load("lib/working-memory.js");
 const { TOPIC_DEFINITIONS } = await load("harness/core/runner.js");
+const { loadRegister } = await load("lib/rules-register.js");
 
 const args = process.argv.slice(2);
 const json = args.includes("--json");
@@ -26,7 +27,7 @@ if (args.includes("--all-forks")) ids = readdirSync(forksRoot).filter((d) => exi
 const readings = Object.fromEntries(
     Object.entries(TOPIC_DEFINITIONS)
         .filter(([, d]) => d?.judges)
-        .map(([t, d]) => [t, { judges: d.judges, digest: d.digest, guardWords: d.words ? guardWordsOf(path.join(root, ...d.words.words.file.split("/"))) : undefined }]),
+        .map(([t, d]) => [t, { judges: d.judges, digest: d.digest, guardWords: d.words ? guardWordsOf(path.join(root, ...d.words.words.file.split("/"))) : undefined, register: loadRegister(t) }]),
 );
 const source = ids.length
     ? ids
@@ -39,5 +40,5 @@ if (json) {
 } else {
     console.log(`${ids.length ? `forks ${ids.join(", ")}` : "the repository's workshop"}: ${JSON.stringify(e.counts)}`);
     for (const f of e.findings) console.log(`${f.detector} ${f.class}${f.settledBy ? ` (to settle: ${f.settledBy})` : ""}${f.recommend ? "" : " (nothing to recommend)"}\n    ${f.title}`);
-    for (const u of e.unclassified) console.log(`unclassified, ${u.tasks} task(s): ${u.shape}`);
+    for (const u of e.unclassified) console.log(`unclassified, ${u.tasks} task(s)${u.rules?.length ? ` [${u.rules.join(", ")}]` : ""}: ${u.shape}`);
 }
