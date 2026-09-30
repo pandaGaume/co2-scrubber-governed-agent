@@ -56,7 +56,16 @@ export interface Manifest {
     profile: { file: string; sha256: string | null };
     prompt: { file: string | null; sha256: string | null };
     provider: { name: string; model: string; family: string };
-    tools: { count: number; sha256: string; list: Array<{ id: string; replayPolicy: string; origin: string }> };
+    /**
+     * The catalogue: `sha256` of the ids, descriptions and policies, as it always was; `contract` of the same with the input schemas,
+     * and each tool's own (2026-09-30, the harness's graph: which text a model read changed between two runs, the store under
+     * `_statements/<sha256>.json` holding each text once).
+     */
+    tools: { count: number; sha256: string; contract?: string; list: Array<{ id: string; replayPolicy: string; origin: string; sha256?: string }> };
+    /** The words file of the topic (its briefs and refusals), by its sha256; the text in the store. */
+    words?: { file: string; sha256: string } | null;
+    /** The code and the context the task ran under: the repository's commit, and a fork's own history's (2026-09-30). */
+    context?: { repository: string | null; fork: string | null };
     recipes: { file: string; loaded: boolean; experiencesBefore: number; experiencesAfter: number | null; replayedSteps: number; sha256: string | null };
     budget: { iterations: number; minutes: number };
     steps: ManifestStep[];
@@ -94,8 +103,13 @@ export const sha256Text = (text: string): string => createHash("sha256").update(
 /** The catalogue as the manifest names it, and its sha256 (ids, descriptions, policies: what the model was given). */
 export function toolsOf(catalogue: CatalogueEntry[]): Manifest["tools"] {
     const sorted = [...catalogue].sort((a, b) => a.id.localeCompare(b.id));
-    return { count: sorted.length, sha256: sha256Text(JSON.stringify(sorted.map((c) => [c.id, c.description, c.replayPolicy]))), list: sorted.map((c) => ({ id: c.id, replayPolicy: c.replayPolicy, origin: c.origin })) };
+    const each = sorted.map((c) => ({ id: c.id, replayPolicy: c.replayPolicy, origin: c.origin, sha256: statementSha(c) }));
+    return { count: sorted.length, sha256: sha256Text(JSON.stringify(sorted.map((c) => [c.id, c.description, c.replayPolicy]))), contract: sha256Text(JSON.stringify(each.map((c) => [c.id, c.sha256]))), list: each };
 }
+
+/** A tool as the model reads it: its id, its description, its input schema. */
+export const statementOf = (c: CatalogueEntry): { id: string; description: string; inputSchema: JsonValue } => ({ id: c.id, description: c.description, inputSchema: (c.inputSchema ?? null) as JsonValue });
+export const statementSha = (c: CatalogueEntry): string => sha256Text(JSON.stringify(statementOf(c)));
 
 const HEAVY = new Set(["series", "samples", "text", "base64", "coefficients", "checked"]);
 

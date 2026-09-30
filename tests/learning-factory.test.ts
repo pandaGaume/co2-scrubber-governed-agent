@@ -118,6 +118,14 @@ describe("the procedure factory learns from its episodes, in a fork: a memory, n
             }
 
             // Three tasks since its trial, the mistake in none: consolidated, with its confidence.
+            // The harness's graph of this workshop, through the station (2026-09-30, E0): the five procedure tasks and the reflection's (its
+            // topic judges its proposals too), the form the first attempts were refused for, answered by the corrections of the two first.
+            const graph = await ok<{ nodes: Record<string, number>; links: Record<string, number> }>("station", "harness_graph", {});
+            assert.equal(graph.nodes["harness.task"], 6, JSON.stringify(graph));
+            assert.ok((graph.links["harness.answers"] ?? 0) >= 2, JSON.stringify(graph.links));
+            const forms = await ok<{ nodes: Array<{ id: string }> }>("station", "harness_graph", { type: "harness.form" });
+            const form = await ok<{ in: Array<{ type: string }> }>("station", "harness_graph", { id: forms.nodes[0].id });
+            assert.ok(form.in.some((l) => l.type === "harness.refused-for"));
             const again = await ok<{ taskId: string | null }>("station", "reflect", { builder: "scripted" });
             assert.equal(again.taskId, null, "the failures the memory answers are not read again: nothing new to reflect on");
             const consolidated = JSON.parse(readFileSync(memoryFile, "utf8")) as typeof memory;

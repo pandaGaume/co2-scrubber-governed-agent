@@ -15,18 +15,19 @@
  * received is kept byte for byte as `manifest.proposed.json`; `manifest.json`
  * is the same plus the proposal's id and the final state.
  */
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
 import type { DecisionTrace, Intention, JsonValue, StageEvent } from "@spiky-panda/harness";
 import { errorMessage, sha256File } from "../../lib/files.js";
-import { forkId, fromRoot } from "../../lib/paths.js";
+import { forkDir, forkId, fromRoot } from "../../lib/paths.js";
+import { contextCommits } from "../../lib/fork.js";
 import { WORKSHOP_ROOT } from "../../slots/tools/lib/workshop.js";
 import type { Broker } from "../lib/broker.js";
 import type { Provider, ProviderExchange } from "../lib/provider.js";
 import { createAgent } from "./agent.js";
 import { createBuilderGuard } from "./builder-guard.js";
 import { buildCapabilities, type CapabilityCall } from "./capabilities.js";
-import { manifestText, newTelemetry, sha256Text, summarize, toolsOf, type Manifest, type ManifestArtifact, type ManifestStep } from "./manifest.js";
+import { manifestText, newTelemetry, sha256Text, statementOf, statementSha, summarize, toolsOf, type Manifest, type ManifestArtifact, type ManifestStep } from "./manifest.js";
 import { compactOutput } from "./compact.js";
 import { reasoningStateOf } from "./reasoning-state.js";
 import { intentionFor, loadRecipes, saveRecipes, taskSignature } from "./recipes.js";
@@ -199,6 +200,38 @@ async function writeText(broker: Broker, taskId: string, file: string, text: str
     return (r.output as { sha256: string }).sha256;
 }
 
+/**
+ * What a model reads, kept once by its sha256 (2026-09-30, the harness's graph): each tool as given (its description and its input
+ * schema), the topic's words, the prompt, under `<workshop>/_statements/<sha256>.json`; the manifest names them. Two tasks that read
+ * different texts differ by a sha256, and the text that changed is there to be read: a regression is found by its cause.
+ */
+function keepStatements(catalogue: import("./capabilities.js").CatalogueEntry[], topic: TopicDefinition, promptPath: string | null): Pick<Manifest, "words" | "context"> {
+    const store = path.join(WORKSHOP_ROOT, "_statements");
+    const keep = (sha: string, value: unknown): void => {
+        const file = path.join(store, `${sha}.json`);
+        if (existsSync(file)) return;
+        try {
+            mkdirSync(store, { recursive: true });
+            writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+        } catch {
+            // a store that cannot be written loses the text, never the task
+        }
+    };
+    for (const c of catalogue) keep(statementSha(c), { kind: "tool", ...statementOf(c) });
+    let words: Manifest["words"] = null;
+    const wordsFile = topic.words?.words.file;
+    if (wordsFile && existsSync(fromRoot(...wordsFile.split("/")))) {
+        const text = readFileSync(fromRoot(...wordsFile.split("/")), "utf8");
+        words = { file: wordsFile, sha256: sha256Text(text) };
+        keep(words.sha256, { kind: "words", file: wordsFile, text });
+    }
+    if (promptPath && existsSync(promptPath)) {
+        const text = readFileSync(promptPath, "utf8");
+        keep(sha256Text(text), { kind: "prompt", file: path.relative(fromRoot(), promptPath).split(path.sep).join("/"), text });
+    }
+    return { words, context: contextCommits(forkId() ? forkDir() : null) };
+}
+
 export async function runTask({ broker, provider: providerOrBuild, taskId, topic: topicName, supervisor, recipesDir = path.join(WORKSHOP_ROOT, "_recipes"), runtimeSlot = "twin", promptFile = null, timeoutMs = 60000, onStage, onProgress, log = () => undefined }: RunTaskOptions): Promise<RunTaskResult> {
     const startedAt = new Date();
     const { task: file, sha256: taskSha256 } = await readTask(broker, taskId);
@@ -328,6 +361,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         prompt: { file: promptFile, sha256: promptPath && existsSync(promptPath) ? sha256File(promptPath) : null },
         provider: { name: provider.name, model: provider.model, family: provider.family },
         tools: toolsOf(capabilities.catalogue),
+        ...keepStatements(capabilities.catalogue, topic, promptPath),
         recipes: { file: relativeOrAbsolute(recipes.file), loaded: recipes.loaded, experiencesBefore: recipes.experiences, experiencesAfter: null, replayedSteps: 0, sha256: null },
         budget: { iterations: budget.iterations, minutes: budget.minutes },
         steps: [],

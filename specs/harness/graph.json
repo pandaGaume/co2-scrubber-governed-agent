@@ -1,0 +1,26 @@
+{
+    "note": "The harness's graph (2026-09-30, docs/evaluateur.fr.md): a SpikyPanda graph (core Graph, GraphNode, GraphOLink), each item typed by the ontology (core ONTOLOGY) declared here, as the physics knowledge graph is. It is derived: lib/harness-graph.ts rebuilds it from the sources at each reading (the tasks' manifests and episodes, the store of the texts a model read, _statements/<sha256>.json), never a second source of truth, and no model writes it. Only the types a query uses are built (E0: what the first detectors read); the guard's rules and the contract's statements of them come with their register (E2). Never adaptable by the reflection (specs/harness/**).",
+    "types": [
+        { "id": "harness.item" },
+        { "id": "harness.task", "superType": "harness.item", "note": "a factory's task: its topic, its state, its steps and tokens (the manifest)" },
+        { "id": "harness.episode", "superType": "harness.item", "note": "the task's submissions as one unit, its final outcome (harness/core/episodes.ts)" },
+        { "id": "harness.attempt", "superType": "harness.item", "note": "one submission: its capability, who decided it (ACCEPTED, GUARD_REJECTED, PRE_GUARD_REJECTED, TRUNCATED, CAPABILITY_FAILED)" },
+        { "id": "harness.capability", "superType": "harness.item", "note": "a capability a submission called" },
+        { "id": "harness.form", "superType": "harness.item", "note": "a form of failure: a guard problem with its fields, ids, quotes and numbers taken out (shapesOf), by topic" },
+        { "id": "harness.correction", "superType": "harness.item", "note": "a field a submission was refused on, what was sent there (X) and what the next accepted submission sent (Y)" },
+        { "id": "harness.model", "superType": "harness.item", "note": "the model behind a task, and its provider" },
+        { "id": "harness.fingerprint", "superType": "harness.item", "note": "what a task ran under: the tools as given (their descriptions and schemas), the topic's words, the prompt, the commits of the code and of the context" },
+        { "id": "harness.statement", "superType": "harness.item", "note": "a text a model read: a tool (its description and its input schema), a words file, a prompt, by the sha256 of its content" },
+        { "id": "harness.link" },
+        { "id": "harness.of", "superType": "harness.link", "note": "attempt of episode, episode of task" },
+        { "id": "harness.calls", "superType": "harness.link", "note": "attempt calls capability" },
+        { "id": "harness.ran-by", "superType": "harness.link", "note": "task ran by model" },
+        { "id": "harness.ran-under", "superType": "harness.link", "note": "task ran under fingerprint" },
+        { "id": "harness.read", "superType": "harness.link", "note": "task read statement: what its model was given, every step" },
+        { "id": "harness.refused-for", "superType": "harness.link", "note": "attempt refused for form (the guard's own refusals)" },
+        { "id": "harness.corrected-by", "superType": "harness.link", "note": "episode corrected by correction" },
+        { "id": "harness.answers", "superType": "harness.link", "note": "correction answers form" },
+        { "id": "harness.after", "superType": "harness.link", "note": "fingerprint after fingerprint: the one the tasks ran under before it" },
+        { "id": "harness.changed", "superType": "harness.link", "note": "fingerprint changed statement: a text it holds that the fingerprint before it held in another version (bag: was, the sha256 before)" }
+    ]
+}

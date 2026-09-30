@@ -46,6 +46,8 @@ export interface CatalogueEntry {
     description: string;
     /** Where the capability runs: on the broker, or in this process. */
     origin: "broker" | "local";
+    /** The input schema this agent was given, its descriptions included (2026-09-30: what a contract says is there too, and a change of it is a change of what the model reads). */
+    inputSchema?: JsonValue;
 }
 
 /** What the host completes in a tool's input before the call. */
@@ -120,7 +122,7 @@ export async function buildCapabilities(broker: Broker, { profile = {}, approve,
                     return result.ok ? { ok: true, output: { outcome: result.outcome, value: (result.output ?? null) as JsonValue } } : { ok: false, error: result.error, output: { outcome: result.outcome } };
                 },
             });
-            catalogue.push({ id, slot, tool: tool.name, replayPolicy, description, origin: "broker" });
+            catalogue.push({ id, slot, tool: tool.name, replayPolicy, description, origin: "broker", inputSchema: descriptor.inputSchema });
         }
     }
     for (const local of profile.local ?? []) {
@@ -138,7 +140,7 @@ export async function buildCapabilities(broker: Broker, { profile = {}, approve,
                 return r;
             },
         });
-        catalogue.push({ id: local.id, slot, tool, replayPolicy, description: local.description, origin: "local" });
+        catalogue.push({ id: local.id, slot, tool, replayPolicy, description: local.description, origin: "local", inputSchema: local.inputSchema });
     }
     return { registry, catalogue };
 }

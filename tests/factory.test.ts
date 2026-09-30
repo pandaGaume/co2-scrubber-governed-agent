@@ -31,7 +31,7 @@ import { PROCEDURE_TOPIC } from "../harness/topics/procedure/index.js";
 import { CODE_TOPIC } from "../harness/topics/code/index.js";
 import { briefOf as onnxBrief, requirementsOf as onnxRequirements, stateOfTopic as onnxState } from "../harness/topics/onnx/index.js";
 import { newProgress } from "../harness/core/workspace-observer.js";
-import { taskDir } from "../slots/tools/lib/workshop.js";
+import { taskDir, WORKSHOP_ROOT } from "../slots/tools/lib/workshop.js";
 import { sha256Of } from "../slots/tools/lib/workshop.js";
 import { endSentence, loadWords, stageSentence, stepSentence } from "../ui/factory-voice.js";
 import { truncatedDecision } from "../harness/lib/llm-common.js";
@@ -212,6 +212,13 @@ describe("the constructor's loop (F4), through the broker", () => {
             ["twin.registry_search", "task.plan", "workspace.list", "model.fit", "model.inspect", "model.contract", "task.done"],
         );
         assert.ok(result.manifest.steps.every((s) => s.source === "fallback" && s.outcome === "completed"), "first task: every step by the builder, every one completed");
+        // What the model was given, fingerprinted tool by tool and kept once by its sha256 (2026-09-30, the harness's graph): a text that changes is found.
+        const tools = result.manifest.tools;
+        assert.match(String(tools.contract), /^[0-9a-f]{64}$/);
+        assert.ok(tools.list.every((t) => /^[0-9a-f]{64}$/.test(String(t.sha256))));
+        const kept = JSON.parse(readFileSync(path.join(WORKSHOP_ROOT, "_statements", `${tools.list[0].sha256}.json`), "utf8")) as { kind: string; id: string; description: string };
+        assert.deepEqual([kept.kind, kept.id], ["tool", tools.list[0].id]);
+        assert.match(String(result.manifest.context?.repository), /^[0-9a-f]{40}$/, "the code's commit");
         assert.equal(stages.filter((s) => s === "record").length, 7, "seven decisions reached the recorder");
         assert.ok(stages.includes("reason") && stages.includes("guard") && stages.includes("execute"));
         // The plan: the cabin's air node for the concentration, the efficiency declared missing.

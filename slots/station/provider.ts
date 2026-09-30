@@ -52,6 +52,7 @@ import { adaptationProblems, observe, reflectionFormat, type Adaptation } from "
 import { enterAdoption, historyOf, judge, judgedFamilies, mistakeRate, readLedger, underJudgement, undo, writeLedger } from "../../lib/adaptations.js";
 import { answeredByMemory, enterCandidate, judgeTrials, memoryConfig, memoryProblems, promote, readMemory, topicOfPatterns, type Remembered } from "../../lib/memory.js";
 import { workingMemory } from "../../lib/working-memory.js";
+import { HarnessGraph } from "../../lib/harness-graph.js";
 import { TOPIC_DEFINITIONS } from "../../harness/core/runner.js";
 import type { Episode } from "../../harness/core/episodes.js";
 import { snapshotAt } from "../../lib/fork.js";
@@ -542,6 +543,35 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
         version: `${VERSION}-stub`,
         state,
         tools: [
+            {
+                // The harness's graph (2026-09-30, docs/evaluateur.fr.md, E0): what the tasks of this workshop did and under what, rebuilt
+                // from their manifests at each call, read the way physics.units_knowledge reads the physics graph. Read only.
+                name: "harness_graph",
+                title: "The harness's graph",
+                description:
+                    "The graph of what this workshop's factory tasks did and under what, rebuilt from their manifests at each call (never stored): tasks, their episodes and attempts, the forms of failure the guard refused them for, the corrections that answered them (X refused, Y accepted), the models, the fingerprints they ran under (the tools as given, the words, the prompt, the commits) and the texts each read, with what a fingerprint changed from the one before it. With id: a node and its typed links in and out; with type: the nodes of that type; with nothing: how many nodes and links of each type.",
+                inputSchema: obj({ id: { type: "string", description: "a node's id (task:t-..., form:procedure:..., fingerprint:...)" }, type: { type: "string", description: "a node type (harness.form, harness.fingerprint, ...)" } }),
+                handle: (args) => {
+                    const readings = Object.fromEntries(
+                        Object.entries(TOPIC_DEFINITIONS)
+                            .filter(([, d]) => d?.judges)
+                            .map(([t, d]) => [t, { judges: d!.judges!, digest: d!.digest }]),
+                    );
+                    const g = new HarnessGraph(WORKSHOP_ROOT, readings);
+                    const brief = (n: { id?: unknown; type?: string; bag?: unknown }) => ({ id: String(n.id), type: n.type ?? null, ...(n.bag && typeof n.bag === "object" && Object.keys(n.bag).length ? { bag: n.bag } : {}) });
+                    if (typeof args.id === "string" && args.id) {
+                        const n = g.get(args.id);
+                        if (!n) throw new Error(`no node "${args.id}" in the harness's graph`);
+                        return {
+                            ...brief(n),
+                            out: g.out(n).map((l) => ({ type: l.type ?? null, to: String(l.ofin?.id), ...(l.bag && Object.keys(l.bag).length ? { bag: l.bag } : {}) })),
+                            in: g.in(n).map((l) => ({ type: l.type ?? null, from: String(l.oini?.id), ...(l.bag && Object.keys(l.bag).length ? { bag: l.bag } : {}) })),
+                        };
+                    }
+                    if (typeof args.type === "string" && args.type) return { type: args.type, nodes: g.nodesOf(args.type).map(brief) };
+                    return g.summary();
+                },
+            },
             {
                 // Mother reflects on what the fork's agents did (2026-09-29, P4): the patterns of the traces, read by code, and the
                 // reflection factory asked for an adaptation that answers them. In a fork only: its adaptations are adopted and measured there.

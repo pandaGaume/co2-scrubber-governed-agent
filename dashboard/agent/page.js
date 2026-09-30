@@ -913,7 +913,7 @@ async function buildCapabilities(broker, { profile = {}, approve, onCall } = {})
           return result.ok ? { ok: true, output: { outcome: result.outcome, value: result.output ?? null } } : { ok: false, error: result.error, output: { outcome: result.outcome } };
         }
       });
-      catalogue.push({ id, slot, tool: tool.name, replayPolicy, description, origin: "broker" });
+      catalogue.push({ id, slot, tool: tool.name, replayPolicy, description, origin: "broker", inputSchema: descriptor.inputSchema });
     }
   }
   for (const local of profile.local ?? []) {
@@ -931,7 +931,7 @@ async function buildCapabilities(broker, { profile = {}, approve, onCall } = {})
         return r;
       }
     });
-    catalogue.push({ id: local.id, slot, tool, replayPolicy, description: local.description, origin: "local" });
+    catalogue.push({ id: local.id, slot, tool, replayPolicy, description: local.description, origin: "local", inputSchema: local.inputSchema });
   }
   return { registry, catalogue };
 }
@@ -971,7 +971,9 @@ var EXCLUDED = [
   /^station\.propose$/,
   // A health alarm is raised and cleared by a person (the crew, the medical panel), and an aborted commissioning reopened by the commander (2026-09-29).
   /^biomed\.(monitor_start|monitor_stop|report|move|alarm|alarm_clear)$/,
-  /^station\.(registry_register|registry_report|procedure_checked|candidate_evaluated|commissioning_authorise|commissioning_reopen|procedure_run|reflect)$/
+  /^station\.(registry_register|registry_report|procedure_checked|candidate_evaluated|commissioning_authorise|commissioning_reopen|procedure_run|reflect)$/,
+  // The harness's graph is the evaluator's reading of the factories' traces (2026-09-30), not something the habitat's agent acts on.
+  /^station\.harness_graph$/
 ];
 function replayPolicyFor(id, guardMode) {
   if (APPROVAL_REQUIRED.some((r) => r.test(id))) return "approval-required";

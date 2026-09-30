@@ -51,6 +51,13 @@ const gitOr = (cwd: string, args: string[]): string | null => {
     }
 };
 
+/** The code's commit, read once per process; and the context's, a fork's own history, read now (its snapshots move it). */
+let repositoryCommit: string | null | undefined;
+export function contextCommits(forkDirectory: string | null): { repository: string | null; fork: string | null } {
+    if (repositoryCommit === undefined) repositoryCommit = gitOr(fromRepository(), ["rev-parse", "HEAD"]);
+    return { repository: repositoryCommit, fork: forkDirectory ? gitOr(forkDirectory, ["rev-parse", "HEAD"]) : null };
+}
+
 function configure(dir: string, id: string): void {
     git(dir, ["config", "user.name", `fork ${id}`]);
     git(dir, ["config", "user.email", `fork-${id}@forks.local`]);
