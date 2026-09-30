@@ -1,0 +1,11 @@
+v1 t-2026-09-30-0001: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 10; tokens in 63967 out 8901 (max 5819); memory seen: 0 learned, 0 previous episode(s)
+v2 t-2026-09-30-0002: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 10; tokens in 70735 out 6659 (max 5448); memory seen: 0 learned, 0 previous episode(s)
+v3 t-2026-09-30-0003: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 11; tokens in 91300 out 7558 (max 4883); memory seen: 0 learned, 0 previous episode(s)
+v4 t-2026-09-30-0004: first guard-judged refused (analysis: the analysis says * changes stays under the # min cap.), and the new procedure keeps it as it was: the prevention is not in the test + analysis: the analysis says device changes, and the new procedure keeps it as it was: the prevention is not in the test); pre-guard 0; truncated 0; steps 12; tokens in 180483 out 14252 (max 3680); memory seen: 0 learned, 0 previous episode(s)
+v5 t-2026-09-30-0005: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 14; tokens in 213180 out 10219 (max 4068); memory seen: 0 learned, 0 previous episode(s)
+v6 t-2026-09-30-0006: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 9; tokens in 49143 out 6012 (max 5247); memory seen: 0 learned, 0 previous episode(s)
+v7 t-2026-09-30-0007: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 11; tokens in 51599 out 5467 (max 4559); memory seen: 0 learned, 0 previous episode(s)
+v8 t-2026-09-30-0008: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 10; tokens in 30039 out 6566 (max 5958); memory seen: 0 learned, 0 previous episode(s)
+v9 t-2026-09-30-0009: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 11; tokens in 66705 out 8501 (max 4197); memory seen: 0 learned, 0 previous episode(s)
+v10 t-2026-09-30-0010: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 13; tokens in 69313 out 7594 (max 4937); memory seen: 0 learned, 0 previous episode(s)
+exit 0
