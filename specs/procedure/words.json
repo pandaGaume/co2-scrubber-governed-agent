@@ -51,7 +51,9 @@
     "guard": {
         "refused": "procedure refused: {problems}",
         "id": "id \"{id}\" must be lower case letters, digits and dashes (it names the file)",
-        "quantity": "quantity \"{name}\": {reason} ({code})"
+        "quantity": "quantity \"{name}\": {reason} ({code})",
+        "quantityUnitAlone": " The unit {unit} alone is one of {quantity} (physics.units_normalize with the unit alone says which quantity takes a unit).",
+        "quantityDeclared": " The register declares {device}'s {property} as {quantity} in {unit} (factory.inventory, measures)."
     },
     "intentionPrevious": " The last test of this commissioning was aborted ({reason}): first analyse why (procedure.analyse), then write a test that keeps it from happening again.",
     "analysis": {

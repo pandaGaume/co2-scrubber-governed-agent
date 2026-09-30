@@ -81,6 +81,9 @@ const COMPACTORS: Record<string, (v: unknown, input: JsonValue) => JsonValue> = 
     "workspace.read": (v, input) => {
         const o = obj(v);
         const path = String((input as Obj)?.path ?? "");
+        // One field asked for, by its pointer: the field itself, made to fit (2026-09-30: a model given only a JSON file's keys read it
+        // again, then the handle of that read, and ended stuck).
+        if (typeof (input as Obj)?.pointer === "string" && "value" in o) return { path, pointer: (input as Obj).pointer, value: fitted(o.value) ?? head(JSON.stringify(o.value), SUMMARY_LIMIT) } as JsonValue;
         const text = typeof o.text === "string" ? o.text : "";
         // A JSON file is read for its shape, not its bytes; a text file for its first lines.
         let parsed: unknown = null;
@@ -90,7 +93,13 @@ const COMPACTORS: Record<string, (v: unknown, input: JsonValue) => JsonValue> = 
             parsed = null;
         }
         const shape = parsed && typeof parsed === "object" ? (Array.isArray(parsed) ? `an array of ${parsed.length} item(s); first: ${head(JSON.stringify(parsed[0] ?? null), 300)}` : `an object with keys ${Object.keys(parsed as Obj).join(", ")}`) : head(text, 600);
-        return { path, sha256: o.sha256 ?? null, bytes: text.length, content: shape, note: "the whole file is in the task's workshop; the harness already put what it holds into the state (task, telemetry, shelf); read it again only for a detail the state does not give" } as JsonValue;
+        return {
+            path,
+            sha256: o.sha256 ?? null,
+            bytes: text.length,
+            content: shape,
+            note: parsed && typeof parsed === "object" ? "the harness already put what the task holds into the state (task, telemetry, shelf); for a detail it does not give, read one field with pointer (a JSON Pointer: /steps/0/reason): read whole again, a JSON file shows its keys again" : "the whole file is in the task's workshop; the harness already put what it holds into the state (task, telemetry, shelf); read it again only for a detail the state does not give",
+        } as JsonValue;
     },
     "workspace.list": (v) => {
         const files = list(obj(v).files);

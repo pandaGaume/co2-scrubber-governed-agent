@@ -8,7 +8,7 @@
         "purpose": { "type": "string", "description": "What the test is for, in one line." },
         "volume": { "type": "string", "description": "ISA-95 path of the volume under test, e.g. /habitat/lab." },
         "device": { "type": "string", "description": "ISA-95 path of the device the steps command." },
-        "quantities": { "type": "array", "items": { "type": "object", "properties": { "name": { "type": "string" }, "quantity": { "type": "string" }, "unit": { "type": "string" } }, "required": ["name", "quantity", "unit"] }, "description": "What the test measures." },
+        "quantities": { "type": "array", "items": { "type": "object", "properties": { "name": { "type": "string" }, "quantity": { "type": "string", "description": "a quantity of the unit system (physics.units_normalize says which quantity takes a unit)" }, "unit": { "type": "string", "description": "one of that quantity's units" } }, "required": ["name", "quantity", "unit"] }, "description": "What the test measures: each a quantity of the unit system with one of its units. For a device's property, the quantity and the unit its register declares (factory.inventory, measures); a word of the property's name is not its quantity. physics.units_normalize with the unit alone says which quantity takes a unit." },
         "hypotheses": { "type": "array", "items": { "type": "string" }, "description": "What the test does not measure and leaves to be decided otherwise." },
         "limits": {
             "type": "object",

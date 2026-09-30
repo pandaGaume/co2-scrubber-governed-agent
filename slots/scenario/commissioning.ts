@@ -402,7 +402,7 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
 
             // 3. the relay: Mother re-checked the proposed procedure with the occupancy she reads; the commissioning waits for the commander.
             begin(3);
-            const c1 = await call<{ commissioning: { status: string; procedure: { procedureId: string; minutes: number; occupants: unknown[] } | null } }>("station", "commissioning_state", { commissioningId });
+            const c1 = await call<{ commissioning: { status: string; procedure: { procedureId: string; minutes: number; occupants: unknown[]; content?: JsonValue } | null } }>("station", "commissioning_state", { commissioningId });
             end(3, { status: c1.commissioning.status, procedure: c1.commissioning.procedure?.procedureId ?? null, minutes: c1.commissioning.procedure?.minutes ?? null, occupants: c1.commissioning.procedure?.occupants.length ?? 0 } as JsonValue);
             if (c1.commissioning.status !== "awaiting-authorisation") throw new Error(`commissioning ${commissioningId} is ${c1.commissioning.status}: Mother did not relay the procedure`);
 
@@ -517,7 +517,16 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
                     const refused = refusing.filter((g) => g.capabilities.includes("station.commissioning_reopen"));
                     if (refused.length) throw new Error(refused.map((g) => says(g)).join("; "));
                     await call("station", "commissioning_reopen", { commissioningId, reason: says(stage, String(stage.bag.reasonSays)) });
-                    previous = { procedureId: c1.commissioning.procedure?.procedureId ?? null, aborted: { condition: aborted?.condition ?? null, reason: why, step: aborted?.step ?? null }, minutesRun: telemetry.length - 1 };
+                    // What the brief says the state holds (2026-09-30: it said "the aborted procedure, what the test ran" and gave neither; a model went
+                    // looking for them in a workshop that never had them, and ended stuck): the procedure as it was relayed, and the test's record in short.
+                    const co2 = telemetry.map((r) => r.co2_lab_ppm);
+                    previous = {
+                        procedureId: c1.commissioning.procedure?.procedureId ?? null,
+                        procedure: c1.commissioning.procedure?.content ?? null,
+                        aborted: { condition: aborted?.condition ?? null, reason: why, step: aborted?.step ?? null },
+                        minutesRun: telemetry.length - 1,
+                        record: telemetry.length ? { first: telemetry[0], last: telemetry[telemetry.length - 1], co2LabMaxPpm: Math.max(...co2), rows: telemetry.length } : null,
+                    };
                     // The world where the abort left it: the next test starts from the CO2 measured now.
                     await call("scrubber", "debug.set_co2", { state: "NOMINAL", ppm: Math.round(world.labPpm) });
                     measured = { co2Ppm: Math.round(world.labPpm), source: sensor ? `${sensor} (co2)` : "scrubber.motor.state", at: new Date().toISOString() };

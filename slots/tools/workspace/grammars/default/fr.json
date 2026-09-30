@@ -14,11 +14,12 @@
         },
         "read": {
             "title": "Lire un fichier d'une tâche",
-            "description": "Le contenu d'un fichier de la tâche, en texte (ou base64 pour un binaire), avec sa taille et son sha256. 256 Ko au plus par lecture ; un fichier plus gros est refusé avec sa taille.",
+            "description": "Le contenu d'un fichier de la tâche, en texte (ou base64 pour un binaire), avec sa taille et son sha256 ; ou, avec pointer, un champ d'un fichier JSON (sa valeur). 256 Ko au plus par lecture ; un fichier plus gros est refusé avec sa taille.",
             "properties": {
                 "taskId": "la tâche",
                 "path": "un chemin relatif au répertoire de la tâche",
-                "maxBytes": "refuser au-delà de ce nombre d'octets (256 Ko au plus)"
+                "maxBytes": "refuser au-delà de ce nombre d'octets (256 Ko au plus)",
+                "pointer": "un champ d'un fichier JSON, par un JSON Pointer (/steps/0/reason ; ~1 pour une barre oblique dans une clé) : sa valeur seule, pour un détail d'un fichier que l'état ne montre pas en entier"
             }
         },
         "write": {

@@ -77,7 +77,7 @@ export const PROCEDURE_WORD_KEYS = [
     "brief.handOver", "brief.situation", "brief.method", "brief.methodListed", "brief.methodFind", "brief.methodNotACard", "brief.plan", "brief.planOutput", "brief.planUnit",
     "brief.procedure", "brief.safetyBounds", "brief.presenceRead", "brief.presenceUnread", "brief.measured", "brief.measuredSource", "brief.refused", "brief.refusedKept", "brief.refusedWhole",
     "intentionPrevious", "requirements.analysisAccepted", "brief.analysis", "brief.analysed", "analysis.first", "analysis.noPrevious", "analysis.cause", "analysis.path", "analysis.unchanged", "analysis.done", "capabilities.analyse",
-    "draft.none", "draft.noneAtExecution", "draft.accepted", "draft.kept", "capabilities.submit", "capabilities.revise", "capabilities.reviseChanges", "guard.refused", "guard.id", "guard.quantity",
+    "draft.none", "draft.noneAtExecution", "draft.accepted", "draft.kept", "capabilities.submit", "capabilities.revise", "capabilities.reviseChanges", "guard.refused", "guard.id", "guard.quantity", "guard.quantityUnitAlone", "guard.quantityDeclared",
 ];
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -91,6 +91,8 @@ export interface Previous {
     procedure?: ProcedureLike | null;
     aborted: { condition?: string | null; reason?: string | null; step?: number | null };
     minutesRun?: number;
+    /** What the test ran, in short: its first and last rows of telemetry, the highest CO2 the volume reached (2026-09-30). */
+    record?: { first?: Record<string, number>; last?: Record<string, number>; co2LabMaxPpm?: number; rows?: number } | null;
 }
 export function previousOf(task: TaskFile["task"]): Previous | null {
     const p = FORMAT.history ? (task.observations as Record<string, unknown> | undefined)?.[FORMAT.history] : undefined;
@@ -234,6 +236,19 @@ function stateOf(progress: Progress): ProcedureTopicState {
 
 /** A read of this task, by the name the spec gives it. */
 const readOf = (progress: Progress, name: string) => progress.reads[FORMAT.reads[name] ?? name];
+
+/**
+ * What the register declares for the device property a quantity of the procedure is named after (2026-09-30): read in the
+ * installation this task read, a property whose name is a word of the quantity's name ("scrubber_speed_command": speed).
+ */
+export function declaredQuantity(progress: Progress, name: string): { device: string; property: string; quantity: string; unit: string } | null {
+    const words = new Set(name.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
+    const devices = ((readOf(progress, "installation")?.value as { devices?: Array<{ path?: string; measures?: Array<{ property?: string; quantity?: string; unit?: string }> }> } | undefined)?.devices ?? []) as Array<{ path?: string; measures?: Array<{ property?: string; quantity?: string; unit?: string }> }>;
+    for (const d of devices)
+        for (const m of d.measures ?? [])
+            if (m.property && words.has(m.property.toLowerCase()) && m.quantity && m.unit) return { device: String(d.path ?? "the device"), property: m.property, quantity: m.quantity, unit: m.unit };
+    return null;
+}
 
 /** The method cards the library listed for the missing quantity, by id. */
 function methodsListed(progress: Progress): string[] {
@@ -498,7 +513,15 @@ async function guardProcedure(capabilityId: string, input: JsonValue, context: T
         if (!q || typeof q !== "object") continue;
         const r = physics().resolveUnitRef({ unit: String(q.unit ?? ""), ...(q.quantity ? { quantity: String(q.quantity) } : {}) });
         if (!r.ok) {
-            check.problems.push({ kind: "shape", message: w("guard.quantity", { name: String(q.name), reason: r.reason, code: r.code }) });
+            // What would answer it, said with the refusal (2026-09-30: a speed in percent declared as Speed, a velocity, refused and dropped
+            // in 29 tasks of 30 rather than put right): the quantity the unit alone belongs to, and what the register declares for the property.
+            const alone = q.quantity ? physics().resolveUnitRef({ unit: String(q.unit ?? "") }) : null;
+            const declared = declaredQuantity(context.progress, String(q.name ?? ""));
+            const hints = [
+                ...(alone?.ok ? [w("guard.quantityUnitAlone", { unit: String(q.unit), quantity: String((alone.unit as { quantity?: unknown }).quantity ?? "?") })] : []),
+                ...(declared ? [w("guard.quantityDeclared", declared)] : []),
+            ].join("");
+            check.problems.push({ kind: "shape", message: `${w("guard.quantity", { name: String(q.name), reason: r.reason, code: r.code })}${hints}` });
             check.ok = false;
         }
     }
@@ -633,7 +656,8 @@ export function stateOfTopic(progress: Progress, task: TaskFile["task"]): TopicS
             ...reads,
             method: state.method ? { id: state.method, card: state.methodCard ?? `(read it: ${FORMAT.reads.card})` } : null,
             // What stopped the last test, and its analysis once accepted.
-            ...(previousOf(task) ? { previous: headOf(previousOf(task), 3000), analysis: (state.analysis ?? null) as unknown as JsonValue } : {}),
+            // The aborted procedure whole, with what the test ran (2026-09-30: cut at 3000 characters, the procedure the brief promised was a head).
+            ...(previousOf(task) ? { previous: headOf(previousOf(task), 16000), analysis: (state.analysis ?? null) as unknown as JsonValue } : {}),
             // What the task measured when it opened: the test starts from it.
             measured: measured as unknown as JsonValue,
             accepted: state.accepted,

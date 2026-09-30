@@ -121,7 +121,8 @@ for (const v of variants) {
     const active = ledger().filter((e) => e.status === "adopted" || e.status === "kept").map((e) => e.n);
     const { taskId } = await call("factory", "request", {
         objective: { required_outputs: [{ name: "V_lab", quantity: "Volume", unit: "m3" }] },
-        observations: { device: scrubber, measured: { co2Ppm: v.co2Ppm, source: `${sensor} (co2)`, at: new Date().toISOString() }, ...(v.previous ? { previous: v.previous } : {}) },
+        // A previous test's procedure names the device of this commissioning ({scrubber} in the task list: its path changes with each task).
+        observations: { device: scrubber, measured: { co2Ppm: v.co2Ppm, source: `${sensor} (co2)`, at: new Date().toISOString() }, ...(v.previous ? { previous: JSON.parse(JSON.stringify(v.previous).split("{scrubber}").join(scrubber)) } : {}) },
         topics: ["procedure"],
         builder,
         budget: { iterations: 25, minutes: 15 },

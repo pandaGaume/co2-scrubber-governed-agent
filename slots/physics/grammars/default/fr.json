@@ -1,12 +1,12 @@
 {
     "server": {
-        "description": "Les unités physiques, déterministes : une unité telle qu'écrite ramenée à sa grandeur et à son code UCUM, une valeur convertie entre unités d'une même grandeur, deux unités comparées, et la valeur d'une source vérifiée contre sa reformulation dans une autre unité",
-        "instructions": "Ne convertissez jamais une unité de tête : demandez units_convert, et vérifiez ce que vous copiez d'un document avec units_validate_connection (la valeur et l'unité du document comme source, la vôtre comme cible). Une unité inconnue du système est refusée, jamais devinée : écrivez la grandeur à côté."
+        "description": "Les unités physiques, déterministes : une unité telle qu'écrite ramenée à sa grandeur et à son code UCUM, une valeur convertie entre unités d'une même grandeur, deux unités comparées, et la valeur d'une source vérifiée contre sa reformulation dans une autre unité ; l'outil à interroger dès qu'une unité ou une grandeur est refusée ou inconnue",
+        "instructions": "Ne convertissez jamais une unité de tête : demandez units_convert, et vérifiez ce que vous copiez d'un document avec units_validate_connection (la valeur et l'unité du document comme source, la vôtre comme cible). Une unité inconnue du système est refusée, jamais devinée : écrivez la grandeur à côté. Quand une unité ou une grandeur est refusée (UNKNOWN_UNIT, UNKNOWN_QUANTITY, une unité qui n'est pas de la grandeur), interrogez ce slot avant de la réécrire : units_normalize avec l'unité seule dit à quelle grandeur elle appartient, avec une grandeur il en donne les unités. Un mot du nom d'une propriété n'est pas sa grandeur (une vitesse en pourcentage n'est pas une Speed, qui est une vitesse de déplacement)."
     },
     "tools": {
         "units_normalize": {
             "title": "Résoudre une unité",
-            "description": "Une unité telle qu'écrite (m3/min, m³/min, L/min, ppm, kg/s...), avec sa grandeur quand elle est connue (VolumetricFlow, Concentration, MassFlow...) : la grandeur à laquelle elle appartient, son code UCUM, son symbole et son facteur vers l'unité de base de la grandeur. Ambiguë sans la grandeur quand le même code appartient à deux grandeurs."
+            "description": "Une unité telle qu'écrite (m3/min, m³/min, L/min, ppm, kg/s...), avec sa grandeur quand elle est connue (VolumetricFlow, Concentration, MassFlow...) : la grandeur à laquelle elle appartient, son code UCUM, son symbole et son facteur vers l'unité de base de la grandeur. Ambiguë sans la grandeur quand le même code appartient à deux grandeurs. La première chose à demander quand une unité ou une grandeur est refusée : l'unité seule donne la grandeur à laquelle elle appartient."
         },
         "units_convert": {
             "title": "Convertir une valeur",

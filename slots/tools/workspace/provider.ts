@@ -18,6 +18,27 @@ export interface WorkspaceState {
 }
 
 const MAX_READ = 256 * 1024;
+
+/** The value at a JSON Pointer (RFC 6901: /steps/0/reason; ~1 is a slash, ~0 a tilde), or an error naming what the document holds there. */
+export function fieldAt(doc: unknown, pointer: string, path: string): unknown {
+    if (!pointer.startsWith("/")) throw new Error(`pointer "${pointer}": a JSON Pointer starts with / (/steps/0/reason)`);
+    let at: unknown = doc;
+    const walked: string[] = [];
+    for (const raw of pointer.slice(1).split("/")) {
+        const key = raw.replace(/~1/g, "/").replace(/~0/g, "~");
+        const here = walked.length ? `/${walked.join("/")}` : "the document";
+        if (Array.isArray(at)) {
+            const i = Number(key);
+            if (!Number.isInteger(i) || i < 0 || i >= at.length) throw new Error(`"${path}": ${here} is a list of ${at.length} item(s), no item ${key}`);
+            at = at[i];
+        } else if (at && typeof at === "object") {
+            if (!(key in (at as Record<string, unknown>))) throw new Error(`"${path}": ${here} has no field "${key}" (its fields: ${Object.keys(at as Record<string, unknown>).join(", ")})`);
+            at = (at as Record<string, unknown>)[key];
+        } else throw new Error(`"${path}": ${here} is a value, not an object or a list`);
+        walked.push(raw);
+    }
+    return at;
+}
 const TASK = { type: "string" };
 const PATH = { type: "string" };
 
@@ -31,7 +52,7 @@ export function workspaceSlot(wsBase: string, log: (line: string) => void): Publ
         },
         {
             name: "read",
-            inputSchema: objectSchema({ taskId: TASK, path: PATH, maxBytes: { type: "number" } }, ["taskId", "path"]),
+            inputSchema: objectSchema({ taskId: TASK, path: PATH, maxBytes: { type: "number" }, pointer: { type: "string" } }, ["taskId", "path"]),
             handle: (args) => {
                 const file = taskFile(checkTaskId(args.taskId), args.path);
                 if (!existsSync(file)) throw new Error(`no file "${String(args.path)}" in task ${String(args.taskId)}`);
@@ -39,6 +60,16 @@ export function workspaceSlot(wsBase: string, log: (line: string) => void): Publ
                 const limit = Math.min(MAX_READ, typeof args.maxBytes === "number" ? args.maxBytes : MAX_READ);
                 if (bytes.length > limit) throw new Error(`"${String(args.path)}" is ${bytes.length} bytes, ${limit} at most for one read`);
                 const text = bytes.toString("utf8");
+                // One field of a JSON file (2026-09-30: a model looking for a detail of a JSON file was given its keys, again and again, and ended stuck).
+                if (typeof args.pointer === "string" && args.pointer !== "") {
+                    let doc: unknown;
+                    try {
+                        doc = JSON.parse(text);
+                    } catch {
+                        throw new Error(`"${String(args.path)}" is not JSON: a pointer reads a field of a JSON file`);
+                    }
+                    return { path: String(args.path), pointer: args.pointer, bytes: bytes.length, sha256: sha256Of(bytes), value: fieldAt(doc, args.pointer, String(args.path)) };
+                }
                 const binary = text.includes("�");
                 return { path: String(args.path), bytes: bytes.length, sha256: sha256Of(bytes), ...(binary ? { base64: bytes.toString("base64") } : { text }) };
             },

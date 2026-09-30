@@ -32,13 +32,229 @@
       "fe-2"
     ],
     "previous": {
-      "procedureId": "decay-vlab-lab-01",
+      "procedureId": "decay-vlab-scrubber-1-v2-01",
+      "procedure": {
+        "version": 1,
+        "id": "decay-vlab-scrubber-1-v2-01",
+        "method": "concentration-decay",
+        "standard": "ASTM E741 (concentration decay, single zone); ASTM D6245 (occupant CO2 as tracer)",
+        "purpose": "Measure the volume of air V_lab served by /habitat/lab/eclss/scrubber-1-v2 as V = Qe * tau, from a CO2 rise at reduced speed then a decay at full speed, occupants as the source.",
+        "volume": "/habitat/lab",
+        "device": "{scrubber}",
+        "quantities": [
+          {
+            "name": "co2_lab",
+            "quantity": "Concentration",
+            "unit": "ppm"
+          },
+          {
+            "name": "V_lab",
+            "quantity": "Volume",
+            "unit": "m3"
+          },
+          {
+            "name": "scrubber_speed",
+            "quantity": "Ratio",
+            "unit": "percent"
+          },
+          {
+            "name": "co2_habb",
+            "quantity": "Concentration",
+            "unit": "ppm"
+          }
+        ],
+        "limits": {
+          "co2MaxPpm": 3000,
+          "co2AbortPpm": 3200,
+          "minSpeedPercent": 30,
+          "maxMinutes": 60
+        },
+        "steps": [
+          {
+            "n": 1,
+            "hatch": "closed",
+            "speedPercent": 30,
+            "minutes": 25,
+            "why": "Rise: reduce effective flow to 0.3 m3/min (floor speed) so CO2 climbs from 2000 ppm towards a higher equilibrium; hatch closed and held closed."
+          },
+          {
+            "n": 2,
+            "hatch": "closed",
+            "speedPercent": 100,
+            "minutes": 30,
+            "why": "Decay: full speed (Qe = 1 m3/min), record the fall towards equilibrium; about one time constant (first guess V=30 m3, tau=30 min). Hatch unchanged."
+          }
+        ],
+        "occupancy": {
+          "module": "lab",
+          "occupants": 2,
+          "subjects": [
+            "fe-1",
+            "fe-2"
+          ],
+          "readBy": "biomed.presence",
+          "at": "2026-09-30T09:06:34.938Z"
+        },
+        "monitoring": {
+          "subjects": [
+            "fe-1",
+            "fe-2"
+          ],
+          "reason": "The two lab occupants breathe the air whose CO2 is raised by the test; hab-b occupants are not exposed with the hatch closed.",
+          "band": {
+            "minBpm": 45,
+            "maxBpm": 120
+          }
+        },
+        "authorisation": {
+          "by": "commander",
+          "required": true
+        },
+        "abort": [
+          {
+            "id": "co2",
+            "source": "scrubber.motor.state: CO2 of the lab (co2-1-v2)",
+            "when": "CO2 at or above 3200 ppm",
+            "threshold": 3200
+          },
+          {
+            "id": "refused",
+            "source": "scrubber.motor.set_speed",
+            "when": "the device refuses a step's command"
+          },
+          {
+            "id": "battery",
+            "source": "station.registry_list: battery state of charge",
+            "when": "state of charge under 40 percent",
+            "threshold": 40
+          },
+          {
+            "id": "vitals",
+            "source": "biomed.verdict",
+            "when": "a monitored person out of band, monitoring lost, or one more person in the lab"
+          }
+        ],
+        "expected": {
+          "rise": "Starting at about 2000 ppm with 2 occupants (0.76 L/min CO2 at 0.38 L/min each), 30% speed: CO2 rises slowly towards about 2500 ppm (G/Qe with Qe=0.3 m3/min), i.e. roughly +100 to +200 ppm over 25 min, peak well under 3000 ppm; a rise under sensor noise or a drop means exchange through the hatch or a wrong source.",
+          "decay": "At full speed CO2 falls towards C_eq about 760 ppm above the scrubber-free baseline (G/Qe, Qe=1 m3/min) with tau = V/Qe; first guess V=30 m3 gives tau about 30 min (plus 3.33 min lag). Fit C(t)=C_eq+(C0-C_eq)exp(-t/tau); V_lab = Qe*tau, expected 10 to 200 m3 (default 30).",
+          "refutation": "A fitted C_eq far from G/Qe, non-exponential residuals, or hab-b CO2 moving in step with the lab would show the lab is not one closed well-mixed zone (hatch exchange, design 3 m3/min hatch-closed ventilation) and V would be an overestimate of the served volume."
+        },
+        "hypotheses": [
+          "Lab air is one well-mixed zone.",
+          "Exchange through the closed hatch to hab-b is not measured; it is a hypothesis (station-topology gives a design inter-module ventilation of 3 m3/min hatch closed), not assumed zero; hab-b CO2 is recorded to reveal it.",
+          "Occupants' number and activity (awake, 0.38 L/min each) are constant during the test; no one enters or leaves.",
+          "Effective flow at full speed Qe = 1 m3/min per datasheet and scales linearly with speed; lag 3.33 min is ignored in the fit after the first ~10 min of each step.",
+          "Sensor co2-1-v2 is accurate and its noise is small against the expected swing."
+        ],
+        "justifications": [
+          {
+            "constant": "limits.co2MaxPpm",
+            "value": 3000,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm",
+            "reason": "Below the 3200 ppm ceiling; start 2000 ppm leaves over 200 ppm headroom; expected peak about 2200."
+          },
+          {
+            "constant": "limits.co2AbortPpm",
+            "value": 3200,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm",
+            "reason": "At the signed ceiling, below ELEVATED 3500 ppm."
+          },
+          {
+            "constant": "abort.co2.threshold",
+            "value": 3200,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm",
+            "reason": "Same abort ceiling, at or below 3200 ppm."
+          },
+          {
+            "constant": "limits.minSpeedPercent",
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent",
+            "reason": "Scrubber never commanded below 30 percent."
+          },
+          {
+            "constant": "steps.1.speedPercent",
+            "value": 30,
+            "source": "library",
+            "reference": "test.speedFloorPercent",
+            "reason": "Reduced speed at the floor gives the largest rise allowed."
+          },
+          {
+            "constant": "steps.2.speedPercent",
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent",
+            "reason": "Full speed, above the 30 percent floor, for the decay."
+          },
+          {
+            "constant": "limits.maxMinutes",
+            "value": 60,
+            "source": "library",
+            "reference": "test.maxMinutesCeiling",
+            "reason": "At the signed 60 min ceiling; steps total 55 min."
+          },
+          {
+            "constant": "abort.battery.threshold",
+            "value": 40,
+            "source": "library",
+            "reference": "test.batteryAbortMinPercent",
+            "reason": "Above the 35 percent minimum for margin."
+          },
+          {
+            "constant": "monitoring.band.minBpm",
+            "value": 45,
+            "source": "library",
+            "reference": "test.heartRateMinBpm",
+            "reason": "Signed lower heart-rate bound; matches monitor default band."
+          },
+          {
+            "constant": "monitoring.band.maxBpm",
+            "value": 120,
+            "source": "library",
+            "reference": "test.heartRateMaxBpm",
+            "reason": "Signed upper heart-rate bound; matches monitor default band."
+          },
+          {
+            "constant": "steps.1.minutes",
+            "value": 25,
+            "source": "derived",
+            "reference": "rise tau = V/Qe(30%) = 30/0.3 = 100 min, too long for the 60 min cap; 25 min chosen so both steps fit within 60 (25+30=55)",
+            "reason": "Budget split under the duration cap; rise limited by the speed floor."
+          },
+          {
+            "constant": "steps.2.minutes",
+            "value": 30,
+            "source": "derived",
+            "reference": "tau = V/Qe = 30 m3 / 1 m3/min = 30 min (first guess V=30 m3, library default)",
+            "reason": "One time constant of decay at full speed."
+          }
+        ]
+      },
       "aborted": {
         "condition": "co2",
         "reason": "the Lab's CO2 reached the procedure's abort threshold during the rise",
         "step": 1
       },
-      "minutesRun": 34
+      "minutesRun": 22,
+      "record": {
+        "first": {
+          "minute": 0,
+          "co2_lab_ppm": 2150,
+          "co2_habb_ppm": 900,
+          "speed_percent": 30
+        },
+        "last": {
+          "minute": 22,
+          "co2_lab_ppm": 3205,
+          "co2_habb_ppm": 960,
+          "speed_percent": 30
+        },
+        "co2LabMaxPpm": 3205,
+        "rows": 23
+      }
     }
   },
   {
@@ -49,13 +265,226 @@
       "fe-3"
     ],
     "previous": {
-      "procedureId": "decay-vlab-lab-01",
+      "procedureId": "decay-lab-v7-01",
+      "procedure": {
+        "version": 1,
+        "id": "decay-lab-v7-01",
+        "method": "concentration-decay",
+        "standard": "ASTM E741 (single-zone tracer decay); ASTM D6245 (occupant CO2 as tracer)",
+        "purpose": "Measure V_lab, the air volume served by scrubber-1-v7, as V = Qe * tau from a raise-then-decay of the occupants' CO2 with the hatch held closed.",
+        "volume": "/habitat/lab",
+        "device": "{scrubber}",
+        "quantities": [
+          {
+            "name": "co2_lab",
+            "quantity": "Concentration",
+            "unit": "ppm"
+          },
+          {
+            "name": "V_lab",
+            "quantity": "Volume",
+            "unit": "m3"
+          },
+          {
+            "name": "co2_habb",
+            "quantity": "Concentration",
+            "unit": "ppm"
+          }
+        ],
+        "limits": {
+          "co2MaxPpm": 2500,
+          "co2AbortPpm": 3000,
+          "minSpeedPercent": 40,
+          "maxMinutes": 60
+        },
+        "steps": [
+          {
+            "n": 1,
+            "hatch": "closed",
+            "speedPercent": 40,
+            "minutes": 28,
+            "why": "Rise: reduced effective flow (0.4 m3/min) lets the 3 occupants' CO2 climb from 1050 ppm toward a higher equilibrium, several hundred ppm above sensor noise, about one tau/3 for a first guess V=30 m3."
+          },
+          {
+            "n": 2,
+            "hatch": "closed",
+            "speedPercent": 100,
+            "minutes": 30,
+            "why": "Decay: full speed (Qe 1 m3/min); fit C(t)=C_eq+(C0-C_eq)exp(-t/tau) toward equilibrium; first-guess tau=V/Qe=30 min for V=30 m3."
+          }
+        ],
+        "abort": [
+          {
+            "id": "co2",
+            "source": "scrubber.motor.state: CO2 of /habitat/lab",
+            "when": "CO2 of the lab at or above 3000 ppm"
+          },
+          {
+            "id": "refused",
+            "source": "scrubber.motor.set_speed",
+            "when": "the device refuses a step's command"
+          },
+          {
+            "id": "battery",
+            "source": "station.registry_list",
+            "threshold": 35,
+            "when": "battery state of charge under 35 percent"
+          },
+          {
+            "id": "vitals",
+            "source": "biomed.verdict",
+            "when": "a monitored person out of band, monitoring lost, or one more person in the lab"
+          }
+        ],
+        "authorisation": {
+          "by": "commander",
+          "required": true
+        },
+        "occupancy": {
+          "module": "lab",
+          "occupants": 3,
+          "at": "2026-09-30T09:13",
+          "readBy": "biomed.presence",
+          "subjects": [
+            "fe-2",
+            "cdr",
+            "fe-3"
+          ]
+        },
+        "monitoring": {
+          "subjects": [
+            "fe-2",
+            "cdr",
+            "fe-3"
+          ],
+          "band": {
+            "minBpm": 45,
+            "maxBpm": 120
+          },
+          "reason": "The test raises the CO2 of the air these three lab occupants breathe."
+        },
+        "expected": {
+          "rise": "With 3 awake occupants (about 1.14 L/min CO2) and Qe 0.4 m3/min at 40 percent, lab CO2 rises from about 1050 ppm toward about 2850 ppm equilibrium; after 28 min roughly 1500-1800 ppm for V about 30 m3 (faster if V is smaller), staying under 2500 ppm.",
+          "decay": "At full speed the CO2 falls toward about 1140 ppm equilibrium (G/Qe) with tau = V/Qe about 30 min for V=30 m3 (plus the 3.33 min scrubber lag); V_lab = Qe*tau, with Qe = 1 m3/min.",
+          "hypothesisHeld": "A single exponential with a stable C_eq, hab-b CO2 flat or moving only slightly, all scrubber commands accepted, all heart rates within 45-120 bpm.",
+          "hypothesisRejected": "A fitted V far from the 10-200 m3 range, a C_eq drifting, a hab-b CO2 that follows the lab's (the closed hatch exchanges air), a non-exponential residual, or a change in occupants would show the one-zone hypothesis or the constant source does not hold."
+        },
+        "hypotheses": [
+          "The hatch to hab-b is held closed in both steps; the exchange through the closed opening is not measured and is not assumed zero (signed design ventilation with hatch closed is 3 m3/min); hab-b CO2 is recorded to show it.",
+          "The lab is one well-mixed zone.",
+          "The 3 occupants stay in the lab at constant awake activity (0.38 L/min each, range 0.26-0.45); CO2 production is not measured and only affects C_eq, not tau.",
+          "Qe scales linearly with speed from the datasheet 1 m3/min at full speed (single-pass efficiency 0.3, flow 3.3 m3/min); the 3.33 min lag is excluded from the fit start.",
+          "Records: lab and hab-b CO2 each minute, speed commands and accepted/refused status."
+        ],
+        "justifications": [
+          {
+            "constant": "limits.minSpeedPercent",
+            "value": 40,
+            "source": "library",
+            "reference": "test.speedFloorPercent",
+            "reason": "Above the 30 percent floor and equal to the datasheet's elevated-CO2 minimum of 40."
+          },
+          {
+            "constant": "steps.1.speedPercent",
+            "value": 40,
+            "source": "library",
+            "reference": "test.speedFloorPercent",
+            "reason": "Reduced speed for the rise, at or above the 30 percent floor."
+          },
+          {
+            "constant": "steps.2.speedPercent",
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent",
+            "reason": "Full speed for the decay, above the floor."
+          },
+          {
+            "constant": "limits.co2AbortPpm",
+            "value": 3000,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm",
+            "reason": "At or below 3200 ppm ceiling and under elevated 3500 ppm."
+          },
+          {
+            "constant": "limits.co2MaxPpm",
+            "value": 2500,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm",
+            "reason": "Working ceiling below the abort ceiling, with 500 ppm margin; start 1050 gives well over 200 ppm headroom."
+          },
+          {
+            "constant": "abort.co2.threshold",
+            "value": 3000,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm",
+            "reason": "Same as limits.co2AbortPpm, below 3200 ppm."
+          },
+          {
+            "constant": "limits.maxMinutes",
+            "value": 60,
+            "source": "library",
+            "reference": "test.maxMinutesCeiling",
+            "reason": "Steps total 58 min, within the 60 min ceiling."
+          },
+          {
+            "constant": "abort.battery.threshold",
+            "value": 35,
+            "source": "library",
+            "reference": "test.batteryAbortMinPercent",
+            "reason": "At the signed minimum of 35 percent."
+          },
+          {
+            "constant": "monitoring.band.minBpm",
+            "value": 45,
+            "source": "library",
+            "reference": "test.heartRateMinBpm",
+            "reason": "Signed lower heart-rate bound."
+          },
+          {
+            "constant": "monitoring.band.maxBpm",
+            "value": 120,
+            "source": "library",
+            "reference": "test.heartRateMaxBpm",
+            "reason": "Signed upper heart-rate bound."
+          },
+          {
+            "constant": "steps.1.minutes",
+            "value": 28,
+            "source": "derived",
+            "reference": "tau_rise=V/Qe(40%)=30/0.4=75 min (V=30 m3 first guess); rise=(2850-1050)*(1-exp(-28/75)) about 560 ppm, bounded by 60 min total",
+            "reason": "Enough rise over noise while leaving one decay tau inside 60 min."
+          },
+          {
+            "constant": "steps.2.minutes",
+            "value": 30,
+            "source": "derived",
+            "reference": "tau_decay=V/Qe=30 m3/1 m3/min=30 min (first guess V=30 m3, stated as such)",
+            "reason": "About one time constant, total 58 min under the ceiling."
+          }
+        ]
+      },
       "aborted": {
         "condition": "heart-rate",
         "reason": "cdr's heart rate left the monitoring band during the rise",
         "step": 1
       },
-      "minutesRun": 12
+      "minutesRun": 12,
+      "record": {
+        "first": {
+          "minute": 0,
+          "co2_lab_ppm": 900,
+          "co2_habb_ppm": 850,
+          "speed_percent": 40
+        },
+        "last": {
+          "minute": 12,
+          "co2_lab_ppm": 1080,
+          "co2_habb_ppm": 870,
+          "speed_percent": 40
+        },
+        "co2LabMaxPpm": 1080,
+        "rows": 13
+      }
     }
   },
   {
@@ -92,13 +521,226 @@
       "fe-3"
     ],
     "previous": {
-      "procedureId": "decay-vlab-lab-01",
+      "procedureId": "decay-lab-v7-01",
+      "procedure": {
+        "version": 1,
+        "id": "decay-lab-v7-01",
+        "method": "concentration-decay",
+        "standard": "ASTM E741 (single-zone tracer decay); ASTM D6245 (occupant CO2 as tracer)",
+        "purpose": "Measure V_lab, the air volume served by scrubber-1-v7, as V = Qe * tau from a raise-then-decay of the occupants' CO2 with the hatch held closed.",
+        "volume": "/habitat/lab",
+        "device": "{scrubber}",
+        "quantities": [
+          {
+            "name": "co2_lab",
+            "quantity": "Concentration",
+            "unit": "ppm"
+          },
+          {
+            "name": "V_lab",
+            "quantity": "Volume",
+            "unit": "m3"
+          },
+          {
+            "name": "co2_habb",
+            "quantity": "Concentration",
+            "unit": "ppm"
+          }
+        ],
+        "limits": {
+          "co2MaxPpm": 2500,
+          "co2AbortPpm": 3000,
+          "minSpeedPercent": 40,
+          "maxMinutes": 60
+        },
+        "steps": [
+          {
+            "n": 1,
+            "hatch": "closed",
+            "speedPercent": 40,
+            "minutes": 28,
+            "why": "Rise: reduced effective flow (0.4 m3/min) lets the 3 occupants' CO2 climb from 1050 ppm toward a higher equilibrium, several hundred ppm above sensor noise, about one tau/3 for a first guess V=30 m3."
+          },
+          {
+            "n": 2,
+            "hatch": "closed",
+            "speedPercent": 100,
+            "minutes": 30,
+            "why": "Decay: full speed (Qe 1 m3/min); fit C(t)=C_eq+(C0-C_eq)exp(-t/tau) toward equilibrium; first-guess tau=V/Qe=30 min for V=30 m3."
+          }
+        ],
+        "abort": [
+          {
+            "id": "co2",
+            "source": "scrubber.motor.state: CO2 of /habitat/lab",
+            "when": "CO2 of the lab at or above 3000 ppm"
+          },
+          {
+            "id": "refused",
+            "source": "scrubber.motor.set_speed",
+            "when": "the device refuses a step's command"
+          },
+          {
+            "id": "battery",
+            "source": "station.registry_list",
+            "threshold": 35,
+            "when": "battery state of charge under 35 percent"
+          },
+          {
+            "id": "vitals",
+            "source": "biomed.verdict",
+            "when": "a monitored person out of band, monitoring lost, or one more person in the lab"
+          }
+        ],
+        "authorisation": {
+          "by": "commander",
+          "required": true
+        },
+        "occupancy": {
+          "module": "lab",
+          "occupants": 3,
+          "at": "2026-09-30T09:13",
+          "readBy": "biomed.presence",
+          "subjects": [
+            "fe-2",
+            "cdr",
+            "fe-3"
+          ]
+        },
+        "monitoring": {
+          "subjects": [
+            "fe-2",
+            "cdr",
+            "fe-3"
+          ],
+          "band": {
+            "minBpm": 45,
+            "maxBpm": 120
+          },
+          "reason": "The test raises the CO2 of the air these three lab occupants breathe."
+        },
+        "expected": {
+          "rise": "With 3 awake occupants (about 1.14 L/min CO2) and Qe 0.4 m3/min at 40 percent, lab CO2 rises from about 1050 ppm toward about 2850 ppm equilibrium; after 28 min roughly 1500-1800 ppm for V about 30 m3 (faster if V is smaller), staying under 2500 ppm.",
+          "decay": "At full speed the CO2 falls toward about 1140 ppm equilibrium (G/Qe) with tau = V/Qe about 30 min for V=30 m3 (plus the 3.33 min scrubber lag); V_lab = Qe*tau, with Qe = 1 m3/min.",
+          "hypothesisHeld": "A single exponential with a stable C_eq, hab-b CO2 flat or moving only slightly, all scrubber commands accepted, all heart rates within 45-120 bpm.",
+          "hypothesisRejected": "A fitted V far from the 10-200 m3 range, a C_eq drifting, a hab-b CO2 that follows the lab's (the closed hatch exchanges air), a non-exponential residual, or a change in occupants would show the one-zone hypothesis or the constant source does not hold."
+        },
+        "hypotheses": [
+          "The hatch to hab-b is held closed in both steps; the exchange through the closed opening is not measured and is not assumed zero (signed design ventilation with hatch closed is 3 m3/min); hab-b CO2 is recorded to show it.",
+          "The lab is one well-mixed zone.",
+          "The 3 occupants stay in the lab at constant awake activity (0.38 L/min each, range 0.26-0.45); CO2 production is not measured and only affects C_eq, not tau.",
+          "Qe scales linearly with speed from the datasheet 1 m3/min at full speed (single-pass efficiency 0.3, flow 3.3 m3/min); the 3.33 min lag is excluded from the fit start.",
+          "Records: lab and hab-b CO2 each minute, speed commands and accepted/refused status."
+        ],
+        "justifications": [
+          {
+            "constant": "limits.minSpeedPercent",
+            "value": 40,
+            "source": "library",
+            "reference": "test.speedFloorPercent",
+            "reason": "Above the 30 percent floor and equal to the datasheet's elevated-CO2 minimum of 40."
+          },
+          {
+            "constant": "steps.1.speedPercent",
+            "value": 40,
+            "source": "library",
+            "reference": "test.speedFloorPercent",
+            "reason": "Reduced speed for the rise, at or above the 30 percent floor."
+          },
+          {
+            "constant": "steps.2.speedPercent",
+            "value": 100,
+            "source": "library",
+            "reference": "test.speedFloorPercent",
+            "reason": "Full speed for the decay, above the floor."
+          },
+          {
+            "constant": "limits.co2AbortPpm",
+            "value": 3000,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm",
+            "reason": "At or below 3200 ppm ceiling and under elevated 3500 ppm."
+          },
+          {
+            "constant": "limits.co2MaxPpm",
+            "value": 2500,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm",
+            "reason": "Working ceiling below the abort ceiling, with 500 ppm margin; start 1050 gives well over 200 ppm headroom."
+          },
+          {
+            "constant": "abort.co2.threshold",
+            "value": 3000,
+            "source": "library",
+            "reference": "test.co2AbortCeilingPpm",
+            "reason": "Same as limits.co2AbortPpm, below 3200 ppm."
+          },
+          {
+            "constant": "limits.maxMinutes",
+            "value": 60,
+            "source": "library",
+            "reference": "test.maxMinutesCeiling",
+            "reason": "Steps total 58 min, within the 60 min ceiling."
+          },
+          {
+            "constant": "abort.battery.threshold",
+            "value": 35,
+            "source": "library",
+            "reference": "test.batteryAbortMinPercent",
+            "reason": "At the signed minimum of 35 percent."
+          },
+          {
+            "constant": "monitoring.band.minBpm",
+            "value": 45,
+            "source": "library",
+            "reference": "test.heartRateMinBpm",
+            "reason": "Signed lower heart-rate bound."
+          },
+          {
+            "constant": "monitoring.band.maxBpm",
+            "value": 120,
+            "source": "library",
+            "reference": "test.heartRateMaxBpm",
+            "reason": "Signed upper heart-rate bound."
+          },
+          {
+            "constant": "steps.1.minutes",
+            "value": 28,
+            "source": "derived",
+            "reference": "tau_rise=V/Qe(40%)=30/0.4=75 min (V=30 m3 first guess); rise=(2850-1050)*(1-exp(-28/75)) about 560 ppm, bounded by 60 min total",
+            "reason": "Enough rise over noise while leaving one decay tau inside 60 min."
+          },
+          {
+            "constant": "steps.2.minutes",
+            "value": 30,
+            "source": "derived",
+            "reference": "tau_decay=V/Qe=30 m3/1 m3/min=30 min (first guess V=30 m3, stated as such)",
+            "reason": "About one time constant, total 58 min under the ceiling."
+          }
+        ]
+      },
       "aborted": {
         "condition": "co2",
         "reason": "the Lab's CO2 reached the procedure's abort threshold during the rise",
         "step": 1
       },
-      "minutesRun": 28
+      "minutesRun": 26,
+      "record": {
+        "first": {
+          "minute": 0,
+          "co2_lab_ppm": 2100,
+          "co2_habb_ppm": 880,
+          "speed_percent": 40
+        },
+        "last": {
+          "minute": 26,
+          "co2_lab_ppm": 3004,
+          "co2_habb_ppm": 940,
+          "speed_percent": 40
+        },
+        "co2LabMaxPpm": 3004,
+        "rows": 27
+      }
     }
   },
   {

@@ -14,11 +14,12 @@
         },
         "read": {
             "title": "Read one file of a task",
-            "description": "The content of one file of the task, as text (or base64 for a binary), with its size and sha256. 256 KB at most per read; a bigger file is refused with its size.",
+            "description": "The content of one file of the task, as text (or base64 for a binary), with its size and sha256; or, with pointer, one field of a JSON file (its value). 256 KB at most per read; a bigger file is refused with its size.",
             "properties": {
                 "taskId": "the task",
                 "path": "a path relative to the task's directory",
-                "maxBytes": "refuse above this many bytes (256 KB at most)"
+                "maxBytes": "refuse above this many bytes (256 KB at most)",
+                "pointer": "one field of a JSON file, by a JSON Pointer (/steps/0/reason; ~1 for a slash in a key): its value alone, for a detail of a file whose whole the state does not show"
             }
         },
         "write": {
