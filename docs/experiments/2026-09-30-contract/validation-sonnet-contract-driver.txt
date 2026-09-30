@@ -1,0 +1,11 @@
+v1 t-2026-09-30-0001: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 9; tokens in 53408 out 7457 (max 6589); memory seen: 0 learned, 0 previous episode(s)
+v2 t-2026-09-30-0002: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 10; tokens in 70522 out 5623 (max 4440); memory seen: 0 learned, 0 previous episode(s)
+v3 t-2026-09-30-0003: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 11; tokens in 90977 out 9249 (max 5024); memory seen: 0 learned, 0 previous episode(s)
+v4 t-2026-09-30-0004: first guard-judged none; pre-guard 0; truncated 0; steps 17; tokens in 152412 out 2752 (max 442); memory seen: none
+v5 t-2026-09-30-0005: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 20; tokens in 206305 out 10773 (max 4277); memory seen: 0 learned, 0 previous episode(s)
+v6 t-2026-09-30-0006: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 9; tokens in 57170 out 6909 (max 6080); memory seen: 0 learned, 0 previous episode(s)
+v7 t-2026-09-30-0007: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 9; tokens in 45773 out 6102 (max 5256); memory seen: 0 learned, 0 previous episode(s)
+v8 t-2026-09-30-0008: first guard-judged refused (shape: quantity …: no unit … for Speed); pre-guard 0; truncated 0; steps 12; tokens in 73145 out 8782 (max 5407); memory seen: 0 learned, 0 previous episode(s)
+v9 t-2026-09-30-0009: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 15; tokens in 103146 out 11177 (max 4432); memory seen: 0 learned, 0 previous episode(s)
+v10 t-2026-09-30-0010: first guard-judged ACCEPTED; pre-guard 0; truncated 0; steps 10; tokens in 41582 out 5386 (max 4690); memory seen: 0 learned, 0 previous episode(s)
+exit 0
