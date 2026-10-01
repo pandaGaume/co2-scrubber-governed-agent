@@ -33,10 +33,12 @@ export async function composeText(profile: ProviderProfile | null, input: Compos
     try {
         if (wire === "anthropic-messages") {
             const baseUrl = (p.baseUrl ?? process.env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com").replace(/\/$/, "");
+            // A Claude 5 model always thinks and refuses a fixed temperature, as in providers/anthropic.ts (2026-10-01: HTTP 400 on Sonnet 5.5).
+            const thinksAlways = /^claude-(opus-5|sonnet-5|fable|mythos)/.test(p.model);
             const response = await fetch(`${baseUrl}/v1/messages`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "x-api-key": apiKeyFor(profile, ["ANTHROPIC_API_KEY"]), "anthropic-version": "2023-06-01" },
-                body: JSON.stringify({ model: p.model, system: input.instructions, messages: [{ role: "user", content: input.context ?? "Go." }], max_tokens: maxTokens, temperature: 0.4 }),
+                body: JSON.stringify({ model: p.model, system: input.instructions, messages: [{ role: "user", content: input.context ?? "Go." }], max_tokens: maxTokens, ...(thinksAlways ? {} : { temperature: 0.4 }) }),
                 signal: controller.signal,
             });
             const raw = await response.text();
