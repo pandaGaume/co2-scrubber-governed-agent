@@ -36,14 +36,14 @@
             "lead": "D2:8cba194716f8",
             "about": "composite reference narrowed, the value changed too, 2 tasks",
             "verdict": "right",
-            "cause": "as D3:652d6e9fdffe: the same rule, the correction also changed the speed",
+            "cause": "three things in one correction, in both tasks. (1) The reference named the right bound, test.speedFloorPercent, and a second fact beside it; the guard of the time found a fact in the text only when one was named, and for two it answered \"is not a fact of the library\", which was false. (2) The path: the model justified the decay (100 percent) under steps.1.speedPercent, when the decay is steps.2 (the same refusal says steps.2.speedPercent = 100 has no justification, and steps.1.minutes: the justification says 30, what you sent sets 25); the path convention said nowhere, as in D2:5e13127c08a7. (3) At the retry the model renumbered: steps.1 got the rise (30), steps.2 the decay (100, test.speedFloorPercent). No speed of the procedure changed; the diff, made path by path, reads the renumbering as value:replaced (100 to 30 under steps.1). Gaps: the rule one fact by its id, the false refusal message, the path convention",
             "class": "contract-gap",
             "current": "closed",
             "certainty": "established",
             "confirmed": false,
             "by": "Claude, 2026-10-01",
-            "how": "its two corrections narrow the reference to test.speedFloorPercent as the 22 others do; the same cause found twice because the correction's signature differs",
-            "note": "a duplicate of D2:0ed9f72ce86c, not a second cause"
+            "how": "the refusals and the submissions before and after in the manifests of exp3-baseline t-0010 (steps 8 and 9) and exp4-sonnet-a t-0008 (steps 9 and 10); factOf at 08a954e (one fact found inside other text, undefined for two, the message for two facts the one for no fact); since 287f5bc INVALID_REFERENCE_CARDINALITY and the contract says one id alone",
+            "note": "raised by the user on 2026-10-01 (steps.2.speedPercent compared with test.speedFloorPercent, a name error): the false refusal message and the path shift both missed by the first label; the correction form value:replaced is an artefact of the diff by path"
         },
         {
             "corpus": "evaluator",
