@@ -113,7 +113,8 @@ export function cadSlot(wsBase: string, log: (line: string) => void, options: Fu
         try {
             const out = await attempt().catch(async (e) => {
                 // A session Fusion dropped (its add-in restarted) is reopened once; a refusal by the tool is not retried.
-                if (!/HTTP 4\d\d|session|ECONNRESET|fetch failed/i.test(errorText(e))) throw e;
+                // The MCP client sends on a connection of its own since 2026-10-01: a dropped session reads ECONNREFUSED or "socket hang up".
+                if (!/HTTP 4\d\d|session|ECONNRESET|ECONNREFUSED|socket hang up|fetch failed/i.test(errorText(e))) throw e;
                 session = null;
                 return attempt();
             });

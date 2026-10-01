@@ -15,8 +15,41 @@
  *    handles both.
  */
 import type { McpTool, McpToolResult } from "@cyanmycelium/mcp-core";
+import { request as httpRequest } from "node:http";
+import { request as httpsRequest } from "node:https";
 
 export const PROTOCOL_VERSION = "2025-06-18";
+
+/**
+ * A request on a connection of its own, closed after its answer (2026-10-01). The global fetch keeps a connection open between
+ * requests, and the broker's server closes one idle for 5 seconds; a process whose event loop was busy longer (the station building
+ * the harness's graph, synchronously, for several seconds) then wrote its next request on a connection the server had closed, and
+ * read ECONNRESET: "fetch failed", at the station's first call after a long reading. Whether the server had read that request
+ * cannot be told, so it is never sent again; it is sent on a connection no one closed. On the same machine a connection per call
+ * costs nothing that shows.
+ */
+function send(endpoint: string, init: { method: string; headers: Record<string, string>; body?: string; signal?: AbortSignal }): Promise<Response> {
+    const url = new URL(endpoint);
+    const request = url.protocol === "https:" ? httpsRequest : httpRequest;
+    return new Promise((resolve, reject) => {
+        const headers = { ...init.headers, Connection: "close", ...(init.body !== undefined ? { "Content-Length": String(Buffer.byteLength(init.body)) } : {}) };
+        const req = request(url, { method: init.method, headers, agent: false, ...(init.signal ? { signal: init.signal } : {}) }, (res) => {
+            const chunks: Buffer[] = [];
+            res.on("data", (c: Buffer) => chunks.push(c));
+            res.on("error", reject);
+            res.on("end", () => {
+                const h = new Headers();
+                for (const [k, v] of Object.entries(res.headers)) if (v !== undefined) h.set(k, Array.isArray(v) ? v.join(", ") : v);
+                const status = res.statusCode ?? 500;
+                // A status that carries no body (204, 205, 304) cannot be given one.
+                resolve(new Response([204, 205, 304].includes(status) ? null : Buffer.concat(chunks), { status, statusText: res.statusMessage ?? "", headers: h }));
+            });
+        });
+        req.on("error", reject);
+        if (init.body !== undefined) req.write(init.body);
+        req.end();
+    });
+}
 
 export interface JsonRpcErrorShape {
     code: number;
@@ -102,7 +135,7 @@ export async function connectMcpAt(endpoint: string, slot: string, identity: Cli
         if (sessionId) headers["Mcp-Session-Id"] = sessionId;
         // The option's timeout bounds every request of the session (2026-09-27: a CAD add-in that stalled on tools/list hung a whole test suite for three hours).
         const bound = timeoutMs ?? options.timeoutMs;
-        const response = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify(body), ...(bound ? { signal: AbortSignal.timeout(bound) } : {}) });
+        const response = await send(endpoint, { method: "POST", headers, body: JSON.stringify(body), ...(bound ? { signal: AbortSignal.timeout(bound) } : {}) });
         if (!response.ok) {
             const text = await response.text().catch(() => "");
             throw new Error(`${endpoint} answered HTTP ${response.status} ${response.statusText}. ${text.slice(0, 400)}`);
@@ -142,7 +175,7 @@ export async function connectMcpAt(endpoint: string, slot: string, identity: Cli
         callTool: (name, args = {}) => request<McpToolResult>("tools/call", { name, arguments: args }),
         /** Ends the session. The broker frees it; skipping this only leaks a session. */
         close: async () => {
-            await fetch(endpoint, { method: "DELETE", headers: sessionId ? { "Mcp-Session-Id": sessionId, ...extraHeaders } : extraHeaders }).catch(() => undefined);
+            await send(endpoint, { method: "DELETE", headers: sessionId ? { "Mcp-Session-Id": sessionId, ...extraHeaders } : extraHeaders }).catch(() => undefined);
         },
     };
 }

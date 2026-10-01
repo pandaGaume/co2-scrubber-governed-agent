@@ -199,7 +199,8 @@ var Broker = class {
       }
       return { ok: true, outcome: "completed", output: payload && "result" in payload ? payload.result : payload };
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const cause = error instanceof Error && error.cause instanceof Error ? `${error.cause.message}${error.cause.code ? ` (${error.cause.code})` : ""}` : null;
+      const message = `${error instanceof Error ? error.message : String(error)}${cause ? `: ${cause}` : ""}`;
       const code = error instanceof McpRpcError ? error.rpc.code : void 0;
       if (code === -32001 || /forbidden|not allowed|unauthori[sz]ed/i.test(message)) return { ok: false, outcome: "deny", error: `policy deny: ${message}` };
       return { ok: false, outcome: "error", error: `error: ${message}` };

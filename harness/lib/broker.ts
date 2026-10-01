@@ -113,7 +113,9 @@ export class Broker {
             }
             return { ok: true, outcome: "completed", output: payload && "result" in payload ? payload.result : payload };
         } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
+            // "fetch failed" says nothing alone: its cause (a socket closed by the other side, a refused connection) is what to read.
+            const cause = error instanceof Error && error.cause instanceof Error ? `${error.cause.message}${(error.cause as { code?: string }).code ? ` (${(error.cause as { code?: string }).code})` : ""}` : null;
+            const message = `${error instanceof Error ? error.message : String(error)}${cause ? `: ${cause}` : ""}`;
             const code = error instanceof McpRpcError ? error.rpc.code : undefined;
             if (code === -32001 || /forbidden|not allowed|unauthori[sz]ed/i.test(message)) return { ok: false, outcome: "deny", error: `policy deny: ${message}` };
             return { ok: false, outcome: "error", error: `error: ${message}` };
