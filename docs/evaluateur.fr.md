@@ -630,3 +630,59 @@ Une prédiction mal formée (prédicat ou argument inconnu, type faux, argument 
 - **`D5:c6d7`** : 2 tâches sur 9, puis 5 sur 6, sous les deux empreintes que D5 compare.
 
 **Ce qui reste pour E5.2** : l'usine de diagnostic (son topic, son garde, sa doublure scriptée) et ses outils de lecture, qui pourront s'appuyer sur ces prédicats. Le garde refusera notamment une prédiction qui ne fait que redire la piste.
+
+## E5.2, fait (2026-10-01)
+
+L'usine de diagnostic : un topic `diagnosis`, construit comme les autres usines, avec une tâche par piste. Ses textes sont dans `specs/diagnosis/` (format, mots, prompt, conduite) et son code dans `harness/topics/diagnosis/index.ts`.
+
+**Ce qu'elle reçoit**, lu dans le graphe par la station (`lib/diagnosis.ts`), jamais écrit par un modèle :
+- la piste entière, avec sa forme et ses tâches par identifiant ;
+- son voisinage à deux liens, en partant de ses propres nœuds et de ses tâches (au plus 80 nœuds) ;
+- les règles du registre qu'elle touche, ce que le guard vérifie, et où chacune est énoncée aujourd'hui ;
+- l'état d'aujourd'hui : le commit, les signatures des documents qu'elle nomme, les profils de ses tâches (sans le nom de la clé) ;
+- les hypothèses déjà réfutées ;
+- le langage fermé des prédictions, avec chaque prédicat et ses arguments.
+
+**Ses outils, tous en lecture seule**
+- `diagnosis.graph` : un nœud et ses liens, ou les nœuds d'un type.
+- `diagnosis.step` : un pas d'une tâche, réduit : ce qui a été envoyé, son issue, le refus en entier, les champs de l'état reçu.
+- `diagnosis.text` : un texte du contrat à la version d'une tâche ou aujourd'hui, autour des mots demandés.
+- La bibliothèque.
+
+**Ce qu'elle rend** (`diagnosis.submit`) :
+- un verdict sur la piste : juste, faux, ou périmé. Périmé veut dire « vrai autrefois, réglé depuis, et la piste demande encore d'agir » : c'est la définition qui manquait à l'essai ;
+- une cause ;
+- une classe, dans la taxonomie des étiquettes ;
+- l'actualité ;
+- des preuves, qui sont des nœuds du graphe ;
+- des prédictions, chacune avec son rôle (cause, actualité, hypothèse écartée) et la valeur attendue.
+
+**Son garde** (`diagnosisCheck`, que la station exécute à nouveau) travaille en deux temps.
+1. Il refuse un diagnostic mal formé, avant de rien exécuter :
+   - verdict, classe ou actualité hors du format ;
+   - preuve qui n'est pas un nœud du graphe ;
+   - moins de trois prédictions, ou un rôle manquant ;
+   - prédiction mal formée ;
+   - prédiction d'actualité qui ne porte pas sur aujourd'hui (à « today », ou un taux sous une empreinte que la piste ne compare pas) ;
+   - prédiction qui ne fait que redire la piste (la même forme sur ses tâches, son taux sous ses empreintes).
+2. Puis il exécute les prédictions.
+   - Une prédiction réfutée revient au modèle avec ce que le harnais a observé.
+   - Une prédiction « inconnu » est gardée : elle ne réfute rien et ne confirme rien.
+   - Le diagnostic enregistré garde le résultat de chaque prédiction et les compte. La confiance reste à calculer par le harnais (E5.3).
+
+**Sa doublure scriptée** dit ce que disent les nœuds de la piste, et attend ce que le harnais observe. Elle sert au câblage, jamais à mesurer un diagnostic.
+
+**La station**
+- `station.diagnose` demande le diagnostic d'une piste : celle qu'on nomme, ou la première pas encore diagnostiquée.
+- Un diagnostic proposé est revérifié sur le graphe de la station elle-même, puis gardé avec le statut « diagnosed ». Mother dit combien de prédictions le harnais a confirmées.
+- L'agent de l'habitat n'a pas `station.diagnose`.
+
+**Vérifié sur `D2:8cba`**
+- Le diagnostic des étiquettes (référence composite refusée avec un message faux, décroissance renumérotée de `steps.1` à `steps.2`, les deux réglés aujourd'hui) est accepté. Ses sept prédictions sont confirmées.
+- Les deux erreurs des essais sont refusées comme réfutées. Pour Sonnet, « le message était vrai » : le harnais observe que le refus relevait de `REFERENCE_NOT_A_FACT`, pas du code des deux faits. Pour GPT, « la vitesse de `steps.1` n'a pas changé » : le harnais observe 30 envoyé au pas 9.
+- Un diagnostic mal formé est refusé sans rien exécuter.
+- L'usine tourne de bout en bout via la station, sur sa doublure.
+
+**Ce qui reste**
+- E5.3 : le second reasoner et le calcul de la confiance.
+- E5.4 : la calibration réelle, avec deux modèles sur les étiquettes.
