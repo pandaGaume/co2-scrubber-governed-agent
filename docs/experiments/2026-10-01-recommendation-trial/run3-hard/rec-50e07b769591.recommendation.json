@@ -1,0 +1,65 @@
+{
+    "id": "rec-50e07b769591",
+    "finding": {
+        "id": "D7:f0e111fbaac6",
+        "detector": "D7",
+        "class": "library-gap",
+        "title": "FACT_UNSIGNED: refused in 5 task(s), about commissioning-test-safety, scrubber-1-datasheet: the library, not the model or the contract",
+        "settledBy": null,
+        "path": [
+            "rule:procedure:FACT_UNSIGNED (concerns the library) <-of- form:procedure:5c4fbc9fea6d",
+            "<-refused-for- 5 task(s)",
+            "naming commissioning-test-safety, scrubber-1-datasheet"
+        ],
+        "about": [
+            "rule:procedure:FACT_UNSIGNED",
+            "form:procedure:5c4fbc9fea6d"
+        ],
+        "tasks": 5,
+        "models": {
+            "claude-haiku-4-5-20251001": 5
+        },
+        "evidence": {
+            "code": "FACT_UNSIGNED",
+            "documents": [
+                "commissioning-test-safety",
+                "scrubber-1-datasheet"
+            ]
+        },
+        "recommend": true
+    },
+    "rule": {
+        "code": "FACT_UNSIGNED",
+        "status": "stated",
+        "example": "justification: steps.1.speedPercent: the fact scrubber.minimumSpeedElevated is in \"scrubber-1-datasheet\", which no person has signed as valid: cite instead a fact of a signed document that bounds this constant"
+    },
+    "kind": "library",
+    "target": {
+        "library": "scrubber-1-datasheet"
+    },
+    "action": "sign",
+    "current": null,
+    "proposed": "An authorised person reviews the datasheet scrubber-1-datasheet and signs it (library page of the control room, or `npm run library:sign -- scrubber-1-datasheet \"<name>\"`). The facts it states then count as signed: scrubber.flowAtFull 3.3 m3/min, scrubber.singlePassEfficiency 0.3, scrubber.effectiveFlowAtFull 1 m3/min, scrubber.lagTimeConstant 3.33 min, scrubber.minimumSpeedElevated 40 percent. The guard refuses a justification that cites a fact of a document no person has signed (FACT_UNSIGNED); once the datasheet is signed, a safety constant such as steps.<n>.speedPercent may cite scrubber.minimumSpeedElevated, and must still respect the safe side of the signed safety bound test.speedFloorPercent (at or above 30 percent) in commissioning-test-safety. The same review covers commissioning-test-safety: it too must be signed, and re-signed after any change to it or its facts, otherwise the guard refuses every procedure that cites it. The texts the models read are not changed.",
+    "why": "The guard refused 5 tasks (all claude-haiku-4-5) with FACT_UNSIGNED, naming commissioning-test-safety and scrubber-1-datasheet: the justifications cited facts of documents no person had signed. No text of the models is wrong or missing on this point (the contract already says safety constants cite a fact of a signed document); the gap is in the library, where the two documents await a person's signature. Only a signatory can close it; models cannot and must not treat an unsigned fact as a limit.",
+    "effect": "FACT_UNSIGNED refusals on the procedure form should fall from 5 of 5 replayed tasks to 0 once both documents are signed; other rules of the guard are unchanged.",
+    "changesAcceptance": false,
+    "verification": {
+        "replay": [
+            "scenario"
+        ],
+        "models": [
+            "claude-haiku-4-5-20251001"
+        ],
+        "tasks": 5,
+        "measure": "FACT_UNSIGNED: count of 'justification: *: the fact * is in …, which no person has signed as valid' refusals across the replayed tasks. Five tasks, one per refused task of the finding, to show the refusal disappears on every case where it appeared."
+    },
+    "justifications": [
+        {
+            "constant": "verification.tasks",
+            "value": 5,
+            "source": "measured",
+            "reference": "finding D7:f0e111fbaac6 (tasks: 5, all claude-haiku-4-5-20251001)",
+            "reason": "The finding counts 5 refused tasks; replaying each once checks the refusal is gone in every case."
+        }
+    ]
+}

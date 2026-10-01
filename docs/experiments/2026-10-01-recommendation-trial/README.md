@@ -73,7 +73,32 @@ Now an attempt that follows a truncation or a refusal by the harness is no first
 **Neither run's `expected` recommendation should be signed.** They answer a finding that is no longer one.
 
 ## Still to see
-
-- **The model has not yet been asked about harder findings:** a gap the register found (`abort.required`, `monitoring.occupied`), or the regression of the monitoring rule for Haiku.
 - **Nothing signed has been applied or measured.** That is E4.
 - **The other `fetch failed`.** The intermittent failure of the commissioning tests (`factory.task: fetch failed` under the full suite) is a session already open, not one that could not be opened. The Broker fix does not cover it.
+
+## Run 3: harder findings
+
+Three findings of the repository's workshop (Haiku's tasks of 28 September), each a test of judgement more than of writing:
+
+- **The tasks' copy.** They were copied into a snapshot of their own (`outputs/forks/snapshot-repository-workshop`), whose record names no commit. As in the repository, the version of the contract they ran under stays not known; copied into a fork, they would have taken its commit, today's.
+- **The run.** Fork `exp9-recommend-3`, Sonnet 5.5, `driver-named.mjs`. The recommendations, as the shelf holds them, are in `run3-hard/`.
+
+| Finding | What the model wrote | Verdict |
+|---|---|---|
+| D5: the regression of `monitoring.occupied` for Haiku, a rule stated nowhere (a gap of the register) | A section appended to the procedure's prompt: read the occupancy before submitting; name every occupant in `monitoring.subjects`; stop on the vitals (an `abort` with id `vitals`, source `biomed.verdict`); no test on a person under an alarm | **Good.** What the guard's check says and no more, the convention kept. |
+| D7: `FACT_UNSIGNED` in 5 tasks, about `commissioning-test-safety` and `scrubber-1-datasheet` | Sign `scrubber-1-datasheet`. "Once signed, a step's speed may cite `scrubber.minimumSpeedElevated`." | **Wrong.** The datasheet is signed already (28 September, 14:04), after Haiku's refusals. And the claim is false: `floor.step` bounds a step's speed by `test.speedFloorPercent`, and the guard refuses any other fact (`FACT_NOT_BOUNDING`). A signatory would have been misled. |
+| D4: 18 calls cut at the output limit in 4 tasks | Ask for a short procedure in `procedure.submit`'s description, and list four rules of the guard there too | **Too broad.** Asking for a short procedure is a fair answer. The four rules are other findings, which makes the change impossible to measure. The cause, the output limit, is no text. |
+
+What it cost: D5 3 calls, 17 832 input tokens; D7 7 calls (it read the library, and its first proposal was refused for a justification missing), 52 775; D4 5 calls, 19 465.
+
+**What was wrong on our side, and fixed:**
+
+- **D7 did not close.** A gap of the library stayed open after its documents were signed. It now closes when every document it names is signed today, and stays listed, signed since.
+- **Signatures were not given.** The factory was not told whether a document is signed. It is now, and the guard refuses to recommend signing a document already signed.
+- **Cases.** Outside an experiment, who asked ("station", "scenario") names no case. The cases to replay are then the tasks themselves.
+- **One change per finding.** The prompt now asks for it, and says that a signature makes possible only what the guard's rules say.
+
+On the same snapshot, the station now refuses to ask for D7 again: nothing to recommend, both documents signed since.
+
+**Still to see.** Whether a model keeps to one change per finding cannot be checked by a guard. It is for the signatory, who reads the recommendation before signing it.
+

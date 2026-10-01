@@ -1,0 +1,66 @@
+{
+    "id": "rec-8d1d9947e11b",
+    "finding": {
+        "id": "D4:d77a2a5a7508",
+        "detector": "D4",
+        "class": "harness-artefact",
+        "title": "18 call(s) cut at the output limit in 4 task(s) (procedure.submit): unfinished arguments no guard judged",
+        "settledBy": null,
+        "path": [
+            "step or attempt -refused-for-> form:procedure:harness:69e875cfddc9 (by the harness)",
+            "x 18 in 4 tasks",
+            "-calls-> procedure.submit"
+        ],
+        "about": [
+            "form:procedure:harness:69e875cfddc9",
+            "attempt:snapshot-repository-workshop/t-2026-09-23-0002:3",
+            "attempt:snapshot-repository-workshop/t-2026-09-23-0003:5",
+            "attempt:snapshot-repository-workshop/t-2026-09-23-0003:6",
+            "attempt:snapshot-repository-workshop/t-2026-09-23-0003:7",
+            "attempt:snapshot-repository-workshop/t-2026-09-23-0003:8"
+        ],
+        "tasks": 4,
+        "models": {
+            "claude-haiku-4-5-20251001": 4
+        },
+        "evidence": {
+            "refusals": 18,
+            "capabilities": [
+                "procedure.submit"
+            ],
+            "example": "procedure refused: floor: step 1 stops the scrubber: a test never stops the only scrubber of a volume, it does not restart at once; abort: no \"co2\" abort condition; abort: no \"refused\" abort condition; monitoring: lab is occupied (2) and the procedure asks for no monitoring of its occupants; monitor"
+        },
+        "recommend": true
+    },
+    "rule": null,
+    "kind": "contract",
+    "target": {
+        "file": "specs/procedure/words.json",
+        "pointer": "/capabilities/submit"
+    },
+    "action": "replace",
+    "current": "Submit the test procedure: the file the test will be run from, later, by others. It is checked before it is written; a procedure that does not pass comes back with the reasons, and stays kept for a revision. The procedure accepted is written as {file} in the workshop, with its sha256.",
+    "proposed": "Submit the test procedure: the file the test will be run from, later, by others. It is checked before it is written; a procedure that does not pass comes back with the reasons, and stays kept for a revision. The procedure accepted is written as {file} in the workshop, with its sha256. Send the procedure short and whole: a call that is cut off before its end is not judged at all, and nothing is kept of it. Write only what the check reads: the steps (each with its number n), the abort conditions (each with its id), and the monitoring. Keep each step and each condition to one plain line, with no commentary or prose inside the arguments. The check refuses a procedure when: a step stops the scrubber or commands it below the speed floor of the signed safety card (a test never stops the only scrubber of a volume); the abort conditions have no condition with id \"co2\" or none with id \"refused\"; the volume is occupied and the monitoring does not name every occupant. Write each of these in the first submission, so that no revision is needed.",
+    "why": "In 4 tasks (all claude-haiku-4-5), 18 procedure.submit calls were cut at the output limit, so no guard judged them. The calls that did come back were refused on the same points: a step stopping the scrubber, a missing \"co2\" abort condition, a missing \"refused\" abort condition, and occupants not monitored. The text of the capability said none of this, so the model wrote long procedures and retried. Putting the checks and a request for a short procedure where the model reads should shorten the call and remove the revision loop. It states only what the guard checks.",
+    "effect": "Calls cut at the output limit on procedure.submit should fall from 18 in 4 tasks to 0 in the replay. Procedures should reach the guard and pass its floor, abort and monitoring checks in the first or second submission.",
+    "changesAcceptance": false,
+    "verification": {
+        "replay": [
+            "station"
+        ],
+        "models": [
+            "claude-haiku-4-5-20251001"
+        ],
+        "tasks": 5,
+        "measure": "procedure.submit calls cut at the output limit (target 0), and refusals on floor, abort co2, abort refused and monitoring per task"
+    },
+    "justifications": [
+        {
+            "constant": "verification.tasks",
+            "value": 5,
+            "source": "measured",
+            "reference": "state: recommendation minTasks = 5; the finding spans 4 tasks",
+            "reason": "Five is the minimum replay; it covers the 4 tasks where the cut occurred, plus one."
+        }
+    ]
+}

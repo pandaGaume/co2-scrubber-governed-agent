@@ -1,0 +1,285 @@
+{
+  "D5:e5282d588cef": {
+    "recommendation": "rec-121b5f159d1b",
+    "taskId": "t-2026-10-01-0001",
+    "state": "proposed",
+    "ended": "contract held after 3 step(s)",
+    "proposal": {
+      "proposalId": "p0001-27b15450",
+      "status": "awaiting-signature"
+    },
+    "seconds": 29,
+    "model": "claude-sonnet-5-5",
+    "telemetry": {
+      "calls": 3,
+      "input": 17832,
+      "output": 3446
+    },
+    "steps": [
+      {
+        "n": 1,
+        "capability": "task.plan",
+        "outcome": "completed",
+        "judged": null,
+        "reason": null
+      },
+      {
+        "n": 2,
+        "capability": "recommendation.propose",
+        "outcome": "completed",
+        "judged": "accepted",
+        "input": {
+          "id": "rec-121b5f159d1b",
+          "kind": "contract",
+          "target": {
+            "file": "specs/procedure/prompt.md"
+          },
+          "action": "append",
+          "current": "You are the factory of a lunar habitat, an engineer's assistant. A device was just installed and the station opened its commissioning: the device knows itself, but not the place it was installed in. Your work in this task is to write the test procedure that will measure what is missing, as an engineer writes a test sheet before it is signed.\n\nYou write the procedure; you never run it. Others run it later, once the commander has authorised it. None of your tools commands a device.\n\n## What you can use\n\n- **The installation**: `factory.inventory` (what is installed, where, what each device measures and accepts, and what is unknown), `station.registry_list` (the register itself, with the devices' descriptors and last readings).\n- **The people**: `biomed.presence` (who is in which module now), `biomed.describe` (the medical monitor: who it can watch, its bands, whether its readings are live or simulated). The monitor is on standby between tests: when the commander authorises your procedure, the station starts it for the subjects your procedure names in `monitoring`, and stops it at the end.\n- **The library**: `library.facts` (the typed facts the documents state, by id), `library.methods` (the method cards that measure a quantity; a card holds the method's principle and its rules of application), `library.search` and `library.list` (the physics of scrubbers and of air, the effects of CO2 on people, this installation), `library.read` (one document whole).\n- **Your workshop**: `workspace.list`, `workspace.read` (the task's files).\n- **Your work**: `task.plan` (declare what no node of the catalogue produces), `procedure.submit` (the procedure, checked whole before it is written), `procedure.revise` (after a refusal: only what changes, applied to the whole procedure the harness keeps for a few minutes and checked whole again; erased once a procedure is accepted), `task.done` (hand it over), `task.fail` (give up, with the reason). When the last test of this commissioning was aborted, `procedure.analyse` comes first: why it stopped, the evidence, why the last procedure did not prevent it, and what the new one changes.\n\n## How you work\n\n- You know what a CO2 scrubber is; what you are unsure of, you look up.\n- Your safety constants are the CO2 limits, the minimum speed and every step's speed, the maximum duration, the abort thresholds and the heart-rate band (by path: `limits.co2MaxPpm`, `limits.co2AbortPpm`, `limits.minSpeedPercent`, `limits.maxMinutes`, `steps.<n>.speedPercent`, `abort.<id>.threshold`, `monitoring.band.minBpm`, `monitoring.band.maxBpm`): each cites a fact of a signed library document and respects it (each fact says its kind, scientific with its literature or context with where the decision comes from). The steps' durations (`steps.<n>.minutes`) are the other constants. The guard's envelope is a source here (`envelope`).\n- A test that was aborted is not sent back as it was. Read what stopped it (the state's `previous`: the aborted procedure, the abort's condition and reason), find its cause in what the test recorded, and change the procedure where the cause lies, so that it does not happen again, or the test stops sooner if it does. The guard checks that the new procedure makes the changes your analysis names.\n- Apply the method's rules of application to this installation and to what your tools say about it. Write your predictions before the test runs: what you expect to see if your hypotheses hold, and what would show they do not.\n",
+          "proposed": "\n## When the volume is occupied\n\n- Before you submit, read `biomed.presence` for the volume of the test. A procedure on a volume whose occupancy was not read is refused.\n- If anyone is in the volume, name every occupant in `monitoring.subjects`, with the heart-rate band (`monitoring.band.minBpm`, `monitoring.band.maxBpm`). The station starts the medical monitor only for the subjects you name, so an occupant you leave out is not monitored, and the procedure is refused (\"the volume is occupied and these occupants would not be monitored\").\n- Stop the test on the occupants' vitals: the `abort` list must hold an entry with the id `vitals`, whose source is the medical monitor's verdict (`biomed.verdict`). Like every abort, it is one entry of the `abort` list, keyed by its `id`.\n- If a person in the volume is under a critical health alarm, the procedure is refused: no test exposes them. Wait until the alarm is cleared or the person is out of the volume, and read `biomed.presence` again.\n",
+          "why": "The guard refuses a procedure on an occupied volume unless monitoring.subjects names every occupant declared by biomed.presence and the abort list stops on the vitals verdict. No text of the prompt says it: the prompt says only that the station watches the subjects a procedure names. After the tools changed, 3 of 3 tasks of claude-haiku-4-5 were refused for this form (2 of 8 before), so the model no longer finds the rule by itself.",
+          "effect": "Tasks of claude-haiku-4-5-20251001 refused for \"lab is occupied and FE#, FE# would not be monitored\" (monitoring.occupied) should fall from 3 of 3 after the tool change to about the 0 of 8 baseline floor, ideally none in the replay. The procedure should name every occupant and carry the vitals abort on the first submission.",
+          "changesAcceptance": false,
+          "verification": {
+            "replay": [
+              "station"
+            ],
+            "models": [
+              "claude-haiku-4-5-20251001"
+            ],
+            "tasks": 5,
+            "measure": "monitoring.occupied: share of tasks refused for 'lab is occupied and FE#, FE# would not be monitored' on the first submission, with all occupants named in monitoring.subjects and a vitals abort present"
+          },
+          "justifications": [
+            {
+              "constant": "verification.tasks",
+              "value": 5,
+              "source": "assumed",
+              "reference": "the finding's minTasks of 5 and its 5 tasks, all of claude-haiku-4-5-20251001",
+              "reason": "Same count as the finding: 5 tasks replay the station case; 3 of 3 refused after the change would show clearly if the form persists."
+            }
+          ]
+        },
+        "reason": null
+      },
+      {
+        "n": 3,
+        "capability": "task.done",
+        "outcome": "completed",
+        "judged": null,
+        "reason": null
+      }
+    ]
+  },
+  "D7:f0e111fbaac6": {
+    "recommendation": "rec-50e07b769591",
+    "taskId": "t-2026-10-01-0002",
+    "state": "proposed",
+    "ended": "contract held after 7 step(s)",
+    "proposal": {
+      "proposalId": "p0002-58ce3315",
+      "status": "awaiting-signature"
+    },
+    "seconds": 41,
+    "model": "claude-sonnet-5-5",
+    "telemetry": {
+      "calls": 7,
+      "input": 52775,
+      "output": 4245
+    },
+    "steps": [
+      {
+        "n": 1,
+        "capability": "task.plan",
+        "outcome": "completed",
+        "judged": null,
+        "reason": null
+      },
+      {
+        "n": 2,
+        "capability": "library.list",
+        "outcome": "completed",
+        "judged": null,
+        "reason": null
+      },
+      {
+        "n": 3,
+        "capability": "library.read",
+        "outcome": "completed",
+        "judged": null,
+        "reason": null
+      },
+      {
+        "n": 4,
+        "capability": "library.facts",
+        "outcome": "completed",
+        "judged": null,
+        "reason": null
+      },
+      {
+        "n": 5,
+        "capability": "recommendation.propose",
+        "outcome": "refused",
+        "judged": "refused",
+        "input": {
+          "id": "rec-50e07b769591",
+          "kind": "library",
+          "target": {
+            "library": "scrubber-1-datasheet"
+          },
+          "action": "sign",
+          "current": null,
+          "proposed": "An authorised person reviews the datasheet scrubber-1-datasheet and signs it (library page of the control room, or `npm run library:sign -- scrubber-1-datasheet \"<name>\"`). The facts it states then count as signed: scrubber.flowAtFull 3.3 m3/min, scrubber.singlePassEfficiency 0.3, scrubber.effectiveFlowAtFull 1 m3/min, scrubber.lagTimeConstant 3.33 min, scrubber.minimumSpeedElevated 40 percent. The guard refuses a justification that cites a fact of a document no person has signed (FACT_UNSIGNED); once the datasheet is signed, a safety constant such as steps.<n>.speedPercent may cite scrubber.minimumSpeedElevated, and must still respect the safe side of the signed safety bound test.speedFloorPercent (at or above 30 percent) in commissioning-test-safety. The same review covers commissioning-test-safety: it too must be signed, and re-signed after any change to it or its facts, otherwise the guard refuses every procedure that cites it. The texts the models read are not changed.",
+          "why": "The guard refused 5 tasks (all claude-haiku-4-5) with FACT_UNSIGNED, naming commissioning-test-safety and scrubber-1-datasheet: the justifications cited facts of documents no person had signed. No text of the models is wrong or missing on this point (the contract already says safety constants cite a fact of a signed document); the gap is in the library, where the two documents await a person's signature. Only a signatory can close it; models cannot and must not treat an unsigned fact as a limit.",
+          "effect": "FACT_UNSIGNED refusals on the procedure form should fall from 5 of 5 replayed tasks to 0 once both documents are signed; other rules of the guard are unchanged.",
+          "changesAcceptance": false,
+          "verification": {
+            "replay": [
+              "scenario"
+            ],
+            "models": [
+              "claude-haiku-4-5-20251001"
+            ],
+            "tasks": 5,
+            "measure": "FACT_UNSIGNED: count of 'justification: *: the fact * is in …, which no person has signed as valid' refusals across the replayed tasks. Five tasks, the same count as the finding's, one per refused task, to show the refusal disappears on every case where it appeared."
+          },
+          "justifications": []
+        },
+        "reason": "justification: verification.tasks = 5 has no justification (a justification names it by its path, constant \"verification.tasks\"): say its source (a library document or fact read, a web page found, the measurement given, the guard's envelope, a calculation from other constants, or an assumption said as such) and why"
+      },
+      {
+        "n": 6,
+        "capability": "recommendation.propose",
+        "outcome": "completed",
+        "judged": "accepted",
+        "input": {
+          "id": "rec-50e07b769591",
+          "kind": "library",
+          "target": {
+            "library": "scrubber-1-datasheet"
+          },
+          "action": "sign",
+          "current": null,
+          "proposed": "An authorised person reviews the datasheet scrubber-1-datasheet and signs it (library page of the control room, or `npm run library:sign -- scrubber-1-datasheet \"<name>\"`). The facts it states then count as signed: scrubber.flowAtFull 3.3 m3/min, scrubber.singlePassEfficiency 0.3, scrubber.effectiveFlowAtFull 1 m3/min, scrubber.lagTimeConstant 3.33 min, scrubber.minimumSpeedElevated 40 percent. The guard refuses a justification that cites a fact of a document no person has signed (FACT_UNSIGNED); once the datasheet is signed, a safety constant such as steps.<n>.speedPercent may cite scrubber.minimumSpeedElevated, and must still respect the safe side of the signed safety bound test.speedFloorPercent (at or above 30 percent) in commissioning-test-safety. The same review covers commissioning-test-safety: it too must be signed, and re-signed after any change to it or its facts, otherwise the guard refuses every procedure that cites it. The texts the models read are not changed.",
+          "why": "The guard refused 5 tasks (all claude-haiku-4-5) with FACT_UNSIGNED, naming commissioning-test-safety and scrubber-1-datasheet: the justifications cited facts of documents no person had signed. No text of the models is wrong or missing on this point (the contract already says safety constants cite a fact of a signed document); the gap is in the library, where the two documents await a person's signature. Only a signatory can close it; models cannot and must not treat an unsigned fact as a limit.",
+          "effect": "FACT_UNSIGNED refusals on the procedure form should fall from 5 of 5 replayed tasks to 0 once both documents are signed; other rules of the guard are unchanged.",
+          "changesAcceptance": false,
+          "verification": {
+            "replay": [
+              "scenario"
+            ],
+            "models": [
+              "claude-haiku-4-5-20251001"
+            ],
+            "tasks": 5,
+            "measure": "FACT_UNSIGNED: count of 'justification: *: the fact * is in …, which no person has signed as valid' refusals across the replayed tasks. Five tasks, one per refused task of the finding, to show the refusal disappears on every case where it appeared."
+          },
+          "justifications": [
+            {
+              "constant": "verification.tasks",
+              "value": 5,
+              "source": "measured",
+              "reference": "finding D7:f0e111fbaac6 (tasks: 5, all claude-haiku-4-5-20251001)",
+              "reason": "The finding counts 5 refused tasks; replaying each once checks the refusal is gone in every case."
+            }
+          ]
+        },
+        "reason": null
+      },
+      {
+        "n": 7,
+        "capability": "task.done",
+        "outcome": "completed",
+        "judged": null,
+        "reason": null
+      }
+    ]
+  },
+  "D4:d77a2a5a7508": {
+    "recommendation": "rec-8d1d9947e11b",
+    "taskId": "t-2026-10-01-0003",
+    "state": "proposed",
+    "ended": "contract held after 5 step(s)",
+    "proposal": {
+      "proposalId": "p0003-b3a3f14a",
+      "status": "awaiting-signature"
+    },
+    "seconds": 38,
+    "model": "claude-sonnet-5-5",
+    "telemetry": {
+      "calls": 5,
+      "input": 19465,
+      "output": 3331
+    },
+    "steps": [
+      {
+        "n": 1,
+        "capability": "task.plan",
+        "outcome": "completed",
+        "judged": null,
+        "reason": null
+      },
+      {
+        "n": 2,
+        "capability": "library.search",
+        "outcome": "completed",
+        "judged": null,
+        "reason": null
+      },
+      {
+        "n": 3,
+        "capability": "library.read",
+        "outcome": "completed",
+        "judged": null,
+        "reason": null
+      },
+      {
+        "n": 4,
+        "capability": "recommendation.propose",
+        "outcome": "completed",
+        "judged": "accepted",
+        "input": {
+          "id": "rec-8d1d9947e11b",
+          "kind": "contract",
+          "target": {
+            "file": "specs/procedure/words.json",
+            "pointer": "/capabilities/submit"
+          },
+          "action": "replace",
+          "current": "Submit the test procedure: the file the test will be run from, later, by others. It is checked before it is written; a procedure that does not pass comes back with the reasons, and stays kept for a revision. The procedure accepted is written as {file} in the workshop, with its sha256.",
+          "proposed": "Submit the test procedure: the file the test will be run from, later, by others. It is checked before it is written; a procedure that does not pass comes back with the reasons, and stays kept for a revision. The procedure accepted is written as {file} in the workshop, with its sha256. Send the procedure short and whole: a call that is cut off before its end is not judged at all, and nothing is kept of it. Write only what the check reads: the steps (each with its number n), the abort conditions (each with its id), and the monitoring. Keep each step and each condition to one plain line, with no commentary or prose inside the arguments. The check refuses a procedure when: a step stops the scrubber or commands it below the speed floor of the signed safety card (a test never stops the only scrubber of a volume); the abort conditions have no condition with id \"co2\" or none with id \"refused\"; the volume is occupied and the monitoring does not name every occupant. Write each of these in the first submission, so that no revision is needed.",
+          "why": "In 4 tasks (all claude-haiku-4-5), 18 procedure.submit calls were cut at the output limit, so no guard judged them. The calls that did come back were refused on the same points: a step stopping the scrubber, a missing \"co2\" abort condition, a missing \"refused\" abort condition, and occupants not monitored. The text of the capability said none of this, so the model wrote long procedures and retried. Putting the checks and a request for a short procedure where the model reads should shorten the call and remove the revision loop. It states only what the guard checks.",
+          "effect": "Calls cut at the output limit on procedure.submit should fall from 18 in 4 tasks to 0 in the replay. Procedures should reach the guard and pass its floor, abort and monitoring checks in the first or second submission.",
+          "changesAcceptance": false,
+          "verification": {
+            "replay": [
+              "station"
+            ],
+            "models": [
+              "claude-haiku-4-5-20251001"
+            ],
+            "tasks": 5,
+            "measure": "procedure.submit calls cut at the output limit (target 0), and refusals on floor, abort co2, abort refused and monitoring per task"
+          },
+          "justifications": [
+            {
+              "constant": "verification.tasks",
+              "value": 5,
+              "source": "measured",
+              "reference": "state: recommendation minTasks = 5; the finding spans 4 tasks",
+              "reason": "Five is the minimum replay; it covers the 4 tasks where the cut occurred, plus one."
+            }
+          ]
+        },
+        "reason": null
+      },
+      {
+        "n": 5,
+        "capability": "task.done",
+        "outcome": "completed",
+        "judged": null,
+        "reason": null
+      }
+    ]
+  }
+}
