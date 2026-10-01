@@ -182,6 +182,7 @@ C'est le test de non-régression de l'évaluateur lui-même, sans modèle pour l
 - **E2. Le registre des règles.** Les codes du guard, `rules.contract.json` et son test de conformité, les liens `states` et `applies`, puis D1 et D6.
 - **E3. L'usine de recommandation.** Elle lit le graphe. Son guard vérifie qu'un exemple ne contredit aucune convention. Ajoutent aussi D7 et les propositions pour la bibliothèque.
 - **E4. La boucle de vérification.** La proposition signée est appliquée dans un fork, mesurée, puis intégrée ou rejetée avec sa mesure.
+- **E5. Le diagnostic par reasoner** (conçu le 1er octobre, à faire avant E4). Les détecteurs ne donnent plus que des pistes. Un reasoner les diagnostique, le harnais vérifie ses prédictions, et la confiance est calculée puis calibrée. Voir la section E5 plus bas.
 
 ## E1, fait (2026-09-30)
 
@@ -348,3 +349,163 @@ Les corrections :
 - les cas à rejouer sont les tâches quand le demandeur ne les distingue pas ;
 - le prompt demande un seul changement par constat.
 
+
+## E5, le diagnostic par reasoner (conception, 2026-10-01)
+
+### Pourquoi le script ne suffit pas
+
+Sur les six constats donnés à l'usine de recommandation pendant les essais, trois étaient justes et actuels : le schéma de `procedure.analyse`, l'entrée de mémoire redondante, la règle de surveillance dite nulle part. Les trois autres ne l'étaient pas :
+
+- **`expected` était faux.** C'était la séquelle d'une soumission coupée, pas une règle énoncée et non suivie.
+- **D7 était périmé.** Les documents avaient été signés depuis.
+- **La troncature était réglée.** Le passage à 8192 jetons l'avait fait disparaître, et D5 le disait lui-même, pendant que D4 continuait de la recommander.
+
+Les huit cas du corpus, eux, étaient tous retrouvés. Mais les détecteurs avaient été écrits à partir d'eux : le corpus mesurait que le code reproduisait nos conclusions, pas qu'il en tirait de justes de cas nouveaux.
+
+Le script sait **trouver** : lire les traces, relier, compter. Il ne sait pas **diagnostiquer**. Dire pourquoi c'est arrivé et si c'est encore vrai demande de former des hypothèses, de les confronter aux faits et d'en écarter. Chaque correction au cas par cas (une condition de plus, un détecteur de plus) a réparé un échec sans empêcher le suivant.
+
+Le diagnostic revient donc à un reasoner. Mais un modèle qui note ses propres réponses converge vers des réponses sûres d'elles, pas vers des réponses justes. La confiance n'est donc jamais déclarée par le modèle : le harnais la calcule à partir de vérifications qu'il exécute lui-même. C'est le principe de tout le projet appliqué à l'évaluateur : le modèle propose, des règles déterministes jugent.
+
+### Le principe
+
+```
+détecteurs (script)      ->  pistes
+usine de diagnostic      ->  diagnostic : cause, classe, actualité, preuves, prédictions
+harnais                  ->  exécute les prédictions ; une prédiction réfutée revient au modèle
+second reasoner          ->  le même travail, sans voir le premier
+harnais                  ->  confiance = prédictions confirmées, accord des deux, alternatives écartées
+seuil calibré            ->  au-dessus : l'usine de recommandation ; en dessous : une personne
+```
+
+Ce qui reste au script, parce qu'il le fait bien et sans se tromper :
+
+- le graphe et les pistes ;
+- l'exécution des prédictions ;
+- le garde ;
+- le calcul de la confiance ;
+- la calibration.
+
+Ce qui revient au modèle : les hypothèses, le choix des preuves, les prédictions qui départagent les hypothèses.
+
+### Les pistes
+
+D1 à D8 continuent de tourner, mais leur sortie change de statut : une **piste** (ce qui mérite qu'on regarde, avec ses nœuds et ses comptes), plus un verdict. Leur classe devient une hypothèse de départ parmi d'autres. Une piste n'atteint jamais l'usine de recommandation sans diagnostic.
+
+### L'usine de diagnostic
+
+C'est un topic `diagnosis`, construit comme les autres usines : une conduite en étapes, un prompt et des mots en anglais, un garde déterministe et une doublure scriptée. Une tâche correspond à une piste.
+
+**Ce qu'elle reçoit** (`observations.diagnosis`, lu dans le graphe, jamais écrit par un modèle) :
+
+- la piste entière ;
+- le voisinage de ses nœuds dans le graphe, à deux sauts ;
+- les règles du registre qu'elle touche, avec leur vérification ;
+- l'état d'aujourd'hui des choses dont elle dépend :
+  - les énoncés tels qu'ils sont ;
+  - les signatures ;
+  - le profil du modèle ;
+  - les empreintes postérieures ;
+- les hypothèses déjà réfutées pour cette piste, avec la prédiction qui les a réfutées.
+
+**Ses outils**, tous en lecture seule :
+
+- **`station.harness_graph`** : un nœud et ses liens, les nœuds d'un type.
+- **Une étape d'une tâche, réduite** : ce que le modèle a reçu (son état, son brief) et ce qu'il a envoyé (les arguments), lu dans la trace. C'est ce qui manquait pour voir qu'un champ promis par un brief était absent de l'état.
+- **Un texte du contrat à une version** : celle d'une tâche, ou aujourd'hui.
+- **La bibliothèque** : documents, faits, signatures.
+
+**Ce qu'elle rend** (`diagnosis.submit`) :
+
+- la **cause**, en une phrase ;
+- la **classe**, dans la taxonomie de l'évaluateur ;
+- l'**actualité** : encore vrai, réglé depuis, ou inconnu ;
+- les **preuves**, des nœuds du graphe ;
+- les **prédictions**, au moins trois, et parmi elles au moins une sur la cause, au moins une sur l'actualité, et au moins une qui écarte une hypothèse concurrente qu'elle nomme.
+
+### Le langage des prédictions
+
+Une prédiction est un **prédicat fermé** que le harnais sait évaluer sur le graphe et ses sources, et qui rend vrai, faux ou inconnu, avec les nœuds qui le montrent. Le modèle les choisit et les remplit ; il ne les évalue jamais.
+
+| Prédicat | Ce qu'il vérifie | Ce qu'il aurait départagé |
+|---|---|---|
+| `preceded-by` (tâche, étape, issue) | la tentative précédente a cette issue : coupée, refusée par le harnais, refusée par le garde | `expected` : la soumission précédente était coupée |
+| `stated-at` (énoncé, version : tâche ou aujourd'hui) | le texte à cette version contient la phrase | les lacunes de contrat, et leur fermeture |
+| `signed` (document, moment : tâche ou aujourd'hui) | le document est signé, et sa signature valide | D7 : signé depuis |
+| `rate` (forme, modèle, empreinte, comparaison, valeur) | la part des tâches où la forme apparaît, sous une empreinte | la troncature, disparue après le profil |
+| `read-before` (tâche, document) | le document a été lu avant la première soumission | une règle de la bibliothèque, lue ou non |
+| `in-state` (tâche, étape, pointeur) | ce que le modèle a reçu contient ce champ | l'historique promis par un brief et absent |
+| `run-setting` (tâche, réglage, comparaison, valeur) | le réglage du modèle sous lequel la tâche a tourné : limite de sortie, effort | la troncature, sa cause |
+| `same-form` (tâches, forme) | ces tâches ont été refusées pour cette forme | une forme, une cause ou deux |
+
+**Le langage est fermé exprès.** Une cause qu'il ne sait pas exprimer donne des prédictions « inconnu », et la piste va à une personne, ce qui est sûr. On l'étend quand un cas réel le demande, avec un test, comme les détecteurs.
+
+`run-setting` suppose que le manifeste enregistre les réglages du modèle. C'est le point ouvert d'E1, à faire en premier.
+
+### Le garde du diagnostic
+
+Il refuse, avant toute vérification :
+
+- une preuve qui n'est pas un nœud du graphe ;
+- une classe hors de la taxonomie ;
+- une prédiction mal formée ;
+- trop peu de prédictions, ou aucune sur l'actualité, ou aucune hypothèse écartée ;
+- une prédiction qui ne fait que redire la piste (les mêmes nœuds et le même compte que ceux qui l'ont fait naître) : elle ne départage rien.
+
+Puis **le harnais exécute les prédictions.** Une prédiction réfutée revient au modèle comme un refus du garde aujourd'hui : la prédiction, ce qui a été observé, les nœuds. Le modèle révise sa cause ou ses prédictions. Il ne peut pas se contenter de retirer la prédiction gênante, car les minimums restent dus. Trois refus sur les mêmes points font une tâche bloquée : la piste va à une personne, comme « diagnostic impossible ».
+
+### Le second reasoner
+
+Un autre modèle, d'une autre famille quand c'est possible, reçoit la même piste et les mêmes outils, sans le premier diagnostic. Les deux familles partagent des angles morts différents. Deux diagnostics s'**accordent** quand ils ont la même classe, la même actualité, et des preuves qui se recoupent sur le nœud de la cause. On compare des nœuds, pas des phrases. En cas de désaccord, la confiance est plafonnée, et les deux diagnostics vont ensemble à la personne qui tranche.
+
+### La confiance
+
+Calculée par le harnais, jamais déclarée par le modèle :
+
+- **la part des prédictions confirmées.** Une prédiction « inconnu » compte comme non confirmée ;
+- **l'accord des deux reasoners** : un désaccord plafonne la confiance ;
+- **le nombre d'hypothèses concurrentes écartées par une prédiction confirmée** ;
+- **la taille de l'échantillon** : une piste de deux tâches ne peut pas atteindre la confiance d'une piste de vingt.
+
+Les poids et le seuil sont dans `specs/harness/diagnosis.json`. Ils ne sont jamais choisis au jugé : la calibration les fixe.
+
+### La calibration
+
+Un corpus **étiqueté** (`tests/fixtures/evaluator/labels.json`) dit, pour chaque piste, la cause, la classe et l'actualité justes, avec qui les a établies et comment. On y met :
+
+- les huit cas du début ;
+- les verdicts des essais : `expected` faux (séquelle de troncature), D7 périmé (signé depuis), la troncature réglée (le profil), le schéma de `procedure.analyse` juste, l'entrée de mémoire juste et redondante, la surveillance juste et ouverte.
+
+Chaque passe mesure la **précision par tranche de confiance**. Le seuil est le plus bas qui donne la précision visée (par exemple 9 sur 10) sur ce corpus. La précision du script seul, environ une sur deux sur les essais, est le point de départ à battre.
+
+Pour ne plus mesurer sur ce qui a servi à construire, un second corpus est **réservé** : les prochains runs réels, étiquetés par une personne avant que l'évaluateur ne les lise. Le seuil n'est jamais réglé sur lui. Il sert à vérifier que la précision tient sur des cas nouveaux.
+
+### La gouvernance
+
+- **Au-dessus du seuil**, le diagnostic, et non la piste brute, est donné à l'usine de recommandation. Elle reçoit la cause, les preuves et les prédictions confirmées, et sa recommandation porte la confiance.
+- **En dessous**, une personne voit la piste, les diagnostics, les prédictions confirmées et réfutées, et décide.
+- Rien n'est jamais signé par un modèle, et rien de signé n'est appliqué hors d'un fork mesuré (E4).
+- La page de l'évaluateur montre pour chaque piste son diagnostic, sa confiance et ses prédictions, chacune avec son résultat.
+
+### Le coût
+
+Pour une piste : deux reasoners, chacun quelques tours de 10 000 à 30 000 jetons lus, soit de l'ordre de 100 000 à 300 000 jetons. Les passes se font donc **par lots**, sur demande, jamais après chaque tâche, en commençant par les pistes les plus graves.
+
+Un diagnostic est gardé avec l'empreinte de ses sources : les tâches, les énoncés, les signatures. On ne refait un diagnostic que si l'une d'elles a changé.
+
+### Ce qui peut mal tourner
+
+- **Deux modèles qui se trompent ensemble.** C'est pour cela que la confiance repose d'abord sur les prédictions exécutées par le harnais, et que la calibration se mesure sur un corpus réservé.
+- **Des prédictions faciles.** Le garde refuse celles qui redisent la piste, et exige une hypothèse écartée. La calibration montrera si cela suffit.
+- **Un langage trop pauvre.** Le cas sort en « inconnu » vers une personne. On l'étend, au cas réel près.
+- **Le coût.** Lots, priorités, et diagnostics gardés tant que leurs sources n'ont pas changé.
+
+### Le plan
+
+- **E5.0 Mesurer.** Écrire les étiquettes du corpus. Mesurer la précision des détecteurs actuels sur ce corpus. Enregistrer dans le manifeste les réglages du modèle (limite de sortie, effort), dont `run-setting` a besoin.
+- **E5.1 Les prédictions.** Le langage fermé et son exécuteur sur le graphe, déterministes, chaque prédicat testé sur le corpus.
+- **E5.2 L'usine de diagnostic.** Le topic, son garde, sa doublure scriptée, ses outils de lecture (étape réduite, texte à une version).
+- **E5.3 Le second reasoner et la confiance.** L'accord par nœuds, le calcul, `specs/harness/diagnosis.json`.
+- **E5.4 La calibration réelle.** Les deux reasoners sur le corpus étiqueté, la précision par tranche, le seuil. Puis une vérification sur le corpus réservé, dès qu'il existe.
+- **E5.5 Le branchement.** L'usine de recommandation ne reçoit plus que des diagnostics au-dessus du seuil ; la page montre diagnostics et prédictions.
+
+E4, la boucle de vérification, vient ensuite. Elle mesurera des recommandations nées de diagnostics, et ses mesures entreront à leur tour dans la calibration : une recommandation qui ne produit pas l'effet prédit dit que son diagnostic était faux.
