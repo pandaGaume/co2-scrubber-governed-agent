@@ -323,6 +323,32 @@ export function evaluatePrediction(g: HarnessGraph, p: Prediction, ctx: Predicat
     }
 }
 
+/** Where the texts of the contract are: what stated-at and a diagnosis may read, nothing else of the repository. */
+export const CONTRACT_TEXTS = ["specs/", "harness/", "lib/", "slots/", "docs/library/", "profiles/"];
+export const isContractText = (file: string): boolean => CONTRACT_TEXTS.some((d) => file.startsWith(d)) && !file.split("/").includes("..") && !file.includes("\\");
+
+/** A step of a task, reduced: what it called and sent, how it ended and why, and the fields of the state the model received. */
+export interface ReducedStep {
+    task: string;
+    step: number;
+    capability: string;
+    outcome: string;
+    sent: unknown;
+    reason: string | null;
+    tokens: unknown;
+    received: string[] | null;
+}
+
+export function reducedStep(g: HarnessGraph, task: string, n: number): ReducedStep | { why: string } {
+    const t = taskOf(g, task);
+    if (!t) return { why: `no task ${task} in the graph` };
+    const steps = stepsOf(t.source);
+    const s = steps.find((x) => x.n === n);
+    if (!s) return { why: `the task has ${steps.length} steps, no step ${n}` };
+    const o = outcomeOf(g, t, n);
+    return { task: t.node.id, step: n, capability: s.capability, outcome: o?.outcome ?? s.outcome, sent: s.input === undefined ? "(not kept)" : s.input, reason: s.reason ?? null, tokens: (s as { tokens?: unknown }).tokens ?? null, received: receivedAt(t.source, n) };
+}
+
 /** A task of the graph and where it is read from, by its node id (task:… or the id without the prefix). */
 function taskOf(g: HarnessGraph, id: unknown): { node: HarnessNode; source: TaskSource } | null {
     const key = String(id).startsWith("task:") ? String(id) : `task:${String(id)}`;
@@ -494,7 +520,7 @@ const libraryToday = (): Set<string> => {
 function statementsOf(g: HarnessGraph, a: Record<string, unknown>): { list: Array<{ stmt: Statement; node?: string }>; node?: string } | { why: string } {
     if (a.file !== undefined) {
         const file = String(a.file);
-        if (!/^(specs|harness|lib|slots|docs\/library|profiles)\//.test(file) || file.includes("..")) return { why: `${file} is not a text of the contract (specs/, harness/, lib/, slots/, docs/library/, profiles/)` };
+        if (!isContractText(file)) return { why: `${file} is not a text of the contract (${CONTRACT_TEXTS.join(", ")})` };
         return { list: [{ stmt: { file, ...(a.pointer ? { pointer: String(a.pointer) } : {}), phrase: String(a.phrase) } }] };
     }
     const code = String(a.rule);

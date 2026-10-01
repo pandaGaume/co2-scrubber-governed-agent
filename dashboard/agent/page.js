@@ -986,7 +986,9 @@ var EXCLUDED = [
   // The harness's graph and its evaluation are the evaluator's reading of the factories' traces (2026-09-30), not something the habitat's agent acts on.
   /^station\.harness_(graph|evaluate)$/,
   // A recommendation is the evaluator's factory's work, asked by a person or the station, signed by a person (2026-10-01, E3).
-  /^station\.recommend$/
+  /^station\.recommend$/,
+  // A diagnosis of a lead is the evaluator's diagnosis factory's work, asked by a person or the station (2026-10-01, E5.2).
+  /^station\.diagnose$/
 ];
 function replayPolicyFor(id, guardMode) {
   if (APPROVAL_REQUIRED.some((r) => r.test(id))) return "approval-required";

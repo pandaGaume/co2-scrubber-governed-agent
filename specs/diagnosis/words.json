@@ -1,0 +1,51 @@
+{
+    "note": "What the diagnosis factory says to its model and in its refusals (2026-10-01, E5.2): the code fills the holes {name} and says nothing of its own.",
+    "intention": "Diagnose the lead {id} of the harness's evaluator: {lead}. Say what really caused it, its class, whether it is still true, the nodes of the harness's graph it rests on, and predictions the harness checks. You decide nothing: the harness runs your predictions and computes the confidence.",
+    "capabilities": {
+        "graph": "Read the harness's graph the lead comes from: with id, a node and its typed links in and out; with type, the nodes of that type; with nothing, how many nodes and links of each type. Read only.",
+        "step": "Read one step of a task, reduced: the capability it called, how it ended (cut, harness-refused, guard-refused, accepted, completed, failed), what the model sent (its arguments), the refusal's words whole, its tokens, and the fields of the state the model received (three levels, no values). Read only.",
+        "text": "Read a text of the contract (a file under {roots}) at a version: a task's (the version it ran under) or today's; with pointer, the value at that JSON Pointer; with find, the part around those words. At most {max} characters. Read only.",
+        "submit": "Submit the diagnosis: the verdict on the lead, the cause, its class, whether it is still true, the nodes of the harness's graph it rests on (evidence), and predictions in the closed language of the state (field \"predicates\"), each with its role and the value you expect. The guard checks its form, then runs each prediction: one the sources refute comes back with what was observed. An accepted one is written to {file}."
+    },
+    "brief": {
+        "plan": "Stage 1 of 3, the plan. The lead is in the state (hypothesis, field \"lead\": what the detector says, its class, its path in the graph, its evidence), with its neighbourhood in the harness's graph (field \"neighbourhood\"), the rules of the register it touches and where they are stated today (field \"rules\"), the state of today (field \"today\"), and the hypotheses already refuted (field \"refuted\"). Declare with task.plan that the diagnosis is made here: no node of the catalogue, the output {name} missing, to the topic \"diagnosis\".",
+        "diagnose": "Stage 2 of 3, the diagnosis. Read what you need with diagnosis.graph, diagnosis.step and diagnosis.text, then submit one diagnosis with diagnosis.submit: a verdict ({verdicts}), the cause in a few sentences, a class ({classes}), current ({current}), evidence as node ids of the graph, and at least {min} predictions: one on the cause, one on whether it holds today, and one that rules out a competing hypothesis you name. A prediction that only repeats what made the lead is refused: it tells nothing apart.{refused}",
+        "refused": " Your last diagnosis was refused: {problems}. A refuted prediction says your cause or your prediction is wrong: read again, revise the cause or the prediction, and submit the diagnosis again, whole.",
+        "handOver": "Stage 3 of 3, hand over. The guard accepted {path}. End with task.done, the diagnosis as the artifact of kind \"diagnosis\"."
+    },
+    "requirements": {
+        "missing": "the plan needs {requirement} first: {how}"
+    },
+    "guard": {
+        "refused": "diagnosis refused: {problems}",
+        "id": "the diagnosis's id is \"{got}\", not the \"{id}\" the task asks for",
+        "accepted": "the diagnosis {path} is already accepted: end with task.done",
+        "verdict": "the verdict is one of {verdicts}, not \"{got}\"",
+        "class": "the class is one of {classes}, not \"{got}\"",
+        "current": "current is one of {current}, not \"{got}\"",
+        "cause": "the cause says nothing",
+        "language": "the cause is read by a model next: write it in English (it holds {chars})",
+        "dash": "the cause holds an em dash: use a comma, a colon or a semicolon",
+        "evidence": "the evidence names {count} node(s) of the graph: {min} at least",
+        "notNode": "{node} is not a node of the harness's graph (diagnosis.graph reads it)",
+        "predictions": "the diagnosis gives {count} prediction(s): {min} at least",
+        "role": "a prediction's role is one of {roles}, not \"{got}\"",
+        "roles": "the predictions miss a role: at least {cause} on the cause, {current} on whether it holds today, {rulesOut} that rules out a competing hypothesis",
+        "expect": "prediction {n}: expect is true or false, the value you predict",
+        "alternative": "prediction {n} rules out a hypothesis: name it (alternative)",
+        "form": "prediction {n}: {problems}",
+        "today": "prediction {n} is on whether the cause holds today: give it at \"today\", or make it a rate under a fingerprint the lead does not compare",
+        "restates": "prediction {n} only repeats what made the lead ({what}): it tells no hypothesis apart",
+        "refuted": "prediction {n} ({role}{alternative}) expected {expect}, the harness observed {observed}"
+    },
+    "openQuestions": {
+        "plan": "the plan: the diagnosis is made here (task.plan)",
+        "diagnose": "the diagnosis, its predictions run by the harness (diagnosis.submit)",
+        "handOver": "hand the diagnosis over (task.done)"
+    },
+    "validate": {
+        "none": "no diagnosis among the claimed artifacts",
+        "notAccepted": "no diagnosis was accepted by the guard in this task (diagnosis.submit)",
+        "notTheFile": "claimed diagnosis \"{path}\" is not the file the guard accepted ({accepted})"
+    }
+}

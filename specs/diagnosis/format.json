@@ -1,0 +1,48 @@
+{
+    "title": "The diagnosis factory: what it is given, what it returns, and what its guard checks",
+    "note": "A factory that diagnoses one lead of the post-procedure evaluator (2026-10-01, docs/evaluateur.fr.md, E5.2): what really caused it, its class, whether it is still true, the graph's nodes it rests on, and predictions the harness checks (lib/predicates.ts). What it is given is the task's observations.diagnosis: the lead whole, its neighbourhood in the harness's graph, the rules of the register it touches, the state of today, and the hypotheses already refuted. Its tools only read. Its guard refuses a diagnosis of the wrong form, then runs its predictions: a refuted one comes back as a refusal. It decides nothing: the confidence is computed by the harness (E5.3), never declared by the model. Its words are words.json, its prompt prompt.md, its own stages playbook.json.",
+    "words": "specs/diagnosis/words.json",
+    "prompt": "specs/diagnosis/prompt.md",
+    "playbook": "specs/diagnosis/playbook.json",
+    "observation": "diagnosis",
+    "file": "diagnoses/{id}.json",
+    "verdicts": {
+        "right": "the lead's reading is correct and points at something real",
+        "wrong": "the lead's reading is incorrect: the cause is not what it says",
+        "stale": "it was true, has been fixed since, and the lead still asks to act on it"
+    },
+    "classes": {
+        "contract-gap": "a rule the guard enforces that the texts the model read did not state, or stated misleadingly (a refusal's own words included)",
+        "model-error": "the texts stated it and the model did not follow",
+        "harness-artefact": "the harness itself caused it: a cut, a refusal before any guard, a lost session, a message of the harness",
+        "library-gap": "a fact or a document of the library missing, or not signed",
+        "regression": "a form of failure that came with a change of the harness or of its texts",
+        "improvement": "a form of failure that went with a change",
+        "mixed": "several of these at once, each with its own prediction",
+        "none": "nothing to act on",
+        "unknown": "what the sources do not let anyone tell"
+    },
+    "current": ["still", "closed", "unknown"],
+    "roles": {
+        "cause": "it tests the cause said",
+        "current": "it tests whether the cause holds today: a prediction at \"today\", or a rate under a fingerprint the lead does not compare",
+        "rules-out": "it tests a competing hypothesis, named in alternative, and its expected value rules that hypothesis out"
+    },
+    "minimum": {
+        "note": "the least a diagnosis gives; three refusals on the same points send the lead to a person",
+        "predictions": 3,
+        "cause": 1,
+        "current": 1,
+        "rulesOut": 1,
+        "evidence": 1
+    },
+    "neighbourhood": {
+        "note": "the lead's nodes and those two links away, at most this many; the read tools give the rest",
+        "hops": 2,
+        "maxNodes": 80
+    },
+    "text": {
+        "note": "what diagnosis.text gives at once: a window around the words asked for, or the start",
+        "maxChars": 6000
+    }
+}

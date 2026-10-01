@@ -57,6 +57,8 @@ import type { JsonValue } from "@spiky-panda/harness";
 import { evaluate } from "../../lib/evaluator.js";
 import { askedFor, RECOMMEND_ORDER, recommendationIdOf } from "../../lib/recommendation.js";
 import { askedOf as recommendationAsked, feasibleKinds, recommendationProblems } from "../../harness/topics/recommendation/index.js";
+import { diagnosisAskedFor, diagnosisIdOf } from "../../lib/diagnosis.js";
+import { diagnosisAskedOf, diagnosisCheck } from "../../harness/topics/diagnosis/index.js";
 import { loadRegister } from "../../lib/rules-register.js";
 import { TOPIC_DEFINITIONS } from "../../harness/core/runner.js";
 import type { Episode } from "../../harness/core/episodes.js";
@@ -97,7 +99,7 @@ export interface Proposal {
     artifacts: Array<{ kind: string; path: string; sha256: string; contractSha256?: string }>;
     manifestSha256: string;
     claims: Record<string, unknown>;
-    status: "received" | "judging" | "accepted" | "rejected" | "relayed" | "awaiting-signature" | "adopted" | "candidate";
+    status: "received" | "judging" | "accepted" | "rejected" | "relayed" | "awaiting-signature" | "adopted" | "candidate" | "diagnosed";
     reportId?: string;
     reason?: string;
     receivedAt: string;
@@ -373,6 +375,35 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
             resume: { slot: "library", tool: "sign", args: { id } },
         });
         say("mother.recommendation.proposed", null, () => ({ id, kind: String(r.kind), finding: String(record.finding?.title ?? record.finding?.id ?? "").slice(0, 200) }));
+    };
+
+    /**
+     * A diagnosis of the evaluator's diagnosis factory (2026-10-01, E5.2): checked again here against the lead the task was given, its
+     * predictions run again on the station's own graph of the same forks, never taken on the factory's word. Kept as the proposal's
+     * status: it changes nothing. The confidence is computed from what the harness confirmed (E5.3), and only a diagnosis above the
+     * threshold reaches the recommendation factory (E5.5).
+     */
+    const relayDiagnosis = async (proposal: Proposal, artifact: Proposal["artifacts"][number]) => {
+        const dir = taskDir(checkTaskId(proposal.taskId));
+        const file = path.join(dir, artifact.path);
+        if (!existsSync(file)) throw new Error(`diagnosis ${artifact.path} is not in the workshop of task ${proposal.taskId}`);
+        const text = readFileSync(file);
+        if (sha256Of(text) !== artifact.sha256) throw new Error(`diagnosis ${artifact.path}: the sha256 proposed is not the file's`);
+        const record = JSON.parse(text.toString("utf8")) as { id?: string; class?: string; current?: string; lead?: { id?: string; title?: string }; predictions?: unknown[] };
+        const id = String(record.id ?? "");
+        const task = JSON.parse(readFileSync(path.join(dir, "task.json"), "utf8")) as { task: Parameters<typeof diagnosisAskedOf>[0] };
+        const asked = diagnosisAskedOf(task.task);
+        const registers = Object.fromEntries(Object.keys(TOPIC_DEFINITIONS).map((t) => [t, loadRegister(t)]));
+        const { problems, results } = diagnosisCheck(record, asked, harnessGraphOf(asked.forks ?? []), { registers });
+        if (problems.length) {
+            proposal.status = "rejected";
+            proposal.reason = problems.join("; ");
+            say("mother.diagnosis.refused", null, () => ({ id, problems: proposal.reason ?? "" }));
+            return;
+        }
+        proposal.status = "diagnosed";
+        const confirmed = results.filter((r) => r && r.truth !== "unknown").length;
+        say("mother.diagnosis.received", null, () => ({ id, class: String(record.class), current: String(record.current), lead: String(record.lead?.title ?? record.lead?.id ?? "").slice(0, 200), confirmed, predictions: results.length, unknown: results.length - confirmed }));
     };
 
     const relayPlaybook = async (proposal: Proposal, artifact: Proposal["artifacts"][number]) => {
@@ -692,6 +723,40 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                 },
             },
             {
+                // The evaluator's diagnosis asked of a reasoner (2026-10-01, docs/evaluateur.fr.md, E5.2): one lead, the one named or the
+                // first not yet diagnosed, what the factory is given read from the harness's graph. It returns at once; the diagnosis
+                // reaches the station as the factory's proposal, its predictions run again here.
+                name: "diagnose",
+                title: "Ask for a diagnosis of a lead of the evaluator",
+                description:
+                    "Asks the diagnosis factory to diagnose one lead of the post-procedure evaluator (station.harness_evaluate): the one named, or the first not yet diagnosed. What the factory is given is read from the harness's graph: the lead whole, its neighbourhood, the rules of the register it touches and where they are stated today, the state of today. The diagnosis says what caused the lead, its class, whether it is still true, the nodes it rests on, and predictions the harness runs: the factory's guard runs them, and the station runs them again. It changes nothing. With forks: the leads of those forks, together.",
+                inputSchema: obj({ forks: HARNESS_FORKS, lead: { type: "string", description: "a finding's id, as station.harness_evaluate gives it" }, builder: { type: "string", enum: ["reasoner", "scripted"], description: "the factory's builder: a model (default), or its script" } }),
+                handle: async (args, s) => {
+                    const forks = Array.isArray(args.forks) ? args.forks.filter((f): f is string => typeof f === "string" && f.length > 0) : [];
+                    const g = harnessGraphOf(forks);
+                    const evaluation = evaluate(g);
+                    // A lead diagnosed already: its diagnosis among the proposals the station checked and kept.
+                    const diagnosed = new Set(s.proposals.filter((p) => p.status === "diagnosed").flatMap((p) => p.artifacts.filter((a) => a.kind === "diagnosis").map((a) => path.basename(a.path, ".json"))));
+                    const named = typeof args.lead === "string" && args.lead ? evaluation.findings.find((f) => f.id === args.lead) : undefined;
+                    if (args.lead && !named) throw new Error(`no lead "${String(args.lead)}" in these tasks (station.harness_evaluate lists them)`);
+                    if (named && diagnosed.has(diagnosisIdOf(named))) throw new Error(`the lead ${named.id} is diagnosed already: ${diagnosisIdOf(named)}`);
+                    const open = evaluation.findings.filter((f) => !diagnosed.has(diagnosisIdOf(f)));
+                    const lead = named ?? open[0];
+                    if (!lead) return { lead: null, diagnosis: null, taskId: null, open: 0 };
+                    const asked = diagnosisAskedFor(g, lead, forks.length ? forks : null);
+                    const r = await client().call("factory", "request", {
+                        objective: { required_outputs: [{ name: asked.id, quantity: "Diagnosis" }] },
+                        observations: { diagnosis: asked as unknown as JsonValue },
+                        topics: ["diagnosis"],
+                        ...(args.builder === "scripted" || args.builder === "reasoner" ? { builder: args.builder } : {}),
+                        requestedBy: "station (evaluator)",
+                    });
+                    if (!r.ok) throw new Error(`the factory did not take the request: ${r.error ?? "refused"}`);
+                    say("mother.diagnosis.asked", null, () => ({ id: asked.id, lead: lead.title.slice(0, 200) }));
+                    return { lead: lead.id, diagnosis: asked.id, taskId: (r.output as { taskId?: string }).taskId ?? null, open: open.length };
+                },
+            },
+            {
                 // Mother reflects on what the fork's agents did (2026-09-29, P4): the patterns of the traces, read by code, and the
                 // reflection factory asked for an adaptation that answers them. In a fork only: its adaptations are adopted and measured there.
                 name: "reflect",
@@ -772,7 +837,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                 inputSchema: obj(
                     {
                         taskId: { type: "string" },
-                        artifacts: { type: "array", items: { type: "object", properties: { kind: { type: "string", enum: ["graph", "model", "twin", "procedure", "plugin", "playbook", "adaptation", "recommendation"] }, path: { type: "string" }, sha256: SHA, contractSha256: SHA }, required: ["kind", "path", "sha256"] } },
+                        artifacts: { type: "array", items: { type: "object", properties: { kind: { type: "string", enum: ["graph", "model", "twin", "procedure", "plugin", "playbook", "adaptation", "recommendation", "diagnosis"] }, path: { type: "string" }, sha256: SHA, contractSha256: SHA }, required: ["kind", "path", "sha256"] } },
                         manifestSha256: { ...SHA },
                         claims: { type: "object" },
                     },
@@ -794,6 +859,11 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     if (recommendation) {
                         await relayRecommendation(proposal, recommendation);
                         return { proposalId, status: proposal.status, ...(proposal.reason ? { reason: proposal.reason } : {}), note: proposal.status === "awaiting-signature" ? "on the library's proposals shelf, unsigned: an authorised signatory is asked to sign it" : "the recommendation did not pass the station's check" };
+                    }
+                    const diagnosis = list.find((a) => a.kind === "diagnosis");
+                    if (diagnosis) {
+                        await relayDiagnosis(proposal, diagnosis);
+                        return { proposalId, status: proposal.status, ...(proposal.reason ? { reason: proposal.reason } : {}), note: proposal.status === "diagnosed" ? "checked again: its predictions run on the station's graph; it changes nothing" : "the diagnosis did not pass the station's check" };
                     }
                     const playbook = list.find((a) => a.kind === "playbook");
                     if (playbook) {
