@@ -138,18 +138,18 @@ describe("the evaluator's factory writes a recommendation, and an authorised sig
         assert.match(String(again.error), /is recommended on already/);
     });
 
-    it("a rule stated and not followed: its own words added where its kind is said; the contract as it was", async () => {
-        const expected = (await findings()).find((f) => f.detector === "D1" && f.evidence.code === "expected")!;
-        const schema = readFileSync(fromRepository("specs", "procedure", "procedure.schema.json"), "utf8");
-        const { recommendation: id, task } = await recommend(expected.id);
+    it("a schema the harness refused calls by: what it asks added to the capability's description; the contract as it was", async () => {
+        const analyse = (await findings()).find((f) => f.detector === "D4" && /data\/evidence must be array/.test(f.title))!;
+        const words = readFileSync(fromRepository("specs", "procedure", "words.json"), "utf8");
+        const { recommendation: id, task } = await recommend(analyse.id);
         assert.equal(task.state, "proposed", String(task.manifest?.ended ?? task.run?.ended));
         const review = await ok<{ files: Array<{ name: string; text: string }> }>("library", "review", { id });
         const record = JSON.parse(review.files[1].text) as Proposal;
-        assert.deepEqual([record.kind, record.action, record.target.file, record.target.pointer], ["contract", "append", "specs/procedure/procedure.schema.json", "/properties/expected/description"]);
-        assert.equal(record.current, textNow("specs/procedure/procedure.schema.json", "/properties/expected/description"));
-        assert.match(record.proposed, /A test that does not say what it expects to see cannot be told from a fishing trip\./);
+        assert.deepEqual([record.kind, record.action, record.target.file, record.target.pointer], ["contract", "append", "specs/procedure/words.json", "/capabilities/analyse"]);
+        assert.equal(record.current, textNow("specs/procedure/words.json", "/capabilities/analyse"));
+        assert.equal(record.proposed, " In its arguments, evidence is an array, even of one element.");
         assert.ok(record.verification.tasks >= 5);
-        assert.equal(readFileSync(fromRepository("specs", "procedure", "procedure.schema.json"), "utf8"), schema, "nothing applied");
+        assert.equal(readFileSync(fromRepository("specs", "procedure", "words.json"), "utf8"), words, "nothing applied");
     });
 
     it("a model's own mistake has nothing to recommend", async () => {
@@ -164,30 +164,31 @@ describe("the recommendation's guard, on what a model could send", () => {
     const forks = FORKS.map((name) => ({ name, dir: path.join(CORPUS, name), createdAt: (JSON.parse(readFileSync(path.join(CORPUS, name, "fork.json"), "utf8")) as { createdAt: string }).createdAt })).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     const g = new HarnessGraph(forks, { procedure: { judges: PROCEDURE_TOPIC.judges ?? [], digest: PROCEDURE_TOPIC.digest, guardWords: guardWordsOf(fromRepository("specs", "procedure", "words.json")), register: loadRegister("procedure") } });
     const e = evaluate(g);
-    const expected = e.findings.find((f) => f.detector === "D1" && f.evidence.code === "expected")!;
-    const asked = askedFor(g, expected);
-    const target = asked.targets.find((t) => t.pointer === "/properties/expected/description")!;
+    const analyse = e.findings.find((f) => f.detector === "D4" && /data\/evidence must be array/.test(f.title))!;
+    const asked = askedFor(g, analyse);
+    const target = asked.targets.find((t) => t.pointer === "/capabilities/analyse")!;
     const good: Proposal = {
         id: asked.id,
         kind: "contract",
         target: { file: target.file, pointer: target.pointer },
         action: "append",
         current: textNow(target.file, target.pointer),
-        proposed: " A test says what it expects to see before it runs.",
-        why: "stated, read, and refused all the same",
-        effect: "expected refused at no first try",
+        proposed: " Its evidence and its changes are arrays, even of one element.",
+        why: "the harness refused the analysis's arguments in 10 tasks",
+        effect: "no refusal of the analysis's arguments",
         changesAcceptance: false,
-        verification: { replay: asked.cases, models: asked.models, tasks: 5, measure: "expected at the first try" },
+        verification: { replay: asked.cases, models: asked.models, tasks: 5, measure: `${asked.measures[0]}: refusals per task` },
         justifications: [],
     };
     const problems = (p: Partial<Proposal>) => recommendationProblems({ ...good, ...p }, asked);
 
     it("what the graph gives the factory: the finding whole, the texts it may change with what they hold, the cases, the conventions", () => {
-        assert.equal(asked.finding.id, expected.id);
-        assert.deepEqual(asked.rule?.code, "expected");
-        assert.ok(asked.targets.some((t) => t.file === "specs/procedure/prompt.md" && t.text !== null), "the topic's prompt, where a rule its texts state nowhere would be said");
+        assert.equal(asked.finding.id, analyse.id);
+        assert.equal(asked.rule, null, "a refusal of the harness, no rule of the register");
+        assert.deepEqual(asked.targets.map((t) => `${t.file} ${t.pointer ?? ""}`), ["specs/procedure/words.json /capabilities/analyse"]);
+        assert.deepEqual(asked.measures, ["Invalid capability arguments: data/evidence must be array"]);
         assert.deepEqual(asked.conventions, [{ list: "steps", key: "n" }, { list: "abort", key: "id" }]);
-        assert.equal(asked.cases.length, 2);
+        assert.deepEqual([...asked.cases].sort(), ["experiment validate v4", "experiment validate v5", "experiment validate v9"]);
         assert.deepEqual(problems({}), []);
     });
 
@@ -204,16 +205,17 @@ describe("the recommendation's guard, on what a model could send", () => {
     });
 
     it("in English, without an em dash; a kind the class takes; a change of what a guard accepts said as such", () => {
-        assert.match(problems({ proposed: " Le test dit ce qu'il attend à l'avance." }).join(" "), /a text a model reads is written in English: the proposed text holds à/);
-        assert.match(problems({ proposed: ` A test says what it expects ${String.fromCharCode(0x2014)} before it runs.` }).join(" "), /holds an em dash/);
-        assert.deepEqual(problems({ proposed: " A test says what it expects in 2014, before it runs." }).filter((x) => /em dash/.test(x)), []);
-        assert.match(problems({ kind: "memory" }).join(" "), /a finding of class stated-not-followed takes a recommendation of kind contract, guard-message, not "memory"/);
+        assert.match(problems({ proposed: " Ses preuves sont une liste, même d'un élément." }).join(" "), /a text a model reads is written in English: the proposed text holds ê é/);
+        assert.match(problems({ proposed: ` Its evidence is an array ${String.fromCharCode(0x2014)} even of one element.` }).join(" "), /holds an em dash/);
+        assert.deepEqual(problems({ proposed: " Its evidence is an array since 2014, even of one element." }).filter((x) => /em dash/.test(x)), []);
+        assert.match(problems({ kind: "memory" }).join(" "), /a finding of class harness-artefact takes a recommendation of kind contract, guard-message, guard-decision, not "memory"/);
         assert.match(problems({ changesAcceptance: true }).join(" "), /changesAcceptance true/);
+        assert.deepEqual(problems({ kind: "guard-decision", changesAcceptance: true }).filter((x) => /changesAcceptance/.test(x)), []);
     });
 
     it("a verification that replays the finding's cases, five tasks at least, and measures what the finding is about", () => {
         assert.match(problems({ verification: { ...good.verification, replay: ["experiment validate v99"] } }).join(" "), /experiment validate v99 are not among them/);
         assert.match(problems({ verification: { ...good.verification, tasks: 2 } }).join(" "), /replays 2 task\(s\): 5 at least/);
-        assert.match(problems({ verification: { ...good.verification, measure: "something else" } }).join(" "), /name expected/);
+        assert.match(problems({ verification: { ...good.verification, measure: "something else" } }).join(" "), /name Invalid capability arguments: data\/evidence must be array/);
     });
 });

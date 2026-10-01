@@ -84,10 +84,11 @@ describe("the evaluator on its corpus: the tasks of 29 and 30 September, classed
         if (known("08a954e557281e4701ceb4ebb0f72da5a1fdee2c") && known("287f5bcc1d3be2439ee45d5107360f13349813d7")) assert.ok((fixed.evidence.changed as Array<{ slot: string }>).some((c) => c.slot === "file:specs/procedure/words.json"), JSON.stringify(fixed.evidence.changed));
     });
 
-    it("the composite reference, by the register: REFERENCE_NOT_A_FACT refused at the first try of 23 tasks none of whose texts said a reference is one id alone (D1), stated since by the words and the justification's schema", () => {
+    it("the composite reference, by the register: REFERENCE_NOT_A_FACT refused at the first try of 16 tasks none of whose texts said a reference is one id alone (D1), stated since by the words and the justification's schema", () => {
         const [d1] = e.findings.filter((f) => f.detector === "D1" && f.evidence.code === "REFERENCE_NOT_A_FACT");
         assert.equal(d1.class, "contract-gap");
-        assert.equal(d1.evidence.untold, 23);
+        // 16, not the 22 D2 counts: a task whose first submission the output limit cut had no first try on the contract.
+        assert.equal(d1.evidence.untold, 16);
         assert.deepEqual(d1.evidence.missing, ["rule:procedure:REFERENCE_NOT_A_FACT"]);
         assert.deepEqual(d1.evidence.statedNow, ['specs/procedure/words.json /brief/safetyBounds: "which is the single fact to cite, by its id alone as the reference"', 'harness/core/justify.ts: "Exactly one: for library, one id as library.facts lists it"']);
         // D3's text read two ways was said to neither model.
@@ -96,10 +97,10 @@ describe("the evaluator on its corpus: the tasks of 29 and 30 September, classed
         assert.deepEqual((divergence.evidence.register as { rules: string[] }).rules, ["REFERENCE_NOT_A_FACT"]);
     });
 
-    it("the speed in percent declared a Speed: UNKNOWN_UNIT refused at the first try of 3 tasks whose schema did not say a property's quantity is the register's (D1), stated since", () => {
+    it("the speed in percent declared a Speed: UNKNOWN_UNIT refused at the first try of 2 tasks whose schema did not say a property's quantity is the register's (D1), stated since", () => {
         const [d1] = e.findings.filter((f) => f.detector === "D1" && f.evidence.code === "UNKNOWN_UNIT");
         assert.equal(d1.class, "contract-gap");
-        assert.equal(d1.evidence.untold, 3);
+        assert.equal(d1.evidence.untold, 2);
         assert.deepEqual(d1.evidence.statedNow, ['specs/procedure/procedure.schema.json /properties/quantities/description: "the quantity and the unit its register declares"']);
         assert.equal(e.unclassified.filter((u) => /for Speed/.test(u.shape)).length, 0);
     });
@@ -162,10 +163,11 @@ describe("the evaluator on its corpus: the tasks of 29 and 30 September, classed
         assert.deepEqual(d6.tasks.sort(), ["task:exp4-sonnet-a/t-2026-09-29-0001", "task:exp4-sonnet-a/t-2026-09-29-0002"]);
     });
 
-    it("a rule said and refused all the same, in two tasks no other detector explains: what a test expects (D1)", () => {
-        const [expected] = e.findings.filter((f) => f.detector === "D1" && f.evidence.code === "expected");
-        assert.equal(expected.class, "stated-not-followed");
-        assert.equal(expected.evidence.told, 2);
+    it("what a cut submission left: an empty expected, refused on the revise sent after the 4096-token limit cut the submission, at no first try on the contract (the real run of the factory found it, 2026-10-01)", () => {
+        assert.equal(e.findings.filter((f) => f.evidence.code === "expected").length, 0);
+        const [expected] = e.unclassified.filter((u) => /expected says nothing/.test(u.shape));
+        assert.deepEqual(expected.rules, ["expected"]);
+        assert.deepEqual((expected.tasksTold ?? []).map((t) => t.firstTry), [false, false]);
     });
 
     it("derived only: the same sources give the same findings", () => {

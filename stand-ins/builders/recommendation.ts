@@ -8,6 +8,8 @@
  *   a document of the library in question    a person reads it and signs it;
  *   a rule of the signed document said       its own words added to the first text the state offers, a sentence of their own;
  *   nowhere, or said and not followed
+ *   a schema's refusal by the harness        what the schema asks (data/<field> must be <type>) added to the capability's
+ *                                            description, a sentence of its own
  *   anything else                            task.fail: nothing a script can write.
  *
  * The task's observations may give it the whole proposal instead (`script.recommendation`), as the playbook script's hook.
@@ -54,6 +56,19 @@ export function scriptedProposal(asked: Asked): Omit<Proposal, "verification" | 
             changesAcceptance: false,
         };
     const target = asked.targets.find((t) => t.text !== null && (t.pointer || t.file.endsWith(".md")));
+    const schema = asked.measures.map((m) => /data\/(\S+) must be (\w+)/.exec(m)).find(Boolean);
+    const described = asked.targets.find((t) => t.text !== null && /^\/capabilities\//.test(t.pointer ?? ""));
+    if (!asked.rule && schema && described && kinds.includes("contract"))
+        return {
+            kind: "contract",
+            target: { file: described.file, pointer: described.pointer },
+            action: "append",
+            current: textNow(described.file, described.pointer),
+            proposed: ` In its arguments, ${schema[1].split("/").join(".")} is ${schema[2] === "array" ? "an array, even of one element" : `a value of type ${schema[2]}`}.`,
+            why: asked.finding.title,
+            effect: `the harness refuses the arguments of this capability no more for ${schema[1]}`,
+            changesAcceptance: false,
+        };
     if (asked.rule?.says && target && kinds.includes("contract"))
         return {
             kind: "contract",

@@ -268,8 +268,8 @@ Elles attendent la décision d'une personne (E3).
 | Cas | E2 |
 |---|---|
 | Troncature à 4096 | inchangé (D4, D5) |
-| Référence composite | `REFERENCE_NOT_A_FACT` refusée au premier essai de 23 tâches dont aucun texte ne disait « un seul identifiant » ; énoncé depuis par `words.json` et le schéma de `justify.ts` (D1) ; D3 : dit à aucun des deux modèles |
-| `Speed` en percent | `UNKNOWN_UNIT` au premier essai de 3 tâches dont le schéma ne disait pas que la grandeur d'une propriété est celle du registre ; énoncé depuis (D1) |
+| Référence composite | `REFERENCE_NOT_A_FACT` refusée au premier essai de 16 tâches (23 avant la correction du 1er octobre, voir plus bas) dont aucun texte ne disait « un seul identifiant » ; énoncé depuis par `words.json` et le schéma de `justify.ts` (D1) ; D3 : dit à aucun des deux modèles |
+| `Speed` en percent | `UNKNOWN_UNIT` au premier essai de 2 tâches (3 avant la correction du 1er octobre) dont le schéma ne disait pas que la grandeur d'une propriété est celle du registre ; énoncé depuis (D1) |
 | Boucle de lecture | inchangé (D4) |
 | Historique fictif | toujours non vu |
 | `steps.0` (GPT) | la règle de justification était dite, pas la convention de chemin qu'elle suppose : lacune de contrat (D1, D2) |
@@ -321,7 +321,15 @@ E0 à E2 suffisent à retrouver sans modèle les huit cas, sauf l'historique fic
 **Ce que la doublure scriptée sait écrire, et que vérifie `tests/recommendation-factory.test.ts` sur le vrai corpus :**
 
 - retirer l'entrée apprise par Sonnet : une lacune comblée depuis, la mémoire devenue redondante ;
-- ajouter ses propres mots à la description d'`expected`, une règle dite et non suivie ;
+- ajouter à la description d'une capacité ce que son schéma exige, quand le harnais refuse ses arguments (`procedure.analyse` : `evidence` est une liste) ;
 - faire signer un document (D7, dans l'atelier du dépôt : `FACT_UNSIGNED`).
 
 Tout le reste revient au modèle, qui écrit avec ce prompt et sous ce garde. E3 et E4 ferment la boucle que nous avons faite à la main pendant deux jours. Plus tard, les mêmes nœuds accueilleront la connaissance du domaine (le comportement de l'épurateur, les causes d'abort, les écarts du jumeau), reliée aux faits signés et aux paramètres du jumeau.
+
+## Le premier essai réel (2026-10-01)
+
+L'usine a tourné avec Sonnet 5.5 sur trois constats, dans des forks à part (`docs/experiments/2026-10-01-recommendation-trial`). L'essai a corrigé deux défauts du harnais et un de l'évaluateur.
+
+- **Le Broker** gardait une session qu'il n'avait pas pu ouvrir. La station avait demandé la bibliothèque au démarrage, avant qu'elle soit publiée, et ne l'a plus jamais atteinte. Ses trois recommandations, acceptées par le garde de l'usine, ont été refusées pour « fetch failed ». La session ratée est maintenant rouverte à l'appel suivant, et la station refuse de continuer quand elle ne peut pas lire le rayon.
+- **L'usine recevait trop et pas assez.** Elle recevait du code entier comme cible (`justify.ts`, 28 000 caractères), mais pas ce que le garde vérifie. Pour `expected`, le modèle a écrit une règle à lui (des prédictions chiffrées), alors que le garde ne vérifie que la présence du champ. Elle ne reçoit maintenant que des textes qu'une recommandation peut changer, avec la vérification du garde, et son prompt dit de recommander ce que le garde applique, rien de plus. Au second passage : `expected` dit exactement la règle, et la tâche de mémoire passe de 86 000 à 19 000 jetons lus.
+- **D1 comptait comme premier essai une tentative qui suivait une troncature.** Le constat `expected` venait de deux tâches dont la soumission avait été coupée à 4096 jetons ; le refus portait sur la révision envoyée ensuite. Une tentative qui suit une troncature ou un refus du harnais n'est plus un premier essai sur le contrat. `expected` n'est plus un constat, et les comptes de D1 baissent (16 au lieu de 23, 2 au lieu de 3).

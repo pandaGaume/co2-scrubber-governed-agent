@@ -78,7 +78,7 @@ export interface Finding {
 export interface Evaluation {
     findings: Finding[];
     /** The guard's forms no detector of this stage classes: those D1 (E2) reads, with the register. */
-    unclassified: Array<{ form: string; shape: string; tasks: number; rules?: string[]; tasksTold?: Array<{ task: string; requestedBy: string | null; missing: string[] }> }>;
+    unclassified: Array<{ form: string; shape: string; tasks: number; rules?: string[]; tasksTold?: Array<{ task: string; requestedBy: string | null; firstTry: boolean; missing: string[] }> }>;
     counts: { tasks: number; models: Record<string, number>; forms: number; ignored: Record<string, number> };
 }
 
@@ -173,12 +173,16 @@ class Reader {
             if (attempt.type !== H.attempt) continue;
             const episode = byType(this.g, attempt, H.of);
             if (!episode) continue;
-            const first = this.g
+            const attempts = this.g
                 .in(episode, H.of)
                 .map((x) => x.oini as HarnessNode)
-                .filter((a) => a.bag?.outcome === "ACCEPTED" || a.bag?.outcome === "GUARD_REJECTED")
-                .sort((a, b) => Number(a.bag?.step) - Number(b.bag?.step))[0];
-            const task = first?.id === attempt.id ? byType(this.g, episode, H.of) : undefined;
+                .sort((a, b) => Number(a.bag?.step) - Number(b.bag?.step));
+            const first = attempts.find((a) => a.bag?.outcome === "ACCEPTED" || a.bag?.outcome === "GUARD_REJECTED");
+            // A first attempt cut at the output limit, or refused by the harness before any guard, leaves the next one no first try on the
+            // contract: what the guard refused then followed the artefact (2026-10-01: an empty expected, a revise sent after a submission
+            // the 4096-token limit had cut, read as a rule stated and not followed).
+            const afterArtefact = attempts.some((a) => Number(a.bag?.step) < Number(first?.bag?.step) && (a.bag?.outcome === "TRUNCATED" || a.bag?.outcome === "PRE_GUARD_REJECTED"));
+            const task = first?.id === attempt.id && !afterArtefact ? byType(this.g, episode, H.of) : undefined;
             if (this.live(task)) out.set(String(task.id), task);
         }
         return [...out.values()];
@@ -556,7 +560,9 @@ export function evaluate(g: HarnessGraph, cfg: EvaluatorConfig = evaluatorConfig
         .map((u) => {
             const form = g.get(u.form)!;
             const rules = r.rulesOf(form);
-            const per = r.tasksOf(form).map((t) => ({ task: String(t.id), requestedBy: (t.bag?.requestedBy ?? null) as string | null, missing: rules.flatMap((x) => r.told(t, x).missing).map(named) }));
+            const first = new Set(r.firstTried(form).map((t) => String(t.id)));
+            // Whether it was a first try on the contract, or followed an artefact (a submission cut, refused before any guard).
+            const per = r.tasksOf(form).map((t) => ({ task: String(t.id), requestedBy: (t.bag?.requestedBy ?? null) as string | null, firstTry: first.has(String(t.id)), missing: rules.flatMap((x) => r.told(t, x).missing).map(named) }));
             return { ...u, rules: rules.map((x) => String(x.bag?.code)), tasksTold: per };
         });
 
