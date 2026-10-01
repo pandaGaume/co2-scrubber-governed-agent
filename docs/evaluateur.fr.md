@@ -686,3 +686,45 @@ L'usine de diagnostic : un topic `diagnosis`, construit comme les autres usines,
 **Ce qui reste**
 - E5.3 : le second reasoner et le calcul de la confiance.
 - E5.4 : la calibration réelle, avec deux modèles sur les étiquettes.
+
+## E5.3, fait (2026-10-01)
+
+Le second reasoner et la confiance : `lib/confidence.ts`, réglé par `specs/harness/diagnosis.json`.
+
+**Le second diagnostic.** `station.diagnose` accepte `second` : un second diagnostic d'une piste déjà diagnostiquée une fois.
+- Il est fait à l'aveugle : le second reçoit la piste comme le premier l'a reçue, et rien du premier diagnostic.
+- La station ne choisit pas le modèle. C'est celui avec lequel tourne le slot reasoner, comme pour les expériences GPT contre Sonnet ; le second se lance donc sous un autre profil.
+- La station note quel modèle a fait chaque diagnostic, d'après le manifeste de la tâche.
+- Une piste diagnostiquée par deux modèles n'est plus redemandée.
+- Un diagnostic n'est gardé que si les résultats qu'il enregistre sont ceux que la station observe elle-même. La confiance lit ces résultats ; ils ne peuvent donc pas être la parole de l'usine.
+
+**L'accord, par nœuds.** Deux diagnostics s'accordent quand trois conditions sont réunies :
+- ils ont la même classe ;
+- ils ont la même actualité ;
+- leurs causes reposent sur un nœud commun du graphe, en dehors de la forme et des tâches de la piste. Tout diagnostic citerait celles-ci ; une règle que la piste touche compte, en revanche, car c'est là que deux causes se rejoignent.
+
+On compare des nœuds, jamais des phrases. Pour `D2:8cba`, deux diagnostics qui partent chacun d'une tâche différente se rejoignent sur `rule:procedure:REFERENCE_NOT_A_FACT`.
+
+**La confiance** combine quatre parts, chacune entre 0 et 1 :
+- la part des prédictions confirmées, où une prédiction « inconnu » ne confirme rien ;
+- les hypothèses concurrentes écartées par une prédiction confirmée, la part pleine à deux ;
+- le nombre de tâches de la piste, n / (n + 5) ;
+- l'accord de deux modèles.
+
+Elles sont pondérées, puis plafonnées quand l'accord de deux familles manque :
+- 0,5 pour un désaccord ;
+- 0,7 pour un diagnostic seul ou un même modèle deux fois, compté une seule fois ;
+- 0,7 pour deux modèles d'une même famille.
+
+Un désaccord envoie les deux diagnostics à une personne, quel que soit le seuil. Sur plusieurs diagnostics, on en pèse deux de modèles différents, de familles différentes quand il y en a.
+
+**Rien n'est calibré.** Les poids sont égaux et le seuil est vide : c'est la forme du calcul, pas un choix. Tant qu'E5.4 ne les a pas fixés sur le corpus étiqueté, chaque diagnostic va à une personne.
+
+**La station**
+- `station.diagnoses`, en lecture seule, donne pour chaque piste ses diagnostics avec leurs modèles, leur accord et la confiance.
+- Mother compare les deux diagnostics quand celui du second modèle arrive.
+- L'agent de l'habitat n'a ni `diagnose` ni `diagnoses`.
+
+**Ce qui reste**
+- E5.4, la calibration réelle : deux modèles de familles différentes diagnostiquent les pistes du corpus étiqueté. On mesure la précision par tranche de confiance, on fixe les poids et le seuil, puis on vérifie sur un corpus réservé.
+- Les hypothèses déjà réfutées ne sont pas encore reprises d'une tâche à l'autre pour un même modèle. Le champ existe et reste vide ; jamais celles de l'autre modèle, pour garder l'aveugle.
