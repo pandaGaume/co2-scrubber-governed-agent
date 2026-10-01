@@ -207,7 +207,17 @@ describe("the diagnosis factory through the station, on its script", () => {
         assert.ok(mother.some((l) => l.key === "mother.diagnosis.received" && l.text.en.includes(`The diagnosis ${id} is in: contract-gap, closed`) && l.text.en.includes("confirmed 3 of its 3 predictions")));
         const again = await operator.call("station", "diagnose", { forks: FORKS, lead: LEAD, builder: "scripted" });
         assert.equal(again.ok, false);
-        assert.match(String(again.error), /is diagnosed already/);
+        assert.match(String(again.error), /is diagnosed already, by scripted\/diagnosis: ask a second diagnosis \(second\), made by another model/);
+
+        // A second diagnosis, blind to the first (E5.3): the same model here, counted once, so the confidence is capped as a single one.
+        const second = await ok<{ taskId: string; first: string }>("station", "diagnose", { forks: FORKS, lead: LEAD, second: true, builder: "scripted" });
+        tasks.push(second.taskId);
+        assert.equal(second.first, "scripted/diagnosis");
+        assert.equal((await ended(second.taskId)).manifest?.proposal?.status, "diagnosed");
+        const { leads: weighed } = await ok<{ leads: Array<{ lead: string; diagnoses: Array<{ model: string; class: string }>; confidence: { weighed: unknown[]; cap: { why: string } | null; decision: string; why: string } }> }>("station", "diagnoses", { lead: LEAD });
+        assert.equal(weighed.length, 1);
+        assert.deepEqual(weighed[0].diagnoses.map((d) => `${d.model}:${d.class}`), ["scripted/diagnosis:contract-gap", "scripted/diagnosis:contract-gap"]);
+        assert.deepEqual([weighed[0].confidence.weighed.length, weighed[0].confidence.cap?.why, weighed[0].confidence.decision], [1, "single", "person"]);
     });
 
     it("a refuted diagnosis comes back to the factory as a refusal, and the script stops there", async () => {

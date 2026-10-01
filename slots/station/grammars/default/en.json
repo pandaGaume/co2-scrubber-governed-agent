@@ -326,6 +326,7 @@
         "mother.diagnosis.asked": "The evaluator raised a lead: {lead}. I asked the diagnosis factory for {id}.",
         "mother.diagnosis.received": "The diagnosis {id} is in: {class}, {current}, for {lead}. The harness confirmed {confirmed} of its {predictions} predictions, and could not settle {unknown}.",
         "mother.diagnosis.refused": "The diagnosis {id} is not taken: {problems}.",
+        "mother.diagnosis.compared": "Two diagnoses of {id}, by {models}: {agreement}. The harness puts its confidence at {confidence}; {why}.",
         "mother.question.auto": "Answered by standing order: {choice}. The question was: {question}",
         "mother.questions.policy.auto": "Standing order: questions of {kind} are answered with {choice}.",
         "mother.questions.policy.ask": "Standing order lifted: questions of {kind} wait for the commander.",

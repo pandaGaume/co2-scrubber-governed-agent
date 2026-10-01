@@ -58,6 +58,7 @@ import { evaluate } from "../../lib/evaluator.js";
 import { askedFor, RECOMMEND_ORDER, recommendationIdOf } from "../../lib/recommendation.js";
 import { askedOf as recommendationAsked, feasibleKinds, recommendationProblems } from "../../harness/topics/recommendation/index.js";
 import { diagnosisAskedFor, diagnosisIdOf } from "../../lib/diagnosis.js";
+import { confidenceOf, type Diagnosed } from "../../lib/confidence.js";
 import { diagnosisAskedOf, diagnosisCheck } from "../../harness/topics/diagnosis/index.js";
 import { loadRegister } from "../../lib/rules-register.js";
 import { TOPIC_DEFINITIONS } from "../../harness/core/runner.js";
@@ -383,18 +384,21 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
      * status: it changes nothing. The confidence is computed from what the harness confirmed (E5.3), and only a diagnosis above the
      * threshold reaches the recommendation factory (E5.5).
      */
-    const relayDiagnosis = async (proposal: Proposal, artifact: Proposal["artifacts"][number]) => {
+    const relayDiagnosis = async (proposal: Proposal, artifact: Proposal["artifacts"][number], proposals: Proposal[]) => {
         const dir = taskDir(checkTaskId(proposal.taskId));
         const file = path.join(dir, artifact.path);
         if (!existsSync(file)) throw new Error(`diagnosis ${artifact.path} is not in the workshop of task ${proposal.taskId}`);
         const text = readFileSync(file);
         if (sha256Of(text) !== artifact.sha256) throw new Error(`diagnosis ${artifact.path}: the sha256 proposed is not the file's`);
-        const record = JSON.parse(text.toString("utf8")) as { id?: string; class?: string; current?: string; lead?: { id?: string; title?: string }; predictions?: unknown[] };
+        const record = JSON.parse(text.toString("utf8")) as { id?: string; class?: string; current?: string; lead?: { id?: string; title?: string; tasks?: string[] }; predictions?: Array<{ result?: { truth?: string } | null }> };
         const id = String(record.id ?? "");
         const task = JSON.parse(readFileSync(path.join(dir, "task.json"), "utf8")) as { task: Parameters<typeof diagnosisAskedOf>[0] };
         const asked = diagnosisAskedOf(task.task);
         const registers = Object.fromEntries(Object.keys(TOPIC_DEFINITIONS).map((t) => [t, loadRegister(t)]));
         const { problems, results } = diagnosisCheck(record, asked, harnessGraphOf(asked.forks ?? []), { registers });
+        // The results the record keeps are what the confidence reads (E5.3): they must be what the station observes, not the factory's word.
+        const kept = (record.predictions ?? []).map((p) => p?.result?.truth ?? null);
+        if (!problems.length && kept.some((t, i) => t !== (results[i]?.truth ?? null))) problems.push(`the results the diagnosis keeps (${kept.join(", ")}) are not what the station observes (${results.map((r) => r?.truth ?? null).join(", ")})`);
         if (problems.length) {
             proposal.status = "rejected";
             proposal.reason = problems.join("; ");
@@ -404,6 +408,26 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
         proposal.status = "diagnosed";
         const confirmed = results.filter((r) => r && r.truth !== "unknown").length;
         say("mother.diagnosis.received", null, () => ({ id, class: String(record.class), current: String(record.current), lead: String(record.lead?.title ?? record.lead?.id ?? "").slice(0, 200), confirmed, predictions: results.length, unknown: results.length - confirmed }));
+        // A second model's diagnosis of the lead: the two compared by their nodes, the confidence computed (E5.3).
+        const all = diagnosesOf(proposals).get(id) ?? [];
+        if (new Set(all.map((d) => d.model)).size >= 2) {
+            const c = confidenceOf(all, (record.lead?.tasks ?? []).length);
+            say("mother.diagnosis.compared", null, () => ({ id, models: c.weighed.map((d) => d.model).join(" and "), agreement: c.agreement?.agree ? "they agree" : "they disagree", confidence: c.confidence.toFixed(2), why: c.why }));
+        }
+    };
+
+    /** The diagnoses the station checked and kept, by their id (one per lead), each with the model that made it, in the order received. */
+    const diagnosesOf = (proposals: Proposal[]): Map<string, Diagnosed[]> => {
+        const out = new Map<string, Diagnosed[]>();
+        for (const p of proposals.filter((x) => x.status === "diagnosed"))
+            for (const a of p.artifacts.filter((x) => x.kind === "diagnosis")) {
+                const dir = taskDir(checkTaskId(p.taskId));
+                const record = JSON.parse(readFileSync(path.join(dir, a.path), "utf8")) as Diagnosed["record"];
+                const manifest = existsSync(path.join(dir, "manifest.json")) ? (JSON.parse(readFileSync(path.join(dir, "manifest.json"), "utf8")) as { provider?: { model?: string; family?: string } }) : null;
+                const d: Diagnosed = { taskId: p.taskId, model: String(manifest?.provider?.model ?? "unknown"), family: String(manifest?.provider?.family ?? "unknown"), record };
+                out.set(record.id, [...(out.get(record.id) ?? []), d]);
+            }
+        return out;
     };
 
     const relayPlaybook = async (proposal: Proposal, artifact: Proposal["artifacts"][number]) => {
@@ -729,20 +753,25 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                 name: "diagnose",
                 title: "Ask for a diagnosis of a lead of the evaluator",
                 description:
-                    "Asks the diagnosis factory to diagnose one lead of the post-procedure evaluator (station.harness_evaluate): the one named, or the first not yet diagnosed. What the factory is given is read from the harness's graph: the lead whole, its neighbourhood, the rules of the register it touches and where they are stated today, the state of today. The diagnosis says what caused the lead, its class, whether it is still true, the nodes it rests on, and predictions the harness runs: the factory's guard runs them, and the station runs them again. It changes nothing. With forks: the leads of those forks, together.",
-                inputSchema: obj({ forks: HARNESS_FORKS, lead: { type: "string", description: "a finding's id, as station.harness_evaluate gives it" }, builder: { type: "string", enum: ["reasoner", "scripted"], description: "the factory's builder: a model (default), or its script" } }),
+                    "Asks the diagnosis factory to diagnose one lead of the post-procedure evaluator (station.harness_evaluate): the one named, or the first not yet diagnosed. What the factory is given is read from the harness's graph: the lead whole, its neighbourhood, the rules of the register it touches and where they are stated today, the state of today. The diagnosis says what caused the lead, its class, whether it is still true, the nodes it rests on, and predictions the harness runs: the factory's guard runs them, and the station runs them again. With second: a second diagnosis of a lead diagnosed once, blind to the first, to be made by another model (the reasoner the factory runs with; of another family when possible); station.diagnoses compares the two and gives the confidence. It changes nothing. With forks: the leads of those forks, together.",
+                inputSchema: obj({ forks: HARNESS_FORKS, lead: { type: "string", description: "a finding's id, as station.harness_evaluate gives it" }, second: { type: "boolean", description: "a second diagnosis of a lead diagnosed once, by another model, blind to the first" }, builder: { type: "string", enum: ["reasoner", "scripted"], description: "the factory's builder: a model (default), or its script" } }),
                 handle: async (args, s) => {
                     const forks = Array.isArray(args.forks) ? args.forks.filter((f): f is string => typeof f === "string" && f.length > 0) : [];
                     const g = harnessGraphOf(forks);
                     const evaluation = evaluate(g);
-                    // A lead diagnosed already: its diagnosis among the proposals the station checked and kept.
-                    const diagnosed = new Set(s.proposals.filter((p) => p.status === "diagnosed").flatMap((p) => p.artifacts.filter((a) => a.kind === "diagnosis").map((a) => path.basename(a.path, ".json"))));
+                    // The leads diagnosed already: their diagnoses among the proposals the station checked and kept, with who made them.
+                    const diagnosed = diagnosesOf(s.proposals);
+                    const models = (f: { id: string }) => [...new Set((diagnosed.get(diagnosisIdOf(f)) ?? []).map((d) => d.model))];
+                    const second = args.second === true;
                     const named = typeof args.lead === "string" && args.lead ? evaluation.findings.find((f) => f.id === args.lead) : undefined;
                     if (args.lead && !named) throw new Error(`no lead "${String(args.lead)}" in these tasks (station.harness_evaluate lists them)`);
-                    if (named && diagnosed.has(diagnosisIdOf(named))) throw new Error(`the lead ${named.id} is diagnosed already: ${diagnosisIdOf(named)}`);
-                    const open = evaluation.findings.filter((f) => !diagnosed.has(diagnosisIdOf(f)));
+                    if (named && models(named).length >= 2) throw new Error(`the lead ${named.id} is diagnosed by two models already (${models(named).join(", ")}): station.diagnoses compares them`);
+                    if (named && models(named).length === 1 && !second) throw new Error(`the lead ${named.id} is diagnosed already, by ${models(named)[0]}: ask a second diagnosis (second), made by another model`);
+                    if (named && !models(named).length && second) throw new Error(`the lead ${named.id} has no first diagnosis yet`);
+                    const open = evaluation.findings.filter((f) => models(f).length === (second ? 1 : 0));
                     const lead = named ?? open[0];
                     if (!lead) return { lead: null, diagnosis: null, taskId: null, open: 0 };
+                    // Blind: the second is given the lead as the first was, and nothing of the first diagnosis.
                     const asked = diagnosisAskedFor(g, lead, forks.length ? forks : null);
                     const r = await client().call("factory", "request", {
                         objective: { required_outputs: [{ name: asked.id, quantity: "Diagnosis" }] },
@@ -753,7 +782,29 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     });
                     if (!r.ok) throw new Error(`the factory did not take the request: ${r.error ?? "refused"}`);
                     say("mother.diagnosis.asked", null, () => ({ id: asked.id, lead: lead.title.slice(0, 200) }));
-                    return { lead: lead.id, diagnosis: asked.id, taskId: (r.output as { taskId?: string }).taskId ?? null, open: open.length };
+                    return { lead: lead.id, diagnosis: asked.id, taskId: (r.output as { taskId?: string }).taskId ?? null, open: open.length, ...(second ? { first: models(lead)[0] } : {}) };
+                },
+            },
+            {
+                // The diagnoses kept, compared and weighed (2026-10-01, docs/evaluateur.fr.md, E5.3): read only.
+                name: "diagnoses",
+                title: "The diagnoses of the evaluator's leads, compared and weighed",
+                description:
+                    "The diagnoses the station checked and kept, by lead: each with the model that made it, its verdict, class, currency and what the harness confirmed of its predictions; with two by different models, whether they agree (the same class, the same currency, a node of both causes besides the lead's form and tasks) and the confidence the harness computes (specs/harness/diagnosis.json), and where it goes: to a person while nothing is calibrated. Read only. With lead: that lead's only.",
+                inputSchema: obj({ lead: { type: "string", description: "a finding's id" } }),
+                handle: (args, s) => {
+                    const all = diagnosesOf(s.proposals);
+                    const wanted = typeof args.lead === "string" && args.lead ? diagnosisIdOf({ id: args.lead }) : null;
+                    return {
+                        leads: [...all.entries()]
+                            .filter(([id]) => !wanted || id === wanted)
+                            .map(([id, ds]) => ({
+                                id,
+                                lead: ds[0].record.lead.id,
+                                diagnoses: ds.map((d) => ({ taskId: d.taskId, model: d.model, family: d.family, verdict: (d.record as { verdict?: string }).verdict ?? null, class: d.record.class, current: d.record.current, confirmed: d.record.predictions.filter((p) => p.result && p.result.truth !== "unknown").length, predictions: d.record.predictions.length })),
+                                confidence: confidenceOf(ds, (ds[0].record.lead.tasks ?? []).length),
+                            })),
+                    };
                 },
             },
             {
@@ -862,7 +913,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     }
                     const diagnosis = list.find((a) => a.kind === "diagnosis");
                     if (diagnosis) {
-                        await relayDiagnosis(proposal, diagnosis);
+                        await relayDiagnosis(proposal, diagnosis, s.proposals);
                         return { proposalId, status: proposal.status, ...(proposal.reason ? { reason: proposal.reason } : {}), note: proposal.status === "diagnosed" ? "checked again: its predictions run on the station's graph; it changes nothing" : "the diagnosis did not pass the station's check" };
                     }
                     const playbook = list.find((a) => a.kind === "playbook");

@@ -348,6 +348,7 @@
         "mother.diagnosis.asked": "L'évaluateur a soulevé une piste : {lead}. J'ai demandé le diagnostic {id} à l'usine de diagnostic.",
         "mother.diagnosis.received": "Le diagnostic {id} est arrivé : {class}, {current}, pour {lead}. Le harnais a confirmé {confirmed} de ses {predictions} prédictions, et n'a pas pu trancher {unknown}.",
         "mother.diagnosis.refused": "Le diagnostic {id} n'est pas retenu : {problems}.",
+        "mother.diagnosis.compared": "Deux diagnostics de {id}, par {models} : {agreement}. Le harnais met sa confiance à {confidence} ; {why}.",
         "mother.question.auto": "Répondu par consigne permanente : {choice}. La question était : {question}",
         "mother.questions.policy.auto": "Consigne permanente : les questions de {kind} reçoivent {choice}.",
         "mother.questions.policy.ask": "Consigne levée : les questions de {kind} attendent le commandant.",

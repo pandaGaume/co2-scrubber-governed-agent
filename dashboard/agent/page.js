@@ -987,8 +987,9 @@ var EXCLUDED = [
   /^station\.harness_(graph|evaluate)$/,
   // A recommendation is the evaluator's factory's work, asked by a person or the station, signed by a person (2026-10-01, E3).
   /^station\.recommend$/,
-  // A diagnosis of a lead is the evaluator's diagnosis factory's work, asked by a person or the station (2026-10-01, E5.2).
-  /^station\.diagnose$/
+  // A diagnosis of a lead is the evaluator's diagnosis factory's work, asked by a person or the station (2026-10-01, E5.2), and the
+  // diagnoses compared and weighed are the evaluator's reading too (E5.3).
+  /^station\.diagnoses?$/
 ];
 function replayPolicyFor(id, guardMode) {
   if (APPROVAL_REQUIRED.some((r) => r.test(id))) return "approval-required";

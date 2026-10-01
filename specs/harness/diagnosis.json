@@ -1,0 +1,27 @@
+{
+    "note": "How the harness weighs a lead's diagnoses (2026-10-01, docs/evaluateur.fr.md, E5.3): the confidence is computed here from what the harness checked, never declared by a model. Its parts: the share of predictions the harness confirmed (an unknown one confirms nothing), the competing hypotheses ruled out by a confirmed prediction, the number of tasks the lead rests on, and whether two models of different families agree (the same class, the same currency, and both causes resting on a node of the graph besides the lead's form and tasks). A disagreement caps it, and so does a single diagnosis, two by the same model (counted once), or two of one family. The weights and the threshold are set by calibration on the labelled corpus (E5.4), never by judgement: until then calibrated is false, the threshold is null, and every diagnosis goes to a person. Never adaptable by the reflection (specs/harness/**).",
+    "calibrated": false,
+    "calibratedOn": null,
+    "weights": {
+        "note": "the same weight for each part until calibration says otherwise: a form for the computation, not a choice",
+        "confirmed": 1,
+        "ruledOut": 1,
+        "sample": 1,
+        "agreement": 1
+    },
+    "ruledOut": {
+        "note": "the competing hypotheses ruled out that give the full part",
+        "saturation": 2
+    },
+    "sample": {
+        "note": "the number of tasks at which the sample's part is a half: n / (n + half)",
+        "half": 5
+    },
+    "caps": {
+        "note": "the most a confidence can be when the agreement of two models of different families is missing",
+        "disagreement": 0.5,
+        "single": 0.7,
+        "sameFamily": 0.7
+    },
+    "threshold": null
+}
