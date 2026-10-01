@@ -4,7 +4,7 @@
  * likely, in the two labelled corpora presented as forks. Every task is recorded by the factory in datasets/diagnosis/; this keeps
  * a summary of the run beside it.
  *
- *     node docs/experiments/2026-10-01-diagnosis-calibration/driver.mjs --port 3040 --out <file> [--only <lead>] [--parallel 2]
+ *     node docs/experiments/2026-10-01-diagnosis-calibration/driver.mjs --port 3040 --out <file> [--only <lead>] [--corpus <corpus>] [--parallel 2]
  */
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
@@ -17,6 +17,7 @@ const option = (name, fallback) => (args.includes(name) ? args[args.indexOf(name
 const port = Number(option("--port", "3040"));
 const out = option("--out");
 const only = option("--only");
+const onlyCorpus = option("--corpus");
 const parallel = Number(option("--parallel", "2"));
 const broker = new Broker(`http://localhost:${port}`, { name: "diagnosis-calibration", version: "0", locale: "en" });
 const ok = async (slot, tool, a = {}) => {
@@ -35,7 +36,7 @@ for (let i = 0; ; i++) {
 }
 
 const labels = JSON.parse(readFileSync(path.join(R, "tests/fixtures/evaluator/labels.json"), "utf8")).labels.filter((l) => l.certainty !== "unknown" && !l.lead.startsWith("form:"));
-const corpora = ["evaluator", "evaluator-repository"].map((c) => ({ corpus: c, forks: readdirSync(path.join(R, "tests/fixtures", c), { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name) }));
+const corpora = ["evaluator", "evaluator-repository"].filter((c) => !onlyCorpus || c === onlyCorpus).map((c) => ({ corpus: c, forks: readdirSync(path.join(R, "tests/fixtures", c), { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name) }));
 const jobs = [];
 for (const { corpus, forks } of corpora) {
     const { findings } = await ok("station", "harness_evaluate", { forks });

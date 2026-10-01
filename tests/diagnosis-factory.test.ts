@@ -78,6 +78,7 @@ describe("the diagnosis factory's guard, on the corpus", () => {
 
     it("what the factory is given: the lead whole, its tasks by id, the rule it touches stated today, its neighbourhood", () => {
         assert.equal(asked.id, diagnosisIdOf(lead));
+        assert.notEqual(diagnosisIdOf(lead, ["exp3-baseline"]), diagnosisIdOf(lead, ["snapshot-repository-workshop"]), "one lead's id in two corpora, two diagnoses");
         assert.deepEqual(asked.lead.tasks, [`task:${T10}`, "task:exp4-sonnet-a/t-2026-09-29-0008"]);
         assert.equal(asked.lead.form?.id, lead.form?.id);
         const rule = asked.rules.find((r) => r.code === "REFERENCE_NOT_A_FACT");

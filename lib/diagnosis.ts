@@ -16,8 +16,11 @@ import type { Prediction } from "./predicates.js";
 import { signatureOf } from "../harness/lib/signatures.js";
 import { DIAGNOSIS_FORMAT, type DiagnosisAsked, type LeadRef } from "../harness/topics/diagnosis/index.js";
 
-/** A diagnosis's id: one per lead, the same whenever the lead is found again. */
-export const diagnosisIdOf = (lead: Pick<Finding, "id">): string => `diag-${shortSha(lead.id)}`;
+/**
+ * A diagnosis's id: one per lead in the tasks it was read in, the same whenever it is found again there. The forks are in it: one
+ * lead's id can name a lead of two corpora (2026-10-01, E5.4: D4:d77a2a5a7508, a cut of Sonnet in one and of Haiku in the other).
+ */
+export const diagnosisIdOf = (lead: Pick<Finding, "id">, forks: string[] | null = null): string => `diag-${shortSha(forks?.length ? `${[...forks].sort().join(",")}|${lead.id}` : lead.id)}`;
 
 const short = (bag: unknown, max = 400): JsonValue | undefined => {
     if (!bag || typeof bag !== "object" || !Object.keys(bag).length) return undefined;
@@ -76,7 +79,7 @@ export function diagnosisAskedFor(g: HarnessGraph, f: Finding, forks: string[] |
         commit = null;
     }
     return {
-        id: diagnosisIdOf(f),
+        id: diagnosisIdOf(f, forks),
         forks,
         lead: leadOf(f),
         // Its own nodes first, its tasks with them: a form refused in many tasks would fill the neighbourhood before them.

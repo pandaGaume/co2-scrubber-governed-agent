@@ -761,7 +761,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     const evaluation = evaluate(g);
                     // The leads diagnosed already: their diagnoses among the proposals the station checked and kept, with who made them.
                     const diagnosed = diagnosesOf(s.proposals);
-                    const models = (f: { id: string }) => [...new Set((diagnosed.get(diagnosisIdOf(f)) ?? []).map((d) => d.model))];
+                    const models = (f: { id: string }) => [...new Set((diagnosed.get(diagnosisIdOf(f, forks.length ? forks : null)) ?? []).map((d) => d.model))];
                     const second = args.second === true;
                     const named = typeof args.lead === "string" && args.lead ? evaluation.findings.find((f) => f.id === args.lead) : undefined;
                     if (args.lead && !named) throw new Error(`no lead "${String(args.lead)}" in these tasks (station.harness_evaluate lists them)`);
@@ -794,10 +794,10 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                 inputSchema: obj({ lead: { type: "string", description: "a finding's id" } }),
                 handle: (args, s) => {
                     const all = diagnosesOf(s.proposals);
-                    const wanted = typeof args.lead === "string" && args.lead ? diagnosisIdOf({ id: args.lead }) : null;
+                    const wanted = typeof args.lead === "string" && args.lead ? args.lead : null;
                     return {
                         leads: [...all.entries()]
-                            .filter(([id]) => !wanted || id === wanted)
+                            .filter(([, ds]) => !wanted || ds[0].record.lead.id === wanted)
                             .map(([id, ds]) => ({
                                 id,
                                 lead: ds[0].record.lead.id,
