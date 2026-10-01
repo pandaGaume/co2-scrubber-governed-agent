@@ -112,6 +112,10 @@ describe("the scripted providers through the broker", () => {
         assert.ok(["claude", "nemotron", "gpt", "gemini", "mistral", "default"].includes(provider.family));
         assert.equal(typeof provider.description.ready, "boolean");
         if (!provider.description.ready) assert.match(provider.description.reason ?? "", /API key|not ready/);
+        // How it runs its model, and the profile it runs it from: what a factory's manifest keeps (2026-10-01, E5.0).
+        assert.deepEqual(Object.keys(provider.settings ?? {}).sort(), ["maxTokens", "maxTokensParam", "reasoningEffort", "temperature", "timeoutMs"]);
+        assert.match(String(provider.profile?.file), /^profiles\/.+\.json$/);
+        assert.match(String(provider.profile?.sha256), /^[0-9a-f]{64}$/);
         // The agent never sees the reasoner as a capability: it is what chooses.
         const { scorecard } = await runScenario({ providerName: "scripted:prudent", guardMode: "measured", brokerUrl: broker.httpBase, scenarioFile: DEFAULT_SCENARIO_FILE, log: quiet });
         assert.equal(scorecard.decisions, 9);

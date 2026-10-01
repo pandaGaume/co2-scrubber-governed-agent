@@ -583,6 +583,13 @@ var ReasonerProvider = class _ReasonerProvider {
     const d = r.output;
     return new _ReasonerProvider(broker, d.model, d.family, d);
   }
+  /** How the slot runs its model, as its describe said: what a factory's manifest keeps. */
+  get settings() {
+    return this.description.settings;
+  }
+  get profile() {
+    return this.description.profile;
+  }
   /** The agent's own broker (its identity, its token): the decide calls go through it, so they sit in the trace as the agent's. */
   useBroker(broker) {
     this.broker = broker;

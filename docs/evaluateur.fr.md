@@ -509,3 +509,46 @@ Un diagnostic est gardé avec l'empreinte de ses sources : les tâches, les éno
 - **E5.5 Le branchement.** L'usine de recommandation ne reçoit plus que des diagnostics au-dessus du seuil ; la page montre diagnostics et prédictions.
 
 E4, la boucle de vérification, vient ensuite. Elle mesurera des recommandations nées de diagnostics, et ses mesures entreront à leur tour dans la calibration : une recommandation qui ne produit pas l'effet prédit dit que son diagnostic était faux.
+
+## E5.0, fait (2026-10-01)
+
+**Les réglages du modèle sont dans le manifeste.**
+- Le reasoner les dit dans son `describe` : limite de sortie, paramètre qui la nomme, température, effort, délai.
+- Le `ReasonerProvider` les transmet, et le runner les écrit dans `manifest.provider.settings`, avec le profil et son sha256.
+- Une doublure scriptée n'en a pas.
+- `run-setting` pourra donc dire, pour toute tâche à partir d'aujourd'hui, sous quelle limite elle a tourné.
+
+**Un second corpus.** Les tâches de procédure de l'atelier du dépôt, du 23 au 28 septembre (`tests/fixtures/evaluator-repository`), viennent d'un instantané qui ne nomme aucun commit : leur version reste inconnue. Les tâches scriptées et les autres topics en sont exclus.
+
+**Les étiquettes** (`tests/fixtures/evaluator/labels.json`). Il y en a 61, une par piste des deux corpus (les constats et les formes laissées sans classe). Chacune donne :
+- son verdict : juste, faux, périmé, ou incertain ;
+- la vraie cause et la vraie classe ;
+- si c'est encore vrai ;
+- sa certitude : établie (avec toi, ou par un fait vérifiable), probable, ou inconnue ;
+- qui l'a faite, comment, et si une personne l'a confirmée.
+
+Je n'ai rien deviné : ce qui n'a pas été lu est « incertain ».
+
+**La précision des détecteurs scriptés**, mesurée par `scripts/evaluator/precision.mjs` et tenue par `tests/evaluator-labels.test.ts` :
+
+| | juste | faux | périmé | incertain | précision |
+|---|---|---|---|---|---|
+| tous les constats, étiquettes établies | 13 | 2 | 2 | 0 | 76 % |
+| tous les constats, établies et probables | 13 | 3 | 4 | 0 | 65 % |
+| ce qu'ils demandent d'agir (recommend), établies et probables | 4 | 1 | 4 | 0 | 44 % |
+| incertains, toutes étiquettes | | | | 23 | |
+
+Par détecteur (établies et probables) :
+- D1, D3, D6 et D7 sont justes à chaque fois, mais sur peu de cas, deux au plus.
+- D2 et D5 font chacun une erreur sur trois : D2 prend une incohérence du modèle pour une politique apprise, D5 lit les deux bras parallèles comme un avant et un après.
+- D8 se trompe une fois sur deux : une règle dite nulle part est classée « erreur du modèle ».
+- D4 est juste trois fois sur sept, et périmé les quatre autres : troncature réglée, boucle réglée, seuils nuls et lectures de fichiers absents réglés le 28 septembre. D4 ne sait pas quand une chose a été réglée.
+
+Parmi les formes laissées sans classe, deux sont des **oublis** : `monitoring.occupied` et `abort.required` sont dites nulle part, même aujourd'hui, donc c'étaient des lacunes quelle que soit la version. D1 les ignore parce que la version des tâches est inconnue.
+
+**Ce que ce chiffre veut dire.** Ce que l'évaluateur demande de faire n'est juste qu'une fois sur deux à peu près (44 %), et la première cause d'échec est l'actualité : quatre fois sur neuf, la chose a été réglée depuis. Les constats « clos » sont justes, mais ce n'est pas eux qu'on demande d'agir.
+
+E5 devra battre ces chiffres sur les mêmes étiquettes, puis le prouver sur un corpus réservé.
+
+Les étiquettes non confirmées par une personne sont marquées comme telles. Les relire est le premier travail utile pour toi : elles sont la référence de tout ce qui suit.
+

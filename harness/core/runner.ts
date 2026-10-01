@@ -360,7 +360,8 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         task: { file: "task.json", sha256: taskSha256 },
         profile: { file: file.profile ?? "", sha256: file.profile && existsSync(profileFile) ? sha256File(profileFile) : null },
         prompt: { file: promptFile, sha256: promptPath && existsSync(promptPath) ? sha256File(promptPath) : null },
-        provider: { name: provider.name, model: provider.model, family: provider.family },
+        // How the model ran (2026-10-01, E5.0): its output limit and the rest, and the profile they come from; none for a script.
+        provider: { name: provider.name, model: provider.model, family: provider.family, ...(provider.settings ? { settings: provider.settings } : {}), ...(provider.profile ? { profile: provider.profile } : {}) },
         tools: toolsOf(capabilities.catalogue),
         ...keepStatements(capabilities.catalogue, topic, promptPath),
         recipes: { file: relativeOrAbsolute(recipes.file), loaded: recipes.loaded, experiencesBefore: recipes.experiences, experiencesAfter: null, replayedSteps: 0, sha256: null },

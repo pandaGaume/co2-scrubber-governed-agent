@@ -13,15 +13,35 @@
  * under the first fork that holds it (the forks in the order they were made).
  *
  *     node scripts/evaluator/corpus.mjs exp-control exp3-baseline exp4-sonnet-a exp4-gpt-a exp6-contract exp7-fixes exp8-paths
+ *
+ * Options: --out <dir> (tests/fixtures/evaluator when absent); --skip-model <regex>, the tasks of a model left out (a script's: a
+ * stand-in whose mistakes are written on purpose, which the evaluator does not read); --topics <a,b>, only the tasks of these topics.
+ *
+ *     node scripts/evaluator/corpus.mjs --out tests/fixtures/evaluator-repository --skip-model ^scripted/ --topics procedure snapshot-repository-workshop
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
 
 const root = process.cwd();
-const out = path.join(root, "tests", "fixtures", "evaluator");
+const args = process.argv.slice(2);
+const option = (name) => {
+    const i = args.indexOf(name);
+    if (i < 0) return null;
+    const v = args[i + 1];
+    args.splice(i, 2);
+    return v;
+};
+const out = path.join(root, ...(option("--out") ?? "tests/fixtures/evaluator").split("/"));
+const skipModel = (() => {
+    const p = option("--skip-model");
+    return p ? new RegExp(p) : null;
+})();
+const topics = (() => {
+    const t = option("--topics");
+    return t ? new Set(t.split(",")) : null;
+})();
 const forkDir = (id) => path.join(root, "outputs", "forks", id);
-const forks = process.argv
-    .slice(2)
+const forks = args
     .map((id) => ({ id, record: JSON.parse(readFileSync(path.join(forkDir(id), "fork.json"), "utf8")) }))
     .sort((a, b) => a.record.createdAt.localeCompare(b.record.createdAt));
 if (!forks.length) throw new Error("name the forks to copy");
@@ -82,7 +102,7 @@ for (const { id, record } of forks) {
         if (!existsSync(file)) continue;
         const m = JSON.parse(readFileSync(file, "utf8"));
         const same = `${m.taskId}|${m.startedAt}`;
-        if (seen.has(same)) continue;
+        if (seen.has(same) || (skipModel && skipModel.test(String(m.provider?.model ?? ""))) || (topics && !topics.has(String(m.topic)))) continue;
         seen.add(same);
         const dir = path.join(to, t);
         mkdirSync(dir, { recursive: true });

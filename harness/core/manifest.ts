@@ -55,7 +55,7 @@ export interface Manifest {
     task: { file: string; sha256: string };
     profile: { file: string; sha256: string | null };
     prompt: { file: string | null; sha256: string | null };
-    provider: { name: string; model: string; family: string };
+    provider: { name: string; model: string; family: string; settings?: Record<string, string | number | null>; profile?: { file: string; sha256: string } };
     /**
      * The catalogue: `sha256` of the ids, descriptions and policies, as it always was; `contract` of the same with the input schemas,
      * and each tool's own (2026-09-30, the harness's graph: which text a model read changed between two runs, the store under

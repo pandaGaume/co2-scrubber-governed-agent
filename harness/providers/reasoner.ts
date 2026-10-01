@@ -21,6 +21,8 @@ export interface ReasonerDescription {
     ready: boolean;
     reason: string | null;
     profile?: { file: string; sha256: string };
+    /** How the model is run: its output limit, temperature, effort, timeout (null: the wire's default). */
+    settings?: Record<string, string | number | null>;
     promptSha256?: string | null;
 }
 
@@ -54,6 +56,14 @@ export class ReasonerProvider implements Provider {
         if (!r.ok) throw new Error(`the reasoner slot did not answer describe: ${r.error}`);
         const d = r.output as ReasonerDescription;
         return new ReasonerProvider(broker, d.model, d.family, d);
+    }
+
+    /** How the slot runs its model, as its describe said: what a factory's manifest keeps. */
+    get settings(): Record<string, string | number | null> | undefined {
+        return this.description.settings;
+    }
+    get profile(): { file: string; sha256: string } | undefined {
+        return this.description.profile;
     }
 
     /** The agent's own broker (its identity, its token): the decide calls go through it, so they sit in the trace as the agent's. */

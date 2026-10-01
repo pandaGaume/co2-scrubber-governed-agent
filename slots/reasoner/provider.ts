@@ -113,6 +113,18 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
 
     /** What describe answers without a conversation: the model and family the profile names. */
     const identity = () => ({ model: profile.tier3?.model ?? "?", family: familyOf(profile, profile.tier3?.model ?? ""), wire });
+    /**
+     * How the model is run (2026-10-01, docs/evaluateur.fr.md, E5.0): its output limit, its temperature, the effort asked of it, how
+     * long an answer may take; null where the profile leaves it to the wire's default. A factory's manifest keeps them: a call cut at
+     * the output limit is told from the limit it ran under, not guessed from the date of a commit.
+     */
+    const settingsOf = (p: typeof profile) => ({
+        maxTokens: p.tier3?.maxTokens ?? null,
+        maxTokensParam: p.tier3?.maxTokensParam ?? null,
+        temperature: p.tier3?.temperature === undefined ? null : p.tier3.temperature,
+        reasoningEffort: p.tier3?.reasoningEffort ?? null,
+        timeoutMs: p.tier3?.timeoutMs ?? null,
+    });
 
     return publishSlot<ReasonerState>({
         slot: "reasoner",
@@ -144,7 +156,7 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
                             reason = errorMessage(e);
                         }
                     }
-                    return { ...identity(), ready, reason, profile: { file: relativeToRoot(profileFile), sha256: sha256File(profileFile) }, promptSha256: existsSync(SYSTEM_PROMPT_FILE) ? sha256File(SYSTEM_PROMPT_FILE) : null };
+                    return { ...identity(), ready, reason, profile: { file: relativeToRoot(profileFile), sha256: sha256File(profileFile) }, settings: settingsOf(profile), promptSha256: existsSync(SYSTEM_PROMPT_FILE) ? sha256File(SYSTEM_PROMPT_FILE) : null };
                 },
             },
             {

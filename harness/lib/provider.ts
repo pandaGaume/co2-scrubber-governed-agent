@@ -36,6 +36,10 @@ export interface Provider extends PolicyFallback {
     readonly calls: number;
     /** Called by the runner when a new intention starts (a new conversation for a model, a new cursor for a script). */
     begin?(intentionId: string): void;
+    /** How the model is run (its output limit, temperature, effort, timeout), when a model is: a factory's manifest keeps it. */
+    readonly settings?: Record<string, string | number | null>;
+    /** The profile it is run from, with its sha256. */
+    readonly profile?: { file: string; sha256: string };
 }
 
 /**

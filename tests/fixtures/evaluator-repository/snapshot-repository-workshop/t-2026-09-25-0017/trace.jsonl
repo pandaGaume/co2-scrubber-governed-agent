@@ -1,0 +1,9 @@
+{"n":5,"source":"refused","exchange":{"response":{"stop_reason":"tool_use"}}}
+{"n":8,"source":"refused","exchange":{"response":{"stop_reason":"tool_use"}}}
+{"n":10,"source":"refused","exchange":{"response":{"stop_reason":"tool_use"}}}
+{"n":12,"source":"refused","exchange":{"response":{"stop_reason":"tool_use"}}}
+{"n":14,"source":"refused","exchange":{"response":{"stop_reason":"tool_use"}}}
+{"n":16,"source":"refused","exchange":{"response":{"stop_reason":"tool_use"}}}
+{"n":19,"source":"refused","exchange":{"response":{"stop_reason":"tool_use"}}}
+{"n":21,"source":"refused","exchange":{"response":{"stop_reason":"tool_use"}}}
+{"n":23,"source":"refused","exchange":{"response":{"stop_reason":"tool_use"}}}
