@@ -100,7 +100,11 @@ var Broker = class {
   session(slot) {
     let s = this.sessions.get(slot);
     if (!s) {
-      s = connectMcp(this.base, slot, this.identity, this.headers);
+      const opening = connectMcp(this.base, slot, this.identity, this.headers);
+      opening.catch(() => {
+        if (this.sessions.get(slot) === opening) this.sessions.delete(slot);
+      });
+      s = opening;
       this.sessions.set(slot, s);
     }
     return s;
