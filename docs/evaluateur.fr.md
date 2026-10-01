@@ -752,3 +752,47 @@ L'état lu par le modèle à chaque pas reste dans la trace : il se reconstruit 
 - Une piste compte une fois. Elle est juste quand son diagnostic dit le verdict, la classe et l'actualité de l'étiquette, chacun montré à part pour voir où un diagnostic rate de peu.
 - Le script donne la précision par tranche de confiance et au-dessus de chaque seuil (deux diagnostics en désaccord ne passent jamais). On peut l'exécuter sous `specs/harness/diagnosis.json` ou sous une autre configuration.
 - `--recheck` revérifie chaque diagnostic accepté avec le code tel qu'il est, sur son corpus. Un changement des prédicats ou du garde se mesure donc aussi sans modèle.
+
+## E5.4, la première passe réelle (2026-10-01)
+
+Sonnet 5.5 et GPT 5.6 ont diagnostiqué, chacun sans voir l'autre, les 20 pistes dont l'étiquette est établie (17) ou probable (3). Les 40 diagnostics sont dans `datasets/diagnosis/` ; le détail est dans `docs/experiments/2026-10-01-diagnosis-calibration/`.
+
+**Avant la passe, trois pilotes et cinq corrections.** Le premier pilote a lu 351 000 tokens pour un seul diagnostic. Les corrections :
+- la piste n'est plus donnée deux fois dans l'état ;
+- les outils de lecture répondent par pages, alors que le socle coupait toute réponse à ses 1 200 premiers caractères ;
+- deux lectures de deux tâches ne s'écrasent plus ;
+- le voisinage tient en lignes (16 700 caractères au lieu de 45 000) ;
+- l'identifiant d'un diagnostic nomme ses forks, puisqu'une même piste existait dans les deux corpus.
+
+En chemin, l'échec intermittent `fetch failed` de la suite de tests a trouvé sa cause : une connexion gardée ouverte, que le serveur du broker fermait pendant que la station construisait un graphe.
+
+**La passe**
+- Les 40 diagnostics sont acceptés par le garde de l'usine et revérifiés par la station.
+- Dix soumissions ont d'abord été refusées : un tiret cadratin, une prédiction mal formée, une prédiction réfutée par le harnais. Chaque modèle a révisé, puis a été accepté.
+- Tokens lus : 4,3 millions pour Sonnet, 3,8 millions pour GPT.
+
+| | Sonnet 5.5 | GPT 5.6 |
+|---|---|---|
+| verdict comme l'étiquette | 16/20 | 7/20 |
+| classe comme l'étiquette | 14/20 | 14/20 |
+| actualité, là où l'étiquette la connaît | 11/18 | 12/18 |
+| les trois à la fois | 8/20 | 2/20 |
+
+**La confiance** (poids égaux, rien de calibré). C'est l'accord des deux modèles qui départage : là où ils s'accordent, 7 pistes justes sur 12 ; là où ils divergent, 1 sur 8. Au-dessus de 0,85, il reste 3 justes sur 4 ; au-dessus de 0,90, 2 sur 2. Aucun seuil n'atteint neuf sur dix sur plus de deux pistes. **Le seuil reste donc vide**, et chaque diagnostic va à une personne.
+
+**Ce que les diagnostics ratent**
+- **Le verdict « périmé ».** GPT le donne pour la plupart des causes réglées aujourd'hui, même quand la piste ne demande plus d'agir : 9 fois, dont 8 à tort. Un verdict déduit par le harnais (la classe de la piste juste ou non, réglée ou non, demande d'agir ou non) donnerait 12 bons à GPT, mais 13 au lieu de 16 à Sonnet. Il n'est pas retenu.
+- **Les artefacts du harnais et les taux (D4, D5).** Les deux modèles s'y trompent le plus souvent, comme dans le premier essai, et les huit désaccords sont tous là.
+- **Ce que la cause dit sans qu'aucune prédiction le teste.** Sur `D2:8cba`, les deux ont manqué la renumérotation des chemins, alors que le prompt demande de comparer les chemins. Sonnet écrit que le message du refus était vrai ; GPT, que la vitesse a été changée pour rien. Le harnais a confirmé toutes leurs prédictions : la confiance mesure les prédictions, pas les phrases de la cause.
+- **Les étiquettes.** Certains écarts sont peut-être les leurs :
+  - `D4:92b3a81902a4` : les deux modèles disent « lacune du contrat », l'étiquette dit « artefact du harnais », avec une cause qui se lit comme une lacune de la description ;
+  - `D6:93cf26da851b` : les deux disent « réglé », l'étiquette dit « encore vrai » ;
+  - `D4:d77a2a5a7508` du corpus du dépôt ;
+  - deux étiquettes dont l'actualité est inconnue.
+
+  Elles sont à relire par une personne ; la calibration se recalcule ensuite à partir du jeu de données, sans modèle.
+
+**Ce que ça dit pour la suite**
+- L'accord de deux familles est le signal le plus net, et le plafond en cas de désaccord fait son travail.
+- Vingt pistes ne suffisent pas à fixer un seuil. Il faudra plus de pistes étiquetées, et le corpus réservé.
+- Les affirmations de la cause qui ne sont portées par aucune prédiction passent sans contrôle. C'est la prochaine faiblesse à fermer : exiger qu'une affirmation de la cause sur un fait des sources (une valeur, un chemin, les mots d'un refus) soit une prédiction.
