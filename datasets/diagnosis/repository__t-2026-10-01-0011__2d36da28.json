@@ -1,0 +1,779 @@
+{
+ "schema": 1,
+ "key": "repository/t-2026-10-01-0011",
+ "workshop": "repository",
+ "taskId": "t-2026-10-01-0011",
+ "recordedAt": "2026-10-01T18:56:59.810Z",
+ "startedAt": "2026-10-01T18:55:49.373Z",
+ "endedAt": "2026-10-01T18:56:59.102Z",
+ "state": "proposed",
+ "ended": "contract held after 11 step(s)",
+ "requestedBy": "station (evaluator)",
+ "corpus": "evaluator",
+ "forks": [
+  "exp-control",
+  "exp-learn",
+  "exp3-baseline",
+  "exp4-gpt-a",
+  "exp4-gpt-c",
+  "exp4-sonnet-a",
+  "exp6-contract",
+  "exp7-fixes",
+  "exp8-paths"
+ ],
+ "lead": "D8:bbec8866303c",
+ "diagnosisId": "diag-21e0c2313c51",
+ "model": "claude-sonnet-5-5",
+ "family": "claude",
+ "provider": {
+  "name": "reasoner:claude",
+  "model": "claude-sonnet-5-5",
+  "family": "claude",
+  "settings": {
+   "maxTokens": 8192,
+   "maxTokensParam": null,
+   "temperature": null,
+   "reasoningEffort": null,
+   "timeoutMs": null
+  },
+  "profile": {
+   "file": "profiles/anthropic-sonnet.json",
+   "sha256": "4cfc6349fd069075d89f8228c08374f628e69adbae6f7b9958363bac0a61b342"
+  }
+ },
+ "profile": {
+  "file": "profiles/anthropic.json",
+  "sha256": "57b865b5b073a8d0fc00cfaa6e23171d4dca37acbb447b317c622718f68df5d0"
+ },
+ "harness": {
+  "repository": "f29cb0cb72c0a7e44664dda08c2386b507e09fd9",
+  "fork": null
+ },
+ "asked": {
+  "id": "diag-21e0c2313c51",
+  "forks": [
+   "exp-control",
+   "exp-learn",
+   "exp3-baseline",
+   "exp4-gpt-a",
+   "exp4-gpt-c",
+   "exp4-sonnet-a",
+   "exp6-contract",
+   "exp7-fixes",
+   "exp8-paths"
+  ],
+  "lead": {
+   "id": "D8:bbec8866303c",
+   "detector": "D8",
+   "class": "model-error",
+   "title": "analysis: the analysis says device changes, and the new procedure keeps it as it was: the prevention is not in the test: in one task (experiment validate v4), answered by no common correction and read no differently by another model: the model's own mistake",
+   "settledBy": null,
+   "form": {
+    "id": "form:procedure:4c2c6021c2e4",
+    "shape": "analysis: the analysis says device changes, and the new procedure keeps it as it was: the prevention is not in the test",
+    "by": "guard"
+   },
+   "path": [
+    "task:exp8-paths/t-2026-09-30-0004 -refused-for-> form:procedure:4c2c6021c2e4",
+    "no other task"
+   ],
+   "about": [
+    "form:procedure:4c2c6021c2e4",
+    "task:exp8-paths/t-2026-09-30-0004",
+    "rule:procedure:ANALYSIS_NOT_APPLIED"
+   ],
+   "tasks": [
+    "task:exp8-paths/t-2026-09-30-0004"
+   ],
+   "models": {
+    "claude-sonnet-5-5": 1
+   },
+   "evidence": {
+    "requestedBy": "experiment validate v4",
+    "register": {
+     "rules": [
+      "ANALYSIS_NOT_APPLIED"
+     ],
+     "told": 1,
+     "untold": 0,
+     "unknown": 0,
+     "missing": []
+    }
+   },
+   "recommend": false
+  },
+  "neighbourhood": {
+   "nodes": [
+    "form:procedure:4c2c6021c2e4 [form] {\"topic\":\"procedure\",\"shape\":\"analysis: the analysis says device changes, and the new procedure keeps it as it was: the prevention is not in the test\",\"kind\":\"a…",
+    "task:exp8-paths/t-2026-09-30-0004 [task] {\"taskId\":\"t-2026-09-30-0004\",\"workshop\":\"exp8-paths\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-30T11:13:08.785Z\",\"ended\":\"contract held after…",
+    "rule:procedure:ANALYSIS_NOT_APPLIED [rule] {\"topic\":\"procedure\",\"code\":\"ANALYSIS_NOT_APPLIED\",\"status\":\"stated\",\"signed\":false,\"example\":\"analysis: the analysis says steps.2.minutes changes (to 35), and …",
+    "attempt:exp8-paths/t-2026-09-30-0004:9 [attempt] {\"step\":9,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: analysis: the analysis says steps.2.minutes changes (Set to 30…",
+    "model:claude-sonnet-5-5 [model] {\"model\":\"claude-sonnet-5-5\",\"provider\":\"reasoner:claude\",\"family\":\"claude\"}",
+    "fingerprint:d5594bbebee5 [fingerprint] {\"tools\":\"29c27780b532e619127138e1db51687be816f90ba5d6e3e3622eb47071602eff\",\"toolsDetailed\":false,\"words\":null,\"prompt\":\"4539a2b270603168740441153eaf30be44ec707…",
+    "statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3 [statement] {\"slot\":\"prompt:specs/procedure/prompt.md\",\"kind\":\"prompt\",\"of\":\"specs/procedure/prompt.md\",\"sha256\":\"4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5…",
+    "statement:contract:a8b94bfadcfe [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/procedure.schema.json\",\"pointer\":\"/properties/steps/items/properties/n/description\",\"phrase\":\"A path names a step by …",
+    "statement:contract:37faf23536a7 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/procedure.schema.json\",\"pointer\":\"/properties/abort/items/properties/id/description\",\"phrase\":\"A path names a conditi…",
+    "statement:contract:278be4dcbf17 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/safetyBounds\",\"phrase\":\"a path names a step by its n and an abort condition by its id\"}",
+    "statement:contract:d318d8ec9126 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/procedure\",\"phrase\":\"cite a fact of a library document a person signed\"}",
+    "statement:contract:6ef2783d2f3c [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/safetyBounds\",\"phrase\":\"which is the single fact to cite, by its id alone as the refere…",
+    "statement:contract:4b09f3d1eea0 [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"Exactly one: for library, one id as library.facts lists it\"}",
+    "statement:contract:661448b756fd [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/safetyBounds\",\"phrase\":\"the fact its signed rules bound it by\"}",
+    "statement:contract:ec185a62d3cd [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/procedure\",\"phrase\":\"library.facts says which are signed\"}",
+    "statement:contract:d0d31897432e [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/procedure\",\"phrase\":\"and respect it\"}",
+    "statement:contract:e7c8ceacd378 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/safetyBounds\",\"phrase\":\"and on which side\"}",
+    "statement:contract:1770e40880de [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/procedure\",\"phrase\":\"Every constant you set is justified in justifications\"}",
+    "statement:contract:be58c67f8aab [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"its value (a number, or [min, max] for bounds)\"}",
+    "statement:contract:b020dd6a2c51 [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"Why, in a few words\"}",
+    "statement:contract:2ba750a23bd2 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/procedure\",\"phrase\":\"cite what you read\"}",
+    "statement:contract:189045e7d19f [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"web: a URL a search returned\"}",
+    "statement:contract:06599146cbe7 [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"measured: what the task observed\"}",
+    "statement:contract:96011ca77ae3 [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"envelope: a bound of the guard's envelope\"}",
+    "statement:contract:98914823d9ec [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"derived: the formula\"}",
+    "statement:contract:e5418443b2af [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"library: a document or fact id read in this task\"}",
+    "statement:contract:d61820a4a508 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/capabilities/analyse\",\"phrase\":\"the new procedure must make these changes\"}",
+    "statement:contract:a68c38560610 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/analysed\",\"phrase\":\"the procedure must change what it names\"}",
+    "statement:contract:d44661945a3b [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/procedure.schema.json\",\"pointer\":\"/properties/quantities/description\",\"phrase\":\"the quantity and the unit its registe…",
+    "statement:contract:d2b9f4f5548f [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/procedure.schema.json\",\"pointer\":\"/properties/quantities/description\",\"phrase\":\"each a quantity of the unit system wi…",
+    "statement:contract:4d0116386950 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/procedure.schema.json\",\"pointer\":\"/properties/quantities/items/properties/quantity/description\",\"phrase\":\"a quantity …",
+    "statement:contract:58656577bd4f [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/analysis\",\"phrase\":\"Before any new procedure, analyse it with procedure.analyse\"}",
+    "statement:contract:ed4d477392a3 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/handOver\",\"phrase\":\"End with task.done\"}",
+    "statement:contract:f4047e81683f [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/methodFind\",\"phrase\":\"read the card of the one you choose\"}",
+    "statement:contract:164ede095e07 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/capabilities/revise\",\"phrase\":\"When nothing is kept\"}",
+    "statement:contract:8ef5996c115c [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/capabilities/analyse\",\"phrase\":\"Analyse why the last test was aborted\"}",
+    "statement:contract:aa7b9a3e49f9 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/capabilities/analyse\",\"phrase\":\"the cause\"}",
+    "statement:contract:87429838499a [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/capabilities/analyse\",\"phrase\":\"each a field of the procedure\"}",
+    "statement:contract:ee13241e11fe [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/procedure.schema.json\",\"pointer\":\"/properties/volume/description\",\"phrase\":\"ISA-95 path of the volume under test\"}",
+    "statement:contract:326fb8b4b56a [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/procedure.schema.json\",\"pointer\":\"/properties/device/description\",\"phrase\":\"ISA-95 path of the device the steps comma…",
+    "statement:contract:6e5f03e58e7a [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/prompt.md\",\"phrase\":\"`limits.co2MaxPpm`, `limits.co2AbortPpm`, `limits.minSpeedPercent`, `limits.maxMinutes`\"}",
+    "statement:contract:5f06e9dabbb1 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/procedure.schema.json\",\"pointer\":\"/properties/steps/items/required\",\"phrase\":\"speedPercent\"}",
+    "statement:contract:c102be04e443 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/procedure.schema.json\",\"pointer\":\"/properties/limits/description\",\"phrase\":\"The bounds the test stays within\"}",
+    "statement:contract:aa6aa9f9d1c5 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/procedure.schema.json\",\"pointer\":\"/properties/abort/description\",\"phrase\":\"A condition that cannot be read stops the …",
+    "statement:contract:8b426033c0b7 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/procedure.schema.json\",\"pointer\":\"/properties/expected/description\",\"phrase\":\"written before it runs\"}",
+    "statement:contract:63d895f69226 [statement] {\"kind\":\"contract\",\"library\":\"method-concentration-decay\",\"phrase\":\"the predictions\"}",
+    "statement:contract:bb59fef081fe [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/openQuestions/presence\",\"phrase\":\"a procedure on a volume whose occupancy was not read is ref…",
+    "episode:exp8-paths/t-2026-09-30-0004 [episode] {\"finalOutcome\":\"ACCEPTED\",\"action\":\"procedure.submit\"}",
+    "step:exp8-paths/t-2026-09-30-0004:7 [step] {\"step\":7,\"capability\":\"procedure.analyse\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"Invalid capability arguments: data must have required property 'changes'\"}",
+    "convention:procedure:path-keys [convention] {\"topic\":\"procedure\",\"name\":\"path-keys\",\"note\":\"a path names a list's element by the key format.json gives the list (steps by n, abort conditions by id), never …"
+   ],
+   "links": [
+    "form:procedure:4c2c6021c2e4 of rule:procedure:ANALYSIS_NOT_APPLIED",
+    "task:exp8-paths/t-2026-09-30-0004 ran-by model:claude-sonnet-5-5",
+    "task:exp8-paths/t-2026-09-30-0004 ran-under fingerprint:d5594bbebee5",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:a8b94bfadcfe",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:37faf23536a7",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:278be4dcbf17",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:d318d8ec9126",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:6ef2783d2f3c",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:4b09f3d1eea0",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:661448b756fd",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:ec185a62d3cd",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:d0d31897432e",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:e7c8ceacd378",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:1770e40880de",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:be58c67f8aab",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:b020dd6a2c51",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:2ba750a23bd2",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:189045e7d19f",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:06599146cbe7",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:96011ca77ae3",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:98914823d9ec",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:e5418443b2af",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:d61820a4a508",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:a68c38560610",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:d44661945a3b",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:d2b9f4f5548f",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:4d0116386950",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:58656577bd4f",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:ed4d477392a3",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:f4047e81683f",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:164ede095e07",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:8ef5996c115c",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:aa7b9a3e49f9",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:87429838499a",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:ee13241e11fe",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:326fb8b4b56a",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:6e5f03e58e7a",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:5f06e9dabbb1",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:c102be04e443",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:aa6aa9f9d1c5",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:8b426033c0b7",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:63d895f69226",
+    "task:exp8-paths/t-2026-09-30-0004 read statement:contract:bb59fef081fe",
+    "rule:procedure:ANALYSIS_NOT_APPLIED applies convention:procedure:path-keys",
+    "attempt:exp8-paths/t-2026-09-30-0004:9 of episode:exp8-paths/t-2026-09-30-0004",
+    "attempt:exp8-paths/t-2026-09-30-0004:9 refused-for form:procedure:4c2c6021c2e4",
+    "statement:contract:a8b94bfadcfe states convention:procedure:path-keys",
+    "statement:contract:37faf23536a7 states convention:procedure:path-keys",
+    "statement:contract:278be4dcbf17 states convention:procedure:path-keys",
+    "statement:contract:d61820a4a508 states rule:procedure:ANALYSIS_NOT_APPLIED",
+    "statement:contract:a68c38560610 states rule:procedure:ANALYSIS_NOT_APPLIED",
+    "episode:exp8-paths/t-2026-09-30-0004 of task:exp8-paths/t-2026-09-30-0004",
+    "step:exp8-paths/t-2026-09-30-0004:7 of task:exp8-paths/t-2026-09-30-0004"
+   ]
+  },
+  "rules": [
+   {
+    "code": "ANALYSIS_NOT_APPLIED",
+    "status": "stated",
+    "signed": false,
+    "statedToday": [
+     {
+      "where": "specs/procedure/words.json#/capabilities/analyse",
+      "holds": true
+     },
+     {
+      "where": "specs/procedure/words.json#/brief/analysed",
+      "holds": true
+     }
+    ]
+   }
+  ],
+  "today": {
+   "commit": "f29cb0c",
+   "signatures": {},
+   "profiles": {
+    "profiles/anthropic.json": {
+     "wire": "anthropic-messages",
+     "model": "claude-haiku-4-5-20251001",
+     "capabilities": [
+      "tools",
+      "json"
+     ]
+    }
+   }
+  },
+  "refuted": []
+ },
+ "askedSha256": "cfff00b350e11b5cad4dd711758b3fc5ec3ec222481750dfd77c61ca20a3f81b",
+ "steps": [
+  {
+   "n": 1,
+   "capability": "task.plan",
+   "input": {
+    "selected_nodes": [],
+    "missing_capabilities": [
+     {
+      "required_output": "diag-21e0c2313c51 (Diagnosis)",
+      "quantity": "Diagnosis",
+      "reason": "No catalogue node produces a diagnosis; it is made here from the harness graph, task steps and texts.",
+      "topic": "diagnosis"
+     }
+    ]
+   },
+   "outcome": "completed",
+   "reason": "plan accepted: 0 node type(s), 1 missing capability(ies)",
+   "tokens": {
+    "prompt": 10818,
+    "completion": 169,
+    "total": 10987
+   }
+  },
+  {
+   "n": 2,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp8-paths/t-2026-09-30-0004",
+    "step": 9,
+    "part": "reason"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 11621,
+    "completion": 144,
+    "total": 11765
+   }
+  },
+  {
+   "n": 3,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp8-paths/t-2026-09-30-0004",
+    "step": 9
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 12516,
+    "completion": 218,
+    "total": 12734
+   }
+  },
+  {
+   "n": 4,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp8-paths/t-2026-09-30-0004",
+    "step": 7,
+    "part": "outline"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 13061,
+    "completion": 163,
+    "total": 13224
+   }
+  },
+  {
+   "n": 5,
+   "capability": "diagnosis.text",
+   "input": {
+    "file": "specs/procedure/words.json",
+    "at": "today",
+    "pointer": "/capabilities/analyse"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.text completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 13101,
+    "completion": 389,
+    "total": 13490
+   }
+  },
+  {
+   "n": 6,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp8-paths/t-2026-09-30-0004",
+    "step": 7,
+    "part": "reason"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 13043,
+    "completion": 168,
+    "total": 13211
+   }
+  },
+  {
+   "n": 7,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp8-paths/t-2026-09-30-0004",
+    "step": 8
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 13325,
+    "completion": 445,
+    "total": 13770
+   }
+  },
+  {
+   "n": 8,
+   "capability": "diagnosis.text",
+   "input": {
+    "file": "specs/procedure/words.json",
+    "at": "today",
+    "pointer": "/brief/analysed"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.text completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 13670,
+    "completion": 522,
+    "total": 14192
+   }
+  },
+  {
+   "n": 9,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp8-paths/t-2026-09-30-0004",
+    "step": 9,
+    "part": "sent",
+    "pointer": "/steps"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 13509,
+    "completion": 639,
+    "total": 14148
+   }
+  },
+  {
+   "n": 10,
+   "capability": "diagnosis.submit",
+   "input": {
+    "id": "diag-21e0c2313c51",
+    "verdict": "right",
+    "cause": "At step 8 the model's accepted analysis listed changes to steps.2.minutes (\"Set to 30 min\") and to the device (\"names scrubber-1-v4 and co2-1-v4 only\"). At step 9 it submitted a procedure with those fields unchanged: steps.2.minutes was still 30 and the device was still /habitat/lab/eclss/scrubber-1-v4. The guard refused with ANALYSIS_NOT_APPLIED, and its words were true. The analysis and the procedure disagree with each other. The texts already said \"the new procedure must make these changes\" and \"the procedure must change what it names\", so this is not a gap in the contract. Only one task and one model are involved, and the refusal came once. The evidence shows a model slip, not a harness fault. The task later ended accepted.",
+    "class": "model-error",
+    "current": "still",
+    "evidence": [
+     "task:exp8-paths/t-2026-09-30-0004",
+     "attempt:exp8-paths/t-2026-09-30-0004:9",
+     "form:procedure:4c2c6021c2e4",
+     "rule:procedure:ANALYSIS_NOT_APPLIED",
+     "step:exp8-paths/t-2026-09-30-0004:7"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "refused-with",
+      "args": {
+       "task": "task:exp8-paths/t-2026-09-30-0004",
+       "step": 9,
+       "rule": "ANALYSIS_NOT_APPLIED"
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:exp8-paths/t-2026-09-30-0004",
+       "step": 9,
+       "outcome": "guard-refused"
+      },
+      "expect": true
+     },
+     {
+      "role": "current",
+      "predicate": "stated-at",
+      "args": {
+       "file": "specs/procedure/words.json",
+       "pointer": "/capabilities/analyse",
+       "phrase": "the new procedure must make these changes",
+       "at": "today"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "predicate": "stated-at",
+      "args": {
+       "file": "specs/procedure/words.json",
+       "pointer": "/capabilities/analyse",
+       "phrase": "the new procedure must make these changes",
+       "at": "task:exp8-paths/t-2026-09-30-0004"
+      },
+      "expect": true,
+      "alternative": "contract-gap: the texts the model read did not state that the new procedure must apply the analysis's changes"
+     },
+     {
+      "role": "rules-out",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:exp8-paths/t-2026-09-30-0004",
+       "step": 9,
+       "outcome": "cut"
+      },
+      "expect": false,
+      "alternative": "harness-artefact: the call was cut at the output limit"
+     }
+    ],
+    "justifications": []
+   },
+   "outcome": "completed",
+   "judged": "accepted",
+   "reason": "diagnosis.submit completed; the workshop changed",
+   "tokens": {
+    "prompt": 14456,
+    "completion": 2000,
+    "total": 16456
+   }
+  },
+  {
+   "n": 11,
+   "capability": "task.done",
+   "input": {
+    "summary": "Diagnosis accepted by the guard at diagnoses/diag-21e0c2313c51.json (sha256 4034bc8f...eeb599). The lead D8:bbec8866303c is read as model-error. In task exp8-paths/t-2026-09-30-0004, step 9 (procedure.submit) was guard-refused under ANALYSIS_NOT_APPLIED. The model's analysis said steps.2.minutes and the device would change. The new procedure kept steps.2.minutes at 30 and the device at /habitat/lab/eclss/scrubber-1-v4. The rule was already stated in specs/procedure/words.json (capabilities/analyse and brief/analysed), both today and at the task's version. The refusal's words were true. All the guard's checks agreed with the predictions: the refusal falls under ANALYSIS_NOT_APPLIED, step 9 was guard-refused, and the rule is stated both today and at the task's version. The competing prediction expected false and came back false, as written. The lead's form involves one task and one model (claude-sonnet-5-5), with no sign of a contract gap. I did not check whether the cause still holds beyond the rule being stated today.",
+    "artifacts": [
+     {
+      "kind": "diagnosis",
+      "path": "diagnoses/diag-21e0c2313c51.json"
+     }
+    ]
+   },
+   "outcome": "completed",
+   "reason": "contract held on topic diagnosis: diagnosis diagnoses/diag-21e0c2313c51.json",
+   "tokens": {
+    "prompt": 14283,
+    "completion": 497,
+    "total": 14780
+   }
+  }
+ ],
+ "submissions": [
+  {
+   "step": 10,
+   "outcome": "completed",
+   "refused": false,
+   "reason": "diagnosis.submit completed; the workshop changed",
+   "diagnosis": {
+    "id": "diag-21e0c2313c51",
+    "verdict": "right",
+    "cause": "At step 8 the model's accepted analysis listed changes to steps.2.minutes (\"Set to 30 min\") and to the device (\"names scrubber-1-v4 and co2-1-v4 only\"). At step 9 it submitted a procedure with those fields unchanged: steps.2.minutes was still 30 and the device was still /habitat/lab/eclss/scrubber-1-v4. The guard refused with ANALYSIS_NOT_APPLIED, and its words were true. The analysis and the procedure disagree with each other. The texts already said \"the new procedure must make these changes\" and \"the procedure must change what it names\", so this is not a gap in the contract. Only one task and one model are involved, and the refusal came once. The evidence shows a model slip, not a harness fault. The task later ended accepted.",
+    "class": "model-error",
+    "current": "still",
+    "evidence": [
+     "task:exp8-paths/t-2026-09-30-0004",
+     "attempt:exp8-paths/t-2026-09-30-0004:9",
+     "form:procedure:4c2c6021c2e4",
+     "rule:procedure:ANALYSIS_NOT_APPLIED",
+     "step:exp8-paths/t-2026-09-30-0004:7"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "refused-with",
+      "args": {
+       "task": "task:exp8-paths/t-2026-09-30-0004",
+       "step": 9,
+       "rule": "ANALYSIS_NOT_APPLIED"
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:exp8-paths/t-2026-09-30-0004",
+       "step": 9,
+       "outcome": "guard-refused"
+      },
+      "expect": true
+     },
+     {
+      "role": "current",
+      "predicate": "stated-at",
+      "args": {
+       "file": "specs/procedure/words.json",
+       "pointer": "/capabilities/analyse",
+       "phrase": "the new procedure must make these changes",
+       "at": "today"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "predicate": "stated-at",
+      "args": {
+       "file": "specs/procedure/words.json",
+       "pointer": "/capabilities/analyse",
+       "phrase": "the new procedure must make these changes",
+       "at": "task:exp8-paths/t-2026-09-30-0004"
+      },
+      "expect": true,
+      "alternative": "contract-gap: the texts the model read did not state that the new procedure must apply the analysis's changes"
+     },
+     {
+      "role": "rules-out",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:exp8-paths/t-2026-09-30-0004",
+       "step": 9,
+       "outcome": "cut"
+      },
+      "expect": false,
+      "alternative": "harness-artefact: the call was cut at the output limit"
+     }
+    ],
+    "justifications": []
+   }
+  }
+ ],
+ "accepted": {
+  "id": "diag-21e0c2313c51",
+  "lead": {
+   "id": "D8:bbec8866303c",
+   "detector": "D8",
+   "class": "model-error",
+   "title": "analysis: the analysis says device changes, and the new procedure keeps it as it was: the prevention is not in the test: in one task (experiment validate v4), answered by no common correction and read no differently by another model: the model's own mistake",
+   "settledBy": null,
+   "form": {
+    "id": "form:procedure:4c2c6021c2e4",
+    "shape": "analysis: the analysis says device changes, and the new procedure keeps it as it was: the prevention is not in the test",
+    "by": "guard"
+   },
+   "path": [
+    "task:exp8-paths/t-2026-09-30-0004 -refused-for-> form:procedure:4c2c6021c2e4",
+    "no other task"
+   ],
+   "about": [
+    "form:procedure:4c2c6021c2e4",
+    "task:exp8-paths/t-2026-09-30-0004",
+    "rule:procedure:ANALYSIS_NOT_APPLIED"
+   ],
+   "tasks": [
+    "task:exp8-paths/t-2026-09-30-0004"
+   ],
+   "models": {
+    "claude-sonnet-5-5": 1
+   },
+   "evidence": {
+    "requestedBy": "experiment validate v4",
+    "register": {
+     "rules": [
+      "ANALYSIS_NOT_APPLIED"
+     ],
+     "told": 1,
+     "untold": 0,
+     "unknown": 0,
+     "missing": []
+    }
+   },
+   "recommend": false
+  },
+  "forks": [
+   "exp-control",
+   "exp-learn",
+   "exp3-baseline",
+   "exp4-gpt-a",
+   "exp4-gpt-c",
+   "exp4-sonnet-a",
+   "exp6-contract",
+   "exp7-fixes",
+   "exp8-paths"
+  ],
+  "verdict": "right",
+  "cause": "At step 8 the model's accepted analysis listed changes to steps.2.minutes (\"Set to 30 min\") and to the device (\"names scrubber-1-v4 and co2-1-v4 only\"). At step 9 it submitted a procedure with those fields unchanged: steps.2.minutes was still 30 and the device was still /habitat/lab/eclss/scrubber-1-v4. The guard refused with ANALYSIS_NOT_APPLIED, and its words were true. The analysis and the procedure disagree with each other. The texts already said \"the new procedure must make these changes\" and \"the procedure must change what it names\", so this is not a gap in the contract. Only one task and one model are involved, and the refusal came once. The evidence shows a model slip, not a harness fault. The task later ended accepted.",
+  "class": "model-error",
+  "current": "still",
+  "evidence": [
+   "task:exp8-paths/t-2026-09-30-0004",
+   "attempt:exp8-paths/t-2026-09-30-0004:9",
+   "form:procedure:4c2c6021c2e4",
+   "rule:procedure:ANALYSIS_NOT_APPLIED",
+   "step:exp8-paths/t-2026-09-30-0004:7"
+  ],
+  "predictions": [
+   {
+    "role": "cause",
+    "predicate": "refused-with",
+    "args": {
+     "task": "task:exp8-paths/t-2026-09-30-0004",
+     "step": 9,
+     "rule": "ANALYSIS_NOT_APPLIED"
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "the refusal at step 9 falls under ANALYSIS_NOT_APPLIED",
+     "nodes": [
+      "task:exp8-paths/t-2026-09-30-0004",
+      "attempt:exp8-paths/t-2026-09-30-0004:9",
+      "rule:procedure:ANALYSIS_NOT_APPLIED"
+     ],
+     "read": []
+    }
+   },
+   {
+    "role": "cause",
+    "predicate": "outcome-at",
+    "args": {
+     "task": "task:exp8-paths/t-2026-09-30-0004",
+     "step": 9,
+     "outcome": "guard-refused"
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "step 9 (procedure.submit): guard-refused",
+     "nodes": [
+      "task:exp8-paths/t-2026-09-30-0004",
+      "attempt:exp8-paths/t-2026-09-30-0004:9"
+     ],
+     "read": []
+    }
+   },
+   {
+    "role": "current",
+    "predicate": "stated-at",
+    "args": {
+     "file": "specs/procedure/words.json",
+     "pointer": "/capabilities/analyse",
+     "phrase": "the new procedure must make these changes",
+     "at": "today"
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "stated at today in specs/procedure/words.json#/capabilities/analyse",
+     "nodes": [],
+     "read": [
+      "specs/procedure/words.json#/capabilities/analyse@working tree"
+     ]
+    }
+   },
+   {
+    "role": "rules-out",
+    "predicate": "stated-at",
+    "args": {
+     "file": "specs/procedure/words.json",
+     "pointer": "/capabilities/analyse",
+     "phrase": "the new procedure must make these changes",
+     "at": "task:exp8-paths/t-2026-09-30-0004"
+    },
+    "expect": true,
+    "alternative": "contract-gap: the texts the model read did not state that the new procedure must apply the analysis's changes",
+    "result": {
+     "truth": "true",
+     "observed": "stated at task:exp8-paths/t-2026-09-30-0004 in specs/procedure/words.json#/capabilities/analyse",
+     "nodes": [
+      "task:exp8-paths/t-2026-09-30-0004"
+     ],
+     "read": [
+      "specs/procedure/words.json#/capabilities/analyse@43e1fe8b0524a04189e8d77fabf02bf8aa1cd6c8"
+     ]
+    }
+   },
+   {
+    "role": "rules-out",
+    "predicate": "outcome-at",
+    "args": {
+     "task": "task:exp8-paths/t-2026-09-30-0004",
+     "step": 9,
+     "outcome": "cut"
+    },
+    "expect": false,
+    "alternative": "harness-artefact: the call was cut at the output limit",
+    "result": {
+     "truth": "false",
+     "observed": "step 9 (procedure.submit): guard-refused",
+     "nodes": [
+      "task:exp8-paths/t-2026-09-30-0004",
+      "attempt:exp8-paths/t-2026-09-30-0004:9"
+     ],
+     "read": []
+    }
+   }
+  ],
+  "checked": {
+   "confirmed": 5,
+   "unknown": 0,
+   "byRole": {
+    "cause": {
+     "confirmed": 2,
+     "of": 2
+    },
+    "current": {
+     "confirmed": 1,
+     "of": 1
+    },
+    "rules-out": {
+     "confirmed": 2,
+     "of": 2
+    }
+   },
+   "alternativesRuledOut": [
+    "contract-gap: the texts the model read did not state that the new procedure must apply the analysis's changes",
+    "harness-artefact: the call was cut at the output limit"
+   ]
+  },
+  "justifications": []
+ },
+ "station": {
+  "status": "diagnosed"
+ },
+ "tokens": {
+  "prompt": 143403,
+  "completion": 5354
+ }
+}

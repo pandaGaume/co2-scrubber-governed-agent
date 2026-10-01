@@ -1,0 +1,653 @@
+{
+ "schema": 1,
+ "key": "repository/t-2026-10-01-0018",
+ "workshop": "repository",
+ "taskId": "t-2026-10-01-0018",
+ "recordedAt": "2026-10-01T18:59:59.148Z",
+ "startedAt": "2026-10-01T18:59:11.345Z",
+ "endedAt": "2026-10-01T18:59:58.570Z",
+ "state": "proposed",
+ "ended": "contract held after 10 step(s)",
+ "requestedBy": "station (evaluator)",
+ "corpus": "evaluator-repository",
+ "forks": [
+  "snapshot-repository-workshop"
+ ],
+ "lead": "D8:f6953768a10e",
+ "diagnosisId": "diag-4965ddba5a16",
+ "model": "claude-sonnet-5-5",
+ "family": "claude",
+ "provider": {
+  "name": "reasoner:claude",
+  "model": "claude-sonnet-5-5",
+  "family": "claude",
+  "settings": {
+   "maxTokens": 8192,
+   "maxTokensParam": null,
+   "temperature": null,
+   "reasoningEffort": null,
+   "timeoutMs": null
+  },
+  "profile": {
+   "file": "profiles/anthropic-sonnet.json",
+   "sha256": "4cfc6349fd069075d89f8228c08374f628e69adbae6f7b9958363bac0a61b342"
+  }
+ },
+ "profile": {
+  "file": "profiles/anthropic.json",
+  "sha256": "57b865b5b073a8d0fc00cfaa6e23171d4dca37acbb447b317c622718f68df5d0"
+ },
+ "harness": {
+  "repository": "f29cb0cb72c0a7e44664dda08c2386b507e09fd9",
+  "fork": null
+ },
+ "asked": {
+  "id": "diag-4965ddba5a16",
+  "forks": [
+   "snapshot-repository-workshop"
+  ],
+  "lead": {
+   "id": "D8:f6953768a10e",
+   "detector": "D8",
+   "class": "model-error",
+   "title": "abort: no … abort condition: in one task (station), answered by no common correction and read no differently by another model: the model's own mistake",
+   "settledBy": "D1 cannot: the version of the contract these tasks ran under is not known (manifests before E0, outside a fork)",
+   "form": {
+    "id": "form:procedure:834c98ebd636",
+    "shape": "abort: no … abort condition",
+    "by": "guard"
+   },
+   "path": [
+    "task:snapshot-repository-workshop/t-2026-09-23-0002 -refused-for-> form:procedure:834c98ebd636",
+    "no other task"
+   ],
+   "about": [
+    "form:procedure:834c98ebd636",
+    "task:snapshot-repository-workshop/t-2026-09-23-0002",
+    "rule:procedure:abort.required"
+   ],
+   "tasks": [
+    "task:snapshot-repository-workshop/t-2026-09-23-0002"
+   ],
+   "models": {
+    "claude-haiku-4-5-20251001": 1
+   },
+   "evidence": {
+    "requestedBy": "station",
+    "register": {
+     "rules": [
+      "abort.required"
+     ],
+     "told": 0,
+     "untold": 0,
+     "unknown": 1,
+     "missing": []
+    }
+   },
+   "recommend": false
+  },
+  "neighbourhood": {
+   "nodes": [
+    "form:procedure:834c98ebd636 [form] {\"topic\":\"procedure\",\"shape\":\"abort: no … abort condition\",\"kind\":\"abort\",\"by\":\"guard\",\"sample\":\"abort: no \\\"co2\\\" abort condition\"}",
+    "task:snapshot-repository-workshop/t-2026-09-23-0002 [task] {\"taskId\":\"t-2026-09-23-0002\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"failed\",\"startedAt\":\"2026-09-23T20:14:49.342Z\",\"ended\":\"the…",
+    "rule:procedure:abort.required [rule] {\"topic\":\"procedure\",\"code\":\"abort.required\",\"status\":\"gap\",\"signed\":true,\"kind\":\"abort\",\"note\":\"which conditions every test must stop on (its CO2, a refused co…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:4 [attempt] {\"step\":4,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: abort: no \\\"co2\\\" abort condition; abort: no \\\"refused\\\" abort…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:5 [attempt] {\"step\":5,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: abort: no \\\"co2\\\" abort condition; abort: no \\\"refused\\\" abort…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:7 [attempt] {\"step\":7,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: abort: no \\\"co2\\\" abort condition; abort: no \\\"refused\\\" abort…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:11 [attempt] {\"step\":11,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: abort: no \\\"co2\\\" abort condition; abort: no \\\"refused\\\" abor…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:12 [attempt] {\"step\":12,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: abort: no \\\"co2\\\" abort condition; abort: no \\\"refused\\\" abor…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:13 [attempt] {\"step\":13,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: abort: no \\\"co2\\\" abort condition; abort: no \\\"refused\\\" abor…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:15 [attempt] {\"step\":15,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: abort: no \\\"co2\\\" abort condition; abort: no \\\"refused\\\" abor…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:16 [attempt] {\"step\":16,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: abort: no \\\"co2\\\" abort condition; abort: no \\\"refused\\\" abor…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:17 [attempt] {\"step\":17,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: abort: no \\\"co2\\\" abort condition; abort: no \\\"refused\\\" abor…",
+    "model:claude-haiku-4-5-20251001 [model] {\"model\":\"claude-haiku-4-5-20251001\",\"provider\":\"reasoner:claude\",\"family\":\"claude\"}",
+    "fingerprint:afaecbd3bb2b [fingerprint] {\"tools\":\"7de3cc97f1131edca35b86838668b8cccfdbe339fbb7410f582be90b5e10b019\",\"toolsDetailed\":false,\"words\":null,\"prompt\":\"5e5d26694258364d2d3824167cab6a2c03f733b…",
+    "statement:5e5d26694258364d2d3824167cab6a2c03f733bd1f6d396b4cacfe55608fdda4 [statement] {\"slot\":\"prompt:harness/topics/procedure/prompt.md\",\"kind\":\"prompt\",\"of\":\"harness/topics/procedure/prompt.md\",\"sha256\":\"5e5d26694258364d2d3824167cab6a2c03f733bd…",
+    "episode:snapshot-repository-workshop/t-2026-09-23-0002 [episode] {\"finalOutcome\":\"NOT_ACCEPTED\",\"action\":\"procedure.submit\"}",
+    "form:procedure:82278e3fc941 [form] {\"topic\":\"procedure\",\"shape\":\"abort: no abort condition with id …\",\"kind\":\"abort\",\"by\":\"guard\",\"sample\":\"abort: no abort condition with id \\\"refused\\\" (scrubber…",
+    "capability:procedure.submit [capability] {\"id\":\"procedure.submit\"}",
+    "task:snapshot-repository-workshop/t-2026-09-23-0003 [task] {\"taskId\":\"t-2026-09-23-0003\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-23T20:17:27.451Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-23-0004 [task] {\"taskId\":\"t-2026-09-23-0004\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"failed\",\"startedAt\":\"2026-09-23T20:29:20.669Z\",\"ended\":\"ite…",
+    "task:snapshot-repository-workshop/t-2026-09-23-0005 [task] {\"taskId\":\"t-2026-09-23-0005\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"failed\",\"startedAt\":\"2026-09-23T20:31:00.050Z\",\"ended\":\"ite…",
+    "task:snapshot-repository-workshop/t-2026-09-23-0006 [task] {\"taskId\":\"t-2026-09-23-0006\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-23T20:34:41.721Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-24-0003 [task] {\"taskId\":\"t-2026-09-24-0003\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-24T08:41:18.478Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-24-0005 [task] {\"taskId\":\"t-2026-09-24-0005\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-24T16:14:02.124Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-24-0007 [task] {\"taskId\":\"t-2026-09-24-0007\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-24T16:24:58.768Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-24-0009 [task] {\"taskId\":\"t-2026-09-24-0009\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-24T16:30:11.271Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-24-0011 [task] {\"taskId\":\"t-2026-09-24-0011\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-24T16:38:22.145Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-24-0013 [task] {\"taskId\":\"t-2026-09-24-0013\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-24T16:43:39.452Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-24-0015 [task] {\"taskId\":\"t-2026-09-24-0015\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-24T16:55:19.885Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-24-0017 [task] {\"taskId\":\"t-2026-09-24-0017\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-24T17:25:38.010Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-24-0019 [task] {\"taskId\":\"t-2026-09-24-0019\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-24T17:34:02.474Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0001 [task] {\"taskId\":\"t-2026-09-25-0001\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-25T12:41:55.287Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0003 [task] {\"taskId\":\"t-2026-09-25-0003\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-25T13:13:54.390Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0004 [task] {\"taskId\":\"t-2026-09-25-0004\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-25T13:25:32.797Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0012 [task] {\"taskId\":\"t-2026-09-25-0012\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"failed\",\"startedAt\":\"2026-09-25T14:48:57.730Z\",\"ended\":\"ite…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0013 [task] {\"taskId\":\"t-2026-09-25-0013\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-25T14:53:38.067Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0015 [task] {\"taskId\":\"t-2026-09-25-0015\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-25T14:56:52.308Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0017 [task] {\"taskId\":\"t-2026-09-25-0017\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-25T15:33:32.269Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0019 [task] {\"taskId\":\"t-2026-09-25-0019\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"failed\",\"startedAt\":\"2026-09-25T15:42:10.524Z\",\"ended\":\"ite…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0020 [task] {\"taskId\":\"t-2026-09-25-0020\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-25T15:44:32.313Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0022 [task] {\"taskId\":\"t-2026-09-25-0022\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-25T15:52:54.490Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0024 [task] {\"taskId\":\"t-2026-09-25-0024\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-25T16:05:59.105Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0026 [task] {\"taskId\":\"t-2026-09-25-0026\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"failed\",\"startedAt\":\"2026-09-25T17:18:33.583Z\",\"ended\":\"ite…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0027 [task] {\"taskId\":\"t-2026-09-25-0027\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-25T17:19:41.420Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0028 [task] {\"taskId\":\"t-2026-09-25-0028\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-25T17:21:41.716Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0030 [task] {\"taskId\":\"t-2026-09-25-0030\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"failed\",\"startedAt\":\"2026-09-25T17:23:59.391Z\",\"ended\":\"ite…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0031 [task] {\"taskId\":\"t-2026-09-25-0031\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-25T17:26:32.086Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0033 [task] {\"taskId\":\"t-2026-09-25-0033\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-25T17:33:01.520Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0035 [task] {\"taskId\":\"t-2026-09-25-0035\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-25T18:46:30.945Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0036 [task] {\"taskId\":\"t-2026-09-25-0036\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-25T18:49:50.011Z\",\"ended\":\"c…"
+   ],
+   "links": [
+    "form:procedure:834c98ebd636 of rule:procedure:abort.required",
+    "task:snapshot-repository-workshop/t-2026-09-23-0002 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-23-0002 ran-under fingerprint:afaecbd3bb2b",
+    "task:snapshot-repository-workshop/t-2026-09-23-0002 read statement:5e5d26694258364d2d3824167cab6a2c03f733bd1f6d396b4cacfe55608fdda4",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:4 of episode:snapshot-repository-workshop/t-2026-09-23-0002",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:4 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:4 refused-for form:procedure:834c98ebd636",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:5 of episode:snapshot-repository-workshop/t-2026-09-23-0002",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:5 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:5 refused-for form:procedure:834c98ebd636",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:7 of episode:snapshot-repository-workshop/t-2026-09-23-0002",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:7 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:7 refused-for form:procedure:834c98ebd636",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:11 of episode:snapshot-repository-workshop/t-2026-09-23-0002",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:11 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:11 refused-for form:procedure:834c98ebd636",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:12 of episode:snapshot-repository-workshop/t-2026-09-23-0002",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:12 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:12 refused-for form:procedure:834c98ebd636",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:13 of episode:snapshot-repository-workshop/t-2026-09-23-0002",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:13 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:13 refused-for form:procedure:834c98ebd636",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:15 of episode:snapshot-repository-workshop/t-2026-09-23-0002",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:15 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:15 refused-for form:procedure:834c98ebd636",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:16 of episode:snapshot-repository-workshop/t-2026-09-23-0002",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:16 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:16 refused-for form:procedure:834c98ebd636",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:17 of episode:snapshot-repository-workshop/t-2026-09-23-0002",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:17 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:17 refused-for form:procedure:834c98ebd636",
+    "episode:snapshot-repository-workshop/t-2026-09-23-0002 of task:snapshot-repository-workshop/t-2026-09-23-0002",
+    "form:procedure:82278e3fc941 of rule:procedure:abort.required",
+    "task:snapshot-repository-workshop/t-2026-09-23-0003 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-23-0003 ran-under fingerprint:afaecbd3bb2b",
+    "task:snapshot-repository-workshop/t-2026-09-23-0003 read statement:5e5d26694258364d2d3824167cab6a2c03f733bd1f6d396b4cacfe55608fdda4",
+    "task:snapshot-repository-workshop/t-2026-09-23-0004 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-23-0005 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-23-0006 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-24-0003 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-24-0005 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-24-0007 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-24-0009 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-24-0011 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-24-0013 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-24-0015 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-24-0017 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-24-0019 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0001 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0003 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0004 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0012 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0013 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0015 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0017 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0019 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0020 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0022 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0024 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0026 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0027 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0028 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0030 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0031 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0033 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0035 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0036 ran-by model:claude-haiku-4-5-20251001"
+   ]
+  },
+  "rules": [
+   {
+    "code": "abort.required",
+    "status": "gap",
+    "signed": true,
+    "says": "every test stops on its CO2 and on a refused command",
+    "check": {
+     "require": {
+      "list": "abort",
+      "key": "id",
+      "values": [
+       "co2",
+       "refused"
+      ]
+     }
+    },
+    "note": "which conditions every test must stop on (its CO2, a refused command) is said nowhere before the refusal: the schema says an abort is read by the executor, not which ones are owed",
+    "statedToday": []
+   }
+  ],
+  "today": {
+   "commit": "f29cb0c",
+   "signatures": {},
+   "profiles": {
+    "profiles/anthropic.json": {
+     "wire": "anthropic-messages",
+     "model": "claude-haiku-4-5-20251001",
+     "capabilities": [
+      "tools",
+      "json"
+     ]
+    }
+   }
+  },
+  "refuted": []
+ },
+ "askedSha256": "868390856784cdc68bcf9d52875bc5a0ca699f8984da327e70471fc42170009f",
+ "steps": [
+  {
+   "n": 1,
+   "capability": "task.plan",
+   "input": {
+    "selected_nodes": [],
+    "missing_capabilities": [
+     {
+      "required_output": "diag-4965ddba5a16",
+      "quantity": "Diagnosis",
+      "reason": "No node of the catalogue produces a diagnosis; it is made here from the harness's graph and the tasks' sources.",
+      "topic": "diagnosis"
+     }
+    ]
+   },
+   "outcome": "completed",
+   "reason": "plan accepted: 0 node type(s), 1 missing capability(ies)",
+   "tokens": {
+    "prompt": 13801,
+    "completion": 164,
+    "total": 13965
+   }
+  },
+  {
+   "n": 2,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-23-0002",
+    "step": 4,
+    "part": "reason"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 14293,
+    "completion": 190,
+    "total": 14483
+   }
+  },
+  {
+   "n": 3,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-23-0002",
+    "step": 4,
+    "part": "outline"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 14973,
+    "completion": 200,
+    "total": 15173
+   }
+  },
+  {
+   "n": 4,
+   "capability": "diagnosis.graph",
+   "input": {
+    "id": "task:snapshot-repository-workshop/t-2026-09-23-0002"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.graph completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 15151,
+    "completion": 255,
+    "total": 15406
+   }
+  },
+  {
+   "n": 5,
+   "capability": "diagnosis.graph",
+   "input": {
+    "id": "rule:procedure:abort.required"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.graph completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 15583,
+    "completion": 198,
+    "total": 15781
+   }
+  },
+  {
+   "n": 6,
+   "capability": "diagnosis.graph",
+   "input": {
+    "id": "form:procedure:834c98ebd636"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.graph completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 15678,
+    "completion": 293,
+    "total": 15971
+   }
+  },
+  {
+   "n": 7,
+   "capability": "diagnosis.text",
+   "input": {
+    "file": "harness/topics/procedure/prompt.md",
+    "at": "task:snapshot-repository-workshop/t-2026-09-23-0002",
+    "find": "abort"
+   },
+   "outcome": "failed",
+   "reason": "the version of the texts task:snapshot-repository-workshop/t-2026-09-23-0002 ran under is not known",
+   "tokens": {
+    "prompt": 16444,
+    "completion": 275,
+    "total": 16719
+   }
+  },
+  {
+   "n": 8,
+   "capability": "diagnosis.graph",
+   "input": {
+    "id": "form:procedure:834c98ebd636",
+    "from": 10
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.graph completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 16063,
+    "completion": 335,
+    "total": 16398
+   }
+  },
+  {
+   "n": 9,
+   "capability": "diagnosis.submit",
+   "input": {
+    "id": "diag-4965ddba5a16",
+    "verdict": "wrong",
+    "cause": "The lead calls this the model's own mistake, but the register has the rule abort.required (signed, status gap). Every test must stop on \"co2\" and on \"refused\". The register notes that this is said nowhere before the refusal. The schema only says an abort is read by the executor, not which ones are owed. The guard's refusal at step 4 of t-2026-09-23-0002 (\"no co2 abort condition; no refused abort condition\") was true. It named the missing ids but not the format, and the task's text did not state the obligation. The model (haiku) tried several formats of the \"when\" field and was refused each time on the same points. It gave up after 9 refusals. This is a contract gap: the owed abort conditions were not stated to the model. It is not a failure to follow stated instructions. Nothing the register shows today states the rule, so the gap is still open. I did not see what the model sent, because it was not kept, so the exact formats it tried are unknown.",
+    "class": "contract-gap",
+    "current": "still",
+    "evidence": [
+     "rule:procedure:abort.required",
+     "form:procedure:834c98ebd636",
+     "task:snapshot-repository-workshop/t-2026-09-23-0002",
+     "form:procedure:82278e3fc941",
+     "fingerprint:afaecbd3bb2b"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "stated-at",
+      "args": {
+       "rule": "abort.required",
+       "at": "task:snapshot-repository-workshop/t-2026-09-23-0002"
+      },
+      "expect": false
+     },
+     {
+      "role": "current",
+      "predicate": "stated-at",
+      "args": {
+       "rule": "abort.required",
+       "at": "today"
+      },
+      "expect": false
+     },
+     {
+      "role": "rules-out",
+      "predicate": "refused-with",
+      "args": {
+       "task": "task:snapshot-repository-workshop/t-2026-09-23-0002",
+       "step": 4,
+       "rule": "abort.required"
+      },
+      "expect": true,
+      "alternative": "the model's own mistake: the texts stated the owed abort conditions and the model did not follow them"
+     }
+    ],
+    "justifications": []
+   },
+   "outcome": "completed",
+   "judged": "accepted",
+   "reason": "diagnosis.submit completed; the workshop changed",
+   "tokens": {
+    "prompt": 16456,
+    "completion": 1415,
+    "total": 17871
+   }
+  },
+  {
+   "n": 10,
+   "capability": "task.done",
+   "input": {
+    "summary": "Diagnosis diag-4965ddba5a16 accepted by the guard. The lead called this the model's own mistake. The sources do not support that. The rule abort.required (every test stops on \"co2\" and \"refused\") is signed but marked gap: no text of the contract states it, today's included. The refusal at step 4 of task t-2026-09-23-0002 (\"abort: no co2 abort condition; abort: no refused abort condition\") falls under that rule. The model (haiku) tried many formats over about 10 refused submissions and then gave up, because nothing told it which abort ids are required. This is a contract-gap, not a model-error, and it still holds today. The harness checked three predictions. Two said the rule is stated in no text, and that was confirmed. One said the step 4 refusal falls under abort.required, and that was confirmed. I did not check whether other models read the rule differently, because only one task and one model are involved.",
+    "artifacts": [
+     {
+      "kind": "diagnosis",
+      "path": "diagnoses/diag-4965ddba5a16.json"
+     }
+    ]
+   },
+   "outcome": "completed",
+   "reason": "contract held on topic diagnosis: diagnosis diagnoses/diag-4965ddba5a16.json",
+   "tokens": {
+    "prompt": 16022,
+    "completion": 399,
+    "total": 16421
+   }
+  }
+ ],
+ "submissions": [
+  {
+   "step": 9,
+   "outcome": "completed",
+   "refused": false,
+   "reason": "diagnosis.submit completed; the workshop changed",
+   "diagnosis": {
+    "id": "diag-4965ddba5a16",
+    "verdict": "wrong",
+    "cause": "The lead calls this the model's own mistake, but the register has the rule abort.required (signed, status gap). Every test must stop on \"co2\" and on \"refused\". The register notes that this is said nowhere before the refusal. The schema only says an abort is read by the executor, not which ones are owed. The guard's refusal at step 4 of t-2026-09-23-0002 (\"no co2 abort condition; no refused abort condition\") was true. It named the missing ids but not the format, and the task's text did not state the obligation. The model (haiku) tried several formats of the \"when\" field and was refused each time on the same points. It gave up after 9 refusals. This is a contract gap: the owed abort conditions were not stated to the model. It is not a failure to follow stated instructions. Nothing the register shows today states the rule, so the gap is still open. I did not see what the model sent, because it was not kept, so the exact formats it tried are unknown.",
+    "class": "contract-gap",
+    "current": "still",
+    "evidence": [
+     "rule:procedure:abort.required",
+     "form:procedure:834c98ebd636",
+     "task:snapshot-repository-workshop/t-2026-09-23-0002",
+     "form:procedure:82278e3fc941",
+     "fingerprint:afaecbd3bb2b"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "stated-at",
+      "args": {
+       "rule": "abort.required",
+       "at": "task:snapshot-repository-workshop/t-2026-09-23-0002"
+      },
+      "expect": false
+     },
+     {
+      "role": "current",
+      "predicate": "stated-at",
+      "args": {
+       "rule": "abort.required",
+       "at": "today"
+      },
+      "expect": false
+     },
+     {
+      "role": "rules-out",
+      "predicate": "refused-with",
+      "args": {
+       "task": "task:snapshot-repository-workshop/t-2026-09-23-0002",
+       "step": 4,
+       "rule": "abort.required"
+      },
+      "expect": true,
+      "alternative": "the model's own mistake: the texts stated the owed abort conditions and the model did not follow them"
+     }
+    ],
+    "justifications": []
+   }
+  }
+ ],
+ "accepted": {
+  "id": "diag-4965ddba5a16",
+  "lead": {
+   "id": "D8:f6953768a10e",
+   "detector": "D8",
+   "class": "model-error",
+   "title": "abort: no … abort condition: in one task (station), answered by no common correction and read no differently by another model: the model's own mistake",
+   "settledBy": "D1 cannot: the version of the contract these tasks ran under is not known (manifests before E0, outside a fork)",
+   "form": {
+    "id": "form:procedure:834c98ebd636",
+    "shape": "abort: no … abort condition",
+    "by": "guard"
+   },
+   "path": [
+    "task:snapshot-repository-workshop/t-2026-09-23-0002 -refused-for-> form:procedure:834c98ebd636",
+    "no other task"
+   ],
+   "about": [
+    "form:procedure:834c98ebd636",
+    "task:snapshot-repository-workshop/t-2026-09-23-0002",
+    "rule:procedure:abort.required"
+   ],
+   "tasks": [
+    "task:snapshot-repository-workshop/t-2026-09-23-0002"
+   ],
+   "models": {
+    "claude-haiku-4-5-20251001": 1
+   },
+   "evidence": {
+    "requestedBy": "station",
+    "register": {
+     "rules": [
+      "abort.required"
+     ],
+     "told": 0,
+     "untold": 0,
+     "unknown": 1,
+     "missing": []
+    }
+   },
+   "recommend": false
+  },
+  "forks": [
+   "snapshot-repository-workshop"
+  ],
+  "verdict": "wrong",
+  "cause": "The lead calls this the model's own mistake, but the register has the rule abort.required (signed, status gap). Every test must stop on \"co2\" and on \"refused\". The register notes that this is said nowhere before the refusal. The schema only says an abort is read by the executor, not which ones are owed. The guard's refusal at step 4 of t-2026-09-23-0002 (\"no co2 abort condition; no refused abort condition\") was true. It named the missing ids but not the format, and the task's text did not state the obligation. The model (haiku) tried several formats of the \"when\" field and was refused each time on the same points. It gave up after 9 refusals. This is a contract gap: the owed abort conditions were not stated to the model. It is not a failure to follow stated instructions. Nothing the register shows today states the rule, so the gap is still open. I did not see what the model sent, because it was not kept, so the exact formats it tried are unknown.",
+  "class": "contract-gap",
+  "current": "still",
+  "evidence": [
+   "rule:procedure:abort.required",
+   "form:procedure:834c98ebd636",
+   "task:snapshot-repository-workshop/t-2026-09-23-0002",
+   "form:procedure:82278e3fc941",
+   "fingerprint:afaecbd3bb2b"
+  ],
+  "predictions": [
+   {
+    "role": "cause",
+    "predicate": "stated-at",
+    "args": {
+     "rule": "abort.required",
+     "at": "task:snapshot-repository-workshop/t-2026-09-23-0002"
+    },
+    "expect": false,
+    "result": {
+     "truth": "false",
+     "observed": "abort.required is stated in no text of the contract, today's included",
+     "nodes": [
+      "rule:procedure:abort.required"
+     ],
+     "read": []
+    }
+   },
+   {
+    "role": "current",
+    "predicate": "stated-at",
+    "args": {
+     "rule": "abort.required",
+     "at": "today"
+    },
+    "expect": false,
+    "result": {
+     "truth": "false",
+     "observed": "abort.required is stated in no text of the contract, today's included",
+     "nodes": [
+      "rule:procedure:abort.required"
+     ],
+     "read": []
+    }
+   },
+   {
+    "role": "rules-out",
+    "predicate": "refused-with",
+    "args": {
+     "task": "task:snapshot-repository-workshop/t-2026-09-23-0002",
+     "step": 4,
+     "rule": "abort.required"
+    },
+    "expect": true,
+    "alternative": "the model's own mistake: the texts stated the owed abort conditions and the model did not follow them",
+    "result": {
+     "truth": "true",
+     "observed": "the refusal at step 4 falls under abort.required",
+     "nodes": [
+      "task:snapshot-repository-workshop/t-2026-09-23-0002",
+      "attempt:snapshot-repository-workshop/t-2026-09-23-0002:4",
+      "rule:procedure:abort.required"
+     ],
+     "read": []
+    }
+   }
+  ],
+  "checked": {
+   "confirmed": 3,
+   "unknown": 0,
+   "byRole": {
+    "cause": {
+     "confirmed": 1,
+     "of": 1
+    },
+    "current": {
+     "confirmed": 1,
+     "of": 1
+    },
+    "rules-out": {
+     "confirmed": 1,
+     "of": 1
+    }
+   },
+   "alternativesRuledOut": [
+    "the model's own mistake: the texts stated the owed abort conditions and the model did not follow them"
+   ]
+  },
+  "justifications": []
+ },
+ "station": {
+  "status": "diagnosed"
+ },
+ "tokens": {
+  "prompt": 154464,
+  "completion": 3724
+ }
+}

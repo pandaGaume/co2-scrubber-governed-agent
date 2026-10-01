@@ -1,0 +1,994 @@
+{
+ "schema": 1,
+ "key": "repository/t-2026-10-01-0017",
+ "workshop": "repository",
+ "taskId": "t-2026-10-01-0017",
+ "recordedAt": "2026-10-01T19:00:26.892Z",
+ "startedAt": "2026-10-01T18:58:47.844Z",
+ "endedAt": "2026-10-01T19:00:26.061Z",
+ "state": "proposed",
+ "ended": "contract held after 19 step(s)",
+ "requestedBy": "station (evaluator)",
+ "corpus": "evaluator-repository",
+ "forks": [
+  "snapshot-repository-workshop"
+ ],
+ "lead": "D4:4f5d2b183d6c",
+ "diagnosisId": "diag-f40f32751bd6",
+ "model": "claude-sonnet-5-5",
+ "family": "claude",
+ "provider": {
+  "name": "reasoner:claude",
+  "model": "claude-sonnet-5-5",
+  "family": "claude",
+  "settings": {
+   "maxTokens": 8192,
+   "maxTokensParam": null,
+   "temperature": null,
+   "reasoningEffort": null,
+   "timeoutMs": null
+  },
+  "profile": {
+   "file": "profiles/anthropic-sonnet.json",
+   "sha256": "4cfc6349fd069075d89f8228c08374f628e69adbae6f7b9958363bac0a61b342"
+  }
+ },
+ "profile": {
+  "file": "profiles/anthropic.json",
+  "sha256": "57b865b5b073a8d0fc00cfaa6e23171d4dca37acbb447b317c622718f68df5d0"
+ },
+ "harness": {
+  "repository": "f29cb0cb72c0a7e44664dda08c2386b507e09fd9",
+  "fork": null
+ },
+ "asked": {
+  "id": "diag-f40f32751bd6",
+  "forks": [
+   "snapshot-repository-workshop"
+  ],
+  "lead": {
+   "id": "D4:4f5d2b183d6c",
+   "detector": "D4",
+   "class": "harness-artefact",
+   "title": "the harness refused \"device refused: no file … in task t####\" 19 times in 2 tasks, before any guard (workspace.read)",
+   "settledBy": null,
+   "form": {
+    "id": "form:procedure:harness:8ea43e47ade1",
+    "shape": "device refused: no file … in task t####",
+    "by": "harness"
+   },
+   "path": [
+    "step or attempt -refused-for-> form:procedure:harness:8ea43e47ade1 (by the harness)",
+    "x 19 in 2 tasks",
+    "-calls-> workspace.read"
+   ],
+   "about": [
+    "form:procedure:harness:8ea43e47ade1",
+    "step:snapshot-repository-workshop/t-2026-09-25-0017:9",
+    "step:snapshot-repository-workshop/t-2026-09-25-0017:11",
+    "step:snapshot-repository-workshop/t-2026-09-25-0017:15",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:10",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:11"
+   ],
+   "tasks": [
+    "task:snapshot-repository-workshop/t-2026-09-25-0017",
+    "task:snapshot-repository-workshop/t-2026-09-25-0026"
+   ],
+   "models": {
+    "claude-haiku-4-5-20251001": 2
+   },
+   "evidence": {
+    "refusals": 19,
+    "capabilities": [
+     "workspace.read"
+    ],
+    "example": "device refused: no file \"evaluation.procedure\" in task t-2026-09-25-0017"
+   },
+   "recommend": true
+  },
+  "neighbourhood": {
+   "nodes": [
+    "form:procedure:harness:8ea43e47ade1 [form] {\"topic\":\"procedure\",\"shape\":\"device refused: no file … in task t####\",\"kind\":\"PRE_GUARD_REJECTED\",\"by\":\"harness\"}",
+    "step:snapshot-repository-workshop/t-2026-09-25-0017:9 [step] {\"step\":9,\"capability\":\"workspace.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"device refused: no file \\\"evaluation.procedure\\\" in task t-2026-09-25-0017\"}",
+    "step:snapshot-repository-workshop/t-2026-09-25-0017:11 [step] {\"step\":11,\"capability\":\"workspace.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"device refused: no file \\\"evaluation.procedure\\\" in task t-2026-09-25-0017\"}",
+    "step:snapshot-repository-workshop/t-2026-09-25-0017:15 [step] {\"step\":15,\"capability\":\"workspace.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"device refused: no file \\\"evaluation.procedure\\\" in task t-2026-09-25-0017\"}",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:10 [step] {\"step\":10,\"capability\":\"workspace.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"device refused: no file \\\"results/step-009-procedure-submit.json\\\" in task t-2…",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:11 [step] {\"step\":11,\"capability\":\"workspace.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"device refused: no file \\\"results/step-009-procedure-submit.json\\\" in task t-2…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0017 [task] {\"taskId\":\"t-2026-09-25-0017\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-25T15:33:32.269Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0026 [task] {\"taskId\":\"t-2026-09-25-0026\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"failed\",\"startedAt\":\"2026-09-25T17:18:33.583Z\",\"ended\":\"ite…",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:12 [step] {\"step\":12,\"capability\":\"workspace.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"device refused: no file \\\"results/step-009-procedure-submit.json\\\" in task t-2…",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:13 [step] {\"step\":13,\"capability\":\"workspace.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"device refused: no file \\\"results/step-009-procedure-submit.json\\\" in task t-2…",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:14 [step] {\"step\":14,\"capability\":\"workspace.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"device refused: no file \\\"results/step-009-procedure-submit.json\\\" in task t-2…",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:15 [step] {\"step\":15,\"capability\":\"workspace.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"device refused: no file \\\"results/step-009-procedure-submit.json\\\" in task t-2…",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:16 [step] {\"step\":16,\"capability\":\"workspace.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"device refused: no file \\\"results/step-009-procedure-submit.json\\\" in task t-2…",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:17 [step] {\"step\":17,\"capability\":\"workspace.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"device refused: no file \\\"results/step-009-procedure-submit.json\\\" in task t-2…",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:18 [step] {\"step\":18,\"capability\":\"workspace.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"device refused: no file \\\"results/step-009-procedure-submit.json\\\" in task t-2…",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:19 [step] {\"step\":19,\"capability\":\"workspace.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"device refused: no file \\\"results/step-009-procedure-submit.json\\\" in task t-2…",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:20 [step] {\"step\":20,\"capability\":\"workspace.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"device refused: no file \\\"results/step-009-procedure-submit.json\\\" in task t-2…",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:21 [step] {\"step\":21,\"capability\":\"workspace.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"device refused: no file \\\"results/step-009-procedure-submit.json\\\" in task t-2…",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:22 [step] {\"step\":22,\"capability\":\"workspace.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"device refused: no file \\\"results/step-009-procedure-submit.json\\\" in task t-2…",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:23 [step] {\"step\":23,\"capability\":\"workspace.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"device refused: no file \\\"results/step-009-procedure-submit.json\\\" in task t-2…",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:24 [step] {\"step\":24,\"capability\":\"workspace.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"device refused: no file \\\"results/step-009-procedure-submit.json\\\" in task t-2…",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:25 [step] {\"step\":25,\"capability\":\"workspace.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"device refused: no file \\\"results/step-009-procedure-submit.json\\\" in task t-2…",
+    "capability:workspace.read [capability] {\"id\":\"workspace.read\"}",
+    "model:claude-haiku-4-5-20251001 [model] {\"model\":\"claude-haiku-4-5-20251001\",\"provider\":\"reasoner:claude\",\"family\":\"claude\"}",
+    "fingerprint:433bbb9878a7 [fingerprint] {\"tools\":\"a3e430d47f9bbb97c1c41a0d42ea868c8010bda9f04a580b6e3695aa4c82280b\",\"toolsDetailed\":false,\"words\":null,\"prompt\":\"295db18bb3fa14873cac806613d9f41d5827e94…",
+    "statement:295db18bb3fa14873cac806613d9f41d5827e9449d141242e438824474dda17b [statement] {\"slot\":\"prompt:harness/topics/procedure/prompt.md\",\"kind\":\"prompt\",\"of\":\"harness/topics/procedure/prompt.md\",\"sha256\":\"295db18bb3fa14873cac806613d9f41d5827e944…",
+    "episode:snapshot-repository-workshop/t-2026-09-25-0017 [episode] {\"finalOutcome\":\"ACCEPTED\",\"action\":\"procedure.submit\"}",
+    "step:snapshot-repository-workshop/t-2026-09-25-0017:5 [step] {\"step\":5,\"capability\":\"task.plan\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"plan refused: required output \\\"V_lab\\\" (Volume, m3) is neither produced by a select…",
+    "step:snapshot-repository-workshop/t-2026-09-25-0017:20 [step] {\"step\":20,\"capability\":\"workspace.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"device refused: EISDIR: illegal operation on a directory, read\"}",
+    "fingerprint:e189827ff35b [fingerprint] {\"tools\":\"12b071a3ba2b20a8e1ad31bd0bdf6d5fda196ecf54d1d2a261d04717abc53166\",\"toolsDetailed\":false,\"words\":null,\"prompt\":\"ae65e2fe4399172e11ec57178857e189df62bef…",
+    "statement:ae65e2fe4399172e11ec57178857e189df62bef915d97d806ee32ae40a7547ee [statement] {\"slot\":\"prompt:harness/topics/procedure/prompt.md\",\"kind\":\"prompt\",\"of\":\"harness/topics/procedure/prompt.md\",\"sha256\":\"ae65e2fe4399172e11ec57178857e189df62bef9…",
+    "episode:snapshot-repository-workshop/t-2026-09-25-0026 [episode] {\"finalOutcome\":\"NOT_ACCEPTED\",\"action\":\"procedure.submit\"}",
+    "step:snapshot-repository-workshop/t-2026-09-25-0012:21 [step] {\"step\":21,\"capability\":\"workspace.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"Stale decision: observed world changed before execution\"}",
+    "task:snapshot-repository-workshop/t-2026-09-23-0002 [task] {\"taskId\":\"t-2026-09-23-0002\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"failed\",\"startedAt\":\"2026-09-23T20:14:49.342Z\",\"ended\":\"the…",
+    "task:snapshot-repository-workshop/t-2026-09-23-0003 [task] {\"taskId\":\"t-2026-09-23-0003\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-23T20:17:27.451Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-23-0004 [task] {\"taskId\":\"t-2026-09-23-0004\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"failed\",\"startedAt\":\"2026-09-23T20:29:20.669Z\",\"ended\":\"ite…",
+    "task:snapshot-repository-workshop/t-2026-09-23-0005 [task] {\"taskId\":\"t-2026-09-23-0005\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"failed\",\"startedAt\":\"2026-09-23T20:31:00.050Z\",\"ended\":\"ite…",
+    "task:snapshot-repository-workshop/t-2026-09-23-0006 [task] {\"taskId\":\"t-2026-09-23-0006\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-23T20:34:41.721Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-24-0003 [task] {\"taskId\":\"t-2026-09-24-0003\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-24T08:41:18.478Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-24-0005 [task] {\"taskId\":\"t-2026-09-24-0005\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-24T16:14:02.124Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-24-0007 [task] {\"taskId\":\"t-2026-09-24-0007\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-24T16:24:58.768Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-24-0009 [task] {\"taskId\":\"t-2026-09-24-0009\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-24T16:30:11.271Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-24-0011 [task] {\"taskId\":\"t-2026-09-24-0011\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-24T16:38:22.145Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-24-0013 [task] {\"taskId\":\"t-2026-09-24-0013\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-24T16:43:39.452Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-24-0015 [task] {\"taskId\":\"t-2026-09-24-0015\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-24T16:55:19.885Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-24-0017 [task] {\"taskId\":\"t-2026-09-24-0017\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-24T17:25:38.010Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-24-0019 [task] {\"taskId\":\"t-2026-09-24-0019\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-24T17:34:02.474Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0001 [task] {\"taskId\":\"t-2026-09-25-0001\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-25T12:41:55.287Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0003 [task] {\"taskId\":\"t-2026-09-25-0003\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-25T13:13:54.390Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0004 [task] {\"taskId\":\"t-2026-09-25-0004\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-25T13:25:32.797Z\",\"ended\":\"c…"
+   ],
+   "links": [
+    "step:snapshot-repository-workshop/t-2026-09-25-0017:9 of task:snapshot-repository-workshop/t-2026-09-25-0017",
+    "step:snapshot-repository-workshop/t-2026-09-25-0017:9 calls capability:workspace.read",
+    "step:snapshot-repository-workshop/t-2026-09-25-0017:9 refused-for form:procedure:harness:8ea43e47ade1",
+    "step:snapshot-repository-workshop/t-2026-09-25-0017:11 of task:snapshot-repository-workshop/t-2026-09-25-0017",
+    "step:snapshot-repository-workshop/t-2026-09-25-0017:11 calls capability:workspace.read",
+    "step:snapshot-repository-workshop/t-2026-09-25-0017:11 refused-for form:procedure:harness:8ea43e47ade1",
+    "step:snapshot-repository-workshop/t-2026-09-25-0017:15 of task:snapshot-repository-workshop/t-2026-09-25-0017",
+    "step:snapshot-repository-workshop/t-2026-09-25-0017:15 calls capability:workspace.read",
+    "step:snapshot-repository-workshop/t-2026-09-25-0017:15 refused-for form:procedure:harness:8ea43e47ade1",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:10 of task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:10 calls capability:workspace.read",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:10 refused-for form:procedure:harness:8ea43e47ade1",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:11 of task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:11 calls capability:workspace.read",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:11 refused-for form:procedure:harness:8ea43e47ade1",
+    "task:snapshot-repository-workshop/t-2026-09-25-0017 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0017 ran-under fingerprint:433bbb9878a7",
+    "task:snapshot-repository-workshop/t-2026-09-25-0017 read statement:295db18bb3fa14873cac806613d9f41d5827e9449d141242e438824474dda17b",
+    "task:snapshot-repository-workshop/t-2026-09-25-0026 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0026 ran-under fingerprint:e189827ff35b",
+    "task:snapshot-repository-workshop/t-2026-09-25-0026 read statement:ae65e2fe4399172e11ec57178857e189df62bef915d97d806ee32ae40a7547ee",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:12 of task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:12 calls capability:workspace.read",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:12 refused-for form:procedure:harness:8ea43e47ade1",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:13 of task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:13 calls capability:workspace.read",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:13 refused-for form:procedure:harness:8ea43e47ade1",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:14 of task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:14 calls capability:workspace.read",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:14 refused-for form:procedure:harness:8ea43e47ade1",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:15 of task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:15 calls capability:workspace.read",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:15 refused-for form:procedure:harness:8ea43e47ade1",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:16 of task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:16 calls capability:workspace.read",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:16 refused-for form:procedure:harness:8ea43e47ade1",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:17 of task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:17 calls capability:workspace.read",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:17 refused-for form:procedure:harness:8ea43e47ade1",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:18 of task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:18 calls capability:workspace.read",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:18 refused-for form:procedure:harness:8ea43e47ade1",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:19 of task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:19 calls capability:workspace.read",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:19 refused-for form:procedure:harness:8ea43e47ade1",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:20 of task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:20 calls capability:workspace.read",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:20 refused-for form:procedure:harness:8ea43e47ade1",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:21 of task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:21 calls capability:workspace.read",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:21 refused-for form:procedure:harness:8ea43e47ade1",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:22 of task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:22 calls capability:workspace.read",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:22 refused-for form:procedure:harness:8ea43e47ade1",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:23 of task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:23 calls capability:workspace.read",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:23 refused-for form:procedure:harness:8ea43e47ade1",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:24 of task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:24 calls capability:workspace.read",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:24 refused-for form:procedure:harness:8ea43e47ade1",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:25 of task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:25 calls capability:workspace.read",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:25 refused-for form:procedure:harness:8ea43e47ade1",
+    "fingerprint:433bbb9878a7 changed statement:295db18bb3fa14873cac806613d9f41d5827e9449d141242e438824474dda17b",
+    "episode:snapshot-repository-workshop/t-2026-09-25-0017 of task:snapshot-repository-workshop/t-2026-09-25-0017",
+    "step:snapshot-repository-workshop/t-2026-09-25-0017:5 of task:snapshot-repository-workshop/t-2026-09-25-0017",
+    "step:snapshot-repository-workshop/t-2026-09-25-0017:20 of task:snapshot-repository-workshop/t-2026-09-25-0017",
+    "step:snapshot-repository-workshop/t-2026-09-25-0017:20 calls capability:workspace.read",
+    "fingerprint:e189827ff35b after fingerprint:433bbb9878a7",
+    "fingerprint:e189827ff35b changed statement:ae65e2fe4399172e11ec57178857e189df62bef915d97d806ee32ae40a7547ee",
+    "episode:snapshot-repository-workshop/t-2026-09-25-0026 of task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "step:snapshot-repository-workshop/t-2026-09-25-0012:21 calls capability:workspace.read",
+    "task:snapshot-repository-workshop/t-2026-09-23-0002 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-23-0003 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-23-0004 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-23-0004 ran-under fingerprint:433bbb9878a7",
+    "task:snapshot-repository-workshop/t-2026-09-23-0004 read statement:295db18bb3fa14873cac806613d9f41d5827e9449d141242e438824474dda17b",
+    "task:snapshot-repository-workshop/t-2026-09-23-0005 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-23-0005 ran-under fingerprint:433bbb9878a7",
+    "task:snapshot-repository-workshop/t-2026-09-23-0005 read statement:295db18bb3fa14873cac806613d9f41d5827e9449d141242e438824474dda17b",
+    "task:snapshot-repository-workshop/t-2026-09-23-0006 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-23-0006 ran-under fingerprint:433bbb9878a7",
+    "task:snapshot-repository-workshop/t-2026-09-23-0006 read statement:295db18bb3fa14873cac806613d9f41d5827e9449d141242e438824474dda17b",
+    "task:snapshot-repository-workshop/t-2026-09-24-0003 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-24-0003 ran-under fingerprint:433bbb9878a7",
+    "task:snapshot-repository-workshop/t-2026-09-24-0003 read statement:295db18bb3fa14873cac806613d9f41d5827e9449d141242e438824474dda17b",
+    "task:snapshot-repository-workshop/t-2026-09-24-0005 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-24-0005 ran-under fingerprint:433bbb9878a7",
+    "task:snapshot-repository-workshop/t-2026-09-24-0005 read statement:295db18bb3fa14873cac806613d9f41d5827e9449d141242e438824474dda17b",
+    "task:snapshot-repository-workshop/t-2026-09-24-0007 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-24-0007 ran-under fingerprint:433bbb9878a7",
+    "task:snapshot-repository-workshop/t-2026-09-24-0007 read statement:295db18bb3fa14873cac806613d9f41d5827e9449d141242e438824474dda17b",
+    "task:snapshot-repository-workshop/t-2026-09-24-0009 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-24-0009 ran-under fingerprint:433bbb9878a7",
+    "task:snapshot-repository-workshop/t-2026-09-24-0009 read statement:295db18bb3fa14873cac806613d9f41d5827e9449d141242e438824474dda17b",
+    "task:snapshot-repository-workshop/t-2026-09-24-0011 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-24-0011 ran-under fingerprint:433bbb9878a7",
+    "task:snapshot-repository-workshop/t-2026-09-24-0011 read statement:295db18bb3fa14873cac806613d9f41d5827e9449d141242e438824474dda17b",
+    "task:snapshot-repository-workshop/t-2026-09-24-0013 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-24-0013 ran-under fingerprint:433bbb9878a7",
+    "task:snapshot-repository-workshop/t-2026-09-24-0013 read statement:295db18bb3fa14873cac806613d9f41d5827e9449d141242e438824474dda17b",
+    "task:snapshot-repository-workshop/t-2026-09-24-0015 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-24-0015 ran-under fingerprint:433bbb9878a7",
+    "task:snapshot-repository-workshop/t-2026-09-24-0015 read statement:295db18bb3fa14873cac806613d9f41d5827e9449d141242e438824474dda17b",
+    "task:snapshot-repository-workshop/t-2026-09-24-0017 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-24-0017 ran-under fingerprint:433bbb9878a7",
+    "task:snapshot-repository-workshop/t-2026-09-24-0017 read statement:295db18bb3fa14873cac806613d9f41d5827e9449d141242e438824474dda17b",
+    "task:snapshot-repository-workshop/t-2026-09-24-0019 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-24-0019 ran-under fingerprint:433bbb9878a7",
+    "task:snapshot-repository-workshop/t-2026-09-24-0019 read statement:295db18bb3fa14873cac806613d9f41d5827e9449d141242e438824474dda17b",
+    "task:snapshot-repository-workshop/t-2026-09-25-0001 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0001 ran-under fingerprint:433bbb9878a7",
+    "task:snapshot-repository-workshop/t-2026-09-25-0001 read statement:295db18bb3fa14873cac806613d9f41d5827e9449d141242e438824474dda17b",
+    "task:snapshot-repository-workshop/t-2026-09-25-0003 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0003 ran-under fingerprint:433bbb9878a7",
+    "task:snapshot-repository-workshop/t-2026-09-25-0003 read statement:295db18bb3fa14873cac806613d9f41d5827e9449d141242e438824474dda17b",
+    "task:snapshot-repository-workshop/t-2026-09-25-0004 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0004 ran-under fingerprint:433bbb9878a7",
+    "task:snapshot-repository-workshop/t-2026-09-25-0004 read statement:295db18bb3fa14873cac806613d9f41d5827e9449d141242e438824474dda17b"
+   ]
+  },
+  "rules": [],
+  "today": {
+   "commit": "f29cb0c",
+   "signatures": {},
+   "profiles": {
+    "profiles/anthropic.json": {
+     "wire": "anthropic-messages",
+     "model": "claude-haiku-4-5-20251001",
+     "capabilities": [
+      "tools",
+      "json"
+     ]
+    }
+   }
+  },
+  "refuted": []
+ },
+ "askedSha256": "3dbf6381385d4724cde1888829cfa56a8ce97aebce0cb8b8c2a768157c09e52b",
+ "steps": [
+  {
+   "n": 1,
+   "capability": "task.plan",
+   "input": {
+    "selected_nodes": [],
+    "missing_capabilities": [
+     {
+      "required_output": "diag-f40f32751bd6",
+      "quantity": "Diagnosis",
+      "reason": "No node of the catalogue produces a diagnosis; it is made here by reading the harness's graph and steps.",
+      "topic": "diagnosis"
+     }
+    ]
+   },
+   "outcome": "completed",
+   "reason": "plan accepted: 0 node type(s), 1 missing capability(ies)",
+   "tokens": {
+    "prompt": 16226,
+    "completion": 161,
+    "total": 16387
+   }
+  },
+  {
+   "n": 2,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-25-0017",
+    "step": 9
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 16697,
+    "completion": 119,
+    "total": 16816
+   }
+  },
+  {
+   "n": 3,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-25-0017",
+    "step": 9,
+    "part": "reason"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 17502,
+    "completion": 151,
+    "total": 17653
+   }
+  },
+  {
+   "n": 4,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "step": 10,
+    "part": "reason"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 17584,
+    "completion": 217,
+    "total": 17801
+   }
+  },
+  {
+   "n": 5,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "step": 10,
+    "part": "received"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 17765,
+    "completion": 278,
+    "total": 18043
+   }
+  },
+  {
+   "n": 6,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "step": 9
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 18673,
+    "completion": 254,
+    "total": 18927
+   }
+  },
+  {
+   "n": 7,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "step": 10,
+    "part": "sent"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 18628,
+    "completion": 286,
+    "total": 18914
+   }
+  },
+  {
+   "n": 8,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "step": 10,
+    "part": "received",
+    "pointer": "/evaluation"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 18714,
+    "completion": 330,
+    "total": 19044
+   }
+  },
+  {
+   "n": 9,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "step": 9,
+    "part": "received",
+    "pointer": "/lastAction"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 18938,
+    "completion": 337,
+    "total": 19275
+   }
+  },
+  {
+   "n": 10,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "step": 11,
+    "part": "received",
+    "pointer": "/lastRefusal"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 19414,
+    "completion": 376,
+    "total": 19790
+   }
+  },
+  {
+   "n": 11,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "step": 10,
+    "part": "received",
+    "pointer": "/lastAction"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 19381,
+    "completion": 511,
+    "total": 19892
+   }
+  },
+  {
+   "n": 12,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "step": 11,
+    "part": "received",
+    "pointer": "/lastRefusal"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 19722,
+    "completion": 395,
+    "total": 20117
+   }
+  },
+  {
+   "n": 13,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "step": 11,
+    "part": "received",
+    "pointer": "/lastRefusal"
+   },
+   "outcome": "refused",
+   "reason": "diagnosis.step with the same input was the previous step, and completed: its answer is in the state (lastAction, and evidence for a read); calling it again gives the same answer. Decide from what the state holds, or call something else.",
+   "tokens": {
+    "prompt": 19627,
+    "completion": 398,
+    "total": 20025
+   }
+  },
+  {
+   "n": 14,
+   "capability": "diagnosis.text",
+   "input": {
+    "file": "harness/topics/procedure/prompt.md",
+    "at": "task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "find": "workspace.read"
+   },
+   "outcome": "failed",
+   "reason": "the version of the texts task:snapshot-repository-workshop/t-2026-09-25-0026 ran under is not known",
+   "tokens": {
+    "prompt": 19504,
+    "completion": 401,
+    "total": 19905
+   }
+  },
+  {
+   "n": 15,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "step": 11,
+    "part": "received",
+    "pointer": "/lastAction"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 19185,
+    "completion": 345,
+    "total": 19530
+   }
+  },
+  {
+   "n": 16,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-25-0017",
+    "step": 9,
+    "part": "sent"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 19715,
+    "completion": 544,
+    "total": 20259
+   }
+  },
+  {
+   "n": 17,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-25-0026",
+    "step": 9,
+    "part": "received",
+    "pointer": "/lastAction"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 19636,
+    "completion": 530,
+    "total": 20166
+   }
+  },
+  {
+   "n": 18,
+   "capability": "diagnosis.submit",
+   "input": {
+    "id": "diag-f40f32751bd6",
+    "verdict": "wrong",
+    "cause": "The harness did not malfunction: its refusal \"no file ... in task\" was true. The model (claude-haiku-4-5) called workspace.read on paths that are not files of the task workspace. In t-2026-09-25-0017 it read \"evaluation.procedure\", which is a field of the reasoning state (/evaluation), not a file. Steps 9, 11 and 15 were refused for it. In t-2026-09-25-0026 it read manifest.json at step 9, which succeeded. It then guessed \"results/step-009-procedure-submit.json\", which does not exist, and sent the identical call 16 times (steps 10 to 25) until the task failed on iterations. The refusal names the missing file but does not list the files that exist, and the harness does not stop an identical repeat. That let the model loop, but the origin is a model that confuses state fields with workspace files and invents file names. The two tasks ran under different fingerprints (433bbb9878a7 and e189827ff35b), so a prompt change is not the cause.",
+    "class": "model-error",
+    "current": "still",
+    "evidence": [
+     "form:procedure:harness:8ea43e47ade1",
+     "step:snapshot-repository-workshop/t-2026-09-25-0017:9",
+     "step:snapshot-repository-workshop/t-2026-09-25-0026:10",
+     "step:snapshot-repository-workshop/t-2026-09-25-0026:25",
+     "task:snapshot-repository-workshop/t-2026-09-25-0017",
+     "task:snapshot-repository-workshop/t-2026-09-25-0026",
+     "capability:workspace.read"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "sent",
+      "args": {
+       "task": "task:snapshot-repository-workshop/t-2026-09-25-0017",
+       "step": 9,
+       "pointer": "/path",
+       "compare": "=",
+       "value": "evaluation.procedure"
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "sent",
+      "args": {
+       "task": "task:snapshot-repository-workshop/t-2026-09-25-0026",
+       "step": 25,
+       "pointer": "/path",
+       "compare": "=",
+       "value": "results/step-009-procedure-submit.json"
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:snapshot-repository-workshop/t-2026-09-25-0026",
+       "step": 9,
+       "outcome": "completed"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "alternative": "a change of the procedure prompt (fingerprint change) introduced the refusals: the form appears under both the old and the new fingerprint",
+      "predicate": "rate",
+      "args": {
+       "form": "form:procedure:harness:8ea43e47ade1",
+       "fingerprint": "fingerprint:433bbb9878a7",
+       "compare": ">",
+       "value": 0
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "alternative": "the refusal gave a false reason (the file existed)",
+      "predicate": "refused-with",
+      "args": {
+       "task": "task:snapshot-repository-workshop/t-2026-09-25-0026",
+       "step": 10,
+       "phrase": "no file"
+      },
+      "expect": true
+     },
+     {
+      "role": "current",
+      "predicate": "rate",
+      "args": {
+       "form": "form:procedure:harness:8ea43e47ade1",
+       "fingerprint": "fingerprint:e189827ff35b",
+       "compare": ">",
+       "value": 0
+      },
+      "expect": true
+     }
+    ],
+    "justifications": []
+   },
+   "outcome": "completed",
+   "judged": "accepted",
+   "reason": "diagnosis.submit completed; the workshop changed",
+   "tokens": {
+    "prompt": 19807,
+    "completion": 2611,
+    "total": 22418
+   }
+  },
+  {
+   "n": 19,
+   "capability": "task.done",
+   "input": {
+    "summary": "Diagnosis diag-f40f32751bd6 accepted by the guard (sha256 b00a3dc2fd30...). The 19 refusals (\"device refused: no file … in task t####\") came from workspace.read calls on paths that do not exist in the task workspace. In t-2026-09-25-0017 the model (haiku) asked for \"evaluation.procedure\", a name that is not a file. In t-2026-09-25-0026 it asked 16 times for \"results/step-009-procedure-submit.json\" after step 9 read manifest.json successfully. The device's refusal is true: the file is absent. The harness refused before any guard. The refusal gives no list of files that exist, so the model repeated the same path. The harness checked the six predictions and all were true: the paths sent, step 9 completed, the refusal text at step 10, and the rates. The rates were 1 of 24 tasks (4%) under fingerprint 433bbb9878a7 and 1 of 8 tasks (13%) under e189827ff35b. The lead's reading (harness-artefact, pre-guard device refusal) was kept. The sources did not support a regression from the prompt change.",
+    "artifacts": [
+     {
+      "kind": "diagnosis",
+      "path": "diagnoses/diag-f40f32751bd6.json"
+     }
+    ]
+   },
+   "outcome": "completed",
+   "reason": "contract held on topic diagnosis: diagnosis diagnoses/diag-f40f32751bd6.json",
+   "tokens": {
+    "prompt": 19806,
+    "completion": 480,
+    "total": 20286
+   }
+  }
+ ],
+ "submissions": [
+  {
+   "step": 18,
+   "outcome": "completed",
+   "refused": false,
+   "reason": "diagnosis.submit completed; the workshop changed",
+   "diagnosis": {
+    "id": "diag-f40f32751bd6",
+    "verdict": "wrong",
+    "cause": "The harness did not malfunction: its refusal \"no file ... in task\" was true. The model (claude-haiku-4-5) called workspace.read on paths that are not files of the task workspace. In t-2026-09-25-0017 it read \"evaluation.procedure\", which is a field of the reasoning state (/evaluation), not a file. Steps 9, 11 and 15 were refused for it. In t-2026-09-25-0026 it read manifest.json at step 9, which succeeded. It then guessed \"results/step-009-procedure-submit.json\", which does not exist, and sent the identical call 16 times (steps 10 to 25) until the task failed on iterations. The refusal names the missing file but does not list the files that exist, and the harness does not stop an identical repeat. That let the model loop, but the origin is a model that confuses state fields with workspace files and invents file names. The two tasks ran under different fingerprints (433bbb9878a7 and e189827ff35b), so a prompt change is not the cause.",
+    "class": "model-error",
+    "current": "still",
+    "evidence": [
+     "form:procedure:harness:8ea43e47ade1",
+     "step:snapshot-repository-workshop/t-2026-09-25-0017:9",
+     "step:snapshot-repository-workshop/t-2026-09-25-0026:10",
+     "step:snapshot-repository-workshop/t-2026-09-25-0026:25",
+     "task:snapshot-repository-workshop/t-2026-09-25-0017",
+     "task:snapshot-repository-workshop/t-2026-09-25-0026",
+     "capability:workspace.read"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "sent",
+      "args": {
+       "task": "task:snapshot-repository-workshop/t-2026-09-25-0017",
+       "step": 9,
+       "pointer": "/path",
+       "compare": "=",
+       "value": "evaluation.procedure"
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "sent",
+      "args": {
+       "task": "task:snapshot-repository-workshop/t-2026-09-25-0026",
+       "step": 25,
+       "pointer": "/path",
+       "compare": "=",
+       "value": "results/step-009-procedure-submit.json"
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:snapshot-repository-workshop/t-2026-09-25-0026",
+       "step": 9,
+       "outcome": "completed"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "alternative": "a change of the procedure prompt (fingerprint change) introduced the refusals: the form appears under both the old and the new fingerprint",
+      "predicate": "rate",
+      "args": {
+       "form": "form:procedure:harness:8ea43e47ade1",
+       "fingerprint": "fingerprint:433bbb9878a7",
+       "compare": ">",
+       "value": 0
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "alternative": "the refusal gave a false reason (the file existed)",
+      "predicate": "refused-with",
+      "args": {
+       "task": "task:snapshot-repository-workshop/t-2026-09-25-0026",
+       "step": 10,
+       "phrase": "no file"
+      },
+      "expect": true
+     },
+     {
+      "role": "current",
+      "predicate": "rate",
+      "args": {
+       "form": "form:procedure:harness:8ea43e47ade1",
+       "fingerprint": "fingerprint:e189827ff35b",
+       "compare": ">",
+       "value": 0
+      },
+      "expect": true
+     }
+    ],
+    "justifications": []
+   }
+  }
+ ],
+ "accepted": {
+  "id": "diag-f40f32751bd6",
+  "lead": {
+   "id": "D4:4f5d2b183d6c",
+   "detector": "D4",
+   "class": "harness-artefact",
+   "title": "the harness refused \"device refused: no file … in task t####\" 19 times in 2 tasks, before any guard (workspace.read)",
+   "settledBy": null,
+   "form": {
+    "id": "form:procedure:harness:8ea43e47ade1",
+    "shape": "device refused: no file … in task t####",
+    "by": "harness"
+   },
+   "path": [
+    "step or attempt -refused-for-> form:procedure:harness:8ea43e47ade1 (by the harness)",
+    "x 19 in 2 tasks",
+    "-calls-> workspace.read"
+   ],
+   "about": [
+    "form:procedure:harness:8ea43e47ade1",
+    "step:snapshot-repository-workshop/t-2026-09-25-0017:9",
+    "step:snapshot-repository-workshop/t-2026-09-25-0017:11",
+    "step:snapshot-repository-workshop/t-2026-09-25-0017:15",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:10",
+    "step:snapshot-repository-workshop/t-2026-09-25-0026:11"
+   ],
+   "tasks": [
+    "task:snapshot-repository-workshop/t-2026-09-25-0017",
+    "task:snapshot-repository-workshop/t-2026-09-25-0026"
+   ],
+   "models": {
+    "claude-haiku-4-5-20251001": 2
+   },
+   "evidence": {
+    "refusals": 19,
+    "capabilities": [
+     "workspace.read"
+    ],
+    "example": "device refused: no file \"evaluation.procedure\" in task t-2026-09-25-0017"
+   },
+   "recommend": true
+  },
+  "forks": [
+   "snapshot-repository-workshop"
+  ],
+  "verdict": "wrong",
+  "cause": "The harness did not malfunction: its refusal \"no file ... in task\" was true. The model (claude-haiku-4-5) called workspace.read on paths that are not files of the task workspace. In t-2026-09-25-0017 it read \"evaluation.procedure\", which is a field of the reasoning state (/evaluation), not a file. Steps 9, 11 and 15 were refused for it. In t-2026-09-25-0026 it read manifest.json at step 9, which succeeded. It then guessed \"results/step-009-procedure-submit.json\", which does not exist, and sent the identical call 16 times (steps 10 to 25) until the task failed on iterations. The refusal names the missing file but does not list the files that exist, and the harness does not stop an identical repeat. That let the model loop, but the origin is a model that confuses state fields with workspace files and invents file names. The two tasks ran under different fingerprints (433bbb9878a7 and e189827ff35b), so a prompt change is not the cause.",
+  "class": "model-error",
+  "current": "still",
+  "evidence": [
+   "form:procedure:harness:8ea43e47ade1",
+   "step:snapshot-repository-workshop/t-2026-09-25-0017:9",
+   "step:snapshot-repository-workshop/t-2026-09-25-0026:10",
+   "step:snapshot-repository-workshop/t-2026-09-25-0026:25",
+   "task:snapshot-repository-workshop/t-2026-09-25-0017",
+   "task:snapshot-repository-workshop/t-2026-09-25-0026",
+   "capability:workspace.read"
+  ],
+  "predictions": [
+   {
+    "role": "cause",
+    "predicate": "sent",
+    "args": {
+     "task": "task:snapshot-repository-workshop/t-2026-09-25-0017",
+     "step": 9,
+     "pointer": "/path",
+     "compare": "=",
+     "value": "evaluation.procedure"
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "step 9 (workspace.read) sent \"evaluation.procedure\" at /path",
+     "nodes": [
+      "task:snapshot-repository-workshop/t-2026-09-25-0017",
+      "step:snapshot-repository-workshop/t-2026-09-25-0017:9"
+     ],
+     "read": []
+    }
+   },
+   {
+    "role": "cause",
+    "predicate": "sent",
+    "args": {
+     "task": "task:snapshot-repository-workshop/t-2026-09-25-0026",
+     "step": 25,
+     "pointer": "/path",
+     "compare": "=",
+     "value": "results/step-009-procedure-submit.json"
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "step 25 (workspace.read) sent \"results/step-009-procedure-submit.json\" at /path",
+     "nodes": [
+      "task:snapshot-repository-workshop/t-2026-09-25-0026",
+      "step:snapshot-repository-workshop/t-2026-09-25-0026:25"
+     ],
+     "read": []
+    }
+   },
+   {
+    "role": "cause",
+    "predicate": "outcome-at",
+    "args": {
+     "task": "task:snapshot-repository-workshop/t-2026-09-25-0026",
+     "step": 9,
+     "outcome": "completed"
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "step 9 (workspace.read): completed",
+     "nodes": [
+      "task:snapshot-repository-workshop/t-2026-09-25-0026"
+     ],
+     "read": []
+    }
+   },
+   {
+    "role": "rules-out",
+    "alternative": "a change of the procedure prompt (fingerprint change) introduced the refusals: the form appears under both the old and the new fingerprint",
+    "predicate": "rate",
+    "args": {
+     "form": "form:procedure:harness:8ea43e47ade1",
+     "fingerprint": "fingerprint:433bbb9878a7",
+     "compare": ">",
+     "value": 0
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "1 of 24 tasks refused for it (4 %)",
+     "nodes": [
+      "form:procedure:harness:8ea43e47ade1",
+      "fingerprint:433bbb9878a7"
+     ],
+     "read": []
+    }
+   },
+   {
+    "role": "rules-out",
+    "alternative": "the refusal gave a false reason (the file existed)",
+    "predicate": "refused-with",
+    "args": {
+     "task": "task:snapshot-repository-workshop/t-2026-09-25-0026",
+     "step": 10,
+     "phrase": "no file"
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "the refusal at step 10: \"device refused: no file \\\"results/step-009-procedure-submit.json\\\" in task t-2026-09-25-0026\"",
+     "nodes": [
+      "task:snapshot-repository-workshop/t-2026-09-25-0026",
+      "step:snapshot-repository-workshop/t-2026-09-25-0026:10"
+     ],
+     "read": []
+    }
+   },
+   {
+    "role": "current",
+    "predicate": "rate",
+    "args": {
+     "form": "form:procedure:harness:8ea43e47ade1",
+     "fingerprint": "fingerprint:e189827ff35b",
+     "compare": ">",
+     "value": 0
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "1 of 8 tasks refused for it (13 %)",
+     "nodes": [
+      "form:procedure:harness:8ea43e47ade1",
+      "fingerprint:e189827ff35b"
+     ],
+     "read": []
+    }
+   }
+  ],
+  "checked": {
+   "confirmed": 6,
+   "unknown": 0,
+   "byRole": {
+    "cause": {
+     "confirmed": 3,
+     "of": 3
+    },
+    "current": {
+     "confirmed": 1,
+     "of": 1
+    },
+    "rules-out": {
+     "confirmed": 2,
+     "of": 2
+    }
+   },
+   "alternativesRuledOut": [
+    "a change of the procedure prompt (fingerprint change) introduced the refusals: the form appears under both the old and the new fingerprint",
+    "the refusal gave a false reason (the file existed)"
+   ]
+  },
+  "justifications": []
+ },
+ "station": {
+  "status": "diagnosed"
+ },
+ "tokens": {
+  "prompt": 356524,
+  "completion": 8724
+ }
+}

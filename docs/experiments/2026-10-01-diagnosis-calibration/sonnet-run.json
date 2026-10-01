@@ -1,0 +1,410 @@
+[
+  {
+    "corpus": "evaluator",
+    "lead": "D2:0ed9f72ce86c",
+    "taskId": "t-2026-10-01-0002",
+    "model": "claude-sonnet-5-5",
+    "state": "proposed",
+    "ended": "contract held after 9 step(s)",
+    "proposal": {
+      "proposalId": "p0001-d6b4cf9a",
+      "status": "diagnosed"
+    },
+    "seconds": 53,
+    "calls": 9,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 127859,
+      "completion": 4543
+    }
+  },
+  {
+    "corpus": "evaluator",
+    "lead": "D3:652d6e9fdffe",
+    "taskId": "t-2026-10-01-0001",
+    "model": "claude-sonnet-5-5",
+    "state": "proposed",
+    "ended": "contract held after 16 step(s)",
+    "proposal": {
+      "proposalId": "p0002-62723887",
+      "status": "diagnosed"
+    },
+    "seconds": 78,
+    "calls": 16,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 251508,
+      "completion": 5990
+    }
+  },
+  {
+    "corpus": "evaluator",
+    "lead": "D2:8cba194716f8",
+    "taskId": "t-2026-10-01-0003",
+    "model": "claude-sonnet-5-5",
+    "state": "proposed",
+    "ended": "contract held after 10 step(s)",
+    "proposal": {
+      "proposalId": "p0003-8bee969f",
+      "status": "diagnosed"
+    },
+    "seconds": 53,
+    "calls": 10,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 148158,
+      "completion": 4380
+    }
+  },
+  {
+    "corpus": "evaluator",
+    "lead": "D2:dc0bc69a9ef4",
+    "taskId": "t-2026-10-01-0004",
+    "model": "claude-sonnet-5-5",
+    "state": "proposed",
+    "ended": "contract held after 12 step(s)",
+    "proposal": {
+      "proposalId": "p0004-c2a3abee",
+      "status": "diagnosed"
+    },
+    "seconds": 83,
+    "calls": 12,
+    "submits": [
+      "refused",
+      "refused",
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 201678,
+      "completion": 8916
+    }
+  },
+  {
+    "corpus": "evaluator",
+    "lead": "D4:d77a2a5a7508",
+    "taskId": "t-2026-10-01-0005",
+    "model": "claude-sonnet-5-5",
+    "state": "proposed",
+    "ended": "contract held after 10 step(s)",
+    "proposal": {
+      "proposalId": "p0005-83cd6a73",
+      "status": "diagnosed"
+    },
+    "seconds": 55,
+    "calls": 10,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 197151,
+      "completion": 4389
+    }
+  },
+  {
+    "corpus": "evaluator",
+    "lead": "D4:92b3a81902a4",
+    "taskId": "t-2026-10-01-0006",
+    "model": "claude-sonnet-5-5",
+    "state": "proposed",
+    "ended": "contract held after 20 step(s)",
+    "proposal": {
+      "proposalId": "p0006-4c94c0a1",
+      "status": "diagnosed"
+    },
+    "seconds": 98,
+    "calls": 20,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 417952,
+      "completion": 7469
+    }
+  },
+  {
+    "corpus": "evaluator",
+    "lead": "D4:467375274717",
+    "taskId": "t-2026-10-01-0007",
+    "model": "claude-sonnet-5-5",
+    "state": "proposed",
+    "ended": "contract held after 20 step(s)",
+    "proposal": {
+      "proposalId": "p0007-9b13d677",
+      "status": "diagnosed"
+    },
+    "seconds": 107,
+    "calls": 20,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 293318,
+      "completion": 9197
+    }
+  },
+  {
+    "corpus": "evaluator",
+    "lead": "D5:c6d772db8922",
+    "taskId": "t-2026-10-01-0008",
+    "model": "claude-sonnet-5-5",
+    "state": "proposed",
+    "ended": "contract held after 8 step(s)",
+    "proposal": {
+      "proposalId": "p0008-75629329",
+      "status": "diagnosed"
+    },
+    "seconds": 47,
+    "calls": 8,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 123119,
+      "completion": 4249
+    }
+  },
+  {
+    "corpus": "evaluator",
+    "lead": "D5:8d5e2be35eb0",
+    "taskId": "t-2026-10-01-0009",
+    "model": "claude-sonnet-5-5",
+    "state": "proposed",
+    "ended": "contract held after 18 step(s)",
+    "proposal": {
+      "proposalId": "p0009-22d95eaf",
+      "status": "diagnosed"
+    },
+    "seconds": 134,
+    "calls": 18,
+    "submits": [
+      "refused",
+      "refused",
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 351406,
+      "completion": 13462
+    }
+  },
+  {
+    "corpus": "evaluator",
+    "lead": "D5:cecbb33cb4d2",
+    "taskId": "t-2026-10-01-0010",
+    "model": "claude-sonnet-5-5",
+    "state": "proposed",
+    "ended": "contract held after 19 step(s)",
+    "proposal": {
+      "proposalId": "p0010-f6a746e2",
+      "status": "diagnosed"
+    },
+    "seconds": 101,
+    "calls": 19,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 326736,
+      "completion": 7108
+    }
+  },
+  {
+    "corpus": "evaluator",
+    "lead": "D1:ec5a5d112405",
+    "taskId": "t-2026-10-01-0012",
+    "model": "claude-sonnet-5-5",
+    "state": "proposed",
+    "ended": "contract held after 8 step(s)",
+    "proposal": {
+      "proposalId": "p0011-a62f51d9",
+      "status": "diagnosed"
+    },
+    "seconds": 43,
+    "calls": 8,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 115585,
+      "completion": 3751
+    }
+  },
+  {
+    "corpus": "evaluator",
+    "lead": "D8:bbec8866303c",
+    "taskId": "t-2026-10-01-0011",
+    "model": "claude-sonnet-5-5",
+    "state": "proposed",
+    "ended": "contract held after 11 step(s)",
+    "proposal": {
+      "proposalId": "p0012-35679a67",
+      "status": "diagnosed"
+    },
+    "seconds": 74,
+    "calls": 11,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 143403,
+      "completion": 5354
+    }
+  },
+  {
+    "corpus": "evaluator",
+    "lead": "D1:97a33bdc4935",
+    "taskId": "t-2026-10-01-0013",
+    "model": "claude-sonnet-5-5",
+    "state": "proposed",
+    "ended": "contract held after 9 step(s)",
+    "proposal": {
+      "proposalId": "p0013-43c42fc4",
+      "status": "diagnosed"
+    },
+    "seconds": 52,
+    "calls": 9,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 132252,
+      "completion": 4860
+    }
+  },
+  {
+    "corpus": "evaluator-repository",
+    "lead": "D4:d77a2a5a7508",
+    "error": "station.diagnose: device refused: the lead D4:d77a2a5a7508 is diagnosed already, by claude-sonnet-5-5: ask a second diagnosis (second), made by another model"
+  },
+  {
+    "corpus": "evaluator",
+    "lead": "D6:93cf26da851b",
+    "taskId": "t-2026-10-01-0014",
+    "model": "claude-sonnet-5-5",
+    "state": "proposed",
+    "ended": "contract held after 6 step(s)",
+    "proposal": {
+      "proposalId": "p0014-ac9c9fca",
+      "status": "diagnosed"
+    },
+    "seconds": 40,
+    "calls": 6,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 87787,
+      "completion": 3238
+    }
+  },
+  {
+    "corpus": "evaluator-repository",
+    "lead": "D4:e694065969d8",
+    "taskId": "t-2026-10-01-0015",
+    "model": "claude-sonnet-5-5",
+    "state": "proposed",
+    "ended": "contract held after 16 step(s)",
+    "proposal": {
+      "proposalId": "p0015-bd953f47",
+      "status": "diagnosed"
+    },
+    "seconds": 79,
+    "calls": 16,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 234109,
+      "completion": 6957
+    }
+  },
+  {
+    "corpus": "evaluator-repository",
+    "lead": "D4:a01631994ed6",
+    "taskId": "t-2026-10-01-0016",
+    "model": "claude-sonnet-5-5",
+    "state": "proposed",
+    "ended": "contract held after 20 step(s)",
+    "proposal": {
+      "proposalId": "p0016-9b06db80",
+      "status": "diagnosed"
+    },
+    "seconds": 88,
+    "calls": 20,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 296630,
+      "completion": 7180
+    }
+  },
+  {
+    "corpus": "evaluator-repository",
+    "lead": "D8:f6953768a10e",
+    "taskId": "t-2026-10-01-0018",
+    "model": "claude-sonnet-5-5",
+    "state": "proposed",
+    "ended": "contract held after 10 step(s)",
+    "proposal": {
+      "proposalId": "p0017-e652b4ae",
+      "status": "diagnosed"
+    },
+    "seconds": 49,
+    "calls": 10,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 154464,
+      "completion": 3724
+    }
+  },
+  {
+    "corpus": "evaluator-repository",
+    "lead": "D4:4f5d2b183d6c",
+    "taskId": "t-2026-10-01-0017",
+    "model": "claude-sonnet-5-5",
+    "state": "proposed",
+    "ended": "contract held after 19 step(s)",
+    "proposal": {
+      "proposalId": "p0018-7efc14c1",
+      "status": "diagnosed"
+    },
+    "seconds": 100,
+    "calls": 19,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 356524,
+      "completion": 8724
+    }
+  },
+  {
+    "corpus": "evaluator-repository",
+    "lead": "D7:f0e111fbaac6",
+    "taskId": "t-2026-10-01-0019",
+    "model": "claude-sonnet-5-5",
+    "state": "proposed",
+    "ended": "contract held after 7 step(s)",
+    "proposal": {
+      "proposalId": "p0019-93ac89ff",
+      "status": "diagnosed"
+    },
+    "seconds": 46,
+    "calls": 7,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 110295,
+      "completion": 3678
+    }
+  }
+]

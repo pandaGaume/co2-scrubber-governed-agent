@@ -1,0 +1,723 @@
+{
+ "schema": 1,
+ "key": "repository/t-2026-10-01-0012",
+ "workshop": "repository",
+ "taskId": "t-2026-10-01-0012",
+ "recordedAt": "2026-10-01T18:56:34.757Z",
+ "startedAt": "2026-10-01T18:55:53.067Z",
+ "endedAt": "2026-10-01T18:56:34.080Z",
+ "state": "proposed",
+ "ended": "contract held after 8 step(s)",
+ "requestedBy": "station (evaluator)",
+ "corpus": "evaluator",
+ "forks": [
+  "exp-control",
+  "exp-learn",
+  "exp3-baseline",
+  "exp4-gpt-a",
+  "exp4-gpt-c",
+  "exp4-sonnet-a",
+  "exp6-contract",
+  "exp7-fixes",
+  "exp8-paths"
+ ],
+ "lead": "D1:ec5a5d112405",
+ "diagnosisId": "diag-7d510665d714",
+ "model": "claude-sonnet-5-5",
+ "family": "claude",
+ "provider": {
+  "name": "reasoner:claude",
+  "model": "claude-sonnet-5-5",
+  "family": "claude",
+  "settings": {
+   "maxTokens": 8192,
+   "maxTokensParam": null,
+   "temperature": null,
+   "reasoningEffort": null,
+   "timeoutMs": null
+  },
+  "profile": {
+   "file": "profiles/anthropic-sonnet.json",
+   "sha256": "4cfc6349fd069075d89f8228c08374f628e69adbae6f7b9958363bac0a61b342"
+  }
+ },
+ "profile": {
+  "file": "profiles/anthropic.json",
+  "sha256": "57b865b5b073a8d0fc00cfaa6e23171d4dca37acbb447b317c622718f68df5d0"
+ },
+ "harness": {
+  "repository": "f29cb0cb72c0a7e44664dda08c2386b507e09fd9",
+  "fork": null
+ },
+ "asked": {
+  "id": "diag-7d510665d714",
+  "forks": [
+   "exp-control",
+   "exp-learn",
+   "exp3-baseline",
+   "exp4-gpt-a",
+   "exp4-gpt-c",
+   "exp4-sonnet-a",
+   "exp6-contract",
+   "exp7-fixes",
+   "exp8-paths"
+  ],
+  "lead": {
+   "id": "D1:ec5a5d112405",
+   "detector": "D1",
+   "class": "contract-gap",
+   "title": "REFERENCE_NOT_A_FACT: refused at the first try of 16 task(s) whose texts did not state REFERENCE_NOT_A_FACT; stated since, by specs/procedure/words.json /brief/safetyBounds: \"which is the single fact to cite, by its id alone as the reference\"; harness/core/justify.ts: \"Exactly one: for library, one id as library.facts lists it\"",
+   "settledBy": null,
+   "form": {
+    "id": "form:procedure:33231b945eef",
+    "shape": "justification: *: … is not a fact of the library",
+    "by": "guard"
+   },
+   "path": [
+    "rule:procedure:REFERENCE_NOT_A_FACT <-of- form:procedure:33231b945eef",
+    "<-refused-for- the first attempt of 16 task(s)",
+    "no statement read: rule:procedure:REFERENCE_NOT_A_FACT",
+    "stated now by specs/procedure/words.json /brief/safetyBounds: \"which is the single fact to cite, by its id alone as the reference\"; harness/core/justify.ts: \"Exactly one: for library, one id as library.facts lists it\""
+   ],
+   "about": [
+    "rule:procedure:REFERENCE_NOT_A_FACT",
+    "rule:procedure:REFERENCE_NOT_A_FACT",
+    "form:procedure:33231b945eef"
+   ],
+   "tasks": [
+    "task:exp3-baseline/t-2026-09-29-0002",
+    "task:exp3-baseline/t-2026-09-29-0004",
+    "task:exp3-baseline/t-2026-09-29-0005",
+    "task:exp3-baseline/t-2026-09-29-0006",
+    "task:exp3-baseline/t-2026-09-29-0007",
+    "task:exp3-baseline/t-2026-09-29-0008",
+    "task:exp3-baseline/t-2026-09-29-0009",
+    "task:exp3-baseline/t-2026-09-29-0010",
+    "task:exp4-sonnet-a/t-2026-09-29-0001",
+    "task:exp4-sonnet-a/t-2026-09-29-0002",
+    "task:exp4-sonnet-a/t-2026-09-29-0007",
+    "task:exp4-sonnet-a/t-2026-09-29-0008",
+    "task:exp4-sonnet-a/t-2026-09-29-0009",
+    "task:exp4-sonnet-a/t-2026-09-29-0011",
+    "task:exp4-sonnet-a/t-2026-09-29-0012",
+    "task:exp4-sonnet-a/t-2026-09-29-0016"
+   ],
+   "models": {
+    "claude-sonnet-5-5": 16
+   },
+   "evidence": {
+    "code": "REFERENCE_NOT_A_FACT",
+    "status": "stated",
+    "untold": 16,
+    "told": 0,
+    "unknown": 0,
+    "missing": [
+     "rule:procedure:REFERENCE_NOT_A_FACT"
+    ],
+    "statedNow": [
+     "specs/procedure/words.json /brief/safetyBounds: \"which is the single fact to cite, by its id alone as the reference\"",
+     "harness/core/justify.ts: \"Exactly one: for library, one id as library.facts lists it\""
+    ],
+    "closedSince": [
+     "specs/procedure/words.json /brief/safetyBounds: \"which is the single fact to cite, by its id alone as the reference\"",
+     "harness/core/justify.ts: \"Exactly one: for library, one id as library.facts lists it\""
+    ]
+   },
+   "recommend": false
+  },
+  "neighbourhood": {
+   "nodes": [
+    "rule:procedure:REFERENCE_NOT_A_FACT [rule] {\"topic\":\"procedure\",\"code\":\"REFERENCE_NOT_A_FACT\",\"status\":\"stated\",\"signed\":false,\"note\":\"the safety card says to cite \\\"the fact's id as its reference\\\", whi…",
+    "form:procedure:33231b945eef [form] {\"topic\":\"procedure\",\"shape\":\"justification: *: … is not a fact of the library\",\"kind\":\"justification\",\"by\":\"guard\",\"sample\":\"justification: steps.2.speedPercen…",
+    "task:exp3-baseline/t-2026-09-29-0002 [task] {\"taskId\":\"t-2026-09-29-0002\",\"workshop\":\"exp3-baseline\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:13:45.231Z\",\"ended\":\"contract held af…",
+    "task:exp3-baseline/t-2026-09-29-0004 [task] {\"taskId\":\"t-2026-09-29-0004\",\"workshop\":\"exp3-baseline\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:16:26.575Z\",\"ended\":\"contract held af…",
+    "task:exp3-baseline/t-2026-09-29-0005 [task] {\"taskId\":\"t-2026-09-29-0005\",\"workshop\":\"exp3-baseline\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:17:33.129Z\",\"ended\":\"contract held af…",
+    "task:exp3-baseline/t-2026-09-29-0006 [task] {\"taskId\":\"t-2026-09-29-0006\",\"workshop\":\"exp3-baseline\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:18:45.724Z\",\"ended\":\"contract held af…",
+    "task:exp3-baseline/t-2026-09-29-0007 [task] {\"taskId\":\"t-2026-09-29-0007\",\"workshop\":\"exp3-baseline\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:20:12.455Z\",\"ended\":\"contract held af…",
+    "task:exp3-baseline/t-2026-09-29-0008 [task] {\"taskId\":\"t-2026-09-29-0008\",\"workshop\":\"exp3-baseline\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:21:21.065Z\",\"ended\":\"contract held af…",
+    "task:exp3-baseline/t-2026-09-29-0009 [task] {\"taskId\":\"t-2026-09-29-0009\",\"workshop\":\"exp3-baseline\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:22:17.574Z\",\"ended\":\"contract held af…",
+    "task:exp3-baseline/t-2026-09-29-0010 [task] {\"taskId\":\"t-2026-09-29-0010\",\"workshop\":\"exp3-baseline\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:23:12.031Z\",\"ended\":\"contract held af…",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 [task] {\"taskId\":\"t-2026-09-29-0001\",\"workshop\":\"exp4-sonnet-a\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:49:53.871Z\",\"ended\":\"contract held af…",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 [task] {\"taskId\":\"t-2026-09-29-0002\",\"workshop\":\"exp4-sonnet-a\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:51:00.454Z\",\"ended\":\"contract held af…",
+    "task:exp4-sonnet-a/t-2026-09-29-0007 [task] {\"taskId\":\"t-2026-09-29-0007\",\"workshop\":\"exp4-sonnet-a\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:56:39.487Z\",\"ended\":\"contract held af…",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 [task] {\"taskId\":\"t-2026-09-29-0008\",\"workshop\":\"exp4-sonnet-a\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:58:38.823Z\",\"ended\":\"contract held af…",
+    "task:exp4-sonnet-a/t-2026-09-29-0009 [task] {\"taskId\":\"t-2026-09-29-0009\",\"workshop\":\"exp4-sonnet-a\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:59:53.650Z\",\"ended\":\"contract held af…",
+    "task:exp4-sonnet-a/t-2026-09-29-0011 [task] {\"taskId\":\"t-2026-09-29-0011\",\"workshop\":\"exp4-sonnet-a\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T21:03:03.960Z\",\"ended\":\"contract held af…",
+    "task:exp4-sonnet-a/t-2026-09-29-0012 [task] {\"taskId\":\"t-2026-09-29-0012\",\"workshop\":\"exp4-sonnet-a\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T21:04:39.057Z\",\"ended\":\"contract held af…",
+    "task:exp4-sonnet-a/t-2026-09-29-0016 [task] {\"taskId\":\"t-2026-09-29-0016\",\"workshop\":\"exp4-sonnet-a\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T21:09:26.455Z\",\"ended\":\"contract held af…",
+    "statement:contract:6ef2783d2f3c [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/safetyBounds\",\"phrase\":\"which is the single fact to cite, by its id alone as the refere…",
+    "statement:contract:4b09f3d1eea0 [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"Exactly one: for library, one id as library.facts lists it\"}",
+    "attempt:exp-learn/t-2026-09-29-0001:9 [attempt] {\"step\":9,\"capability\":\"procedure.revise\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: justification: steps.2.speedPercent: \\\"test.speedFloorPercent …",
+    "correction:exp-learn/t-2026-09-29-0001:steps.2.speedPercent [correction] {\"path\":\"steps.2.speedPercent\",\"kind\":\"justification\",\"refused\":{\"value\":100,\"source\":\"library\",\"reference\":\"test.speedFloorPercent (signed, at least 30 percent…",
+    "attempt:exp-learn/t-2026-09-29-0002:9 [attempt] {\"step\":9,\"capability\":\"procedure.revise\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: justification: steps.1.speedPercent: \\\"test.speedFloorPercent …",
+    "correction:exp-learn/t-2026-09-29-0002:steps.1.speedPercent [correction] {\"path\":\"steps.1.speedPercent\",\"kind\":\"justification\",\"refused\":{\"value\":50,\"source\":\"library\",\"reference\":\"test.speedFloorPercent (commissioning-test-safety, s…",
+    "correction:exp-learn/t-2026-09-29-0002:steps.2.speedPercent [correction] {\"path\":\"steps.2.speedPercent\",\"kind\":\"justification\",\"refused\":{\"value\":100,\"source\":\"library\",\"reference\":\"test.speedFloorPercent (commissioning-test-safety, …",
+    "attempt:exp-control/t-2026-09-29-0001:9 [attempt] {\"step\":9,\"capability\":\"procedure.revise\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: justification: steps.2.speedPercent: \\\"test.speedFloorPercent …",
+    "correction:exp-control/t-2026-09-29-0001:steps.2.speedPercent [correction] {\"path\":\"steps.2.speedPercent\",\"kind\":\"justification\",\"refused\":{\"value\":100,\"source\":\"library\",\"reference\":\"test.speedFloorPercent (signed, at least 30 percent…",
+    "attempt:exp-control/t-2026-09-29-0002:9 [attempt] {\"step\":9,\"capability\":\"procedure.revise\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: justification: steps.2.speedPercent: \\\"test.speedFloorPercent …",
+    "correction:exp-control/t-2026-09-29-0002:steps.2.speedPercent [correction] {\"path\":\"steps.2.speedPercent\",\"kind\":\"justification\",\"refused\":{\"value\":100,\"source\":\"library\",\"reference\":\"test.speedFloorPercent (signed, at least 30 percent…",
+    "attempt:exp-control/t-2026-09-29-0003:9 [attempt] {\"step\":9,\"capability\":\"procedure.revise\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: expected: expected says nothing: a test that does not say what…",
+    "correction:exp-control/t-2026-09-29-0003:steps.2.speedPercent [correction] {\"path\":\"steps.2.speedPercent\",\"kind\":\"justification\",\"refused\":{\"value\":100,\"source\":\"library\",\"reference\":\"scrubber.effectiveFlowAtFull (scrubber-1-datasheet,…",
+    "attempt:exp-control/t-2026-09-29-0004:18 [attempt] {\"step\":18,\"capability\":\"procedure.revise\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: justification: steps.2.speedPercent: \\\"test.speedFloorPercent…",
+    "correction:exp-control/t-2026-09-29-0004:steps.2.speedPercent [correction] {\"path\":\"steps.2.speedPercent\",\"kind\":\"justification\",\"refused\":{\"value\":100,\"source\":\"library\",\"reference\":\"test.speedFloorPercent (signed, at or above 30 perc…",
+    "attempt:exp-control/t-2026-09-29-0006:9 [attempt] {\"step\":9,\"capability\":\"procedure.revise\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: justification: steps.2.speedPercent: \\\"scrubber.effectiveFlowA…",
+    "correction:exp-control/t-2026-09-29-0006:steps.2.speedPercent [correction] {\"path\":\"steps.2.speedPercent\",\"kind\":\"justification\",\"refused\":{\"value\":100,\"source\":\"library\",\"reference\":\"scrubber.effectiveFlowAtFull (scrubber-1-datasheet,…",
+    "attempt:exp3-baseline/t-2026-09-29-0002:8 [attempt] {\"step\":8,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: justification: limits.minSpeedPercent: \\\"test.speedFloorPercen…",
+    "correction:exp3-baseline/t-2026-09-29-0002:limits.minSpeedPercent [correction] {\"path\":\"limits.minSpeedPercent\",\"kind\":\"justification\",\"refused\":{\"value\":40,\"source\":\"library\",\"reference\":\"test.speedFloorPercent (signed); scrubber.minimumS…",
+    "attempt:exp3-baseline/t-2026-09-29-0004:8 [attempt] {\"step\":8,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: justification: limits.minSpeedPercent: \\\"test.speedFloorPercen…",
+    "correction:exp3-baseline/t-2026-09-29-0004:limits.minSpeedPercent [correction] {\"path\":\"limits.minSpeedPercent\",\"kind\":\"justification\",\"refused\":{\"value\":40,\"source\":\"library\",\"reference\":\"test.speedFloorPercent (commissioning-test-safety,…",
+    "attempt:exp3-baseline/t-2026-09-29-0005:8 [attempt] {\"step\":8,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: justification: limits.co2MaxPpm: \\\"test.co2AbortCeilingPpm (at…",
+    "correction:exp3-baseline/t-2026-09-29-0005:limits.co2MaxPpm [correction] {\"path\":\"limits.co2MaxPpm\",\"kind\":\"justification\",\"refused\":{\"value\":2500,\"source\":\"library\",\"reference\":\"test.co2AbortCeilingPpm (at most 3200, signed); habita…",
+    "correction:exp3-baseline/t-2026-09-29-0005:steps.2.speedPercent [correction] {\"path\":\"steps.2.speedPercent\",\"kind\":\"justification\",\"refused\":{\"value\":100,\"source\":\"library\",\"reference\":\"test.speedFloorPercent; scrubber.effectiveFlowAtFul…",
+    "attempt:exp3-baseline/t-2026-09-29-0006:11 [attempt] {\"step\":11,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: justification: steps.2.speedPercent: \\\"test.speedFloorPercent…",
+    "correction:exp3-baseline/t-2026-09-29-0006:steps.2.speedPercent [correction] {\"path\":\"steps.2.speedPercent\",\"kind\":\"justification\",\"refused\":{\"value\":100,\"source\":\"library\",\"reference\":\"test.speedFloorPercent; scrubber.effectiveFlowAtFul…",
+    "attempt:exp3-baseline/t-2026-09-29-0007:9 [attempt] {\"step\":9,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: justification: limits.co2MaxPpm: \\\"test.co2AbortCeilingPpm (<=…",
+    "correction:exp3-baseline/t-2026-09-29-0007:limits.co2MaxPpm [correction] {\"path\":\"limits.co2MaxPpm\",\"kind\":\"justification\",\"refused\":{\"value\":2500,\"source\":\"library\",\"reference\":\"test.co2AbortCeilingPpm (<=3200); test.startHeadroomPp…",
+    "correction:exp3-baseline/t-2026-09-29-0007:limits.minSpeedPercent [correction] {\"path\":\"limits.minSpeedPercent\",\"kind\":\"justification\",\"refused\":{\"value\":40,\"source\":\"library\",\"reference\":\"test.speedFloorPercent (commissioning-test-safety,…",
+    "correction:exp3-baseline/t-2026-09-29-0007:steps.1.speedPercent [correction] {\"path\":\"steps.1.speedPercent\",\"kind\":\"justification\",\"refused\":{\"value\":40,\"source\":\"library\",\"reference\":\"test.speedFloorPercent (>=30 percent); scrubber.mini…",
+    "correction:exp3-baseline/t-2026-09-29-0007:steps.2.speedPercent [correction] {\"path\":\"steps.2.speedPercent\",\"kind\":\"justification\",\"refused\":{\"value\":100,\"source\":\"library\",\"reference\":\"test.speedFloorPercent (>=30 percent); scrubber.eff…",
+    "attempt:exp3-baseline/t-2026-09-29-0008:8 [attempt] {\"step\":8,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: justification: limits.co2MaxPpm: \\\"test.co2AbortCeilingPpm (at…"
+   ],
+   "links": [
+    "form:procedure:33231b945eef of rule:procedure:REFERENCE_NOT_A_FACT",
+    "statement:contract:6ef2783d2f3c states rule:procedure:REFERENCE_NOT_A_FACT",
+    "statement:contract:4b09f3d1eea0 states rule:procedure:REFERENCE_NOT_A_FACT",
+    "attempt:exp-learn/t-2026-09-29-0001:9 refused-for form:procedure:33231b945eef",
+    "correction:exp-learn/t-2026-09-29-0001:steps.2.speedPercent answers form:procedure:33231b945eef",
+    "attempt:exp-learn/t-2026-09-29-0002:9 refused-for form:procedure:33231b945eef",
+    "correction:exp-learn/t-2026-09-29-0002:steps.1.speedPercent answers form:procedure:33231b945eef",
+    "correction:exp-learn/t-2026-09-29-0002:steps.2.speedPercent answers form:procedure:33231b945eef",
+    "attempt:exp-control/t-2026-09-29-0001:9 refused-for form:procedure:33231b945eef",
+    "correction:exp-control/t-2026-09-29-0001:steps.2.speedPercent answers form:procedure:33231b945eef",
+    "attempt:exp-control/t-2026-09-29-0002:9 refused-for form:procedure:33231b945eef",
+    "correction:exp-control/t-2026-09-29-0002:steps.2.speedPercent answers form:procedure:33231b945eef",
+    "attempt:exp-control/t-2026-09-29-0003:9 refused-for form:procedure:33231b945eef",
+    "correction:exp-control/t-2026-09-29-0003:steps.2.speedPercent answers form:procedure:33231b945eef",
+    "attempt:exp-control/t-2026-09-29-0004:18 refused-for form:procedure:33231b945eef",
+    "correction:exp-control/t-2026-09-29-0004:steps.2.speedPercent answers form:procedure:33231b945eef",
+    "attempt:exp-control/t-2026-09-29-0006:9 refused-for form:procedure:33231b945eef",
+    "correction:exp-control/t-2026-09-29-0006:steps.2.speedPercent answers form:procedure:33231b945eef",
+    "attempt:exp3-baseline/t-2026-09-29-0002:8 refused-for form:procedure:33231b945eef",
+    "correction:exp3-baseline/t-2026-09-29-0002:limits.minSpeedPercent answers form:procedure:33231b945eef",
+    "attempt:exp3-baseline/t-2026-09-29-0004:8 refused-for form:procedure:33231b945eef",
+    "correction:exp3-baseline/t-2026-09-29-0004:limits.minSpeedPercent answers form:procedure:33231b945eef",
+    "attempt:exp3-baseline/t-2026-09-29-0005:8 refused-for form:procedure:33231b945eef",
+    "correction:exp3-baseline/t-2026-09-29-0005:limits.co2MaxPpm answers form:procedure:33231b945eef",
+    "correction:exp3-baseline/t-2026-09-29-0005:steps.2.speedPercent answers form:procedure:33231b945eef",
+    "attempt:exp3-baseline/t-2026-09-29-0006:11 refused-for form:procedure:33231b945eef",
+    "correction:exp3-baseline/t-2026-09-29-0006:steps.2.speedPercent answers form:procedure:33231b945eef",
+    "attempt:exp3-baseline/t-2026-09-29-0007:9 refused-for form:procedure:33231b945eef",
+    "correction:exp3-baseline/t-2026-09-29-0007:limits.co2MaxPpm answers form:procedure:33231b945eef",
+    "correction:exp3-baseline/t-2026-09-29-0007:limits.minSpeedPercent answers form:procedure:33231b945eef",
+    "correction:exp3-baseline/t-2026-09-29-0007:steps.1.speedPercent answers form:procedure:33231b945eef",
+    "correction:exp3-baseline/t-2026-09-29-0007:steps.2.speedPercent answers form:procedure:33231b945eef",
+    "attempt:exp3-baseline/t-2026-09-29-0008:8 refused-for form:procedure:33231b945eef"
+   ]
+  },
+  "rules": [
+   {
+    "code": "REFERENCE_NOT_A_FACT",
+    "status": "stated",
+    "signed": false,
+    "note": "the safety card says to cite \"the fact's id as its reference\", which a model read as allowing two ids joined; what the guard accepts, one id and nothing else, is stated by these two since 287f5bc",
+    "statedToday": [
+     {
+      "where": "specs/procedure/words.json#/brief/safetyBounds",
+      "holds": true
+     },
+     {
+      "where": "harness/core/justify.ts",
+      "holds": true
+     }
+    ]
+   }
+  ],
+  "today": {
+   "commit": "f29cb0c",
+   "signatures": {},
+   "profiles": {
+    "profiles/anthropic.json": {
+     "wire": "anthropic-messages",
+     "model": "claude-haiku-4-5-20251001",
+     "capabilities": [
+      "tools",
+      "json"
+     ]
+    }
+   }
+  },
+  "refuted": []
+ },
+ "askedSha256": "a3b244b562d73b7312f6aeca8e076b5e9a98f078791e39aac3d398eabca43eca",
+ "steps": [
+  {
+   "n": 1,
+   "capability": "task.plan",
+   "input": {
+    "selected_nodes": [],
+    "missing_capabilities": [
+     {
+      "required_output": "diag-7d510665d714 (Diagnosis)",
+      "quantity": "Diagnosis",
+      "reason": "No node of the catalogue produces a diagnosis; it is made here by reading the graph, steps and texts, then submitted with diagnosis.submit.",
+      "topic": "diagnosis"
+     }
+    ]
+   },
+   "outcome": "completed",
+   "reason": "plan accepted: 0 node type(s), 1 missing capability(ies)",
+   "tokens": {
+    "prompt": 12668,
+    "completion": 182,
+    "total": 12850
+   }
+  },
+  {
+   "n": 2,
+   "capability": "diagnosis.graph",
+   "input": {
+    "id": "rule:procedure:REFERENCE_NOT_A_FACT"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.graph completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 13460,
+    "completion": 114,
+    "total": 13574
+   }
+  },
+  {
+   "n": 3,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp3-baseline/t-2026-09-29-0002",
+    "step": 8,
+    "part": "reason"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 14259,
+    "completion": 209,
+    "total": 14468
+   }
+  },
+  {
+   "n": 4,
+   "capability": "diagnosis.text",
+   "input": {
+    "file": "specs/procedure/words.json",
+    "at": "task:exp3-baseline/t-2026-09-29-0002",
+    "pointer": "/brief/safetyBounds"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.text completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 14505,
+    "completion": 265,
+    "total": 14770
+   }
+  },
+  {
+   "n": 5,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp3-baseline/t-2026-09-29-0005",
+    "step": 8,
+    "part": "reason"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 14632,
+    "completion": 213,
+    "total": 14845
+   }
+  },
+  {
+   "n": 6,
+   "capability": "diagnosis.text",
+   "input": {
+    "file": "specs/procedure/words.json",
+    "at": "today",
+    "pointer": "/brief/safetyBounds"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.text completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 15361,
+    "completion": 251,
+    "total": 15612
+   }
+  },
+  {
+   "n": 7,
+   "capability": "diagnosis.submit",
+   "input": {
+    "id": "diag-7d510665d714",
+    "verdict": "right",
+    "class": "contract-gap",
+    "current": "closed",
+    "cause": "At the time of the 16 tasks, the safety card and words.json said only to cite \"the fact's id as its reference\". They did not say the reference must be one id and nothing else. The model read this as allowing several ids joined, or an id with an annotation (for example \"test.speedFloorPercent (signed); scrubber.minimumSpeedElevated 40\"). The guard looks the whole string up as a fact id, finds none, and answers \"is not a fact of the library\". That wording is misleading: the real fault is the joined or annotated reference, not a missing fact. The refusal does name the correct fact (test.speedFloorPercent = 30 percent) and tells the model to cite it, so the model corrected itself on the next try. Since 287f5bc, specs/procedure/words.json /brief/safetyBounds says \"the single fact to cite, by its id alone as the reference\", and harness/core/justify.ts says \"Exactly one: for library, one id as library.facts lists it\". The library facts were present and signed, so this is a contract gap and not a library gap or a model-error. It is closed in today's texts.",
+    "evidence": [
+     "rule:procedure:REFERENCE_NOT_A_FACT",
+     "form:procedure:33231b945eef",
+     "statement:contract:6ef2783d2f3c",
+     "statement:contract:4b09f3d1eea0",
+     "attempt:exp3-baseline/t-2026-09-29-0002:8",
+     "correction:exp3-baseline/t-2026-09-29-0002:limits.minSpeedPercent",
+     "attempt:exp3-baseline/t-2026-09-29-0005:8"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "stated-at",
+      "args": {
+       "file": "specs/procedure/words.json",
+       "pointer": "/brief/safetyBounds",
+       "phrase": "by its id alone as the reference",
+       "at": "task:exp3-baseline/t-2026-09-29-0002"
+      },
+      "expect": false
+     },
+     {
+      "role": "cause",
+      "predicate": "sent",
+      "args": {
+       "task": "task:exp3-baseline/t-2026-09-29-0002",
+       "step": 8,
+       "pointer": "/justifications/[constant=limits.minSpeedPercent]/reference",
+       "compare": "contains",
+       "value": ";"
+      },
+      "expect": true
+     },
+     {
+      "role": "current",
+      "predicate": "stated-at",
+      "args": {
+       "file": "specs/procedure/words.json",
+       "pointer": "/brief/safetyBounds",
+       "phrase": "by its id alone as the reference",
+       "at": "today"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "predicate": "fact",
+      "args": {
+       "id": "test.speedFloorPercent",
+       "at": "today",
+       "compare": "present"
+      },
+      "expect": true,
+      "alternative": "library-gap: the fact the model tried to cite was missing from the library or not signed"
+     }
+    ],
+    "justifications": []
+   },
+   "outcome": "completed",
+   "judged": "accepted",
+   "reason": "diagnosis.submit completed; the workshop changed",
+   "tokens": {
+    "prompt": 15364,
+    "completion": 1960,
+    "total": 17324
+   }
+  },
+  {
+   "n": 8,
+   "capability": "task.done",
+   "input": {
+    "summary": "Diagnosis accepted by the guard as diagnoses/diag-7d510665d714.json (sha256 fe8644b354d8c431e87dc72c4be3062b520d88bda1b38707192d8fe8def69eda). The class is contract-gap and the lead's reading is right. At the task's time, the safety card and words.json /brief/safetyBounds said to cite \"the fact's id as its reference\". That wording did not say the reference must be a single id. The model joined two ids, or added qualifiers, in one reference. Example at exp3-baseline/t-2026-09-29-0002 step 8: \"test.speedFloorPercent (signed); scrubber.minimumSpeedElevated 40\" at limits.minSpeedPercent. The guard refused it as not a fact of the library. Its own words were true: the signed rule bounds the value by test.speedFloorPercent = 30 percent, to be cited alone. 16 tasks were refused at their first try. words.json now says \"the single fact to cite, by its id alone as the reference\", and harness/core/justify.ts says \"Exactly one: for library, one id\". The predictions the guard checked all held: the old text lacked the phrase, the bad reference was sent at step 8, the phrase is stated today, and test.speedFloorPercent = 30 in commissioning-test-safety. The cause is closed in the texts, since 287f5bc.",
+    "artifacts": [
+     {
+      "kind": "diagnosis",
+      "path": "diagnoses/diag-7d510665d714.json"
+     }
+    ]
+   },
+   "outcome": "completed",
+   "reason": "contract held on topic diagnosis: diagnosis diagnoses/diag-7d510665d714.json",
+   "tokens": {
+    "prompt": 15336,
+    "completion": 557,
+    "total": 15893
+   }
+  }
+ ],
+ "submissions": [
+  {
+   "step": 7,
+   "outcome": "completed",
+   "refused": false,
+   "reason": "diagnosis.submit completed; the workshop changed",
+   "diagnosis": {
+    "id": "diag-7d510665d714",
+    "verdict": "right",
+    "class": "contract-gap",
+    "current": "closed",
+    "cause": "At the time of the 16 tasks, the safety card and words.json said only to cite \"the fact's id as its reference\". They did not say the reference must be one id and nothing else. The model read this as allowing several ids joined, or an id with an annotation (for example \"test.speedFloorPercent (signed); scrubber.minimumSpeedElevated 40\"). The guard looks the whole string up as a fact id, finds none, and answers \"is not a fact of the library\". That wording is misleading: the real fault is the joined or annotated reference, not a missing fact. The refusal does name the correct fact (test.speedFloorPercent = 30 percent) and tells the model to cite it, so the model corrected itself on the next try. Since 287f5bc, specs/procedure/words.json /brief/safetyBounds says \"the single fact to cite, by its id alone as the reference\", and harness/core/justify.ts says \"Exactly one: for library, one id as library.facts lists it\". The library facts were present and signed, so this is a contract gap and not a library gap or a model-error. It is closed in today's texts.",
+    "evidence": [
+     "rule:procedure:REFERENCE_NOT_A_FACT",
+     "form:procedure:33231b945eef",
+     "statement:contract:6ef2783d2f3c",
+     "statement:contract:4b09f3d1eea0",
+     "attempt:exp3-baseline/t-2026-09-29-0002:8",
+     "correction:exp3-baseline/t-2026-09-29-0002:limits.minSpeedPercent",
+     "attempt:exp3-baseline/t-2026-09-29-0005:8"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "stated-at",
+      "args": {
+       "file": "specs/procedure/words.json",
+       "pointer": "/brief/safetyBounds",
+       "phrase": "by its id alone as the reference",
+       "at": "task:exp3-baseline/t-2026-09-29-0002"
+      },
+      "expect": false
+     },
+     {
+      "role": "cause",
+      "predicate": "sent",
+      "args": {
+       "task": "task:exp3-baseline/t-2026-09-29-0002",
+       "step": 8,
+       "pointer": "/justifications/[constant=limits.minSpeedPercent]/reference",
+       "compare": "contains",
+       "value": ";"
+      },
+      "expect": true
+     },
+     {
+      "role": "current",
+      "predicate": "stated-at",
+      "args": {
+       "file": "specs/procedure/words.json",
+       "pointer": "/brief/safetyBounds",
+       "phrase": "by its id alone as the reference",
+       "at": "today"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "predicate": "fact",
+      "args": {
+       "id": "test.speedFloorPercent",
+       "at": "today",
+       "compare": "present"
+      },
+      "expect": true,
+      "alternative": "library-gap: the fact the model tried to cite was missing from the library or not signed"
+     }
+    ],
+    "justifications": []
+   }
+  }
+ ],
+ "accepted": {
+  "id": "diag-7d510665d714",
+  "lead": {
+   "id": "D1:ec5a5d112405",
+   "detector": "D1",
+   "class": "contract-gap",
+   "title": "REFERENCE_NOT_A_FACT: refused at the first try of 16 task(s) whose texts did not state REFERENCE_NOT_A_FACT; stated since, by specs/procedure/words.json /brief/safetyBounds: \"which is the single fact to cite, by its id alone as the reference\"; harness/core/justify.ts: \"Exactly one: for library, one id as library.facts lists it\"",
+   "settledBy": null,
+   "form": {
+    "id": "form:procedure:33231b945eef",
+    "shape": "justification: *: … is not a fact of the library",
+    "by": "guard"
+   },
+   "path": [
+    "rule:procedure:REFERENCE_NOT_A_FACT <-of- form:procedure:33231b945eef",
+    "<-refused-for- the first attempt of 16 task(s)",
+    "no statement read: rule:procedure:REFERENCE_NOT_A_FACT",
+    "stated now by specs/procedure/words.json /brief/safetyBounds: \"which is the single fact to cite, by its id alone as the reference\"; harness/core/justify.ts: \"Exactly one: for library, one id as library.facts lists it\""
+   ],
+   "about": [
+    "rule:procedure:REFERENCE_NOT_A_FACT",
+    "rule:procedure:REFERENCE_NOT_A_FACT",
+    "form:procedure:33231b945eef"
+   ],
+   "tasks": [
+    "task:exp3-baseline/t-2026-09-29-0002",
+    "task:exp3-baseline/t-2026-09-29-0004",
+    "task:exp3-baseline/t-2026-09-29-0005",
+    "task:exp3-baseline/t-2026-09-29-0006",
+    "task:exp3-baseline/t-2026-09-29-0007",
+    "task:exp3-baseline/t-2026-09-29-0008",
+    "task:exp3-baseline/t-2026-09-29-0009",
+    "task:exp3-baseline/t-2026-09-29-0010",
+    "task:exp4-sonnet-a/t-2026-09-29-0001",
+    "task:exp4-sonnet-a/t-2026-09-29-0002",
+    "task:exp4-sonnet-a/t-2026-09-29-0007",
+    "task:exp4-sonnet-a/t-2026-09-29-0008",
+    "task:exp4-sonnet-a/t-2026-09-29-0009",
+    "task:exp4-sonnet-a/t-2026-09-29-0011",
+    "task:exp4-sonnet-a/t-2026-09-29-0012",
+    "task:exp4-sonnet-a/t-2026-09-29-0016"
+   ],
+   "models": {
+    "claude-sonnet-5-5": 16
+   },
+   "evidence": {
+    "code": "REFERENCE_NOT_A_FACT",
+    "status": "stated",
+    "untold": 16,
+    "told": 0,
+    "unknown": 0,
+    "missing": [
+     "rule:procedure:REFERENCE_NOT_A_FACT"
+    ],
+    "statedNow": [
+     "specs/procedure/words.json /brief/safetyBounds: \"which is the single fact to cite, by its id alone as the reference\"",
+     "harness/core/justify.ts: \"Exactly one: for library, one id as library.facts lists it\""
+    ],
+    "closedSince": [
+     "specs/procedure/words.json /brief/safetyBounds: \"which is the single fact to cite, by its id alone as the reference\"",
+     "harness/core/justify.ts: \"Exactly one: for library, one id as library.facts lists it\""
+    ]
+   },
+   "recommend": false
+  },
+  "forks": [
+   "exp-control",
+   "exp-learn",
+   "exp3-baseline",
+   "exp4-gpt-a",
+   "exp4-gpt-c",
+   "exp4-sonnet-a",
+   "exp6-contract",
+   "exp7-fixes",
+   "exp8-paths"
+  ],
+  "verdict": "right",
+  "cause": "At the time of the 16 tasks, the safety card and words.json said only to cite \"the fact's id as its reference\". They did not say the reference must be one id and nothing else. The model read this as allowing several ids joined, or an id with an annotation (for example \"test.speedFloorPercent (signed); scrubber.minimumSpeedElevated 40\"). The guard looks the whole string up as a fact id, finds none, and answers \"is not a fact of the library\". That wording is misleading: the real fault is the joined or annotated reference, not a missing fact. The refusal does name the correct fact (test.speedFloorPercent = 30 percent) and tells the model to cite it, so the model corrected itself on the next try. Since 287f5bc, specs/procedure/words.json /brief/safetyBounds says \"the single fact to cite, by its id alone as the reference\", and harness/core/justify.ts says \"Exactly one: for library, one id as library.facts lists it\". The library facts were present and signed, so this is a contract gap and not a library gap or a model-error. It is closed in today's texts.",
+  "class": "contract-gap",
+  "current": "closed",
+  "evidence": [
+   "rule:procedure:REFERENCE_NOT_A_FACT",
+   "form:procedure:33231b945eef",
+   "statement:contract:6ef2783d2f3c",
+   "statement:contract:4b09f3d1eea0",
+   "attempt:exp3-baseline/t-2026-09-29-0002:8",
+   "correction:exp3-baseline/t-2026-09-29-0002:limits.minSpeedPercent",
+   "attempt:exp3-baseline/t-2026-09-29-0005:8"
+  ],
+  "predictions": [
+   {
+    "role": "cause",
+    "predicate": "stated-at",
+    "args": {
+     "file": "specs/procedure/words.json",
+     "pointer": "/brief/safetyBounds",
+     "phrase": "by its id alone as the reference",
+     "at": "task:exp3-baseline/t-2026-09-29-0002"
+    },
+    "expect": false,
+    "result": {
+     "truth": "false",
+     "observed": "at task:exp3-baseline/t-2026-09-29-0002, none of specs/procedure/words.json#/brief/safetyBounds held it",
+     "nodes": [
+      "task:exp3-baseline/t-2026-09-29-0002"
+     ],
+     "read": [
+      "specs/procedure/words.json#/brief/safetyBounds@4e3458b732ebb757929df0cfc9e36a8c010329a8"
+     ]
+    }
+   },
+   {
+    "role": "cause",
+    "predicate": "sent",
+    "args": {
+     "task": "task:exp3-baseline/t-2026-09-29-0002",
+     "step": 8,
+     "pointer": "/justifications/[constant=limits.minSpeedPercent]/reference",
+     "compare": "contains",
+     "value": ";"
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "step 8 (procedure.submit) sent \"test.speedFloorPercent (signed); scrubber.minimumSpeedElevated 40\" at /justifications/[constant=limits.minSpeedPercent]/reference",
+     "nodes": [
+      "task:exp3-baseline/t-2026-09-29-0002",
+      "attempt:exp3-baseline/t-2026-09-29-0002:8"
+     ],
+     "read": []
+    }
+   },
+   {
+    "role": "current",
+    "predicate": "stated-at",
+    "args": {
+     "file": "specs/procedure/words.json",
+     "pointer": "/brief/safetyBounds",
+     "phrase": "by its id alone as the reference",
+     "at": "today"
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "stated at today in specs/procedure/words.json#/brief/safetyBounds",
+     "nodes": [],
+     "read": [
+      "specs/procedure/words.json#/brief/safetyBounds@working tree"
+     ]
+    }
+   },
+   {
+    "role": "rules-out",
+    "predicate": "fact",
+    "args": {
+     "id": "test.speedFloorPercent",
+     "at": "today",
+     "compare": "present"
+    },
+    "expect": true,
+    "alternative": "library-gap: the fact the model tried to cite was missing from the library or not signed",
+    "result": {
+     "truth": "true",
+     "observed": "test.speedFloorPercent = 30 percent (commissioning-test-safety)",
+     "nodes": [],
+     "read": [
+      "docs/library/commissioning-test-safety.facts.json"
+     ]
+    }
+   }
+  ],
+  "checked": {
+   "confirmed": 4,
+   "unknown": 0,
+   "byRole": {
+    "cause": {
+     "confirmed": 2,
+     "of": 2
+    },
+    "current": {
+     "confirmed": 1,
+     "of": 1
+    },
+    "rules-out": {
+     "confirmed": 1,
+     "of": 1
+    }
+   },
+   "alternativesRuledOut": [
+    "library-gap: the fact the model tried to cite was missing from the library or not signed"
+   ]
+  },
+  "justifications": []
+ },
+ "station": {
+  "status": "diagnosed"
+ },
+ "tokens": {
+  "prompt": 115585,
+  "completion": 3751
+ }
+}

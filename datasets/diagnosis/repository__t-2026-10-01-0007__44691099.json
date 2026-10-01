@@ -1,0 +1,1257 @@
+{
+ "schema": 1,
+ "key": "repository/t-2026-10-01-0007",
+ "workshop": "repository",
+ "taskId": "t-2026-10-01-0007",
+ "recordedAt": "2026-10-01T19:09:21.211Z",
+ "startedAt": "2026-10-01T19:08:07.735Z",
+ "endedAt": "2026-10-01T19:09:20.362Z",
+ "state": "proposed",
+ "ended": "contract held after 14 step(s)",
+ "requestedBy": "station (evaluator)",
+ "corpus": "evaluator",
+ "forks": [
+  "exp-control",
+  "exp-learn",
+  "exp3-baseline",
+  "exp4-gpt-a",
+  "exp4-gpt-c",
+  "exp4-sonnet-a",
+  "exp6-contract",
+  "exp7-fixes",
+  "exp8-paths"
+ ],
+ "lead": "D4:467375274717",
+ "diagnosisId": "diag-71b57fe124ba",
+ "model": "gpt-5.6-sol",
+ "family": "gpt",
+ "provider": {
+  "name": "reasoner:gpt",
+  "model": "gpt-5.6-sol",
+  "family": "gpt",
+  "settings": {
+   "maxTokens": 8192,
+   "maxTokensParam": null,
+   "temperature": null,
+   "reasoningEffort": null,
+   "timeoutMs": 180000
+  },
+  "profile": {
+   "file": "profiles/openai-gpt.json",
+   "sha256": "1b15955d0eb3113d08cd56851da12950c1842477c7ba0197ec20d20e35c128b4"
+  }
+ },
+ "profile": {
+  "file": "profiles/anthropic.json",
+  "sha256": "57b865b5b073a8d0fc00cfaa6e23171d4dca37acbb447b317c622718f68df5d0"
+ },
+ "harness": {
+  "repository": "b253fbd93cde4274c37e0b5e09554c32da466451",
+  "fork": null
+ },
+ "asked": {
+  "id": "diag-71b57fe124ba",
+  "forks": [
+   "exp-control",
+   "exp-learn",
+   "exp3-baseline",
+   "exp4-gpt-a",
+   "exp4-gpt-c",
+   "exp4-sonnet-a",
+   "exp6-contract",
+   "exp7-fixes",
+   "exp8-paths"
+  ],
+  "lead": {
+   "id": "D4:467375274717",
+   "detector": "D4",
+   "class": "harness-artefact",
+   "title": "2 task(s) ended in a loop of the harness's refusals: \"* with the same input was the previous step, and completed\"",
+   "settledBy": null,
+   "form": {
+    "id": "form:procedure:harness:9b0e6ddae04e",
+    "shape": "* with the same input was the previous step, and completed",
+    "by": "harness"
+   },
+   "path": [
+    "2 task(s) ended \"STUCK: library.read refused 3 times in a row on the same point(s), library.read,\"",
+    "step:exp-control/t-2026-09-29-0005:11 (library.read) -refused-for-> form:procedure:harness:9b0e6ddae04e",
+    "step:exp-control/t-2026-09-29-0005:14 (library.read) -refused-for-> form:procedure:harness:9b0e6ddae04e",
+    "step:exp-control/t-2026-09-29-0005:17 (library.read) -refused-for-> form:procedure:harness:9b0e6ddae04e"
+   ],
+   "about": [
+    "form:procedure:harness:9b0e6ddae04e",
+    "task:exp-control/t-2026-09-29-0005",
+    "task:exp6-contract/t-2026-09-30-0004"
+   ],
+   "tasks": [
+    "task:exp-control/t-2026-09-29-0005",
+    "task:exp6-contract/t-2026-09-30-0004"
+   ],
+   "models": {
+    "claude-sonnet-5-5": 2
+   },
+   "evidence": {
+    "loops": {
+     "task:exp-control/t-2026-09-29-0005": [
+      11,
+      14,
+      17
+     ],
+     "task:exp6-contract/t-2026-09-30-0004": [
+      13,
+      15,
+      17
+     ]
+    },
+    "forms": [
+     "form:procedure:harness:9b0e6ddae04e"
+    ]
+   },
+   "recommend": true
+  },
+  "neighbourhood": {
+   "nodes": [
+    "form:procedure:harness:9b0e6ddae04e [form] {\"topic\":\"procedure\",\"shape\":\"* with the same input was the previous step, and completed\",\"kind\":\"PRE_GUARD_REJECTED\",\"by\":\"harness\"}",
+    "task:exp-control/t-2026-09-29-0005 [task] {\"taskId\":\"t-2026-09-29-0005\",\"workshop\":\"exp-control\",\"topic\":\"procedure\",\"state\":\"failed\",\"startedAt\":\"2026-09-29T19:02:58.787Z\",\"ended\":\"STUCK: library.read …",
+    "task:exp6-contract/t-2026-09-30-0004 [task] {\"taskId\":\"t-2026-09-30-0004\",\"workshop\":\"exp6-contract\",\"topic\":\"procedure\",\"state\":\"failed\",\"startedAt\":\"2026-09-30T09:09:04.865Z\",\"ended\":\"STUCK: workspace.r…",
+    "step:exp-learn/t-2026-09-29-0008:14 [step] {\"step\":14,\"capability\":\"library.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"library.read with the same input was the previous step, and completed: its answe…",
+    "step:exp-learn/t-2026-09-29-0009:13 [step] {\"step\":13,\"capability\":\"library.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"library.read with the same input was the previous step, and completed: its answe…",
+    "step:exp-control/t-2026-09-29-0004:11 [step] {\"step\":11,\"capability\":\"library.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"library.read with the same input was the previous step, and completed: its answe…",
+    "step:exp-control/t-2026-09-29-0005:11 [step] {\"step\":11,\"capability\":\"library.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"library.read with the same input was the previous step, and completed: its answe…",
+    "step:exp-control/t-2026-09-29-0005:14 [step] {\"step\":14,\"capability\":\"library.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"library.read with the same input was the previous step, and completed: its answe…",
+    "step:exp-control/t-2026-09-29-0005:17 [step] {\"step\":17,\"capability\":\"library.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"library.read with the same input was the previous step, and completed: its answe…",
+    "step:exp4-sonnet-a/t-2026-09-29-0007:10 [step] {\"step\":10,\"capability\":\"library.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"library.read with the same input was the previous step, and completed: its answe…",
+    "step:exp4-sonnet-a/t-2026-09-29-0010:12 [step] {\"step\":12,\"capability\":\"library.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"library.read with the same input was the previous step, and completed: its answe…",
+    "step:exp4-sonnet-a/t-2026-09-29-0011:12 [step] {\"step\":12,\"capability\":\"library.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"library.read with the same input was the previous step, and completed: its answe…",
+    "step:exp4-sonnet-a/t-2026-09-29-0015:10 [step] {\"step\":10,\"capability\":\"library.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"library.read with the same input was the previous step, and completed: its answe…",
+    "step:exp4-sonnet-a/t-2026-09-29-0015:13 [step] {\"step\":13,\"capability\":\"library.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"library.read with the same input was the previous step, and completed: its answe…",
+    "step:exp6-contract/t-2026-09-30-0003:9 [step] {\"step\":9,\"capability\":\"library.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"library.read with the same input was the previous step, and completed: its answer…",
+    "step:exp6-contract/t-2026-09-30-0004:10 [step] {\"step\":10,\"capability\":\"library.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"library.read with the same input was the previous step, and completed: its answe…",
+    "step:exp6-contract/t-2026-09-30-0004:13 [step] {\"step\":13,\"capability\":\"workspace.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"workspace.read with the same input was the previous step, and completed: its a…",
+    "step:exp6-contract/t-2026-09-30-0004:15 [step] {\"step\":15,\"capability\":\"workspace.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"workspace.read with the same input was the previous step, and completed: its a…",
+    "step:exp6-contract/t-2026-09-30-0004:17 [step] {\"step\":17,\"capability\":\"workspace.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"workspace.read with the same input was the previous step, and completed: its a…",
+    "step:exp6-contract/t-2026-09-30-0005:16 [step] {\"step\":16,\"capability\":\"library.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"library.read with the same input was the previous step, and completed: its answe…",
+    "step:exp6-contract/t-2026-09-30-0009:11 [step] {\"step\":11,\"capability\":\"library.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"library.read with the same input was the previous step, and completed: its answe…",
+    "step:exp7-fixes/t-2026-09-30-0006:9 [step] {\"step\":9,\"capability\":\"library.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"library.read with the same input was the previous step, and completed: its answer…",
+    "step:exp7-fixes/t-2026-09-30-0010:9 [step] {\"step\":9,\"capability\":\"library.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"library.read with the same input was the previous step, and completed: its answer…",
+    "step:exp8-paths/t-2026-09-30-0003:9 [step] {\"step\":9,\"capability\":\"library.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"library.read with the same input was the previous step, and completed: its answer…",
+    "step:exp8-paths/t-2026-09-30-0010:11 [step] {\"step\":11,\"capability\":\"library.read\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"library.read with the same input was the previous step, and completed: its answe…",
+    "model:claude-sonnet-5-5 [model] {\"model\":\"claude-sonnet-5-5\",\"provider\":\"reasoner:claude\",\"family\":\"claude\"}",
+    "fingerprint:f6f379ac8445 [fingerprint] {\"tools\":\"7474411ba76bc4d4cfb83066834385e723eaf6ce05d0b7471590a702cd4edc65\",\"toolsDetailed\":false,\"words\":null,\"prompt\":\"9d6df0fbe9e4ef78233baea24c821740dcbd529…",
+    "statement:9d6df0fbe9e4ef78233baea24c821740dcbd5291120de0f2469b05697db2917f [statement] {\"slot\":\"prompt:specs/procedure/prompt.md\",\"kind\":\"prompt\",\"of\":\"specs/procedure/prompt.md\",\"sha256\":\"9d6df0fbe9e4ef78233baea24c821740dcbd5291120de0f2469b05697d…",
+    "statement:contract:d318d8ec9126 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/procedure\",\"phrase\":\"cite a fact of a library document a person signed\"}",
+    "statement:contract:661448b756fd [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/safetyBounds\",\"phrase\":\"the fact its signed rules bound it by\"}",
+    "statement:contract:ec185a62d3cd [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/procedure\",\"phrase\":\"library.facts says which are signed\"}",
+    "statement:contract:d0d31897432e [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/procedure\",\"phrase\":\"and respect it\"}",
+    "statement:contract:e7c8ceacd378 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/safetyBounds\",\"phrase\":\"and on which side\"}",
+    "statement:contract:1770e40880de [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/procedure\",\"phrase\":\"Every constant you set is justified in justifications\"}",
+    "statement:contract:be58c67f8aab [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"its value (a number, or [min, max] for bounds)\"}",
+    "statement:contract:b020dd6a2c51 [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"Why, in a few words\"}",
+    "statement:contract:2ba750a23bd2 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/procedure\",\"phrase\":\"cite what you read\"}",
+    "statement:contract:189045e7d19f [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"web: a URL a search returned\"}",
+    "statement:contract:06599146cbe7 [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"measured: what the task observed\"}",
+    "statement:contract:96011ca77ae3 [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"envelope: a bound of the guard's envelope\"}",
+    "statement:contract:98914823d9ec [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"derived: the formula\"}",
+    "statement:contract:e5418443b2af [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"library: a document or fact id read in this task\"}",
+    "statement:contract:d61820a4a508 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/capabilities/analyse\",\"phrase\":\"the new procedure must make these changes\"}",
+    "statement:contract:a68c38560610 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/analysed\",\"phrase\":\"the procedure must change what it names\"}",
+    "statement:contract:58656577bd4f [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/analysis\",\"phrase\":\"Before any new procedure, analyse it with procedure.analyse\"}",
+    "statement:contract:ed4d477392a3 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/handOver\",\"phrase\":\"End with task.done\"}",
+    "statement:contract:f4047e81683f [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/methodFind\",\"phrase\":\"read the card of the one you choose\"}",
+    "statement:contract:164ede095e07 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/capabilities/revise\",\"phrase\":\"When nothing is kept\"}",
+    "statement:contract:8ef5996c115c [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/capabilities/analyse\",\"phrase\":\"Analyse why the last test was aborted\"}",
+    "statement:contract:aa7b9a3e49f9 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/capabilities/analyse\",\"phrase\":\"the cause\"}"
+   ],
+   "links": [
+    "task:exp-control/t-2026-09-29-0005 ran-by model:claude-sonnet-5-5",
+    "task:exp-control/t-2026-09-29-0005 ran-under fingerprint:f6f379ac8445",
+    "task:exp-control/t-2026-09-29-0005 read statement:9d6df0fbe9e4ef78233baea24c821740dcbd5291120de0f2469b05697db2917f",
+    "task:exp-control/t-2026-09-29-0005 read statement:contract:d318d8ec9126",
+    "task:exp-control/t-2026-09-29-0005 read statement:contract:661448b756fd",
+    "task:exp-control/t-2026-09-29-0005 read statement:contract:ec185a62d3cd",
+    "task:exp-control/t-2026-09-29-0005 read statement:contract:d0d31897432e",
+    "task:exp-control/t-2026-09-29-0005 read statement:contract:e7c8ceacd378",
+    "task:exp-control/t-2026-09-29-0005 read statement:contract:1770e40880de",
+    "task:exp-control/t-2026-09-29-0005 read statement:contract:be58c67f8aab",
+    "task:exp-control/t-2026-09-29-0005 read statement:contract:b020dd6a2c51",
+    "task:exp-control/t-2026-09-29-0005 read statement:contract:2ba750a23bd2",
+    "task:exp-control/t-2026-09-29-0005 read statement:contract:189045e7d19f",
+    "task:exp-control/t-2026-09-29-0005 read statement:contract:06599146cbe7",
+    "task:exp-control/t-2026-09-29-0005 read statement:contract:96011ca77ae3",
+    "task:exp-control/t-2026-09-29-0005 read statement:contract:98914823d9ec",
+    "task:exp-control/t-2026-09-29-0005 read statement:contract:e5418443b2af",
+    "task:exp-control/t-2026-09-29-0005 read statement:contract:d61820a4a508",
+    "task:exp-control/t-2026-09-29-0005 read statement:contract:a68c38560610",
+    "task:exp-control/t-2026-09-29-0005 read statement:contract:58656577bd4f",
+    "task:exp-control/t-2026-09-29-0005 read statement:contract:ed4d477392a3",
+    "task:exp-control/t-2026-09-29-0005 read statement:contract:f4047e81683f",
+    "task:exp-control/t-2026-09-29-0005 read statement:contract:164ede095e07",
+    "task:exp-control/t-2026-09-29-0005 read statement:contract:8ef5996c115c",
+    "task:exp-control/t-2026-09-29-0005 read statement:contract:aa7b9a3e49f9",
+    "task:exp6-contract/t-2026-09-30-0004 ran-by model:claude-sonnet-5-5",
+    "task:exp6-contract/t-2026-09-30-0004 read statement:contract:d318d8ec9126",
+    "task:exp6-contract/t-2026-09-30-0004 read statement:contract:661448b756fd",
+    "task:exp6-contract/t-2026-09-30-0004 read statement:contract:ec185a62d3cd",
+    "task:exp6-contract/t-2026-09-30-0004 read statement:contract:d0d31897432e",
+    "task:exp6-contract/t-2026-09-30-0004 read statement:contract:e7c8ceacd378",
+    "task:exp6-contract/t-2026-09-30-0004 read statement:contract:1770e40880de",
+    "task:exp6-contract/t-2026-09-30-0004 read statement:contract:be58c67f8aab",
+    "task:exp6-contract/t-2026-09-30-0004 read statement:contract:b020dd6a2c51",
+    "task:exp6-contract/t-2026-09-30-0004 read statement:contract:2ba750a23bd2",
+    "task:exp6-contract/t-2026-09-30-0004 read statement:contract:189045e7d19f",
+    "task:exp6-contract/t-2026-09-30-0004 read statement:contract:06599146cbe7",
+    "task:exp6-contract/t-2026-09-30-0004 read statement:contract:96011ca77ae3",
+    "task:exp6-contract/t-2026-09-30-0004 read statement:contract:98914823d9ec",
+    "task:exp6-contract/t-2026-09-30-0004 read statement:contract:e5418443b2af",
+    "task:exp6-contract/t-2026-09-30-0004 read statement:contract:d61820a4a508",
+    "task:exp6-contract/t-2026-09-30-0004 read statement:contract:a68c38560610",
+    "task:exp6-contract/t-2026-09-30-0004 read statement:contract:58656577bd4f",
+    "task:exp6-contract/t-2026-09-30-0004 read statement:contract:ed4d477392a3",
+    "task:exp6-contract/t-2026-09-30-0004 read statement:contract:f4047e81683f",
+    "task:exp6-contract/t-2026-09-30-0004 read statement:contract:164ede095e07",
+    "task:exp6-contract/t-2026-09-30-0004 read statement:contract:8ef5996c115c",
+    "task:exp6-contract/t-2026-09-30-0004 read statement:contract:aa7b9a3e49f9",
+    "step:exp-learn/t-2026-09-29-0008:14 refused-for form:procedure:harness:9b0e6ddae04e",
+    "step:exp-learn/t-2026-09-29-0009:13 refused-for form:procedure:harness:9b0e6ddae04e",
+    "step:exp-control/t-2026-09-29-0004:11 refused-for form:procedure:harness:9b0e6ddae04e",
+    "step:exp-control/t-2026-09-29-0005:11 of task:exp-control/t-2026-09-29-0005",
+    "step:exp-control/t-2026-09-29-0005:11 refused-for form:procedure:harness:9b0e6ddae04e",
+    "step:exp-control/t-2026-09-29-0005:14 of task:exp-control/t-2026-09-29-0005",
+    "step:exp-control/t-2026-09-29-0005:14 refused-for form:procedure:harness:9b0e6ddae04e",
+    "step:exp-control/t-2026-09-29-0005:17 of task:exp-control/t-2026-09-29-0005",
+    "step:exp-control/t-2026-09-29-0005:17 refused-for form:procedure:harness:9b0e6ddae04e",
+    "step:exp4-sonnet-a/t-2026-09-29-0007:10 refused-for form:procedure:harness:9b0e6ddae04e",
+    "step:exp4-sonnet-a/t-2026-09-29-0010:12 refused-for form:procedure:harness:9b0e6ddae04e",
+    "step:exp4-sonnet-a/t-2026-09-29-0011:12 refused-for form:procedure:harness:9b0e6ddae04e",
+    "step:exp4-sonnet-a/t-2026-09-29-0015:10 refused-for form:procedure:harness:9b0e6ddae04e",
+    "step:exp4-sonnet-a/t-2026-09-29-0015:13 refused-for form:procedure:harness:9b0e6ddae04e",
+    "step:exp6-contract/t-2026-09-30-0003:9 refused-for form:procedure:harness:9b0e6ddae04e",
+    "step:exp6-contract/t-2026-09-30-0004:10 of task:exp6-contract/t-2026-09-30-0004",
+    "step:exp6-contract/t-2026-09-30-0004:10 refused-for form:procedure:harness:9b0e6ddae04e",
+    "step:exp6-contract/t-2026-09-30-0004:13 of task:exp6-contract/t-2026-09-30-0004",
+    "step:exp6-contract/t-2026-09-30-0004:13 refused-for form:procedure:harness:9b0e6ddae04e",
+    "step:exp6-contract/t-2026-09-30-0004:15 of task:exp6-contract/t-2026-09-30-0004",
+    "step:exp6-contract/t-2026-09-30-0004:15 refused-for form:procedure:harness:9b0e6ddae04e",
+    "step:exp6-contract/t-2026-09-30-0004:17 of task:exp6-contract/t-2026-09-30-0004",
+    "step:exp6-contract/t-2026-09-30-0004:17 refused-for form:procedure:harness:9b0e6ddae04e",
+    "step:exp6-contract/t-2026-09-30-0005:16 refused-for form:procedure:harness:9b0e6ddae04e",
+    "step:exp6-contract/t-2026-09-30-0009:11 refused-for form:procedure:harness:9b0e6ddae04e",
+    "step:exp7-fixes/t-2026-09-30-0006:9 refused-for form:procedure:harness:9b0e6ddae04e",
+    "step:exp7-fixes/t-2026-09-30-0010:9 refused-for form:procedure:harness:9b0e6ddae04e",
+    "step:exp8-paths/t-2026-09-30-0003:9 refused-for form:procedure:harness:9b0e6ddae04e",
+    "step:exp8-paths/t-2026-09-30-0010:11 refused-for form:procedure:harness:9b0e6ddae04e",
+    "fingerprint:f6f379ac8445 changed statement:9d6df0fbe9e4ef78233baea24c821740dcbd5291120de0f2469b05697db2917f"
+   ]
+  },
+  "rules": [],
+  "today": {
+   "commit": "b253fbd",
+   "signatures": {},
+   "profiles": {
+    "profiles/anthropic.json": {
+     "wire": "anthropic-messages",
+     "model": "claude-haiku-4-5-20251001",
+     "capabilities": [
+      "tools",
+      "json"
+     ]
+    }
+   }
+  },
+  "refuted": []
+ },
+ "askedSha256": "fb69d3f3e9ec456b1eea93ec9343231d21660c7fcb043dcd0666f076c6fe8194",
+ "steps": [
+  {
+   "n": 1,
+   "capability": "task.plan",
+   "input": {
+    "selected_nodes": [],
+    "missing_capabilities": [
+     {
+      "required_output": "diag-71b57fe124ba",
+      "quantity": "Diagnosis",
+      "reason": "The diagnosis is made here from harness graph, task-step, and contract evidence; no catalogue node produces it.",
+      "topic": "diagnosis"
+     }
+    ]
+   },
+   "outcome": "completed",
+   "reason": "plan accepted: 0 node type(s), 1 missing capability(ies)",
+   "tokens": {
+    "prompt": 13664,
+    "completion": 70,
+    "total": 13734
+   }
+  },
+  {
+   "n": 2,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp-control/t-2026-09-29-0005",
+    "step": 11,
+    "part": "outline"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 14029,
+    "completion": 65,
+    "total": 14094
+   }
+  },
+  {
+   "n": 3,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp-control/t-2026-09-29-0005",
+    "step": 11,
+    "part": "reason"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 14340,
+    "completion": 59,
+    "total": 14399
+   }
+  },
+  {
+   "n": 4,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp-control/t-2026-09-29-0005",
+    "step": 10,
+    "part": "outline"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 14442,
+    "completion": 78,
+    "total": 14520
+   }
+  },
+  {
+   "n": 5,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp6-contract/t-2026-09-30-0004",
+    "step": 13,
+    "part": "outline"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 14629,
+    "completion": 69,
+    "total": 14698
+   }
+  },
+  {
+   "n": 6,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp-control/t-2026-09-29-0005",
+    "step": 12,
+    "part": "outline"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 14812,
+    "completion": 97,
+    "total": 14909
+   }
+  },
+  {
+   "n": 7,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp-control/t-2026-09-29-0005",
+    "step": 13,
+    "part": "outline"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 14961,
+    "completion": 79,
+    "total": 15040
+   }
+  },
+  {
+   "n": 8,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp6-contract/t-2026-09-30-0004",
+    "step": 12,
+    "part": "outline"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 15121,
+    "completion": 85,
+    "total": 15206
+   }
+  },
+  {
+   "n": 9,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp-control/t-2026-09-29-0005",
+    "step": 14,
+    "part": "outline"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 15298,
+    "completion": 110,
+    "total": 15408
+   }
+  },
+  {
+   "n": 10,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp6-contract/t-2026-09-30-0004",
+    "step": 15,
+    "part": "outline"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 15456,
+    "completion": 210,
+    "total": 15666
+   }
+  },
+  {
+   "n": 11,
+   "capability": "diagnosis.submit",
+   "input": {
+    "id": "diag-71b57fe124ba",
+    "verdict": "right",
+    "cause": "Both failures were caused by the model reissuing a read with exactly the input of a completed read, even after the harness explained that the answer remained in state. The repeat refusal was accurate and pre-guard; the terminal loop came from continuing to request redundant reads rather than using the stored result or taking another action.",
+    "class": "model-error",
+    "current": "still",
+    "evidence": [
+     "form:procedure:harness:9b0e6ddae04e",
+     "task:exp-control/t-2026-09-29-0005",
+     "step:exp-control/t-2026-09-29-0005:10",
+     "step:exp-control/t-2026-09-29-0005:11",
+     "step:exp-control/t-2026-09-29-0005:12",
+     "step:exp-control/t-2026-09-29-0005:13",
+     "step:exp-control/t-2026-09-29-0005:14",
+     "task:exp6-contract/t-2026-09-30-0004",
+     "step:exp6-contract/t-2026-09-30-0004:12",
+     "step:exp6-contract/t-2026-09-30-0004:13",
+     "step:exp6-contract/t-2026-09-30-0004:15"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "preceded-by",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0005",
+       "step": 11,
+       "outcome": "completed"
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "sent",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0005",
+       "step": 10,
+       "pointer": "/id",
+       "compare": "=",
+       "value": "commissioning-test-safety"
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "sent",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0005",
+       "step": 11,
+       "pointer": "/id",
+       "compare": "=",
+       "value": "commissioning-test-safety"
+      },
+      "expect": true
+     },
+     {
+      "role": "current",
+      "predicate": "stated-at",
+      "args": {
+       "file": "specs/procedure/prompt.md",
+       "phrase": "The state is what you read",
+       "at": "today"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "alternative": "The harness falsely reported a duplicate because the immediately preceding same-family call had not completed.",
+      "predicate": "preceded-by",
+      "args": {
+       "task": "task:exp6-contract/t-2026-09-30-0004",
+       "step": 13,
+       "outcome": "completed"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "alternative": "The first task was trapped because every later read of commissioning-test-safety was automatically refused, even after an intervening different read.",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0005",
+       "step": 13,
+       "outcome": "completed"
+      },
+      "expect": true
+     }
+    ],
+    "justifications": []
+   },
+   "outcome": "refused",
+   "judged": "refused",
+   "reason": "diagnosis refused: step:exp-control/t-2026-09-29-0005:10 is not a node of the harness's graph (diagnosis.graph reads it); step:exp-control/t-2026-09-29-0005:12 is not a node of the harness's graph (diagnosis.graph reads it); step:exp-control/t-2026-09-29-0005:13 is not a node of the harness's graph (diagnosis.graph reads it); step:exp6-contract/t-2026-09-30-0004:12 is not a node of the harness's graph (diagnosis.graph reads it)",
+   "tokens": {
+    "prompt": 15636,
+    "completion": 1354,
+    "total": 16990
+   }
+  },
+  {
+   "n": 12,
+   "capability": "diagnosis.submit",
+   "input": {
+    "id": "diag-71b57fe124ba",
+    "verdict": "right",
+    "cause": "Both tasks failed because the model repeatedly reissued read calls with the same input as a completed read, despite the harness saying the result remained in state. The duplicate-read refusals were accurate pre-guard checks; the terminal loops came from the model continuing redundant reads instead of using the stored result or taking another action.",
+    "class": "model-error",
+    "current": "still",
+    "evidence": [
+     "form:procedure:harness:9b0e6ddae04e",
+     "task:exp-control/t-2026-09-29-0005",
+     "step:exp-control/t-2026-09-29-0005:11",
+     "step:exp-control/t-2026-09-29-0005:14",
+     "step:exp-control/t-2026-09-29-0005:17",
+     "task:exp6-contract/t-2026-09-30-0004",
+     "step:exp6-contract/t-2026-09-30-0004:13",
+     "step:exp6-contract/t-2026-09-30-0004:15",
+     "step:exp6-contract/t-2026-09-30-0004:17"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "preceded-by",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0005",
+       "step": 11,
+       "outcome": "completed"
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "sent",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0005",
+       "step": 10,
+       "pointer": "/id",
+       "compare": "=",
+       "value": "commissioning-test-safety"
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "sent",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0005",
+       "step": 11,
+       "pointer": "/id",
+       "compare": "=",
+       "value": "commissioning-test-safety"
+      },
+      "expect": true
+     },
+     {
+      "role": "current",
+      "predicate": "stated-at",
+      "args": {
+       "file": "specs/procedure/prompt.md",
+       "phrase": "The state is what you read",
+       "at": "today"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "alternative": "The harness falsely reported a duplicate although the immediately preceding same-family call had not completed.",
+      "predicate": "preceded-by",
+      "args": {
+       "task": "task:exp6-contract/t-2026-09-30-0004",
+       "step": 13,
+       "outcome": "completed"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "alternative": "The first task was trapped because any later read of commissioning-test-safety was refused even after an intervening different read.",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0005",
+       "step": 13,
+       "outcome": "completed"
+      },
+      "expect": true
+     }
+    ],
+    "justifications": []
+   },
+   "outcome": "refused",
+   "judged": "refused",
+   "reason": "diagnosis refused: prediction 4 (current) expected true, the harness observed false: at today, none of specs/procedure/prompt.md held it",
+   "tokens": {
+    "prompt": 17190,
+    "completion": 845,
+    "total": 18035
+   }
+  },
+  {
+   "n": 13,
+   "capability": "diagnosis.submit",
+   "input": {
+    "id": "diag-71b57fe124ba",
+    "verdict": "right",
+    "cause": "Both tasks failed because the model repeatedly reissued read calls with the same input as a completed read, despite each refusal saying the result remained in state. The duplicate-read refusals accurately described the immediately preceding calls; the terminal loops came from the model continuing redundant reads rather than using the stored result or taking another action.",
+    "class": "model-error",
+    "current": "unknown",
+    "evidence": [
+     "form:procedure:harness:9b0e6ddae04e",
+     "task:exp-control/t-2026-09-29-0005",
+     "step:exp-control/t-2026-09-29-0005:11",
+     "step:exp-control/t-2026-09-29-0005:14",
+     "step:exp-control/t-2026-09-29-0005:17",
+     "task:exp6-contract/t-2026-09-30-0004",
+     "step:exp6-contract/t-2026-09-30-0004:13",
+     "step:exp6-contract/t-2026-09-30-0004:15",
+     "step:exp6-contract/t-2026-09-30-0004:17"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "preceded-by",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0005",
+       "step": 11,
+       "outcome": "completed"
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "sent",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-29-0005",
+       "step": 10,
+       "pointer": "/id",
+       "compare": "=",
+       "value": "commissioning-test-safety"
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "sent",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0005",
+       "step": 11,
+       "pointer": "/id",
+       "compare": "=",
+       "value": "commissioning-test-safety"
+      },
+      "expect": true
+     },
+     {
+      "role": "current",
+      "predicate": "stated-at",
+      "args": {
+       "file": "specs/procedure/prompt.md",
+       "phrase": "The state is what you read",
+       "at": "today"
+      },
+      "expect": false
+     },
+     {
+      "role": "rules-out",
+      "alternative": "The harness falsely reported a duplicate although the immediately preceding same-family call had not completed.",
+      "predicate": "preceded-by",
+      "args": {
+       "task": "task:exp6-contract/t-2026-09-30-0004",
+       "step": 13,
+       "outcome": "completed"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "alternative": "The first task was trapped because any later read of commissioning-test-safety was refused even after an intervening different read.",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0005",
+       "step": 13,
+       "outcome": "completed"
+      },
+      "expect": true
+     }
+    ],
+    "justifications": []
+   },
+   "outcome": "completed",
+   "judged": "accepted",
+   "reason": "diagnosis.submit completed; the workshop changed",
+   "tokens": {
+    "prompt": 16649,
+    "completion": 825,
+    "total": 17474
+   }
+  },
+  {
+   "n": 14,
+   "capability": "task.done",
+   "input": {
+    "summary": "Diagnosed lead D4:467375274717. The accepted diagnosis is recorded at diagnoses/diag-71b57fe124ba.json (SHA-256 25fc70bbcc9621ad61eb2deefa9fdd6baeef448673c0d1455ce4e2b66123535c).",
+    "artifacts": [
+     {
+      "kind": "diagnosis",
+      "path": "diagnoses/diag-71b57fe124ba.json"
+     }
+    ]
+   },
+   "outcome": "completed",
+   "reason": "contract held on topic diagnosis: diagnosis diagnoses/diag-71b57fe124ba.json",
+   "tokens": {
+    "prompt": 15756,
+    "completion": 112,
+    "total": 15868
+   }
+  }
+ ],
+ "submissions": [
+  {
+   "step": 11,
+   "outcome": "refused",
+   "refused": true,
+   "reason": "diagnosis refused: step:exp-control/t-2026-09-29-0005:10 is not a node of the harness's graph (diagnosis.graph reads it); step:exp-control/t-2026-09-29-0005:12 is not a node of the harness's graph (diagnosis.graph reads it); step:exp-control/t-2026-09-29-0005:13 is not a node of the harness's graph (diagnosis.graph reads it); step:exp6-contract/t-2026-09-30-0004:12 is not a node of the harness's graph (diagnosis.graph reads it)",
+   "diagnosis": {
+    "id": "diag-71b57fe124ba",
+    "verdict": "right",
+    "cause": "Both failures were caused by the model reissuing a read with exactly the input of a completed read, even after the harness explained that the answer remained in state. The repeat refusal was accurate and pre-guard; the terminal loop came from continuing to request redundant reads rather than using the stored result or taking another action.",
+    "class": "model-error",
+    "current": "still",
+    "evidence": [
+     "form:procedure:harness:9b0e6ddae04e",
+     "task:exp-control/t-2026-09-29-0005",
+     "step:exp-control/t-2026-09-29-0005:10",
+     "step:exp-control/t-2026-09-29-0005:11",
+     "step:exp-control/t-2026-09-29-0005:12",
+     "step:exp-control/t-2026-09-29-0005:13",
+     "step:exp-control/t-2026-09-29-0005:14",
+     "task:exp6-contract/t-2026-09-30-0004",
+     "step:exp6-contract/t-2026-09-30-0004:12",
+     "step:exp6-contract/t-2026-09-30-0004:13",
+     "step:exp6-contract/t-2026-09-30-0004:15"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "preceded-by",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0005",
+       "step": 11,
+       "outcome": "completed"
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "sent",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0005",
+       "step": 10,
+       "pointer": "/id",
+       "compare": "=",
+       "value": "commissioning-test-safety"
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "sent",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0005",
+       "step": 11,
+       "pointer": "/id",
+       "compare": "=",
+       "value": "commissioning-test-safety"
+      },
+      "expect": true
+     },
+     {
+      "role": "current",
+      "predicate": "stated-at",
+      "args": {
+       "file": "specs/procedure/prompt.md",
+       "phrase": "The state is what you read",
+       "at": "today"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "alternative": "The harness falsely reported a duplicate because the immediately preceding same-family call had not completed.",
+      "predicate": "preceded-by",
+      "args": {
+       "task": "task:exp6-contract/t-2026-09-30-0004",
+       "step": 13,
+       "outcome": "completed"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "alternative": "The first task was trapped because every later read of commissioning-test-safety was automatically refused, even after an intervening different read.",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0005",
+       "step": 13,
+       "outcome": "completed"
+      },
+      "expect": true
+     }
+    ],
+    "justifications": []
+   }
+  },
+  {
+   "step": 12,
+   "outcome": "refused",
+   "refused": true,
+   "reason": "diagnosis refused: prediction 4 (current) expected true, the harness observed false: at today, none of specs/procedure/prompt.md held it",
+   "diagnosis": {
+    "id": "diag-71b57fe124ba",
+    "verdict": "right",
+    "cause": "Both tasks failed because the model repeatedly reissued read calls with the same input as a completed read, despite the harness saying the result remained in state. The duplicate-read refusals were accurate pre-guard checks; the terminal loops came from the model continuing redundant reads instead of using the stored result or taking another action.",
+    "class": "model-error",
+    "current": "still",
+    "evidence": [
+     "form:procedure:harness:9b0e6ddae04e",
+     "task:exp-control/t-2026-09-29-0005",
+     "step:exp-control/t-2026-09-29-0005:11",
+     "step:exp-control/t-2026-09-29-0005:14",
+     "step:exp-control/t-2026-09-29-0005:17",
+     "task:exp6-contract/t-2026-09-30-0004",
+     "step:exp6-contract/t-2026-09-30-0004:13",
+     "step:exp6-contract/t-2026-09-30-0004:15",
+     "step:exp6-contract/t-2026-09-30-0004:17"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "preceded-by",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0005",
+       "step": 11,
+       "outcome": "completed"
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "sent",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0005",
+       "step": 10,
+       "pointer": "/id",
+       "compare": "=",
+       "value": "commissioning-test-safety"
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "sent",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0005",
+       "step": 11,
+       "pointer": "/id",
+       "compare": "=",
+       "value": "commissioning-test-safety"
+      },
+      "expect": true
+     },
+     {
+      "role": "current",
+      "predicate": "stated-at",
+      "args": {
+       "file": "specs/procedure/prompt.md",
+       "phrase": "The state is what you read",
+       "at": "today"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "alternative": "The harness falsely reported a duplicate although the immediately preceding same-family call had not completed.",
+      "predicate": "preceded-by",
+      "args": {
+       "task": "task:exp6-contract/t-2026-09-30-0004",
+       "step": 13,
+       "outcome": "completed"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "alternative": "The first task was trapped because any later read of commissioning-test-safety was refused even after an intervening different read.",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0005",
+       "step": 13,
+       "outcome": "completed"
+      },
+      "expect": true
+     }
+    ],
+    "justifications": []
+   }
+  },
+  {
+   "step": 13,
+   "outcome": "completed",
+   "refused": false,
+   "reason": "diagnosis.submit completed; the workshop changed",
+   "diagnosis": {
+    "id": "diag-71b57fe124ba",
+    "verdict": "right",
+    "cause": "Both tasks failed because the model repeatedly reissued read calls with the same input as a completed read, despite each refusal saying the result remained in state. The duplicate-read refusals accurately described the immediately preceding calls; the terminal loops came from the model continuing redundant reads rather than using the stored result or taking another action.",
+    "class": "model-error",
+    "current": "unknown",
+    "evidence": [
+     "form:procedure:harness:9b0e6ddae04e",
+     "task:exp-control/t-2026-09-29-0005",
+     "step:exp-control/t-2026-09-29-0005:11",
+     "step:exp-control/t-2026-09-29-0005:14",
+     "step:exp-control/t-2026-09-29-0005:17",
+     "task:exp6-contract/t-2026-09-30-0004",
+     "step:exp6-contract/t-2026-09-30-0004:13",
+     "step:exp6-contract/t-2026-09-30-0004:15",
+     "step:exp6-contract/t-2026-09-30-0004:17"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "preceded-by",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0005",
+       "step": 11,
+       "outcome": "completed"
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "sent",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-29-0005",
+       "step": 10,
+       "pointer": "/id",
+       "compare": "=",
+       "value": "commissioning-test-safety"
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "sent",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0005",
+       "step": 11,
+       "pointer": "/id",
+       "compare": "=",
+       "value": "commissioning-test-safety"
+      },
+      "expect": true
+     },
+     {
+      "role": "current",
+      "predicate": "stated-at",
+      "args": {
+       "file": "specs/procedure/prompt.md",
+       "phrase": "The state is what you read",
+       "at": "today"
+      },
+      "expect": false
+     },
+     {
+      "role": "rules-out",
+      "alternative": "The harness falsely reported a duplicate although the immediately preceding same-family call had not completed.",
+      "predicate": "preceded-by",
+      "args": {
+       "task": "task:exp6-contract/t-2026-09-30-0004",
+       "step": 13,
+       "outcome": "completed"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "alternative": "The first task was trapped because any later read of commissioning-test-safety was refused even after an intervening different read.",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0005",
+       "step": 13,
+       "outcome": "completed"
+      },
+      "expect": true
+     }
+    ],
+    "justifications": []
+   }
+  }
+ ],
+ "accepted": {
+  "id": "diag-71b57fe124ba",
+  "lead": {
+   "id": "D4:467375274717",
+   "detector": "D4",
+   "class": "harness-artefact",
+   "title": "2 task(s) ended in a loop of the harness's refusals: \"* with the same input was the previous step, and completed\"",
+   "settledBy": null,
+   "form": {
+    "id": "form:procedure:harness:9b0e6ddae04e",
+    "shape": "* with the same input was the previous step, and completed",
+    "by": "harness"
+   },
+   "path": [
+    "2 task(s) ended \"STUCK: library.read refused 3 times in a row on the same point(s), library.read,\"",
+    "step:exp-control/t-2026-09-29-0005:11 (library.read) -refused-for-> form:procedure:harness:9b0e6ddae04e",
+    "step:exp-control/t-2026-09-29-0005:14 (library.read) -refused-for-> form:procedure:harness:9b0e6ddae04e",
+    "step:exp-control/t-2026-09-29-0005:17 (library.read) -refused-for-> form:procedure:harness:9b0e6ddae04e"
+   ],
+   "about": [
+    "form:procedure:harness:9b0e6ddae04e",
+    "task:exp-control/t-2026-09-29-0005",
+    "task:exp6-contract/t-2026-09-30-0004"
+   ],
+   "tasks": [
+    "task:exp-control/t-2026-09-29-0005",
+    "task:exp6-contract/t-2026-09-30-0004"
+   ],
+   "models": {
+    "claude-sonnet-5-5": 2
+   },
+   "evidence": {
+    "loops": {
+     "task:exp-control/t-2026-09-29-0005": [
+      11,
+      14,
+      17
+     ],
+     "task:exp6-contract/t-2026-09-30-0004": [
+      13,
+      15,
+      17
+     ]
+    },
+    "forms": [
+     "form:procedure:harness:9b0e6ddae04e"
+    ]
+   },
+   "recommend": true
+  },
+  "forks": [
+   "exp-control",
+   "exp-learn",
+   "exp3-baseline",
+   "exp4-gpt-a",
+   "exp4-gpt-c",
+   "exp4-sonnet-a",
+   "exp6-contract",
+   "exp7-fixes",
+   "exp8-paths"
+  ],
+  "verdict": "right",
+  "cause": "Both tasks failed because the model repeatedly reissued read calls with the same input as a completed read, despite each refusal saying the result remained in state. The duplicate-read refusals accurately described the immediately preceding calls; the terminal loops came from the model continuing redundant reads rather than using the stored result or taking another action.",
+  "class": "model-error",
+  "current": "unknown",
+  "evidence": [
+   "form:procedure:harness:9b0e6ddae04e",
+   "task:exp-control/t-2026-09-29-0005",
+   "step:exp-control/t-2026-09-29-0005:11",
+   "step:exp-control/t-2026-09-29-0005:14",
+   "step:exp-control/t-2026-09-29-0005:17",
+   "task:exp6-contract/t-2026-09-30-0004",
+   "step:exp6-contract/t-2026-09-30-0004:13",
+   "step:exp6-contract/t-2026-09-30-0004:15",
+   "step:exp6-contract/t-2026-09-30-0004:17"
+  ],
+  "predictions": [
+   {
+    "role": "cause",
+    "predicate": "preceded-by",
+    "args": {
+     "task": "task:exp-control/t-2026-09-29-0005",
+     "step": 11,
+     "outcome": "completed"
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "the attempt before, step 10 (library.read): completed",
+     "nodes": [
+      "task:exp-control/t-2026-09-29-0005"
+     ],
+     "read": []
+    }
+   },
+   {
+    "role": "cause",
+    "predicate": "sent",
+    "args": {
+     "task": "task:exp-control/t-2026-09-29-29-0005",
+     "step": 10,
+     "pointer": "/id",
+     "compare": "=",
+     "value": "commissioning-test-safety"
+    },
+    "expect": true,
+    "result": {
+     "truth": "unknown",
+     "observed": "no task task:exp-control/t-2026-09-29-29-0005 in the graph",
+     "nodes": [],
+     "read": []
+    }
+   },
+   {
+    "role": "cause",
+    "predicate": "sent",
+    "args": {
+     "task": "task:exp-control/t-2026-09-29-0005",
+     "step": 11,
+     "pointer": "/id",
+     "compare": "=",
+     "value": "commissioning-test-safety"
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "step 11 (library.read) sent \"commissioning-test-safety\" at /id",
+     "nodes": [
+      "task:exp-control/t-2026-09-29-0005",
+      "step:exp-control/t-2026-09-29-0005:11"
+     ],
+     "read": []
+    }
+   },
+   {
+    "role": "current",
+    "predicate": "stated-at",
+    "args": {
+     "file": "specs/procedure/prompt.md",
+     "phrase": "The state is what you read",
+     "at": "today"
+    },
+    "expect": false,
+    "result": {
+     "truth": "false",
+     "observed": "at today, none of specs/procedure/prompt.md held it",
+     "nodes": [],
+     "read": [
+      "specs/procedure/prompt.md@working tree"
+     ]
+    }
+   },
+   {
+    "role": "rules-out",
+    "alternative": "The harness falsely reported a duplicate although the immediately preceding same-family call had not completed.",
+    "predicate": "preceded-by",
+    "args": {
+     "task": "task:exp6-contract/t-2026-09-30-0004",
+     "step": 13,
+     "outcome": "completed"
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "the attempt before, step 12 (workspace.read): completed",
+     "nodes": [
+      "task:exp6-contract/t-2026-09-30-0004"
+     ],
+     "read": []
+    }
+   },
+   {
+    "role": "rules-out",
+    "alternative": "The first task was trapped because any later read of commissioning-test-safety was refused even after an intervening different read.",
+    "predicate": "outcome-at",
+    "args": {
+     "task": "task:exp-control/t-2026-09-29-0005",
+     "step": 13,
+     "outcome": "completed"
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "step 13 (library.read): completed",
+     "nodes": [
+      "task:exp-control/t-2026-09-29-0005"
+     ],
+     "read": []
+    }
+   }
+  ],
+  "checked": {
+   "confirmed": 5,
+   "unknown": 1,
+   "byRole": {
+    "cause": {
+     "confirmed": 2,
+     "of": 3
+    },
+    "current": {
+     "confirmed": 1,
+     "of": 1
+    },
+    "rules-out": {
+     "confirmed": 2,
+     "of": 2
+    }
+   },
+   "alternativesRuledOut": [
+    "The harness falsely reported a duplicate although the immediately preceding same-family call had not completed.",
+    "The first task was trapped because any later read of commissioning-test-safety was refused even after an intervening different read."
+   ]
+  },
+  "justifications": []
+ },
+ "station": {
+  "status": "diagnosed"
+ },
+ "tokens": {
+  "prompt": 211983,
+  "completion": 4058
+ }
+}

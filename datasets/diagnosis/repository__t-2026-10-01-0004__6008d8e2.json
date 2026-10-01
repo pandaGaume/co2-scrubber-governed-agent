@@ -1,0 +1,841 @@
+{
+ "schema": 1,
+ "key": "repository/t-2026-10-01-0004",
+ "workshop": "repository",
+ "taskId": "t-2026-10-01-0004",
+ "recordedAt": "2026-10-01T19:07:06.555Z",
+ "startedAt": "2026-10-01T19:06:27.966Z",
+ "endedAt": "2026-10-01T19:07:05.814Z",
+ "state": "proposed",
+ "ended": "contract held after 8 step(s)",
+ "requestedBy": "station (evaluator)",
+ "corpus": "evaluator",
+ "forks": [
+  "exp-control",
+  "exp-learn",
+  "exp3-baseline",
+  "exp4-gpt-a",
+  "exp4-gpt-c",
+  "exp4-sonnet-a",
+  "exp6-contract",
+  "exp7-fixes",
+  "exp8-paths"
+ ],
+ "lead": "D2:dc0bc69a9ef4",
+ "diagnosisId": "diag-9e3066d9ffcd",
+ "model": "gpt-5.6-sol",
+ "family": "gpt",
+ "provider": {
+  "name": "reasoner:gpt",
+  "model": "gpt-5.6-sol",
+  "family": "gpt",
+  "settings": {
+   "maxTokens": 8192,
+   "maxTokensParam": null,
+   "temperature": null,
+   "reasoningEffort": null,
+   "timeoutMs": 180000
+  },
+  "profile": {
+   "file": "profiles/openai-gpt.json",
+   "sha256": "1b15955d0eb3113d08cd56851da12950c1842477c7ba0197ec20d20e35c128b4"
+  }
+ },
+ "profile": {
+  "file": "profiles/anthropic.json",
+  "sha256": "57b865b5b073a8d0fc00cfaa6e23171d4dca37acbb447b317c622718f68df5d0"
+ },
+ "harness": {
+  "repository": "b253fbd93cde4274c37e0b5e09554c32da466451",
+  "fork": null
+ },
+ "asked": {
+  "id": "diag-9e3066d9ffcd",
+  "forks": [
+   "exp-control",
+   "exp-learn",
+   "exp3-baseline",
+   "exp4-gpt-a",
+   "exp4-gpt-c",
+   "exp4-sonnet-a",
+   "exp6-contract",
+   "exp7-fixes",
+   "exp8-paths"
+  ],
+  "lead": {
+   "id": "D2:dc0bc69a9ef4",
+   "detector": "D2",
+   "class": "learned-policy",
+   "title": "justification: *: the justification says #, what you sent sets #: answered the same way (reference:replaced,value:replaced) in 3 tasks, at the first retry 100 % of the time: a rule the models learn by being refused; stated in what they read: a policy learned (D1)",
+   "settledBy": null,
+   "form": {
+    "id": "form:procedure:4717aa09817a",
+    "shape": "justification: *: the justification says #, what you sent sets #",
+    "by": "guard"
+   },
+   "path": [
+    "task -refused-for-> form:procedure:4717aa09817a",
+    "form:procedure:4717aa09817a <-answers- correction (reference:replaced,value:replaced)",
+    "x 3 corrections in 3 tasks"
+   ],
+   "about": [
+    "form:procedure:4717aa09817a",
+    "correction:exp3-baseline/t-2026-09-29-0010:steps.1.minutes",
+    "correction:exp4-sonnet-a/t-2026-09-29-0008:steps.1.minutes",
+    "correction:exp4-sonnet-a/t-2026-09-29-0014:steps.1.minutes",
+    "rule:procedure:JUSTIFIED_VALUE_MISMATCH"
+   ],
+   "tasks": [
+    "task:exp3-baseline/t-2026-09-29-0010",
+    "task:exp4-sonnet-a/t-2026-09-29-0008",
+    "task:exp4-sonnet-a/t-2026-09-29-0014"
+   ],
+   "models": {
+    "claude-sonnet-5-5": 3
+   },
+   "evidence": {
+    "signature": "reference:replaced,value:replaced",
+    "corrections": 3,
+    "firstRetryShare": 1,
+    "example": {
+     "path": "steps.1.minutes",
+     "refused": {
+      "value": 30,
+      "source": "derived",
+      "reference": "tau=V/Qe=30 m3/(1 m3/min)=30 min (first guess of V, assumed); 25+30=55 min under 60"
+     },
+     "accepted": {
+      "value": 25,
+      "source": "derived",
+      "reference": "rise dC/dt=(G-Qe*C)/V, G=0.76 L/min, Qe=0.3 m3/min at 30 percent, V=30 m3 first guess; start 1650 ppm measured"
+     }
+    },
+    "register": {
+     "rules": [
+      "JUSTIFIED_VALUE_MISMATCH"
+     ],
+     "told": 3,
+     "untold": 0,
+     "unknown": 0,
+     "missing": []
+    }
+   },
+   "recommend": true
+  },
+  "neighbourhood": {
+   "nodes": [
+    "form:procedure:4717aa09817a [form] {\"topic\":\"procedure\",\"shape\":\"justification: *: the justification says #, what you sent sets #\",\"kind\":\"justification\",\"by\":\"guard\",\"sample\":\"justification: ste…",
+    "correction:exp3-baseline/t-2026-09-29-0010:steps.1.minutes [correction] {\"path\":\"steps.1.minutes\",\"kind\":\"justification\",\"refused\":{\"value\":30,\"source\":\"derived\",\"reference\":\"tau=V/Qe=30 m3/(1 m3/min)=30 min (first guess of V, assum…",
+    "correction:exp4-sonnet-a/t-2026-09-29-0008:steps.1.minutes [correction] {\"path\":\"steps.1.minutes\",\"kind\":\"justification\",\"refused\":{\"value\":30,\"source\":\"derived\",\"reference\":\"tau = V/Qe = 30 m3 / 1 m3/min = 30 min (first guess V=30 …",
+    "correction:exp4-sonnet-a/t-2026-09-29-0014:steps.1.minutes [correction] {\"path\":\"steps.1.minutes\",\"kind\":\"justification\",\"refused\":{\"value\":35,\"source\":\"derived\",\"reference\":\"tau = V/Qe = 30 m3 / 1 m3/min = 30 min, plus 3.33 min lag…",
+    "rule:procedure:JUSTIFIED_VALUE_MISMATCH [rule] {\"topic\":\"procedure\",\"code\":\"JUSTIFIED_VALUE_MISMATCH\",\"status\":\"stated\",\"signed\":false,\"example\":\"justification: steps.1.minutes: the justification says 30, wh…",
+    "task:exp3-baseline/t-2026-09-29-0010 [task] {\"taskId\":\"t-2026-09-29-0010\",\"workshop\":\"exp3-baseline\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:23:12.031Z\",\"ended\":\"contract held af…",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 [task] {\"taskId\":\"t-2026-09-29-0008\",\"workshop\":\"exp4-sonnet-a\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:58:38.823Z\",\"ended\":\"contract held af…",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 [task] {\"taskId\":\"t-2026-09-29-0014\",\"workshop\":\"exp4-sonnet-a\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T21:06:34.300Z\",\"ended\":\"contract held af…",
+    "attempt:exp3-baseline/t-2026-09-29-0010:8 [attempt] {\"step\":8,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: justification: steps.1.speedPercent: \\\"test.speedFloorPercent;…",
+    "attempt:exp4-sonnet-a/t-2026-09-29-0008:9 [attempt] {\"step\":9,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: justification: limits.co2MaxPpm: \\\"test.co2AbortCeilingPpm and…",
+    "attempt:exp4-sonnet-a/t-2026-09-29-0014:9 [attempt] {\"step\":9,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: justification: steps.2.speedPercent = 100 is a safety constant…",
+    "attempt:exp4-gpt-c/t-2026-09-29-0016:7 [attempt] {\"step\":7,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: justification: steps.2.speedPercent = 100 is a safety constant…",
+    "correction:exp4-gpt-c/t-2026-09-29-0016:steps.1.minutes [correction] {\"path\":\"steps.1.minutes\",\"kind\":\"justification\",\"refused\":{\"value\":30,\"source\":\"library\",\"reference\":\"method-concentration-decay\"},\"accepted\":{\"value\":25,\"sour…",
+    "episode:exp3-baseline/t-2026-09-29-0010 [episode] {\"finalOutcome\":\"ACCEPTED\",\"action\":\"procedure.submit\"}",
+    "episode:exp4-sonnet-a/t-2026-09-29-0008 [episode] {\"finalOutcome\":\"ACCEPTED\",\"action\":\"procedure.submit\"}",
+    "episode:exp4-sonnet-a/t-2026-09-29-0014 [episode] {\"finalOutcome\":\"ACCEPTED\",\"action\":\"procedure.submit\"}",
+    "statement:contract:be58c67f8aab [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"its value (a number, or [min, max] for bounds)\"}",
+    "model:claude-sonnet-5-5 [model] {\"model\":\"claude-sonnet-5-5\",\"provider\":\"reasoner:claude\",\"family\":\"claude\"}",
+    "fingerprint:b955c2ab8a73 [fingerprint] {\"tools\":\"7474411ba76bc4d4cfb83066834385e723eaf6ce05d0b7471590a702cd4edc65\",\"toolsDetailed\":false,\"words\":null,\"prompt\":\"4539a2b270603168740441153eaf30be44ec707…",
+    "statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3 [statement] {\"slot\":\"prompt:specs/procedure/prompt.md\",\"kind\":\"prompt\",\"of\":\"specs/procedure/prompt.md\",\"sha256\":\"4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5…",
+    "statement:contract:d318d8ec9126 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/procedure\",\"phrase\":\"cite a fact of a library document a person signed\"}",
+    "statement:contract:661448b756fd [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/safetyBounds\",\"phrase\":\"the fact its signed rules bound it by\"}",
+    "statement:contract:ec185a62d3cd [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/procedure\",\"phrase\":\"library.facts says which are signed\"}",
+    "statement:contract:d0d31897432e [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/procedure\",\"phrase\":\"and respect it\"}",
+    "statement:contract:e7c8ceacd378 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/safetyBounds\",\"phrase\":\"and on which side\"}",
+    "statement:contract:1770e40880de [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/procedure\",\"phrase\":\"Every constant you set is justified in justifications\"}",
+    "statement:contract:b020dd6a2c51 [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"Why, in a few words\"}",
+    "statement:contract:2ba750a23bd2 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/procedure\",\"phrase\":\"cite what you read\"}",
+    "statement:contract:189045e7d19f [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"web: a URL a search returned\"}",
+    "statement:contract:06599146cbe7 [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"measured: what the task observed\"}",
+    "statement:contract:96011ca77ae3 [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"envelope: a bound of the guard's envelope\"}",
+    "statement:contract:98914823d9ec [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"derived: the formula\"}",
+    "statement:contract:e5418443b2af [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"library: a document or fact id read in this task\"}",
+    "statement:contract:d61820a4a508 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/capabilities/analyse\",\"phrase\":\"the new procedure must make these changes\"}",
+    "statement:contract:a68c38560610 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/analysed\",\"phrase\":\"the procedure must change what it names\"}",
+    "statement:contract:58656577bd4f [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/analysis\",\"phrase\":\"Before any new procedure, analyse it with procedure.analyse\"}",
+    "statement:contract:ed4d477392a3 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/handOver\",\"phrase\":\"End with task.done\"}",
+    "statement:contract:f4047e81683f [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/methodFind\",\"phrase\":\"read the card of the one you choose\"}",
+    "statement:contract:164ede095e07 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/capabilities/revise\",\"phrase\":\"When nothing is kept\"}",
+    "statement:contract:8ef5996c115c [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/capabilities/analyse\",\"phrase\":\"Analyse why the last test was aborted\"}",
+    "statement:contract:aa7b9a3e49f9 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/capabilities/analyse\",\"phrase\":\"the cause\"}",
+    "statement:contract:87429838499a [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/capabilities/analyse\",\"phrase\":\"each a field of the procedure\"}",
+    "statement:contract:ee13241e11fe [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/procedure.schema.json\",\"pointer\":\"/properties/volume/description\",\"phrase\":\"ISA-95 path of the volume under test\"}",
+    "statement:contract:326fb8b4b56a [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/procedure.schema.json\",\"pointer\":\"/properties/device/description\",\"phrase\":\"ISA-95 path of the device the steps comma…",
+    "statement:contract:6e5f03e58e7a [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/prompt.md\",\"phrase\":\"`limits.co2MaxPpm`, `limits.co2AbortPpm`, `limits.minSpeedPercent`, `limits.maxMinutes`\"}",
+    "statement:contract:5f06e9dabbb1 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/procedure.schema.json\",\"pointer\":\"/properties/steps/items/required\",\"phrase\":\"speedPercent\"}",
+    "statement:contract:c102be04e443 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/procedure.schema.json\",\"pointer\":\"/properties/limits/description\",\"phrase\":\"The bounds the test stays within\"}",
+    "statement:contract:aa6aa9f9d1c5 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/procedure.schema.json\",\"pointer\":\"/properties/abort/description\",\"phrase\":\"A condition that cannot be read stops the …",
+    "statement:contract:8b426033c0b7 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/procedure.schema.json\",\"pointer\":\"/properties/expected/description\",\"phrase\":\"written before it runs\"}",
+    "statement:contract:63d895f69226 [statement] {\"kind\":\"contract\",\"library\":\"method-concentration-decay\",\"phrase\":\"the predictions\"}"
+   ],
+   "links": [
+    "form:procedure:4717aa09817a of rule:procedure:JUSTIFIED_VALUE_MISMATCH",
+    "correction:exp3-baseline/t-2026-09-29-0010:steps.1.minutes answers form:procedure:4717aa09817a",
+    "correction:exp4-sonnet-a/t-2026-09-29-0008:steps.1.minutes answers form:procedure:4717aa09817a",
+    "correction:exp4-sonnet-a/t-2026-09-29-0014:steps.1.minutes answers form:procedure:4717aa09817a",
+    "task:exp3-baseline/t-2026-09-29-0010 ran-by model:claude-sonnet-5-5",
+    "task:exp3-baseline/t-2026-09-29-0010 ran-under fingerprint:b955c2ab8a73",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:d318d8ec9126",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:661448b756fd",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:ec185a62d3cd",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:d0d31897432e",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:e7c8ceacd378",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:1770e40880de",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:be58c67f8aab",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:b020dd6a2c51",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:2ba750a23bd2",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:189045e7d19f",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:06599146cbe7",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:96011ca77ae3",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:98914823d9ec",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:e5418443b2af",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:d61820a4a508",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:a68c38560610",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:58656577bd4f",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:ed4d477392a3",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:f4047e81683f",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:164ede095e07",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:8ef5996c115c",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:aa7b9a3e49f9",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:87429838499a",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:ee13241e11fe",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:326fb8b4b56a",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:6e5f03e58e7a",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:5f06e9dabbb1",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:c102be04e443",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:aa6aa9f9d1c5",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:8b426033c0b7",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:contract:63d895f69226",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 ran-by model:claude-sonnet-5-5",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:d318d8ec9126",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:661448b756fd",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:ec185a62d3cd",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:d0d31897432e",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:e7c8ceacd378",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:1770e40880de",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:be58c67f8aab",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:b020dd6a2c51",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:2ba750a23bd2",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:189045e7d19f",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:06599146cbe7",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:96011ca77ae3",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:98914823d9ec",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:e5418443b2af",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:d61820a4a508",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:a68c38560610",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:58656577bd4f",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:ed4d477392a3",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:f4047e81683f",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:164ede095e07",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:8ef5996c115c",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:aa7b9a3e49f9",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:87429838499a",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:ee13241e11fe",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:326fb8b4b56a",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:6e5f03e58e7a",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:5f06e9dabbb1",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:c102be04e443",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:aa6aa9f9d1c5",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:8b426033c0b7",
+    "task:exp4-sonnet-a/t-2026-09-29-0008 read statement:contract:63d895f69226",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 ran-by model:claude-sonnet-5-5",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:d318d8ec9126",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:661448b756fd",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:ec185a62d3cd",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:d0d31897432e",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:e7c8ceacd378",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:1770e40880de",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:be58c67f8aab",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:b020dd6a2c51",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:2ba750a23bd2",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:189045e7d19f",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:06599146cbe7",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:96011ca77ae3",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:98914823d9ec",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:e5418443b2af",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:d61820a4a508",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:a68c38560610",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:58656577bd4f",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:ed4d477392a3",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:f4047e81683f",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:164ede095e07",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:8ef5996c115c",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:aa7b9a3e49f9",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:87429838499a",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:ee13241e11fe",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:326fb8b4b56a",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:6e5f03e58e7a",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:5f06e9dabbb1",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:c102be04e443",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:aa6aa9f9d1c5",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:8b426033c0b7",
+    "task:exp4-sonnet-a/t-2026-09-29-0014 read statement:contract:63d895f69226",
+    "attempt:exp3-baseline/t-2026-09-29-0010:8 of episode:exp3-baseline/t-2026-09-29-0010",
+    "attempt:exp3-baseline/t-2026-09-29-0010:8 refused-for form:procedure:4717aa09817a",
+    "attempt:exp4-sonnet-a/t-2026-09-29-0008:9 of episode:exp4-sonnet-a/t-2026-09-29-0008",
+    "attempt:exp4-sonnet-a/t-2026-09-29-0008:9 refused-for form:procedure:4717aa09817a",
+    "attempt:exp4-sonnet-a/t-2026-09-29-0014:9 of episode:exp4-sonnet-a/t-2026-09-29-0014",
+    "attempt:exp4-sonnet-a/t-2026-09-29-0014:9 refused-for form:procedure:4717aa09817a",
+    "attempt:exp4-gpt-c/t-2026-09-29-0016:7 refused-for form:procedure:4717aa09817a",
+    "correction:exp4-gpt-c/t-2026-09-29-0016:steps.1.minutes answers form:procedure:4717aa09817a",
+    "episode:exp3-baseline/t-2026-09-29-0010 of task:exp3-baseline/t-2026-09-29-0010",
+    "episode:exp3-baseline/t-2026-09-29-0010 corrected-by correction:exp3-baseline/t-2026-09-29-0010:steps.1.minutes",
+    "episode:exp4-sonnet-a/t-2026-09-29-0008 of task:exp4-sonnet-a/t-2026-09-29-0008",
+    "episode:exp4-sonnet-a/t-2026-09-29-0008 corrected-by correction:exp4-sonnet-a/t-2026-09-29-0008:steps.1.minutes",
+    "episode:exp4-sonnet-a/t-2026-09-29-0014 of task:exp4-sonnet-a/t-2026-09-29-0014",
+    "episode:exp4-sonnet-a/t-2026-09-29-0014 corrected-by correction:exp4-sonnet-a/t-2026-09-29-0014:steps.1.minutes",
+    "statement:contract:be58c67f8aab states rule:procedure:JUSTIFIED_VALUE_MISMATCH",
+    "fingerprint:b955c2ab8a73 changed statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3"
+   ]
+  },
+  "rules": [
+   {
+    "code": "JUSTIFIED_VALUE_MISMATCH",
+    "status": "stated",
+    "signed": false,
+    "statedToday": [
+     {
+      "where": "harness/core/justify.ts",
+      "holds": true
+     }
+    ]
+   }
+  ],
+  "today": {
+   "commit": "b253fbd",
+   "signatures": {},
+   "profiles": {
+    "profiles/anthropic.json": {
+     "wire": "anthropic-messages",
+     "model": "claude-haiku-4-5-20251001",
+     "capabilities": [
+      "tools",
+      "json"
+     ]
+    }
+   }
+  },
+  "refuted": []
+ },
+ "askedSha256": "8e35e6a3037c4531e38e42e7d3c4bee72abfd5c5661fd81dc9ff2104d560f5a2",
+ "steps": [
+  {
+   "n": 1,
+   "capability": "task.plan",
+   "input": {
+    "selected_nodes": [],
+    "missing_capabilities": [
+     {
+      "required_output": "diag-9e3066d9ffcd",
+      "quantity": "Diagnosis",
+      "reason": "The diagnosis is made here from harness graph, task steps, and contract texts; no catalogue node produces it.",
+      "topic": "diagnosis"
+     }
+    ]
+   },
+   "outcome": "completed",
+   "reason": "plan accepted: 0 node type(s), 1 missing capability(ies)",
+   "tokens": {
+    "prompt": 14979,
+    "completion": 72,
+    "total": 15051
+   }
+  },
+  {
+   "n": 2,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp3-baseline/t-2026-09-29-0010",
+    "step": 8,
+    "part": "reason"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 15213,
+    "completion": 65,
+    "total": 15278
+   }
+  },
+  {
+   "n": 3,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp3-baseline/t-2026-09-29-0010",
+    "step": 8,
+    "part": "sent",
+    "pointer": "/justifications/[constant=steps.1.minutes]"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 15781,
+    "completion": 92,
+    "total": 15873
+   }
+  },
+  {
+   "n": 4,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp3-baseline/t-2026-09-29-0010",
+    "step": 9,
+    "part": "outline"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 15812,
+    "completion": 79,
+    "total": 15891
+   }
+  },
+  {
+   "n": 5,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp4-sonnet-a/t-2026-09-29-0008",
+    "step": 9,
+    "part": "sent",
+    "pointer": "/justifications/[constant=steps.1.minutes]"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 16003,
+    "completion": 117,
+    "total": 16120
+   }
+  },
+  {
+   "n": 6,
+   "capability": "diagnosis.text",
+   "input": {
+    "file": "specs/procedure/prompt.md",
+    "at": "task:exp3-baseline/t-2026-09-29-0010",
+    "find": "justification"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.text completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 16181,
+    "completion": 160,
+    "total": 16341
+   }
+  },
+  {
+   "n": 7,
+   "capability": "diagnosis.submit",
+   "input": {
+    "id": "diag-9e3066d9ffcd",
+    "verdict": "right",
+    "cause": "The procedure set steps.1.minutes to 25 while its keyed justification still claimed and derived 30. The guard correctly rejected that internal inconsistency, and the models repaired both the justification value and its derivation on the first retry. This was a model error rather than a missing rule: the requirement that every set constant have its own matching justification was in the contract the tasks read.",
+    "class": "model-error",
+    "current": "still",
+    "evidence": [
+     "form:procedure:4717aa09817a",
+     "rule:procedure:JUSTIFIED_VALUE_MISMATCH",
+     "correction:exp3-baseline/t-2026-09-29-0010:steps.1.minutes",
+     "correction:exp4-sonnet-a/t-2026-09-29-0008:steps.1.minutes",
+     "correction:exp4-sonnet-a/t-2026-09-29-0014:steps.1.minutes",
+     "attempt:exp3-baseline/t-2026-09-29-0010:8",
+     "statement:contract:1770e40880de",
+     "statement:contract:be58c67f8aab"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "sent",
+      "args": {
+       "task": "task:exp3-baseline/t-2026-09-29-0010",
+       "step": 8,
+       "pointer": "/justifications/[constant=steps.1.minutes]/value",
+       "compare": "=",
+       "value": 30
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "refused-with",
+      "args": {
+       "task": "task:exp3-baseline/t-2026-09-29-0010",
+       "step": 8,
+       "phrase": "the justification says 30, what you sent sets 25"
+      },
+      "expect": true
+     },
+     {
+      "role": "current",
+      "predicate": "stated-at",
+      "args": {
+       "rule": "JUSTIFIED_VALUE_MISMATCH",
+       "at": "today"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "alternative": "The guard enforced an unstated contract requirement.",
+      "predicate": "stated-at",
+      "args": {
+       "rule": "JUSTIFIED_VALUE_MISMATCH",
+       "at": "task:exp3-baseline/t-2026-09-29-0010"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "alternative": "The apparent refusal was an output-limit cut rather than guard validation.",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:exp3-baseline/t-2026-09-29-0010",
+       "step": 8,
+       "outcome": "guard-refused"
+      },
+      "expect": true
+     }
+    ],
+    "justifications": []
+   },
+   "outcome": "completed",
+   "judged": "accepted",
+   "reason": "diagnosis.submit completed; the workshop changed",
+   "tokens": {
+    "prompt": 16622,
+    "completion": 986,
+    "total": 17608
+   }
+  },
+  {
+   "n": 8,
+   "capability": "task.done",
+   "input": {
+    "summary": "Diagnosed lead D2:dc0bc69a9ef4. The accepted diagnosis finds a model error rather than an unstated learned policy: the submission set steps.1.minutes to 25 while its keyed justification still said 30, despite the value-matching requirement being stated in the contract the task read. The guard correctly refused the mismatch; the requirement remains stated today. The diagnosis also rules out a contract-gap explanation through checked task-version and current-version statements.",
+    "artifacts": [
+     {
+      "kind": "diagnosis",
+      "path": "diagnoses/diag-9e3066d9ffcd.json"
+     }
+    ]
+   },
+   "outcome": "completed",
+   "reason": "contract held on topic diagnosis: diagnosis diagnoses/diag-9e3066d9ffcd.json",
+   "tokens": {
+    "prompt": 17112,
+    "completion": 139,
+    "total": 17251
+   }
+  }
+ ],
+ "submissions": [
+  {
+   "step": 7,
+   "outcome": "completed",
+   "refused": false,
+   "reason": "diagnosis.submit completed; the workshop changed",
+   "diagnosis": {
+    "id": "diag-9e3066d9ffcd",
+    "verdict": "right",
+    "cause": "The procedure set steps.1.minutes to 25 while its keyed justification still claimed and derived 30. The guard correctly rejected that internal inconsistency, and the models repaired both the justification value and its derivation on the first retry. This was a model error rather than a missing rule: the requirement that every set constant have its own matching justification was in the contract the tasks read.",
+    "class": "model-error",
+    "current": "still",
+    "evidence": [
+     "form:procedure:4717aa09817a",
+     "rule:procedure:JUSTIFIED_VALUE_MISMATCH",
+     "correction:exp3-baseline/t-2026-09-29-0010:steps.1.minutes",
+     "correction:exp4-sonnet-a/t-2026-09-29-0008:steps.1.minutes",
+     "correction:exp4-sonnet-a/t-2026-09-29-0014:steps.1.minutes",
+     "attempt:exp3-baseline/t-2026-09-29-0010:8",
+     "statement:contract:1770e40880de",
+     "statement:contract:be58c67f8aab"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "sent",
+      "args": {
+       "task": "task:exp3-baseline/t-2026-09-29-0010",
+       "step": 8,
+       "pointer": "/justifications/[constant=steps.1.minutes]/value",
+       "compare": "=",
+       "value": 30
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "refused-with",
+      "args": {
+       "task": "task:exp3-baseline/t-2026-09-29-0010",
+       "step": 8,
+       "phrase": "the justification says 30, what you sent sets 25"
+      },
+      "expect": true
+     },
+     {
+      "role": "current",
+      "predicate": "stated-at",
+      "args": {
+       "rule": "JUSTIFIED_VALUE_MISMATCH",
+       "at": "today"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "alternative": "The guard enforced an unstated contract requirement.",
+      "predicate": "stated-at",
+      "args": {
+       "rule": "JUSTIFIED_VALUE_MISMATCH",
+       "at": "task:exp3-baseline/t-2026-09-29-0010"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "alternative": "The apparent refusal was an output-limit cut rather than guard validation.",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:exp3-baseline/t-2026-09-29-0010",
+       "step": 8,
+       "outcome": "guard-refused"
+      },
+      "expect": true
+     }
+    ],
+    "justifications": []
+   }
+  }
+ ],
+ "accepted": {
+  "id": "diag-9e3066d9ffcd",
+  "lead": {
+   "id": "D2:dc0bc69a9ef4",
+   "detector": "D2",
+   "class": "learned-policy",
+   "title": "justification: *: the justification says #, what you sent sets #: answered the same way (reference:replaced,value:replaced) in 3 tasks, at the first retry 100 % of the time: a rule the models learn by being refused; stated in what they read: a policy learned (D1)",
+   "settledBy": null,
+   "form": {
+    "id": "form:procedure:4717aa09817a",
+    "shape": "justification: *: the justification says #, what you sent sets #",
+    "by": "guard"
+   },
+   "path": [
+    "task -refused-for-> form:procedure:4717aa09817a",
+    "form:procedure:4717aa09817a <-answers- correction (reference:replaced,value:replaced)",
+    "x 3 corrections in 3 tasks"
+   ],
+   "about": [
+    "form:procedure:4717aa09817a",
+    "correction:exp3-baseline/t-2026-09-29-0010:steps.1.minutes",
+    "correction:exp4-sonnet-a/t-2026-09-29-0008:steps.1.minutes",
+    "correction:exp4-sonnet-a/t-2026-09-29-0014:steps.1.minutes",
+    "rule:procedure:JUSTIFIED_VALUE_MISMATCH"
+   ],
+   "tasks": [
+    "task:exp3-baseline/t-2026-09-29-0010",
+    "task:exp4-sonnet-a/t-2026-09-29-0008",
+    "task:exp4-sonnet-a/t-2026-09-29-0014"
+   ],
+   "models": {
+    "claude-sonnet-5-5": 3
+   },
+   "evidence": {
+    "signature": "reference:replaced,value:replaced",
+    "corrections": 3,
+    "firstRetryShare": 1,
+    "example": {
+     "path": "steps.1.minutes",
+     "refused": {
+      "value": 30,
+      "source": "derived",
+      "reference": "tau=V/Qe=30 m3/(1 m3/min)=30 min (first guess of V, assumed); 25+30=55 min under 60"
+     },
+     "accepted": {
+      "value": 25,
+      "source": "derived",
+      "reference": "rise dC/dt=(G-Qe*C)/V, G=0.76 L/min, Qe=0.3 m3/min at 30 percent, V=30 m3 first guess; start 1650 ppm measured"
+     }
+    },
+    "register": {
+     "rules": [
+      "JUSTIFIED_VALUE_MISMATCH"
+     ],
+     "told": 3,
+     "untold": 0,
+     "unknown": 0,
+     "missing": []
+    }
+   },
+   "recommend": true
+  },
+  "forks": [
+   "exp-control",
+   "exp-learn",
+   "exp3-baseline",
+   "exp4-gpt-a",
+   "exp4-gpt-c",
+   "exp4-sonnet-a",
+   "exp6-contract",
+   "exp7-fixes",
+   "exp8-paths"
+  ],
+  "verdict": "right",
+  "cause": "The procedure set steps.1.minutes to 25 while its keyed justification still claimed and derived 30. The guard correctly rejected that internal inconsistency, and the models repaired both the justification value and its derivation on the first retry. This was a model error rather than a missing rule: the requirement that every set constant have its own matching justification was in the contract the tasks read.",
+  "class": "model-error",
+  "current": "still",
+  "evidence": [
+   "form:procedure:4717aa09817a",
+   "rule:procedure:JUSTIFIED_VALUE_MISMATCH",
+   "correction:exp3-baseline/t-2026-09-29-0010:steps.1.minutes",
+   "correction:exp4-sonnet-a/t-2026-09-29-0008:steps.1.minutes",
+   "correction:exp4-sonnet-a/t-2026-09-29-0014:steps.1.minutes",
+   "attempt:exp3-baseline/t-2026-09-29-0010:8",
+   "statement:contract:1770e40880de",
+   "statement:contract:be58c67f8aab"
+  ],
+  "predictions": [
+   {
+    "role": "cause",
+    "predicate": "sent",
+    "args": {
+     "task": "task:exp3-baseline/t-2026-09-29-0010",
+     "step": 8,
+     "pointer": "/justifications/[constant=steps.1.minutes]/value",
+     "compare": "=",
+     "value": 30
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "step 8 (procedure.submit) sent 30 at /justifications/[constant=steps.1.minutes]/value",
+     "nodes": [
+      "task:exp3-baseline/t-2026-09-29-0010",
+      "attempt:exp3-baseline/t-2026-09-29-0010:8"
+     ],
+     "read": []
+    }
+   },
+   {
+    "role": "cause",
+    "predicate": "refused-with",
+    "args": {
+     "task": "task:exp3-baseline/t-2026-09-29-0010",
+     "step": 8,
+     "phrase": "the justification says 30, what you sent sets 25"
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "the refusal at step 8: \"procedure refused: justification: steps.1.speedPercent: \\\"test.speedFloorPercent; scrubber.effectiveFlowAtFull 1 m3/min (scrubber-1-datasheet)\\\" is not a fact of the library (a safety constant cites …",
+     "nodes": [
+      "task:exp3-baseline/t-2026-09-29-0010",
+      "attempt:exp3-baseline/t-2026-09-29-0010:8"
+     ],
+     "read": []
+    }
+   },
+   {
+    "role": "current",
+    "predicate": "stated-at",
+    "args": {
+     "rule": "JUSTIFIED_VALUE_MISMATCH",
+     "at": "today"
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "stated at today in harness/core/justify.ts",
+     "nodes": [
+      "rule:procedure:JUSTIFIED_VALUE_MISMATCH",
+      "statement:contract:be58c67f8aab"
+     ],
+     "read": [
+      "harness/core/justify.ts@working tree"
+     ]
+    }
+   },
+   {
+    "role": "rules-out",
+    "alternative": "The guard enforced an unstated contract requirement.",
+    "predicate": "stated-at",
+    "args": {
+     "rule": "JUSTIFIED_VALUE_MISMATCH",
+     "at": "task:exp3-baseline/t-2026-09-29-0010"
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "stated at task:exp3-baseline/t-2026-09-29-0010 in harness/core/justify.ts",
+     "nodes": [
+      "task:exp3-baseline/t-2026-09-29-0010",
+      "rule:procedure:JUSTIFIED_VALUE_MISMATCH",
+      "statement:contract:be58c67f8aab"
+     ],
+     "read": [
+      "harness/core/justify.ts@4e3458b732ebb757929df0cfc9e36a8c010329a8"
+     ]
+    }
+   },
+   {
+    "role": "rules-out",
+    "alternative": "The apparent refusal was an output-limit cut rather than guard validation.",
+    "predicate": "outcome-at",
+    "args": {
+     "task": "task:exp3-baseline/t-2026-09-29-0010",
+     "step": 8,
+     "outcome": "guard-refused"
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "step 8 (procedure.submit): guard-refused",
+     "nodes": [
+      "task:exp3-baseline/t-2026-09-29-0010",
+      "attempt:exp3-baseline/t-2026-09-29-0010:8"
+     ],
+     "read": []
+    }
+   }
+  ],
+  "checked": {
+   "confirmed": 5,
+   "unknown": 0,
+   "byRole": {
+    "cause": {
+     "confirmed": 2,
+     "of": 2
+    },
+    "current": {
+     "confirmed": 1,
+     "of": 1
+    },
+    "rules-out": {
+     "confirmed": 2,
+     "of": 2
+    }
+   },
+   "alternativesRuledOut": [
+    "The guard enforced an unstated contract requirement.",
+    "The apparent refusal was an output-limit cut rather than guard validation."
+   ]
+  },
+  "justifications": []
+ },
+ "station": {
+  "status": "diagnosed"
+ },
+ "tokens": {
+  "prompt": 127703,
+  "completion": 1710
+ }
+}

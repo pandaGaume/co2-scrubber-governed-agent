@@ -1,0 +1,23 @@
+[
+  {
+    "corpus": "evaluator-repository",
+    "lead": "D4:d77a2a5a7508",
+    "taskId": "t-2026-10-01-0020",
+    "model": "claude-sonnet-5-5",
+    "state": "proposed",
+    "ended": "contract held after 12 step(s)",
+    "proposal": {
+      "proposalId": "p0001-1ed1750c",
+      "status": "diagnosed"
+    },
+    "seconds": 64,
+    "calls": 12,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 203323,
+      "completion": 5320
+    }
+  }
+]

@@ -1,0 +1,843 @@
+{
+ "schema": 1,
+ "key": "repository/t-2026-10-01-0016",
+ "workshop": "repository",
+ "taskId": "t-2026-10-01-0016",
+ "recordedAt": "2026-10-01T19:12:38.728Z",
+ "startedAt": "2026-10-01T19:11:32.138Z",
+ "endedAt": "2026-10-01T19:12:37.870Z",
+ "state": "proposed",
+ "ended": "contract held after 19 step(s)",
+ "requestedBy": "station (evaluator)",
+ "corpus": "evaluator-repository",
+ "forks": [
+  "snapshot-repository-workshop"
+ ],
+ "lead": "D4:e694065969d8",
+ "diagnosisId": "diag-98e239019b8b",
+ "model": "gpt-5.6-sol",
+ "family": "gpt",
+ "provider": {
+  "name": "reasoner:gpt",
+  "model": "gpt-5.6-sol",
+  "family": "gpt",
+  "settings": {
+   "maxTokens": 8192,
+   "maxTokensParam": null,
+   "temperature": null,
+   "reasoningEffort": null,
+   "timeoutMs": 180000
+  },
+  "profile": {
+   "file": "profiles/openai-gpt.json",
+   "sha256": "1b15955d0eb3113d08cd56851da12950c1842477c7ba0197ec20d20e35c128b4"
+  }
+ },
+ "profile": {
+  "file": "profiles/anthropic.json",
+  "sha256": "57b865b5b073a8d0fc00cfaa6e23171d4dca37acbb447b317c622718f68df5d0"
+ },
+ "harness": {
+  "repository": "b253fbd93cde4274c37e0b5e09554c32da466451",
+  "fork": null
+ },
+ "asked": {
+  "id": "diag-98e239019b8b",
+  "forks": [
+   "snapshot-repository-workshop"
+  ],
+  "lead": {
+   "id": "D4:e694065969d8",
+   "detector": "D4",
+   "class": "harness-artefact",
+   "title": "the harness refused \"Invalid capability arguments: data/expected must be object\" 5 times in 3 tasks, before any guard (procedure.submit)",
+   "settledBy": null,
+   "form": {
+    "id": "form:procedure:harness:12a366ff3873",
+    "shape": "Invalid capability arguments: data/expected must be object",
+    "by": "harness"
+   },
+   "path": [
+    "step or attempt -refused-for-> form:procedure:harness:12a366ff3873 (by the harness)",
+    "x 5 in 3 tasks",
+    "-calls-> procedure.submit"
+   ],
+   "about": [
+    "form:procedure:harness:12a366ff3873",
+    "attempt:snapshot-repository-workshop/t-2026-09-24-0019:14",
+    "attempt:snapshot-repository-workshop/t-2026-09-24-0019:15",
+    "attempt:snapshot-repository-workshop/t-2026-09-24-0019:18",
+    "attempt:snapshot-repository-workshop/t-2026-09-25-0001:13",
+    "attempt:snapshot-repository-workshop/t-2026-09-25-0038:13"
+   ],
+   "tasks": [
+    "task:snapshot-repository-workshop/t-2026-09-24-0019",
+    "task:snapshot-repository-workshop/t-2026-09-25-0001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0038"
+   ],
+   "models": {
+    "claude-haiku-4-5-20251001": 3
+   },
+   "evidence": {
+    "refusals": 5,
+    "capabilities": [
+     "procedure.submit"
+    ],
+    "example": "Invalid capability arguments: data/expected must be object"
+   },
+   "recommend": true
+  },
+  "neighbourhood": {
+   "nodes": [
+    "form:procedure:harness:12a366ff3873 [form] {\"topic\":\"procedure\",\"shape\":\"Invalid capability arguments: data/expected must be object\",\"kind\":\"PRE_GUARD_REJECTED\",\"by\":\"harness\"}",
+    "attempt:snapshot-repository-workshop/t-2026-09-24-0019:14 [attempt] {\"step\":14,\"capability\":\"procedure.submit\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"Invalid capability arguments: data/expected must be object\"}",
+    "attempt:snapshot-repository-workshop/t-2026-09-24-0019:15 [attempt] {\"step\":15,\"capability\":\"procedure.submit\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"Invalid capability arguments: data/expected must be object\"}",
+    "attempt:snapshot-repository-workshop/t-2026-09-24-0019:18 [attempt] {\"step\":18,\"capability\":\"procedure.submit\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"Invalid capability arguments: data/expected must be object\"}",
+    "attempt:snapshot-repository-workshop/t-2026-09-25-0001:13 [attempt] {\"step\":13,\"capability\":\"procedure.submit\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"Invalid capability arguments: data/expected must be object\"}",
+    "attempt:snapshot-repository-workshop/t-2026-09-25-0038:13 [attempt] {\"step\":13,\"capability\":\"procedure.submit\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"Invalid capability arguments: data/expected must be object\"}",
+    "task:snapshot-repository-workshop/t-2026-09-24-0019 [task] {\"taskId\":\"t-2026-09-24-0019\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-24T17:34:02.474Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0001 [task] {\"taskId\":\"t-2026-09-25-0001\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-25T12:41:55.287Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0038 [task] {\"taskId\":\"t-2026-09-25-0038\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-25T18:55:20.063Z\",\"ended\":\"c…",
+    "episode:snapshot-repository-workshop/t-2026-09-24-0019 [episode] {\"finalOutcome\":\"ACCEPTED\",\"action\":\"procedure.submit\"}",
+    "capability:procedure.submit [capability] {\"id\":\"procedure.submit\"}",
+    "episode:snapshot-repository-workshop/t-2026-09-25-0001 [episode] {\"finalOutcome\":\"ACCEPTED\",\"action\":\"procedure.submit\"}",
+    "episode:snapshot-repository-workshop/t-2026-09-25-0038 [episode] {\"finalOutcome\":\"ACCEPTED\",\"action\":\"procedure.submit\"}",
+    "model:claude-haiku-4-5-20251001 [model] {\"model\":\"claude-haiku-4-5-20251001\",\"provider\":\"reasoner:claude\",\"family\":\"claude\"}",
+    "fingerprint:433bbb9878a7 [fingerprint] {\"tools\":\"a3e430d47f9bbb97c1c41a0d42ea868c8010bda9f04a580b6e3695aa4c82280b\",\"toolsDetailed\":false,\"words\":null,\"prompt\":\"295db18bb3fa14873cac806613d9f41d5827e94…",
+    "statement:295db18bb3fa14873cac806613d9f41d5827e9449d141242e438824474dda17b [statement] {\"slot\":\"prompt:harness/topics/procedure/prompt.md\",\"kind\":\"prompt\",\"of\":\"harness/topics/procedure/prompt.md\",\"sha256\":\"295db18bb3fa14873cac806613d9f41d5827e944…",
+    "fingerprint:b156d783f695 [fingerprint] {\"tools\":\"1a8b0f90c003e646e06ce806bdd58eb3eeef04640ec507a19c364dd920868efe\",\"toolsDetailed\":false,\"words\":null,\"prompt\":\"ae65e2fe4399172e11ec57178857e189df62bef…",
+    "statement:ae65e2fe4399172e11ec57178857e189df62bef915d97d806ee32ae40a7547ee [statement] {\"slot\":\"prompt:harness/topics/procedure/prompt.md\",\"kind\":\"prompt\",\"of\":\"harness/topics/procedure/prompt.md\",\"sha256\":\"ae65e2fe4399172e11ec57178857e189df62bef9…",
+    "attempt:snapshot-repository-workshop/t-2026-09-24-0019:19 [attempt] {\"step\":19,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: floor: the procedure sets its own minimum speed at 20 %, belo…",
+    "attempt:snapshot-repository-workshop/t-2026-09-24-0019:20 [attempt] {\"step\":20,\"capability\":\"procedure.submit\",\"outcome\":\"ACCEPTED\"}",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:3 [attempt] {\"step\":3,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"procedure refused: floor: step 1 stops the scrubber: a test never stops the only scrub…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:4 [attempt] {\"step\":4,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: abort: no \\\"co2\\\" abort condition; abort: no \\\"refused\\\" abort…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:5 [attempt] {\"step\":5,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: abort: no \\\"co2\\\" abort condition; abort: no \\\"refused\\\" abort…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:7 [attempt] {\"step\":7,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: abort: no \\\"co2\\\" abort condition; abort: no \\\"refused\\\" abort…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:11 [attempt] {\"step\":11,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: abort: no \\\"co2\\\" abort condition; abort: no \\\"refused\\\" abor…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:12 [attempt] {\"step\":12,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: abort: no \\\"co2\\\" abort condition; abort: no \\\"refused\\\" abor…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:13 [attempt] {\"step\":13,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: abort: no \\\"co2\\\" abort condition; abort: no \\\"refused\\\" abor…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:15 [attempt] {\"step\":15,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: abort: no \\\"co2\\\" abort condition; abort: no \\\"refused\\\" abor…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:16 [attempt] {\"step\":16,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: abort: no \\\"co2\\\" abort condition; abort: no \\\"refused\\\" abor…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:17 [attempt] {\"step\":17,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: abort: no \\\"co2\\\" abort condition; abort: no \\\"refused\\\" abor…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0003:5 [attempt] {\"step\":5,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"procedure refused: floor: step 1 stops the scrubber: a test never stops the only scrub…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0003:6 [attempt] {\"step\":6,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"procedure refused: monitoring: lab is occupied (2) and the procedure asks for no monit…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0003:7 [attempt] {\"step\":7,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"procedure refused: monitoring: lab is occupied (2) and the procedure asks for no monit…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0003:8 [attempt] {\"step\":8,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"procedure refused: monitoring: lab is occupied (2) and the procedure asks for no monit…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0003:9 [attempt] {\"step\":9,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"procedure refused: monitoring: lab is occupied (2) and the procedure asks for no monit…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0003:10 [attempt] {\"step\":10,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"procedure refused: monitoring: lab is occupied (2) and the procedure asks for no moni…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0003:11 [attempt] {\"step\":11,\"capability\":\"procedure.submit\",\"outcome\":\"ACCEPTED\"}",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0004:17 [attempt] {\"step\":17,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"Invalid capability arguments: data must have required property 'expected', data/abort…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0004:18 [attempt] {\"step\":18,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"procedure refused: floor: the procedure sets its own minimum speed at 10 %, below the…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0004:19 [attempt] {\"step\":19,\"capability\":\"procedure.submit\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"Stale decision: observed world changed before execution\"}",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0005:10 [attempt] {\"step\":10,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"Invalid capability arguments: data must have required property 'expected'\"}",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0005:11 [attempt] {\"step\":11,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"procedure refused: floor: the procedure sets its own minimum speed at 20 %, below the…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0005:12 [attempt] {\"step\":12,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"Invalid capability arguments: data must have required property 'expected'\"}",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0005:13 [attempt] {\"step\":13,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"procedure refused: bounds: the CO2 maximum 3200 ppm is not below the abort limit 3200…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0005:14 [attempt] {\"step\":14,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"procedure refused: monitoring: lab is occupied (2) and the procedure asks for no moni…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0005:15 [attempt] {\"step\":15,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"procedure refused: monitoring: lab is occupied (2) and the procedure asks for no moni…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0005:16 [attempt] {\"step\":16,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"procedure refused: monitoring: lab is occupied (2) and the procedure asks for no moni…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0005:17 [attempt] {\"step\":17,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"procedure refused: monitoring: lab is occupied (2) and the procedure asks for no moni…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0005:20 [attempt] {\"step\":20,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"procedure refused: monitoring: lab is occupied (2) and the procedure asks for no moni…",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0006:10 [attempt] {\"step\":10,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: floor: the procedure sets its own minimum speed at 20 %, belo…"
+   ],
+   "links": [
+    "attempt:snapshot-repository-workshop/t-2026-09-24-0019:14 of episode:snapshot-repository-workshop/t-2026-09-24-0019",
+    "attempt:snapshot-repository-workshop/t-2026-09-24-0019:14 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-24-0019:14 refused-for form:procedure:harness:12a366ff3873",
+    "attempt:snapshot-repository-workshop/t-2026-09-24-0019:15 of episode:snapshot-repository-workshop/t-2026-09-24-0019",
+    "attempt:snapshot-repository-workshop/t-2026-09-24-0019:15 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-24-0019:15 refused-for form:procedure:harness:12a366ff3873",
+    "attempt:snapshot-repository-workshop/t-2026-09-24-0019:18 of episode:snapshot-repository-workshop/t-2026-09-24-0019",
+    "attempt:snapshot-repository-workshop/t-2026-09-24-0019:18 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-24-0019:18 refused-for form:procedure:harness:12a366ff3873",
+    "attempt:snapshot-repository-workshop/t-2026-09-25-0001:13 of episode:snapshot-repository-workshop/t-2026-09-25-0001",
+    "attempt:snapshot-repository-workshop/t-2026-09-25-0001:13 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-25-0001:13 refused-for form:procedure:harness:12a366ff3873",
+    "attempt:snapshot-repository-workshop/t-2026-09-25-0038:13 of episode:snapshot-repository-workshop/t-2026-09-25-0038",
+    "attempt:snapshot-repository-workshop/t-2026-09-25-0038:13 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-25-0038:13 refused-for form:procedure:harness:12a366ff3873",
+    "task:snapshot-repository-workshop/t-2026-09-24-0019 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-24-0019 ran-under fingerprint:433bbb9878a7",
+    "task:snapshot-repository-workshop/t-2026-09-24-0019 read statement:295db18bb3fa14873cac806613d9f41d5827e9449d141242e438824474dda17b",
+    "task:snapshot-repository-workshop/t-2026-09-25-0001 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0001 ran-under fingerprint:433bbb9878a7",
+    "task:snapshot-repository-workshop/t-2026-09-25-0001 read statement:295db18bb3fa14873cac806613d9f41d5827e9449d141242e438824474dda17b",
+    "task:snapshot-repository-workshop/t-2026-09-25-0038 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0038 ran-under fingerprint:b156d783f695",
+    "task:snapshot-repository-workshop/t-2026-09-25-0038 read statement:ae65e2fe4399172e11ec57178857e189df62bef915d97d806ee32ae40a7547ee",
+    "episode:snapshot-repository-workshop/t-2026-09-24-0019 of task:snapshot-repository-workshop/t-2026-09-24-0019",
+    "episode:snapshot-repository-workshop/t-2026-09-25-0001 of task:snapshot-repository-workshop/t-2026-09-25-0001",
+    "episode:snapshot-repository-workshop/t-2026-09-25-0038 of task:snapshot-repository-workshop/t-2026-09-25-0038",
+    "fingerprint:433bbb9878a7 changed statement:295db18bb3fa14873cac806613d9f41d5827e9449d141242e438824474dda17b",
+    "attempt:snapshot-repository-workshop/t-2026-09-24-0019:19 of episode:snapshot-repository-workshop/t-2026-09-24-0019",
+    "attempt:snapshot-repository-workshop/t-2026-09-24-0019:19 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-24-0019:20 of episode:snapshot-repository-workshop/t-2026-09-24-0019",
+    "attempt:snapshot-repository-workshop/t-2026-09-24-0019:20 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:3 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:4 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:5 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:7 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:11 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:12 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:13 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:15 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:16 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0002:17 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0003:5 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0003:6 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0003:7 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0003:8 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0003:9 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0003:10 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0003:11 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0004:17 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0004:18 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0004:19 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0005:10 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0005:11 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0005:12 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0005:13 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0005:14 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0005:15 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0005:16 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0005:17 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0005:20 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-23-0006:10 calls capability:procedure.submit"
+   ]
+  },
+  "rules": [],
+  "today": {
+   "commit": "b253fbd",
+   "signatures": {},
+   "profiles": {
+    "profiles/anthropic.json": {
+     "wire": "anthropic-messages",
+     "model": "claude-haiku-4-5-20251001",
+     "capabilities": [
+      "tools",
+      "json"
+     ]
+    }
+   }
+  },
+  "refuted": []
+ },
+ "askedSha256": "22485e1d9bf6881eeed370c56c3eda520faaaf501d1e82c094fac2b4eb96f268",
+ "steps": [
+  {
+   "n": 1,
+   "capability": "task.plan",
+   "input": {
+    "selected_nodes": [],
+    "missing_capabilities": [
+     {
+      "required_output": "diag-98e239019b8b",
+      "quantity": "Diagnosis",
+      "reason": "The diagnosis is produced here by examining harness task sources and submitting checked predictions; no catalogue node produces it.",
+      "topic": "diagnosis"
+     }
+    ]
+   },
+   "outcome": "completed",
+   "reason": "plan accepted: 0 node type(s), 1 missing capability(ies)",
+   "tokens": {
+    "prompt": 13400,
+    "completion": 70,
+    "total": 13470
+   }
+  },
+  {
+   "n": 2,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-24-0019",
+    "step": 14,
+    "part": "sent"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 13660,
+    "completion": 62,
+    "total": 13722
+   }
+  },
+  {
+   "n": 3,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-24-0019",
+    "step": 15,
+    "part": "outline"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 13889,
+    "completion": 89,
+    "total": 13978
+   }
+  },
+  {
+   "n": 4,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-24-0019",
+    "step": 18,
+    "part": "sent",
+    "pointer": ""
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 14018,
+    "completion": 77,
+    "total": 14095
+   }
+  },
+  {
+   "n": 5,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-25-0001",
+    "step": 13,
+    "part": "sent",
+    "pointer": ""
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 14099,
+    "completion": 80,
+    "total": 14179
+   }
+  },
+  {
+   "n": 6,
+   "capability": "diagnosis.text",
+   "input": {
+    "file": "harness/topics/procedure/prompt.md",
+    "at": "task:snapshot-repository-workshop/t-2026-09-24-0019",
+    "find": "expected"
+   },
+   "outcome": "failed",
+   "reason": "the version of the texts task:snapshot-repository-workshop/t-2026-09-24-0019 ran under is not known",
+   "tokens": {
+    "prompt": 14196,
+    "completion": 91,
+    "total": 14287
+   }
+  },
+  {
+   "n": 7,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-24-0019",
+    "step": 15,
+    "part": "reason"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 14039,
+    "completion": 68,
+    "total": 14107
+   }
+  },
+  {
+   "n": 8,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-25-0038",
+    "step": 13,
+    "part": "sent",
+    "pointer": ""
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 14331,
+    "completion": 84,
+    "total": 14415
+   }
+  },
+  {
+   "n": 9,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-24-0019",
+    "step": 14,
+    "part": "received",
+    "pointer": ""
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 14426,
+    "completion": 116,
+    "total": 14542
+   }
+  },
+  {
+   "n": 10,
+   "capability": "diagnosis.graph",
+   "input": {
+    "id": "capability:procedure.submit"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.graph completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 14496,
+    "completion": 126,
+    "total": 14622
+   }
+  },
+  {
+   "n": 11,
+   "capability": "diagnosis.text",
+   "input": {
+    "file": "harness/topics/procedure/prompt.md",
+    "at": "task:snapshot-repository-workshop/t-2026-09-24-0019",
+    "find": "expected"
+   },
+   "outcome": "failed",
+   "reason": "the version of the texts task:snapshot-repository-workshop/t-2026-09-24-0019 ran under is not known",
+   "tokens": {
+    "prompt": 14913,
+    "completion": 97,
+    "total": 15010
+   }
+  },
+  {
+   "n": 12,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-24-0019",
+    "step": 19,
+    "part": "sent",
+    "pointer": "/expected"
+   },
+   "outcome": "failed",
+   "reason": "step 19 sent nothing at /expected: its fields are \"(not kept)\"",
+   "tokens": {
+    "prompt": 14627,
+    "completion": 81,
+    "total": 14708
+   }
+  },
+  {
+   "n": 13,
+   "capability": "diagnosis.text",
+   "input": {
+    "file": "harness/topics/procedure/prompt.md",
+    "at": "task:snapshot-repository-workshop/t-2026-09-24-0019",
+    "find": "expected"
+   },
+   "outcome": "failed",
+   "reason": "the version of the texts task:snapshot-repository-workshop/t-2026-09-24-0019 ran under is not known",
+   "tokens": {
+    "prompt": 14602,
+    "completion": 96,
+    "total": 14698
+   }
+  },
+  {
+   "n": 14,
+   "capability": "diagnosis.text",
+   "input": {
+    "file": "harness/topics/procedure/prompt.md",
+    "at": "today",
+    "find": "expected"
+   },
+   "outcome": "failed",
+   "reason": "harness/topics/procedure/prompt.md is not there at today",
+   "tokens": {
+    "prompt": 14653,
+    "completion": 56,
+    "total": 14709
+   }
+  },
+  {
+   "n": 15,
+   "capability": "diagnosis.graph",
+   "input": {
+    "id": "fingerprint:433bbb9878a7",
+    "from": 0
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.graph completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 14657,
+    "completion": 78,
+    "total": 14735
+   }
+  },
+  {
+   "n": 16,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-24-0019",
+    "step": 20,
+    "part": "sent",
+    "pointer": ""
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 15449,
+    "completion": 140,
+    "total": 15589
+   }
+  },
+  {
+   "n": 17,
+   "capability": "diagnosis.graph",
+   "input": {
+    "id": "fingerprint:b156d783f695",
+    "from": 0
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.graph completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 15308,
+    "completion": 94,
+    "total": 15402
+   }
+  },
+  {
+   "n": 18,
+   "capability": "diagnosis.submit",
+   "input": {
+    "id": "diag-98e239019b8b",
+    "verdict": "right",
+    "cause": "The five calls failed capability-schema validation because procedure.submit received a non-object value at data.expected. The generic harness validator therefore rejected them before the procedure guard; this was not a procedure safety-rule refusal. The later guard refusal and acceptance in t-2026-09-24-0019 show that a schema-valid call could pass the harness boundary, so the recurring defect was malformed model output rather than an unavailable capability.",
+    "class": "model-error",
+    "current": "closed",
+    "evidence": [
+     "form:procedure:harness:12a366ff3873",
+     "attempt:snapshot-repository-workshop/t-2026-09-24-0019:15",
+     "attempt:snapshot-repository-workshop/t-2026-09-24-0019:19",
+     "attempt:snapshot-repository-workshop/t-2026-09-24-0019:20",
+     "capability:procedure.submit",
+     "fingerprint:b156d783f695",
+     "fingerprint:e189827ff35b"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:snapshot-repository-workshop/t-2026-09-24-0019",
+       "step": 19,
+       "outcome": "guard-refused"
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:snapshot-repository-workshop/t-2026-09-24-0019",
+       "step": 20,
+       "outcome": "accepted"
+      },
+      "expect": true
+     },
+     {
+      "role": "current",
+      "predicate": "rate",
+      "args": {
+       "form": "form:procedure:harness:12a366ff3873",
+       "model": "claude-haiku-4-5-20251001",
+       "fingerprint": "fingerprint:e189827ff35b",
+       "compare": "=",
+       "value": 0
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "alternative": "The procedure safety guard produced the quoted refusal rather than the capability-schema validator.",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:snapshot-repository-workshop/t-2026-09-24-0019",
+       "step": 15,
+       "outcome": "guard-refused"
+      },
+      "expect": false
+     }
+    ],
+    "justifications": []
+   },
+   "outcome": "completed",
+   "judged": "accepted",
+   "reason": "diagnosis.submit completed; the workshop changed",
+   "tokens": {
+    "prompt": 15530,
+    "completion": 987,
+    "total": 16517
+   }
+  },
+  {
+   "n": 19,
+   "capability": "task.done",
+   "input": {
+    "summary": "Diagnosis diag-98e239019b8b was accepted. The checked diagnosis identifies the pre-guard procedure.submit schema failures and records their cause, classification, present status, graph evidence, and validated predictions. Accepted artifact SHA-256: 3c9c9893703c548478666265277332cc6d222275d1a0ca764569dd11e5a661da.",
+    "artifacts": [
+     {
+      "kind": "diagnosis",
+      "path": "diagnoses/diag-98e239019b8b.json"
+     }
+    ]
+   },
+   "outcome": "completed",
+   "reason": "contract held on topic diagnosis: diagnosis diagnoses/diag-98e239019b8b.json",
+   "tokens": {
+    "prompt": 15535,
+    "completion": 126,
+    "total": 15661
+   }
+  }
+ ],
+ "submissions": [
+  {
+   "step": 18,
+   "outcome": "completed",
+   "refused": false,
+   "reason": "diagnosis.submit completed; the workshop changed",
+   "diagnosis": {
+    "id": "diag-98e239019b8b",
+    "verdict": "right",
+    "cause": "The five calls failed capability-schema validation because procedure.submit received a non-object value at data.expected. The generic harness validator therefore rejected them before the procedure guard; this was not a procedure safety-rule refusal. The later guard refusal and acceptance in t-2026-09-24-0019 show that a schema-valid call could pass the harness boundary, so the recurring defect was malformed model output rather than an unavailable capability.",
+    "class": "model-error",
+    "current": "closed",
+    "evidence": [
+     "form:procedure:harness:12a366ff3873",
+     "attempt:snapshot-repository-workshop/t-2026-09-24-0019:15",
+     "attempt:snapshot-repository-workshop/t-2026-09-24-0019:19",
+     "attempt:snapshot-repository-workshop/t-2026-09-24-0019:20",
+     "capability:procedure.submit",
+     "fingerprint:b156d783f695",
+     "fingerprint:e189827ff35b"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:snapshot-repository-workshop/t-2026-09-24-0019",
+       "step": 19,
+       "outcome": "guard-refused"
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:snapshot-repository-workshop/t-2026-09-24-0019",
+       "step": 20,
+       "outcome": "accepted"
+      },
+      "expect": true
+     },
+     {
+      "role": "current",
+      "predicate": "rate",
+      "args": {
+       "form": "form:procedure:harness:12a366ff3873",
+       "model": "claude-haiku-4-5-20251001",
+       "fingerprint": "fingerprint:e189827ff35b",
+       "compare": "=",
+       "value": 0
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "alternative": "The procedure safety guard produced the quoted refusal rather than the capability-schema validator.",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:snapshot-repository-workshop/t-2026-09-24-0019",
+       "step": 15,
+       "outcome": "guard-refused"
+      },
+      "expect": false
+     }
+    ],
+    "justifications": []
+   }
+  }
+ ],
+ "accepted": {
+  "id": "diag-98e239019b8b",
+  "lead": {
+   "id": "D4:e694065969d8",
+   "detector": "D4",
+   "class": "harness-artefact",
+   "title": "the harness refused \"Invalid capability arguments: data/expected must be object\" 5 times in 3 tasks, before any guard (procedure.submit)",
+   "settledBy": null,
+   "form": {
+    "id": "form:procedure:harness:12a366ff3873",
+    "shape": "Invalid capability arguments: data/expected must be object",
+    "by": "harness"
+   },
+   "path": [
+    "step or attempt -refused-for-> form:procedure:harness:12a366ff3873 (by the harness)",
+    "x 5 in 3 tasks",
+    "-calls-> procedure.submit"
+   ],
+   "about": [
+    "form:procedure:harness:12a366ff3873",
+    "attempt:snapshot-repository-workshop/t-2026-09-24-0019:14",
+    "attempt:snapshot-repository-workshop/t-2026-09-24-0019:15",
+    "attempt:snapshot-repository-workshop/t-2026-09-24-0019:18",
+    "attempt:snapshot-repository-workshop/t-2026-09-25-0001:13",
+    "attempt:snapshot-repository-workshop/t-2026-09-25-0038:13"
+   ],
+   "tasks": [
+    "task:snapshot-repository-workshop/t-2026-09-24-0019",
+    "task:snapshot-repository-workshop/t-2026-09-25-0001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0038"
+   ],
+   "models": {
+    "claude-haiku-4-5-20251001": 3
+   },
+   "evidence": {
+    "refusals": 5,
+    "capabilities": [
+     "procedure.submit"
+    ],
+    "example": "Invalid capability arguments: data/expected must be object"
+   },
+   "recommend": true
+  },
+  "forks": [
+   "snapshot-repository-workshop"
+  ],
+  "verdict": "right",
+  "cause": "The five calls failed capability-schema validation because procedure.submit received a non-object value at data.expected. The generic harness validator therefore rejected them before the procedure guard; this was not a procedure safety-rule refusal. The later guard refusal and acceptance in t-2026-09-24-0019 show that a schema-valid call could pass the harness boundary, so the recurring defect was malformed model output rather than an unavailable capability.",
+  "class": "model-error",
+  "current": "closed",
+  "evidence": [
+   "form:procedure:harness:12a366ff3873",
+   "attempt:snapshot-repository-workshop/t-2026-09-24-0019:15",
+   "attempt:snapshot-repository-workshop/t-2026-09-24-0019:19",
+   "attempt:snapshot-repository-workshop/t-2026-09-24-0019:20",
+   "capability:procedure.submit",
+   "fingerprint:b156d783f695",
+   "fingerprint:e189827ff35b"
+  ],
+  "predictions": [
+   {
+    "role": "cause",
+    "predicate": "outcome-at",
+    "args": {
+     "task": "task:snapshot-repository-workshop/t-2026-09-24-0019",
+     "step": 19,
+     "outcome": "guard-refused"
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "step 19 (procedure.submit): guard-refused",
+     "nodes": [
+      "task:snapshot-repository-workshop/t-2026-09-24-0019",
+      "attempt:snapshot-repository-workshop/t-2026-09-24-0019:19"
+     ],
+     "read": []
+    }
+   },
+   {
+    "role": "cause",
+    "predicate": "outcome-at",
+    "args": {
+     "task": "task:snapshot-repository-workshop/t-2026-09-24-0019",
+     "step": 20,
+     "outcome": "accepted"
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "step 20 (procedure.submit): accepted",
+     "nodes": [
+      "task:snapshot-repository-workshop/t-2026-09-24-0019",
+      "attempt:snapshot-repository-workshop/t-2026-09-24-0019:20"
+     ],
+     "read": []
+    }
+   },
+   {
+    "role": "current",
+    "predicate": "rate",
+    "args": {
+     "form": "form:procedure:harness:12a366ff3873",
+     "model": "claude-haiku-4-5-20251001",
+     "fingerprint": "fingerprint:e189827ff35b",
+     "compare": "=",
+     "value": 0
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "0 of 8 tasks refused for it (0 %)",
+     "nodes": [
+      "form:procedure:harness:12a366ff3873",
+      "fingerprint:e189827ff35b",
+      "model:claude-haiku-4-5-20251001"
+     ],
+     "read": []
+    }
+   },
+   {
+    "role": "rules-out",
+    "alternative": "The procedure safety guard produced the quoted refusal rather than the capability-schema validator.",
+    "predicate": "outcome-at",
+    "args": {
+     "task": "task:snapshot-repository-workshop/t-2026-09-24-0019",
+     "step": 15,
+     "outcome": "guard-refused"
+    },
+    "expect": false,
+    "result": {
+     "truth": "false",
+     "observed": "step 15 (procedure.submit): harness-refused",
+     "nodes": [
+      "task:snapshot-repository-workshop/t-2026-09-24-0019",
+      "attempt:snapshot-repository-workshop/t-2026-09-24-0019:15"
+     ],
+     "read": []
+    }
+   }
+  ],
+  "checked": {
+   "confirmed": 4,
+   "unknown": 0,
+   "byRole": {
+    "cause": {
+     "confirmed": 2,
+     "of": 2
+    },
+    "current": {
+     "confirmed": 1,
+     "of": 1
+    },
+    "rules-out": {
+     "confirmed": 1,
+     "of": 1
+    }
+   },
+   "alternativesRuledOut": [
+    "The procedure safety guard produced the quoted refusal rather than the capability-schema validator."
+   ]
+  },
+  "justifications": []
+ },
+ "station": {
+  "status": "diagnosed"
+ },
+ "tokens": {
+  "prompt": 275828,
+  "completion": 2618
+ }
+}

@@ -1,0 +1,710 @@
+{
+ "schema": 1,
+ "key": "repository/t-2026-10-01-0014",
+ "workshop": "repository",
+ "taskId": "t-2026-10-01-0014",
+ "recordedAt": "2026-10-01T18:57:40.720Z",
+ "startedAt": "2026-10-01T18:57:03.489Z",
+ "endedAt": "2026-10-01T18:57:39.946Z",
+ "state": "proposed",
+ "ended": "contract held after 6 step(s)",
+ "requestedBy": "station (evaluator)",
+ "corpus": "evaluator",
+ "forks": [
+  "exp-control",
+  "exp-learn",
+  "exp3-baseline",
+  "exp4-gpt-a",
+  "exp4-gpt-c",
+  "exp4-sonnet-a",
+  "exp6-contract",
+  "exp7-fixes",
+  "exp8-paths"
+ ],
+ "lead": "D6:93cf26da851b",
+ "diagnosisId": "diag-5372d1dbbafa",
+ "model": "claude-sonnet-5-5",
+ "family": "claude",
+ "provider": {
+  "name": "reasoner:claude",
+  "model": "claude-sonnet-5-5",
+  "family": "claude",
+  "settings": {
+   "maxTokens": 8192,
+   "maxTokensParam": null,
+   "temperature": null,
+   "reasoningEffort": null,
+   "timeoutMs": null
+  },
+  "profile": {
+   "file": "profiles/anthropic-sonnet.json",
+   "sha256": "4cfc6349fd069075d89f8228c08374f628e69adbae6f7b9958363bac0a61b342"
+  }
+ },
+ "profile": {
+  "file": "profiles/anthropic.json",
+  "sha256": "57b865b5b073a8d0fc00cfaa6e23171d4dca37acbb447b317c622718f68df5d0"
+ },
+ "harness": {
+  "repository": "f29cb0cb72c0a7e44664dda08c2386b507e09fd9",
+  "fork": null
+ },
+ "asked": {
+  "id": "diag-5372d1dbbafa",
+  "forks": [
+   "exp-control",
+   "exp-learn",
+   "exp3-baseline",
+   "exp4-gpt-a",
+   "exp4-gpt-c",
+   "exp4-sonnet-a",
+   "exp6-contract",
+   "exp7-fixes",
+   "exp8-paths"
+  ],
+  "lead": {
+   "id": "D6:93cf26da851b",
+   "detector": "D6",
+   "class": "contract-gap",
+   "title": "the memory entry \"In the justification of each safety constant, cite as reference only the bare id of the single signed fact that bounds i…\" compensates REFERENCE_NOT_A_FACT, which no text its failures were given stated: a gap of the contract, learned instead of written; stated since, by specs/procedure/words.json /brief/safetyBounds: \"which is the single fact to cite, by its id alone as the reference\"; harness/core/justify.ts: \"Exactly one: for library, one id as library.facts lists it\": the entry is now redundant",
+   "settledBy": null,
+   "form": null,
+   "path": [
+    "memory:procedure:m-e26243b3d5 -rests-on-> episode:exp4-sonnet-a/t-2026-09-29-0001, episode:exp4-sonnet-a/t-2026-09-29-0002",
+    "<-of- attempts -refused-for-> forms -of-> rule:procedure:REFERENCE_NOT_A_FACT",
+    "told: 0, not: 2, not known: 0"
+   ],
+   "about": [
+    "memory:procedure:m-e26243b3d5",
+    "episode:exp4-sonnet-a/t-2026-09-29-0001",
+    "episode:exp4-sonnet-a/t-2026-09-29-0002",
+    "rule:procedure:REFERENCE_NOT_A_FACT"
+   ],
+   "tasks": [
+    "task:exp4-sonnet-a/t-2026-09-29-0001",
+    "task:exp4-sonnet-a/t-2026-09-29-0002"
+   ],
+   "models": {
+    "claude-sonnet-5-5": 2
+   },
+   "evidence": {
+    "entry": "m-e26243b3d5",
+    "status": "consolidated",
+    "rules": [
+     "REFERENCE_NOT_A_FACT"
+    ],
+    "told": 0,
+    "untold": 2,
+    "unknown": 0,
+    "missing": [
+     "rule:procedure:REFERENCE_NOT_A_FACT"
+    ],
+    "statedNow": [
+     "specs/procedure/words.json /brief/safetyBounds: \"which is the single fact to cite, by its id alone as the reference\"",
+     "harness/core/justify.ts: \"Exactly one: for library, one id as library.facts lists it\""
+    ]
+   },
+   "recommend": true
+  },
+  "neighbourhood": {
+   "nodes": [
+    "memory:procedure:m-e26243b3d5 [memory-entry] {\"id\":\"m-e26243b3d5\",\"topic\":\"procedure\",\"rule\":\"In the justification of each safety constant, cite as reference only the bare id of the single signed fact that…",
+    "episode:exp4-sonnet-a/t-2026-09-29-0001 [episode] {\"finalOutcome\":\"ACCEPTED\",\"action\":\"procedure.submit\"}",
+    "episode:exp4-sonnet-a/t-2026-09-29-0002 [episode] {\"finalOutcome\":\"ACCEPTED\",\"action\":\"procedure.submit\"}",
+    "rule:procedure:REFERENCE_NOT_A_FACT [rule] {\"topic\":\"procedure\",\"code\":\"REFERENCE_NOT_A_FACT\",\"status\":\"stated\",\"signed\":false,\"note\":\"the safety card says to cite \\\"the fact's id as its reference\\\", whi…",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 [task] {\"taskId\":\"t-2026-09-29-0001\",\"workshop\":\"exp4-sonnet-a\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:49:53.871Z\",\"ended\":\"contract held af…",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 [task] {\"taskId\":\"t-2026-09-29-0002\",\"workshop\":\"exp4-sonnet-a\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:51:00.454Z\",\"ended\":\"contract held af…",
+    "correction:exp4-sonnet-a/t-2026-09-29-0001:steps.2.speedPercent [correction] {\"path\":\"steps.2.speedPercent\",\"kind\":\"justification\",\"refused\":{\"value\":100,\"source\":\"library\",\"reference\":\"test.speedFloorPercent; scrubber.effectiveFlowAtFul…",
+    "attempt:exp4-sonnet-a/t-2026-09-29-0001:9 [attempt] {\"step\":9,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: justification: steps.2.speedPercent: \\\"test.speedFloorPercent;…",
+    "attempt:exp4-sonnet-a/t-2026-09-29-0001:10 [attempt] {\"step\":10,\"capability\":\"procedure.revise\",\"outcome\":\"ACCEPTED\"}",
+    "correction:exp4-sonnet-a/t-2026-09-29-0002:limits.co2MaxPpm [correction] {\"path\":\"limits.co2MaxPpm\",\"kind\":\"justification\",\"refused\":{\"value\":2500,\"source\":\"library\",\"reference\":\"test.co2AbortCeilingPpm (<=3200); test.startHeadroomPp…",
+    "correction:exp4-sonnet-a/t-2026-09-29-0002:limits.minSpeedPercent [correction] {\"path\":\"limits.minSpeedPercent\",\"kind\":\"justification\",\"refused\":{\"value\":40,\"source\":\"library\",\"reference\":\"test.speedFloorPercent (>=30, signed); scrubber.mi…",
+    "correction:exp4-sonnet-a/t-2026-09-29-0002:steps.1.speedPercent [correction] {\"path\":\"steps.1.speedPercent\",\"kind\":\"justification\",\"refused\":{\"value\":40,\"source\":\"library\",\"reference\":\"test.speedFloorPercent (>=30); scrubber.minimumSpeed…",
+    "correction:exp4-sonnet-a/t-2026-09-29-0002:steps.2.speedPercent [correction] {\"path\":\"steps.2.speedPercent\",\"kind\":\"justification\",\"refused\":{\"value\":100,\"source\":\"library\",\"reference\":\"test.speedFloorPercent (>=30); scrubber.effectiveFl…",
+    "attempt:exp4-sonnet-a/t-2026-09-29-0002:8 [attempt] {\"step\":8,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: justification: limits.co2MaxPpm: \\\"test.co2AbortCeilingPpm (<=…",
+    "attempt:exp4-sonnet-a/t-2026-09-29-0002:9 [attempt] {\"step\":9,\"capability\":\"procedure.revise\",\"outcome\":\"ACCEPTED\"}",
+    "statement:contract:6ef2783d2f3c [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/safetyBounds\",\"phrase\":\"which is the single fact to cite, by its id alone as the refere…",
+    "statement:contract:4b09f3d1eea0 [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"Exactly one: for library, one id as library.facts lists it\"}",
+    "form:procedure:33231b945eef [form] {\"topic\":\"procedure\",\"shape\":\"justification: *: … is not a fact of the library\",\"kind\":\"justification\",\"by\":\"guard\",\"sample\":\"justification: steps.2.speedPercen…",
+    "model:claude-sonnet-5-5 [model] {\"model\":\"claude-sonnet-5-5\",\"provider\":\"reasoner:claude\",\"family\":\"claude\"}",
+    "fingerprint:7890280cb9b1 [fingerprint] {\"tools\":\"7474411ba76bc4d4cfb83066834385e723eaf6ce05d0b7471590a702cd4edc65\",\"toolsDetailed\":false,\"words\":null,\"prompt\":\"4539a2b270603168740441153eaf30be44ec707…",
+    "statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3 [statement] {\"slot\":\"prompt:specs/procedure/prompt.md\",\"kind\":\"prompt\",\"of\":\"specs/procedure/prompt.md\",\"sha256\":\"4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5…",
+    "statement:contract:d318d8ec9126 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/procedure\",\"phrase\":\"cite a fact of a library document a person signed\"}",
+    "statement:contract:661448b756fd [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/safetyBounds\",\"phrase\":\"the fact its signed rules bound it by\"}",
+    "statement:contract:ec185a62d3cd [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/procedure\",\"phrase\":\"library.facts says which are signed\"}",
+    "statement:contract:d0d31897432e [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/procedure\",\"phrase\":\"and respect it\"}",
+    "statement:contract:e7c8ceacd378 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/safetyBounds\",\"phrase\":\"and on which side\"}",
+    "statement:contract:1770e40880de [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/procedure\",\"phrase\":\"Every constant you set is justified in justifications\"}",
+    "statement:contract:be58c67f8aab [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"its value (a number, or [min, max] for bounds)\"}",
+    "statement:contract:b020dd6a2c51 [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"Why, in a few words\"}",
+    "statement:contract:2ba750a23bd2 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/procedure\",\"phrase\":\"cite what you read\"}",
+    "statement:contract:189045e7d19f [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"web: a URL a search returned\"}",
+    "statement:contract:06599146cbe7 [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"measured: what the task observed\"}",
+    "statement:contract:96011ca77ae3 [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"envelope: a bound of the guard's envelope\"}",
+    "statement:contract:98914823d9ec [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"derived: the formula\"}",
+    "statement:contract:e5418443b2af [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"library: a document or fact id read in this task\"}",
+    "statement:contract:d61820a4a508 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/capabilities/analyse\",\"phrase\":\"the new procedure must make these changes\"}",
+    "statement:contract:a68c38560610 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/analysed\",\"phrase\":\"the procedure must change what it names\"}",
+    "statement:contract:58656577bd4f [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/analysis\",\"phrase\":\"Before any new procedure, analyse it with procedure.analyse\"}",
+    "statement:contract:ed4d477392a3 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/handOver\",\"phrase\":\"End with task.done\"}",
+    "statement:contract:f4047e81683f [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/methodFind\",\"phrase\":\"read the card of the one you choose\"}",
+    "statement:contract:164ede095e07 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/capabilities/revise\",\"phrase\":\"When nothing is kept\"}",
+    "statement:contract:8ef5996c115c [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/capabilities/analyse\",\"phrase\":\"Analyse why the last test was aborted\"}",
+    "statement:contract:aa7b9a3e49f9 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/capabilities/analyse\",\"phrase\":\"the cause\"}",
+    "statement:contract:87429838499a [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/capabilities/analyse\",\"phrase\":\"each a field of the procedure\"}",
+    "statement:contract:ee13241e11fe [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/procedure.schema.json\",\"pointer\":\"/properties/volume/description\",\"phrase\":\"ISA-95 path of the volume under test\"}",
+    "statement:contract:326fb8b4b56a [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/procedure.schema.json\",\"pointer\":\"/properties/device/description\",\"phrase\":\"ISA-95 path of the device the steps comma…",
+    "statement:contract:6e5f03e58e7a [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/prompt.md\",\"phrase\":\"`limits.co2MaxPpm`, `limits.co2AbortPpm`, `limits.minSpeedPercent`, `limits.maxMinutes`\"}",
+    "statement:contract:5f06e9dabbb1 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/procedure.schema.json\",\"pointer\":\"/properties/steps/items/required\",\"phrase\":\"speedPercent\"}",
+    "statement:contract:bf267de9e2d6 [statement] {\"kind\":\"contract\",\"library\":\"commissioning-test-safety\",\"phrase\":\"every step's `speedPercent` are at or above `test.speedFloorPercent`\"}",
+    "statement:contract:857090aaec4d [statement] {\"kind\":\"contract\",\"library\":\"commissioning-test-safety\",\"phrase\":\"never stops it\"}"
+   ],
+   "links": [
+    "memory:procedure:m-e26243b3d5 rests-on episode:exp4-sonnet-a/t-2026-09-29-0001",
+    "memory:procedure:m-e26243b3d5 rests-on episode:exp4-sonnet-a/t-2026-09-29-0002",
+    "episode:exp4-sonnet-a/t-2026-09-29-0001 of task:exp4-sonnet-a/t-2026-09-29-0001",
+    "episode:exp4-sonnet-a/t-2026-09-29-0001 corrected-by correction:exp4-sonnet-a/t-2026-09-29-0001:steps.2.speedPercent",
+    "episode:exp4-sonnet-a/t-2026-09-29-0002 of task:exp4-sonnet-a/t-2026-09-29-0002",
+    "episode:exp4-sonnet-a/t-2026-09-29-0002 corrected-by correction:exp4-sonnet-a/t-2026-09-29-0002:limits.co2MaxPpm",
+    "episode:exp4-sonnet-a/t-2026-09-29-0002 corrected-by correction:exp4-sonnet-a/t-2026-09-29-0002:limits.minSpeedPercent",
+    "episode:exp4-sonnet-a/t-2026-09-29-0002 corrected-by correction:exp4-sonnet-a/t-2026-09-29-0002:steps.1.speedPercent",
+    "episode:exp4-sonnet-a/t-2026-09-29-0002 corrected-by correction:exp4-sonnet-a/t-2026-09-29-0002:steps.2.speedPercent",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 ran-by model:claude-sonnet-5-5",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 ran-under fingerprint:7890280cb9b1",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:contract:d318d8ec9126",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:contract:661448b756fd",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:contract:ec185a62d3cd",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:contract:d0d31897432e",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:contract:e7c8ceacd378",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:contract:1770e40880de",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:contract:be58c67f8aab",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:contract:b020dd6a2c51",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:contract:2ba750a23bd2",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:contract:189045e7d19f",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:contract:06599146cbe7",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:contract:96011ca77ae3",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:contract:98914823d9ec",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:contract:e5418443b2af",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:contract:d61820a4a508",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:contract:a68c38560610",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:contract:58656577bd4f",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:contract:ed4d477392a3",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:contract:f4047e81683f",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:contract:164ede095e07",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:contract:8ef5996c115c",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:contract:aa7b9a3e49f9",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:contract:87429838499a",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:contract:ee13241e11fe",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:contract:326fb8b4b56a",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:contract:6e5f03e58e7a",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:contract:5f06e9dabbb1",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:contract:bf267de9e2d6",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:contract:857090aaec4d",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 ran-by model:claude-sonnet-5-5",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 ran-under fingerprint:7890280cb9b1",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 read statement:contract:d318d8ec9126",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 read statement:contract:661448b756fd",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 read statement:contract:ec185a62d3cd",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 read statement:contract:d0d31897432e",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 read statement:contract:e7c8ceacd378",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 read statement:contract:1770e40880de",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 read statement:contract:be58c67f8aab",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 read statement:contract:b020dd6a2c51",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 read statement:contract:2ba750a23bd2",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 read statement:contract:189045e7d19f",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 read statement:contract:06599146cbe7",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 read statement:contract:96011ca77ae3",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 read statement:contract:98914823d9ec",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 read statement:contract:e5418443b2af",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 read statement:contract:d61820a4a508",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 read statement:contract:a68c38560610",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 read statement:contract:58656577bd4f",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 read statement:contract:ed4d477392a3",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 read statement:contract:f4047e81683f",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 read statement:contract:164ede095e07",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 read statement:contract:8ef5996c115c",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 read statement:contract:aa7b9a3e49f9",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 read statement:contract:87429838499a",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 read statement:contract:ee13241e11fe",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 read statement:contract:326fb8b4b56a",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 read statement:contract:6e5f03e58e7a",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 read statement:contract:5f06e9dabbb1",
+    "correction:exp4-sonnet-a/t-2026-09-29-0001:steps.2.speedPercent answers form:procedure:33231b945eef",
+    "attempt:exp4-sonnet-a/t-2026-09-29-0001:9 of episode:exp4-sonnet-a/t-2026-09-29-0001",
+    "attempt:exp4-sonnet-a/t-2026-09-29-0001:9 refused-for form:procedure:33231b945eef",
+    "attempt:exp4-sonnet-a/t-2026-09-29-0001:10 of episode:exp4-sonnet-a/t-2026-09-29-0001",
+    "correction:exp4-sonnet-a/t-2026-09-29-0002:limits.co2MaxPpm answers form:procedure:33231b945eef",
+    "correction:exp4-sonnet-a/t-2026-09-29-0002:limits.minSpeedPercent answers form:procedure:33231b945eef",
+    "correction:exp4-sonnet-a/t-2026-09-29-0002:steps.1.speedPercent answers form:procedure:33231b945eef",
+    "correction:exp4-sonnet-a/t-2026-09-29-0002:steps.2.speedPercent answers form:procedure:33231b945eef",
+    "attempt:exp4-sonnet-a/t-2026-09-29-0002:8 of episode:exp4-sonnet-a/t-2026-09-29-0002",
+    "attempt:exp4-sonnet-a/t-2026-09-29-0002:8 refused-for form:procedure:33231b945eef",
+    "attempt:exp4-sonnet-a/t-2026-09-29-0002:9 of episode:exp4-sonnet-a/t-2026-09-29-0002",
+    "statement:contract:6ef2783d2f3c states rule:procedure:REFERENCE_NOT_A_FACT",
+    "statement:contract:4b09f3d1eea0 states rule:procedure:REFERENCE_NOT_A_FACT",
+    "form:procedure:33231b945eef of rule:procedure:REFERENCE_NOT_A_FACT"
+   ]
+  },
+  "rules": [
+   {
+    "code": "REFERENCE_NOT_A_FACT",
+    "status": "stated",
+    "signed": false,
+    "note": "the safety card says to cite \"the fact's id as its reference\", which a model read as allowing two ids joined; what the guard accepts, one id and nothing else, is stated by these two since 287f5bc",
+    "statedToday": [
+     {
+      "where": "specs/procedure/words.json#/brief/safetyBounds",
+      "holds": true
+     },
+     {
+      "where": "harness/core/justify.ts",
+      "holds": true
+     }
+    ]
+   }
+  ],
+  "today": {
+   "commit": "f29cb0c",
+   "signatures": {},
+   "profiles": {
+    "profiles/anthropic.json": {
+     "wire": "anthropic-messages",
+     "model": "claude-haiku-4-5-20251001",
+     "capabilities": [
+      "tools",
+      "json"
+     ]
+    }
+   }
+  },
+  "refuted": []
+ },
+ "askedSha256": "41283475df657991ad59e23bf6127c083129c300109def28c425ae0a9de744e2",
+ "steps": [
+  {
+   "n": 1,
+   "capability": "task.plan",
+   "input": {
+    "selected_nodes": [],
+    "missing_capabilities": [
+     {
+      "required_output": "diag-5372d1dbbafa",
+      "quantity": "Diagnosis",
+      "reason": "No catalogue node produces a diagnosis; it is made here from the harness graph, the tasks' steps and the texts of the contract.",
+      "topic": "diagnosis"
+     }
+    ]
+   },
+   "outcome": "completed",
+   "reason": "plan accepted: 0 node type(s), 1 missing capability(ies)",
+   "tokens": {
+    "prompt": 13274,
+    "completion": 170,
+    "total": 13444
+   }
+  },
+  {
+   "n": 2,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp4-sonnet-a/t-2026-09-29-0001",
+    "step": 9,
+    "part": "reason"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 14080,
+    "completion": 171,
+    "total": 14251
+   }
+  },
+  {
+   "n": 3,
+   "capability": "diagnosis.graph",
+   "input": {
+    "id": "rule:procedure:REFERENCE_NOT_A_FACT"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.graph completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 14832,
+    "completion": 150,
+    "total": 14982
+   }
+  },
+  {
+   "n": 4,
+   "capability": "diagnosis.text",
+   "input": {
+    "file": "specs/procedure/words.json",
+    "at": "task:exp4-sonnet-a/t-2026-09-29-0001",
+    "pointer": "/brief/safetyBounds"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.text completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 15101,
+    "completion": 384,
+    "total": 15485
+   }
+  },
+  {
+   "n": 5,
+   "capability": "diagnosis.submit",
+   "input": {
+    "id": "diag-5372d1dbbafa",
+    "verdict": "right",
+    "cause": "At the time of tasks 0001 and 0002, the texts the model read said only to cite \"the fact's id as its reference\". They did not say it must be one id and nothing else. The model read that as allowing two ids joined by \";\" with a note, for example \"test.speedFloorPercent; scrubber.effectiveFlowAtFull (scrubber-1-datasheet)\". The guard accepts a single bare id, so it refused with REFERENCE_NOT_A_FACT. The refusal's own words did give the right fact, but the contract text had not told the model the rule beforehand. This is a contract gap, not a model error or a missing fact. The memory entry learned the rule because the texts did not state it. Since 287f5bc, specs/procedure/words.json /brief/safetyBounds and harness/core/justify.ts state it, so the entry is now redundant.",
+    "class": "contract-gap",
+    "current": "closed",
+    "evidence": [
+     "memory:procedure:m-e26243b3d5",
+     "episode:exp4-sonnet-a/t-2026-09-29-0001",
+     "episode:exp4-sonnet-a/t-2026-09-29-0002",
+     "rule:procedure:REFERENCE_NOT_A_FACT",
+     "form:procedure:33231b945eef",
+     "attempt:exp4-sonnet-a/t-2026-09-29-0001:9",
+     "attempt:exp4-sonnet-a/t-2026-09-29-0002:8",
+     "statement:contract:6ef2783d2f3c",
+     "statement:contract:4b09f3d1eea0"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "stated-at",
+      "args": {
+       "file": "specs/procedure/words.json",
+       "pointer": "/brief/safetyBounds",
+       "phrase": "by its id alone as the reference",
+       "at": "task:exp4-sonnet-a/t-2026-09-29-0001"
+      },
+      "expect": false
+     },
+     {
+      "role": "current",
+      "predicate": "stated-at",
+      "args": {
+       "file": "specs/procedure/words.json",
+       "pointer": "/brief/safetyBounds",
+       "phrase": "by its id alone as the reference",
+       "at": "today"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "alternative": "model-error: the texts already stated one id only and the model did not follow",
+      "predicate": "stated-at",
+      "args": {
+       "file": "harness/core/justify.ts",
+       "phrase": "Exactly one: for library, one id as library.facts lists it",
+       "at": "task:exp4-sonnet-a/t-2026-09-29-0001"
+      },
+      "expect": false
+     },
+     {
+      "role": "rules-out",
+      "alternative": "library-gap: the fact to cite was missing from the library",
+      "predicate": "fact",
+      "args": {
+       "id": "test.speedFloorPercent",
+       "at": "today",
+       "compare": "present"
+      },
+      "expect": true
+     }
+    ],
+    "justifications": []
+   },
+   "outcome": "completed",
+   "judged": "accepted",
+   "reason": "diagnosis.submit completed; the workshop changed",
+   "tokens": {
+    "prompt": 15221,
+    "completion": 1832,
+    "total": 17053
+   }
+  },
+  {
+   "n": 6,
+   "capability": "task.done",
+   "input": {
+    "summary": "Diagnosis diag-5372d1dbbafa accepted by the guard (sha256 0f46b67a3b755f25509872a7f2d74c59ea5f948b97f4fd9eb51e3a25181e859f). The lead is right: the memory entry m-e26243b3d5 compensated a contract gap. REFERENCE_NOT_A_FACT refused two tasks (t-2026-09-29-0001 at step 9, t-2026-09-29-0002 at step 8). The models had joined two ids in one reference, for example \"test.speedFloorPercent; scrubber.effectiveFlowAtFull\". The texts they were given did not say to cite one id alone. The safety card said to cite \"the fact's id as its reference\", which allowed that reading. The harness checked these predictions. At the tasks' version (08a954e), neither specs/procedure/words.json#/brief/safetyBounds nor harness/core/justify.ts held the \"single id\" phrase. Today, safetyBounds states it, and justify.ts also states it (\"Exactly one: for library, one id as library.facts lists it\"). The signed fact test.speedFloorPercent = 30 percent is held today. Class: contract-gap. The gap is closed since commit 287f5bc, so the memory entry is now redundant.",
+    "artifacts": [
+     {
+      "kind": "diagnosis",
+      "path": "diagnoses/diag-5372d1dbbafa.json"
+     }
+    ]
+   },
+   "outcome": "completed",
+   "reason": "contract held on topic diagnosis: diagnosis diagnoses/diag-5372d1dbbafa.json",
+   "tokens": {
+    "prompt": 15279,
+    "completion": 531,
+    "total": 15810
+   }
+  }
+ ],
+ "submissions": [
+  {
+   "step": 5,
+   "outcome": "completed",
+   "refused": false,
+   "reason": "diagnosis.submit completed; the workshop changed",
+   "diagnosis": {
+    "id": "diag-5372d1dbbafa",
+    "verdict": "right",
+    "cause": "At the time of tasks 0001 and 0002, the texts the model read said only to cite \"the fact's id as its reference\". They did not say it must be one id and nothing else. The model read that as allowing two ids joined by \";\" with a note, for example \"test.speedFloorPercent; scrubber.effectiveFlowAtFull (scrubber-1-datasheet)\". The guard accepts a single bare id, so it refused with REFERENCE_NOT_A_FACT. The refusal's own words did give the right fact, but the contract text had not told the model the rule beforehand. This is a contract gap, not a model error or a missing fact. The memory entry learned the rule because the texts did not state it. Since 287f5bc, specs/procedure/words.json /brief/safetyBounds and harness/core/justify.ts state it, so the entry is now redundant.",
+    "class": "contract-gap",
+    "current": "closed",
+    "evidence": [
+     "memory:procedure:m-e26243b3d5",
+     "episode:exp4-sonnet-a/t-2026-09-29-0001",
+     "episode:exp4-sonnet-a/t-2026-09-29-0002",
+     "rule:procedure:REFERENCE_NOT_A_FACT",
+     "form:procedure:33231b945eef",
+     "attempt:exp4-sonnet-a/t-2026-09-29-0001:9",
+     "attempt:exp4-sonnet-a/t-2026-09-29-0002:8",
+     "statement:contract:6ef2783d2f3c",
+     "statement:contract:4b09f3d1eea0"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "stated-at",
+      "args": {
+       "file": "specs/procedure/words.json",
+       "pointer": "/brief/safetyBounds",
+       "phrase": "by its id alone as the reference",
+       "at": "task:exp4-sonnet-a/t-2026-09-29-0001"
+      },
+      "expect": false
+     },
+     {
+      "role": "current",
+      "predicate": "stated-at",
+      "args": {
+       "file": "specs/procedure/words.json",
+       "pointer": "/brief/safetyBounds",
+       "phrase": "by its id alone as the reference",
+       "at": "today"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "alternative": "model-error: the texts already stated one id only and the model did not follow",
+      "predicate": "stated-at",
+      "args": {
+       "file": "harness/core/justify.ts",
+       "phrase": "Exactly one: for library, one id as library.facts lists it",
+       "at": "task:exp4-sonnet-a/t-2026-09-29-0001"
+      },
+      "expect": false
+     },
+     {
+      "role": "rules-out",
+      "alternative": "library-gap: the fact to cite was missing from the library",
+      "predicate": "fact",
+      "args": {
+       "id": "test.speedFloorPercent",
+       "at": "today",
+       "compare": "present"
+      },
+      "expect": true
+     }
+    ],
+    "justifications": []
+   }
+  }
+ ],
+ "accepted": {
+  "id": "diag-5372d1dbbafa",
+  "lead": {
+   "id": "D6:93cf26da851b",
+   "detector": "D6",
+   "class": "contract-gap",
+   "title": "the memory entry \"In the justification of each safety constant, cite as reference only the bare id of the single signed fact that bounds i…\" compensates REFERENCE_NOT_A_FACT, which no text its failures were given stated: a gap of the contract, learned instead of written; stated since, by specs/procedure/words.json /brief/safetyBounds: \"which is the single fact to cite, by its id alone as the reference\"; harness/core/justify.ts: \"Exactly one: for library, one id as library.facts lists it\": the entry is now redundant",
+   "settledBy": null,
+   "form": null,
+   "path": [
+    "memory:procedure:m-e26243b3d5 -rests-on-> episode:exp4-sonnet-a/t-2026-09-29-0001, episode:exp4-sonnet-a/t-2026-09-29-0002",
+    "<-of- attempts -refused-for-> forms -of-> rule:procedure:REFERENCE_NOT_A_FACT",
+    "told: 0, not: 2, not known: 0"
+   ],
+   "about": [
+    "memory:procedure:m-e26243b3d5",
+    "episode:exp4-sonnet-a/t-2026-09-29-0001",
+    "episode:exp4-sonnet-a/t-2026-09-29-0002",
+    "rule:procedure:REFERENCE_NOT_A_FACT"
+   ],
+   "tasks": [
+    "task:exp4-sonnet-a/t-2026-09-29-0001",
+    "task:exp4-sonnet-a/t-2026-09-29-0002"
+   ],
+   "models": {
+    "claude-sonnet-5-5": 2
+   },
+   "evidence": {
+    "entry": "m-e26243b3d5",
+    "status": "consolidated",
+    "rules": [
+     "REFERENCE_NOT_A_FACT"
+    ],
+    "told": 0,
+    "untold": 2,
+    "unknown": 0,
+    "missing": [
+     "rule:procedure:REFERENCE_NOT_A_FACT"
+    ],
+    "statedNow": [
+     "specs/procedure/words.json /brief/safetyBounds: \"which is the single fact to cite, by its id alone as the reference\"",
+     "harness/core/justify.ts: \"Exactly one: for library, one id as library.facts lists it\""
+    ]
+   },
+   "recommend": true
+  },
+  "forks": [
+   "exp-control",
+   "exp-learn",
+   "exp3-baseline",
+   "exp4-gpt-a",
+   "exp4-gpt-c",
+   "exp4-sonnet-a",
+   "exp6-contract",
+   "exp7-fixes",
+   "exp8-paths"
+  ],
+  "verdict": "right",
+  "cause": "At the time of tasks 0001 and 0002, the texts the model read said only to cite \"the fact's id as its reference\". They did not say it must be one id and nothing else. The model read that as allowing two ids joined by \";\" with a note, for example \"test.speedFloorPercent; scrubber.effectiveFlowAtFull (scrubber-1-datasheet)\". The guard accepts a single bare id, so it refused with REFERENCE_NOT_A_FACT. The refusal's own words did give the right fact, but the contract text had not told the model the rule beforehand. This is a contract gap, not a model error or a missing fact. The memory entry learned the rule because the texts did not state it. Since 287f5bc, specs/procedure/words.json /brief/safetyBounds and harness/core/justify.ts state it, so the entry is now redundant.",
+  "class": "contract-gap",
+  "current": "closed",
+  "evidence": [
+   "memory:procedure:m-e26243b3d5",
+   "episode:exp4-sonnet-a/t-2026-09-29-0001",
+   "episode:exp4-sonnet-a/t-2026-09-29-0002",
+   "rule:procedure:REFERENCE_NOT_A_FACT",
+   "form:procedure:33231b945eef",
+   "attempt:exp4-sonnet-a/t-2026-09-29-0001:9",
+   "attempt:exp4-sonnet-a/t-2026-09-29-0002:8",
+   "statement:contract:6ef2783d2f3c",
+   "statement:contract:4b09f3d1eea0"
+  ],
+  "predictions": [
+   {
+    "role": "cause",
+    "predicate": "stated-at",
+    "args": {
+     "file": "specs/procedure/words.json",
+     "pointer": "/brief/safetyBounds",
+     "phrase": "by its id alone as the reference",
+     "at": "task:exp4-sonnet-a/t-2026-09-29-0001"
+    },
+    "expect": false,
+    "result": {
+     "truth": "false",
+     "observed": "at task:exp4-sonnet-a/t-2026-09-29-0001, none of specs/procedure/words.json#/brief/safetyBounds held it",
+     "nodes": [
+      "task:exp4-sonnet-a/t-2026-09-29-0001"
+     ],
+     "read": [
+      "specs/procedure/words.json#/brief/safetyBounds@08a954e557281e4701ceb4ebb0f72da5a1fdee2c"
+     ]
+    }
+   },
+   {
+    "role": "current",
+    "predicate": "stated-at",
+    "args": {
+     "file": "specs/procedure/words.json",
+     "pointer": "/brief/safetyBounds",
+     "phrase": "by its id alone as the reference",
+     "at": "today"
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "stated at today in specs/procedure/words.json#/brief/safetyBounds",
+     "nodes": [],
+     "read": [
+      "specs/procedure/words.json#/brief/safetyBounds@working tree"
+     ]
+    }
+   },
+   {
+    "role": "rules-out",
+    "alternative": "model-error: the texts already stated one id only and the model did not follow",
+    "predicate": "stated-at",
+    "args": {
+     "file": "harness/core/justify.ts",
+     "phrase": "Exactly one: for library, one id as library.facts lists it",
+     "at": "task:exp4-sonnet-a/t-2026-09-29-0001"
+    },
+    "expect": false,
+    "result": {
+     "truth": "false",
+     "observed": "at task:exp4-sonnet-a/t-2026-09-29-0001, none of harness/core/justify.ts held it",
+     "nodes": [
+      "task:exp4-sonnet-a/t-2026-09-29-0001"
+     ],
+     "read": [
+      "harness/core/justify.ts@08a954e557281e4701ceb4ebb0f72da5a1fdee2c"
+     ]
+    }
+   },
+   {
+    "role": "rules-out",
+    "alternative": "library-gap: the fact to cite was missing from the library",
+    "predicate": "fact",
+    "args": {
+     "id": "test.speedFloorPercent",
+     "at": "today",
+     "compare": "present"
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "test.speedFloorPercent = 30 percent (commissioning-test-safety)",
+     "nodes": [],
+     "read": [
+      "docs/library/commissioning-test-safety.facts.json"
+     ]
+    }
+   }
+  ],
+  "checked": {
+   "confirmed": 4,
+   "unknown": 0,
+   "byRole": {
+    "cause": {
+     "confirmed": 1,
+     "of": 1
+    },
+    "current": {
+     "confirmed": 1,
+     "of": 1
+    },
+    "rules-out": {
+     "confirmed": 2,
+     "of": 2
+    }
+   },
+   "alternativesRuledOut": [
+    "model-error: the texts already stated one id only and the model did not follow",
+    "library-gap: the fact to cite was missing from the library"
+   ]
+  },
+  "justifications": []
+ },
+ "station": {
+  "status": "diagnosed"
+ },
+ "tokens": {
+  "prompt": 87787,
+  "completion": 3238
+ }
+}

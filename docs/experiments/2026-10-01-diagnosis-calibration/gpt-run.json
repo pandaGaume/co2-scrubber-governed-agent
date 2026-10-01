@@ -1,0 +1,410 @@
+[
+  {
+    "corpus": "evaluator",
+    "lead": "D2:0ed9f72ce86c",
+    "taskId": "t-2026-10-01-0003",
+    "model": "gpt-5.6-sol",
+    "state": "proposed",
+    "ended": "contract held after 6 step(s)",
+    "proposal": {
+      "proposalId": "p0002-7adde1f4",
+      "status": "diagnosed"
+    },
+    "seconds": 29,
+    "calls": 6,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 83970,
+      "completion": 1185
+    }
+  },
+  {
+    "corpus": "evaluator",
+    "lead": "D2:8cba194716f8",
+    "error": "station.diagnose: device refused: the lead D2:8cba194716f8 is diagnosed already, by gpt-5.6-sol: ask a second diagnosis (second), made by another model"
+  },
+  {
+    "corpus": "evaluator",
+    "lead": "D3:652d6e9fdffe",
+    "taskId": "t-2026-10-01-0002",
+    "model": "gpt-5.6-sol",
+    "state": "proposed",
+    "ended": "contract held after 15 step(s)",
+    "proposal": {
+      "proposalId": "p0003-b2ff2b4f",
+      "status": "diagnosed"
+    },
+    "seconds": 59,
+    "calls": 15,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 226782,
+      "completion": 2407
+    }
+  },
+  {
+    "corpus": "evaluator",
+    "lead": "D2:dc0bc69a9ef4",
+    "taskId": "t-2026-10-01-0004",
+    "model": "gpt-5.6-sol",
+    "state": "proposed",
+    "ended": "contract held after 8 step(s)",
+    "proposal": {
+      "proposalId": "p0004-d35e28f6",
+      "status": "diagnosed"
+    },
+    "seconds": 40,
+    "calls": 8,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 127703,
+      "completion": 1710
+    }
+  },
+  {
+    "corpus": "evaluator",
+    "lead": "D4:d77a2a5a7508",
+    "taskId": "t-2026-10-01-0005",
+    "model": "gpt-5.6-sol",
+    "state": "proposed",
+    "ended": "contract held after 12 step(s)",
+    "proposal": {
+      "proposalId": "p0005-3cefa30e",
+      "status": "diagnosed"
+    },
+    "seconds": 70,
+    "calls": 12,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 239162,
+      "completion": 3271
+    }
+  },
+  {
+    "corpus": "evaluator",
+    "lead": "D4:92b3a81902a4",
+    "taskId": "t-2026-10-01-0006",
+    "model": "gpt-5.6-sol",
+    "state": "proposed",
+    "ended": "contract held after 18 step(s)",
+    "proposal": {
+      "proposalId": "p0006-b2af283d",
+      "status": "diagnosed"
+    },
+    "seconds": 67,
+    "calls": 18,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 366455,
+      "completion": 2631
+    }
+  },
+  {
+    "corpus": "evaluator",
+    "lead": "D5:c6d772db8922",
+    "taskId": "t-2026-10-01-0008",
+    "model": "gpt-5.6-sol",
+    "state": "proposed",
+    "ended": "contract held after 12 step(s)",
+    "proposal": {
+      "proposalId": "p0007-30689558",
+      "status": "diagnosed"
+    },
+    "seconds": 61,
+    "calls": 12,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 190710,
+      "completion": 2660
+    }
+  },
+  {
+    "corpus": "evaluator",
+    "lead": "D4:467375274717",
+    "taskId": "t-2026-10-01-0007",
+    "model": "gpt-5.6-sol",
+    "state": "proposed",
+    "ended": "contract held after 14 step(s)",
+    "proposal": {
+      "proposalId": "p0008-7dc7f777",
+      "status": "diagnosed"
+    },
+    "seconds": 76,
+    "calls": 14,
+    "submits": [
+      "refused",
+      "refused",
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 211983,
+      "completion": 4058
+    }
+  },
+  {
+    "corpus": "evaluator",
+    "lead": "D5:8d5e2be35eb0",
+    "taskId": "t-2026-10-01-0009",
+    "model": "gpt-5.6-sol",
+    "state": "proposed",
+    "ended": "contract held after 14 step(s)",
+    "proposal": {
+      "proposalId": "p0009-5e093112",
+      "status": "diagnosed"
+    },
+    "seconds": 61,
+    "calls": 14,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 256163,
+      "completion": 2416
+    }
+  },
+  {
+    "corpus": "evaluator",
+    "lead": "D5:cecbb33cb4d2",
+    "taskId": "t-2026-10-01-0010",
+    "model": "gpt-5.6-sol",
+    "state": "proposed",
+    "ended": "contract held after 16 step(s)",
+    "proposal": {
+      "proposalId": "p0010-7f7c03ac",
+      "status": "diagnosed"
+    },
+    "seconds": 55,
+    "calls": 16,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 260440,
+      "completion": 2140
+    }
+  },
+  {
+    "corpus": "evaluator",
+    "lead": "D1:ec5a5d112405",
+    "taskId": "t-2026-10-01-0012",
+    "model": "gpt-5.6-sol",
+    "state": "proposed",
+    "ended": "contract held after 6 step(s)",
+    "proposal": {
+      "proposalId": "p0011-93a3076e",
+      "status": "diagnosed"
+    },
+    "seconds": 31,
+    "calls": 6,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 85924,
+      "completion": 1322
+    }
+  },
+  {
+    "corpus": "evaluator",
+    "lead": "D8:bbec8866303c",
+    "taskId": "t-2026-10-01-0011",
+    "model": "gpt-5.6-sol",
+    "state": "proposed",
+    "ended": "contract held after 11 step(s)",
+    "proposal": {
+      "proposalId": "p0012-760298cc",
+      "status": "diagnosed"
+    },
+    "seconds": 46,
+    "calls": 11,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 153576,
+      "completion": 1859
+    }
+  },
+  {
+    "corpus": "evaluator",
+    "lead": "D1:97a33bdc4935",
+    "taskId": "t-2026-10-01-0013",
+    "model": "gpt-5.6-sol",
+    "state": "proposed",
+    "ended": "contract held after 7 step(s)",
+    "proposal": {
+      "proposalId": "p0013-29994328",
+      "status": "diagnosed"
+    },
+    "seconds": 31,
+    "calls": 7,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 102659,
+      "completion": 1321
+    }
+  },
+  {
+    "corpus": "evaluator",
+    "lead": "D6:93cf26da851b",
+    "taskId": "t-2026-10-01-0014",
+    "model": "gpt-5.6-sol",
+    "state": "proposed",
+    "ended": "contract held after 5 step(s)",
+    "proposal": {
+      "proposalId": "p0014-56139083",
+      "status": "diagnosed"
+    },
+    "seconds": 29,
+    "calls": 5,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 73867,
+      "completion": 1368
+    }
+  },
+  {
+    "corpus": "evaluator-repository",
+    "lead": "D4:d77a2a5a7508",
+    "taskId": "t-2026-10-01-0015",
+    "model": "gpt-5.6-sol",
+    "state": "proposed",
+    "ended": "contract held after 9 step(s)",
+    "proposal": {
+      "proposalId": "p0015-2e684b35",
+      "status": "diagnosed"
+    },
+    "seconds": 61,
+    "calls": 9,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 145137,
+      "completion": 2391
+    }
+  },
+  {
+    "corpus": "evaluator-repository",
+    "lead": "D4:e694065969d8",
+    "taskId": "t-2026-10-01-0016",
+    "model": "gpt-5.6-sol",
+    "state": "proposed",
+    "ended": "contract held after 19 step(s)",
+    "proposal": {
+      "proposalId": "p0016-14364282",
+      "status": "diagnosed"
+    },
+    "seconds": 67,
+    "calls": 19,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 275828,
+      "completion": 2618
+    }
+  },
+  {
+    "corpus": "evaluator-repository",
+    "lead": "D4:a01631994ed6",
+    "taskId": "t-2026-10-01-0017",
+    "model": "gpt-5.6-sol",
+    "state": "proposed",
+    "ended": "contract held after 20 step(s)",
+    "proposal": {
+      "proposalId": "p0017-6edbc2e2",
+      "status": "diagnosed"
+    },
+    "seconds": 85,
+    "calls": 20,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 287587,
+      "completion": 3374
+    }
+  },
+  {
+    "corpus": "evaluator-repository",
+    "lead": "D4:4f5d2b183d6c",
+    "taskId": "t-2026-10-01-0018",
+    "model": "gpt-5.6-sol",
+    "state": "proposed",
+    "ended": "contract held after 18 step(s)",
+    "proposal": {
+      "proposalId": "p0018-598f2b66",
+      "status": "diagnosed"
+    },
+    "seconds": 85,
+    "calls": 18,
+    "submits": [
+      "refused",
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 315875,
+      "completion": 3987
+    }
+  },
+  {
+    "corpus": "evaluator-repository",
+    "lead": "D8:f6953768a10e",
+    "taskId": "t-2026-10-01-0019",
+    "model": "gpt-5.6-sol",
+    "state": "proposed",
+    "ended": "contract held after 7 step(s)",
+    "proposal": {
+      "proposalId": "p0019-e0c31c7b",
+      "status": "diagnosed"
+    },
+    "seconds": 34,
+    "calls": 7,
+    "submits": [
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 104542,
+      "completion": 1469
+    }
+  },
+  {
+    "corpus": "evaluator-repository",
+    "lead": "D7:f0e111fbaac6",
+    "taskId": "t-2026-10-01-0020",
+    "model": "gpt-5.6-sol",
+    "state": "proposed",
+    "ended": "contract held after 5 step(s)",
+    "proposal": {
+      "proposalId": "p0020-6f3d6040",
+      "status": "diagnosed"
+    },
+    "seconds": 28,
+    "calls": 5,
+    "submits": [
+      "refused",
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 76131,
+      "completion": 1458
+    }
+  }
+]

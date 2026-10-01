@@ -1,0 +1,25 @@
+[
+  {
+    "corpus": "evaluator",
+    "lead": "D2:8cba194716f8",
+    "taskId": "t-2026-10-01-0001",
+    "model": "gpt-5.6-sol",
+    "state": "proposed",
+    "ended": "contract held after 15 step(s)",
+    "proposal": {
+      "proposalId": "p0001-2a7401fa",
+      "status": "diagnosed"
+    },
+    "seconds": 85,
+    "calls": 15,
+    "submits": [
+      "refused",
+      "refused",
+      "completed"
+    ],
+    "tokens": {
+      "prompt": 228835,
+      "completion": 4407
+    }
+  }
+]

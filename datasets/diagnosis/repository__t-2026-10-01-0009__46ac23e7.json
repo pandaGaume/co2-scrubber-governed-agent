@@ -1,0 +1,1372 @@
+{
+ "schema": 1,
+ "key": "repository/t-2026-10-01-0009",
+ "workshop": "repository",
+ "taskId": "t-2026-10-01-0009",
+ "recordedAt": "2026-10-01T18:55:45.713Z",
+ "startedAt": "2026-10-01T18:53:35.104Z",
+ "endedAt": "2026-10-01T18:55:44.768Z",
+ "state": "proposed",
+ "ended": "contract held after 18 step(s)",
+ "requestedBy": "station (evaluator)",
+ "corpus": "evaluator",
+ "forks": [
+  "exp-control",
+  "exp-learn",
+  "exp3-baseline",
+  "exp4-gpt-a",
+  "exp4-gpt-c",
+  "exp4-sonnet-a",
+  "exp6-contract",
+  "exp7-fixes",
+  "exp8-paths"
+ ],
+ "lead": "D5:8d5e2be35eb0",
+ "diagnosisId": "diag-193d614066bf",
+ "model": "claude-sonnet-5-5",
+ "family": "claude",
+ "provider": {
+  "name": "reasoner:claude",
+  "model": "claude-sonnet-5-5",
+  "family": "claude",
+  "settings": {
+   "maxTokens": 8192,
+   "maxTokensParam": null,
+   "temperature": null,
+   "reasoningEffort": null,
+   "timeoutMs": null
+  },
+  "profile": {
+   "file": "profiles/anthropic-sonnet.json",
+   "sha256": "4cfc6349fd069075d89f8228c08374f628e69adbae6f7b9958363bac0a61b342"
+  }
+ },
+ "profile": {
+  "file": "profiles/anthropic.json",
+  "sha256": "57b865b5b073a8d0fc00cfaa6e23171d4dca37acbb447b317c622718f68df5d0"
+ },
+ "harness": {
+  "repository": "f29cb0cb72c0a7e44664dda08c2386b507e09fd9",
+  "fork": null
+ },
+ "asked": {
+  "id": "diag-193d614066bf",
+  "forks": [
+   "exp-control",
+   "exp-learn",
+   "exp3-baseline",
+   "exp4-gpt-a",
+   "exp4-gpt-c",
+   "exp4-sonnet-a",
+   "exp6-contract",
+   "exp7-fixes",
+   "exp8-paths"
+  ],
+  "lead": {
+   "id": "D5:8d5e2be35eb0",
+   "detector": "D5",
+   "class": "improvement",
+   "title": "cut at the output limit: 5 of 6 tasks of claude-sonnet-5-5 before, 0 of 10 after the harness changed: prompt:specs/procedure/prompt.md, file:slots/station/grammars/default/en.json, file:slots/station/grammars/default/fr.json, file:specs/harness/memory.json, file:specs/reflection/format.json, file:specs/reflection/playbook.json, file:specs/reflection/prompt.md, file:specs/reflection/words.json, file:specs/scenario-commissioning-learning.json, run:profiles/anthropic-sonnet.json, 17 file(s) of code",
+   "settledBy": null,
+   "form": {
+    "id": "form:procedure:harness:69e875cfddc9",
+    "shape": "cut at the output limit",
+    "by": "harness"
+   },
+   "path": [
+    "fingerprint:f6f379ac8445: 5/6 -refused-for-> form:procedure:harness:69e875cfddc9",
+    "fingerprint:b955c2ab8a73: 0/10",
+    "fingerprint:b955c2ab8a73 -changed-> statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3 (prompt:specs/procedure/prompt.md, was statement:9d6df0fbe9e4ef78233baea24c821740dcbd5291120de0f2469b05697db2917f)",
+    "fingerprint:b955c2ab8a73 -changed-> ? (file:slots/station/grammars/default/en.json, was 13408813b64a8f96368b3b5c935cad78b061dc22)",
+    "fingerprint:b955c2ab8a73 -changed-> ? (file:slots/station/grammars/default/fr.json, was 13408813b64a8f96368b3b5c935cad78b061dc22)",
+    "fingerprint:b955c2ab8a73 -changed-> ? (file:specs/harness/memory.json, was 13408813b64a8f96368b3b5c935cad78b061dc22)",
+    "fingerprint:b955c2ab8a73 -changed-> ? (file:specs/reflection/format.json, was 13408813b64a8f96368b3b5c935cad78b061dc22)",
+    "fingerprint:b955c2ab8a73 -changed-> ? (file:specs/reflection/playbook.json, was 13408813b64a8f96368b3b5c935cad78b061dc22)",
+    "fingerprint:b955c2ab8a73 -changed-> ? (file:specs/reflection/prompt.md, was 13408813b64a8f96368b3b5c935cad78b061dc22)",
+    "fingerprint:b955c2ab8a73 -changed-> ? (file:specs/reflection/words.json, was 13408813b64a8f96368b3b5c935cad78b061dc22)",
+    "fingerprint:b955c2ab8a73 -changed-> ? (file:specs/scenario-commissioning-learning.json, was 13408813b64a8f96368b3b5c935cad78b061dc22)",
+    "fingerprint:b955c2ab8a73 -changed-> ? (run:profiles/anthropic-sonnet.json, was 13408813b64a8f96368b3b5c935cad78b061dc22)",
+    "fingerprint:b955c2ab8a73 -changed-> ? (17 file(s) of code, was 13408813b64a8f96368b3b5c935cad78b061dc22)"
+   ],
+   "about": [
+    "form:procedure:harness:69e875cfddc9",
+    "fingerprint:f6f379ac8445",
+    "fingerprint:b955c2ab8a73",
+    "statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3"
+   ],
+   "tasks": [
+    "task:exp-control/t-2026-09-29-0001",
+    "task:exp-control/t-2026-09-29-0002",
+    "task:exp-control/t-2026-09-29-0003",
+    "task:exp-control/t-2026-09-29-0004",
+    "task:exp-control/t-2026-09-29-0006"
+   ],
+   "models": {
+    "claude-sonnet-5-5": 5
+   },
+   "evidence": {
+    "before": {
+     "fingerprint": "fingerprint:f6f379ac8445",
+     "tasks": 6,
+     "withForm": 5
+    },
+    "after": {
+     "fingerprint": "fingerprint:b955c2ab8a73",
+     "tasks": 10,
+     "withForm": 0
+    },
+    "changed": [
+     {
+      "slot": "prompt:specs/procedure/prompt.md",
+      "statement": "statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+      "stored": null,
+      "was": "statement:9d6df0fbe9e4ef78233baea24c821740dcbd5291120de0f2469b05697db2917f"
+     },
+     {
+      "slot": "file:slots/station/grammars/default/en.json",
+      "statement": null,
+      "stored": null,
+      "was": "13408813b64a8f96368b3b5c935cad78b061dc22"
+     },
+     {
+      "slot": "file:slots/station/grammars/default/fr.json",
+      "statement": null,
+      "stored": null,
+      "was": "13408813b64a8f96368b3b5c935cad78b061dc22"
+     },
+     {
+      "slot": "file:specs/harness/memory.json",
+      "statement": null,
+      "stored": null,
+      "was": "13408813b64a8f96368b3b5c935cad78b061dc22"
+     },
+     {
+      "slot": "file:specs/reflection/format.json",
+      "statement": null,
+      "stored": null,
+      "was": "13408813b64a8f96368b3b5c935cad78b061dc22"
+     },
+     {
+      "slot": "file:specs/reflection/playbook.json",
+      "statement": null,
+      "stored": null,
+      "was": "13408813b64a8f96368b3b5c935cad78b061dc22"
+     },
+     {
+      "slot": "file:specs/reflection/prompt.md",
+      "statement": null,
+      "stored": null,
+      "was": "13408813b64a8f96368b3b5c935cad78b061dc22"
+     },
+     {
+      "slot": "file:specs/reflection/words.json",
+      "statement": null,
+      "stored": null,
+      "was": "13408813b64a8f96368b3b5c935cad78b061dc22"
+     },
+     {
+      "slot": "file:specs/scenario-commissioning-learning.json",
+      "statement": null,
+      "stored": null,
+      "was": "13408813b64a8f96368b3b5c935cad78b061dc22"
+     },
+     {
+      "slot": "run:profiles/anthropic-sonnet.json",
+      "statement": null,
+      "stored": null,
+      "was": "13408813b64a8f96368b3b5c935cad78b061dc22"
+     },
+     {
+      "slot": "17 file(s) of code",
+      "statement": null,
+      "stored": null,
+      "was": "13408813b64a8f96368b3b5c935cad78b061dc22"
+     }
+    ],
+    "described": false,
+    "files": [
+     "harness/core/episodes.ts",
+     "harness/core/manifest.ts",
+     "harness/core/reasoning-state.ts",
+     "harness/core/runner.ts",
+     "harness/core/socle.md",
+     "harness/core/topic.ts",
+     "harness/lib/llm-common.ts",
+     "harness/topics/procedure/index.ts",
+     "harness/topics/reflection/index.ts",
+     "lib/adaptations.ts",
+     "lib/fork.ts",
+     "lib/memory.ts",
+     "lib/reflection.ts",
+     "lib/working-memory.ts",
+     "profiles/anthropic-sonnet.json",
+     "slots/station/grammars/default/en.json",
+     "slots/station/grammars/default/fr.json",
+     "slots/station/provider.ts",
+     "specs/harness/memory.json",
+     "specs/reflection/format.json",
+     "specs/reflection/playbook.json",
+     "specs/reflection/prompt.md",
+     "specs/reflection/words.json",
+     "specs/scenario-commissioning-learning.json",
+     "stand-ins/builders/procedure.ts",
+     "stand-ins/builders/reflection.ts"
+    ],
+    "toolsBefore": "7474411ba76bc4d4cfb83066834385e723eaf6ce05d0b7471590a702cd4edc65",
+    "toolsAfter": "7474411ba76bc4d4cfb83066834385e723eaf6ce05d0b7471590a702cd4edc65"
+   },
+   "recommend": false
+  },
+  "neighbourhood": {
+   "nodes": [
+    "form:procedure:harness:69e875cfddc9 [form] {\"topic\":\"procedure\",\"shape\":\"cut at the output limit\",\"kind\":\"TRUNCATED\",\"by\":\"harness\"}",
+    "fingerprint:f6f379ac8445 [fingerprint] {\"tools\":\"7474411ba76bc4d4cfb83066834385e723eaf6ce05d0b7471590a702cd4edc65\",\"toolsDetailed\":false,\"words\":null,\"prompt\":\"9d6df0fbe9e4ef78233baea24c821740dcbd529…",
+    "fingerprint:b955c2ab8a73 [fingerprint] {\"tools\":\"7474411ba76bc4d4cfb83066834385e723eaf6ce05d0b7471590a702cd4edc65\",\"toolsDetailed\":false,\"words\":null,\"prompt\":\"4539a2b270603168740441153eaf30be44ec707…",
+    "statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3 [statement] {\"slot\":\"prompt:specs/procedure/prompt.md\",\"kind\":\"prompt\",\"of\":\"specs/procedure/prompt.md\",\"sha256\":\"4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5…",
+    "task:exp-control/t-2026-09-29-0001 [task] {\"taskId\":\"t-2026-09-29-0001\",\"workshop\":\"exp-control\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T18:56:53.022Z\",\"ended\":\"contract held afte…",
+    "task:exp-control/t-2026-09-29-0002 [task] {\"taskId\":\"t-2026-09-29-0002\",\"workshop\":\"exp-control\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T18:58:05.784Z\",\"ended\":\"contract held afte…",
+    "task:exp-control/t-2026-09-29-0003 [task] {\"taskId\":\"t-2026-09-29-0003\",\"workshop\":\"exp-control\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T18:59:24.488Z\",\"ended\":\"contract held afte…",
+    "task:exp-control/t-2026-09-29-0004 [task] {\"taskId\":\"t-2026-09-29-0004\",\"workshop\":\"exp-control\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T19:00:41.259Z\",\"ended\":\"contract held afte…",
+    "task:exp-control/t-2026-09-29-0006 [task] {\"taskId\":\"t-2026-09-29-0006\",\"workshop\":\"exp-control\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T19:03:45.325Z\",\"ended\":\"contract held afte…",
+    "attempt:exp-learn/t-2026-09-29-0001:8 [attempt] {\"step\":8,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"Provider proposed a capability outside the allowlist\"}",
+    "attempt:exp-learn/t-2026-09-29-0002:8 [attempt] {\"step\":8,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"Provider proposed a capability outside the allowlist\"}",
+    "attempt:exp-learn/t-2026-09-29-0004:8 [attempt] {\"step\":8,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"Provider proposed a capability outside the allowlist\"}",
+    "attempt:exp-learn/t-2026-09-29-0005:9 [attempt] {\"step\":9,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"Provider proposed a capability outside the allowlist\"}",
+    "attempt:exp-learn/t-2026-09-29-0006:9 [attempt] {\"step\":9,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"Provider proposed a capability outside the allowlist\"}",
+    "attempt:exp-learn/t-2026-09-29-0007:9 [attempt] {\"step\":9,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"Provider proposed a capability outside the allowlist\"}",
+    "attempt:exp-learn/t-2026-09-29-0009:16 [attempt] {\"step\":16,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"Provider proposed a capability outside the allowlist\"}",
+    "attempt:exp-learn/t-2026-09-29-0010:8 [attempt] {\"step\":8,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"Provider proposed a capability outside the allowlist\"}",
+    "attempt:exp-control/t-2026-09-29-0001:8 [attempt] {\"step\":8,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"Provider proposed a capability outside the allowlist\"}",
+    "attempt:exp-control/t-2026-09-29-0002:8 [attempt] {\"step\":8,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"Provider proposed a capability outside the allowlist\"}",
+    "attempt:exp-control/t-2026-09-29-0003:8 [attempt] {\"step\":8,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"Provider proposed a capability outside the allowlist\"}",
+    "attempt:exp-control/t-2026-09-29-0004:17 [attempt] {\"step\":17,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"Provider proposed a capability outside the allowlist\"}",
+    "attempt:exp-control/t-2026-09-29-0006:8 [attempt] {\"step\":8,\"capability\":\"procedure.submit\",\"outcome\":\"TRUNCATED\",\"reason\":\"Provider proposed a capability outside the allowlist\"}",
+    "fingerprint:b06d2cba210f [fingerprint] {\"tools\":\"a19ff28224fe700c047deb35005510b1fc2fe64c17e29eba1cb1de02b1425222\",\"toolsDetailed\":false,\"words\":null,\"prompt\":\"ac6c76e70993973cfb4d7963ec8670337df471e…",
+    "statement:9d6df0fbe9e4ef78233baea24c821740dcbd5291120de0f2469b05697db2917f [statement] {\"slot\":\"prompt:specs/procedure/prompt.md\",\"kind\":\"prompt\",\"of\":\"specs/procedure/prompt.md\",\"sha256\":\"9d6df0fbe9e4ef78233baea24c821740dcbd5291120de0f2469b05697d…",
+    "statement:removed:prompt:specs/reflection/prompt.md [statement] {\"slot\":\"prompt:specs/reflection/prompt.md\",\"removed\":true}",
+    "task:exp-control/t-2026-09-29-0005 [task] {\"taskId\":\"t-2026-09-29-0005\",\"workshop\":\"exp-control\",\"topic\":\"procedure\",\"state\":\"failed\",\"startedAt\":\"2026-09-29T19:02:58.787Z\",\"ended\":\"STUCK: library.read …",
+    "task:exp3-baseline/t-2026-09-29-0001 [task] {\"taskId\":\"t-2026-09-29-0001\",\"workshop\":\"exp3-baseline\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:12:24.537Z\",\"ended\":\"contract held af…",
+    "task:exp3-baseline/t-2026-09-29-0002 [task] {\"taskId\":\"t-2026-09-29-0002\",\"workshop\":\"exp3-baseline\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:13:45.231Z\",\"ended\":\"contract held af…",
+    "task:exp3-baseline/t-2026-09-29-0003 [task] {\"taskId\":\"t-2026-09-29-0003\",\"workshop\":\"exp3-baseline\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:14:55.803Z\",\"ended\":\"contract held af…",
+    "task:exp3-baseline/t-2026-09-29-0004 [task] {\"taskId\":\"t-2026-09-29-0004\",\"workshop\":\"exp3-baseline\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:16:26.575Z\",\"ended\":\"contract held af…",
+    "task:exp3-baseline/t-2026-09-29-0005 [task] {\"taskId\":\"t-2026-09-29-0005\",\"workshop\":\"exp3-baseline\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:17:33.129Z\",\"ended\":\"contract held af…",
+    "task:exp3-baseline/t-2026-09-29-0006 [task] {\"taskId\":\"t-2026-09-29-0006\",\"workshop\":\"exp3-baseline\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:18:45.724Z\",\"ended\":\"contract held af…",
+    "task:exp3-baseline/t-2026-09-29-0007 [task] {\"taskId\":\"t-2026-09-29-0007\",\"workshop\":\"exp3-baseline\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:20:12.455Z\",\"ended\":\"contract held af…",
+    "task:exp3-baseline/t-2026-09-29-0008 [task] {\"taskId\":\"t-2026-09-29-0008\",\"workshop\":\"exp3-baseline\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:21:21.065Z\",\"ended\":\"contract held af…",
+    "task:exp3-baseline/t-2026-09-29-0009 [task] {\"taskId\":\"t-2026-09-29-0009\",\"workshop\":\"exp3-baseline\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:22:17.574Z\",\"ended\":\"contract held af…",
+    "task:exp3-baseline/t-2026-09-29-0010 [task] {\"taskId\":\"t-2026-09-29-0010\",\"workshop\":\"exp3-baseline\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:23:12.031Z\",\"ended\":\"contract held af…",
+    "fingerprint:7890280cb9b1 [fingerprint] {\"tools\":\"7474411ba76bc4d4cfb83066834385e723eaf6ce05d0b7471590a702cd4edc65\",\"toolsDetailed\":false,\"words\":null,\"prompt\":\"4539a2b270603168740441153eaf30be44ec707…",
+    "task:exp-learn/t-2026-09-29-0001 [task] {\"taskId\":\"t-2026-09-29-0001\",\"workshop\":\"exp-learn\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T18:51:24.621Z\",\"ended\":\"contract held after …",
+    "task:exp-learn/t-2026-09-29-0002 [task] {\"taskId\":\"t-2026-09-29-0002\",\"workshop\":\"exp-learn\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T18:52:37.187Z\",\"ended\":\"contract held after …",
+    "task:exp-learn/t-2026-09-29-0004 [task] {\"taskId\":\"t-2026-09-29-0004\",\"workshop\":\"exp-learn\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T18:54:07.963Z\",\"ended\":\"contract held after …",
+    "task:exp-learn/t-2026-09-29-0005 [task] {\"taskId\":\"t-2026-09-29-0005\",\"workshop\":\"exp-learn\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T18:56:52.944Z\",\"ended\":\"contract held after …",
+    "task:exp-learn/t-2026-09-29-0006 [task] {\"taskId\":\"t-2026-09-29-0006\",\"workshop\":\"exp-learn\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T18:58:05.687Z\",\"ended\":\"contract held after …",
+    "task:exp-learn/t-2026-09-29-0007 [task] {\"taskId\":\"t-2026-09-29-0007\",\"workshop\":\"exp-learn\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T18:59:26.511Z\",\"ended\":\"contract held after …",
+    "task:exp-learn/t-2026-09-29-0008 [task] {\"taskId\":\"t-2026-09-29-0008\",\"workshop\":\"exp-learn\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T19:00:45.312Z\",\"ended\":\"contract held after …",
+    "task:exp-learn/t-2026-09-29-0009 [task] {\"taskId\":\"t-2026-09-29-0009\",\"workshop\":\"exp-learn\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T19:02:14.277Z\",\"ended\":\"contract held after …",
+    "task:exp-learn/t-2026-09-29-0010 [task] {\"taskId\":\"t-2026-09-29-0010\",\"workshop\":\"exp-learn\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T19:04:01.501Z\",\"ended\":\"contract held after …",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 [task] {\"taskId\":\"t-2026-09-29-0001\",\"workshop\":\"exp4-sonnet-a\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:49:53.871Z\",\"ended\":\"contract held af…",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 [task] {\"taskId\":\"t-2026-09-29-0002\",\"workshop\":\"exp4-sonnet-a\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:51:00.454Z\",\"ended\":\"contract held af…",
+    "task:exp4-sonnet-a/t-2026-09-29-0004 [task] {\"taskId\":\"t-2026-09-29-0004\",\"workshop\":\"exp4-sonnet-a\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:52:31.159Z\",\"ended\":\"contract held af…",
+    "task:exp4-sonnet-a/t-2026-09-29-0005 [task] {\"taskId\":\"t-2026-09-29-0005\",\"workshop\":\"exp4-sonnet-a\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T20:53:31.711Z\",\"ended\":\"contract held af…"
+   ],
+   "links": [
+    "fingerprint:f6f379ac8445 after fingerprint:b06d2cba210f",
+    "fingerprint:f6f379ac8445 changed statement:9d6df0fbe9e4ef78233baea24c821740dcbd5291120de0f2469b05697db2917f",
+    "fingerprint:f6f379ac8445 changed statement:removed:prompt:specs/reflection/prompt.md",
+    "fingerprint:b955c2ab8a73 after fingerprint:f6f379ac8445",
+    "fingerprint:b955c2ab8a73 changed statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp-control/t-2026-09-29-0001 ran-under fingerprint:f6f379ac8445",
+    "task:exp-control/t-2026-09-29-0001 read statement:9d6df0fbe9e4ef78233baea24c821740dcbd5291120de0f2469b05697db2917f",
+    "task:exp-control/t-2026-09-29-0002 ran-under fingerprint:f6f379ac8445",
+    "task:exp-control/t-2026-09-29-0002 read statement:9d6df0fbe9e4ef78233baea24c821740dcbd5291120de0f2469b05697db2917f",
+    "task:exp-control/t-2026-09-29-0003 ran-under fingerprint:f6f379ac8445",
+    "task:exp-control/t-2026-09-29-0003 read statement:9d6df0fbe9e4ef78233baea24c821740dcbd5291120de0f2469b05697db2917f",
+    "task:exp-control/t-2026-09-29-0004 ran-under fingerprint:f6f379ac8445",
+    "task:exp-control/t-2026-09-29-0004 read statement:9d6df0fbe9e4ef78233baea24c821740dcbd5291120de0f2469b05697db2917f",
+    "task:exp-control/t-2026-09-29-0006 ran-under fingerprint:f6f379ac8445",
+    "task:exp-control/t-2026-09-29-0006 read statement:9d6df0fbe9e4ef78233baea24c821740dcbd5291120de0f2469b05697db2917f",
+    "attempt:exp-learn/t-2026-09-29-0001:8 refused-for form:procedure:harness:69e875cfddc9",
+    "attempt:exp-learn/t-2026-09-29-0002:8 refused-for form:procedure:harness:69e875cfddc9",
+    "attempt:exp-learn/t-2026-09-29-0004:8 refused-for form:procedure:harness:69e875cfddc9",
+    "attempt:exp-learn/t-2026-09-29-0005:9 refused-for form:procedure:harness:69e875cfddc9",
+    "attempt:exp-learn/t-2026-09-29-0006:9 refused-for form:procedure:harness:69e875cfddc9",
+    "attempt:exp-learn/t-2026-09-29-0007:9 refused-for form:procedure:harness:69e875cfddc9",
+    "attempt:exp-learn/t-2026-09-29-0009:16 refused-for form:procedure:harness:69e875cfddc9",
+    "attempt:exp-learn/t-2026-09-29-0010:8 refused-for form:procedure:harness:69e875cfddc9",
+    "attempt:exp-control/t-2026-09-29-0001:8 refused-for form:procedure:harness:69e875cfddc9",
+    "attempt:exp-control/t-2026-09-29-0002:8 refused-for form:procedure:harness:69e875cfddc9",
+    "attempt:exp-control/t-2026-09-29-0003:8 refused-for form:procedure:harness:69e875cfddc9",
+    "attempt:exp-control/t-2026-09-29-0004:17 refused-for form:procedure:harness:69e875cfddc9",
+    "attempt:exp-control/t-2026-09-29-0006:8 refused-for form:procedure:harness:69e875cfddc9",
+    "task:exp-control/t-2026-09-29-0005 ran-under fingerprint:f6f379ac8445",
+    "task:exp-control/t-2026-09-29-0005 read statement:9d6df0fbe9e4ef78233baea24c821740dcbd5291120de0f2469b05697db2917f",
+    "task:exp3-baseline/t-2026-09-29-0001 ran-under fingerprint:b955c2ab8a73",
+    "task:exp3-baseline/t-2026-09-29-0001 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp3-baseline/t-2026-09-29-0002 ran-under fingerprint:b955c2ab8a73",
+    "task:exp3-baseline/t-2026-09-29-0002 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp3-baseline/t-2026-09-29-0003 ran-under fingerprint:b955c2ab8a73",
+    "task:exp3-baseline/t-2026-09-29-0003 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp3-baseline/t-2026-09-29-0004 ran-under fingerprint:b955c2ab8a73",
+    "task:exp3-baseline/t-2026-09-29-0004 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp3-baseline/t-2026-09-29-0005 ran-under fingerprint:b955c2ab8a73",
+    "task:exp3-baseline/t-2026-09-29-0005 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp3-baseline/t-2026-09-29-0006 ran-under fingerprint:b955c2ab8a73",
+    "task:exp3-baseline/t-2026-09-29-0006 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp3-baseline/t-2026-09-29-0007 ran-under fingerprint:b955c2ab8a73",
+    "task:exp3-baseline/t-2026-09-29-0007 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp3-baseline/t-2026-09-29-0008 ran-under fingerprint:b955c2ab8a73",
+    "task:exp3-baseline/t-2026-09-29-0008 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp3-baseline/t-2026-09-29-0009 ran-under fingerprint:b955c2ab8a73",
+    "task:exp3-baseline/t-2026-09-29-0009 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp3-baseline/t-2026-09-29-0010 ran-under fingerprint:b955c2ab8a73",
+    "task:exp3-baseline/t-2026-09-29-0010 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "fingerprint:7890280cb9b1 after fingerprint:b955c2ab8a73",
+    "task:exp-learn/t-2026-09-29-0001 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp-learn/t-2026-09-29-0002 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp-learn/t-2026-09-29-0004 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp-learn/t-2026-09-29-0005 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp-learn/t-2026-09-29-0006 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp-learn/t-2026-09-29-0007 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp-learn/t-2026-09-29-0008 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp-learn/t-2026-09-29-0009 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp-learn/t-2026-09-29-0010 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 ran-under fingerprint:7890280cb9b1",
+    "task:exp4-sonnet-a/t-2026-09-29-0001 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 ran-under fingerprint:7890280cb9b1",
+    "task:exp4-sonnet-a/t-2026-09-29-0002 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp4-sonnet-a/t-2026-09-29-0004 ran-under fingerprint:7890280cb9b1",
+    "task:exp4-sonnet-a/t-2026-09-29-0004 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp4-sonnet-a/t-2026-09-29-0005 ran-under fingerprint:7890280cb9b1",
+    "task:exp4-sonnet-a/t-2026-09-29-0005 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3"
+   ]
+  },
+  "rules": [],
+  "today": {
+   "commit": "f29cb0c",
+   "signatures": {},
+   "profiles": {
+    "profiles/anthropic.json": {
+     "wire": "anthropic-messages",
+     "model": "claude-haiku-4-5-20251001",
+     "capabilities": [
+      "tools",
+      "json"
+     ]
+    }
+   }
+  },
+  "refuted": []
+ },
+ "askedSha256": "cb2231a0bbf28c56c2adde24ea52d08893853b8f8be3a4f5aab94539015b9da9",
+ "steps": [
+  {
+   "n": 1,
+   "capability": "task.plan",
+   "input": {
+    "selected_nodes": [],
+    "missing_capabilities": [
+     {
+      "required_output": "diag-193d614066bf",
+      "quantity": "Diagnosis",
+      "reason": "The diagnosis is made here from the harness graph, not by a catalogue node.",
+      "topic": "diagnosis"
+     }
+    ]
+   },
+   "outcome": "completed",
+   "reason": "plan accepted: 0 node type(s), 1 missing capability(ies)",
+   "tokens": {
+    "prompt": 15991,
+    "completion": 150,
+    "total": 16141
+   }
+  },
+  {
+   "n": 2,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp-control/t-2026-09-29-0001",
+    "step": 8
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 16684,
+    "completion": 187,
+    "total": 16871
+   }
+  },
+  {
+   "n": 3,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp-control/t-2026-09-29-0001",
+    "step": 8,
+    "part": "reason"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 17274,
+    "completion": 232,
+    "total": 17506
+   }
+  },
+  {
+   "n": 4,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp-control/t-2026-09-29-0001",
+    "step": 8,
+    "part": "received"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 17310,
+    "completion": 226,
+    "total": 17536
+   }
+  },
+  {
+   "n": 5,
+   "capability": "diagnosis.text",
+   "input": {
+    "file": "profiles/anthropic-sonnet.json",
+    "at": "task:exp-control/t-2026-09-29-0001"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.text completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 18265,
+    "completion": 252,
+    "total": 18517
+   }
+  },
+  {
+   "n": 6,
+   "capability": "diagnosis.text",
+   "input": {
+    "file": "specs/procedure/prompt.md",
+    "at": "task:exp-control/t-2026-09-29-0001"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.text completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 18266,
+    "completion": 519,
+    "total": 18785
+   }
+  },
+  {
+   "n": 7,
+   "capability": "diagnosis.text",
+   "input": {
+    "file": "specs/procedure/prompt.md",
+    "at": "today"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.text completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 18760,
+    "completion": 239,
+    "total": 18999
+   }
+  },
+  {
+   "n": 8,
+   "capability": "diagnosis.graph",
+   "input": {
+    "id": "fingerprint:b955c2ab8a73"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.graph completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 19099,
+    "completion": 544,
+    "total": 19643
+   }
+  },
+  {
+   "n": 9,
+   "capability": "diagnosis.text",
+   "input": {
+    "file": "specs/procedure/prompt.md",
+    "at": "task:exp-control/t-2026-09-29-0001",
+    "from": 900
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.text completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 19814,
+    "completion": 483,
+    "total": 20297
+   }
+  },
+  {
+   "n": 10,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp3-baseline/t-2026-09-29-0001",
+    "step": 8
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 20157,
+    "completion": 636,
+    "total": 20793
+   }
+  },
+  {
+   "n": 11,
+   "capability": "diagnosis.text",
+   "input": {
+    "file": "specs/procedure/prompt.md",
+    "at": "today",
+    "from": 1800
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.text completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 20386,
+    "completion": 871,
+    "total": 21257
+   }
+  },
+  {
+   "n": 12,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp-control/t-2026-09-29-0001",
+    "step": 9
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 20882,
+    "completion": 720,
+    "total": 21602
+   }
+  },
+  {
+   "n": 13,
+   "capability": "diagnosis.submit",
+   "input": {
+    "id": "diag-193d614066bf",
+    "verdict": "wrong",
+    "cause": "The \"cut at the output limit\" form is a mislabel. At step 8 of exp-control/t-2026-09-29-0001 (procedure.submit), the outcome is \"cut\", but the reason the harness recorded is \"Provider proposed a capability outside the allowlist\". No token limit is named. The same reason appears on every attempt linked to the form. So the harness labels an allowlist refusal of the provider's proposed call as a TRUNCATED (output limit) cut. The model proposed a capability that was not on the allowlist, and the harness reported that as a cut. The lead reads the drop from 5/6 to 0/10 as an improvement caused by the changed prompt and files. The sources show only that the labelled form disappeared. They do not show that output truncation was ever the failure. They do not show which change removed the off-allowlist proposals either. The fingerprint changes include the procedure prompt and 17 code files. The text length of specs/procedure/prompt.md is 3501 characters both at the task's version and today. So the prompt edit cannot be isolated as the cause.",
+    "class": "harness-artefact",
+    "current": "unknown",
+    "evidence": [
+     "form:procedure:harness:69e875cfddc9",
+     "fingerprint:f6f379ac8445",
+     "fingerprint:b955c2ab8a73",
+     "attempt:exp-control/t-2026-09-29-0001:8",
+     "task:exp-control/t-2026-09-29-0001"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "refused-with",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0001",
+       "step": 8,
+       "phrase": "outside the allowlist"
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0001",
+       "step": 8,
+       "outcome": "cut"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "alternative": "the model really hit a small output-token limit (maxTokens) that the prompt change relieved",
+      "predicate": "run-setting",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0001",
+       "setting": "maxTokens",
+       "compare": "present"
+      },
+      "expect": false
+     },
+     {
+      "role": "current",
+      "predicate": "rate",
+      "args": {
+       "form": "form:procedure:harness:69e875cfddc9",
+       "fingerprint": "fingerprint:7890280cb9b1",
+       "compare": "=",
+       "value": 0
+      },
+      "expect": true
+     }
+    ],
+    "justifications": []
+   },
+   "outcome": "refused",
+   "judged": "refused",
+   "reason": "diagnosis refused: prediction 3 (rules-out, ruling out \"the model really hit a small output-token limit (maxTokens) that the prompt change relieved\") expected false, the harness observed true: maxTokens: 4096 (profiles/anthropic.json sets none: the Anthropic wire's 4096)",
+   "tokens": {
+    "prompt": 20868,
+    "completion": 2436,
+    "total": 23304
+   }
+  },
+  {
+   "n": 14,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp-control/t-2026-09-29-0001",
+    "step": 8
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 22263,
+    "completion": 306,
+    "total": 22569
+   }
+  },
+  {
+   "n": 15,
+   "capability": "diagnosis.text",
+   "input": {
+    "file": "specs/procedure/prompt.md",
+    "at": "today",
+    "from": 2700
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.text completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 21166,
+    "completion": 869,
+    "total": 22035
+   }
+  },
+  {
+   "n": 16,
+   "capability": "diagnosis.submit",
+   "input": {
+    "id": "diag-193d614066bf",
+    "verdict": "right",
+    "cause": "The cuts were real. In the tasks before the change, procedure.submit at step 8 ended with completion = 4096 tokens, the Anthropic wire's default output cap, because the profile sets no maxTokens. The whole procedure and its long justifications list did not fit in that cap. The cap was the same before and after (4096), so the change did not raise it. After the change, 0 of 10 tasks hit the cap. I cannot attribute the relief to the prompt text alone: the procedure prompt has the same length at both versions (3501 chars), and 26 files changed together (memory, reflection, grammars, code). The model's output got shorter or took another path, not a bigger budget. The harness also labelled each cut \"Provider proposed a capability outside the allowlist\", which is a false reason for a truncated call. The lead is right that the form went away with the change. It is wrong to read it as one prompt edit.",
+    "class": "improvement",
+    "current": "still",
+    "evidence": [
+     "form:procedure:harness:69e875cfddc9",
+     "fingerprint:f6f379ac8445",
+     "fingerprint:b955c2ab8a73",
+     "fingerprint:7890280cb9b1",
+     "task:exp-control/t-2026-09-29-0001",
+     "task:exp3-baseline/t-2026-09-29-0001",
+     "attempt:exp-control/t-2026-09-29-0001:8"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "run-setting",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0001",
+       "setting": "maxTokens",
+       "compare": "=",
+       "value": "4096"
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0001",
+       "step": 8,
+       "outcome": "cut"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "predicate": "run-setting",
+      "args": {
+       "task": "task:exp3-baseline/t-2026-09-29-0001",
+       "setting": "maxTokens",
+       "compare": "=",
+       "value": "4096"
+      },
+      "expect": true,
+      "alternative": "the model really hit a small output-token limit (maxTokens) that the prompt change relieved"
+     },
+     {
+      "role": "current",
+      "predicate": "rate",
+      "args": {
+       "form": "form:procedure:harness:69e875cfddc9",
+       "model": "claude-sonnet-5-5",
+       "fingerprint": "fingerprint:7890280cb9b1",
+       "compare": "=",
+       "value": 0
+      },
+      "expect": true
+     }
+    ],
+    "justifications": [
+     {
+      "constant": "maxTokens",
+      "value": 4096,
+      "source": "measured",
+      "reference": "diagnosis.step task:exp-control/t-2026-09-29-0001 step 8: completion 4096, outcome cut; harness observed maxTokens 4096 (Anthropic wire default)",
+      "reason": "The cap is unchanged between the fingerprints, so it was not the thing that changed."
+     }
+    ]
+   },
+   "outcome": "refused",
+   "judged": "refused",
+   "reason": "diagnosis refused: prediction 1 (cause) expected true, the harness observed false: maxTokens: 4096 (profiles/anthropic.json sets none: the Anthropic wire's 4096); prediction 3 (rules-out, ruling out \"the model really hit a small output-token limit (maxTokens) that the prompt change relieved\") expected true, the harness observed false: maxTokens: 4096 (profiles/anthropic.json sets none: the Anthropic wire's 4096)",
+   "tokens": {
+    "prompt": 21043,
+    "completion": 2427,
+    "total": 23470
+   }
+  },
+  {
+   "n": 17,
+   "capability": "diagnosis.submit",
+   "input": {
+    "id": "diag-193d614066bf",
+    "verdict": "right",
+    "cause": "The cuts were real: procedure.submit at step 8 of the pre-change tasks ended with completion = 4096 tokens, the Anthropic wire's default output cap, because the profile sets no maxTokens. The whole procedure with its long justifications list did not fit in that cap. The cap is the same before and after (4096), so the change did not raise it, and the relief did not come from a larger budget. After the change 0 of 10 tasks hit the cap. The procedure prompt has the same length at both versions (3501 chars) and about 26 files changed together (memory, reflection, grammars, code), so the relief cannot be attributed to the prompt text alone. The model's output got shorter or took another path. The harness also labelled each cut \"Provider proposed a capability outside the allowlist\", a false reason for a truncated call. The lead is right that the form went away with the change, but wrong to read it as one prompt edit.",
+    "class": "improvement",
+    "current": "still",
+    "evidence": [
+     "form:procedure:harness:69e875cfddc9",
+     "fingerprint:f6f379ac8445",
+     "fingerprint:b955c2ab8a73",
+     "fingerprint:7890280cb9b1",
+     "task:exp-control/t-2026-09-29-0001",
+     "task:exp3-baseline/t-2026-09-29-0001",
+     "attempt:exp-control/t-2026-09-29-0001:8"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "run-setting",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0001",
+       "setting": "maxTokens",
+       "compare": "=",
+       "value": 4096
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0001",
+       "step": 8,
+       "outcome": "cut"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "predicate": "run-setting",
+      "args": {
+       "task": "task:exp3-baseline/t-2026-09-29-0001",
+       "setting": "maxTokens",
+       "compare": "=",
+       "value": 4096
+      },
+      "expect": true,
+      "alternative": "the model really hit a small output-token limit (maxTokens) that the prompt change relieved"
+     },
+     {
+      "role": "current",
+      "predicate": "rate",
+      "args": {
+       "form": "form:procedure:harness:69e875cfddc9",
+       "model": "claude-sonnet-5-5",
+       "fingerprint": "fingerprint:7890280cb9b1",
+       "compare": "=",
+       "value": 0
+      },
+      "expect": true
+     }
+    ],
+    "justifications": [
+     {
+      "constant": "maxTokens",
+      "value": 4096,
+      "source": "measured",
+      "reference": "diagnosis.step task:exp-control/t-2026-09-29-0001 step 8: completion 4096, outcome cut; the harness reports maxTokens 4096 (Anthropic wire default)",
+      "reason": "The cap is unchanged between the fingerprints, so it was not what changed."
+     }
+    ]
+   },
+   "outcome": "completed",
+   "judged": "accepted",
+   "reason": "diagnosis.submit completed; the workshop changed",
+   "tokens": {
+    "prompt": 22879,
+    "completion": 1823,
+    "total": 24702
+   }
+  },
+  {
+   "n": 18,
+   "capability": "task.done",
+   "input": {
+    "summary": "Diagnosis diag-193d614066bf was accepted by the guard (sha256 8ece6ea0e4b4…). The sources it rests on show that the truncations were cuts at the 4096-token output limit. Before the change, claude-sonnet-5-5 had a procedure.submit step cut in 5 of 6 tasks. Example: step 8 of task exp-control/t-2026-09-29-0001, which produced a 4096-token completion. profiles/anthropic.json sets no maxTokens, so the Anthropic wire's default of 4096 applied both before and after the change. After the change (fingerprint b955c2ab8a73, and 7890280cb9b1 for the later runs), 0 of 10 tasks were cut, and the rate is 0 of 5 under fingerprint 7890280cb9b1. I did not find which of the changed slots made the difference. The changed slots are the procedure prompt, the reflection/memory files, the scenario and the code. The cause is therefore the output-limit default combined with long procedure submissions, and the later changes reduced it. Whether it still holds today is only partly settled. Today's profile for profiles/anthropic.json (a haiku model) still sets no explicit maxTokens, so the limit itself has not changed. The cause is therefore not closed at the profile, and a long submission could be cut again.",
+    "artifacts": [
+     {
+      "kind": "diagnosis",
+      "path": "diagnoses/diag-193d614066bf.json"
+     }
+    ]
+   },
+   "outcome": "completed",
+   "reason": "contract held on topic diagnosis: diagnosis diagnoses/diag-193d614066bf.json",
+   "tokens": {
+    "prompt": 20299,
+    "completion": 542,
+    "total": 20841
+   }
+  }
+ ],
+ "submissions": [
+  {
+   "step": 13,
+   "outcome": "refused",
+   "refused": true,
+   "reason": "diagnosis refused: prediction 3 (rules-out, ruling out \"the model really hit a small output-token limit (maxTokens) that the prompt change relieved\") expected false, the harness observed true: maxTokens: 4096 (profiles/anthropic.json sets none: the Anthropic wire's 4096)",
+   "diagnosis": {
+    "id": "diag-193d614066bf",
+    "verdict": "wrong",
+    "cause": "The \"cut at the output limit\" form is a mislabel. At step 8 of exp-control/t-2026-09-29-0001 (procedure.submit), the outcome is \"cut\", but the reason the harness recorded is \"Provider proposed a capability outside the allowlist\". No token limit is named. The same reason appears on every attempt linked to the form. So the harness labels an allowlist refusal of the provider's proposed call as a TRUNCATED (output limit) cut. The model proposed a capability that was not on the allowlist, and the harness reported that as a cut. The lead reads the drop from 5/6 to 0/10 as an improvement caused by the changed prompt and files. The sources show only that the labelled form disappeared. They do not show that output truncation was ever the failure. They do not show which change removed the off-allowlist proposals either. The fingerprint changes include the procedure prompt and 17 code files. The text length of specs/procedure/prompt.md is 3501 characters both at the task's version and today. So the prompt edit cannot be isolated as the cause.",
+    "class": "harness-artefact",
+    "current": "unknown",
+    "evidence": [
+     "form:procedure:harness:69e875cfddc9",
+     "fingerprint:f6f379ac8445",
+     "fingerprint:b955c2ab8a73",
+     "attempt:exp-control/t-2026-09-29-0001:8",
+     "task:exp-control/t-2026-09-29-0001"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "refused-with",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0001",
+       "step": 8,
+       "phrase": "outside the allowlist"
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0001",
+       "step": 8,
+       "outcome": "cut"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "alternative": "the model really hit a small output-token limit (maxTokens) that the prompt change relieved",
+      "predicate": "run-setting",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0001",
+       "setting": "maxTokens",
+       "compare": "present"
+      },
+      "expect": false
+     },
+     {
+      "role": "current",
+      "predicate": "rate",
+      "args": {
+       "form": "form:procedure:harness:69e875cfddc9",
+       "fingerprint": "fingerprint:7890280cb9b1",
+       "compare": "=",
+       "value": 0
+      },
+      "expect": true
+     }
+    ],
+    "justifications": []
+   }
+  },
+  {
+   "step": 16,
+   "outcome": "refused",
+   "refused": true,
+   "reason": "diagnosis refused: prediction 1 (cause) expected true, the harness observed false: maxTokens: 4096 (profiles/anthropic.json sets none: the Anthropic wire's 4096); prediction 3 (rules-out, ruling out \"the model really hit a small output-token limit (maxTokens) that the prompt change relieved\") expected true, the harness observed false: maxTokens: 4096 (profiles/anthropic.json sets none: the Anthropic wire's 4096)",
+   "diagnosis": {
+    "id": "diag-193d614066bf",
+    "verdict": "right",
+    "cause": "The cuts were real. In the tasks before the change, procedure.submit at step 8 ended with completion = 4096 tokens, the Anthropic wire's default output cap, because the profile sets no maxTokens. The whole procedure and its long justifications list did not fit in that cap. The cap was the same before and after (4096), so the change did not raise it. After the change, 0 of 10 tasks hit the cap. I cannot attribute the relief to the prompt text alone: the procedure prompt has the same length at both versions (3501 chars), and 26 files changed together (memory, reflection, grammars, code). The model's output got shorter or took another path, not a bigger budget. The harness also labelled each cut \"Provider proposed a capability outside the allowlist\", which is a false reason for a truncated call. The lead is right that the form went away with the change. It is wrong to read it as one prompt edit.",
+    "class": "improvement",
+    "current": "still",
+    "evidence": [
+     "form:procedure:harness:69e875cfddc9",
+     "fingerprint:f6f379ac8445",
+     "fingerprint:b955c2ab8a73",
+     "fingerprint:7890280cb9b1",
+     "task:exp-control/t-2026-09-29-0001",
+     "task:exp3-baseline/t-2026-09-29-0001",
+     "attempt:exp-control/t-2026-09-29-0001:8"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "run-setting",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0001",
+       "setting": "maxTokens",
+       "compare": "=",
+       "value": "4096"
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0001",
+       "step": 8,
+       "outcome": "cut"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "predicate": "run-setting",
+      "args": {
+       "task": "task:exp3-baseline/t-2026-09-29-0001",
+       "setting": "maxTokens",
+       "compare": "=",
+       "value": "4096"
+      },
+      "expect": true,
+      "alternative": "the model really hit a small output-token limit (maxTokens) that the prompt change relieved"
+     },
+     {
+      "role": "current",
+      "predicate": "rate",
+      "args": {
+       "form": "form:procedure:harness:69e875cfddc9",
+       "model": "claude-sonnet-5-5",
+       "fingerprint": "fingerprint:7890280cb9b1",
+       "compare": "=",
+       "value": 0
+      },
+      "expect": true
+     }
+    ],
+    "justifications": [
+     {
+      "constant": "maxTokens",
+      "value": 4096,
+      "source": "measured",
+      "reference": "diagnosis.step task:exp-control/t-2026-09-29-0001 step 8: completion 4096, outcome cut; harness observed maxTokens 4096 (Anthropic wire default)",
+      "reason": "The cap is unchanged between the fingerprints, so it was not the thing that changed."
+     }
+    ]
+   }
+  },
+  {
+   "step": 17,
+   "outcome": "completed",
+   "refused": false,
+   "reason": "diagnosis.submit completed; the workshop changed",
+   "diagnosis": {
+    "id": "diag-193d614066bf",
+    "verdict": "right",
+    "cause": "The cuts were real: procedure.submit at step 8 of the pre-change tasks ended with completion = 4096 tokens, the Anthropic wire's default output cap, because the profile sets no maxTokens. The whole procedure with its long justifications list did not fit in that cap. The cap is the same before and after (4096), so the change did not raise it, and the relief did not come from a larger budget. After the change 0 of 10 tasks hit the cap. The procedure prompt has the same length at both versions (3501 chars) and about 26 files changed together (memory, reflection, grammars, code), so the relief cannot be attributed to the prompt text alone. The model's output got shorter or took another path. The harness also labelled each cut \"Provider proposed a capability outside the allowlist\", a false reason for a truncated call. The lead is right that the form went away with the change, but wrong to read it as one prompt edit.",
+    "class": "improvement",
+    "current": "still",
+    "evidence": [
+     "form:procedure:harness:69e875cfddc9",
+     "fingerprint:f6f379ac8445",
+     "fingerprint:b955c2ab8a73",
+     "fingerprint:7890280cb9b1",
+     "task:exp-control/t-2026-09-29-0001",
+     "task:exp3-baseline/t-2026-09-29-0001",
+     "attempt:exp-control/t-2026-09-29-0001:8"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "run-setting",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0001",
+       "setting": "maxTokens",
+       "compare": "=",
+       "value": 4096
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:exp-control/t-2026-09-29-0001",
+       "step": 8,
+       "outcome": "cut"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "predicate": "run-setting",
+      "args": {
+       "task": "task:exp3-baseline/t-2026-09-29-0001",
+       "setting": "maxTokens",
+       "compare": "=",
+       "value": 4096
+      },
+      "expect": true,
+      "alternative": "the model really hit a small output-token limit (maxTokens) that the prompt change relieved"
+     },
+     {
+      "role": "current",
+      "predicate": "rate",
+      "args": {
+       "form": "form:procedure:harness:69e875cfddc9",
+       "model": "claude-sonnet-5-5",
+       "fingerprint": "fingerprint:7890280cb9b1",
+       "compare": "=",
+       "value": 0
+      },
+      "expect": true
+     }
+    ],
+    "justifications": [
+     {
+      "constant": "maxTokens",
+      "value": 4096,
+      "source": "measured",
+      "reference": "diagnosis.step task:exp-control/t-2026-09-29-0001 step 8: completion 4096, outcome cut; the harness reports maxTokens 4096 (Anthropic wire default)",
+      "reason": "The cap is unchanged between the fingerprints, so it was not what changed."
+     }
+    ]
+   }
+  }
+ ],
+ "accepted": {
+  "id": "diag-193d614066bf",
+  "lead": {
+   "id": "D5:8d5e2be35eb0",
+   "detector": "D5",
+   "class": "improvement",
+   "title": "cut at the output limit: 5 of 6 tasks of claude-sonnet-5-5 before, 0 of 10 after the harness changed: prompt:specs/procedure/prompt.md, file:slots/station/grammars/default/en.json, file:slots/station/grammars/default/fr.json, file:specs/harness/memory.json, file:specs/reflection/format.json, file:specs/reflection/playbook.json, file:specs/reflection/prompt.md, file:specs/reflection/words.json, file:specs/scenario-commissioning-learning.json, run:profiles/anthropic-sonnet.json, 17 file(s) of code",
+   "settledBy": null,
+   "form": {
+    "id": "form:procedure:harness:69e875cfddc9",
+    "shape": "cut at the output limit",
+    "by": "harness"
+   },
+   "path": [
+    "fingerprint:f6f379ac8445: 5/6 -refused-for-> form:procedure:harness:69e875cfddc9",
+    "fingerprint:b955c2ab8a73: 0/10",
+    "fingerprint:b955c2ab8a73 -changed-> statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3 (prompt:specs/procedure/prompt.md, was statement:9d6df0fbe9e4ef78233baea24c821740dcbd5291120de0f2469b05697db2917f)",
+    "fingerprint:b955c2ab8a73 -changed-> ? (file:slots/station/grammars/default/en.json, was 13408813b64a8f96368b3b5c935cad78b061dc22)",
+    "fingerprint:b955c2ab8a73 -changed-> ? (file:slots/station/grammars/default/fr.json, was 13408813b64a8f96368b3b5c935cad78b061dc22)",
+    "fingerprint:b955c2ab8a73 -changed-> ? (file:specs/harness/memory.json, was 13408813b64a8f96368b3b5c935cad78b061dc22)",
+    "fingerprint:b955c2ab8a73 -changed-> ? (file:specs/reflection/format.json, was 13408813b64a8f96368b3b5c935cad78b061dc22)",
+    "fingerprint:b955c2ab8a73 -changed-> ? (file:specs/reflection/playbook.json, was 13408813b64a8f96368b3b5c935cad78b061dc22)",
+    "fingerprint:b955c2ab8a73 -changed-> ? (file:specs/reflection/prompt.md, was 13408813b64a8f96368b3b5c935cad78b061dc22)",
+    "fingerprint:b955c2ab8a73 -changed-> ? (file:specs/reflection/words.json, was 13408813b64a8f96368b3b5c935cad78b061dc22)",
+    "fingerprint:b955c2ab8a73 -changed-> ? (file:specs/scenario-commissioning-learning.json, was 13408813b64a8f96368b3b5c935cad78b061dc22)",
+    "fingerprint:b955c2ab8a73 -changed-> ? (run:profiles/anthropic-sonnet.json, was 13408813b64a8f96368b3b5c935cad78b061dc22)",
+    "fingerprint:b955c2ab8a73 -changed-> ? (17 file(s) of code, was 13408813b64a8f96368b3b5c935cad78b061dc22)"
+   ],
+   "about": [
+    "form:procedure:harness:69e875cfddc9",
+    "fingerprint:f6f379ac8445",
+    "fingerprint:b955c2ab8a73",
+    "statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3"
+   ],
+   "tasks": [
+    "task:exp-control/t-2026-09-29-0001",
+    "task:exp-control/t-2026-09-29-0002",
+    "task:exp-control/t-2026-09-29-0003",
+    "task:exp-control/t-2026-09-29-0004",
+    "task:exp-control/t-2026-09-29-0006"
+   ],
+   "models": {
+    "claude-sonnet-5-5": 5
+   },
+   "evidence": {
+    "before": {
+     "fingerprint": "fingerprint:f6f379ac8445",
+     "tasks": 6,
+     "withForm": 5
+    },
+    "after": {
+     "fingerprint": "fingerprint:b955c2ab8a73",
+     "tasks": 10,
+     "withForm": 0
+    },
+    "changed": [
+     {
+      "slot": "prompt:specs/procedure/prompt.md",
+      "statement": "statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+      "stored": null,
+      "was": "statement:9d6df0fbe9e4ef78233baea24c821740dcbd5291120de0f2469b05697db2917f"
+     },
+     {
+      "slot": "file:slots/station/grammars/default/en.json",
+      "statement": null,
+      "stored": null,
+      "was": "13408813b64a8f96368b3b5c935cad78b061dc22"
+     },
+     {
+      "slot": "file:slots/station/grammars/default/fr.json",
+      "statement": null,
+      "stored": null,
+      "was": "13408813b64a8f96368b3b5c935cad78b061dc22"
+     },
+     {
+      "slot": "file:specs/harness/memory.json",
+      "statement": null,
+      "stored": null,
+      "was": "13408813b64a8f96368b3b5c935cad78b061dc22"
+     },
+     {
+      "slot": "file:specs/reflection/format.json",
+      "statement": null,
+      "stored": null,
+      "was": "13408813b64a8f96368b3b5c935cad78b061dc22"
+     },
+     {
+      "slot": "file:specs/reflection/playbook.json",
+      "statement": null,
+      "stored": null,
+      "was": "13408813b64a8f96368b3b5c935cad78b061dc22"
+     },
+     {
+      "slot": "file:specs/reflection/prompt.md",
+      "statement": null,
+      "stored": null,
+      "was": "13408813b64a8f96368b3b5c935cad78b061dc22"
+     },
+     {
+      "slot": "file:specs/reflection/words.json",
+      "statement": null,
+      "stored": null,
+      "was": "13408813b64a8f96368b3b5c935cad78b061dc22"
+     },
+     {
+      "slot": "file:specs/scenario-commissioning-learning.json",
+      "statement": null,
+      "stored": null,
+      "was": "13408813b64a8f96368b3b5c935cad78b061dc22"
+     },
+     {
+      "slot": "run:profiles/anthropic-sonnet.json",
+      "statement": null,
+      "stored": null,
+      "was": "13408813b64a8f96368b3b5c935cad78b061dc22"
+     },
+     {
+      "slot": "17 file(s) of code",
+      "statement": null,
+      "stored": null,
+      "was": "13408813b64a8f96368b3b5c935cad78b061dc22"
+     }
+    ],
+    "described": false,
+    "files": [
+     "harness/core/episodes.ts",
+     "harness/core/manifest.ts",
+     "harness/core/reasoning-state.ts",
+     "harness/core/runner.ts",
+     "harness/core/socle.md",
+     "harness/core/topic.ts",
+     "harness/lib/llm-common.ts",
+     "harness/topics/procedure/index.ts",
+     "harness/topics/reflection/index.ts",
+     "lib/adaptations.ts",
+     "lib/fork.ts",
+     "lib/memory.ts",
+     "lib/reflection.ts",
+     "lib/working-memory.ts",
+     "profiles/anthropic-sonnet.json",
+     "slots/station/grammars/default/en.json",
+     "slots/station/grammars/default/fr.json",
+     "slots/station/provider.ts",
+     "specs/harness/memory.json",
+     "specs/reflection/format.json",
+     "specs/reflection/playbook.json",
+     "specs/reflection/prompt.md",
+     "specs/reflection/words.json",
+     "specs/scenario-commissioning-learning.json",
+     "stand-ins/builders/procedure.ts",
+     "stand-ins/builders/reflection.ts"
+    ],
+    "toolsBefore": "7474411ba76bc4d4cfb83066834385e723eaf6ce05d0b7471590a702cd4edc65",
+    "toolsAfter": "7474411ba76bc4d4cfb83066834385e723eaf6ce05d0b7471590a702cd4edc65"
+   },
+   "recommend": false
+  },
+  "forks": [
+   "exp-control",
+   "exp-learn",
+   "exp3-baseline",
+   "exp4-gpt-a",
+   "exp4-gpt-c",
+   "exp4-sonnet-a",
+   "exp6-contract",
+   "exp7-fixes",
+   "exp8-paths"
+  ],
+  "verdict": "right",
+  "cause": "The cuts were real: procedure.submit at step 8 of the pre-change tasks ended with completion = 4096 tokens, the Anthropic wire's default output cap, because the profile sets no maxTokens. The whole procedure with its long justifications list did not fit in that cap. The cap is the same before and after (4096), so the change did not raise it, and the relief did not come from a larger budget. After the change 0 of 10 tasks hit the cap. The procedure prompt has the same length at both versions (3501 chars) and about 26 files changed together (memory, reflection, grammars, code), so the relief cannot be attributed to the prompt text alone. The model's output got shorter or took another path. The harness also labelled each cut \"Provider proposed a capability outside the allowlist\", a false reason for a truncated call. The lead is right that the form went away with the change, but wrong to read it as one prompt edit.",
+  "class": "improvement",
+  "current": "still",
+  "evidence": [
+   "form:procedure:harness:69e875cfddc9",
+   "fingerprint:f6f379ac8445",
+   "fingerprint:b955c2ab8a73",
+   "fingerprint:7890280cb9b1",
+   "task:exp-control/t-2026-09-29-0001",
+   "task:exp3-baseline/t-2026-09-29-0001",
+   "attempt:exp-control/t-2026-09-29-0001:8"
+  ],
+  "predictions": [
+   {
+    "role": "cause",
+    "predicate": "run-setting",
+    "args": {
+     "task": "task:exp-control/t-2026-09-29-0001",
+     "setting": "maxTokens",
+     "compare": "=",
+     "value": 4096
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "maxTokens: 4096 (profiles/anthropic.json sets none: the Anthropic wire's 4096)",
+     "nodes": [
+      "task:exp-control/t-2026-09-29-0001"
+     ],
+     "read": [
+      "profiles/anthropic.json@13408813b64a8f96368b3b5c935cad78b061dc22"
+     ]
+    }
+   },
+   {
+    "role": "cause",
+    "predicate": "outcome-at",
+    "args": {
+     "task": "task:exp-control/t-2026-09-29-0001",
+     "step": 8,
+     "outcome": "cut"
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "step 8 (procedure.submit): cut",
+     "nodes": [
+      "task:exp-control/t-2026-09-29-0001",
+      "attempt:exp-control/t-2026-09-29-0001:8"
+     ],
+     "read": []
+    }
+   },
+   {
+    "role": "rules-out",
+    "predicate": "run-setting",
+    "args": {
+     "task": "task:exp3-baseline/t-2026-09-29-0001",
+     "setting": "maxTokens",
+     "compare": "=",
+     "value": 4096
+    },
+    "expect": true,
+    "alternative": "the model really hit a small output-token limit (maxTokens) that the prompt change relieved",
+    "result": {
+     "truth": "true",
+     "observed": "maxTokens: 4096 (profiles/anthropic.json sets none: the Anthropic wire's 4096)",
+     "nodes": [
+      "task:exp3-baseline/t-2026-09-29-0001"
+     ],
+     "read": [
+      "profiles/anthropic.json@4e3458b732ebb757929df0cfc9e36a8c010329a8"
+     ]
+    }
+   },
+   {
+    "role": "current",
+    "predicate": "rate",
+    "args": {
+     "form": "form:procedure:harness:69e875cfddc9",
+     "model": "claude-sonnet-5-5",
+     "fingerprint": "fingerprint:7890280cb9b1",
+     "compare": "=",
+     "value": 0
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "0 of 5 tasks refused for it (0 %)",
+     "nodes": [
+      "form:procedure:harness:69e875cfddc9",
+      "fingerprint:7890280cb9b1",
+      "model:claude-sonnet-5-5"
+     ],
+     "read": []
+    }
+   }
+  ],
+  "checked": {
+   "confirmed": 4,
+   "unknown": 0,
+   "byRole": {
+    "cause": {
+     "confirmed": 2,
+     "of": 2
+    },
+    "current": {
+     "confirmed": 1,
+     "of": 1
+    },
+    "rules-out": {
+     "confirmed": 1,
+     "of": 1
+    }
+   },
+   "alternativesRuledOut": [
+    "the model really hit a small output-token limit (maxTokens) that the prompt change relieved"
+   ]
+  },
+  "justifications": [
+   {
+    "constant": "maxTokens",
+    "value": 4096,
+    "source": "measured",
+    "reference": "diagnosis.step task:exp-control/t-2026-09-29-0001 step 8: completion 4096, outcome cut; the harness reports maxTokens 4096 (Anthropic wire default)",
+    "reason": "The cap is unchanged between the fingerprints, so it was not what changed."
+   }
+  ]
+ },
+ "station": {
+  "status": "diagnosed"
+ },
+ "tokens": {
+  "prompt": 351406,
+  "completion": 13462
+ }
+}

@@ -1,0 +1,1112 @@
+{
+ "schema": 1,
+ "key": "repository/t-2026-10-01-0006",
+ "workshop": "repository",
+ "taskId": "t-2026-10-01-0006",
+ "recordedAt": "2026-10-01T18:53:22.967Z",
+ "startedAt": "2026-10-01T18:51:48.406Z",
+ "endedAt": "2026-10-01T18:53:22.073Z",
+ "state": "proposed",
+ "ended": "contract held after 20 step(s)",
+ "requestedBy": "station (evaluator)",
+ "corpus": "evaluator",
+ "forks": [
+  "exp-control",
+  "exp-learn",
+  "exp3-baseline",
+  "exp4-gpt-a",
+  "exp4-gpt-c",
+  "exp4-sonnet-a",
+  "exp6-contract",
+  "exp7-fixes",
+  "exp8-paths"
+ ],
+ "lead": "D4:92b3a81902a4",
+ "diagnosisId": "diag-3691f2968581",
+ "model": "claude-sonnet-5-5",
+ "family": "claude",
+ "provider": {
+  "name": "reasoner:claude",
+  "model": "claude-sonnet-5-5",
+  "family": "claude",
+  "settings": {
+   "maxTokens": 8192,
+   "maxTokensParam": null,
+   "temperature": null,
+   "reasoningEffort": null,
+   "timeoutMs": null
+  },
+  "profile": {
+   "file": "profiles/anthropic-sonnet.json",
+   "sha256": "4cfc6349fd069075d89f8228c08374f628e69adbae6f7b9958363bac0a61b342"
+  }
+ },
+ "profile": {
+  "file": "profiles/anthropic.json",
+  "sha256": "57b865b5b073a8d0fc00cfaa6e23171d4dca37acbb447b317c622718f68df5d0"
+ },
+ "harness": {
+  "repository": "f29cb0cb72c0a7e44664dda08c2386b507e09fd9",
+  "fork": null
+ },
+ "asked": {
+  "id": "diag-3691f2968581",
+  "forks": [
+   "exp-control",
+   "exp-learn",
+   "exp3-baseline",
+   "exp4-gpt-a",
+   "exp4-gpt-c",
+   "exp4-sonnet-a",
+   "exp6-contract",
+   "exp7-fixes",
+   "exp8-paths"
+  ],
+  "lead": {
+   "id": "D4:92b3a81902a4",
+   "detector": "D4",
+   "class": "harness-artefact",
+   "title": "the harness refused \"Invalid capability arguments: data/evidence must be array\" 7 times in 7 tasks, before any guard (procedure.analyse)",
+   "settledBy": null,
+   "form": {
+    "id": "form:procedure:harness:316429655575",
+    "shape": "Invalid capability arguments: data/evidence must be array",
+    "by": "harness"
+   },
+   "path": [
+    "step or attempt -refused-for-> form:procedure:harness:316429655575 (by the harness)",
+    "x 7 in 7 tasks",
+    "-calls-> procedure.analyse"
+   ],
+   "about": [
+    "form:procedure:harness:316429655575",
+    "step:exp-learn/t-2026-09-29-0009:14",
+    "step:exp-control/t-2026-09-29-0004:15",
+    "step:exp4-sonnet-a/t-2026-09-29-0010:13",
+    "step:exp6-contract/t-2026-09-30-0005:17",
+    "step:exp6-contract/t-2026-09-30-0009:12"
+   ],
+   "tasks": [
+    "task:exp-learn/t-2026-09-29-0009",
+    "task:exp-control/t-2026-09-29-0004",
+    "task:exp4-sonnet-a/t-2026-09-29-0010",
+    "task:exp6-contract/t-2026-09-30-0005",
+    "task:exp6-contract/t-2026-09-30-0009",
+    "task:exp7-fixes/t-2026-09-30-0004",
+    "task:exp7-fixes/t-2026-09-30-0005"
+   ],
+   "models": {
+    "claude-sonnet-5-5": 7
+   },
+   "evidence": {
+    "refusals": 7,
+    "capabilities": [
+     "procedure.analyse"
+    ],
+    "example": "Invalid capability arguments: data/evidence must be array, data/changes must be array"
+   },
+   "recommend": true
+  },
+  "neighbourhood": {
+   "nodes": [
+    "form:procedure:harness:316429655575 [form] {\"topic\":\"procedure\",\"shape\":\"Invalid capability arguments: data/evidence must be array\",\"kind\":\"PRE_GUARD_REJECTED\",\"by\":\"harness\"}",
+    "step:exp-learn/t-2026-09-29-0009:14 [step] {\"step\":14,\"capability\":\"procedure.analyse\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"Invalid capability arguments: data/evidence must be array, data/changes mus…",
+    "step:exp-control/t-2026-09-29-0004:15 [step] {\"step\":15,\"capability\":\"procedure.analyse\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"Invalid capability arguments: data/evidence must be array, data/changes mus…",
+    "step:exp4-sonnet-a/t-2026-09-29-0010:13 [step] {\"step\":13,\"capability\":\"procedure.analyse\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"Invalid capability arguments: data/evidence must be array, data/changes mus…",
+    "step:exp6-contract/t-2026-09-30-0005:17 [step] {\"step\":17,\"capability\":\"procedure.analyse\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"Invalid capability arguments: data/evidence must be array\"}",
+    "step:exp6-contract/t-2026-09-30-0009:12 [step] {\"step\":12,\"capability\":\"procedure.analyse\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"Invalid capability arguments: data/evidence must be array\"}",
+    "task:exp-learn/t-2026-09-29-0009 [task] {\"taskId\":\"t-2026-09-29-0009\",\"workshop\":\"exp-learn\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T19:02:14.277Z\",\"ended\":\"contract held after …",
+    "task:exp-control/t-2026-09-29-0004 [task] {\"taskId\":\"t-2026-09-29-0004\",\"workshop\":\"exp-control\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T19:00:41.259Z\",\"ended\":\"contract held afte…",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 [task] {\"taskId\":\"t-2026-09-29-0010\",\"workshop\":\"exp4-sonnet-a\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-29T21:01:06.580Z\",\"ended\":\"contract held af…",
+    "task:exp6-contract/t-2026-09-30-0005 [task] {\"taskId\":\"t-2026-09-30-0005\",\"workshop\":\"exp6-contract\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-30T09:09:59.557Z\",\"ended\":\"contract held af…",
+    "task:exp6-contract/t-2026-09-30-0009 [task] {\"taskId\":\"t-2026-09-30-0009\",\"workshop\":\"exp6-contract\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-30T09:15:18.052Z\",\"ended\":\"contract held af…",
+    "task:exp7-fixes/t-2026-09-30-0004 [task] {\"taskId\":\"t-2026-09-30-0004\",\"workshop\":\"exp7-fixes\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-30T10:38:45.452Z\",\"ended\":\"contract held after…",
+    "task:exp7-fixes/t-2026-09-30-0005 [task] {\"taskId\":\"t-2026-09-30-0005\",\"workshop\":\"exp7-fixes\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-30T10:40:24.563Z\",\"ended\":\"contract held after…",
+    "step:exp7-fixes/t-2026-09-30-0004:7 [step] {\"step\":7,\"capability\":\"procedure.analyse\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"Invalid capability arguments: data/evidence must be array\"}",
+    "step:exp7-fixes/t-2026-09-30-0005:12 [step] {\"step\":12,\"capability\":\"procedure.analyse\",\"outcome\":\"PRE_GUARD_REJECTED\",\"reason\":\"Invalid capability arguments: data/evidence must be array, data/changes mus…",
+    "capability:procedure.analyse [capability] {\"id\":\"procedure.analyse\"}",
+    "model:claude-sonnet-5-5 [model] {\"model\":\"claude-sonnet-5-5\",\"provider\":\"reasoner:claude\",\"family\":\"claude\"}",
+    "fingerprint:6c3cf12c2da9 [fingerprint] {\"tools\":\"7474411ba76bc4d4cfb83066834385e723eaf6ce05d0b7471590a702cd4edc65\",\"toolsDetailed\":false,\"words\":null,\"prompt\":\"4539a2b270603168740441153eaf30be44ec707…",
+    "statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3 [statement] {\"slot\":\"prompt:specs/procedure/prompt.md\",\"kind\":\"prompt\",\"of\":\"specs/procedure/prompt.md\",\"sha256\":\"4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5…",
+    "statement:contract:d318d8ec9126 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/procedure\",\"phrase\":\"cite a fact of a library document a person signed\"}",
+    "statement:contract:661448b756fd [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/safetyBounds\",\"phrase\":\"the fact its signed rules bound it by\"}",
+    "statement:contract:ec185a62d3cd [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/procedure\",\"phrase\":\"library.facts says which are signed\"}",
+    "statement:contract:d0d31897432e [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/procedure\",\"phrase\":\"and respect it\"}",
+    "statement:contract:e7c8ceacd378 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/safetyBounds\",\"phrase\":\"and on which side\"}",
+    "statement:contract:1770e40880de [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/procedure\",\"phrase\":\"Every constant you set is justified in justifications\"}",
+    "statement:contract:be58c67f8aab [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"its value (a number, or [min, max] for bounds)\"}",
+    "statement:contract:b020dd6a2c51 [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"Why, in a few words\"}",
+    "statement:contract:2ba750a23bd2 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/procedure\",\"phrase\":\"cite what you read\"}",
+    "statement:contract:189045e7d19f [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"web: a URL a search returned\"}",
+    "statement:contract:06599146cbe7 [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"measured: what the task observed\"}",
+    "statement:contract:96011ca77ae3 [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"envelope: a bound of the guard's envelope\"}",
+    "statement:contract:98914823d9ec [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"derived: the formula\"}",
+    "statement:contract:e5418443b2af [statement] {\"kind\":\"contract\",\"file\":\"harness/core/justify.ts\",\"phrase\":\"library: a document or fact id read in this task\"}",
+    "statement:contract:d61820a4a508 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/capabilities/analyse\",\"phrase\":\"the new procedure must make these changes\"}",
+    "statement:contract:a68c38560610 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/analysed\",\"phrase\":\"the procedure must change what it names\"}",
+    "statement:contract:58656577bd4f [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/analysis\",\"phrase\":\"Before any new procedure, analyse it with procedure.analyse\"}",
+    "statement:contract:ed4d477392a3 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/handOver\",\"phrase\":\"End with task.done\"}",
+    "statement:contract:f4047e81683f [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/methodFind\",\"phrase\":\"read the card of the one you choose\"}",
+    "statement:contract:164ede095e07 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/capabilities/revise\",\"phrase\":\"When nothing is kept\"}",
+    "statement:contract:8ef5996c115c [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/capabilities/analyse\",\"phrase\":\"Analyse why the last test was aborted\"}",
+    "statement:contract:aa7b9a3e49f9 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/capabilities/analyse\",\"phrase\":\"the cause\"}",
+    "statement:contract:87429838499a [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/capabilities/analyse\",\"phrase\":\"each a field of the procedure\"}",
+    "statement:contract:ee13241e11fe [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/procedure.schema.json\",\"pointer\":\"/properties/volume/description\",\"phrase\":\"ISA-95 path of the volume under test\"}",
+    "statement:contract:326fb8b4b56a [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/procedure.schema.json\",\"pointer\":\"/properties/device/description\",\"phrase\":\"ISA-95 path of the device the steps comma…",
+    "statement:contract:6e5f03e58e7a [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/prompt.md\",\"phrase\":\"`limits.co2MaxPpm`, `limits.co2AbortPpm`, `limits.minSpeedPercent`, `limits.maxMinutes`\"}",
+    "statement:contract:5f06e9dabbb1 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/procedure.schema.json\",\"pointer\":\"/properties/steps/items/required\",\"phrase\":\"speedPercent\"}",
+    "statement:contract:bf267de9e2d6 [statement] {\"kind\":\"contract\",\"library\":\"commissioning-test-safety\",\"phrase\":\"every step's `speedPercent` are at or above `test.speedFloorPercent`\"}",
+    "statement:contract:857090aaec4d [statement] {\"kind\":\"contract\",\"library\":\"commissioning-test-safety\",\"phrase\":\"never stops it\"}",
+    "statement:contract:c102be04e443 [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/procedure.schema.json\",\"pointer\":\"/properties/limits/description\",\"phrase\":\"The bounds the test stays within\"}",
+    "statement:contract:18b494aef1a9 [statement] {\"kind\":\"contract\",\"library\":\"commissioning-test-safety\",\"phrase\":\"are at or below `test.co2AbortCeilingPpm`\"}"
+   ],
+   "links": [
+    "step:exp-learn/t-2026-09-29-0009:14 of task:exp-learn/t-2026-09-29-0009",
+    "step:exp-learn/t-2026-09-29-0009:14 calls capability:procedure.analyse",
+    "step:exp-learn/t-2026-09-29-0009:14 refused-for form:procedure:harness:316429655575",
+    "step:exp-control/t-2026-09-29-0004:15 of task:exp-control/t-2026-09-29-0004",
+    "step:exp-control/t-2026-09-29-0004:15 calls capability:procedure.analyse",
+    "step:exp-control/t-2026-09-29-0004:15 refused-for form:procedure:harness:316429655575",
+    "step:exp4-sonnet-a/t-2026-09-29-0010:13 of task:exp4-sonnet-a/t-2026-09-29-0010",
+    "step:exp4-sonnet-a/t-2026-09-29-0010:13 calls capability:procedure.analyse",
+    "step:exp4-sonnet-a/t-2026-09-29-0010:13 refused-for form:procedure:harness:316429655575",
+    "step:exp6-contract/t-2026-09-30-0005:17 of task:exp6-contract/t-2026-09-30-0005",
+    "step:exp6-contract/t-2026-09-30-0005:17 calls capability:procedure.analyse",
+    "step:exp6-contract/t-2026-09-30-0005:17 refused-for form:procedure:harness:316429655575",
+    "step:exp6-contract/t-2026-09-30-0009:12 of task:exp6-contract/t-2026-09-30-0009",
+    "step:exp6-contract/t-2026-09-30-0009:12 calls capability:procedure.analyse",
+    "step:exp6-contract/t-2026-09-30-0009:12 refused-for form:procedure:harness:316429655575",
+    "task:exp-learn/t-2026-09-29-0009 ran-by model:claude-sonnet-5-5",
+    "task:exp-learn/t-2026-09-29-0009 ran-under fingerprint:6c3cf12c2da9",
+    "task:exp-learn/t-2026-09-29-0009 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:d318d8ec9126",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:661448b756fd",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:ec185a62d3cd",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:d0d31897432e",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:e7c8ceacd378",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:1770e40880de",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:be58c67f8aab",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:b020dd6a2c51",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:2ba750a23bd2",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:189045e7d19f",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:06599146cbe7",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:96011ca77ae3",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:98914823d9ec",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:e5418443b2af",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:d61820a4a508",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:a68c38560610",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:58656577bd4f",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:ed4d477392a3",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:f4047e81683f",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:164ede095e07",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:8ef5996c115c",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:aa7b9a3e49f9",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:87429838499a",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:ee13241e11fe",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:326fb8b4b56a",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:6e5f03e58e7a",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:5f06e9dabbb1",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:bf267de9e2d6",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:857090aaec4d",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:c102be04e443",
+    "task:exp-learn/t-2026-09-29-0009 read statement:contract:18b494aef1a9",
+    "task:exp-control/t-2026-09-29-0004 ran-by model:claude-sonnet-5-5",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:d318d8ec9126",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:661448b756fd",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:ec185a62d3cd",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:d0d31897432e",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:e7c8ceacd378",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:1770e40880de",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:be58c67f8aab",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:b020dd6a2c51",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:2ba750a23bd2",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:189045e7d19f",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:06599146cbe7",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:96011ca77ae3",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:98914823d9ec",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:e5418443b2af",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:d61820a4a508",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:a68c38560610",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:58656577bd4f",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:ed4d477392a3",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:f4047e81683f",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:164ede095e07",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:8ef5996c115c",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:aa7b9a3e49f9",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:87429838499a",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:ee13241e11fe",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:326fb8b4b56a",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:6e5f03e58e7a",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:5f06e9dabbb1",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:bf267de9e2d6",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:857090aaec4d",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:c102be04e443",
+    "task:exp-control/t-2026-09-29-0004 read statement:contract:18b494aef1a9",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 ran-by model:claude-sonnet-5-5",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:d318d8ec9126",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:661448b756fd",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:ec185a62d3cd",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:d0d31897432e",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:e7c8ceacd378",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:1770e40880de",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:be58c67f8aab",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:b020dd6a2c51",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:2ba750a23bd2",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:189045e7d19f",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:06599146cbe7",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:96011ca77ae3",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:98914823d9ec",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:e5418443b2af",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:d61820a4a508",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:a68c38560610",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:58656577bd4f",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:ed4d477392a3",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:f4047e81683f",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:164ede095e07",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:8ef5996c115c",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:aa7b9a3e49f9",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:87429838499a",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:ee13241e11fe",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:326fb8b4b56a",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:6e5f03e58e7a",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:5f06e9dabbb1",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:bf267de9e2d6",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:857090aaec4d",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:c102be04e443",
+    "task:exp4-sonnet-a/t-2026-09-29-0010 read statement:contract:18b494aef1a9",
+    "task:exp6-contract/t-2026-09-30-0005 ran-by model:claude-sonnet-5-5",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:d318d8ec9126",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:661448b756fd",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:ec185a62d3cd",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:d0d31897432e",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:e7c8ceacd378",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:1770e40880de",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:be58c67f8aab",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:b020dd6a2c51",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:2ba750a23bd2",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:189045e7d19f",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:06599146cbe7",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:96011ca77ae3",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:98914823d9ec",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:e5418443b2af",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:d61820a4a508",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:a68c38560610",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:58656577bd4f",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:ed4d477392a3",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:f4047e81683f",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:164ede095e07",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:8ef5996c115c",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:aa7b9a3e49f9",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:87429838499a",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:ee13241e11fe",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:326fb8b4b56a",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:6e5f03e58e7a",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:5f06e9dabbb1",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:bf267de9e2d6",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:857090aaec4d",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:c102be04e443",
+    "task:exp6-contract/t-2026-09-30-0005 read statement:contract:18b494aef1a9",
+    "task:exp6-contract/t-2026-09-30-0009 ran-by model:claude-sonnet-5-5",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:d318d8ec9126",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:661448b756fd",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:ec185a62d3cd",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:d0d31897432e",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:e7c8ceacd378",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:1770e40880de",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:be58c67f8aab",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:b020dd6a2c51",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:2ba750a23bd2",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:189045e7d19f",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:06599146cbe7",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:96011ca77ae3",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:98914823d9ec",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:e5418443b2af",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:d61820a4a508",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:a68c38560610",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:58656577bd4f",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:ed4d477392a3",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:f4047e81683f",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:164ede095e07",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:8ef5996c115c",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:aa7b9a3e49f9",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:87429838499a",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:ee13241e11fe",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:326fb8b4b56a",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:6e5f03e58e7a",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:5f06e9dabbb1",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:bf267de9e2d6",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:857090aaec4d",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:c102be04e443",
+    "task:exp6-contract/t-2026-09-30-0009 read statement:contract:18b494aef1a9",
+    "task:exp7-fixes/t-2026-09-30-0004 ran-by model:claude-sonnet-5-5",
+    "task:exp7-fixes/t-2026-09-30-0004 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp7-fixes/t-2026-09-30-0004 read statement:contract:d318d8ec9126",
+    "task:exp7-fixes/t-2026-09-30-0004 read statement:contract:661448b756fd",
+    "task:exp7-fixes/t-2026-09-30-0004 read statement:contract:ec185a62d3cd",
+    "task:exp7-fixes/t-2026-09-30-0004 read statement:contract:d0d31897432e",
+    "task:exp7-fixes/t-2026-09-30-0004 read statement:contract:e7c8ceacd378",
+    "task:exp7-fixes/t-2026-09-30-0004 read statement:contract:1770e40880de",
+    "task:exp7-fixes/t-2026-09-30-0004 read statement:contract:be58c67f8aab",
+    "task:exp7-fixes/t-2026-09-30-0004 read statement:contract:b020dd6a2c51",
+    "task:exp7-fixes/t-2026-09-30-0004 read statement:contract:2ba750a23bd2",
+    "task:exp7-fixes/t-2026-09-30-0004 read statement:contract:189045e7d19f",
+    "task:exp7-fixes/t-2026-09-30-0004 read statement:contract:06599146cbe7",
+    "task:exp7-fixes/t-2026-09-30-0004 read statement:contract:96011ca77ae3",
+    "task:exp7-fixes/t-2026-09-30-0004 read statement:contract:98914823d9ec",
+    "task:exp7-fixes/t-2026-09-30-0004 read statement:contract:e5418443b2af",
+    "task:exp7-fixes/t-2026-09-30-0004 read statement:contract:d61820a4a508",
+    "task:exp7-fixes/t-2026-09-30-0004 read statement:contract:a68c38560610",
+    "task:exp7-fixes/t-2026-09-30-0004 read statement:contract:58656577bd4f",
+    "task:exp7-fixes/t-2026-09-30-0004 read statement:contract:ed4d477392a3",
+    "task:exp7-fixes/t-2026-09-30-0004 read statement:contract:f4047e81683f",
+    "task:exp7-fixes/t-2026-09-30-0004 read statement:contract:164ede095e07",
+    "task:exp7-fixes/t-2026-09-30-0004 read statement:contract:8ef5996c115c",
+    "task:exp7-fixes/t-2026-09-30-0004 read statement:contract:aa7b9a3e49f9",
+    "task:exp7-fixes/t-2026-09-30-0004 read statement:contract:87429838499a",
+    "task:exp7-fixes/t-2026-09-30-0004 read statement:contract:ee13241e11fe",
+    "task:exp7-fixes/t-2026-09-30-0004 read statement:contract:326fb8b4b56a",
+    "task:exp7-fixes/t-2026-09-30-0004 read statement:contract:6e5f03e58e7a",
+    "task:exp7-fixes/t-2026-09-30-0004 read statement:contract:5f06e9dabbb1",
+    "task:exp7-fixes/t-2026-09-30-0004 read statement:contract:c102be04e443",
+    "task:exp7-fixes/t-2026-09-30-0005 ran-by model:claude-sonnet-5-5",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:4539a2b270603168740441153eaf30be44ec707bf8e9b17e0c582439e5d38ff3",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:d318d8ec9126",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:661448b756fd",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:ec185a62d3cd",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:d0d31897432e",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:e7c8ceacd378",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:1770e40880de",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:be58c67f8aab",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:b020dd6a2c51",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:2ba750a23bd2",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:189045e7d19f",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:06599146cbe7",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:96011ca77ae3",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:98914823d9ec",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:e5418443b2af",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:d61820a4a508",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:a68c38560610",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:58656577bd4f",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:ed4d477392a3",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:f4047e81683f",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:164ede095e07",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:8ef5996c115c",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:aa7b9a3e49f9",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:87429838499a",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:ee13241e11fe",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:326fb8b4b56a",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:6e5f03e58e7a",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:5f06e9dabbb1",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:bf267de9e2d6",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:857090aaec4d",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:c102be04e443",
+    "task:exp7-fixes/t-2026-09-30-0005 read statement:contract:18b494aef1a9",
+    "step:exp7-fixes/t-2026-09-30-0004:7 of task:exp7-fixes/t-2026-09-30-0004",
+    "step:exp7-fixes/t-2026-09-30-0004:7 calls capability:procedure.analyse",
+    "step:exp7-fixes/t-2026-09-30-0004:7 refused-for form:procedure:harness:316429655575",
+    "step:exp7-fixes/t-2026-09-30-0005:12 of task:exp7-fixes/t-2026-09-30-0005",
+    "step:exp7-fixes/t-2026-09-30-0005:12 calls capability:procedure.analyse",
+    "step:exp7-fixes/t-2026-09-30-0005:12 refused-for form:procedure:harness:316429655575"
+   ]
+  },
+  "rules": [],
+  "today": {
+   "commit": "f29cb0c",
+   "signatures": {},
+   "profiles": {
+    "profiles/anthropic.json": {
+     "wire": "anthropic-messages",
+     "model": "claude-haiku-4-5-20251001",
+     "capabilities": [
+      "tools",
+      "json"
+     ]
+    }
+   }
+  },
+  "refuted": []
+ },
+ "askedSha256": "f3964640ab5d19451895920ef8ce956add037fff8582cefe494e4458d4e7e606",
+ "steps": [
+  {
+   "n": 1,
+   "capability": "task.plan",
+   "input": {
+    "selected_nodes": [],
+    "missing_capabilities": [
+     {
+      "required_output": "diag-3691f2968581",
+      "quantity": "Diagnosis",
+      "reason": "No node of the catalogue produces a diagnosis; it is made here by reading the harness graph and steps.",
+      "topic": "diagnosis"
+     }
+    ]
+   },
+   "outcome": "completed",
+   "reason": "plan accepted: 0 node type(s), 1 missing capability(ies)",
+   "tokens": {
+    "prompt": 18443,
+    "completion": 158,
+    "total": 18601
+   }
+  },
+  {
+   "n": 2,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp7-fixes/t-2026-09-30-0004",
+    "step": 7,
+    "part": "sent"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 19132,
+    "completion": 140,
+    "total": 19272
+   }
+  },
+  {
+   "n": 3,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp7-fixes/t-2026-09-30-0004",
+    "step": 7,
+    "part": "sent"
+   },
+   "outcome": "refused",
+   "reason": "diagnosis.step with the same input was the previous step, and completed: its answer is in the state (lastAction, and evidence for a read); calling it again gives the same answer. Decide from what the state holds, or call something else.",
+   "tokens": {
+    "prompt": 19411,
+    "completion": 202,
+    "total": 19613
+   }
+  },
+  {
+   "n": 4,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp-learn/t-2026-09-29-0009",
+    "step": 14,
+    "part": "reason"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 19651,
+    "completion": 259,
+    "total": 19910
+   }
+  },
+  {
+   "n": 5,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp7-fixes/t-2026-09-30-0004",
+    "step": 7,
+    "part": "sent"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 19568,
+    "completion": 198,
+    "total": 19766
+   }
+  },
+  {
+   "n": 6,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp-learn/t-2026-09-29-0009",
+    "step": 14,
+    "part": "sent"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 19565,
+    "completion": 168,
+    "total": 19733
+   }
+  },
+  {
+   "n": 7,
+   "capability": "diagnosis.text",
+   "input": {
+    "file": "specs/procedure/words.json",
+    "at": "today",
+    "pointer": "/capabilities/analyse"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.text completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 19704,
+    "completion": 319,
+    "total": 20023
+   }
+  },
+  {
+   "n": 8,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp-learn/t-2026-09-29-0009",
+    "step": 14,
+    "part": "outline"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 19876,
+    "completion": 259,
+    "total": 20135
+   }
+  },
+  {
+   "n": 9,
+   "capability": "diagnosis.text",
+   "input": {
+    "file": "specs/procedure/words.json",
+    "at": "today",
+    "pointer": "/brief/analysis"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.text completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 20231,
+    "completion": 313,
+    "total": 20544
+   }
+  },
+  {
+   "n": 10,
+   "capability": "diagnosis.text",
+   "input": {
+    "file": "specs/procedure/words.json",
+    "at": "today",
+    "find": "evidence"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.text completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 20542,
+    "completion": 311,
+    "total": 20853
+   }
+  },
+  {
+   "n": 11,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp7-fixes/t-2026-09-30-0004",
+    "step": 7,
+    "part": "outline"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 21135,
+    "completion": 478,
+    "total": 21613
+   }
+  },
+  {
+   "n": 12,
+   "capability": "diagnosis.text",
+   "input": {
+    "file": "specs/procedure/words.json",
+    "at": "today",
+    "find": "analyse"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.text completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 21227,
+    "completion": 332,
+    "total": 21559
+   }
+  },
+  {
+   "n": 13,
+   "capability": "diagnosis.text",
+   "input": {
+    "file": "specs/procedure/procedure.schema.json",
+    "at": "today",
+    "find": "evidence"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.text completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 21838,
+    "completion": 467,
+    "total": 22305
+   }
+  },
+  {
+   "n": 14,
+   "capability": "diagnosis.text",
+   "input": {
+    "file": "specs/procedure/words.json",
+    "at": "today",
+    "find": "changes"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.text completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 22499,
+    "completion": 473,
+    "total": 22972
+   }
+  },
+  {
+   "n": 15,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp-learn/t-2026-09-29-0009",
+    "step": 14,
+    "part": "reason"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 22710,
+    "completion": 223,
+    "total": 22933
+   }
+  },
+  {
+   "n": 16,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp7-fixes/t-2026-09-30-0004",
+    "step": 8,
+    "part": "outline"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 22442,
+    "completion": 344,
+    "total": 22786
+   }
+  },
+  {
+   "n": 17,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:exp7-fixes/t-2026-09-30-0004",
+    "step": 8,
+    "part": "sent"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 22655,
+    "completion": 369,
+    "total": 23024
+   }
+  },
+  {
+   "n": 18,
+   "capability": "diagnosis.text",
+   "input": {
+    "file": "specs/procedure/words.json",
+    "at": "today",
+    "pointer": "/capabilities/analyse"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.text completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 22512,
+    "completion": 296,
+    "total": 22808
+   }
+  },
+  {
+   "n": 19,
+   "capability": "diagnosis.submit",
+   "input": {
+    "id": "diag-3691f2968581",
+    "verdict": "right",
+    "cause": "The refusal is real and true, and it comes from the harness's schema check on procedure.analyse, before any guard. In the 7 tasks the model (claude-sonnet-5-5) sent `evidence`, and in 5 of them also `changes`, as something other than an array. The words that describe analyse (specs/procedure/words.json /capabilities/analyse) only say \"the evidence in the last test's record\" and \"the changes ... each a field of the procedure\". They never say that evidence and changes are arrays, or what an item holds. The model has to guess the shape and is told only \"data/evidence must be array\", with no expected shape. The sent arguments are not kept, so the exact wrong shape is not visible. The failure is recoverable: in exp7-fixes/t-2026-09-30-0004 step 7 was refused and step 8 completed. The cause is a gap in the contract's texts (an unstated argument shape), not a guard rule and not an output cut.",
+    "class": "contract-gap",
+    "current": "still",
+    "evidence": [
+     "form:procedure:harness:316429655575",
+     "step:exp7-fixes/t-2026-09-30-0004:7",
+     "step:exp-learn/t-2026-09-29-0009:14",
+     "step:exp6-contract/t-2026-09-30-0005:17",
+     "capability:procedure.analyse",
+     "task:exp7-fixes/t-2026-09-30-0004"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "refused-with",
+      "args": {
+       "task": "task:exp7-fixes/t-2026-09-30-0004",
+       "step": 7,
+       "phrase": "must be array"
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "stated-at",
+      "args": {
+       "file": "specs/procedure/words.json",
+       "pointer": "/capabilities/analyse",
+       "phrase": "array",
+       "at": "today"
+      },
+      "expect": false
+     },
+     {
+      "role": "current",
+      "predicate": "stated-at",
+      "args": {
+       "file": "specs/procedure/words.json",
+       "pointer": "/brief/analysis",
+       "phrase": "array",
+       "at": "today"
+      },
+      "expect": false
+     },
+     {
+      "role": "rules-out",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:exp7-fixes/t-2026-09-30-0004",
+       "step": 7,
+       "outcome": "cut"
+      },
+      "expect": false,
+      "alternative": "the call was cut at the output limit, truncating the JSON so that evidence was no longer an array"
+     },
+     {
+      "role": "rules-out",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:exp7-fixes/t-2026-09-30-0004",
+       "step": 7,
+       "outcome": "guard-refused"
+      },
+      "expect": false,
+      "alternative": "a guard rule on the content of the analysis refused it, not the harness schema"
+     }
+    ],
+    "justifications": []
+   },
+   "outcome": "completed",
+   "judged": "accepted",
+   "reason": "diagnosis.submit completed; the workshop changed",
+   "tokens": {
+    "prompt": 22455,
+    "completion": 1813,
+    "total": 24268
+   }
+  },
+  {
+   "n": 20,
+   "capability": "task.done",
+   "input": {
+    "summary": "Diagnosis diag-3691f2968581 accepted by the guard (sha256 c8595e92...e4da). Lead D4:92b3a81902a4: the harness refused procedure.analyse 7 times in 7 tasks with \"Invalid capability arguments: data/evidence must be array\" (sometimes with \"data/changes must be array\"). This was a schema check before any guard. The refusal at step 7 of task exp7-fixes/t-2026-09-30-0004 was confirmed. The accepted predictions that the capabilities/analyse and brief/analysis texts of today do not hold the cause came back false, so the cause is not in those texts as they stand today. The two rules-out predictions on step 7 also came back false. I did not set any constants.",
+    "artifacts": [
+     {
+      "kind": "diagnosis",
+      "path": "diagnoses/diag-3691f2968581.json"
+     }
+    ]
+   },
+   "outcome": "completed",
+   "reason": "contract held on topic diagnosis: diagnosis diagnoses/diag-3691f2968581.json",
+   "tokens": {
+    "prompt": 22356,
+    "completion": 347,
+    "total": 22703
+   }
+  }
+ ],
+ "submissions": [
+  {
+   "step": 19,
+   "outcome": "completed",
+   "refused": false,
+   "reason": "diagnosis.submit completed; the workshop changed",
+   "diagnosis": {
+    "id": "diag-3691f2968581",
+    "verdict": "right",
+    "cause": "The refusal is real and true, and it comes from the harness's schema check on procedure.analyse, before any guard. In the 7 tasks the model (claude-sonnet-5-5) sent `evidence`, and in 5 of them also `changes`, as something other than an array. The words that describe analyse (specs/procedure/words.json /capabilities/analyse) only say \"the evidence in the last test's record\" and \"the changes ... each a field of the procedure\". They never say that evidence and changes are arrays, or what an item holds. The model has to guess the shape and is told only \"data/evidence must be array\", with no expected shape. The sent arguments are not kept, so the exact wrong shape is not visible. The failure is recoverable: in exp7-fixes/t-2026-09-30-0004 step 7 was refused and step 8 completed. The cause is a gap in the contract's texts (an unstated argument shape), not a guard rule and not an output cut.",
+    "class": "contract-gap",
+    "current": "still",
+    "evidence": [
+     "form:procedure:harness:316429655575",
+     "step:exp7-fixes/t-2026-09-30-0004:7",
+     "step:exp-learn/t-2026-09-29-0009:14",
+     "step:exp6-contract/t-2026-09-30-0005:17",
+     "capability:procedure.analyse",
+     "task:exp7-fixes/t-2026-09-30-0004"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "refused-with",
+      "args": {
+       "task": "task:exp7-fixes/t-2026-09-30-0004",
+       "step": 7,
+       "phrase": "must be array"
+      },
+      "expect": true
+     },
+     {
+      "role": "cause",
+      "predicate": "stated-at",
+      "args": {
+       "file": "specs/procedure/words.json",
+       "pointer": "/capabilities/analyse",
+       "phrase": "array",
+       "at": "today"
+      },
+      "expect": false
+     },
+     {
+      "role": "current",
+      "predicate": "stated-at",
+      "args": {
+       "file": "specs/procedure/words.json",
+       "pointer": "/brief/analysis",
+       "phrase": "array",
+       "at": "today"
+      },
+      "expect": false
+     },
+     {
+      "role": "rules-out",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:exp7-fixes/t-2026-09-30-0004",
+       "step": 7,
+       "outcome": "cut"
+      },
+      "expect": false,
+      "alternative": "the call was cut at the output limit, truncating the JSON so that evidence was no longer an array"
+     },
+     {
+      "role": "rules-out",
+      "predicate": "outcome-at",
+      "args": {
+       "task": "task:exp7-fixes/t-2026-09-30-0004",
+       "step": 7,
+       "outcome": "guard-refused"
+      },
+      "expect": false,
+      "alternative": "a guard rule on the content of the analysis refused it, not the harness schema"
+     }
+    ],
+    "justifications": []
+   }
+  }
+ ],
+ "accepted": {
+  "id": "diag-3691f2968581",
+  "lead": {
+   "id": "D4:92b3a81902a4",
+   "detector": "D4",
+   "class": "harness-artefact",
+   "title": "the harness refused \"Invalid capability arguments: data/evidence must be array\" 7 times in 7 tasks, before any guard (procedure.analyse)",
+   "settledBy": null,
+   "form": {
+    "id": "form:procedure:harness:316429655575",
+    "shape": "Invalid capability arguments: data/evidence must be array",
+    "by": "harness"
+   },
+   "path": [
+    "step or attempt -refused-for-> form:procedure:harness:316429655575 (by the harness)",
+    "x 7 in 7 tasks",
+    "-calls-> procedure.analyse"
+   ],
+   "about": [
+    "form:procedure:harness:316429655575",
+    "step:exp-learn/t-2026-09-29-0009:14",
+    "step:exp-control/t-2026-09-29-0004:15",
+    "step:exp4-sonnet-a/t-2026-09-29-0010:13",
+    "step:exp6-contract/t-2026-09-30-0005:17",
+    "step:exp6-contract/t-2026-09-30-0009:12"
+   ],
+   "tasks": [
+    "task:exp-learn/t-2026-09-29-0009",
+    "task:exp-control/t-2026-09-29-0004",
+    "task:exp4-sonnet-a/t-2026-09-29-0010",
+    "task:exp6-contract/t-2026-09-30-0005",
+    "task:exp6-contract/t-2026-09-30-0009",
+    "task:exp7-fixes/t-2026-09-30-0004",
+    "task:exp7-fixes/t-2026-09-30-0005"
+   ],
+   "models": {
+    "claude-sonnet-5-5": 7
+   },
+   "evidence": {
+    "refusals": 7,
+    "capabilities": [
+     "procedure.analyse"
+    ],
+    "example": "Invalid capability arguments: data/evidence must be array, data/changes must be array"
+   },
+   "recommend": true
+  },
+  "forks": [
+   "exp-control",
+   "exp-learn",
+   "exp3-baseline",
+   "exp4-gpt-a",
+   "exp4-gpt-c",
+   "exp4-sonnet-a",
+   "exp6-contract",
+   "exp7-fixes",
+   "exp8-paths"
+  ],
+  "verdict": "right",
+  "cause": "The refusal is real and true, and it comes from the harness's schema check on procedure.analyse, before any guard. In the 7 tasks the model (claude-sonnet-5-5) sent `evidence`, and in 5 of them also `changes`, as something other than an array. The words that describe analyse (specs/procedure/words.json /capabilities/analyse) only say \"the evidence in the last test's record\" and \"the changes ... each a field of the procedure\". They never say that evidence and changes are arrays, or what an item holds. The model has to guess the shape and is told only \"data/evidence must be array\", with no expected shape. The sent arguments are not kept, so the exact wrong shape is not visible. The failure is recoverable: in exp7-fixes/t-2026-09-30-0004 step 7 was refused and step 8 completed. The cause is a gap in the contract's texts (an unstated argument shape), not a guard rule and not an output cut.",
+  "class": "contract-gap",
+  "current": "still",
+  "evidence": [
+   "form:procedure:harness:316429655575",
+   "step:exp7-fixes/t-2026-09-30-0004:7",
+   "step:exp-learn/t-2026-09-29-0009:14",
+   "step:exp6-contract/t-2026-09-30-0005:17",
+   "capability:procedure.analyse",
+   "task:exp7-fixes/t-2026-09-30-0004"
+  ],
+  "predictions": [
+   {
+    "role": "cause",
+    "predicate": "refused-with",
+    "args": {
+     "task": "task:exp7-fixes/t-2026-09-30-0004",
+     "step": 7,
+     "phrase": "must be array"
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "the refusal at step 7: \"Invalid capability arguments: data/evidence must be array\"",
+     "nodes": [
+      "task:exp7-fixes/t-2026-09-30-0004",
+      "step:exp7-fixes/t-2026-09-30-0004:7"
+     ],
+     "read": []
+    }
+   },
+   {
+    "role": "cause",
+    "predicate": "stated-at",
+    "args": {
+     "file": "specs/procedure/words.json",
+     "pointer": "/capabilities/analyse",
+     "phrase": "array",
+     "at": "today"
+    },
+    "expect": false,
+    "result": {
+     "truth": "false",
+     "observed": "at today, none of specs/procedure/words.json#/capabilities/analyse held it",
+     "nodes": [],
+     "read": [
+      "specs/procedure/words.json#/capabilities/analyse@working tree"
+     ]
+    }
+   },
+   {
+    "role": "current",
+    "predicate": "stated-at",
+    "args": {
+     "file": "specs/procedure/words.json",
+     "pointer": "/brief/analysis",
+     "phrase": "array",
+     "at": "today"
+    },
+    "expect": false,
+    "result": {
+     "truth": "false",
+     "observed": "at today, none of specs/procedure/words.json#/brief/analysis held it",
+     "nodes": [],
+     "read": [
+      "specs/procedure/words.json#/brief/analysis@working tree"
+     ]
+    }
+   },
+   {
+    "role": "rules-out",
+    "predicate": "outcome-at",
+    "args": {
+     "task": "task:exp7-fixes/t-2026-09-30-0004",
+     "step": 7,
+     "outcome": "cut"
+    },
+    "expect": false,
+    "alternative": "the call was cut at the output limit, truncating the JSON so that evidence was no longer an array",
+    "result": {
+     "truth": "false",
+     "observed": "step 7 (procedure.analyse): harness-refused",
+     "nodes": [
+      "task:exp7-fixes/t-2026-09-30-0004",
+      "step:exp7-fixes/t-2026-09-30-0004:7"
+     ],
+     "read": []
+    }
+   },
+   {
+    "role": "rules-out",
+    "predicate": "outcome-at",
+    "args": {
+     "task": "task:exp7-fixes/t-2026-09-30-0004",
+     "step": 7,
+     "outcome": "guard-refused"
+    },
+    "expect": false,
+    "alternative": "a guard rule on the content of the analysis refused it, not the harness schema",
+    "result": {
+     "truth": "false",
+     "observed": "step 7 (procedure.analyse): harness-refused",
+     "nodes": [
+      "task:exp7-fixes/t-2026-09-30-0004",
+      "step:exp7-fixes/t-2026-09-30-0004:7"
+     ],
+     "read": []
+    }
+   }
+  ],
+  "checked": {
+   "confirmed": 5,
+   "unknown": 0,
+   "byRole": {
+    "cause": {
+     "confirmed": 2,
+     "of": 2
+    },
+    "current": {
+     "confirmed": 1,
+     "of": 1
+    },
+    "rules-out": {
+     "confirmed": 2,
+     "of": 2
+    }
+   },
+   "alternativesRuledOut": [
+    "the call was cut at the output limit, truncating the JSON so that evidence was no longer an array",
+    "a guard rule on the content of the analysis refused it, not the harness schema"
+   ]
+  },
+  "justifications": []
+ },
+ "station": {
+  "status": "diagnosed"
+ },
+ "tokens": {
+  "prompt": 417952,
+  "completion": 7469
+ }
+}

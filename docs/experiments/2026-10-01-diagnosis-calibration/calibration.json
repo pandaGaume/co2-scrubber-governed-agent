@@ -1,0 +1,1377 @@
+{
+  "entries": 40,
+  "leads": 20,
+  "config": {
+    "calibrated": false,
+    "threshold": null,
+    "weights": {
+      "note": "the same weight for each part until calibration says otherwise: a form for the computation, not a choice",
+      "confirmed": 1,
+      "ruledOut": 1,
+      "sample": 1,
+      "agreement": 1
+    },
+    "caps": {
+      "note": "the most a confidence can be when the agreement of two models of different families is missing",
+      "disagreement": 0.5,
+      "single": 0.7,
+      "sameFamily": 0.7
+    }
+  },
+  "certainty": "likely",
+  "rows": [
+    {
+      "corpus": "evaluator",
+      "lead": "D2:0ed9f72ce86c",
+      "label": {
+        "verdict": "right",
+        "class": "contract-gap",
+        "current": "closed",
+        "certainty": "established"
+      },
+      "said": {
+        "verdict": "right",
+        "class": "contract-gap",
+        "current": "closed"
+      },
+      "matches": {
+        "verdict": true,
+        "class": true,
+        "current": true
+      },
+      "right": true,
+      "confidence": {
+        "lead": "D2:0ed9f72ce86c",
+        "weighed": [
+          {
+            "taskId": "repository/t-2026-10-01-0002",
+            "model": "claude-sonnet-5-5",
+            "family": "claude"
+          },
+          {
+            "taskId": "repository/t-2026-10-01-0003",
+            "model": "gpt-5.6-sol",
+            "family": "gpt"
+          }
+        ],
+        "agreement": {
+          "agree": true,
+          "sameClass": true,
+          "sameCurrent": true,
+          "shared": [
+            "attempt:exp-learn/t-2026-09-29-0001:9",
+            "correction:exp-learn/t-2026-09-29-0001:steps.2.speedPercent",
+            "rule:procedure:REFERENCE_NOT_A_FACT"
+          ]
+        },
+        "parts": {
+          "confirmed": 1,
+          "ruledOut": 1,
+          "sample": 0.8148148148148148,
+          "agreement": 1
+        },
+        "raw": 0.9537037037037037,
+        "cap": null,
+        "confidence": 0.9537037037037037,
+        "decision": "person",
+        "why": "not calibrated yet: every diagnosis goes to a person"
+      }
+    },
+    {
+      "corpus": "evaluator",
+      "lead": "D1:ec5a5d112405",
+      "label": {
+        "verdict": "right",
+        "class": "contract-gap",
+        "current": "closed",
+        "certainty": "established"
+      },
+      "said": {
+        "verdict": "right",
+        "class": "contract-gap",
+        "current": "closed"
+      },
+      "matches": {
+        "verdict": true,
+        "class": true,
+        "current": true
+      },
+      "right": true,
+      "confidence": {
+        "lead": "D1:ec5a5d112405",
+        "weighed": [
+          {
+            "taskId": "repository/t-2026-10-01-0012",
+            "model": "claude-sonnet-5-5",
+            "family": "claude"
+          },
+          {
+            "taskId": "repository/t-2026-10-01-0012",
+            "model": "gpt-5.6-sol",
+            "family": "gpt"
+          }
+        ],
+        "agreement": {
+          "agree": true,
+          "sameClass": true,
+          "sameCurrent": true,
+          "shared": [
+            "attempt:exp3-baseline/t-2026-09-29-0002:8",
+            "correction:exp3-baseline/t-2026-09-29-0002:limits.minSpeedPercent",
+            "rule:procedure:REFERENCE_NOT_A_FACT",
+            "statement:contract:4b09f3d1eea0",
+            "statement:contract:6ef2783d2f3c"
+          ]
+        },
+        "parts": {
+          "confirmed": 1,
+          "ruledOut": 1,
+          "sample": 0.7619047619047619,
+          "agreement": 1
+        },
+        "raw": 0.9404761904761905,
+        "cap": null,
+        "confidence": 0.9404761904761905,
+        "decision": "person",
+        "why": "not calibrated yet: every diagnosis goes to a person"
+      }
+    },
+    {
+      "corpus": "evaluator",
+      "lead": "D4:92b3a81902a4",
+      "label": {
+        "verdict": "right",
+        "class": "harness-artefact",
+        "current": "still",
+        "certainty": "established"
+      },
+      "said": {
+        "verdict": "right",
+        "class": "contract-gap",
+        "current": "still"
+      },
+      "matches": {
+        "verdict": true,
+        "class": false,
+        "current": true
+      },
+      "right": false,
+      "confidence": {
+        "lead": "D4:92b3a81902a4",
+        "weighed": [
+          {
+            "taskId": "repository/t-2026-10-01-0006",
+            "model": "claude-sonnet-5-5",
+            "family": "claude"
+          },
+          {
+            "taskId": "repository/t-2026-10-01-0006",
+            "model": "gpt-5.6-sol",
+            "family": "gpt"
+          }
+        ],
+        "agreement": {
+          "agree": true,
+          "sameClass": true,
+          "sameCurrent": true,
+          "shared": [
+            "capability:procedure.analyse"
+          ]
+        },
+        "parts": {
+          "confirmed": 1,
+          "ruledOut": 1,
+          "sample": 0.5833333333333334,
+          "agreement": 1
+        },
+        "raw": 0.8958333333333334,
+        "cap": null,
+        "confidence": 0.8958333333333334,
+        "decision": "person",
+        "why": "not calibrated yet: every diagnosis goes to a person"
+      }
+    },
+    {
+      "corpus": "evaluator",
+      "lead": "D3:652d6e9fdffe",
+      "label": {
+        "verdict": "right",
+        "class": "contract-gap",
+        "current": "closed",
+        "certainty": "established"
+      },
+      "said": {
+        "verdict": "right",
+        "class": "contract-gap",
+        "current": "closed"
+      },
+      "matches": {
+        "verdict": true,
+        "class": true,
+        "current": true
+      },
+      "right": true,
+      "confidence": {
+        "lead": "D3:652d6e9fdffe",
+        "weighed": [
+          {
+            "taskId": "repository/t-2026-10-01-0001",
+            "model": "claude-sonnet-5-5",
+            "family": "claude"
+          },
+          {
+            "taskId": "repository/t-2026-10-01-0002",
+            "model": "gpt-5.6-sol",
+            "family": "gpt"
+          }
+        ],
+        "agreement": {
+          "agree": true,
+          "sameClass": true,
+          "sameCurrent": true,
+          "shared": [
+            "attempt:exp4-sonnet-a/t-2026-09-29-0007:12",
+            "rule:procedure:REFERENCE_NOT_A_FACT"
+          ]
+        },
+        "parts": {
+          "confirmed": 1,
+          "ruledOut": 1,
+          "sample": 0.5454545454545454,
+          "agreement": 1
+        },
+        "raw": 0.8863636363636364,
+        "cap": null,
+        "confidence": 0.8863636363636364,
+        "decision": "person",
+        "why": "not calibrated yet: every diagnosis goes to a person"
+      }
+    },
+    {
+      "corpus": "evaluator",
+      "lead": "D2:dc0bc69a9ef4",
+      "label": {
+        "verdict": "wrong",
+        "class": "model-error",
+        "current": "unknown",
+        "certainty": "likely"
+      },
+      "said": {
+        "verdict": "wrong",
+        "class": "model-error",
+        "current": "still"
+      },
+      "matches": {
+        "verdict": true,
+        "class": true,
+        "current": false
+      },
+      "right": false,
+      "confidence": {
+        "lead": "D2:dc0bc69a9ef4",
+        "weighed": [
+          {
+            "taskId": "repository/t-2026-10-01-0004",
+            "model": "claude-sonnet-5-5",
+            "family": "claude"
+          },
+          {
+            "taskId": "repository/t-2026-10-01-0004",
+            "model": "gpt-5.6-sol",
+            "family": "gpt"
+          }
+        ],
+        "agreement": {
+          "agree": true,
+          "sameClass": true,
+          "sameCurrent": true,
+          "shared": [
+            "attempt:exp3-baseline/t-2026-09-29-0010:8",
+            "correction:exp3-baseline/t-2026-09-29-0010:steps.1.minutes",
+            "correction:exp4-sonnet-a/t-2026-09-29-0008:steps.1.minutes",
+            "correction:exp4-sonnet-a/t-2026-09-29-0014:steps.1.minutes",
+            "rule:procedure:JUSTIFIED_VALUE_MISMATCH",
+            "statement:contract:be58c67f8aab"
+          ]
+        },
+        "parts": {
+          "confirmed": 1,
+          "ruledOut": 1,
+          "sample": 0.375,
+          "agreement": 1
+        },
+        "raw": 0.84375,
+        "cap": null,
+        "confidence": 0.84375,
+        "decision": "person",
+        "why": "not calibrated yet: every diagnosis goes to a person"
+      }
+    },
+    {
+      "corpus": "evaluator-repository",
+      "lead": "D7:f0e111fbaac6",
+      "label": {
+        "verdict": "right",
+        "class": "library-gap",
+        "current": "closed",
+        "certainty": "established"
+      },
+      "said": {
+        "verdict": "right",
+        "class": "library-gap",
+        "current": "closed"
+      },
+      "matches": {
+        "verdict": true,
+        "class": true,
+        "current": true
+      },
+      "right": true,
+      "confidence": {
+        "lead": "D7:f0e111fbaac6",
+        "weighed": [
+          {
+            "taskId": "repository/t-2026-10-01-0019",
+            "model": "claude-sonnet-5-5",
+            "family": "claude"
+          },
+          {
+            "taskId": "repository/t-2026-10-01-0020",
+            "model": "gpt-5.6-sol",
+            "family": "gpt"
+          }
+        ],
+        "agreement": {
+          "agree": true,
+          "sameClass": true,
+          "sameCurrent": true,
+          "shared": [
+            "attempt:snapshot-repository-workshop/t-2026-09-28-0005:10",
+            "attempt:snapshot-repository-workshop/t-2026-09-28-0063:13",
+            "rule:procedure:FACT_UNSIGNED",
+            "statement:contract:ec185a62d3cd"
+          ]
+        },
+        "parts": {
+          "confirmed": 0.875,
+          "ruledOut": 1,
+          "sample": 0.5,
+          "agreement": 1
+        },
+        "raw": 0.84375,
+        "cap": null,
+        "confidence": 0.84375,
+        "decision": "person",
+        "why": "not calibrated yet: every diagnosis goes to a person"
+      }
+    },
+    {
+      "corpus": "evaluator",
+      "lead": "D2:8cba194716f8",
+      "label": {
+        "verdict": "right",
+        "class": "contract-gap",
+        "current": "closed",
+        "certainty": "established"
+      },
+      "said": {
+        "verdict": "right",
+        "class": "contract-gap",
+        "current": "closed"
+      },
+      "matches": {
+        "verdict": true,
+        "class": true,
+        "current": true
+      },
+      "right": true,
+      "confidence": {
+        "lead": "D2:8cba194716f8",
+        "weighed": [
+          {
+            "taskId": "repository/t-2026-10-01-0003",
+            "model": "claude-sonnet-5-5",
+            "family": "claude"
+          },
+          {
+            "taskId": "repository/t-2026-10-01-0001",
+            "model": "gpt-5.6-sol",
+            "family": "gpt"
+          }
+        ],
+        "agreement": {
+          "agree": true,
+          "sameClass": true,
+          "sameCurrent": true,
+          "shared": [
+            "correction:exp3-baseline/t-2026-09-29-0010:steps.1.speedPercent",
+            "correction:exp4-sonnet-a/t-2026-09-29-0008:steps.1.speedPercent",
+            "rule:procedure:REFERENCE_NOT_A_FACT"
+          ]
+        },
+        "parts": {
+          "confirmed": 1,
+          "ruledOut": 1,
+          "sample": 0.2857142857142857,
+          "agreement": 1
+        },
+        "raw": 0.8214285714285714,
+        "cap": null,
+        "confidence": 0.8214285714285714,
+        "decision": "person",
+        "why": "not calibrated yet: every diagnosis goes to a person"
+      }
+    },
+    {
+      "corpus": "evaluator",
+      "lead": "D1:97a33bdc4935",
+      "label": {
+        "verdict": "right",
+        "class": "contract-gap",
+        "current": "closed",
+        "certainty": "established"
+      },
+      "said": {
+        "verdict": "right",
+        "class": "contract-gap",
+        "current": "closed"
+      },
+      "matches": {
+        "verdict": true,
+        "class": true,
+        "current": true
+      },
+      "right": true,
+      "confidence": {
+        "lead": "D1:97a33bdc4935",
+        "weighed": [
+          {
+            "taskId": "repository/t-2026-10-01-0013",
+            "model": "claude-sonnet-5-5",
+            "family": "claude"
+          },
+          {
+            "taskId": "repository/t-2026-10-01-0013",
+            "model": "gpt-5.6-sol",
+            "family": "gpt"
+          }
+        ],
+        "agreement": {
+          "agree": true,
+          "sameClass": true,
+          "sameCurrent": true,
+          "shared": [
+            "attempt:exp4-sonnet-a/t-2026-09-29-0014:9",
+            "attempt:exp6-contract/t-2026-09-30-0008:10",
+            "rule:procedure:UNKNOWN_UNIT",
+            "statement:contract:d44661945a3b"
+          ]
+        },
+        "parts": {
+          "confirmed": 1,
+          "ruledOut": 1,
+          "sample": 0.2857142857142857,
+          "agreement": 1
+        },
+        "raw": 0.8214285714285714,
+        "cap": null,
+        "confidence": 0.8214285714285714,
+        "decision": "person",
+        "why": "not calibrated yet: every diagnosis goes to a person"
+      }
+    },
+    {
+      "corpus": "evaluator",
+      "lead": "D6:93cf26da851b",
+      "label": {
+        "verdict": "right",
+        "class": "contract-gap",
+        "current": "still",
+        "certainty": "established"
+      },
+      "said": {
+        "verdict": "right",
+        "class": "contract-gap",
+        "current": "closed"
+      },
+      "matches": {
+        "verdict": true,
+        "class": true,
+        "current": false
+      },
+      "right": false,
+      "confidence": {
+        "lead": "D6:93cf26da851b",
+        "weighed": [
+          {
+            "taskId": "repository/t-2026-10-01-0014",
+            "model": "claude-sonnet-5-5",
+            "family": "claude"
+          },
+          {
+            "taskId": "repository/t-2026-10-01-0014",
+            "model": "gpt-5.6-sol",
+            "family": "gpt"
+          }
+        ],
+        "agreement": {
+          "agree": true,
+          "sameClass": true,
+          "sameCurrent": true,
+          "shared": [
+            "attempt:exp4-sonnet-a/t-2026-09-29-0001:9",
+            "attempt:exp4-sonnet-a/t-2026-09-29-0002:8",
+            "form:procedure:33231b945eef",
+            "memory:procedure:m-e26243b3d5",
+            "rule:procedure:REFERENCE_NOT_A_FACT",
+            "statement:contract:4b09f3d1eea0",
+            "statement:contract:6ef2783d2f3c"
+          ]
+        },
+        "parts": {
+          "confirmed": 1,
+          "ruledOut": 1,
+          "sample": 0.2857142857142857,
+          "agreement": 1
+        },
+        "raw": 0.8214285714285714,
+        "cap": null,
+        "confidence": 0.8214285714285714,
+        "decision": "person",
+        "why": "not calibrated yet: every diagnosis goes to a person"
+      }
+    },
+    {
+      "corpus": "evaluator-repository",
+      "lead": "D4:d77a2a5a7508",
+      "label": {
+        "verdict": "right",
+        "class": "harness-artefact",
+        "current": "still",
+        "certainty": "established"
+      },
+      "said": {
+        "verdict": "right",
+        "class": "harness-artefact",
+        "current": "unknown"
+      },
+      "matches": {
+        "verdict": true,
+        "class": true,
+        "current": false
+      },
+      "right": false,
+      "confidence": {
+        "lead": "D4:d77a2a5a7508",
+        "weighed": [
+          {
+            "taskId": "repository/t-2026-10-01-0020",
+            "model": "claude-sonnet-5-5",
+            "family": "claude"
+          },
+          {
+            "taskId": "repository/t-2026-10-01-0015",
+            "model": "gpt-5.6-sol",
+            "family": "gpt"
+          }
+        ],
+        "agreement": {
+          "agree": true,
+          "sameClass": true,
+          "sameCurrent": true,
+          "shared": [
+            "fingerprint:433bbb9878a7",
+            "model:claude-haiku-4-5-20251001"
+          ]
+        },
+        "parts": {
+          "confirmed": 0.75,
+          "ruledOut": 1,
+          "sample": 0.4444444444444444,
+          "agreement": 1
+        },
+        "raw": 0.7986111111111112,
+        "cap": null,
+        "confidence": 0.7986111111111112,
+        "decision": "person",
+        "why": "not calibrated yet: every diagnosis goes to a person"
+      }
+    },
+    {
+      "corpus": "evaluator",
+      "lead": "D8:bbec8866303c",
+      "label": {
+        "verdict": "right",
+        "class": "model-error",
+        "current": "unknown",
+        "certainty": "established"
+      },
+      "said": {
+        "verdict": "right",
+        "class": "model-error",
+        "current": "still"
+      },
+      "matches": {
+        "verdict": true,
+        "class": true,
+        "current": false
+      },
+      "right": false,
+      "confidence": {
+        "lead": "D8:bbec8866303c",
+        "weighed": [
+          {
+            "taskId": "repository/t-2026-10-01-0011",
+            "model": "claude-sonnet-5-5",
+            "family": "claude"
+          },
+          {
+            "taskId": "repository/t-2026-10-01-0011",
+            "model": "gpt-5.6-sol",
+            "family": "gpt"
+          }
+        ],
+        "agreement": {
+          "agree": true,
+          "sameClass": true,
+          "sameCurrent": true,
+          "shared": [
+            "attempt:exp8-paths/t-2026-09-30-0004:9",
+            "rule:procedure:ANALYSIS_NOT_APPLIED"
+          ]
+        },
+        "parts": {
+          "confirmed": 1,
+          "ruledOut": 1,
+          "sample": 0.16666666666666666,
+          "agreement": 1
+        },
+        "raw": 0.7916666666666666,
+        "cap": null,
+        "confidence": 0.7916666666666666,
+        "decision": "person",
+        "why": "not calibrated yet: every diagnosis goes to a person"
+      }
+    },
+    {
+      "corpus": "evaluator-repository",
+      "lead": "D8:f6953768a10e",
+      "label": {
+        "verdict": "wrong",
+        "class": "contract-gap",
+        "current": "still",
+        "certainty": "established"
+      },
+      "said": {
+        "verdict": "wrong",
+        "class": "contract-gap",
+        "current": "still"
+      },
+      "matches": {
+        "verdict": true,
+        "class": true,
+        "current": true
+      },
+      "right": true,
+      "confidence": {
+        "lead": "D8:f6953768a10e",
+        "weighed": [
+          {
+            "taskId": "repository/t-2026-10-01-0018",
+            "model": "claude-sonnet-5-5",
+            "family": "claude"
+          },
+          {
+            "taskId": "repository/t-2026-10-01-0019",
+            "model": "gpt-5.6-sol",
+            "family": "gpt"
+          }
+        ],
+        "agreement": {
+          "agree": true,
+          "sameClass": true,
+          "sameCurrent": true,
+          "shared": [
+            "rule:procedure:abort.required"
+          ]
+        },
+        "parts": {
+          "confirmed": 0.875,
+          "ruledOut": 1,
+          "sample": 0.16666666666666666,
+          "agreement": 1
+        },
+        "raw": 0.7604166666666666,
+        "cap": null,
+        "confidence": 0.7604166666666666,
+        "decision": "person",
+        "why": "not calibrated yet: every diagnosis goes to a person"
+      }
+    },
+    {
+      "corpus": "evaluator",
+      "lead": "D4:d77a2a5a7508",
+      "label": {
+        "verdict": "stale",
+        "class": "harness-artefact",
+        "current": "closed",
+        "certainty": "established"
+      },
+      "said": {
+        "verdict": "right",
+        "class": "harness-artefact",
+        "current": "still"
+      },
+      "matches": {
+        "verdict": false,
+        "class": true,
+        "current": false
+      },
+      "right": false,
+      "confidence": {
+        "lead": "D4:d77a2a5a7508",
+        "weighed": [
+          {
+            "taskId": "repository/t-2026-10-01-0005",
+            "model": "claude-sonnet-5-5",
+            "family": "claude"
+          },
+          {
+            "taskId": "repository/t-2026-10-01-0005",
+            "model": "gpt-5.6-sol",
+            "family": "gpt"
+          }
+        ],
+        "agreement": {
+          "agree": false,
+          "sameClass": true,
+          "sameCurrent": false,
+          "shared": [
+            "attempt:exp-learn/t-2026-09-29-0001:8",
+            "attempt:exp-learn/t-2026-09-29-0009:16",
+            "capability:procedure.submit",
+            "fingerprint:6c3cf12c2da9"
+          ]
+        },
+        "parts": {
+          "confirmed": 1,
+          "ruledOut": 1,
+          "sample": 0.7222222222222222,
+          "agreement": 0
+        },
+        "raw": 0.6805555555555556,
+        "cap": {
+          "why": "disagreement",
+          "at": 0.5
+        },
+        "confidence": 0.5,
+        "decision": "person",
+        "why": "not calibrated yet: every diagnosis goes to a person"
+      }
+    },
+    {
+      "corpus": "evaluator",
+      "lead": "D4:467375274717",
+      "label": {
+        "verdict": "stale",
+        "class": "harness-artefact",
+        "current": "closed",
+        "certainty": "established"
+      },
+      "said": {
+        "verdict": "wrong",
+        "class": "model-error",
+        "current": "still"
+      },
+      "matches": {
+        "verdict": false,
+        "class": false,
+        "current": false
+      },
+      "right": false,
+      "confidence": {
+        "lead": "D4:467375274717",
+        "weighed": [
+          {
+            "taskId": "repository/t-2026-10-01-0007",
+            "model": "claude-sonnet-5-5",
+            "family": "claude"
+          },
+          {
+            "taskId": "repository/t-2026-10-01-0007",
+            "model": "gpt-5.6-sol",
+            "family": "gpt"
+          }
+        ],
+        "agreement": {
+          "agree": false,
+          "sameClass": true,
+          "sameCurrent": false,
+          "shared": [
+            "step:exp-control/t-2026-09-29-0005:11",
+            "step:exp-control/t-2026-09-29-0005:14",
+            "step:exp-control/t-2026-09-29-0005:17"
+          ]
+        },
+        "parts": {
+          "confirmed": 0.9166666666666667,
+          "ruledOut": 1,
+          "sample": 0.2857142857142857,
+          "agreement": 0
+        },
+        "raw": 0.5505952380952381,
+        "cap": {
+          "why": "disagreement",
+          "at": 0.5
+        },
+        "confidence": 0.5,
+        "decision": "person",
+        "why": "not calibrated yet: every diagnosis goes to a person"
+      }
+    },
+    {
+      "corpus": "evaluator",
+      "lead": "D5:c6d772db8922",
+      "label": {
+        "verdict": "wrong",
+        "class": "none",
+        "current": "closed",
+        "certainty": "established"
+      },
+      "said": {
+        "verdict": "wrong",
+        "class": "contract-gap",
+        "current": "closed"
+      },
+      "matches": {
+        "verdict": true,
+        "class": false,
+        "current": true
+      },
+      "right": false,
+      "confidence": {
+        "lead": "D5:c6d772db8922",
+        "weighed": [
+          {
+            "taskId": "repository/t-2026-10-01-0008",
+            "model": "claude-sonnet-5-5",
+            "family": "claude"
+          },
+          {
+            "taskId": "repository/t-2026-10-01-0008",
+            "model": "gpt-5.6-sol",
+            "family": "gpt"
+          }
+        ],
+        "agreement": {
+          "agree": false,
+          "sameClass": false,
+          "sameCurrent": true,
+          "shared": [
+            "attempt:exp-control/t-2026-09-29-0001:9",
+            "fingerprint:f6f379ac8445",
+            "rule:procedure:REFERENCE_NOT_A_FACT",
+            "statement:9d6df0fbe9e4ef78233baea24c821740dcbd5291120de0f2469b05697db2917f"
+          ]
+        },
+        "parts": {
+          "confirmed": 1,
+          "ruledOut": 1,
+          "sample": 0.5833333333333334,
+          "agreement": 0
+        },
+        "raw": 0.6458333333333334,
+        "cap": {
+          "why": "disagreement",
+          "at": 0.5
+        },
+        "confidence": 0.5,
+        "decision": "person",
+        "why": "not calibrated yet: every diagnosis goes to a person"
+      }
+    },
+    {
+      "corpus": "evaluator",
+      "lead": "D5:8d5e2be35eb0",
+      "label": {
+        "verdict": "right",
+        "class": "improvement",
+        "current": "closed",
+        "certainty": "established"
+      },
+      "said": {
+        "verdict": "right",
+        "class": "improvement",
+        "current": "still"
+      },
+      "matches": {
+        "verdict": true,
+        "class": true,
+        "current": false
+      },
+      "right": false,
+      "confidence": {
+        "lead": "D5:8d5e2be35eb0",
+        "weighed": [
+          {
+            "taskId": "repository/t-2026-10-01-0009",
+            "model": "claude-sonnet-5-5",
+            "family": "claude"
+          },
+          {
+            "taskId": "repository/t-2026-10-01-0009",
+            "model": "gpt-5.6-sol",
+            "family": "gpt"
+          }
+        ],
+        "agreement": {
+          "agree": false,
+          "sameClass": false,
+          "sameCurrent": false,
+          "shared": [
+            "attempt:exp-control/t-2026-09-29-0001:8",
+            "fingerprint:7890280cb9b1",
+            "fingerprint:b955c2ab8a73",
+            "fingerprint:f6f379ac8445",
+            "task:exp3-baseline/t-2026-09-29-0001"
+          ]
+        },
+        "parts": {
+          "confirmed": 1,
+          "ruledOut": 1,
+          "sample": 0.5,
+          "agreement": 0
+        },
+        "raw": 0.625,
+        "cap": {
+          "why": "disagreement",
+          "at": 0.5
+        },
+        "confidence": 0.5,
+        "decision": "person",
+        "why": "not calibrated yet: every diagnosis goes to a person"
+      }
+    },
+    {
+      "corpus": "evaluator",
+      "lead": "D5:cecbb33cb4d2",
+      "label": {
+        "verdict": "right",
+        "class": "improvement",
+        "current": "closed",
+        "certainty": "established"
+      },
+      "said": {
+        "verdict": "right",
+        "class": "contract-gap",
+        "current": "closed"
+      },
+      "matches": {
+        "verdict": true,
+        "class": false,
+        "current": true
+      },
+      "right": false,
+      "confidence": {
+        "lead": "D5:cecbb33cb4d2",
+        "weighed": [
+          {
+            "taskId": "repository/t-2026-10-01-0010",
+            "model": "claude-sonnet-5-5",
+            "family": "claude"
+          },
+          {
+            "taskId": "repository/t-2026-10-01-0010",
+            "model": "gpt-5.6-sol",
+            "family": "gpt"
+          }
+        ],
+        "agreement": {
+          "agree": false,
+          "sameClass": false,
+          "sameCurrent": true,
+          "shared": [
+            "attempt:exp4-sonnet-a/t-2026-09-29-0007:12",
+            "fingerprint:3d220753a0be",
+            "fingerprint:e91060f3de5d",
+            "rule:procedure:REFERENCE_NOT_A_FACT"
+          ]
+        },
+        "parts": {
+          "confirmed": 1,
+          "ruledOut": 1,
+          "sample": 0.5454545454545454,
+          "agreement": 0
+        },
+        "raw": 0.6363636363636364,
+        "cap": {
+          "why": "disagreement",
+          "at": 0.5
+        },
+        "confidence": 0.5,
+        "decision": "person",
+        "why": "not calibrated yet: every diagnosis goes to a person"
+      }
+    },
+    {
+      "corpus": "evaluator-repository",
+      "lead": "D4:e694065969d8",
+      "label": {
+        "verdict": "right",
+        "class": "harness-artefact",
+        "current": "still",
+        "certainty": "established"
+      },
+      "said": {
+        "verdict": "right",
+        "class": "harness-artefact",
+        "current": "still"
+      },
+      "matches": {
+        "verdict": true,
+        "class": true,
+        "current": true
+      },
+      "right": true,
+      "confidence": {
+        "lead": "D4:e694065969d8",
+        "weighed": [
+          {
+            "taskId": "repository/t-2026-10-01-0015",
+            "model": "claude-sonnet-5-5",
+            "family": "claude"
+          },
+          {
+            "taskId": "repository/t-2026-10-01-0016",
+            "model": "gpt-5.6-sol",
+            "family": "gpt"
+          }
+        ],
+        "agreement": {
+          "agree": false,
+          "sameClass": false,
+          "sameCurrent": false,
+          "shared": [
+            "attempt:snapshot-repository-workshop/t-2026-09-24-0019:15",
+            "capability:procedure.submit",
+            "fingerprint:b156d783f695"
+          ]
+        },
+        "parts": {
+          "confirmed": 1,
+          "ruledOut": 1,
+          "sample": 0.375,
+          "agreement": 0
+        },
+        "raw": 0.59375,
+        "cap": {
+          "why": "disagreement",
+          "at": 0.5
+        },
+        "confidence": 0.5,
+        "decision": "person",
+        "why": "not calibrated yet: every diagnosis goes to a person"
+      }
+    },
+    {
+      "corpus": "evaluator-repository",
+      "lead": "D4:a01631994ed6",
+      "label": {
+        "verdict": "stale",
+        "class": "harness-artefact",
+        "current": "closed",
+        "certainty": "likely"
+      },
+      "said": {
+        "verdict": "right",
+        "class": "contract-gap",
+        "current": "still"
+      },
+      "matches": {
+        "verdict": false,
+        "class": false,
+        "current": false
+      },
+      "right": false,
+      "confidence": {
+        "lead": "D4:a01631994ed6",
+        "weighed": [
+          {
+            "taskId": "repository/t-2026-10-01-0016",
+            "model": "claude-sonnet-5-5",
+            "family": "claude"
+          },
+          {
+            "taskId": "repository/t-2026-10-01-0017",
+            "model": "gpt-5.6-sol",
+            "family": "gpt"
+          }
+        ],
+        "agreement": {
+          "agree": false,
+          "sameClass": false,
+          "sameCurrent": true,
+          "shared": [
+            "attempt:snapshot-repository-workshop/t-2026-09-25-0017:10",
+            "attempt:snapshot-repository-workshop/t-2026-09-28-0067:7",
+            "capability:procedure.submit",
+            "fingerprint:8cc0cfd05ef9"
+          ]
+        },
+        "parts": {
+          "confirmed": 0.875,
+          "ruledOut": 1,
+          "sample": 0.2857142857142857,
+          "agreement": 0
+        },
+        "raw": 0.5401785714285714,
+        "cap": {
+          "why": "disagreement",
+          "at": 0.5
+        },
+        "confidence": 0.5,
+        "decision": "person",
+        "why": "not calibrated yet: every diagnosis goes to a person"
+      }
+    },
+    {
+      "corpus": "evaluator-repository",
+      "lead": "D4:4f5d2b183d6c",
+      "label": {
+        "verdict": "stale",
+        "class": "harness-artefact",
+        "current": "closed",
+        "certainty": "likely"
+      },
+      "said": {
+        "verdict": "wrong",
+        "class": "model-error",
+        "current": "still"
+      },
+      "matches": {
+        "verdict": false,
+        "class": false,
+        "current": false
+      },
+      "right": false,
+      "confidence": {
+        "lead": "D4:4f5d2b183d6c",
+        "weighed": [
+          {
+            "taskId": "repository/t-2026-10-01-0017",
+            "model": "claude-sonnet-5-5",
+            "family": "claude"
+          },
+          {
+            "taskId": "repository/t-2026-10-01-0018",
+            "model": "gpt-5.6-sol",
+            "family": "gpt"
+          }
+        ],
+        "agreement": {
+          "agree": false,
+          "sameClass": true,
+          "sameCurrent": false,
+          "shared": [
+            "step:snapshot-repository-workshop/t-2026-09-25-0017:9",
+            "step:snapshot-repository-workshop/t-2026-09-25-0026:10"
+          ]
+        },
+        "parts": {
+          "confirmed": 1,
+          "ruledOut": 1,
+          "sample": 0.2857142857142857,
+          "agreement": 0
+        },
+        "raw": 0.5714285714285714,
+        "cap": {
+          "why": "disagreement",
+          "at": 0.5
+        },
+        "confidence": 0.5,
+        "decision": "person",
+        "why": "not calibrated yet: every diagnosis goes to a person"
+      }
+    }
+  ],
+  "bands": [
+    {
+      "from": 0,
+      "to": 0.25,
+      "leads": 0,
+      "right": 0,
+      "precision": null
+    },
+    {
+      "from": 0.25,
+      "to": 0.5,
+      "leads": 0,
+      "right": 0,
+      "precision": null
+    },
+    {
+      "from": 0.5,
+      "to": 0.75,
+      "leads": 8,
+      "right": 1,
+      "precision": 0.125
+    },
+    {
+      "from": 0.75,
+      "to": 1,
+      "leads": 12,
+      "right": 7,
+      "precision": 0.5833333333333334
+    }
+  ],
+  "thresholds": [
+    {
+      "threshold": 0,
+      "sent": 12,
+      "right": 7,
+      "precision": 0.5833333333333334,
+      "coverage": 0.6
+    },
+    {
+      "threshold": 0.05,
+      "sent": 12,
+      "right": 7,
+      "precision": 0.5833333333333334,
+      "coverage": 0.6
+    },
+    {
+      "threshold": 0.1,
+      "sent": 12,
+      "right": 7,
+      "precision": 0.5833333333333334,
+      "coverage": 0.6
+    },
+    {
+      "threshold": 0.15,
+      "sent": 12,
+      "right": 7,
+      "precision": 0.5833333333333334,
+      "coverage": 0.6
+    },
+    {
+      "threshold": 0.2,
+      "sent": 12,
+      "right": 7,
+      "precision": 0.5833333333333334,
+      "coverage": 0.6
+    },
+    {
+      "threshold": 0.25,
+      "sent": 12,
+      "right": 7,
+      "precision": 0.5833333333333334,
+      "coverage": 0.6
+    },
+    {
+      "threshold": 0.3,
+      "sent": 12,
+      "right": 7,
+      "precision": 0.5833333333333334,
+      "coverage": 0.6
+    },
+    {
+      "threshold": 0.35,
+      "sent": 12,
+      "right": 7,
+      "precision": 0.5833333333333334,
+      "coverage": 0.6
+    },
+    {
+      "threshold": 0.4,
+      "sent": 12,
+      "right": 7,
+      "precision": 0.5833333333333334,
+      "coverage": 0.6
+    },
+    {
+      "threshold": 0.45,
+      "sent": 12,
+      "right": 7,
+      "precision": 0.5833333333333334,
+      "coverage": 0.6
+    },
+    {
+      "threshold": 0.5,
+      "sent": 12,
+      "right": 7,
+      "precision": 0.5833333333333334,
+      "coverage": 0.6
+    },
+    {
+      "threshold": 0.55,
+      "sent": 12,
+      "right": 7,
+      "precision": 0.5833333333333334,
+      "coverage": 0.6
+    },
+    {
+      "threshold": 0.6,
+      "sent": 12,
+      "right": 7,
+      "precision": 0.5833333333333334,
+      "coverage": 0.6
+    },
+    {
+      "threshold": 0.65,
+      "sent": 12,
+      "right": 7,
+      "precision": 0.5833333333333334,
+      "coverage": 0.6
+    },
+    {
+      "threshold": 0.7,
+      "sent": 12,
+      "right": 7,
+      "precision": 0.5833333333333334,
+      "coverage": 0.6
+    },
+    {
+      "threshold": 0.75,
+      "sent": 12,
+      "right": 7,
+      "precision": 0.5833333333333334,
+      "coverage": 0.6
+    },
+    {
+      "threshold": 0.8,
+      "sent": 9,
+      "right": 6,
+      "precision": 0.6666666666666666,
+      "coverage": 0.45
+    },
+    {
+      "threshold": 0.85,
+      "sent": 4,
+      "right": 3,
+      "precision": 0.75,
+      "coverage": 0.2
+    },
+    {
+      "threshold": 0.9,
+      "sent": 2,
+      "right": 2,
+      "precision": 1,
+      "coverage": 0.1
+    },
+    {
+      "threshold": 0.95,
+      "sent": 1,
+      "right": 1,
+      "precision": 1,
+      "coverage": 0.05
+    },
+    {
+      "threshold": 1,
+      "sent": 0,
+      "right": 0,
+      "precision": null,
+      "coverage": 0
+    }
+  ],
+  "dropped": []
+}

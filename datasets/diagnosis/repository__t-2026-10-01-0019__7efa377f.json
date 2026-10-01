@@ -1,0 +1,716 @@
+{
+ "schema": 1,
+ "key": "repository/t-2026-10-01-0019",
+ "workshop": "repository",
+ "taskId": "t-2026-10-01-0019",
+ "recordedAt": "2026-10-01T19:00:43.316Z",
+ "startedAt": "2026-10-01T19:00:00.022Z",
+ "endedAt": "2026-10-01T19:00:42.747Z",
+ "state": "proposed",
+ "ended": "contract held after 7 step(s)",
+ "requestedBy": "station (evaluator)",
+ "corpus": "evaluator-repository",
+ "forks": [
+  "snapshot-repository-workshop"
+ ],
+ "lead": "D7:f0e111fbaac6",
+ "diagnosisId": "diag-50e07b769591",
+ "model": "claude-sonnet-5-5",
+ "family": "claude",
+ "provider": {
+  "name": "reasoner:claude",
+  "model": "claude-sonnet-5-5",
+  "family": "claude",
+  "settings": {
+   "maxTokens": 8192,
+   "maxTokensParam": null,
+   "temperature": null,
+   "reasoningEffort": null,
+   "timeoutMs": null
+  },
+  "profile": {
+   "file": "profiles/anthropic-sonnet.json",
+   "sha256": "4cfc6349fd069075d89f8228c08374f628e69adbae6f7b9958363bac0a61b342"
+  }
+ },
+ "profile": {
+  "file": "profiles/anthropic.json",
+  "sha256": "57b865b5b073a8d0fc00cfaa6e23171d4dca37acbb447b317c622718f68df5d0"
+ },
+ "harness": {
+  "repository": "f29cb0cb72c0a7e44664dda08c2386b507e09fd9",
+  "fork": null
+ },
+ "asked": {
+  "id": "diag-50e07b769591",
+  "forks": [
+   "snapshot-repository-workshop"
+  ],
+  "lead": {
+   "id": "D7:f0e111fbaac6",
+   "detector": "D7",
+   "class": "library-gap",
+   "title": "FACT_UNSIGNED: refused in 5 task(s), about commissioning-test-safety, scrubber-1-datasheet: the library, not the model or the contract; signed since: nothing left to recommend",
+   "settledBy": null,
+   "form": {
+    "id": "form:procedure:5c4fbc9fea6d",
+    "shape": "justification: *: the fact * is in …, which no person has signed as valid",
+    "by": "guard"
+   },
+   "path": [
+    "rule:procedure:FACT_UNSIGNED (concerns the library) <-of- form:procedure:5c4fbc9fea6d",
+    "<-refused-for- 5 task(s)",
+    "naming commissioning-test-safety, scrubber-1-datasheet"
+   ],
+   "about": [
+    "rule:procedure:FACT_UNSIGNED",
+    "form:procedure:5c4fbc9fea6d"
+   ],
+   "tasks": [
+    "task:snapshot-repository-workshop/t-2026-09-28-0005",
+    "task:snapshot-repository-workshop/t-2026-09-28-0062",
+    "task:snapshot-repository-workshop/t-2026-09-28-0063",
+    "task:snapshot-repository-workshop/t-2026-09-28-0064",
+    "task:snapshot-repository-workshop/t-2026-09-28-0065"
+   ],
+   "models": {
+    "claude-haiku-4-5-20251001": 5
+   },
+   "evidence": {
+    "code": "FACT_UNSIGNED",
+    "documents": [
+     "commissioning-test-safety",
+     "scrubber-1-datasheet"
+    ],
+    "closedSince": [
+     "commissioning-test-safety signed by Guillaume Pelletier at 2026-09-29T10:17:53.975Z",
+     "scrubber-1-datasheet signed by Guillaume Pelletier at 2026-09-28T14:04:18.278Z"
+    ]
+   },
+   "recommend": false
+  },
+  "neighbourhood": {
+   "nodes": [
+    "rule:procedure:FACT_UNSIGNED [rule] {\"topic\":\"procedure\",\"code\":\"FACT_UNSIGNED\",\"status\":\"stated\",\"signed\":false,\"concerns\":\"library\",\"example\":\"justification: steps.1.speedPercent: the fact scrub…",
+    "form:procedure:5c4fbc9fea6d [form] {\"topic\":\"procedure\",\"shape\":\"justification: *: the fact * is in …, which no person has signed as valid\",\"kind\":\"justification\",\"by\":\"guard\",\"sample\":\"justifica…",
+    "task:snapshot-repository-workshop/t-2026-09-28-0005 [task] {\"taskId\":\"t-2026-09-28-0005\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"failed\",\"startedAt\":\"2026-09-28T09:05:18.651Z\",\"ended\":\"the…",
+    "task:snapshot-repository-workshop/t-2026-09-28-0062 [task] {\"taskId\":\"t-2026-09-28-0062\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"failed\",\"startedAt\":\"2026-09-28T11:24:44.469Z\",\"ended\":\"the…",
+    "task:snapshot-repository-workshop/t-2026-09-28-0063 [task] {\"taskId\":\"t-2026-09-28-0063\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"failed\",\"startedAt\":\"2026-09-28T11:26:47.684Z\",\"ended\":\"the…",
+    "task:snapshot-repository-workshop/t-2026-09-28-0064 [task] {\"taskId\":\"t-2026-09-28-0064\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"failed\",\"startedAt\":\"2026-09-28T11:29:43.674Z\",\"ended\":\"the…",
+    "task:snapshot-repository-workshop/t-2026-09-28-0065 [task] {\"taskId\":\"t-2026-09-28-0065\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"failed\",\"startedAt\":\"2026-09-28T11:31:12.172Z\",\"ended\":\"the…",
+    "statement:contract:ec185a62d3cd [statement] {\"kind\":\"contract\",\"file\":\"specs/procedure/words.json\",\"pointer\":\"/brief/procedure\",\"phrase\":\"library.facts says which are signed\"}",
+    "attempt:snapshot-repository-workshop/t-2026-09-28-0005:10 [attempt] {\"step\":10,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: justification: limits.co2MaxPpm: the fact test.co2AbortCeilin…",
+    "attempt:snapshot-repository-workshop/t-2026-09-28-0062:9 [attempt] {\"step\":9,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: justification: limits.co2MaxPpm: the fact test.co2AbortCeiling…",
+    "attempt:snapshot-repository-workshop/t-2026-09-28-0063:13 [attempt] {\"step\":13,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: justification: steps.1.speedPercent: the fact scrubber.minimu…",
+    "attempt:snapshot-repository-workshop/t-2026-09-28-0064:9 [attempt] {\"step\":9,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: justification: limits.co2MaxPpm: the fact test.co2AbortCeiling…",
+    "attempt:snapshot-repository-workshop/t-2026-09-28-0065:7 [attempt] {\"step\":7,\"capability\":\"procedure.submit\",\"outcome\":\"GUARD_REJECTED\",\"reason\":\"procedure refused: monitoring: lab is occupied and no abort condition reads biome…",
+    "model:claude-haiku-4-5-20251001 [model] {\"model\":\"claude-haiku-4-5-20251001\",\"provider\":\"reasoner:claude\",\"family\":\"claude\"}",
+    "fingerprint:44092772d3eb [fingerprint] {\"tools\":\"a4c9fdd42a8ef5a706350e699f581e91a8713340cf28dfeb52a1d7d840027608\",\"toolsDetailed\":false,\"words\":null,\"prompt\":\"90e4ec27474a8df6891ddc2783f5045e4679348…",
+    "statement:90e4ec27474a8df6891ddc2783f5045e4679348cff180e6f2250fae2a361e476 [statement] {\"slot\":\"prompt:harness/topics/procedure/prompt.md\",\"kind\":\"prompt\",\"of\":\"harness/topics/procedure/prompt.md\",\"sha256\":\"90e4ec27474a8df6891ddc2783f5045e4679348c…",
+    "episode:snapshot-repository-workshop/t-2026-09-28-0005 [episode] {\"finalOutcome\":\"NOT_ACCEPTED\",\"action\":\"procedure.submit\"}",
+    "fingerprint:ac5405dbbb7e [fingerprint] {\"tools\":\"1a5fd2cce994f02a9e570a4002ce3c3e2fa9f3fd74469f94a648b47123202fde\",\"toolsDetailed\":false,\"words\":null,\"prompt\":\"57a21cbd698b75c4027723f48228e78c09bce39…",
+    "statement:57a21cbd698b75c4027723f48228e78c09bce39506fd160523d8d86f9703cc14 [statement] {\"slot\":\"prompt:harness/topics/procedure/prompt.md\",\"kind\":\"prompt\",\"of\":\"harness/topics/procedure/prompt.md\",\"sha256\":\"57a21cbd698b75c4027723f48228e78c09bce395…",
+    "episode:snapshot-repository-workshop/t-2026-09-28-0062 [episode] {\"finalOutcome\":\"NOT_ACCEPTED\",\"action\":\"procedure.submit\"}",
+    "episode:snapshot-repository-workshop/t-2026-09-28-0063 [episode] {\"finalOutcome\":\"NOT_ACCEPTED\",\"action\":\"procedure.submit\"}",
+    "episode:snapshot-repository-workshop/t-2026-09-28-0064 [episode] {\"finalOutcome\":\"NOT_ACCEPTED\",\"action\":\"procedure.submit\"}",
+    "fingerprint:de24fb5176c4 [fingerprint] {\"tools\":\"1a5fd2cce994f02a9e570a4002ce3c3e2fa9f3fd74469f94a648b47123202fde\",\"toolsDetailed\":false,\"words\":null,\"prompt\":\"74432897f305b4d99f7033da2039422a1d23839…",
+    "statement:74432897f305b4d99f7033da2039422a1d2383972aa69a25d52f57f9cf649b91 [statement] {\"slot\":\"prompt:harness/topics/procedure/prompt.md\",\"kind\":\"prompt\",\"of\":\"harness/topics/procedure/prompt.md\",\"sha256\":\"74432897f305b4d99f7033da2039422a1d238397…",
+    "episode:snapshot-repository-workshop/t-2026-09-28-0065 [episode] {\"finalOutcome\":\"NOT_ACCEPTED\",\"action\":\"procedure.submit\"}",
+    "capability:procedure.submit [capability] {\"id\":\"procedure.submit\"}",
+    "form:procedure:07da0a589185 [form] {\"topic\":\"procedure\",\"shape\":\"justification: * = # does not respect * = # m#/min\",\"kind\":\"justification\",\"by\":\"guard\",\"sample\":\"justification: steps.2.speedPerc…",
+    "form:procedure:e4c27a055af1 [form] {\"topic\":\"procedure\",\"shape\":\"justification: * = # is a safety constant: it is justified by a fact of a signed library document, not by a calculation\",\"kind\":\"j…",
+    "form:procedure:8c84ef756545 [form] {\"topic\":\"procedure\",\"shape\":\"monitoring: lab is occupied and no abort condition reads *\",\"kind\":\"monitoring\",\"by\":\"guard\",\"sample\":\"monitoring: lab is occupied…",
+    "form:procedure:33231b945eef [form] {\"topic\":\"procedure\",\"shape\":\"justification: *: … is not a fact of the library\",\"kind\":\"justification\",\"by\":\"guard\",\"sample\":\"justification: limits.co2MaxPpm: \\…",
+    "task:snapshot-repository-workshop/t-2026-09-23-0002 [task] {\"taskId\":\"t-2026-09-23-0002\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"failed\",\"startedAt\":\"2026-09-23T20:14:49.342Z\",\"ended\":\"the…",
+    "task:snapshot-repository-workshop/t-2026-09-23-0003 [task] {\"taskId\":\"t-2026-09-23-0003\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-23T20:17:27.451Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-23-0004 [task] {\"taskId\":\"t-2026-09-23-0004\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"failed\",\"startedAt\":\"2026-09-23T20:29:20.669Z\",\"ended\":\"ite…",
+    "task:snapshot-repository-workshop/t-2026-09-23-0005 [task] {\"taskId\":\"t-2026-09-23-0005\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"failed\",\"startedAt\":\"2026-09-23T20:31:00.050Z\",\"ended\":\"ite…",
+    "task:snapshot-repository-workshop/t-2026-09-23-0006 [task] {\"taskId\":\"t-2026-09-23-0006\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-23T20:34:41.721Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-24-0003 [task] {\"taskId\":\"t-2026-09-24-0003\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-24T08:41:18.478Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-24-0005 [task] {\"taskId\":\"t-2026-09-24-0005\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-24T16:14:02.124Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-24-0007 [task] {\"taskId\":\"t-2026-09-24-0007\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-24T16:24:58.768Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-24-0009 [task] {\"taskId\":\"t-2026-09-24-0009\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-24T16:30:11.271Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-24-0011 [task] {\"taskId\":\"t-2026-09-24-0011\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-24T16:38:22.145Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-24-0013 [task] {\"taskId\":\"t-2026-09-24-0013\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-24T16:43:39.452Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-24-0015 [task] {\"taskId\":\"t-2026-09-24-0015\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-24T16:55:19.885Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-24-0017 [task] {\"taskId\":\"t-2026-09-24-0017\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-24T17:25:38.010Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-24-0019 [task] {\"taskId\":\"t-2026-09-24-0019\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-24T17:34:02.474Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0001 [task] {\"taskId\":\"t-2026-09-25-0001\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-25T12:41:55.287Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0003 [task] {\"taskId\":\"t-2026-09-25-0003\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-25T13:13:54.390Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0004 [task] {\"taskId\":\"t-2026-09-25-0004\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-25T13:25:32.797Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0012 [task] {\"taskId\":\"t-2026-09-25-0012\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"failed\",\"startedAt\":\"2026-09-25T14:48:57.730Z\",\"ended\":\"ite…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0013 [task] {\"taskId\":\"t-2026-09-25-0013\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-25T14:53:38.067Z\",\"ended\":\"c…",
+    "task:snapshot-repository-workshop/t-2026-09-25-0015 [task] {\"taskId\":\"t-2026-09-25-0015\",\"workshop\":\"snapshot-repository-workshop\",\"topic\":\"procedure\",\"state\":\"proposed\",\"startedAt\":\"2026-09-25T14:56:52.308Z\",\"ended\":\"c…"
+   ],
+   "links": [
+    "form:procedure:5c4fbc9fea6d of rule:procedure:FACT_UNSIGNED",
+    "task:snapshot-repository-workshop/t-2026-09-28-0005 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-28-0005 ran-under fingerprint:44092772d3eb",
+    "task:snapshot-repository-workshop/t-2026-09-28-0005 read statement:90e4ec27474a8df6891ddc2783f5045e4679348cff180e6f2250fae2a361e476",
+    "task:snapshot-repository-workshop/t-2026-09-28-0062 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-28-0062 ran-under fingerprint:ac5405dbbb7e",
+    "task:snapshot-repository-workshop/t-2026-09-28-0062 read statement:57a21cbd698b75c4027723f48228e78c09bce39506fd160523d8d86f9703cc14",
+    "task:snapshot-repository-workshop/t-2026-09-28-0063 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-28-0063 ran-under fingerprint:ac5405dbbb7e",
+    "task:snapshot-repository-workshop/t-2026-09-28-0063 read statement:57a21cbd698b75c4027723f48228e78c09bce39506fd160523d8d86f9703cc14",
+    "task:snapshot-repository-workshop/t-2026-09-28-0064 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-28-0064 ran-under fingerprint:ac5405dbbb7e",
+    "task:snapshot-repository-workshop/t-2026-09-28-0064 read statement:57a21cbd698b75c4027723f48228e78c09bce39506fd160523d8d86f9703cc14",
+    "task:snapshot-repository-workshop/t-2026-09-28-0065 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-28-0065 ran-under fingerprint:de24fb5176c4",
+    "task:snapshot-repository-workshop/t-2026-09-28-0065 read statement:74432897f305b4d99f7033da2039422a1d2383972aa69a25d52f57f9cf649b91",
+    "statement:contract:ec185a62d3cd states rule:procedure:FACT_UNSIGNED",
+    "attempt:snapshot-repository-workshop/t-2026-09-28-0005:10 of episode:snapshot-repository-workshop/t-2026-09-28-0005",
+    "attempt:snapshot-repository-workshop/t-2026-09-28-0005:10 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-28-0005:10 refused-for form:procedure:5c4fbc9fea6d",
+    "attempt:snapshot-repository-workshop/t-2026-09-28-0005:10 refused-for form:procedure:07da0a589185",
+    "attempt:snapshot-repository-workshop/t-2026-09-28-0062:9 of episode:snapshot-repository-workshop/t-2026-09-28-0062",
+    "attempt:snapshot-repository-workshop/t-2026-09-28-0062:9 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-28-0062:9 refused-for form:procedure:5c4fbc9fea6d",
+    "attempt:snapshot-repository-workshop/t-2026-09-28-0062:9 refused-for form:procedure:07da0a589185",
+    "attempt:snapshot-repository-workshop/t-2026-09-28-0063:13 of episode:snapshot-repository-workshop/t-2026-09-28-0063",
+    "attempt:snapshot-repository-workshop/t-2026-09-28-0063:13 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-28-0063:13 refused-for form:procedure:5c4fbc9fea6d",
+    "attempt:snapshot-repository-workshop/t-2026-09-28-0063:13 refused-for form:procedure:07da0a589185",
+    "attempt:snapshot-repository-workshop/t-2026-09-28-0064:9 of episode:snapshot-repository-workshop/t-2026-09-28-0064",
+    "attempt:snapshot-repository-workshop/t-2026-09-28-0064:9 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-28-0064:9 refused-for form:procedure:5c4fbc9fea6d",
+    "attempt:snapshot-repository-workshop/t-2026-09-28-0064:9 refused-for form:procedure:e4c27a055af1",
+    "attempt:snapshot-repository-workshop/t-2026-09-28-0065:7 of episode:snapshot-repository-workshop/t-2026-09-28-0065",
+    "attempt:snapshot-repository-workshop/t-2026-09-28-0065:7 calls capability:procedure.submit",
+    "attempt:snapshot-repository-workshop/t-2026-09-28-0065:7 refused-for form:procedure:8c84ef756545",
+    "attempt:snapshot-repository-workshop/t-2026-09-28-0065:7 refused-for form:procedure:33231b945eef",
+    "attempt:snapshot-repository-workshop/t-2026-09-28-0065:7 refused-for form:procedure:5c4fbc9fea6d",
+    "attempt:snapshot-repository-workshop/t-2026-09-28-0065:7 refused-for form:procedure:07da0a589185",
+    "fingerprint:44092772d3eb changed statement:90e4ec27474a8df6891ddc2783f5045e4679348cff180e6f2250fae2a361e476",
+    "episode:snapshot-repository-workshop/t-2026-09-28-0005 of task:snapshot-repository-workshop/t-2026-09-28-0005",
+    "fingerprint:ac5405dbbb7e after fingerprint:44092772d3eb",
+    "fingerprint:ac5405dbbb7e changed statement:57a21cbd698b75c4027723f48228e78c09bce39506fd160523d8d86f9703cc14",
+    "episode:snapshot-repository-workshop/t-2026-09-28-0062 of task:snapshot-repository-workshop/t-2026-09-28-0062",
+    "episode:snapshot-repository-workshop/t-2026-09-28-0063 of task:snapshot-repository-workshop/t-2026-09-28-0063",
+    "episode:snapshot-repository-workshop/t-2026-09-28-0064 of task:snapshot-repository-workshop/t-2026-09-28-0064",
+    "fingerprint:de24fb5176c4 after fingerprint:ac5405dbbb7e",
+    "fingerprint:de24fb5176c4 changed statement:74432897f305b4d99f7033da2039422a1d2383972aa69a25d52f57f9cf649b91",
+    "episode:snapshot-repository-workshop/t-2026-09-28-0065 of task:snapshot-repository-workshop/t-2026-09-28-0065",
+    "task:snapshot-repository-workshop/t-2026-09-23-0002 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-23-0003 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-23-0004 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-23-0005 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-23-0006 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-24-0003 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-24-0005 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-24-0007 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-24-0009 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-24-0011 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-24-0013 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-24-0015 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-24-0017 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-24-0019 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0001 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0003 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0004 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0012 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0013 ran-by model:claude-haiku-4-5-20251001",
+    "task:snapshot-repository-workshop/t-2026-09-25-0015 ran-by model:claude-haiku-4-5-20251001"
+   ]
+  },
+  "rules": [
+   {
+    "code": "FACT_UNSIGNED",
+    "status": "stated",
+    "signed": false,
+    "statedToday": [
+     {
+      "where": "specs/procedure/words.json#/brief/procedure",
+      "holds": true
+     }
+    ]
+   }
+  ],
+  "today": {
+   "commit": "f29cb0c",
+   "signatures": {
+    "commissioning-test-safety": {
+     "by": "Guillaume Pelletier",
+     "at": "2026-09-29T10:17:53.975Z",
+     "valid": true
+    },
+    "scrubber-1-datasheet": {
+     "by": "Guillaume Pelletier",
+     "at": "2026-09-28T14:04:18.278Z",
+     "valid": true
+    }
+   },
+   "profiles": {
+    "profiles/anthropic.json": {
+     "wire": "anthropic-messages",
+     "model": "claude-haiku-4-5-20251001",
+     "capabilities": [
+      "tools",
+      "json"
+     ]
+    }
+   }
+  },
+  "refuted": []
+ },
+ "askedSha256": "b43db3e8ac60e9175eef9c2b48da6cd32bbb8b58219d8af11196ff241fc21b98",
+ "steps": [
+  {
+   "n": 1,
+   "capability": "task.plan",
+   "input": {
+    "selected_nodes": [],
+    "missing_capabilities": [
+     {
+      "required_output": "diag-50e07b769591 (Diagnosis)",
+      "quantity": "Diagnosis",
+      "reason": "No catalogue node produces a diagnosis; it is made here by reading the graph, tasks and library.",
+      "topic": "diagnosis"
+     }
+    ]
+   },
+   "outcome": "completed",
+   "reason": "plan accepted: 0 node type(s), 1 missing capability(ies)",
+   "tokens": {
+    "prompt": 13846,
+    "completion": 166,
+    "total": 14012
+   }
+  },
+  {
+   "n": 2,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-28-0005",
+    "step": 10,
+    "part": "reason"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 14343,
+    "completion": 177,
+    "total": 14520
+   }
+  },
+  {
+   "n": 3,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-28-0062",
+    "step": 9,
+    "part": "reason"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 15674,
+    "completion": 232,
+    "total": 15906
+   }
+  },
+  {
+   "n": 4,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-28-0063",
+    "step": 13,
+    "part": "reason"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 16123,
+    "completion": 243,
+    "total": 16366
+   }
+  },
+  {
+   "n": 5,
+   "capability": "diagnosis.step",
+   "input": {
+    "task": "task:snapshot-repository-workshop/t-2026-09-28-0065",
+    "step": 7,
+    "part": "reason"
+   },
+   "outcome": "completed",
+   "reason": "diagnosis.step completed; nothing new in the workshop",
+   "tokens": {
+    "prompt": 16485,
+    "completion": 222,
+    "total": 16707
+   }
+  },
+  {
+   "n": 6,
+   "capability": "diagnosis.submit",
+   "input": {
+    "id": "diag-50e07b769591",
+    "verdict": "right",
+    "class": "library-gap",
+    "current": "closed",
+    "cause": "The five procedure tasks of 2026-09-28 cited facts (test.co2AbortCeilingPpm, test.speedFloorPercent, test.maxMinutesCeiling, scrubber.minimumSpeedElevated, scrubber.effectiveFlowAtFull) from commissioning-test-safety and scrubber-1-datasheet. Neither document had been signed by a person then, so the guard refused each safety-constant justification with FACT_UNSIGNED. The refusal words were true: the documents were unsigned, and the contract text already says that library.facts shows which documents are signed. Both documents have since been signed by Guillaume Pelletier (scrubber-1-datasheet 2026-09-28T14:04Z, commissioning-test-safety 2026-09-29T10:17Z), so this cause is closed. Nothing is left to recommend on it. The same refusals also carried other forms that signing does not fix: speedPercent = 100 against effectiveFlowAtFull = 1 m3/min, a justification citing two fact ids in one string, and a missing biomed.verdict abort condition. Those are separate model or contract issues, not this lead.",
+    "evidence": [
+     "rule:procedure:FACT_UNSIGNED",
+     "form:procedure:5c4fbc9fea6d",
+     "attempt:snapshot-repository-workshop/t-2026-09-28-0005:10",
+     "attempt:snapshot-repository-workshop/t-2026-09-28-0062:9",
+     "attempt:snapshot-repository-workshop/t-2026-09-28-0063:13",
+     "attempt:snapshot-repository-workshop/t-2026-09-28-0064:9",
+     "attempt:snapshot-repository-workshop/t-2026-09-28-0065:7",
+     "statement:contract:ec185a62d3cd"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "refused-with",
+      "args": {
+       "task": "task:snapshot-repository-workshop/t-2026-09-28-0005",
+       "step": 10,
+       "rule": "FACT_UNSIGNED"
+      },
+      "expect": true
+     },
+     {
+      "role": "current",
+      "predicate": "signed",
+      "args": {
+       "document": "commissioning-test-safety",
+       "at": "today"
+      },
+      "expect": true
+     },
+     {
+      "role": "current",
+      "predicate": "signed",
+      "args": {
+       "document": "scrubber-1-datasheet",
+       "at": "today"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "predicate": "stated-at",
+      "args": {
+       "file": "specs/procedure/words.json",
+       "pointer": "/brief/procedure",
+       "phrase": "library.facts says which are signed",
+       "at": "today"
+      },
+      "expect": true,
+      "alternative": "contract-gap: the texts did not tell the model that facts must come from signed documents"
+     },
+     {
+      "role": "rules-out",
+      "predicate": "fact",
+      "args": {
+       "id": "scrubber.minimumSpeedElevated",
+       "at": "today",
+       "compare": "present"
+      },
+      "expect": true,
+      "alternative": "library-gap by a missing fact: the cited fact ids do not exist in the library, so the model invented them"
+     }
+    ],
+    "justifications": []
+   },
+   "outcome": "completed",
+   "judged": "accepted",
+   "reason": "diagnosis.submit completed; the workshop changed",
+   "tokens": {
+    "prompt": 17042,
+    "completion": 2124,
+    "total": 19166
+   }
+  },
+  {
+   "n": 7,
+   "capability": "task.done",
+   "input": {
+    "summary": "Diagnosis diag-50e07b769591 accepted by the guard (sha256 2f631328bd0384ae7cd8116733715c91424488c01ec830ab640788cb2ab18a5c). The lead is a library gap. The procedure guard refused five procedure tasks (t-2026-09-28-0005, 0062, 0063, 0064 and 0065) with FACT_UNSIGNED. The facts they cited sat in two documents that no person had signed yet: commissioning-test-safety and scrubber-1-datasheet. The refusal's words were true. The guard's checks confirmed that the refusal at step 10 of task 0005 falls under FACT_UNSIGNED. Both documents are now signed by Guillaume Pelletier: scrubber-1-datasheet at 2026-09-28T14:04:18.278Z and commissioning-test-safety at 2026-09-29T10:17:53.975Z. Both signatures are valid and bind the documents as they stand. The cause is closed today, and no further recommendation is needed. The rule is still stated today in specs/procedure/words.json#/brief/procedure. The fact scrubber.minimumSpeedElevated reads 40 percent in scrubber-1-datasheet.",
+    "artifacts": [
+     {
+      "kind": "diagnosis",
+      "path": "diagnoses/diag-50e07b769591.json"
+     }
+    ]
+   },
+   "outcome": "completed",
+   "reason": "contract held on topic diagnosis: diagnosis diagnoses/diag-50e07b769591.json",
+   "tokens": {
+    "prompt": 16782,
+    "completion": 514,
+    "total": 17296
+   }
+  }
+ ],
+ "submissions": [
+  {
+   "step": 6,
+   "outcome": "completed",
+   "refused": false,
+   "reason": "diagnosis.submit completed; the workshop changed",
+   "diagnosis": {
+    "id": "diag-50e07b769591",
+    "verdict": "right",
+    "class": "library-gap",
+    "current": "closed",
+    "cause": "The five procedure tasks of 2026-09-28 cited facts (test.co2AbortCeilingPpm, test.speedFloorPercent, test.maxMinutesCeiling, scrubber.minimumSpeedElevated, scrubber.effectiveFlowAtFull) from commissioning-test-safety and scrubber-1-datasheet. Neither document had been signed by a person then, so the guard refused each safety-constant justification with FACT_UNSIGNED. The refusal words were true: the documents were unsigned, and the contract text already says that library.facts shows which documents are signed. Both documents have since been signed by Guillaume Pelletier (scrubber-1-datasheet 2026-09-28T14:04Z, commissioning-test-safety 2026-09-29T10:17Z), so this cause is closed. Nothing is left to recommend on it. The same refusals also carried other forms that signing does not fix: speedPercent = 100 against effectiveFlowAtFull = 1 m3/min, a justification citing two fact ids in one string, and a missing biomed.verdict abort condition. Those are separate model or contract issues, not this lead.",
+    "evidence": [
+     "rule:procedure:FACT_UNSIGNED",
+     "form:procedure:5c4fbc9fea6d",
+     "attempt:snapshot-repository-workshop/t-2026-09-28-0005:10",
+     "attempt:snapshot-repository-workshop/t-2026-09-28-0062:9",
+     "attempt:snapshot-repository-workshop/t-2026-09-28-0063:13",
+     "attempt:snapshot-repository-workshop/t-2026-09-28-0064:9",
+     "attempt:snapshot-repository-workshop/t-2026-09-28-0065:7",
+     "statement:contract:ec185a62d3cd"
+    ],
+    "predictions": [
+     {
+      "role": "cause",
+      "predicate": "refused-with",
+      "args": {
+       "task": "task:snapshot-repository-workshop/t-2026-09-28-0005",
+       "step": 10,
+       "rule": "FACT_UNSIGNED"
+      },
+      "expect": true
+     },
+     {
+      "role": "current",
+      "predicate": "signed",
+      "args": {
+       "document": "commissioning-test-safety",
+       "at": "today"
+      },
+      "expect": true
+     },
+     {
+      "role": "current",
+      "predicate": "signed",
+      "args": {
+       "document": "scrubber-1-datasheet",
+       "at": "today"
+      },
+      "expect": true
+     },
+     {
+      "role": "rules-out",
+      "predicate": "stated-at",
+      "args": {
+       "file": "specs/procedure/words.json",
+       "pointer": "/brief/procedure",
+       "phrase": "library.facts says which are signed",
+       "at": "today"
+      },
+      "expect": true,
+      "alternative": "contract-gap: the texts did not tell the model that facts must come from signed documents"
+     },
+     {
+      "role": "rules-out",
+      "predicate": "fact",
+      "args": {
+       "id": "scrubber.minimumSpeedElevated",
+       "at": "today",
+       "compare": "present"
+      },
+      "expect": true,
+      "alternative": "library-gap by a missing fact: the cited fact ids do not exist in the library, so the model invented them"
+     }
+    ],
+    "justifications": []
+   }
+  }
+ ],
+ "accepted": {
+  "id": "diag-50e07b769591",
+  "lead": {
+   "id": "D7:f0e111fbaac6",
+   "detector": "D7",
+   "class": "library-gap",
+   "title": "FACT_UNSIGNED: refused in 5 task(s), about commissioning-test-safety, scrubber-1-datasheet: the library, not the model or the contract; signed since: nothing left to recommend",
+   "settledBy": null,
+   "form": {
+    "id": "form:procedure:5c4fbc9fea6d",
+    "shape": "justification: *: the fact * is in …, which no person has signed as valid",
+    "by": "guard"
+   },
+   "path": [
+    "rule:procedure:FACT_UNSIGNED (concerns the library) <-of- form:procedure:5c4fbc9fea6d",
+    "<-refused-for- 5 task(s)",
+    "naming commissioning-test-safety, scrubber-1-datasheet"
+   ],
+   "about": [
+    "rule:procedure:FACT_UNSIGNED",
+    "form:procedure:5c4fbc9fea6d"
+   ],
+   "tasks": [
+    "task:snapshot-repository-workshop/t-2026-09-28-0005",
+    "task:snapshot-repository-workshop/t-2026-09-28-0062",
+    "task:snapshot-repository-workshop/t-2026-09-28-0063",
+    "task:snapshot-repository-workshop/t-2026-09-28-0064",
+    "task:snapshot-repository-workshop/t-2026-09-28-0065"
+   ],
+   "models": {
+    "claude-haiku-4-5-20251001": 5
+   },
+   "evidence": {
+    "code": "FACT_UNSIGNED",
+    "documents": [
+     "commissioning-test-safety",
+     "scrubber-1-datasheet"
+    ],
+    "closedSince": [
+     "commissioning-test-safety signed by Guillaume Pelletier at 2026-09-29T10:17:53.975Z",
+     "scrubber-1-datasheet signed by Guillaume Pelletier at 2026-09-28T14:04:18.278Z"
+    ]
+   },
+   "recommend": false
+  },
+  "forks": [
+   "snapshot-repository-workshop"
+  ],
+  "verdict": "right",
+  "cause": "The five procedure tasks of 2026-09-28 cited facts (test.co2AbortCeilingPpm, test.speedFloorPercent, test.maxMinutesCeiling, scrubber.minimumSpeedElevated, scrubber.effectiveFlowAtFull) from commissioning-test-safety and scrubber-1-datasheet. Neither document had been signed by a person then, so the guard refused each safety-constant justification with FACT_UNSIGNED. The refusal words were true: the documents were unsigned, and the contract text already says that library.facts shows which documents are signed. Both documents have since been signed by Guillaume Pelletier (scrubber-1-datasheet 2026-09-28T14:04Z, commissioning-test-safety 2026-09-29T10:17Z), so this cause is closed. Nothing is left to recommend on it. The same refusals also carried other forms that signing does not fix: speedPercent = 100 against effectiveFlowAtFull = 1 m3/min, a justification citing two fact ids in one string, and a missing biomed.verdict abort condition. Those are separate model or contract issues, not this lead.",
+  "class": "library-gap",
+  "current": "closed",
+  "evidence": [
+   "rule:procedure:FACT_UNSIGNED",
+   "form:procedure:5c4fbc9fea6d",
+   "attempt:snapshot-repository-workshop/t-2026-09-28-0005:10",
+   "attempt:snapshot-repository-workshop/t-2026-09-28-0062:9",
+   "attempt:snapshot-repository-workshop/t-2026-09-28-0063:13",
+   "attempt:snapshot-repository-workshop/t-2026-09-28-0064:9",
+   "attempt:snapshot-repository-workshop/t-2026-09-28-0065:7",
+   "statement:contract:ec185a62d3cd"
+  ],
+  "predictions": [
+   {
+    "role": "cause",
+    "predicate": "refused-with",
+    "args": {
+     "task": "task:snapshot-repository-workshop/t-2026-09-28-0005",
+     "step": 10,
+     "rule": "FACT_UNSIGNED"
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "the refusal at step 10 falls under FACT_UNSIGNED, FACT_NOT_RESPECTED",
+     "nodes": [
+      "task:snapshot-repository-workshop/t-2026-09-28-0005",
+      "attempt:snapshot-repository-workshop/t-2026-09-28-0005:10",
+      "rule:procedure:FACT_UNSIGNED"
+     ],
+     "read": []
+    }
+   },
+   {
+    "role": "current",
+    "predicate": "signed",
+    "args": {
+     "document": "commissioning-test-safety",
+     "at": "today"
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "signed by Guillaume Pelletier at 2026-09-29T10:17:53.975Z, and the document is as signed",
+     "nodes": [],
+     "read": [
+      "signatures/commissioning-test-safety.json"
+     ]
+    }
+   },
+   {
+    "role": "current",
+    "predicate": "signed",
+    "args": {
+     "document": "scrubber-1-datasheet",
+     "at": "today"
+    },
+    "expect": true,
+    "result": {
+     "truth": "true",
+     "observed": "signed by Guillaume Pelletier at 2026-09-28T14:04:18.278Z, and the document is as signed",
+     "nodes": [],
+     "read": [
+      "signatures/scrubber-1-datasheet.json"
+     ]
+    }
+   },
+   {
+    "role": "rules-out",
+    "predicate": "stated-at",
+    "args": {
+     "file": "specs/procedure/words.json",
+     "pointer": "/brief/procedure",
+     "phrase": "library.facts says which are signed",
+     "at": "today"
+    },
+    "expect": true,
+    "alternative": "contract-gap: the texts did not tell the model that facts must come from signed documents",
+    "result": {
+     "truth": "true",
+     "observed": "stated at today in specs/procedure/words.json#/brief/procedure",
+     "nodes": [],
+     "read": [
+      "specs/procedure/words.json#/brief/procedure@working tree"
+     ]
+    }
+   },
+   {
+    "role": "rules-out",
+    "predicate": "fact",
+    "args": {
+     "id": "scrubber.minimumSpeedElevated",
+     "at": "today",
+     "compare": "present"
+    },
+    "expect": true,
+    "alternative": "library-gap by a missing fact: the cited fact ids do not exist in the library, so the model invented them",
+    "result": {
+     "truth": "true",
+     "observed": "scrubber.minimumSpeedElevated = 40 percent (scrubber-1-datasheet)",
+     "nodes": [],
+     "read": [
+      "docs/library/scrubber-1-datasheet.facts.json"
+     ]
+    }
+   }
+  ],
+  "checked": {
+   "confirmed": 5,
+   "unknown": 0,
+   "byRole": {
+    "cause": {
+     "confirmed": 1,
+     "of": 1
+    },
+    "current": {
+     "confirmed": 2,
+     "of": 2
+    },
+    "rules-out": {
+     "confirmed": 2,
+     "of": 2
+    }
+   },
+   "alternativesRuledOut": [
+    "contract-gap: the texts did not tell the model that facts must come from signed documents",
+    "library-gap by a missing fact: the cited fact ids do not exist in the library, so the model invented them"
+   ]
+  },
+  "justifications": []
+ },
+ "station": {
+  "status": "diagnosed"
+ },
+ "tokens": {
+  "prompt": 110295,
+  "completion": 3678
+ }
+}
