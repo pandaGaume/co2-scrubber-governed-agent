@@ -1,0 +1,68 @@
+{
+    "id": "rec-3691f2968581",
+    "finding": {
+        "id": "D4:92b3a81902a4",
+        "detector": "D4",
+        "class": "harness-artefact",
+        "title": "the harness refused \"Invalid capability arguments: data/evidence must be array\" 10 times in 10 tasks, before any guard (procedure.analyse)",
+        "settledBy": null,
+        "path": [
+            "step or attempt -refused-for-> form:procedure:harness:316429655575 (by the harness)",
+            "x 10 in 10 tasks",
+            "-calls-> procedure.analyse"
+        ],
+        "about": [
+            "form:procedure:harness:316429655575",
+            "step:exp-learn/t-2026-09-29-0009:14",
+            "step:exp-control/t-2026-09-29-0004:15",
+            "step:exp4-sonnet-a/t-2026-09-29-0010:13",
+            "step:exp4-sonnet-c/t-2026-09-29-0010:11",
+            "step:exp4-sonnet-c/t-2026-09-29-0011:16"
+        ],
+        "tasks": 10,
+        "models": {
+            "claude-sonnet-5-5": 10
+        },
+        "evidence": {
+            "refusals": 10,
+            "capabilities": [
+                "procedure.analyse"
+            ],
+            "example": "Invalid capability arguments: data/evidence must be array, data/changes must be array"
+        },
+        "recommend": true
+    },
+    "rule": null,
+    "kind": "contract",
+    "target": {
+        "file": "specs/procedure/words.json",
+        "pointer": "/capabilities/analyse"
+    },
+    "action": "replace",
+    "current": "Analyse why the last test was aborted, before any new procedure: the cause, the evidence in the last test's record, why the last procedure did not prevent it, and the changes the new one makes, each a field of the procedure. Checked before it is kept; the new procedure must make these changes.",
+    "proposed": "Analyse why the last test was aborted, before any new procedure: the cause, the evidence in the last test's record, why the last procedure did not prevent it, and the changes the new one makes, each a field of the procedure. Checked before it is kept; the new procedure must make these changes.\n\nForm of the arguments: \"evidence\" and \"changes\" are each an array (a list), never a single string or object. Send an array even when it holds one item, for example \"evidence\": [\"abort <id>: <what the record shows>\"] and \"changes\": [\"<field of the procedure>: <new value>\"]. An argument that is not an array is refused before the analysis is read.",
+    "why": "The harness refuses procedure.analyse 10 times in 10 tasks, all by claude-sonnet-5-5, with \"data/evidence must be array, data/changes must be array\", before any guard judges the content. The current text names evidence and changes but never says they are arrays, so the model sends text. The rule is enforced by the argument schema and no text states it. The fix is to state the form where the model reads the capability.",
+    "effect": "Refusals \"Invalid capability arguments: data/evidence must be array\" on procedure.analyse should fall from 10 in 10 tasks to 0 in the replayed cases. Analyses reach the content check.",
+    "changesAcceptance": false,
+    "verification": {
+        "replay": [
+            "experiment validate v5",
+            "experiment validate v4",
+            "experiment validate v9"
+        ],
+        "models": [
+            "claude-sonnet-5-5"
+        ],
+        "tasks": 5,
+        "measure": "Count of procedure.analyse calls refused with \"Invalid capability arguments: data/evidence must be array\" (or data/changes must be array) across the replayed cases; expected 0."
+    },
+    "justifications": [
+        {
+            "constant": "verification.tasks",
+            "value": 5,
+            "source": "assumed",
+            "reference": "minTasks of the finding's state (5)",
+            "reason": "The state's minimum is 5 tasks; 3 cases replayed, so 5 tasks cover each at least once. The refusal was in 10 of 10 tasks, so even a few clean runs are informative."
+        }
+    ]
+}

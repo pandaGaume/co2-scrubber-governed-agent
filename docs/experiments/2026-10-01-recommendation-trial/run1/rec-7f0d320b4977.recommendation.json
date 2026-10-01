@@ -1,0 +1,68 @@
+{
+    "id": "rec-7f0d320b4977",
+    "finding": {
+        "id": "D1:4a7fdc950d8b",
+        "detector": "D1",
+        "class": "stated-not-followed",
+        "title": "expected: stated in what 2 task(s) read, and refused at their first try all the same",
+        "settledBy": null,
+        "path": [
+            "rule:procedure:expected <-of- form:procedure:7187b87eae3e",
+            "<-refused-for- the first attempt of 2 task(s)",
+            "which read specs/procedure/procedure.schema.json /properties/expected/description: \"written before it runs\"; library method-concentration-decay: \"the predictions\""
+        ],
+        "about": [
+            "rule:procedure:expected",
+            "statement:contract:8b426033c0b7",
+            "statement:contract:63d895f69226",
+            "form:procedure:7187b87eae3e"
+        ],
+        "tasks": 2,
+        "models": {
+            "claude-sonnet-5-5": 2
+        },
+        "evidence": {
+            "code": "expected",
+            "status": "stated",
+            "untold": 0,
+            "told": 2
+        },
+        "recommend": true
+    },
+    "rule": {
+        "code": "expected",
+        "status": "stated",
+        "says": "a test that does not say what it expects to see cannot be told from a fishing trip"
+    },
+    "kind": "contract",
+    "target": {
+        "file": "specs/procedure/procedure.schema.json",
+        "pointer": "/properties/expected/description"
+    },
+    "action": "replace",
+    "current": "What the test is expected to show, written before it runs.",
+    "proposed": "What the test is expected to show, written before it runs. State the predictions, not the aim: for each hypothesis, the value or the curve you expect to read, with its unit (for example the concentration a step should move towards, or the time constant tau and the volume V = Qe * tau that follow from it), tied to the step that produces it by its number n. Then state what result would show the hypothesis does not hold (a value outside a stated range, a curve that does not follow the predicted shape). A generic sentence, an empty text or a list of what will be measured is not a prediction: a test that does not say what it expects to see cannot be told from a fishing trip.",
+    "why": "Two tasks of the model read \"written before it runs\" (schema) and the method card's \"the predictions\", and still had their first procedure refused because `expected` said nothing. The words say when to write it, not what it must hold. The rule the guard enforces (expected must state predictions and what would refute them) is stated in no text the model reads. Closing it in the field description puts the rule where the model fills the field.",
+    "effect": "First-attempt refusals for the rule `expected` should fall from 2 of 2 tasks to none (or at most 1 in 5) on the replayed cases; procedures should carry numeric predictions with units and a refutation condition on the first submit.",
+    "changesAcceptance": false,
+    "verification": {
+        "replay": [
+            "experiment validate v2",
+            "experiment validate v3"
+        ],
+        "models": [
+            "claude-sonnet-5-5"
+        ],
+        "tasks": 5,
+        "measure": "expected: share of first procedure submissions refused for the rule `expected` (expected says nothing: a test that does not say what it expects to see cannot be told from a fishing trip), before and after the change"
+    },
+    "justifications": [
+        {
+            "constant": "verification.tasks",
+            "value": 5,
+            "source": "measured",
+            "reference": "state recommendation.minTasks = 5; finding observed 2 tasks, both refused at first try",
+            "reason": "Five replays is the minimum; enough to tell 0 refusals from the 2 of 2 seen."
+        }
+    ]
+}

@@ -1,0 +1,48 @@
+{
+  "t-2026-10-01-0001": {
+    "model": "claude-sonnet-5-5",
+    "ended": "contract held after 3 step(s)",
+    "steps": [
+      "task.plan:completed",
+      "recommendation.propose:completed/accepted",
+      "task.done:completed"
+    ],
+    "telemetry": {
+      "calls": 3,
+      "input": 7264,
+      "output": 2037,
+      "cacheRead": 18304
+    }
+  },
+  "t-2026-10-01-0002": {
+    "model": "claude-sonnet-5-5",
+    "ended": "contract held after 4 step(s)",
+    "steps": [
+      "task.plan:completed",
+      "library.read:completed",
+      "recommendation.propose:completed/accepted",
+      "task.done:completed"
+    ],
+    "telemetry": {
+      "calls": 4,
+      "input": 20609,
+      "output": 2301,
+      "cacheRead": 36608
+    }
+  },
+  "t-2026-10-01-0003": {
+    "model": "claude-sonnet-5-5",
+    "ended": "contract held after 3 step(s)",
+    "steps": [
+      "task.plan:completed",
+      "recommendation.propose:completed/accepted",
+      "task.done:completed"
+    ],
+    "telemetry": {
+      "calls": 3,
+      "input": 86068,
+      "output": 2095,
+      "cacheRead": 27456
+    }
+  }
+}

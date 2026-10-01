@@ -1,0 +1,71 @@
+{
+    "id": "rec-7f0d320b4977",
+    "finding": {
+        "id": "D1:4a7fdc950d8b",
+        "detector": "D1",
+        "class": "stated-not-followed",
+        "title": "expected: stated in what 2 task(s) read, and refused at their first try all the same",
+        "settledBy": null,
+        "path": [
+            "rule:procedure:expected <-of- form:procedure:7187b87eae3e",
+            "<-refused-for- the first attempt of 2 task(s)",
+            "which read specs/procedure/procedure.schema.json /properties/expected/description: \"written before it runs\"; library method-concentration-decay: \"the predictions\""
+        ],
+        "about": [
+            "rule:procedure:expected",
+            "statement:contract:8b426033c0b7",
+            "statement:contract:63d895f69226",
+            "form:procedure:7187b87eae3e"
+        ],
+        "tasks": 2,
+        "models": {
+            "claude-sonnet-5-5": 2
+        },
+        "evidence": {
+            "code": "expected",
+            "status": "stated",
+            "untold": 0,
+            "told": 2
+        },
+        "recommend": true
+    },
+    "rule": {
+        "code": "expected",
+        "status": "stated",
+        "says": "a test that does not say what it expects to see cannot be told from a fishing trip",
+        "check": {
+            "nonEmpty": "expected"
+        }
+    },
+    "kind": "contract",
+    "target": {
+        "file": "specs/procedure/procedure.schema.json",
+        "pointer": "/properties/expected/description"
+    },
+    "action": "replace",
+    "current": "What the test is expected to show, written before it runs.",
+    "proposed": "What the test is expected to show, written before it runs. Required: this field must not be empty, and the procedure is refused if it is. Write the result you predict if your hypotheses hold, in a sentence or more, so that the test can be told from a fishing trip.",
+    "why": "The guard refuses any procedure whose expected field is empty (check: nonEmpty on expected), because a test that does not say what it expects to see cannot be told from a fishing trip. The present description says only \"written before it runs\": it never says that the field is required or that an empty value is refused. Two tasks by claude-sonnet-5-5 read it and were still refused at their first try. The new text states the one thing the guard checks, that the field is present and not empty, and says what to put in it.",
+    "effect": "Procedures refused at the first try for an empty expected should fall from 2 of 2 tasks to 0 in the replayed cases. The expected field should be non-empty at the first submit.",
+    "changesAcceptance": false,
+    "verification": {
+        "replay": [
+            "experiment validate v2",
+            "experiment validate v3"
+        ],
+        "models": [
+            "claude-sonnet-5-5"
+        ],
+        "tasks": 5,
+        "measure": "expected: share of first procedure submissions refused because expected says nothing (rule nonEmpty on expected); it should be 0 of 5"
+    },
+    "justifications": [
+        {
+            "constant": "verification.tasks",
+            "value": 5,
+            "source": "assumed",
+            "reference": "finding minTasks 5",
+            "reason": "The finding sets a minimum of five tasks. Five replays across the two cases on one model show whether the first-try refusal disappears."
+        }
+    ]
+}

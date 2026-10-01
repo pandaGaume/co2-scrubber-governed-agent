@@ -1,0 +1,59 @@
+{
+  "t-2026-10-01-0001": {
+    "model": "claude-sonnet-5-5",
+    "ended": "contract held after 3 step(s)",
+    "proposal": {
+      "proposalId": "p0001-380dc066",
+      "status": "awaiting-signature"
+    },
+    "steps": [
+      "task.plan:completed",
+      "recommendation.propose:completed/accepted",
+      "task.done:completed"
+    ],
+    "telemetry": {
+      "calls": 3,
+      "input": 7296,
+      "output": 1984,
+      "cacheRead": 18442
+    }
+  },
+  "t-2026-10-01-0002": {
+    "model": "claude-sonnet-5-5",
+    "ended": "contract held after 3 step(s)",
+    "proposal": {
+      "proposalId": "p0002-51eccb4e",
+      "status": "awaiting-signature"
+    },
+    "steps": [
+      "task.plan:completed",
+      "recommendation.propose:completed/accepted",
+      "task.done:completed"
+    ],
+    "telemetry": {
+      "calls": 3,
+      "input": 14084,
+      "output": 1676,
+      "cacheRead": 27663
+    }
+  },
+  "t-2026-10-01-0003": {
+    "model": "claude-sonnet-5-5",
+    "ended": "contract held after 3 step(s)",
+    "proposal": {
+      "proposalId": "p0003-7cfc3ca4",
+      "status": "awaiting-signature"
+    },
+    "steps": [
+      "task.plan:completed",
+      "recommendation.propose:completed/accepted",
+      "task.done:completed"
+    ],
+    "telemetry": {
+      "calls": 3,
+      "input": 19117,
+      "output": 2119,
+      "cacheRead": 27663
+    }
+  }
+}

@@ -74,13 +74,13 @@ What E1 left open is now settled:
 
 | Found | Detector |
 |---|---|
-| `REFERENCE_NOT_A_FACT` refused at the first try of 23 tasks whose texts never said a reference is one id alone. It is stated since by `words.json` (`brief.safetyBounds`) and the justification's schema in `justify.ts`. The divergence between Sonnet and GPT was on a rule stated to neither. | D1, D3 |
+| `REFERENCE_NOT_A_FACT` refused at the first try of 23 tasks (16 since 2026-10-01: an attempt that follows a truncation is no first try, see `../2026-10-01-recommendation-trial`) whose texts never said a reference is one id alone. It is stated since by `words.json` (`brief.safetyBounds`) and the justification's schema in `justify.ts`. The divergence between Sonnet and GPT was on a rule stated to neither. | D1, D3 |
 | `UNKNOWN_UNIT` (the speed declared a Speed) refused at the first try of 3 tasks whose schema never said a property's quantity is the one its register declares. It is stated since. | D1 |
 | `SAFETY_UNJUSTIFIED` (6 tasks, GPT's v10 among them) and `CONSTANT_UNJUSTIFIED` (5 tasks). The rules were stated, but the path convention they assume was not; it is stated since. | D1, D2 |
 | The memory entry Sonnet learned compensates `REFERENCE_NOT_A_FACT`, which no text its failures read stated. It is a gap of the contract, learned instead of written, and now redundant. | D6 |
 | v4 is the model's own mistake, confirmed: the rule was stated and read. | D8 |
 | The analysis form v4 shares with v9 splits task by task: v9 was not given the path convention, v4 was given everything. | (unclassified, per task) |
-| `expected`: stated, read, and refused all the same, in 2 tasks of the first protocol. | D1 |
+| `expected`: stated, read, and refused all the same, in 2 tasks of the first protocol. Withdrawn on 2026-10-01: both followed a submission cut at 4096 tokens, so neither was a first try on the contract (`../2026-10-01-recommendation-trial`). | D1 |
 | A justification's value differing from the value sent: stated, and learned by refusal. | D2, a policy |
 
 ### The repository's workshop
@@ -110,7 +110,7 @@ A finding is closed when the contract states today every rule its tasks were not
 
 - **The forks.**
   - 11 findings are closed: the composite reference, the speed declared a Speed, the path convention, and the divergence and regression around them.
-  - The scripted stand-in writes two recommendations: retire the memory entry Sonnet learned (D6), and add the words of `expected` to its schema description (D1, stated and not followed).
+  - The scripted stand-in writes two recommendations: retire the memory entry Sonnet learned (D6), and add the words of `expected` to its schema description (D1, stated and not followed; a finding withdrawn on 2026-10-01, see `../2026-10-01-recommendation-trial`).
   - The artefacts of the harness (truncations, repeated reads, `procedure.analyse`'s schema refusals) are left to a model.
 - **The repository's workshop.**
   - The scripted stand-in writes a library recommendation for the documents nobody had signed then (D7, `FACT_UNSIGNED`, 5 tasks).

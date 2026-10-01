@@ -1,0 +1,78 @@
+{
+    "id": "rec-5372d1dbbafa",
+    "finding": {
+        "id": "D6:93cf26da851b",
+        "detector": "D6",
+        "class": "contract-gap",
+        "title": "the memory entry \"In the justification of each safety constant, cite as reference only the bare id of the single signed fact that bounds i…\" compensates REFERENCE_NOT_A_FACT, which no text its failures were given stated: a gap of the contract, learned instead of written; stated since, by specs/procedure/words.json /brief/safetyBounds: \"which is the single fact to cite, by its id alone as the reference\"; harness/core/justify.ts: \"Exactly one: for library, one id as library.facts lists it\": the entry is now redundant",
+        "settledBy": null,
+        "path": [
+            "memory:procedure:m-e26243b3d5 -rests-on-> episode:exp4-train/t-2026-09-29-0001, episode:exp4-train/t-2026-09-29-0002",
+            "<-of- attempts -refused-for-> forms -of-> rule:procedure:REFERENCE_NOT_A_FACT",
+            "told: 0, not: 2, not known: 0"
+        ],
+        "about": [
+            "memory:procedure:m-e26243b3d5",
+            "episode:exp4-train/t-2026-09-29-0001",
+            "episode:exp4-train/t-2026-09-29-0002",
+            "rule:procedure:REFERENCE_NOT_A_FACT"
+        ],
+        "tasks": 2,
+        "models": {
+            "claude-sonnet-5-5": 2
+        },
+        "evidence": {
+            "entry": "m-e26243b3d5",
+            "status": "consolidated",
+            "rules": [
+                "REFERENCE_NOT_A_FACT"
+            ],
+            "told": 0,
+            "untold": 2,
+            "unknown": 0,
+            "missing": [
+                "rule:procedure:REFERENCE_NOT_A_FACT"
+            ],
+            "statedNow": [
+                "specs/procedure/words.json /brief/safetyBounds: \"which is the single fact to cite, by its id alone as the reference\"",
+                "harness/core/justify.ts: \"Exactly one: for library, one id as library.facts lists it\""
+            ]
+        },
+        "recommend": true
+    },
+    "rule": {
+        "code": "REFERENCE_NOT_A_FACT",
+        "status": "stated",
+        "note": "the safety card says to cite \"the fact's id as its reference\", which a model read as allowing two ids joined; what the guard accepts, one id and nothing else, is stated by these two since 287f5bc"
+    },
+    "kind": "memory",
+    "target": {
+        "memory": "m-e26243b3d5"
+    },
+    "action": "retire",
+    "current": null,
+    "proposed": "Retire the memory entry m-e26243b3d5 (topic procedure): \"In the justification of each safety constant, cite as reference only the bare id of the single signed fact that bounds it (test.speedFloorPercent for every speed field, test.co2AbortCeilingPpm for the CO2 limit), never a second fact, a datasheet, a comparison sign or a value in the same reference.\" The rule REFERENCE_NOT_A_FACT is now written where the models read: specs/procedure/words.json /brief/safetyBounds (\"which is the single fact to cite, by its id alone as the reference (the facts that support the value and the engineering rationale go in reason)\") and the justification schema of harness/core/justify.ts (\"Exactly one: for library, one id as library.facts lists it (a safety constant's is the one signed fact that bounds it), nothing joined to it\"). No text change is needed; the entry only duplicates them.",
+    "why": "The entry was learned from two refusals (exp4-train t-2026-09-29-0001 and -0002) for REFERENCE_NOT_A_FACT, when no text stated that a reference is exactly one fact id. That was a gap in the contract, filled by memory instead of by writing. Since commit 287f5bc, the procedure brief (words.json /brief/safetyBounds) and the justification schema (justify.ts) both say it: one id, nothing joined, supporting facts in reason. Keeping the entry now duplicates the contract. It also risks drifting from it: it hard-codes fact ids such as test.speedFloorPercent, which the state already gives per constant.",
+    "effect": "The finding's counts go from told 0 / not told 2 to the rule being told by the contract and not by memory. With the entry retired, REFERENCE_NOT_A_FACT refusals in procedure tasks should stay at zero for claude-sonnet-5-5 on the replayed cases, as they were with the entry. The guard's acceptance does not change.",
+    "changesAcceptance": false,
+    "verification": {
+        "replay": [
+            "experiment train t1",
+            "experiment train t2"
+        ],
+        "models": [
+            "claude-sonnet-5-5"
+        ],
+        "tasks": 5,
+        "measure": "REFERENCE_NOT_A_FACT: the number of procedure submissions refused because a safety-constant reference is not exactly one signed fact id, with the entry retired, compared with the two original failures. Success is none refused for this rule across the replays."
+    },
+    "justifications": [
+        {
+            "constant": "verification.tasks",
+            "value": 5,
+            "source": "assumed",
+            "reference": "the harness's minimum of 5 tasks for a recommendation (state minTasks)",
+            "reason": "Two cases replayed on one model; 5 runs is the minimum to see whether the refusal recurs without the entry."
+        }
+    ]
+}
