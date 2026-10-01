@@ -646,6 +646,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     for (const f of evaluation.findings) g.addFinding(f.id, { detector: f.detector, class: f.class, title: f.title }, f.about);
                     // The findings recommended on already (E3): the recommendation on the library's proposals shelf, signed or not.
                     const listed = await client().call("library", "list", {});
+                    if (!listed.ok) throw new Error(`the library cannot be read, so which findings are recommended on is not known: ${listed.error}`);
                     const docs = new Map(((listed.output as { documents?: Array<{ id: string; recommendation?: boolean; signature?: { valid?: boolean } | null }> } | undefined)?.documents ?? []).filter((d) => d.recommendation).map((d) => [d.id, d]));
                     const recommended = Object.fromEntries(evaluation.findings.filter((f) => docs.has(recommendationIdOf(f))).map((f) => [f.id, { id: recommendationIdOf(f), signed: docs.get(recommendationIdOf(f))?.signature?.valid === true }]));
                     return { ...evaluation, recommended, forks: listForks().map((f) => ({ id: f.id, createdAt: f.createdAt, parent: f.parent })).sort((a, b) => a.createdAt.localeCompare(b.createdAt)) };
@@ -664,6 +665,8 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     const g = harnessGraphOf(args.forks);
                     const evaluation = evaluate(g);
                     const listed = await client().call("library", "list", {});
+                    // Unread, the shelf would look empty, and a finding recommended on already would be asked again.
+                    if (!listed.ok) throw new Error(`the library cannot be read, so which findings are recommended on is not known: ${listed.error}`);
                     const proposed = new Set(((listed.output as { documents?: Array<{ id: string; recommendation?: boolean }> } | undefined)?.documents ?? []).filter((d) => d.recommendation).map((d) => d.id));
                     const open = evaluation.findings
                         // A finding the factory can answer: a kind its class takes, with what that kind changes (a text, the entry, a document).

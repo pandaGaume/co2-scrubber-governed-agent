@@ -93,7 +93,8 @@ export interface Asked {
     targets: Target[];
     memory: { id: string; topic: string; rule: string; status: string } | null;
     library: { documents: string[] } | null;
-    rule: { code: string; status: string; note?: string; says?: string } | null;
+    /** The rule the finding is of: its code, its words, and what the guard checks (a signed rule's check, or a refusal it makes). */
+    rule: { code: string; status: string; note?: string; says?: string; check?: JsonValue; example?: string } | null;
     /** The cases to replay: the requests of the finding's tasks. */
     cases: string[];
     models: string[];

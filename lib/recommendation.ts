@@ -38,6 +38,9 @@ export function askedFor(g: HarnessGraph, f: Finding): Asked {
         const file = statement.bag?.file ? String(statement.bag.file) : null;
         if (!file) return;
         const pointer = statement.bag?.pointer ? String(statement.bag.pointer) : undefined;
+        // A text a recommendation of the contract can change: a value of a JSON file by its pointer, or a document whole. Code states
+        // a rule too (a schema's description written in it), but is no text to replace; given whole, it only weighs on the model.
+        if (!(pointer && file.endsWith(".json")) && !file.endsWith(".md")) return;
         const key = `${file}#${pointer ?? ""}`;
         if (!targets.has(key)) targets.set(key, { file, ...(pointer ? { pointer } : {}), text: textNow(file, pointer), why });
     };
@@ -78,7 +81,17 @@ export function askedFor(g: HarnessGraph, f: Finding): Asked {
         targets: [...targets.values()].filter((t) => t.text !== null),
         memory: entry ? { id: String(entry.bag?.id), topic: String(entry.bag?.topic), rule: String(entry.bag?.rule ?? ""), status: String(entry.bag?.status ?? "") } : null,
         library: f.class === "library-gap" ? { documents: ((f.evidence as { documents?: string[] }).documents ?? []).map(String) } : null,
-        rule: rule ? { code: String(rule.bag?.code), status: String(rule.bag?.status), ...(rule.bag?.note ? { note: String(rule.bag.note) } : {}), ...(rule.bag?.says ? { says: String(rule.bag.says) } : {}) } : null,
+        // The rule, and what the guard checks: a recommendation says what is enforced, never a rule of its own.
+        rule: rule
+            ? {
+                  code: String(rule.bag?.code),
+                  status: String(rule.bag?.status),
+                  ...(rule.bag?.note ? { note: String(rule.bag.note) } : {}),
+                  ...(rule.bag?.says ? { says: String(rule.bag.says) } : {}),
+                  ...(rule.bag?.check ? { check: rule.bag.check as JsonValue } : {}),
+                  ...(rule.bag?.example ? { example: String(rule.bag.example) } : {}),
+              }
+            : null,
         cases,
         models: Object.keys(f.models),
         measures: [...rules.map((r) => String(r.bag?.code)), ...(f.form ? [f.form.shape] : [])],

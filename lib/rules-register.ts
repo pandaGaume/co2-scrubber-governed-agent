@@ -39,6 +39,8 @@ export interface RegisteredRule {
     signed: boolean;
     /** What it is about when it is the library rather than the contract (D7). */
     concerns?: "library";
+    /** What the guard checks, for a rule of the signed document: its entry, less its id, kind and words. */
+    check?: Record<string, unknown>;
 }
 
 export interface Register {
@@ -94,7 +96,7 @@ export function loadRegister(topic: string): Register | null {
     }));
     const format = readJson<{ rulesDocument?: string }>(fromRoot("specs", topic, "format.json"));
     const document = format?.rulesDocument ? readJson<{ rules: SignedRuleFile[] }>(fromRoot("docs", "library", `${format.rulesDocument}.rules.json`)) : null;
-    const signed = (code: string, kind: string, says: string | undefined): RegisteredRule => {
+    const signed = (code: string, kind: string, says: string | undefined, check?: Record<string, unknown>): RegisteredRule => {
         const entry = spec.signed?.[code];
         return {
             code,
@@ -102,6 +104,7 @@ export function loadRegister(topic: string): Register | null {
             match: [...(says ? [new RegExp(`^${escape(kind)}: .*${escape(firstClause(says))}`)] : []), ...(entry?.older ?? []).map((m) => new RegExp(m))],
             ...(says ? { says } : {}),
             ...(entry?.examples ? { examples: entry.examples } : {}),
+            ...(check ? { check } : {}),
             states: entry?.states ?? [],
             applies: entry?.applies ?? [],
             status: entry?.status ?? (entry?.states?.length ? "stated" : "gap"),
@@ -110,7 +113,8 @@ export function loadRegister(topic: string): Register | null {
         };
     };
     for (const r of document?.rules ?? []) {
-        rules.push(signed(r.id, r.kind, r.says));
+        const { id: _id, kind: _kind, says: _says, ...check } = r as SignedRuleFile & Record<string, unknown>;
+        rules.push(signed(r.id, r.kind, r.says, check));
         if (r.watch?.unread) rules.push(signed(`${r.id}.unread`, r.watch.unread.kind, r.watch.unread.says));
         if (r.watch?.blocked) rules.push(signed(`${r.id}.blocked`, r.watch.blocked.kind ?? r.kind, r.watch.blocked.says));
     }

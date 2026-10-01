@@ -53,7 +53,14 @@ export class Broker {
     session(slot: string): Promise<McpSession> {
         let s = this.sessions.get(slot);
         if (!s) {
-            s = connectMcp(this.base, slot, this.identity, this.headers);
+            const opening = connectMcp(this.base, slot, this.identity, this.headers);
+            // A session that could not be opened is not kept (2026-10-01): a slot not yet published when a client first asks for it
+            // (the station at startup, before the library) failed every later call of that client with the same "fetch failed".
+            // The next call opens it again; a tool call is never sent twice for it.
+            opening.catch(() => {
+                if (this.sessions.get(slot) === opening) this.sessions.delete(slot);
+            });
+            s = opening;
             this.sessions.set(slot, s);
         }
         return s;
