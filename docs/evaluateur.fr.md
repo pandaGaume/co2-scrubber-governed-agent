@@ -585,3 +585,48 @@ Coût : 198 000 tokens lus et 31 000 écrits, environ un dollar.
 - Un reasoner lit mieux les corrections que les détecteurs, et il dit ce qu'il ne voit pas au lieu de l'inventer, sauf deux fois.
 - Ses erreurs viennent du dossier : un dossier fixe ne suffit pas. Il lui faut les outils en lecture prévus par E5 : le pas tel que le modèle l'a reçu et envoyé, la raison d'arrêt, le profil, les textes et le code du guard à la version de la tâche, et la structure des forks.
 - Ses affirmations restent à vérifier par le harness : « message vrai » est vérifiable en lisant le guard à la version de la tâche, et c'est ce que doivent faire les prédicats d'E5.1.
+
+## E5.1, fait (2026-10-01)
+
+Le langage des prédictions et son exécuteur : `lib/predicates.ts`, testé par `tests/predicates.test.ts`. Un prédicat est évalué par le harnais sur le graphe et ses sources, jamais par un modèle. Il rend vrai, faux ou inconnu, avec ce qu'il a observé, les nœuds du graphe qui le montrent, et ce qu'il a lu hors du graphe (un fichier à un commit, une signature).
+
+**Les douze prédicats.** Les huit de la conception, plus trois que l'essai avec Sonnet a demandés, plus un pour la coupure elle-même :
+
+| Prédicat | Ce qu'il vérifie |
+|---|---|
+| `outcome-at` (tâche, pas, issue) | l'issue du pas : coupé, refusé par le harnais, refusé par le guard, accepté, terminé, en échec |
+| `preceded-by` (tâche, pas, issue) | l'issue de la tentative précédente sur la même famille de capacités |
+| `sent` (tâche, pas, pointeur, comparaison, valeur) | ce que le modèle a envoyé ; un segment `[clé=valeur]` choisit l'élément d'une liste, par exemple `/justifications/[constant=steps.1.speedPercent]/value` |
+| `in-state` (tâche, pas, pointeur) | ce que le modèle a reçu contient ce champ, sur trois niveaux |
+| `refused-with` (tâche, pas, règle ou phrase) | le refus relève de cette règle du registre, ou contient ces mots |
+| `stated-at` (règle, convention ou phrase, version) | énoncé dans les textes à la version de la tâche, ou aujourd'hui |
+| `read-before` (tâche, document) | lu avant la première soumission |
+| `signed` (document, moment) | signé aujourd'hui ; ou, pour une tâche, par une signature antérieure à la tâche qui lie le document tel que la version de la tâche le contenait |
+| `fact` (identifiant, version, comparaison) | la bibliothèque contient ce fait à cette version, avec cette valeur |
+| `run-setting` (tâche, réglage, comparaison, valeur) | les réglages du manifeste (depuis E5.0), sinon le profil à la version de la tâche, vérifié par son empreinte ; sans limite dans le profil, les 4096 du wire Anthropic |
+| `rate` (forme, modèle, empreinte, comparaison, part) | la part des tâches refusées pour cette forme |
+| `same-form` (tâches, forme) | toutes ces tâches ont été refusées pour cette forme |
+
+**Inconnu, jamais deviné.** Plusieurs situations rendent « inconnu » :
+- une tâche dont la version n'est pas connue (l'atelier du dépôt avant E0) ;
+- un pas où aucun modèle n'a rien reçu ;
+- un pointeur plus profond que ce qui est gardé ;
+- une signature faite après la tâche : une signature antérieure qu'elle aurait remplacée ne se verrait pas ;
+- un document qui n'est plus signé.
+
+Une prédiction mal formée (prédicat ou argument inconnu, type faux, argument manquant) est refusée avec ce qui ne va pas : `predictionProblems`.
+
+**Ce qu'il a fallu ajouter**
+- **Le graphe donne la source de chaque tâche** : son dossier, sa version des textes, ce qu'elle a lu d'abord.
+- **`digestOf`** calcule l'empreinte d'un document tel qu'un lecteur le donne, par exemple à un commit. `documentDigest` ne change pas.
+- **Le corpus garde, à chaque pas décidé par un modèle, les champs de l'état reçu**, sur trois niveaux et sans leurs valeurs, codés comme ce qui a changé depuis le pas précédent. Seuls les `trace.jsonl` changent. Les deux corpus passent de 2,8 à 4 Mo.
+
+**Vérifié sur les cas réels étiquetés**
+- **`D2:8cba`**
+  - la décroissance justifiée sous `steps.1` au refus, puis sous `steps.2` au retry, et `steps.1` à 30 : une renumérotation ;
+  - le refus disait « is not a fact of the library » alors que la référence nommait `test.speedFloorPercent`, un fait de la bibliothèque à la version de la tâche ;
+  - la règle « un identifiant » et la convention de chemin, énoncées nulle part à la version de la tâche, et énoncées aujourd'hui.
+- **`D4:d77a`** : la soumission de Sonnet coupée, avec une limite de 4096 tokens, le défaut du wire Anthropic, puisque le profil n'en fixait aucune.
+- **`D5:c6d7`** : 2 tâches sur 9, puis 5 sur 6, sous les deux empreintes que D5 compare.
+
+**Ce qui reste pour E5.2** : l'usine de diagnostic (son topic, son garde, sa doublure scriptée) et ses outils de lecture, qui pourront s'appuyer sur ces prédicats. Le garde refusera notamment une prédiction qui ne fait que redire la piste.
