@@ -44,13 +44,14 @@ export function scriptedProposal(asked: Asked): Omit<Proposal, "verification" | 
             effect: "the rule is read in the contract by every model, with or without the memory; the entry's mistake stays at zero",
             changesAcceptance: false,
         };
-    if (asked.library?.documents.length && kinds.includes("library"))
+    const unsigned = asked.library?.documents.find((d) => !asked.library?.signatures?.[d]?.valid);
+    if (unsigned && kinds.includes("library"))
         return {
             kind: "library",
-            target: { library: asked.library.documents[0] },
+            target: { library: unsigned },
             action: "sign",
             current: null,
-            proposed: `A person reads ${asked.library.documents[0]} and signs it, or says which of its facts must change first.`,
+            proposed: `A person reads ${unsigned} and signs it, or says which of its facts must change first.`,
             why: asked.finding.title,
             effect: "the facts of the document can be cited; the refusals for its signature stop",
             changesAcceptance: false,

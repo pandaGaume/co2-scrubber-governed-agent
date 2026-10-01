@@ -32,7 +32,8 @@
         "library": "the document {got} is not one the finding is about ({documents})",
         "replay": "the verification replays the finding's cases: {unknown} are not among them ({cases})",
         "tasks": "the verification replays {tasks} task(s): {min} at least",
-        "measure": "the verification measures what the finding is about: name {measures}"
+        "measure": "the verification measures what the finding is about: name {measures}",
+        "signed": "the document {document} is signed already ({by}, {at}): a signature asked again changes nothing"
     },
     "openQuestions": {
         "plan": "the plan: the recommendation is written here (task.plan)",

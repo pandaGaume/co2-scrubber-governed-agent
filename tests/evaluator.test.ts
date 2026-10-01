@@ -27,6 +27,7 @@ import { fromRepository } from "../lib/paths.js";
 import { guardWordsOf } from "../lib/working-memory.js";
 import { loadRegister } from "../lib/rules-register.js";
 import { PROCEDURE_TOPIC } from "../harness/topics/procedure/index.js";
+import { signDocument } from "../harness/lib/signatures.js";
 
 const READINGS = { procedure: { judges: PROCEDURE_TOPIC.judges ?? [], digest: PROCEDURE_TOPIC.digest, guardWords: guardWordsOf(fromRepository("specs", "procedure", "words.json")), register: loadRegister("procedure") } };
 const CORPUS = fromRepository("tests", "fixtures", "evaluator");
@@ -282,5 +283,37 @@ describe("the evaluator's reading of a refusal and of a correction", () => {
         const memory = g.nodesOf(H.statement).filter((s) => s.bag?.kind === "memory");
         assert.equal(memory.length, 1);
         assert.match(String(memory[0].bag?.text), /^In the justification of each safety constant, cite as reference only the bare id/);
+    });
+});
+
+describe("a gap of the library closed once its documents are signed (D7)", () => {
+    const workshop = mkdtempSync(path.join(tmpdir(), "evaluator-library-"));
+    const sigDir = mkdtempSync(path.join(tmpdir(), "evaluator-signatures-"));
+    const saved = process.env.LIBRARY_SIGNATURES_DIR;
+    process.env.LIBRARY_SIGNATURES_DIR = sigDir;
+    after(() => {
+        if (saved === undefined) delete process.env.LIBRARY_SIGNATURES_DIR;
+        else process.env.LIBRARY_SIGNATURES_DIR = saved;
+        rmSync(workshop, { recursive: true, force: true });
+        rmSync(sigDir, { recursive: true, force: true });
+    });
+    // Two tasks refused for citing a fact of a document nobody had signed, as Haiku's were on 28 September.
+    for (const id of ["t-2026-09-28-0001", "t-2026-09-28-0002"]) {
+        mkdirSync(path.join(workshop, id));
+        const steps = [
+            { n: 1, capability: "procedure.submit", input: {}, outcome: "refused", judged: "refused", reason: 'procedure refused: justification: steps.1.speedPercent: the fact scrubber.minimumSpeedElevated is in "scrubber-1-datasheet", which no person has signed as valid: cite instead a fact of a signed document that bounds this constant' },
+            { n: 2, capability: "procedure.submit", input: {}, outcome: "completed", judged: "accepted", reason: null },
+        ];
+        writeFileSync(path.join(workshop, id, "manifest.json"), JSON.stringify({ taskId: id, topic: "procedure", startedAt: `2026-09-28T1${id.slice(-1)}:00:00Z`, provider: { model: "claude-haiku-4-5" }, steps }));
+    }
+
+    it("named by its refusals, recommended on while unsigned; signed since, nothing left to recommend", () => {
+        const before = evaluate(new HarnessGraph(workshop, READINGS)).findings.find((f) => f.detector === "D7")!;
+        assert.deepEqual([before.evidence.code, before.evidence.documents, before.recommend], ["FACT_UNSIGNED", ["scrubber-1-datasheet"], true]);
+        signDocument("scrubber-1-datasheet", "signatory-test", { sigDir });
+        const after = evaluate(new HarnessGraph(workshop, READINGS)).findings.find((f) => f.detector === "D7")!;
+        assert.equal(after.recommend, false);
+        assert.match(after.title, /signed since: nothing left to recommend/);
+        assert.match(String((after.evidence.closedSince as string[])[0]), /^scrubber-1-datasheet signed by signatory-test at /);
     });
 });

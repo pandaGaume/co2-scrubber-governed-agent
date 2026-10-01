@@ -11,6 +11,7 @@ import type { JsonValue } from "@spiky-panda/harness";
 import { fromRoot } from "./paths.js";
 import { H, shortSha, type HarnessGraph, type HarnessNode } from "./harness-graph.js";
 import type { Finding } from "./evaluator.js";
+import { signatureOf } from "../harness/lib/signatures.js";
 import { textNow, type Asked, type Target } from "../harness/topics/recommendation/index.js";
 
 /** A recommendation's id: one per finding, the same whenever the finding is found again. */
@@ -73,14 +74,26 @@ export function askedFor(g: HarnessGraph, f: Finding): Asked {
 
     const entry = nodes.find((n) => n.type === H.memoryEntry);
     const rule = rules[0];
-    const cases = [...new Set(tasks.map((t) => t.bag?.requestedBy).filter((x): x is string => typeof x === "string" && x.length > 0))];
+    // The cases to replay: the requests, when who asked tells them apart (an experiment's tasks); the tasks themselves otherwise
+    // (a station or a scenario asks every task: its name is no case).
+    const requests = [...new Set(tasks.map((t) => t.bag?.requestedBy).filter((x): x is string => typeof x === "string" && x.length > 0))];
+    const distinct = new Set(tasks.map((t) => String(t.bag?.case ?? t.id))).size;
+    const cases = requests.length === distinct ? requests : tasks.map((t) => `${t.bag?.workshop ? `${String(t.bag.workshop)}/` : ""}${String(t.bag?.taskId)}`);
     const conventions = topics.flatMap((t) => Object.entries(readJson<{ keys?: Record<string, string> }>(fromRoot("specs", t, "format.json"))?.keys ?? {}).map(([list, key]) => ({ list, key })));
     return {
         id: recommendationIdOf(f),
         finding: { id: f.id, detector: f.detector, class: f.class, title: f.title, settledBy: f.settledBy, path: f.path, about: f.about, tasks: f.tasks.length, models: f.models, evidence: f.evidence as JsonValue, recommend: f.recommend },
         targets: [...targets.values()].filter((t) => t.text !== null),
         memory: entry ? { id: String(entry.bag?.id), topic: String(entry.bag?.topic), rule: String(entry.bag?.rule ?? ""), status: String(entry.bag?.status ?? "") } : null,
-        library: f.class === "library-gap" ? { documents: ((f.evidence as { documents?: string[] }).documents ?? []).map(String) } : null,
+        library:
+            f.class === "library-gap"
+                ? (() => {
+                      const documents = ((f.evidence as { documents?: string[] }).documents ?? []).map(String);
+                      // Whether each is signed now, and by whom: a document signed since needs no signature recommended.
+                      const signatures = Object.fromEntries(documents.map((d) => { try { const s = signatureOf(d); return [d, s ? { by: s.by, at: s.at, valid: s.valid } : null]; } catch { return [d, null]; } }));
+                      return { documents, signatures };
+                  })()
+                : null,
         // The rule, and what the guard checks: a recommendation says what is enforced, never a rule of its own.
         rule: rule
             ? {

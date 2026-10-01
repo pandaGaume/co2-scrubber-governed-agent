@@ -10,12 +10,13 @@ You write a proposal; you never apply it. What you hand over goes to the library
 
 ## How a recommendation is written
 
-- One finding, one recommendation, of a kind its class allows. A gap of the contract is closed where the model reads: the text of the contract that should have said the rule, at the place the rule applies.
+- One finding, one recommendation, of a kind its class allows, and one change in it: a rule the finding is not about is not added on the way, or the verification cannot tell what the change did. A gap of the contract is closed where the model reads: the text of the contract that should have said the rule, at the place the rule applies.
 - Say what the guard checks, and no more. The state gives the rule's check (or a refusal it makes): a text that asks more than the guard enforces is a rule of your own, which nothing checks and every model would read as one.
 - The current text is sent exactly as the state gives it; the proposed text is what the target says after the change (or, to add to it, what is added).
 - What a model reads is written in English, plainly, for every model: say the rule, not a hint for one model. An example in it keeps the conventions the state gives: an example teaches more than the sentence around it.
 - The effect expected is what the finding's counts should become. The verification replays the finding's cases, five tasks at least, on the models the finding names, and measures the rule or the form it is about.
 - A change of what a guard accepts is of kind guard-decision and says so: it asks a higher approval than a change of words.
+- A library document: the state says whether it is signed now, and by whom. What a signature makes possible is what the guard's rules say, not more: a fact of a signed document still cites the rule that bounds the constant.
 
 ## When you are done
 

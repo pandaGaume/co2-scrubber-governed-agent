@@ -333,3 +333,18 @@ L'usine a tourné avec Sonnet 5.5 sur trois constats, dans des forks à part (`d
 - **Le Broker** gardait une session qu'il n'avait pas pu ouvrir. La station avait demandé la bibliothèque au démarrage, avant qu'elle soit publiée, et ne l'a plus jamais atteinte. Ses trois recommandations, acceptées par le garde de l'usine, ont été refusées pour « fetch failed ». La session ratée est maintenant rouverte à l'appel suivant, et la station refuse de continuer quand elle ne peut pas lire le rayon.
 - **L'usine recevait trop et pas assez.** Elle recevait du code entier comme cible (`justify.ts`, 28 000 caractères), mais pas ce que le garde vérifie. Pour `expected`, le modèle a écrit une règle à lui (des prédictions chiffrées), alors que le garde ne vérifie que la présence du champ. Elle ne reçoit maintenant que des textes qu'une recommandation peut changer, avec la vérification du garde, et son prompt dit de recommander ce que le garde applique, rien de plus. Au second passage : `expected` dit exactement la règle, et la tâche de mémoire passe de 86 000 à 19 000 jetons lus.
 - **D1 comptait comme premier essai une tentative qui suivait une troncature.** Le constat `expected` venait de deux tâches dont la soumission avait été coupée à 4096 jetons ; le refus portait sur la révision envoyée ensuite. Une tentative qui suit une troncature ou un refus du harnais n'est plus un premier essai sur le contrat. `expected` n'est plus un constat, et les comptes de D1 baissent (16 au lieu de 23, 2 au lieu de 3).
+
+Un troisième passage a porté sur des constats plus durs (l'atelier du dépôt, les tâches de Haiku).
+
+- **La règle de surveillance**, dite nulle part (une lacune du registre), a été bien énoncée.
+- **La recommandation de bibliothèque était fausse.** Elle proposait de signer une fiche déjà signée, et prétendait qu'une fois signée, un de ses faits pourrait justifier la vitesse d'une étape, alors que la règle `floor.step` l'interdit.
+- **Les troncatures** ont reçu une réponse trop large : plusieurs règles ajoutées à une seule recommandation.
+
+Les corrections :
+
+- D7 se ferme quand ses documents sont signés depuis ;
+- l'usine reçoit l'état des signatures ;
+- le garde refuse de faire signer un document déjà signé ;
+- les cas à rejouer sont les tâches quand le demandeur ne les distingue pas ;
+- le prompt demande un seul changement par constat.
+

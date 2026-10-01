@@ -188,7 +188,9 @@ describe("the recommendation's guard, on what a model could send", () => {
         assert.deepEqual(asked.targets.map((t) => `${t.file} ${t.pointer ?? ""}`), ["specs/procedure/words.json /capabilities/analyse"]);
         assert.deepEqual(asked.measures, ["Invalid capability arguments: data/evidence must be array"]);
         assert.deepEqual(asked.conventions, [{ list: "steps", key: "n" }, { list: "abort", key: "id" }]);
-        assert.deepEqual([...asked.cases].sort(), ["experiment validate v4", "experiment validate v5", "experiment validate v9"]);
+        // Who asked does not tell these tasks apart (the first protocol's share one name for different requests): the cases are the tasks.
+        assert.equal(asked.cases.length, analyse.tasks.length);
+        assert.ok(asked.cases.includes("exp7-fixes/t-2026-09-30-0004"));
         assert.deepEqual(problems({}), []);
     });
 
@@ -211,6 +213,14 @@ describe("the recommendation's guard, on what a model could send", () => {
         assert.match(problems({ kind: "memory" }).join(" "), /a finding of class harness-artefact takes a recommendation of kind contract, guard-message, guard-decision, not "memory"/);
         assert.match(problems({ changesAcceptance: true }).join(" "), /changesAcceptance true/);
         assert.deepEqual(problems({ kind: "guard-decision", changesAcceptance: true }).filter((x) => /changesAcceptance/.test(x)), []);
+    });
+
+    it("a library document signed already is not recommended for a signature", () => {
+        const library = { ...asked, finding: { ...asked.finding, class: "library-gap" }, library: { documents: ["scrubber-1-datasheet"], signatures: { "scrubber-1-datasheet": { by: "signatory-test", at: "2026-09-28T14:04:18Z", valid: true } } } };
+        const sign = { ...good, kind: "library" as const, target: { library: "scrubber-1-datasheet" }, action: "sign", current: null, proposed: "A person signs scrubber-1-datasheet." };
+        assert.match(recommendationProblems(sign, library).join(" "), /the document scrubber-1-datasheet is signed already \(signatory-test, 2026-09-28T14:04:18Z\)/);
+        const unsigned = { ...library, library: { documents: ["scrubber-1-datasheet"], signatures: { "scrubber-1-datasheet": null } } };
+        assert.deepEqual(recommendationProblems(sign, unsigned).filter((x) => /signed already/.test(x)), []);
     });
 
     it("a verification that replays the finding's cases, five tasks at least, and measures what the finding is about", () => {

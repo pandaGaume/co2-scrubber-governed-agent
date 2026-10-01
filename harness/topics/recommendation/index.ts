@@ -56,7 +56,7 @@ export const RECOMMENDATION_WORD_KEYS = [
     "intention", "capabilities.propose", "brief.plan", "brief.write", "brief.refused", "brief.handOver", "requirements.missing",
     "guard.refused", "guard.id", "guard.accepted", "guard.finding", "guard.kind", "guard.action", "guard.target", "guard.stale", "guard.same",
     "guard.empty", "guard.language", "guard.dash", "guard.convention", "guard.decision", "guard.memory", "guard.library", "guard.replay",
-    "guard.tasks", "guard.measure", "openQuestions.plan", "openQuestions.write", "openQuestions.handOver", "validate.none", "validate.notAccepted",
+    "guard.tasks", "guard.measure", "guard.signed", "openQuestions.plan", "openQuestions.write", "openQuestions.handOver", "validate.none", "validate.notAccepted",
     "validate.notTheFile",
 ];
 
@@ -92,7 +92,8 @@ export interface Asked {
     finding: FindingRef;
     targets: Target[];
     memory: { id: string; topic: string; rule: string; status: string } | null;
-    library: { documents: string[] } | null;
+    /** The library documents the finding is about, and whether each is signed now. */
+    library: { documents: string[]; signatures?: Record<string, { by: string; at: string; valid: boolean } | null> } | null;
     /** The rule the finding is of: its code, its words, and what the guard checks (a signed rule's check, or a refusal it makes). */
     rule: { code: string; status: string; note?: string; says?: string; check?: JsonValue; example?: string } | null;
     /** The cases to replay: the requests of the finding's tasks. */
@@ -237,6 +238,8 @@ export function recommendationProblems(input: unknown, asked: Asked, format: Rec
     }
     if (kind === "memory" && (!asked.memory || target.memory !== asked.memory.id)) problems.push(w("guard.memory", { got: String(target.memory ?? ""), memory: asked.memory?.id ?? "none" }));
     if (kind === "library" && !(asked.library?.documents ?? []).includes(String(target.library))) problems.push(w("guard.library", { got: String(target.library ?? ""), documents: (asked.library?.documents ?? []).join(", ") || "none" }));
+    const signature = kind === "library" ? asked.library?.signatures?.[String(target.library)] : null;
+    if (kind === "library" && p.action === "sign" && signature?.valid) problems.push(w("guard.signed", { document: String(target.library), by: signature.by, at: signature.at }));
     if ((kind === "guard-decision") !== (p.changesAcceptance === true)) problems.push(w("guard.decision"));
     // What a model reads is English, without the dash the house style forbids, and its examples keep the conventions.
     const accented = [...new Set(proposed.match(/[À-ÖØ-öø-ÿ]/g) ?? [])];

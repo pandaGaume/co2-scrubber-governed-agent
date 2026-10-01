@@ -38,6 +38,7 @@ import { H, shortSha, type HarnessGraph, type HarnessNode } from "./harness-grap
 import { stated, type Statement } from "./rules-register.js";
 import { shapesOf } from "./reflection.js";
 import { problemsOfReason } from "../harness/core/problems.js";
+import { signatureOf } from "../harness/lib/signatures.js";
 
 export const EVALUATOR_FILE = "specs/harness/evaluator.json";
 
@@ -632,19 +633,22 @@ export function evaluate(g: HarnessGraph, cfg: EvaluatorConfig = evaluatorConfig
         }
         const documents = [...named].sort();
         const code = String(rule.bag?.code);
+        // Signed since, every document it names: what the library lacked then it holds now, nothing left to recommend.
+        const signedNow = documents.map((d) => ({ d, s: (() => { try { return signatureOf(d); } catch { return null; } })() })).filter((x) => x.s?.valid);
+        const closed = documents.length > 0 && signedNow.length === documents.length;
         findings.push({
             id: `D7:${shortSha(String(rule.id))}`,
             detector: "D7",
             class: "library-gap",
             settledBy: null,
-            title: `${code}: refused in ${ts.length} task(s)${documents.length ? `, about ${documents.join(", ")}` : ""}: the library, not the model or the contract`,
+            title: `${code}: refused in ${ts.length} task(s)${documents.length ? `, about ${documents.join(", ")}` : ""}: the library, not the model or the contract${closed ? "; signed since: nothing left to recommend" : ""}`,
             form: ruleForms.length === 1 ? formRef(ruleForms[0]) : null,
             tasks: ids(ts),
             models: r.models(ts),
             about: [String(rule.id), ...ruleForms.map((f) => String(f.id))],
             path: [`${rule.id} (concerns the library) <-of- ${ruleForms.map((f) => f.id).join(", ")}`, `<-refused-for- ${ts.length} task(s)`, ...(documents.length ? [`naming ${documents.join(", ")}`] : [])],
-            evidence: { code, documents },
-            recommend: true,
+            evidence: { code, documents, ...(signedNow.length ? { closedSince: signedNow.map((x) => `${x.d} signed by ${x.s!.by} at ${x.s!.at}`) } : {}) },
+            recommend: !closed,
         });
     }
 
