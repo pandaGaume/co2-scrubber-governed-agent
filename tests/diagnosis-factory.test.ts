@@ -28,6 +28,9 @@ import { loadRegister } from "../lib/rules-register.js";
 import { diagnosisAskedFor, diagnosisIdOf } from "../lib/diagnosis.js";
 import { diagnosisCheck, diagnosisRecord, readingsOf, type Diagnosis, type DiagnosisPrediction } from "../harness/topics/diagnosis/index.js";
 import { TOPIC_DEFINITIONS } from "../harness/core/runner.js";
+import { loadDataset } from "../lib/diagnosis-dataset.js";
+import { calibrationRows, diagnosesOfDataset, recheck } from "../lib/calibration.js";
+import { loadLabels } from "../lib/evaluator-labels.js";
 
 const PORT = 3211;
 const CORPUS = fromRepository("tests", "fixtures", "evaluator");
@@ -140,6 +143,7 @@ describe("the diagnosis factory through the station, on its script", () => {
     let operator: Broker;
     let forksDir = "";
     let recipesDir = "";
+    let datasetDir = "";
     const tasks: string[] = [];
     const ok = async <T>(slot: string, tool: string, args: Record<string, unknown> = {}): Promise<T> => {
         const r = await operator.call(slot, tool, args);
@@ -175,16 +179,20 @@ describe("the diagnosis factory through the station, on its script", () => {
         process.env.BIOMED_PROVIDER = "simulated";
         recipesDir = mkdtempSync(path.join(tmpdir(), "recipes-diagnosis-"));
         process.env.FACTORY_RECIPES_DIR = recipesDir;
+        // What the diagnosis tasks record goes to a directory of the test's own, never the repository's dataset.
+        datasetDir = mkdtempSync(path.join(tmpdir(), "dataset-diagnosis-"));
+        process.env.DIAGNOSIS_DATASET_DIR = datasetDir;
         ({ broker: local, slots } = await startAllOrFail(PORT));
         operator = new Broker(local.httpBase, { name: "operator-test", version: "0", locale: "en" });
     });
     after(async () => {
-        for (const k of ["FORKS_DIR", "SPEECH_PROVIDER", "BIOMED_PROVIDER", "FACTORY_RECIPES_DIR"]) delete process.env[k];
+        for (const k of ["FORKS_DIR", "SPEECH_PROVIDER", "BIOMED_PROVIDER", "FACTORY_RECIPES_DIR", "DIAGNOSIS_DATASET_DIR"]) delete process.env[k];
         await operator?.close();
         for (const s of slots ?? []) await s.close().catch(() => undefined);
         await local?.stop();
         for (const t of tasks) rmSync(taskDir(t), { recursive: true, force: true });
         rmSync(recipesDir, { recursive: true, force: true });
+        rmSync(datasetDir, { recursive: true, force: true });
         rmSync(forksDir, { recursive: true, force: true });
     });
 
@@ -220,7 +228,7 @@ describe("the diagnosis factory through the station, on its script", () => {
         assert.deepEqual([weighed[0].confidence.weighed.length, weighed[0].confidence.cap?.why, weighed[0].confidence.decision], [1, "single", "person"]);
     });
 
-    it("a refuted diagnosis comes back to the factory as a refusal, and the script stops there", async () => {
+    it("a refuted diagnosis comes back to the factory as a refusal; sent again unchanged, it is refused on the same points until the task is stuck", async () => {
         const g = graph();
         const lead = evaluate(g).findings.find((f) => f.detector === "D2" && f.id !== LEAD)!;
         const asked = diagnosisAskedFor(g, lead, FORKS);
@@ -241,5 +249,33 @@ describe("the diagnosis factory through the station, on its script", () => {
         assert.match(String(refused?.reason), /prediction 1 \(cause\) expected true, the harness observed false/);
         assert.match(String(refused?.reason), /prediction 2 \(current\) expected false, the harness observed true/);
         assert.match(String(refused?.reason), /prediction 3 \(rules-out, ruling out "a fact the library holds"\) expected false/);
+    });
+
+    it("every diagnosis task recorded once it ended, however it ended: what the model sent and what the harness observed, for a calibration made again without a model", () => {
+        const entries = loadDataset(datasetDir);
+        assert.deepEqual(entries.map((e) => e.taskId).sort(), [...tasks].sort(), "one entry per task, the failed one too");
+        const kept = entries.filter((e) => e.station?.status === "diagnosed");
+        assert.equal(kept.length, 2);
+        for (const e of kept) {
+            assert.deepEqual([e.corpus, e.lead, e.model, e.family, e.state], ["evaluator", LEAD, "scripted/diagnosis", "scripted", "proposed"]);
+            assert.deepEqual(e.forks, FORKS);
+            assert.match(e.askedSha256, /^[0-9a-f]{64}$/);
+            assert.deepEqual(e.submissions.map((x) => x.refused), [false]);
+            assert.deepEqual((e.accepted as { predictions: Array<{ result: { truth: string } }> }).predictions.map((x) => x.result.truth), ["true", "true", "false"]);
+            assert.ok(e.steps.some((x) => x.capability === "diagnosis.submit" && x.input));
+        }
+        const failed = entries.find((e) => e.state === "failed")!;
+        // Refused three times on the same points, the task stuck: every refused submission kept, with its words.
+        assert.deepEqual([failed.accepted, failed.station, failed.submissions.map((x) => x.refused)], [null, null, [true, true, true]]);
+        assert.match(String(failed.submissions[0].reason), /expected true, the harness observed false/);
+        // The calibration, from the entries and the labels alone: the scripted diagnosis says what the label of D2:8cba says.
+        const rows = calibrationRows(diagnosesOfDataset(entries), loadLabels(fromRepository("tests", "fixtures", "evaluator", "labels.json")));
+        assert.equal(rows.length, 1);
+        assert.deepEqual([rows[0].corpus, rows[0].lead, rows[0].right, rows[0].confidence.cap?.why], ["evaluator", LEAD, true, "single"]);
+        // Checked again as the code is now, on the corpus it was made on: the same results, without the model.
+        const again = recheck(kept[0], graph(), { registers: { procedure: loadRegister("procedure") } });
+        assert.ok("record" in again);
+        assert.deepEqual(again.record.predictions.map((x) => x.result?.truth), ["true", "true", "false"]);
+        assert.deepEqual(recheck(failed, graph(), { registers: {} }), { why: "no diagnosis was accepted in this task" });
     });
 });

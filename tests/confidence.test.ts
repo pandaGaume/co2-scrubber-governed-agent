@@ -18,6 +18,8 @@ import { diagnosisAskedFor } from "../lib/diagnosis.js";
 import { agreementOf, causeNodes, confidenceOf, diagnosisConfig, type Diagnosed, type DiagnosisConfig } from "../lib/confidence.js";
 import { diagnosisCheck, diagnosisRecord, readingsOf, type Diagnosis, type DiagnosisPrediction } from "../harness/topics/diagnosis/index.js";
 import { TOPIC_DEFINITIONS } from "../harness/core/runner.js";
+import { bands, calibrationRows, thresholds } from "../lib/calibration.js";
+import { loadLabels } from "../lib/evaluator-labels.js";
 
 const CORPUS = fromRepository("tests", "fixtures", "evaluator");
 const T10 = "exp3-baseline/t-2026-09-29-0010";
@@ -132,5 +134,28 @@ describe("the confidence in a lead's diagnoses", () => {
         const cfg = diagnosisConfig();
         assert.deepEqual([cfg.calibrated, cfg.threshold], [false, null]);
         assert.throws(() => confidenceOf([], 2), /no diagnosis to weigh/);
+    });
+});
+
+describe("the calibration, offline: the diagnoses recorded, joined with the labels", () => {
+    const labels = loadLabels(fromRepository("tests", "fixtures", "evaluator", "labels.json"));
+
+    it("a lead counts once, right when its diagnosis says the label's verdict, class and currency; each told apart", () => {
+        const [row] = calibrationRows(new Map([["evaluator|D2:8cba194716f8", [sonnet, gpt]]]), labels);
+        assert.deepEqual([row.lead, row.label?.class, row.label?.current, row.label?.verdict], ["D2:8cba194716f8", "contract-gap", "closed", "right"]);
+        assert.deepEqual([row.matches, row.right], [{ verdict: true, class: true, current: true }, true]);
+        const [wrong] = calibrationRows(new Map([["evaluator|D2:8cba194716f8", [contrary]]]), labels);
+        assert.deepEqual([wrong.matches, wrong.right], [{ verdict: false, class: false, current: true }, false]);
+        const [unlabelled] = calibrationRows(new Map([["nowhere|D2:8cba194716f8", [sonnet]]]), labels);
+        assert.deepEqual([unlabelled.label, unlabelled.right], [null, null]);
+    });
+
+    it("the bands and the thresholds: how often it is right, and what a threshold would send on (never two that disagree)", () => {
+        const rows = calibrationRows(new Map([["evaluator|D2:8cba194716f8", [sonnet, gpt]], ["evaluator|D2:0ed9f72ce86c", [sonnet, contrary]]]), labels);
+        const b = bands(rows);
+        assert.deepEqual(b.map((x) => x.leads), [0, 0, 1, 1]);
+        assert.deepEqual(b.find((x) => x.from === 0.75), { from: 0.75, to: 1, leads: 1, right: 1, precision: 1 });
+        const t = thresholds(rows, 4);
+        assert.deepEqual(t.map((x) => [x.threshold, x.sent]), [[0, 1], [0.25, 1], [0.5, 1], [0.75, 1], [1, 0]]);
     });
 });

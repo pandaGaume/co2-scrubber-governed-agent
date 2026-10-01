@@ -111,4 +111,10 @@ export interface TopicDefinition {
      * never from the model's sentence, which stays a note beside it.
      */
     claims?(progress: Progress, task: TaskFile["task"]): Record<string, JsonValue>;
+    /**
+     * What the topic keeps of a task once it has ended, however it ended (2026-10-01, E5.3): the diagnosis topic records what its
+     * model sent and what the harness observed, so a calibration is computed again without paying a model again. Given the task's
+     * directory in the workshop; what it throws is logged, never the task's failure.
+     */
+    record?(taskDir: string): void;
 }

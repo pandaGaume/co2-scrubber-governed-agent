@@ -16,7 +16,8 @@
  *
  *   plan, nothing done     task.plan: the diagnosis is made here, the output missing, to the topic "diagnosis";
  *   build, after the plan  diagnosis.submit;
- *   after a refusal        task.fail with the guard's reasons;
+ *   after a refusal        the same diagnosis again: a script does not revise, and the harness ends the task stuck after three
+ *                          refusals on the same points;
  *   after the acceptance   task.done with the accepted file.
  */
 import type { JsonValue, PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";

@@ -24,6 +24,7 @@ import { H, HarnessGraph, type HarnessNode, type HarnessReading } from "../../..
 import { CONTRACT_TEXTS, evaluatePrediction, isContractText, PREDICATES, predictionProblems, reducedStep, type PredicateContext, type Prediction, type PredictionResult } from "../../../lib/predicates.js";
 import { loadRegister, statementText, textAt, type Register, type TextVersion } from "../../../lib/rules-register.js";
 import { guardWordsOf } from "../../../lib/working-memory.js";
+import { recordDiagnosisTask } from "../../../lib/diagnosis-dataset.js";
 import { withBase } from "../../core/base.js";
 import type { LocalCapability } from "../../core/capabilities.js";
 import { loadPlaybook, sayingText, type Evidence } from "../../core/conduct.js";
@@ -516,5 +517,9 @@ export const DIAGNOSIS_TOPIC: TopicDefinition = {
     brief: briefOf,
     shelf: false,
     quantities: false,
+    // What the model sent and the harness observed, kept for the calibration whatever the task ended as (E5.3, lib/diagnosis-dataset.ts).
+    record: (dir) => {
+        recordDiagnosisTask(dir);
+    },
 };
 

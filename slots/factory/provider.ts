@@ -360,6 +360,12 @@ function launch(httpBase: string, taskId: string, topic: Topic, builder: Builder
             writeFileSync(manifestFile, JSON.stringify({ ...manifest, state: "failed", ended: reason, endedAt: new Date().toISOString() }, null, 2) + "\n");
         })
         .finally(() => {
+            // What the topic keeps of the ended task, however it ended (a diagnosis's record for the dataset, E5.3).
+            try {
+                TOPIC_DEFINITIONS[topic]?.record?.(taskDir(taskId));
+            } catch (e) {
+                log(`[factory] task ${taskId}: the record failed: ${errorMessage(e)}`);
+            }
             announce(taskId);
             void broker.close();
         });
