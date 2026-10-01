@@ -728,3 +728,27 @@ Un désaccord envoie les deux diagnostics à une personne, quel que soit le seui
 **Ce qui reste**
 - E5.4, la calibration réelle : deux modèles de familles différentes diagnostiquent les pistes du corpus étiqueté. On mesure la précision par tranche de confiance, on fixe les poids et le seuil, puis on vérifie sur un corpus réservé.
 - Les hypothèses déjà réfutées ne sont pas encore reprises d'une tâche à l'autre pour un même modèle. Le champ existe et reste vide ; jamais celles de l'autre modèle, pour garder l'aveugle.
+
+## Le jeu de données des diagnostics (2026-10-01)
+
+Un modèle se paie une fois ; la calibration se refait autant qu'il faut. Chaque tâche de diagnostic est enregistrée à sa fin, quelle que soit son issue (acceptée, refusée, bloquée), dans `datasets/diagnosis/`, un fichier par tâche (`lib/diagnosis-dataset.ts`).
+
+**Ce que garde une entrée**, lu dans les fichiers de la tâche, jamais sur la parole d'un modèle :
+- ce que l'usine a reçu, en entier, avec son empreinte ;
+- les forks lus, et le corpus étiqueté qu'ils forment quand c'en est un ;
+- le modèle et ses réglages, et les commits du harnais ;
+- chaque pas : ce que le modèle a envoyé, l'issue, les mots du refus, les tokens ;
+- chaque diagnostic soumis, refusé ou accepté ;
+- le diagnostic accepté, avec le résultat de chaque prédiction ;
+- ce que la station en a décidé.
+
+L'état lu par le modèle à chaque pas reste dans la trace : il se reconstruit à partir des forks et des commits, alors que ce que le modèle a envoyé ne se reconstruit pas. Une entrée n'est jamais réécrite.
+
+**Qui écrit**
+- La fabrique, à la fin de chaque tâche, par un crochet générique des topics (`record`).
+- `scripts/evaluator/dataset.mjs` balaie les ateliers et les forks pour les tâches manquées.
+
+**La calibration hors ligne** (`lib/calibration.ts`, `scripts/evaluator/calibrate.mjs`) joint les entrées aux étiquettes.
+- Une piste compte une fois. Elle est juste quand son diagnostic dit le verdict, la classe et l'actualité de l'étiquette, chacun montré à part pour voir où un diagnostic rate de peu.
+- Le script donne la précision par tranche de confiance et au-dessus de chaque seuil (deux diagnostics en désaccord ne passent jamais). On peut l'exécuter sous `specs/harness/diagnosis.json` ou sous une autre configuration.
+- `--recheck` revérifie chaque diagnostic accepté avec le code tel qu'il est, sur son corpus. Un changement des prédicats ou du garde se mesure donc aussi sans modèle.
