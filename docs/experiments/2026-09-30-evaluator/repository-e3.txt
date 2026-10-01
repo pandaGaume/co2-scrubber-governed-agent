@@ -1,0 +1,62 @@
+the repository's workshop: {"tasks":72,"models":{"claude-haiku-4-5-20251001":71,"claude-opus-5-5":1},"forms":47,"ignored":{"scripted/procedure":57}}
+D4 harness-artefact
+    18 call(s) cut at the output limit in 4 task(s) (procedure.submit): unfinished arguments no guard judged
+D4 harness-artefact
+    the harness refused "Stale decision: observed world changed before execution" 6 times in 2 tasks, before any guard (biomed.presence, factory.inventory, library.read, procedure.submit, workspace.list, workspace.read)
+D4 harness-artefact
+    the harness refused "Invalid capability arguments: data/expected must be object" 5 times in 3 tasks, before any guard (procedure.submit)
+D4 harness-artefact
+    the harness refused "plan refused: required output … (Volume" 23 times in 3 tasks, before any guard (task.plan)
+D4 harness-artefact
+    the harness refused "Invalid capability arguments: data/abort/#/threshold must be number" 7 times in 2 tasks, before any guard (procedure.submit)
+D4 harness-artefact
+    the harness refused "device refused: no file … in task t####" 19 times in 2 tasks, before any guard (workspace.read)
+D4 harness-artefact
+    the harness refused "* with the same input was the previous step, and completed" 23 times in 2 tasks, before any guard (library.methods, library.read)
+D4 harness-artefact
+    the harness refused "Invalid capability arguments: data must have required property 'version'" 2 times in 2 tasks, before any guard (procedure.submit)
+D4 harness-artefact
+    the harness refused "no procedure is kept to revise (none checked yet in this task, or kept longer than # minutes)" 2 times in 2 tasks, before any guard (procedure.revise)
+D5 regression
+    monitoring: lab is occupied and FE#, FE# would not be monitored: 2 of 8 tasks of claude-haiku-4-5-20251001 before, 3 of 3 after the harness changed: tools (no text kept before E0)
+D8 model-error (to settle: D1 cannot: the version of the contract these tasks ran under is not known (manifests before E0, outside a fork)) (nothing to recommend)
+    abort: no … abort condition: in one task (station), answered by no common correction and read no differently by another model: the model's own mistake
+D8 model-error (to settle: D1 cannot: the version of the contract these tasks ran under is not known (manifests before E0, outside a fork)) (nothing to recommend)
+    floor: step # commands # %, below the procedure's own minimum of # %: in one task (station), answered by no common correction and read no differently by another model: the model's own mistake
+D8 model-error (to settle: D1 cannot: the version of the contract these tasks ran under is not known (manifests before E0, outside a fork)) (nothing to recommend)
+    justification: *: … is not a library document or fact read in this task: read it, or cite another source: in one task (scenario), answered by no common correction and read no differently by another model: the model's own mistake
+D8 model-error (to settle: D1 cannot: the version of the contract these tasks ran under is not known (manifests before E0, outside a fork)) (nothing to recommend)
+    justification: *: … is not a bound of the guard's envelope: in one task (scenario), answered by no common correction and read no differently by another model: the model's own mistake
+D8 model-error (to settle: D1 cannot: the version of the contract these tasks ran under is not known (manifests before E0, outside a fork)) (nothing to recommend)
+    justification: *: … is not a library document or fact read in this task (method-concentration-decay, nasa-scrubber-test-protocols, *, *, *, *, *, *, *, *, *, *: in one task (scenario), answered by no common correction and read no differently by another model: the model's own mistake
+D8 model-error (to settle: D1 cannot: the version of the contract these tasks ran under is not known (manifests before E0, outside a fork)) (nothing to recommend)
+    justification: *: … is not a library document or fact read in this task (method-concentration-decay, nasa-scrubber-test-protocols, *, *, *, *, *, *, *, *: in one task (scenario), answered by no common correction and read no differently by another model: the model's own mistake
+D8 model-error (to settle: D1 cannot: the version of the contract these tasks ran under is not known (manifests before E0, outside a fork)) (nothing to recommend)
+    justification: * = # is a safety constant: it is justified by a fact of a signed library document, not by a calculation: in one task (scenario), answered by no common correction and read no differently by another model: the model's own mistake
+D8 model-error (to settle: D1 cannot: the version of the contract these tasks ran under is not known (manifests before E0, outside a fork)) (nothing to recommend)
+    justification: *: the justification says #, what you sent sets #: in one task (scenario), answered by no common correction and read no differently by another model: the model's own mistake
+D8 model-error (to settle: D1 cannot: the version of the contract these tasks ran under is not known (manifests before E0, outside a fork)) (nothing to recommend)
+    justification: * = # is a safety constant: it is justified by a fact of a signed library document, not by a calculation (* = # m#/min: in one task (scenario), answered by no common correction and read no differently by another model: the model's own mistake
+D8 model-error (to settle: D1 cannot: the version of the contract these tasks ran under is not known (manifests before E0, outside a fork)) (nothing to recommend)
+    justification: * = # is a safety constant: it is justified by a fact of a signed library document, not by a calculation (Qe_eff = # m#/min × # = # m#/min: in one task (scenario), answered by no common correction and read no differently by another model: the model's own mistake
+D8 model-error (to settle: D1 cannot: the version of the contract these tasks ran under is not known (manifests before E0, outside a fork)) (nothing to recommend)
+    justification: * = # cites *, which the signed rules do not bound it by: in one task (scenario), answered by no common correction and read no differently by another model: the model's own mistake
+D7 library-gap
+    FACT_UNSIGNED: refused in 5 task(s), about commissioning-test-safety, scrubber-1-datasheet: the library, not the model or the contract
+unclassified, 47 task(s) [floor.own]: floor: the procedure sets its own minimum speed at # %, below the floor of # %: a procedure may raise the floor, never lower it
+unclassified, 28 task(s) [bounds.abortCeiling]: bounds: the CO# abort limit # ppm is above the ceiling of # ppm
+unclassified, 25 task(s) [duration.ceiling]: duration: the maximum duration # min is above the ceiling of # min
+unclassified, 10 task(s) [bounds.maxBelowAbort]: bounds: the CO# maximum # ppm is not below the abort limit # ppm
+unclassified, 7 task(s) [floor.step]: floor: step # commands # %, below the floor of # %
+unclassified, 17 task(s) [UNKNOWN_QUANTITY]: shape: quantity …: no quantity … in the unit system (Timespan, Temperature, Mass, Power, Voltage, Current, Luminosity, Volume, Area, VolumetricFlow, Angle, Leng
+unclassified, 11 task(s) [monitoring.occupied]: monitoring: lab is occupied and no abort condition reads *
+unclassified, 5 task(s) [floor.stop]: floor: step # stops the scrubber: a test never stops the only scrubber of a volume, it does not restart at once
+unclassified, 5 task(s) [duration.total]: duration: the steps last # min, more than the procedure's maximum of # min
+unclassified, 2 task(s) [abort.required]: abort: no abort condition with id …
+unclassified, 6 task(s) [REFERENCE_NOT_A_FACT]: justification: *: … is not a fact of the library
+unclassified, 2 task(s) [LIBRARY_REF_NOT_READ]: justification: *: … is not a library document or fact read in this task (method-concentration-decay, nasa-scrubber-test-protocols, *, *, *, *, *, *, *
+unclassified, 5 task(s) [FACT_UNSIGNED]: justification: *: the fact * is in …, which no person has signed as valid
+unclassified, 5 task(s) [FACT_NOT_RESPECTED]: justification: * = # does not respect * = # m#/min
+unclassified, 4 task(s) [SAFETY_SOURCE_NOT_LIBRARY]: justification: * = # is a safety constant: it is justified by a fact of a signed library document, not by a measurement
+unclassified, 4 task(s) [SAFETY_UNJUSTIFIED]: justification: * = # is a safety constant with no justification: cite the fact of a signed library document it respects
+unclassified, 2 task(s) [CONSTANT_UNJUSTIFIED]: justification: * = # has no justification: say its source and why

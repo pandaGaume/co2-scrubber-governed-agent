@@ -97,3 +97,24 @@ Three rules are stated nowhere before a refusal. They wait for a person's decisi
 - **`INVALID_ID`:** the characters of a procedure's id.
 
 In the repository's workshop, Haiku was refused 27 times for the second, in 17 tasks. The scripted stand-in was refused 170 more times for it, which the evaluator leaves out. The rule is stated nowhere today; what the texts of 28 September said cannot be read, as above.
+
+## What is open to recommend (E3)
+
+The recommendation factory (`station.recommend`) is asked about one finding at a time. A finding is open when:
+
+- it may be recommended on;
+- its class takes a kind the factory can write (a text it is given, the memory entry, a library document);
+- it has no recommendation yet.
+
+A finding is closed when the contract states today every rule its tasks were not told. It stays listed as "stated since". The raw output is in `forks-e3.txt` and `repository-e3.txt`.
+
+- **The forks.**
+  - 11 findings are closed: the composite reference, the speed declared a Speed, the path convention, and the divergence and regression around them.
+  - The scripted stand-in writes two recommendations: retire the memory entry Sonnet learned (D6), and add the words of `expected` to its schema description (D1, stated and not followed).
+  - The artefacts of the harness (truncations, repeated reads, `procedure.analyse`'s schema refusals) are left to a model.
+- **The repository's workshop.**
+  - The scripted stand-in writes a library recommendation for the documents nobody had signed then (D7, `FACT_UNSIGNED`, 5 tasks).
+  - It also writes a contract recommendation for the monitoring regression of Haiku (D5): it adds the words of `monitoring.occupied`, a gap of the register.
+  - The artefacts are left to a model.
+
+No recommendation was asked of a model in this run; the factory's tests use its script.
