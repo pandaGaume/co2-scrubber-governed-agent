@@ -15,8 +15,6 @@
  *    handles both.
  */
 import type { McpTool, McpToolResult } from "@cyanmycelium/mcp-core";
-import { request as httpRequest } from "node:http";
-import { request as httpsRequest } from "node:https";
 
 export const PROTOCOL_VERSION = "2025-06-18";
 
@@ -26,11 +24,21 @@ export const PROTOCOL_VERSION = "2025-06-18";
  * the harness's graph, synchronously, for several seconds) then wrote its next request on a connection the server had closed, and
  * read ECONNRESET: "fetch failed", at the station's first call after a long reading. Whether the server had read that request
  * cannot be told, so it is never sent again; it is sent on a connection no one closed. On the same machine a connection per call
- * costs nothing that shows.
+ * costs nothing that shows. In a browser (the pages bundle this client), fetch as before: node:http is not there, and is loaded by
+ * a name the bundler does not resolve.
  */
-function send(endpoint: string, init: { method: string; headers: Record<string, string>; body?: string; signal?: AbortSignal }): Promise<Response> {
+const IN_NODE = typeof process !== "undefined" && Boolean(process.versions?.node);
+type NodeRequest = typeof import("node:http").request;
+let modules: Promise<{ http: NodeRequest; https: NodeRequest }> | null = null;
+const nodeRequests = (): Promise<{ http: NodeRequest; https: NodeRequest }> => {
+    const named = (name: string) => import(/* a name the bundler leaves alone */ `node:${name}`) as Promise<{ request: NodeRequest }>;
+    return (modules ??= Promise.all([named("http"), named("https")]).then(([h, s]) => ({ http: h.request, https: s.request })));
+};
+async function send(endpoint: string, init: { method: string; headers: Record<string, string>; body?: string; signal?: AbortSignal }): Promise<Response> {
+    if (!IN_NODE) return fetch(endpoint, { method: init.method, headers: init.headers, ...(init.body !== undefined ? { body: init.body } : {}), ...(init.signal ? { signal: init.signal } : {}) });
     const url = new URL(endpoint);
-    const request = url.protocol === "https:" ? httpsRequest : httpRequest;
+    const requests = await nodeRequests();
+    const request = url.protocol === "https:" ? requests.https : requests.http;
     return new Promise((resolve, reject) => {
         const headers = { ...init.headers, Connection: "close", ...(init.body !== undefined ? { "Content-Length": String(Buffer.byteLength(init.body)) } : {}) };
         const req = request(url, { method: init.method, headers, agent: false, ...(init.signal ? { signal: init.signal } : {}) }, (res) => {

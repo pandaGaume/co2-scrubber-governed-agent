@@ -46,6 +46,38 @@ var import_harness4 = __toESM(require_harness(), 1);
 
 // harness/lib/mcp-http.ts
 var PROTOCOL_VERSION = "2025-06-18";
+var IN_NODE = typeof process !== "undefined" && Boolean(process.versions?.node);
+var modules = null;
+var nodeRequests = () => {
+  const named = (name) => import(
+    /* a name the bundler leaves alone */
+    `node:${name}`
+  );
+  return modules ??= Promise.all([named("http"), named("https")]).then(([h, s]) => ({ http: h.request, https: s.request }));
+};
+async function send(endpoint, init) {
+  if (!IN_NODE) return fetch(endpoint, { method: init.method, headers: init.headers, ...init.body !== void 0 ? { body: init.body } : {}, ...init.signal ? { signal: init.signal } : {} });
+  const url = new URL(endpoint);
+  const requests = await nodeRequests();
+  const request = url.protocol === "https:" ? requests.https : requests.http;
+  return new Promise((resolve, reject) => {
+    const headers = { ...init.headers, Connection: "close", ...init.body !== void 0 ? { "Content-Length": String(Buffer.byteLength(init.body)) } : {} };
+    const req = request(url, { method: init.method, headers, agent: false, ...init.signal ? { signal: init.signal } : {} }, (res) => {
+      const chunks = [];
+      res.on("data", (c) => chunks.push(c));
+      res.on("error", reject);
+      res.on("end", () => {
+        const h = new Headers();
+        for (const [k, v] of Object.entries(res.headers)) if (v !== void 0) h.set(k, Array.isArray(v) ? v.join(", ") : v);
+        const status = res.statusCode ?? 500;
+        resolve(new Response([204, 205, 304].includes(status) ? null : Buffer.concat(chunks), { status, statusText: res.statusMessage ?? "", headers: h }));
+      });
+    });
+    req.on("error", reject);
+    if (init.body !== void 0) req.write(init.body);
+    req.end();
+  });
+}
 var McpRpcError = class extends Error {
   constructor(message, rpc) {
     super(message);
@@ -81,7 +113,7 @@ async function connectMcpAt(endpoint, slot, identity, extraHeaders = {}, options
     const headers = { "Content-Type": "application/json", Accept: "application/json, text/event-stream", ...extraHeaders };
     if (sessionId2) headers["Mcp-Session-Id"] = sessionId2;
     const bound = timeoutMs ?? options.timeoutMs;
-    const response = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify(body), ...bound ? { signal: AbortSignal.timeout(bound) } : {} });
+    const response = await send(endpoint, { method: "POST", headers, body: JSON.stringify(body), ...bound ? { signal: AbortSignal.timeout(bound) } : {} });
     if (!response.ok) {
       const text = await response.text().catch(() => "");
       throw new Error(`${endpoint} answered HTTP ${response.status} ${response.statusText}. ${text.slice(0, 400)}`);
@@ -118,7 +150,7 @@ async function connectMcpAt(endpoint, slot, identity, extraHeaders = {}, options
     callTool: (name, args = {}) => request("tools/call", { name, arguments: args }),
     /** Ends the session. The broker frees it; skipping this only leaks a session. */
     close: async () => {
-      await fetch(endpoint, { method: "DELETE", headers: sessionId ? { "Mcp-Session-Id": sessionId, ...extraHeaders } : extraHeaders }).catch(() => void 0);
+      await send(endpoint, { method: "DELETE", headers: sessionId ? { "Mcp-Session-Id": sessionId, ...extraHeaders } : extraHeaders }).catch(() => void 0);
     }
   };
 }

@@ -37,9 +37,9 @@
         "evidence": 1
     },
     "neighbourhood": {
-        "note": "the lead's nodes and those two links away, at most this many, each node's fields cut at bagChars characters; diagnosis.graph gives a node whole (2026-10-01, E5.4: 45 000 characters of neighbourhood at every call)",
+        "note": "the lead's nodes and those two links away, at most this many, each node's fields cut at bagChars characters; diagnosis.graph gives a node whole (2026-10-01, E5.4: 45 000 characters of neighbourhood at every call, then 34 000; one line a node or a link, 50 nodes)",
         "hops": 2,
-        "maxNodes": 80,
+        "maxNodes": 50,
         "bagChars": 160
     },
     "page": {

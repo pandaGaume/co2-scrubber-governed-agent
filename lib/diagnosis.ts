@@ -43,10 +43,18 @@ function neighbourhood(g: HarnessGraph, start: string[], hops: number, max: numb
             }
         frontier = next;
     }
-    const links: DiagnosisAsked["neighbourhood"]["links"] = [];
-    for (const n of seen.values()) for (const l of g.out(n)) if (l.ofin && seen.has((l.ofin as HarnessNode).id)) links.push({ from: n.id, type: String(l.type), to: (l.ofin as HarnessNode).id });
+    // One line each, the ontology's prefix left out (2026-10-01, E5.4: as objects, 34 000 characters at every call, the links most of it).
+    const bare = (type: unknown): string => String(type).replace(/^harness\./, "");
+    const links: string[] = [];
+    for (const n of seen.values()) for (const l of g.out(n)) if (l.ofin && seen.has((l.ofin as HarnessNode).id)) links.push(`${n.id} ${bare(l.type)} ${(l.ofin as HarnessNode).id}`);
     const cut = DIAGNOSIS_FORMAT.neighbourhood.bagChars;
-    return { nodes: [...seen.values()].map((n) => ({ id: n.id, type: String(n.type), ...(short(n.bag, cut) ? { bag: short(n.bag, cut) } : {}) })), links };
+    return {
+        nodes: [...seen.values()].map((n) => {
+            const bag = short(n.bag, cut);
+            return `${n.id} [${bare(n.type)}]${bag === undefined ? "" : ` ${typeof bag === "string" ? bag : JSON.stringify(bag)}`}`;
+        }),
+        links: [...new Set(links)],
+    };
 }
 
 const statementOf = (n: HarnessNode): Statement => ({ ...(n.bag?.library ? { library: String(n.bag.library) } : { file: String(n.bag?.file) }), ...(n.bag?.pointer ? { pointer: String(n.bag.pointer) } : {}), phrase: String(n.bag?.phrase) });

@@ -90,7 +90,8 @@ export interface DiagnosisAsked {
     /** The forks the lead was found in, read together (null: the factory's own workshop). */
     forks: string[] | null;
     lead: LeadRef;
-    neighbourhood: { nodes: Array<{ id: string; type: string; bag?: JsonValue }>; links: Array<{ from: string; type: string; to: string }> };
+    /** One line each: a node as "id [type] its fields cut", a link as "from type to". */
+    neighbourhood: { nodes: string[]; links: string[] };
     /** The rules of the register the lead touches: their status, what the guard checks, where they are stated today. */
     rules: Array<{ code: string; status: string; signed: boolean; says?: string; check?: JsonValue; note?: string; statedToday: Array<{ where: string; holds: boolean }> }>;
     today: { commit: string | null; signatures: Record<string, JsonValue>; profiles: Record<string, JsonValue> };

@@ -82,9 +82,10 @@ describe("the diagnosis factory's guard, on the corpus", () => {
         assert.equal(asked.lead.form?.id, lead.form?.id);
         const rule = asked.rules.find((r) => r.code === "REFERENCE_NOT_A_FACT");
         assert.ok(rule && rule.statedToday.length && rule.statedToday.every((s) => s.holds), "stated today, where the register says");
-        const ids = new Set(asked.neighbourhood.nodes.map((n) => n.id));
+        const ids = new Set(asked.neighbourhood.nodes.map((n) => n.split(" ")[0]));
         for (const id of [lead.form!.id, `task:${T10}`, "rule:procedure:REFERENCE_NOT_A_FACT"]) assert.ok(ids.has(id), id);
-        assert.ok(asked.neighbourhood.links.every((l) => ids.has(l.from) && ids.has(l.to)));
+        assert.ok(asked.neighbourhood.links.every((l) => ids.has(l.split(" ")[0]) && ids.has(l.split(" ").at(-1)!)));
+        assert.ok(asked.neighbourhood.nodes.length <= 50 && JSON.stringify(asked.neighbourhood).length < 20_000, "what a call carries of it");
     });
 
     it("the diagnosis the labels give, accepted: every prediction confirmed by the harness, the record counting them", () => {
