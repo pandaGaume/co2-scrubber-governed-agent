@@ -389,7 +389,7 @@ function outcomeOf(g: HarnessGraph, t: { node: HarnessNode; source: TaskSource }
 }
 
 /** A value at a JSON Pointer, a segment [key=value] picking the element of a list whose key has that value. */
-function resolve(document: unknown, pointer: string): { found: boolean; value: unknown } {
+export function resolve(document: unknown, pointer: string): { found: boolean; value: unknown } {
     let v = document;
     if (pointer === "") return { found: true, value: v };
     for (const raw of pointer.split("/").slice(1)) {

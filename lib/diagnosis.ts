@@ -45,7 +45,8 @@ function neighbourhood(g: HarnessGraph, start: string[], hops: number, max: numb
     }
     const links: DiagnosisAsked["neighbourhood"]["links"] = [];
     for (const n of seen.values()) for (const l of g.out(n)) if (l.ofin && seen.has((l.ofin as HarnessNode).id)) links.push({ from: n.id, type: String(l.type), to: (l.ofin as HarnessNode).id });
-    return { nodes: [...seen.values()].map((n) => ({ id: n.id, type: String(n.type), ...(short(n.bag) ? { bag: short(n.bag) } : {}) })), links };
+    const cut = DIAGNOSIS_FORMAT.neighbourhood.bagChars;
+    return { nodes: [...seen.values()].map((n) => ({ id: n.id, type: String(n.type), ...(short(n.bag, cut) ? { bag: short(n.bag, cut) } : {}) })), links };
 }
 
 const statementOf = (n: HarnessNode): Statement => ({ ...(n.bag?.library ? { library: String(n.bag.library) } : { file: String(n.bag?.file) }), ...(n.bag?.pointer ? { pointer: String(n.bag.pointer) } : {}), phrase: String(n.bag?.phrase) });

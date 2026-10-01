@@ -296,7 +296,10 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             // What was read stays in the state as evidence (a read is not repeated for what the state holds); the topic's own results (an evaluation) live in its part of the state.
             if (call.result.ok && !/^(task|graph)\./.test(call.id)) {
                 const arg = call.input && typeof call.input === "object" && !Array.isArray(call.input) ? (call.input as Record<string, unknown>) : {};
-                const named = ["id", "path", "type", "quantity", "query"].map((k) => arg[k]).find((v) => typeof v === "string") as string | undefined;
+                // Named by its id, path, type, quantity or query; otherwise by its arguments' plain values (2026-10-01, E5.4: two reads of
+                // a diagnosis, a step of one task then of another, filed under one key, each erased the other, and the model read them again).
+                const scalars = Object.values(arg).filter((v) => ["string", "number", "boolean"].includes(typeof v)).map(String).join(" ").slice(0, 200);
+                const named = (["id", "path", "type", "quantity", "query"].map((k) => arg[k]).find((v) => typeof v === "string") as string | undefined) ?? (scalars || undefined);
                 const key = named ? `${call.id} ${named}` : call.id;
                 delete progress.evidence[key];
                 progress.evidence[key] = { at: new Date().toISOString(), summary: compact.summary };
@@ -339,7 +342,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             taskId,
             progress,
             () => topic.brief?.(progress, task) ?? "",
-            () => reasoningStateOf({ task, progress, budget, nextActions: capabilities.catalogue.map((c) => c.id), shelf: topic.shelf === false ? [] : progress.context.shelf, telemetry: progress.context.telemetry, contracts: progress.context.contracts, runsSpent: topic.runsSpent?.(progress), topic: topic.state?.(progress, task), memory: memoryNow() }),
+            () => reasoningStateOf({ task, progress, budget, nextActions: capabilities.catalogue.map((c) => c.id), shelf: topic.shelf === false ? [] : progress.context.shelf, telemetry: progress.context.telemetry, contracts: progress.context.contracts, runsSpent: topic.runsSpent?.(progress), shown: topic.observation ? [topic.observation] : [], topic: topic.state?.(progress, task), memory: memoryNow() }),
             () => topic.key?.(progress) ?? "",
             contextMode,
         ),

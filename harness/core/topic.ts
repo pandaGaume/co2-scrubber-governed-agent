@@ -71,6 +71,11 @@ export interface TopicDefinition {
     intention?(task: TaskFile["task"], generic: Intention): Intention;
     /** The prompt file of the topic, relative to the repository (`specs/<topic>/prompt.md`), for a builder that is a language model; the reasoner adds the socle's (`base.ts`, `socle.md`). */
     prompt?: string;
+    /**
+     * The field of the task's observations the topic's own state shows already (its format's `observation`): left out of the
+     * invariants, which would show it a second time (2026-10-01, E5.4: 48 000 characters of a diagnosis's lead, twice at every call).
+     */
+    observation?: string;
     /** What the topic says to its model, as templates of its spec (`specs/<topic>/words.json`, `words.ts`), and the keys it asks for: the conformance test checks the file holds them. */
     words?: { words: import("./words.js").Words; keys: string[] };
     /** The builder when the request names none: the model when the topic has a prompt, unless the topic says the script (the onnx fit the board asks for without a key). */

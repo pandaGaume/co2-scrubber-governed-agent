@@ -110,6 +110,8 @@ export interface StateInputs {
     contracts?: ContractReport;
     /** The runs already spent by the topic, when it counts them. */
     runsSpent?: number;
+    /** The observations the topic's own state shows already: not shown again in the invariants. */
+    shown?: string[];
     topic?: TopicState;
     /** The memory this step reads, when there is any (the runner's context builder). */
     memory?: JsonValue | null;
@@ -139,7 +141,7 @@ export function knownInvariants(task: TaskFile["task"]): KnownInvariant[] {
 }
 
 /** The invariants of a task: what the model needs of the task file without reading it. */
-export function invariantsOf(task: TaskFile["task"], shelf: StateInvariants["shelf"], telemetry: StateInvariants["telemetry"], contracts?: ContractReport): StateInvariants {
+export function invariantsOf(task: TaskFile["task"], shelf: StateInvariants["shelf"], telemetry: StateInvariants["telemetry"], contracts?: ContractReport, shown: ReadonlyArray<string> = []): StateInvariants {
     const req = (task.requirements ?? {}) as Record<string, unknown>;
     const obs = (task.observations ?? {}) as Record<string, unknown>;
     // Who is observed, one line each by the application's template (specs/harness/application.json, observed).
@@ -155,7 +157,7 @@ export function invariantsOf(task: TaskFile["task"], shelf: StateInvariants["she
           })
         : [];
     const other: Record<string, JsonValue> = {};
-    for (const [k, v] of Object.entries(obs)) if (k !== "persons" && k !== "devices") other[k] = v as JsonValue;
+    for (const [k, v] of Object.entries(obs)) if (k !== "persons" && k !== "devices" && !shown.includes(k)) other[k] = v as JsonValue;
     const thresholds = thresholdsOf(task);
     return {
         objective: {
@@ -184,7 +186,7 @@ export function reasoningStateOf(inputs: StateInputs): ReasoningState {
             iterationsLeft: Math.max(0, budget.iterations - progress.iteration),
             runsLeft: typeof budget.twinPoints === "number" ? Math.max(0, budget.twinPoints - (inputs.runsSpent ?? 0)) : null,
         },
-        invariants: invariantsOf(task, shelf, telemetry, inputs.contracts) as StateInvariants & Record<string, JsonValue>,
+        invariants: invariantsOf(task, shelf, telemetry, inputs.contracts, inputs.shown) as StateInvariants & Record<string, JsonValue>,
         evidence: Object.fromEntries(Object.entries(progress.evidence).map(([k, e]) => [k, e.summary])),
         hypothesis: topic.hypothesis ?? null,
         lastAction: last ? { capability: last.id, outcome: last.result.outcome, summary: (progress.lastSummary ?? null) as JsonValue, artifact: progress.lastArtifact ?? null } : null,

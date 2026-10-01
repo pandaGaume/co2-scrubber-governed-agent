@@ -142,7 +142,8 @@ export function entryOfTask(dir: string, workshop: string = forkId() ?? "reposit
     };
 }
 
-const fileOf = (dir: string, key: string): string => path.join(dir, `${key.replace(/[^A-Za-z0-9_.-]/g, "__")}.json`);
+// The task by its key and when it started: two workshops (a run apart, another WORKSHOP_DIR) number their tasks alike.
+const fileOf = (dir: string, e: Pick<DatasetEntry, "key" | "startedAt">): string => path.join(dir, `${e.key.replace(/[^A-Za-z0-9_.-]/g, "__")}__${sha256(String(e.startedAt)).slice(0, 8)}.json`);
 
 /**
  * A task's entry written to the dataset, once: an entry kept is never overwritten (what a model sent is a measure, not a draft),
@@ -153,9 +154,9 @@ export function recordDiagnosisTask(taskDir: string, options: { workshop?: strin
     if (!entry) return null;
     const dir = options.dir ?? datasetDir();
     mkdirSync(dir, { recursive: true });
-    const file = fileOf(dir, entry.key);
+    const file = fileOf(dir, entry);
     const kept = readJson<DatasetEntry>(file);
-    if (kept && kept.endedAt && kept.startedAt === entry.startedAt) return { file, written: false };
+    if (kept && kept.endedAt) return { file, written: false };
     writeFileSync(file, `${JSON.stringify(entry, null, 1)}\n`);
     return { file, written: true };
 }

@@ -21,7 +21,7 @@ import * as path from "node:path";
 import { fromRoot, pathFromEnv } from "../../../lib/paths.js";
 import { forkPath, readFork } from "../../../lib/fork.js";
 import { H, HarnessGraph, type HarnessNode, type HarnessReading } from "../../../lib/harness-graph.js";
-import { CONTRACT_TEXTS, evaluatePrediction, isContractText, PREDICATES, predictionProblems, reducedStep, type PredicateContext, type Prediction, type PredictionResult } from "../../../lib/predicates.js";
+import { CONTRACT_TEXTS, evaluatePrediction, isContractText, PREDICATES, predictionProblems, reducedStep, resolve, type PredicateContext, type Prediction, type PredictionResult } from "../../../lib/predicates.js";
 import { loadRegister, statementText, textAt, type Register, type TextVersion } from "../../../lib/rules-register.js";
 import { guardWordsOf } from "../../../lib/working-memory.js";
 import { recordDiagnosisTask } from "../../../lib/diagnosis-dataset.js";
@@ -46,8 +46,8 @@ export interface DiagnosisFormat {
     current: string[];
     roles: Record<Role, string>;
     minimum: { predictions: number; cause: number; current: number; rulesOut: number; evidence: number };
-    neighbourhood: { hops: number; maxNodes: number };
-    text: { maxChars: number };
+    neighbourhood: { hops: number; maxNodes: number; bagChars: number };
+    page: { chars: number; links: number };
 }
 export type Role = "cause" | "current" | "rules-out";
 export const DIAGNOSIS_FORMAT_FILE = "specs/diagnosis/format.json";
@@ -373,48 +373,96 @@ function versionAt(g: HarnessGraph, at: string): TextVersion | { why: string } {
     return version ?? { why: `the version of the texts ${at} ran under is not known` };
 }
 
+/** A page of a text: what fits under the socle's compaction, and where the next one starts. */
+function page(text: string, from: number): { from: number; of: number; text: string; next?: number } {
+    const n = DIAGNOSIS_FORMAT.page.chars;
+    const start = Math.max(0, Math.min(from, text.length));
+    return { from: start, of: text.length, text: text.slice(start, start + n), ...(start + n < text.length ? { next: start + n } : {}) };
+}
+
+/** The outline of a value: its fields with what each holds (a type, a length), never the values themselves. */
+function outline(v: unknown): JsonValue {
+    const of = (x: unknown): string => (Array.isArray(x) ? `list of ${x.length}` : x && typeof x === "object" ? `object, ${JSON.stringify(x).length} characters` : typeof x === "string" ? (x.length > 60 ? `text, ${x.length} characters` : x) : String(x));
+    if (Array.isArray(v)) return { list: v.length, first: v.length ? of(v[0]) : null };
+    if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, of(x)]));
+    return of(v);
+}
+
+/**
+ * The read tools answer in pages (2026-10-01, E5.4): the socle keeps a long answer's first 1 200 characters only, so a whole step
+ * (11 000 characters of a procedure) showed the model its beginning and never the refusal it came for; it read it again and again.
+ */
 function readCapabilities(context: TopicContext): LocalCapability[] {
     const ok = (value: unknown): CapabilityResult => ({ ok: true, output: { outcome: "completed", value: value as JsonValue } });
     const no = (error: string): CapabilityResult => ({ ok: false, error, output: { outcome: "failed" } });
+    const from = (a: { from?: unknown }): number => (Number.isInteger(a.from) ? Number(a.from) : 0);
+    const links = DIAGNOSIS_FORMAT.page.links;
     return [
         {
             id: "diagnosis.graph",
-            description: w("capabilities.graph"),
-            inputSchema: { type: "object", properties: { id: { type: "string", description: "a node's id (task:..., form:..., rule:..., fingerprint:...)" }, type: { type: "string", description: "a node type (harness.form, harness.rule, ...)" } } } as unknown as JsonValue,
+            description: w("capabilities.graph", { links }),
+            inputSchema: { type: "object", properties: { id: { type: "string", description: "a node's id (task:..., form:..., rule:..., fingerprint:...)" }, type: { type: "string", description: "a node type (harness.form, harness.rule, ...)" }, from: { type: "integer", description: "the first link (or node) to show, for the next page" } } } as unknown as JsonValue,
             async execute(input: JsonValue): Promise<CapabilityResult> {
                 const g = await graphOfTask(context);
-                const a = (input ?? {}) as { id?: unknown; type?: unknown };
+                const a = (input ?? {}) as { id?: unknown; type?: unknown; from?: unknown };
+                const f = from(a);
                 if (typeof a.id === "string" && a.id) {
                     const n = g.get(a.id);
                     if (!n) return no(`no node "${a.id}" in the harness's graph`);
-                    return ok({
-                        id: n.id,
-                        type: n.type,
-                        bag: shortBag(n.bag, 2000) ?? null,
-                        out: g.out(n).map((l) => ({ type: l.type ?? null, to: String((l.ofin as HarnessNode | null)?.id) })),
-                        in: g.in(n).map((l) => ({ type: l.type ?? null, from: String((l.oini as HarnessNode | null)?.id) })),
-                    });
+                    const out = g.out(n).map((l) => `${String(l.type)} -> ${String((l.ofin as HarnessNode | null)?.id)}`);
+                    const into = g.in(n).map((l) => `${String(l.type)} <- ${String((l.oini as HarnessNode | null)?.id)}`);
+                    const all = [...out, ...into];
+                    return ok({ id: n.id, type: n.type, bag: shortBag(n.bag, 500) ?? null, links: all.length, from: f, shown: all.slice(f, f + links), ...(f + links < all.length ? { next: f + links } : {}) });
                 }
-                if (typeof a.type === "string" && a.type) return ok({ type: a.type, nodes: g.nodesOf(a.type).slice(0, 200).map((n) => ({ id: n.id, bag: shortBag(n.bag, 300) ?? null })) });
+                if (typeof a.type === "string" && a.type) {
+                    const nodes = g.nodesOf(a.type);
+                    return ok({ type: a.type, nodes: nodes.length, from: f, shown: nodes.slice(f, f + links).map((n) => n.id), ...(f + links < nodes.length ? { next: f + links } : {}) });
+                }
                 return ok(g.summary());
             },
         },
         {
             id: "diagnosis.step",
             description: w("capabilities.step"),
-            inputSchema: { type: "object", properties: { task: { type: "string", description: "a task node id" }, step: { type: "integer", description: "the step number n" } }, required: ["task", "step"] } as unknown as JsonValue,
+            inputSchema: {
+                type: "object",
+                properties: {
+                    task: { type: "string", description: "a task node id" },
+                    step: { type: "integer", description: "the step number n" },
+                    part: { type: "string", enum: ["outline", "reason", "sent", "received"], description: "outline (the default): how it ended and what each part holds; reason: the refusal's words; sent: what the model sent, at pointer; received: the fields of the state it received, under pointer" },
+                    pointer: { type: "string", description: "for sent: a JSON Pointer into the arguments ([key=value] picks a list's element, e.g. /justifications/[constant=steps.1.speedPercent]); for received: a prefix" },
+                    from: { type: "integer", description: "the character (or field) to start at, for the next page" },
+                },
+                required: ["task", "step"],
+            } as unknown as JsonValue,
             async execute(input: JsonValue): Promise<CapabilityResult> {
-                const a = (input ?? {}) as { task?: unknown; step?: unknown };
+                const a = (input ?? {}) as { task?: unknown; step?: unknown; part?: unknown; pointer?: unknown; from?: unknown };
                 const r = reducedStep(await graphOfTask(context), String(a.task ?? ""), Number(a.step));
-                return "why" in r ? no(r.why) : ok(r);
+                if ("why" in r) return no(r.why);
+                const head = { task: r.task, step: r.step, capability: r.capability, outcome: r.outcome };
+                const part = String(a.part ?? "outline");
+                if (part === "reason") return ok({ ...head, reason: r.reason === null ? null : page(r.reason, from(a)) });
+                if (part === "sent") {
+                    const pointer = typeof a.pointer === "string" ? a.pointer : "";
+                    const found = resolve(r.sent, pointer);
+                    if (!found.found) return no(`step ${r.step} sent nothing at ${pointer || "the root"}: its fields are ${JSON.stringify(outline(r.sent))}`);
+                    const text = JSON.stringify(found.value);
+                    return ok({ ...head, pointer, ...(text.length > DIAGNOSIS_FORMAT.page.chars && from(a) === 0 ? { outline: outline(found.value) } : {}), value: page(text, from(a)) });
+                }
+                if (part === "received") {
+                    const prefix = typeof a.pointer === "string" ? a.pointer : "";
+                    const fields = (r.received ?? []).filter((k) => k.startsWith(prefix));
+                    return ok({ ...head, received: r.received === null ? "not kept for this step" : { fields: fields.length, from: from(a), shown: fields.slice(from(a), from(a) + links * 3), ...(from(a) + links * 3 < fields.length ? { next: from(a) + links * 3 } : {}) } });
+                }
+                return ok({ ...head, tokens: r.tokens, reason: r.reason === null ? null : `${r.reason.length} characters (part reason)`, sent: outline(r.sent), received: r.received === null ? "not kept" : `${r.received.length} fields (part received): ${r.received.filter((k) => k.split("/").length === 2).join(", ")}` });
             },
         },
         {
             id: "diagnosis.text",
-            description: w("capabilities.text", { roots: CONTRACT_TEXTS.join(", "), max: DIAGNOSIS_FORMAT.text.maxChars }),
-            inputSchema: { type: "object", properties: { file: { type: "string" }, pointer: { type: "string", description: "a JSON Pointer in the file" }, at: { type: "string", description: "a task node id, or today" }, find: { type: "string", description: "words to show the text around" } }, required: ["file", "at"] } as unknown as JsonValue,
+            description: w("capabilities.text", { roots: CONTRACT_TEXTS.join(", ") }),
+            inputSchema: { type: "object", properties: { file: { type: "string" }, pointer: { type: "string", description: "a JSON Pointer in the file" }, at: { type: "string", description: "a task node id, or today" }, find: { type: "string", description: "words to show the text around" }, from: { type: "integer", description: "the character to start at, for the next page" } }, required: ["file", "at"] } as unknown as JsonValue,
             async execute(input: JsonValue): Promise<CapabilityResult> {
-                const a = (input ?? {}) as { file?: unknown; pointer?: unknown; at?: unknown; find?: unknown };
+                const a = (input ?? {}) as { file?: unknown; pointer?: unknown; at?: unknown; find?: unknown; from?: unknown };
                 const file = String(a.file ?? "");
                 if (!isContractText(file)) return no(`${file} is not a text of the contract (${CONTRACT_TEXTS.join(", ")})`);
                 const version = versionAt(await graphOfTask(context), String(a.at ?? "today"));
@@ -423,11 +471,11 @@ function readCapabilities(context: TopicContext): LocalCapability[] {
                 if (whole === null) return no(`${file} is not there at ${String(a.at)}`);
                 const text = typeof a.pointer === "string" && a.pointer ? statementText({ file, pointer: a.pointer, phrase: "" }, whole) : whole;
                 if (text === null) return no(`no value at ${String(a.pointer)} in ${file} at ${String(a.at)}`);
-                const max = DIAGNOSIS_FORMAT.text.maxChars;
-                const at = typeof a.find === "string" && a.find ? text.indexOf(a.find) : -1;
-                if (typeof a.find === "string" && a.find && at < 0) return ok({ file, at: a.at, version: version.commit ?? "working tree", found: false, length: text.length, text: text.slice(0, max) });
-                const from = at < 0 ? 0 : Math.max(0, at - Math.floor(max / 3));
-                return ok({ file, at: a.at, version: version.commit ?? "working tree", ...(at >= 0 ? { found: true } : {}), length: text.length, from, text: text.slice(from, from + max) });
+                const find = typeof a.find === "string" && a.find ? text.indexOf(a.find) : -1;
+                const head = { file, at: a.at, version: version.commit ?? "working tree" };
+                if (typeof a.find === "string" && a.find && find < 0) return ok({ ...head, found: false, text: page(text, from(a)) });
+                const start = find >= 0 && !Number.isInteger(a.from) ? Math.max(0, find - Math.floor(DIAGNOSIS_FORMAT.page.chars / 3)) : from(a);
+                return ok({ ...head, ...(find >= 0 ? { found: find } : {}), text: page(text, start) });
             },
         },
     ];
@@ -513,6 +561,7 @@ export const DIAGNOSIS_TOPIC: TopicDefinition = {
     key: (progress) => stateOf(progress).submissions.map((s) => (s.ok ? "ok" : "refused")).join(","),
     intention: intentionOf,
     prompt: DIAGNOSIS_FORMAT.prompt,
+    observation: DIAGNOSIS_FORMAT.observation,
     words: { words: DIAGNOSIS_WORDS, keys: DIAGNOSIS_WORD_KEYS },
     brief: briefOf,
     shelf: false,

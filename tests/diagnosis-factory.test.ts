@@ -26,7 +26,11 @@ import { HarnessGraph } from "../lib/harness-graph.js";
 import { evaluate } from "../lib/evaluator.js";
 import { loadRegister } from "../lib/rules-register.js";
 import { diagnosisAskedFor, diagnosisIdOf } from "../lib/diagnosis.js";
-import { diagnosisCheck, diagnosisRecord, readingsOf, type Diagnosis, type DiagnosisPrediction } from "../harness/topics/diagnosis/index.js";
+import { DIAGNOSIS_TOPIC, diagnosisCheck, diagnosisRecord, readingsOf, type Diagnosis, type DiagnosisPrediction } from "../harness/topics/diagnosis/index.js";
+import { compactOutput } from "../harness/core/compact.js";
+import { newProgress } from "../harness/core/workspace-observer.js";
+import type { TaskFile } from "../harness/core/task.js";
+import type { JsonValue } from "@spiky-panda/harness";
 import { TOPIC_DEFINITIONS } from "../harness/core/runner.js";
 import { loadDataset } from "../lib/diagnosis-dataset.js";
 import { calibrationRows, diagnosesOfDataset, recheck } from "../lib/calibration.js";
@@ -194,6 +198,39 @@ describe("the diagnosis factory through the station, on its script", () => {
         rmSync(recipesDir, { recursive: true, force: true });
         rmSync(datasetDir, { recursive: true, force: true });
         rmSync(forksDir, { recursive: true, force: true });
+    });
+
+    it("the read tools answer in pages the socle keeps whole: the refusal, one justification, a text around its words (E5.4: a step read whole showed only its beginning)", async () => {
+        const g = graph();
+        const asked = diagnosisAskedFor(g, evaluate(g).findings.find((f) => f.id === LEAD)!, FORKS);
+        const context = { broker: operator, taskId: "t-reads", task: { objective: { required_outputs: [] }, observations: { diagnosis: asked } } as unknown as TaskFile["task"], progress: newProgress(), runtimeSlot: "twin" };
+        const tools = new Map((DIAGNOSIS_TOPIC.local?.(context) ?? []).map((c) => [c.id, c]));
+        const read = async (id: string, input: Record<string, unknown>) => {
+            const r = await tools.get(id)!.execute(input as unknown as JsonValue, {} as never);
+            assert.ok(r.ok, `${id} ${JSON.stringify(input)}: ${r.error}`);
+            const c = compactOutput(id, input as unknown as JsonValue, r.output);
+            assert.equal(c.reduced, false, `${id} ${JSON.stringify(input)}: ${c.bytes} characters, cut by the socle`);
+            return (r.output as { value: Record<string, unknown> }).value;
+        };
+        const outline = await read("diagnosis.step", { task: `task:${T10}`, step: 8 });
+        assert.equal(outline.outcome, "guard-refused");
+        const reason = (await read("diagnosis.step", { task: `task:${T10}`, step: 8, part: "reason" })).reason as { text: string; next?: number };
+        assert.match(reason.text, /is not a fact of the library/);
+        const all = [reason.text];
+        for (let next = reason.next; next !== undefined; ) {
+            const p = (await read("diagnosis.step", { task: `task:${T10}`, step: 8, part: "reason", from: next })).reason as { text: string; next?: number };
+            all.push(p.text);
+            next = p.next;
+        }
+        assert.match(all.join(""), /steps\.2\.speedPercent = 100 is a safety constant with no justification/, "the whole refusal, page by page");
+        const one = await read("diagnosis.step", { task: `task:${T10}`, step: 8, part: "sent", pointer: "/justifications/[constant=steps.1.speedPercent]" });
+        assert.match(String((one.value as { text: string }).text), /"value":100.*test\.speedFloorPercent; scrubber\.effectiveFlowAtFull/);
+        const received = await read("diagnosis.step", { task: `task:${T10}`, step: 8, part: "received", pointer: "/hypothesis" });
+        assert.ok(((received.received as { shown: string[] }).shown).includes("/hypothesis/safetyBounds"));
+        const text = await read("diagnosis.text", { file: "specs/procedure/words.json", pointer: "/brief/safetyBounds", at: "today", find: "by its id alone" });
+        assert.match(String((text.text as { text: string }).text), /by its id alone/);
+        const node = await read("diagnosis.graph", { id: asked.lead.form!.id });
+        assert.ok((node.links as number) > (node.shown as string[]).length && node.next === 10, "a form's many links, a page at a time");
     });
 
     it("a lead of a rule said nowhere then: diagnosed, its predictions run by the factory's guard and again by the station, kept; not asked twice", async () => {

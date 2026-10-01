@@ -406,6 +406,7 @@ export const RECOMMENDATION_TOPIC: TopicDefinition = {
     key: (progress) => stateOf(progress).submissions.map((s) => (s.ok ? "ok" : "refused")).join(","),
     intention: intentionOf,
     prompt: RECOMMENDATION_FORMAT.prompt,
+    observation: RECOMMENDATION_FORMAT.observation,
     words: { words: RECOMMENDATION_WORDS, keys: RECOMMENDATION_WORD_KEYS },
     brief: briefOf,
     shelf: false,

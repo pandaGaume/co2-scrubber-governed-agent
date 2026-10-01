@@ -37,12 +37,14 @@
         "evidence": 1
     },
     "neighbourhood": {
-        "note": "the lead's nodes and those two links away, at most this many; the read tools give the rest",
+        "note": "the lead's nodes and those two links away, at most this many, each node's fields cut at bagChars characters; diagnosis.graph gives a node whole (2026-10-01, E5.4: 45 000 characters of neighbourhood at every call)",
         "hops": 2,
-        "maxNodes": 80
+        "maxNodes": 80,
+        "bagChars": 160
     },
-    "text": {
-        "note": "what diagnosis.text gives at once: a window around the words asked for, or the start",
-        "maxChars": 6000
+    "page": {
+        "note": "what a read tool gives at once: so many characters of a text (the next page by from), so many links of a node; under the socle's compaction, which keeps a longer answer's first 1 200 characters only (2026-10-01, E5.4: a step read whole showed its beginning and never its refusal)",
+        "chars": 900,
+        "links": 10
     }
 }
