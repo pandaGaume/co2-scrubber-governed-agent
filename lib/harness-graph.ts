@@ -77,6 +77,16 @@ export interface Workshop {
     dir: string;
 }
 
+/** Where a task is read from (2026-10-01, E5.1): what the predictions of a diagnosis are checked against. */
+export interface TaskSource {
+    /** The task's directory: its manifest, its request, its trace. */
+    dir: string;
+    /** The texts it was given, at the version it ran under; null when not known. */
+    version: TextVersion | null;
+    /** The library's documents it read before its first submission. */
+    libraryRead: string[];
+}
+
 /** What of a manifest the graph reads besides its episode. */
 interface ManifestLike {
     taskId?: string;
@@ -154,6 +164,7 @@ export class HarnessGraph {
     private readonly byId = new Map<string, HarnessNode>();
     private readonly nodes: HarnessNode[] = [];
     private readonly links: HarnessLink[] = [];
+    private readonly sources = new Map<string, TaskSource>();
 
     /** Built from the tasks of a workshop (or of several), for the topics given with how their episodes are read (their judges and digest). */
     constructor(workshops: string | Workshop[], readings: Record<string, HarnessReading>) {
@@ -241,6 +252,7 @@ export class HarnessGraph {
                         inputTokens: steps.reduce((a, s) => a + (s.tokens?.prompt ?? 0), 0),
                         outputTokens: steps.reduce((a, s) => a + (s.tokens?.completion ?? 0), 0),
                     });
+                    this.sources.set(task.id, { dir, version, libraryRead: [...libraryRead] });
                     const model = this.node(`model:${m?.provider?.model ?? "unknown"}`, H.model, { model: m?.provider?.model ?? null, provider: m?.provider?.name ?? null, family: m?.provider?.family ?? null });
                     this.link(task, model, H.ranBy);
                     // What the task ran under, and every text its model was given.
@@ -397,6 +409,11 @@ export class HarnessGraph {
         }
         this.graph = new Graph<HarnessNode, HarnessLink>(this.nodes, this.links);
         return f;
+    }
+
+    /** Where a task of the graph is read from: its directory, the version of the texts it ran under, the documents it read first. */
+    sourceOf(taskId: string): TaskSource | undefined {
+        return this.sources.get(taskId);
     }
 
     get(id: string): HarnessNode | undefined {

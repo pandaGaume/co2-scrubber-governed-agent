@@ -5,12 +5,14 @@
  *   manifest.json  what the graph reads (the task, its provider, tools, words, prompt, context, its steps without their summaries,
  *                  and without their inputs but for the capabilities a guard judged and the short ones, a read's document);
  *   task.json      who asked and what for (requestedBy, the objective, the observations);
- *   trace.jsonl    only the lines the graph reads: a refused call's stop reason (a cut, before the manifest marked it), and the
- *                  memory's entries a state held (their rule and status);
+ *   trace.jsonl    only the lines the graph reads: a refused call's stop reason (a cut, before the manifest marked it), the
+ *                  memory's entries a state held (their rule and status), and at each step a model decided, the fields of the
+ *                  state it received, three levels deep and without their values, as what changed from the step before (E5.1,
+ *                  the prediction in-state);
  *   fork.json      the commit the fork was made from, and when.
  *
  * Nothing is rewritten: fields are dropped, never changed. A task a fork inherited from the one it was made from is copied once,
- * under the first fork that holds it (the forks in the order they were made).
+ * under the first fork that holds it (the forks in the order they were made). Built code only (npm run build first).
  *
  *     node scripts/evaluator/corpus.mjs exp-control exp3-baseline exp4-sonnet-a exp4-gpt-a exp6-contract exp7-fixes exp8-paths
  *
@@ -21,8 +23,10 @@
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
+import { pathToFileURL } from "node:url";
 
 const root = process.cwd();
+const { stateOfRequest, stateSkeleton, stateChange } = await import(pathToFileURL(path.join(root, "dist", "lib", "predicates.js")).href);
 const args = process.argv.slice(2);
 const option = (name) => {
     const i = args.indexOf(name);
@@ -55,6 +59,7 @@ function lightTrace(file) {
     if (!existsSync(file)) return "";
     const lines = [];
     let memory = false;
+    let fields = [];
     for (const line of readFileSync(file, "utf8").split("\n")) {
         if (!line.trim()) continue;
         let l;
@@ -62,6 +67,14 @@ function lightTrace(file) {
             l = JSON.parse(line);
         } catch {
             continue;
+        }
+        // What the model received at a step it decided, as the fields of its state, three levels deep, kept as what changed from
+        // the step before (E5.1, the prediction in-state): never their values.
+        const state = typeof l.n === "number" ? stateOfRequest(l.exchange?.request) : undefined;
+        if (state !== undefined) {
+            const now = stateSkeleton(state);
+            lines.push({ n: l.n, received: stateChange(fields, now) });
+            fields = now;
         }
         const r = l.exchange?.response;
         if (l.source === "refused" && typeof l.n === "number" && r) {

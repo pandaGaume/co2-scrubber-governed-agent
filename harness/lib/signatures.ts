@@ -47,32 +47,36 @@ export interface SignatureStatus {
 
 /** The digest of a document as a signature binds it: its text and its facts' sidecar, when it has one. */
 export function documentDigest(id: string, dir: string = LIBRARY_DOCS_DIR): string {
-    const md = path.join(dir, `${id}.md`);
-    if (!existsSync(md)) throw new Error(`no document "${id}" in ${dir}`);
+    const digest = digestOf(id, (name) => {
+        const file = path.join(dir, name);
+        return existsSync(file) ? readFileSync(file, "utf8") : null;
+    });
+    if (digest === null) throw new Error(`no document "${id}" in ${dir}`);
+    return digest;
+}
+
+/**
+ * The same digest from the files as a reader gives them, by their names in the library (2026-10-01, E5.1: a document at a version of
+ * the repository, to tell whether a signature bound it as a task read it); null when the document is not there.
+ */
+export function digestOf(id: string, read: (name: string) => string | null): string | null {
     // The text, not the bytes: a checkout that turns LF into CRLF changes no word of what was signed, and must not void the signature.
-    const text = (file: string) => readFileSync(file, "utf8").replace(/\r\n/g, "\n");
-    const hash = createHash("sha256").update(text(md));
-    const facts = path.join(dir, `${id}.facts.json`);
+    const text = (name: string): string | null => read(name)?.replace(/\r\n/g, "\n") ?? null;
+    const md = text(`${id}.md`);
+    if (md === null) return null;
+    const hash = createHash("sha256").update(md);
+    const facts = text(`${id}.facts.json`);
     hash.update("\n--facts--\n");
-    if (existsSync(facts)) hash.update(text(facts));
+    if (facts !== null) hash.update(facts);
     // The guard's rules, when the document holds some (2026-09-28): signed with the facts they cite, and a rule changed voids the signature as a fact changed does.
-    const rules = path.join(dir, `${id}.rules.json`);
-    if (existsSync(rules)) {
-        hash.update("\n--rules--\n");
-        hash.update(text(rules));
-    }
     // The playbook, when the document is one (2026-09-29): what conducts is signed as what judges is, and a stage changed voids the signature.
-    const playbook = path.join(dir, `${id}.playbook.json`);
-    if (existsSync(playbook)) {
-        hash.update("\n--playbook--\n");
-        hash.update(text(playbook));
-    }
     // The recommendation, when the document is one (2026-10-01, E3): what is signed is the change itself, the text proposed and its
     // verification, not only the page a person reads.
-    const recommendation = path.join(dir, `${id}.recommendation.json`);
-    if (existsSync(recommendation)) {
-        hash.update("\n--recommendation--\n");
-        hash.update(text(recommendation));
+    for (const part of ["rules", "playbook", "recommendation"]) {
+        const t = text(`${id}.${part}.json`);
+        if (t === null) continue;
+        hash.update(`\n--${part}--\n`);
+        hash.update(t);
     }
     return hash.digest("hex");
 }
