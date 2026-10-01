@@ -13,6 +13,7 @@ import { ScriptedBuilder } from "./onnx.js";
 import { ScriptedProcedureBuilder } from "./procedure.js";
 import { ScriptedPlaybookBuilder } from "./playbook.js";
 import { ScriptedReflectionBuilder } from "./reflection.js";
+import { ScriptedRecommendationBuilder } from "./recommendation.js";
 
 export const SCRIPTED_BUILDERS: Partial<Record<Topic, (context: BuilderContext) => ScriptedBuilderBase>> = {
     onnx: (context) => new ScriptedBuilder(context),
@@ -21,4 +22,5 @@ export const SCRIPTED_BUILDERS: Partial<Record<Topic, (context: BuilderContext) 
     code: (context) => new ScriptedCodeBuilder(context),
     playbook: (context) => new ScriptedPlaybookBuilder(context),
     reflection: (context) => new ScriptedReflectionBuilder(context),
+    recommendation: (context) => new ScriptedRecommendationBuilder(context),
 };

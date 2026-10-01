@@ -179,7 +179,7 @@ export class HarnessGraph {
                 for (const s of c.states) this.link(stmtNode(s), cn, H.states);
             }
             for (const r of register.rules) {
-                const rn = this.node(`rule:${topic}:${r.code}`, H.rule, { topic, code: r.code, status: r.status, signed: r.signed, ...(r.kind ? { kind: r.kind } : {}), ...(r.note ? { note: r.note } : {}) });
+                const rn = this.node(`rule:${topic}:${r.code}`, H.rule, { topic, code: r.code, status: r.status, signed: r.signed, ...(r.kind ? { kind: r.kind } : {}), ...(r.note ? { note: r.note } : {}), ...(r.says ? { says: r.says } : {}), ...(r.concerns ? { concerns: r.concerns } : {}) });
                 for (const s of r.states) this.link(stmtNode(s), rn, H.states);
                 for (const c of r.applies) {
                     const cn = this.byId.get(`convention:${topic}:${c}`);

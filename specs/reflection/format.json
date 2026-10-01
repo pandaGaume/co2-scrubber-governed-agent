@@ -38,6 +38,10 @@
             "why": "the reflection's own bounds and conduct: a learner that widens its own freedom is no longer measured"
         },
         {
+            "pattern": "specs/recommendation/**",
+            "why": "the evaluator's factory: what reads the factories' failures is not adapted by what it reads"
+        },
+        {
             "pattern": "specs/harness/**",
             "why": "what the core knows of the application"
         },

@@ -55,6 +55,8 @@ export interface LibraryDocument {
     rules: { safety: string[]; rules: unknown[] } | null;
     /** The playbook the document is (`<id>.playbook.json` beside it), signed with it: it conducts only once signed. */
     playbook: boolean;
+    /** The recommendation the document is (`<id>.recommendation.json` beside it, 2026-10-01): signed with it, it changes nothing until applied in a fork and measured. */
+    recommendation: boolean;
     /** Where it is: the library's shelf, or the proposals' (a factory's work, unsigned until a signatory reads it). */
     dir: string;
     proposed: boolean;
@@ -72,6 +74,75 @@ export interface LibraryState {
 }
 
 export const LIBRARY_DIR = fromRoot("docs", "library");
+
+/** A recommendation put on the proposals' shelf: the page a signatory reads, and the recommendation itself beside it, signed with it. */
+function proposeRecommendation(id: string, args: Record<string, unknown>, s: LibraryState): Record<string, unknown> {
+    const r = args.recommendation as {
+        kind?: string;
+        action?: string;
+        target?: { file?: string; pointer?: string; memory?: string; library?: string };
+        current?: string | null;
+        proposed?: string;
+        why?: string;
+        effect?: string;
+        changesAcceptance?: boolean;
+        finding?: { id?: string; detector?: string; class?: string; title?: string; path?: string[]; tasks?: number; models?: Record<string, number> };
+        rule?: { code?: string } | null;
+        verification?: { replay?: string[]; models?: string[]; tasks?: number; measure?: string };
+    };
+    if (!r.kind || !r.finding?.id || typeof r.proposed !== "string") throw new Error(`the recommendation "${id}" says no kind, no finding or no proposed text`);
+    const from = (args.from ?? {}) as { taskId?: string; proposalId?: string; sha256?: string };
+    const dir = proposalsDir();
+    mkdirSync(dir, { recursive: true });
+    const line = (x: unknown) => String(x ?? "").replace(/\s+/g, " ").trim();
+    const code = (x: string) => "`" + x + "`";
+    const quote = (x: string | null | undefined) => (x ? x.split(/\r?\n/).map((l) => `> ${l}`).join("\n") : "> (none)");
+    const t = r.target ?? {};
+    const where = t.file ? `${code(t.file)}${t.pointer ? ` at ${code(t.pointer)}` : ""}` : t.memory ? `the memory entry ${code(t.memory)}` : t.library ? `the library document ${code(t.library)}` : "?";
+    const v = r.verification ?? {};
+    const md = [
+        `# ${line(args.title)}`,
+        "",
+        line(r.why) || "A recommendation of the harness's evaluator.",
+        "",
+        `**Proposed by:** the recommendation factory, task ${line(from.taskId) || "?"}${from.proposalId ? `, proposal ${line(from.proposalId)}` : ""}, sha256 ${line(from.sha256) || "?"}. It is not signed: it changes nothing until an authorised signatory reads it and signs it, and a signed one is applied in a fork and measured before a person commits it.`,
+        "",
+        `**The finding:** ${line(r.finding.detector)}, ${line(r.finding.class)}${r.rule?.code ? `, rule ${code(String(r.rule.code))}` : ""}: ${line(r.finding.title)} (${r.finding.tasks ?? 0} task(s); ${Object.entries(r.finding.models ?? {}).map(([m, n]) => `${m} ${n}`).join(", ")})`,
+        "",
+        "## Its path in the harness's graph",
+        "",
+        ...(r.finding.path ?? []).map((p) => `- ${code(String(p))}`),
+        "",
+        "## What it changes",
+        "",
+        `- **Kind:** ${line(r.kind)}, **action:** ${line(r.action)}, **target:** ${where}.`,
+        r.changesAcceptance ? "- **It changes what a guard accepts.** A decision of the guard, not a word of it: read it as such." : "- It changes no decision of a guard.",
+        "",
+        "### Now",
+        "",
+        quote(r.current ?? null),
+        "",
+        `### ${r.action === "append" ? "Added" : "Proposed"}`,
+        "",
+        quote(r.proposed),
+        "",
+        "## The effect expected",
+        "",
+        line(r.effect),
+        "",
+        "## How it is verified",
+        "",
+        `- Replay ${(v.replay ?? []).map((c) => code(String(c))).join(", ") || "?"}, ${v.tasks ?? "?"} task(s), on ${(v.models ?? []).join(", ") || "?"}.`,
+        `- Measure: ${line(v.measure)}.`,
+        "",
+        `The recommendation itself is the file beside this one, ${code(`${id}.recommendation.json`)}: a signature binds both.`,
+        "",
+    ].join("\n");
+    writeFileSync(path.join(dir, `${id}.md`), md, "utf8");
+    writeFileSync(path.join(dir, `${id}.recommendation.json`), `${JSON.stringify(r, null, 4)}\n`, "utf8");
+    s.documents = loadAll();
+    return { id, proposed: true, recommendation: true, files: filesOf(dir, id).map((f) => f.name), digest: documentDigest(id, dir), signature: signatureOf(id, dir, s.sigDir) };
+}
 /** The proposals' shelf (2026-09-29): what a factory proposes for the library, beside the workshops, never in the repository's library; LIBRARY_PROPOSALS_DIR when set (the tests keep their own). */
 export const proposalsDir = (): string => pathFromEnv("LIBRARY_PROPOSALS_DIR") ?? path.join(WORKSHOP_ROOT, "library-proposals");
 /** The library's documents and the proposals', a proposal never taking the id of a document of the library. */
@@ -99,7 +170,7 @@ export function loadLibrary(dir: string = LIBRARY_DIR, proposed = false): Librar
                 .map((q) => q.trim())
                 .filter(Boolean);
             const id = file.replace(/\.md$/, "");
-            return { id, title, summary, measures, sha256: sha256Of(bytes), bytes: bytes.length, text, facts: loadFacts(dir, id), rules: loadRules(dir, id), playbook: existsSync(path.join(dir, `${id}.playbook.json`)), dir, proposed };
+            return { id, title, summary, measures, sha256: sha256Of(bytes), bytes: bytes.length, text, facts: loadFacts(dir, id), rules: loadRules(dir, id), playbook: existsSync(path.join(dir, `${id}.playbook.json`)), recommendation: existsSync(path.join(dir, `${id}.recommendation.json`)), dir, proposed };
         });
 }
 
@@ -129,7 +200,7 @@ export function loadRules(dir: string, id: string): LibraryDocument["rules"] {
 
 /** The files a signature binds, as they are on disk now: the document, its facts, its rules, its playbook (what a person reads before signing). */
 export function filesOf(dir: string, id: string): Array<{ name: string; text: string }> {
-    return [`${id}.md`, `${id}.facts.json`, `${id}.rules.json`, `${id}.playbook.json`].filter((name) => existsSync(path.join(dir, name))).map((name) => ({ name, text: readFileSync(path.join(dir, name), "utf8").replace(/\r\n/g, "\n") }));
+    return [`${id}.md`, `${id}.facts.json`, `${id}.rules.json`, `${id}.playbook.json`, `${id}.recommendation.json`].filter((name) => existsSync(path.join(dir, name))).map((name) => ({ name, text: readFileSync(path.join(dir, name), "utf8").replace(/\r\n/g, "\n") }));
 }
 
 /** The documents a query's words appear in, the most matched first, with the lines they appear on. */
@@ -168,7 +239,7 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
             name: "list",
             inputSchema: objectSchema({}),
             handle: (_args, s) => ({
-                documents: s.documents.map(({ id, title, summary, measures, sha256, bytes, facts, rules, playbook, dir, proposed }) => ({ id, title, summary, measures, sha256, bytes, facts: facts.length, rules: rules ? rules.rules.length : 0, playbook, proposed, signature: signatureOf(id, dir, s.sigDir) })),
+                documents: s.documents.map(({ id, title, summary, measures, sha256, bytes, facts, rules, playbook, recommendation, dir, proposed }) => ({ id, title, summary, measures, sha256, bytes, facts: facts.length, rules: rules ? rules.rules.length : 0, playbook, recommendation, proposed, signature: signatureOf(id, dir, s.sigDir) })),
                 // Who signs from the control room, and where the signatures go: what the library page says before a person signs.
                 signer: person || null,
                 // The fork the library is, when it runs in one: a signature made here binds nothing outside it.
@@ -271,6 +342,8 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
         {
             // A playbook a factory wrote, proposed to the library by the station (2026-09-29, level 2 of docs/comportement-en-donnees.fr.md):
             // put on the proposals' shelf, never in the repository's library, with a document a person reads; unsigned, it conducts nothing.
+            // Or a recommendation of the evaluator's factory (2026-10-01, E3): what to change, why, and how it is verified; unsigned, it
+            // changes nothing, and a signed one is applied in a fork and measured before a person commits it.
             // The station's, on a factory's proposal; never a model's (kept out of every harness's and the night agent's tools).
             name: "propose",
             inputSchema: objectSchema(
@@ -280,14 +353,17 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
                     summary: { type: "string" },
                     change: { type: "string", description: "what was asked of the factory, in its words" },
                     playbook: { type: "object" },
+                    recommendation: { type: "object", description: "a recommendation of the evaluator's factory, as its guard accepted it" },
                     from: { type: "object", description: "the task, the proposal and the sha256 of the file the factory's guard accepted" },
                 },
-                ["id", "title", "playbook", "from"],
+                ["id", "title", "from"],
             ),
             handle: (args, s) => {
                 const id = String(args.id ?? "");
                 if (!/^[a-z0-9][a-z0-9-]{2,63}$/.test(id)) throw new Error(`a proposed document's id is lowercase words and dashes, not "${id}"`);
                 if (s.documents.some((d) => d.id === id && !d.proposed)) throw new Error(`"${id}" is a document of the library: a proposal takes an id of its own, and the library's stays as signed`);
+                if (Boolean(args.playbook) === Boolean(args.recommendation)) throw new Error("a proposal is a playbook or a recommendation, one of them");
+                if (args.recommendation) return proposeRecommendation(id, args, s);
                 const problems = playbookProblems(args.playbook, id);
                 if (problems.length) throw new Error(`the playbook "${id}" does not run: ${problems.join("; ")}`);
                 const pb = new Playbook(id, args.playbook as PlaybookFile);

@@ -241,7 +241,7 @@ function renderList() {
     const others = docs.filter((d) => !d.proposed && !(d.facts > 0 || d.rules > 0));
     const row = (d) => `<button class="doc${current?.id === d.id ? " on" : ""}" type="button" data-id="${esc(d.id)}">
         <div class="id">${esc(d.id)}</div>
-        <div class="meta">${pill(d.signature)}${d.proposed ? `<span class="tag">proposed</span>` : ""}${d.playbook ? `<span class="tag">playbook</span>` : ""}${d.rules ? `<span class="tag">${d.rules} rules</span>` : ""}${d.facts ? `<span class="tag">${d.facts} facts</span>` : ""}</div>
+        <div class="meta">${pill(d.signature)}${d.proposed ? `<span class="tag">proposed</span>` : ""}${d.playbook ? `<span class="tag">playbook</span>` : ""}${d.recommendation ? `<span class="tag">recommendation</span>` : ""}${d.rules ? `<span class="tag">${d.rules} rules</span>` : ""}${d.facts ? `<span class="tag">${d.facts} facts</span>` : ""}</div>
       </button>`;
     $("list").innerHTML =
         (proposed.length ? `<h2>Proposed by a factory, to be signed</h2>${proposed.map(row).join("")}` : "") +

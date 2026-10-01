@@ -21,6 +21,8 @@
  *                                 read, and refused anyway in several tasks no other detector explains
  *   D6  what a memory entry is    the rules the failures it rests on were refused for: said nowhere to them, a gap of the
  *                                 contract the memory compensates; said, a policy learned; none, knowledge of the domain
+ *   D7  a gap of the library      a rule the register says concerns the library (a document nobody signed, a fact cited where
+ *                                 it does not bound) refused in several tasks: the documents and facts its refusals name (E3)
  *
  * and the classes the first detectors left to D1 are settled: learned by refusal, a gap or a policy; a model's own mistake confirmed
  * or not; the same text read two ways, or a text neither read.
@@ -28,11 +30,14 @@
  * Thresholds: specs/harness/evaluator.json.
  */
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import * as path from "node:path";
 import type { JsonValue } from "@spiky-panda/harness";
 import { fromRoot } from "./paths.js";
 import { H, shortSha, type HarnessGraph, type HarnessNode } from "./harness-graph.js";
 import { stated, type Statement } from "./rules-register.js";
+import { shapesOf } from "./reflection.js";
+import { problemsOfReason } from "../harness/core/problems.js";
 
 export const EVALUATOR_FILE = "specs/harness/evaluator.json";
 
@@ -48,11 +53,11 @@ export interface EvaluatorConfig {
 
 export const evaluatorConfig = (): EvaluatorConfig => JSON.parse(readFileSync(fromRoot(...EVALUATOR_FILE.split("/")), "utf8")) as EvaluatorConfig;
 
-export type FindingClass = "harness-artefact" | "regression" | "improvement" | "contract-gap" | "contract-gap-or-policy" | "learned-policy" | "stated-not-followed" | "domain-knowledge" | "model-error";
+export type FindingClass = "harness-artefact" | "regression" | "improvement" | "contract-gap" | "contract-gap-or-policy" | "learned-policy" | "stated-not-followed" | "domain-knowledge" | "library-gap" | "model-error";
 
 export interface Finding {
     id: string;
-    detector: "D1" | "D2" | "D3" | "D4" | "D5" | "D6" | "D8";
+    detector: "D1" | "D2" | "D3" | "D4" | "D5" | "D6" | "D7" | "D8";
     class: FindingClass;
     /** What settles a class this detector cannot: a later detector and its stage. */
     settledBy: string | null;
@@ -555,6 +560,19 @@ export function evaluate(g: HarnessGraph, cfg: EvaluatorConfig = evaluatorConfig
             return { ...u, rules: rules.map((x) => String(x.bag?.code)), tasksTold: per };
         });
 
+    // What the contract states now: a finding whose tasks missed only texts that hold today has nothing left to recommend.
+    for (const f of findings) {
+        if (f.detector === "D6" || !f.recommend) continue;
+        const missing = ((f.evidence.register as { missing?: string[] } | undefined)?.missing ?? (f.evidence.missing as string[] | undefined) ?? []).map(String);
+        if (!missing.length || f.evidence.register && (f.evidence.register as { told?: number }).told) continue;
+        const now = missing.map((id) => g.get(id)).filter((n): n is HarnessNode => Boolean(n)).map((n) => g.in(n, H.states).map((l) => l.oini as HarnessNode).filter(holdsNow).map(describe));
+        if (now.length === missing.length && now.every((x) => x.length)) {
+            f.recommend = false;
+            f.evidence.closedSince = now.flat();
+            if (!/stated since/.test(f.title)) f.title = `${f.title}; stated since: nothing left to recommend`;
+        }
+    }
+
     // D6: what each memory entry is, by the rules the failures it rests on were refused for, and whether they were told them.
     for (const entry of g.nodesOf(H.memoryEntry)) {
         const episodes = g.out(entry, H.restsOn).map((l) => l.ofin as HarnessNode);
@@ -588,7 +606,62 @@ export function evaluate(g: HarnessGraph, cfg: EvaluatorConfig = evaluatorConfig
         });
     }
 
+    // D7: what the library lacks, by the rules the register says concern it: the documents and facts their refusals name.
+    const library = libraryIndex();
+    for (const rule of g.nodesOf(H.rule).filter((x) => x.bag?.concerns === "library")) {
+        const ruleForms = g.in(rule, H.of).map((l) => l.oini as HarnessNode).filter((n) => n.type === H.form);
+        const ts = [...new Map(ruleForms.flatMap((f) => r.tasksOf(f)).map((t) => [String(t.id), t])).values()];
+        if (ts.length < cfg.recurrence.minTasks) continue;
+        // The problems of these forms only: a refusal joins others, whose documents are not this rule's.
+        const shapes = new Set(ruleForms.map((f) => String(f.bag?.shape)));
+        const texts = ruleForms
+            .flatMap((f) => g.in(f, H.refusedFor).map((l) => String((l.oini as HarnessNode).bag?.reason ?? "")))
+            .flatMap((reason) => problemsOfReason(reason).map((p) => p.says))
+            .filter((says) => shapes.has(shapesOf(says)[0] ?? ""))
+            .concat(ruleForms.map((f) => String(f.bag?.sample ?? "")));
+        const named = new Set<string>();
+        for (const t of texts) {
+            for (const m of t.matchAll(/"([a-z0-9][a-z0-9-]+)"/g)) if (library.documents.has(m[1])) named.add(m[1]);
+            for (const m of t.matchAll(/\b([a-z][A-Za-z0-9]*(?:\.[A-Za-z0-9]+)+)\b/g)) if (library.facts.has(m[1])) named.add(library.facts.get(m[1])!);
+        }
+        const documents = [...named].sort();
+        const code = String(rule.bag?.code);
+        findings.push({
+            id: `D7:${shortSha(String(rule.id))}`,
+            detector: "D7",
+            class: "library-gap",
+            settledBy: null,
+            title: `${code}: refused in ${ts.length} task(s)${documents.length ? `, about ${documents.join(", ")}` : ""}: the library, not the model or the contract`,
+            form: ruleForms.length === 1 ? formRef(ruleForms[0]) : null,
+            tasks: ids(ts),
+            models: r.models(ts),
+            about: [String(rule.id), ...ruleForms.map((f) => String(f.id))],
+            path: [`${rule.id} (concerns the library) <-of- ${ruleForms.map((f) => f.id).join(", ")}`, `<-refused-for- ${ts.length} task(s)`, ...(documents.length ? [`naming ${documents.join(", ")}`] : [])],
+            evidence: { code, documents },
+            recommend: true,
+        });
+    }
+
     return { findings, unclassified: stillUnclassified, counts: { tasks: tasks.length, models: r.models(tasks), forms: forms.length, ignored: r.models(all.filter((t) => !r.live(t))) } };
+}
+
+/** The library's documents and the document each fact is in, as the repository holds them now. */
+function libraryIndex(): { documents: Set<string>; facts: Map<string, string> } {
+    const dir = fromRoot("docs", "library");
+    const documents = new Set<string>();
+    const facts = new Map<string, string>();
+    if (!existsSync(dir)) return { documents, facts };
+    for (const f of readdirSync(dir)) {
+        if (f.endsWith(".md")) documents.add(f.replace(/\.md$/, ""));
+        if (f.endsWith(".facts.json"))
+            try {
+                const doc = f.replace(/\.facts\.json$/, "");
+                for (const x of (JSON.parse(readFileSync(path.join(dir, f), "utf8")) as { facts?: Array<{ id?: string }> }).facts ?? []) if (x.id) facts.set(x.id, doc);
+            } catch {
+                // a facts file that cannot be read names no fact
+            }
+    }
+    return { documents, facts };
 }
 
 /** The files changed between two commits, from git, less those no run reads; none when git or a commit is not there. */

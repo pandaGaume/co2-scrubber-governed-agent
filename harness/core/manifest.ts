@@ -35,7 +35,7 @@ export interface ManifestStep {
 }
 
 export interface ManifestArtifact {
-    kind: "graph" | "model" | "twin" | "procedure" | "plugin" | "playbook" | "adaptation" | "contract" | "file";
+    kind: "graph" | "model" | "twin" | "procedure" | "plugin" | "playbook" | "adaptation" | "recommendation" | "contract" | "file";
     path: string;
     sha256: string;
     bytes: number;

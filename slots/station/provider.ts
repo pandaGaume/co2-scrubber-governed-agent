@@ -53,7 +53,10 @@ import { enterAdoption, historyOf, judge, judgedFamilies, mistakeRate, readLedge
 import { answeredByMemory, enterCandidate, judgeTrials, memoryConfig, memoryProblems, promote, readMemory, topicOfPatterns, type Remembered } from "../../lib/memory.js";
 import { guardWordsOf, workingMemory } from "../../lib/working-memory.js";
 import { HarnessGraph } from "../../lib/harness-graph.js";
+import type { JsonValue } from "@spiky-panda/harness";
 import { evaluate } from "../../lib/evaluator.js";
+import { askedFor, RECOMMEND_ORDER, recommendationIdOf } from "../../lib/recommendation.js";
+import { askedOf as recommendationAsked, feasibleKinds, recommendationProblems } from "../../harness/topics/recommendation/index.js";
 import { loadRegister } from "../../lib/rules-register.js";
 import { TOPIC_DEFINITIONS } from "../../harness/core/runner.js";
 import type { Episode } from "../../harness/core/episodes.js";
@@ -326,6 +329,52 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
      * stage at every event), put on the library's proposals shelf, and its signature asked of the role that signs. The station adopts
      * nothing: unsigned, the playbook conducts nothing, and only a person the role names signs it.
      */
+    /**
+     * A recommendation of the evaluator's factory (2026-10-01, E3): checked again against the finding the task was given and its
+     * target as it is now, put on the library's proposals shelf, and an authorised signatory asked to sign it. Signed, it changes
+     * nothing yet: it is applied in a fork and measured (E4).
+     */
+    const relayRecommendation = async (proposal: Proposal, artifact: Proposal["artifacts"][number]) => {
+        const dir = taskDir(checkTaskId(proposal.taskId));
+        const file = path.join(dir, artifact.path);
+        if (!existsSync(file)) throw new Error(`recommendation ${artifact.path} is not in the workshop of task ${proposal.taskId}`);
+        const text = readFileSync(file);
+        if (sha256Of(text) !== artifact.sha256) throw new Error(`recommendation ${artifact.path}: the sha256 proposed is not the file's`);
+        const record = JSON.parse(text.toString("utf8")) as { id?: string; kind?: string; finding?: { id?: string; title?: string; detector?: string }; rule?: { code?: string } | null };
+        const id = String(record.id ?? "");
+        const task = JSON.parse(readFileSync(path.join(dir, "task.json"), "utf8")) as { task: Parameters<typeof recommendationAsked>[0] };
+        const problems = recommendationProblems(record, recommendationAsked(task.task));
+        if (problems.length) {
+            proposal.status = "rejected";
+            proposal.reason = problems.join("; ");
+            say("mother.recommendation.refused", null, () => ({ id, problems: proposal.reason ?? "" }));
+            return;
+        }
+        const title = `Recommendation ${id}: ${record.kind} for ${record.rule?.code ?? record.finding?.detector ?? "a finding"}`;
+        const put = await client().call("library", "propose", { id, title, recommendation: record, from: { taskId: proposal.taskId, proposalId: proposal.proposalId, sha256: artifact.sha256 } });
+        if (!put.ok) {
+            proposal.status = "rejected";
+            proposal.reason = `the library did not take it: ${put.error ?? "refused"}`;
+            return;
+        }
+        proposal.status = "awaiting-signature";
+        const r = record as { kind?: string; target?: unknown; changesAcceptance?: boolean };
+        await askQuestion({
+            from: "station",
+            taskId: proposal.taskId,
+            kind: "sign",
+            role: SIGNATORY,
+            question: `The evaluator's factory recommends ${id} (${r.kind}) for ${record.finding?.title ?? record.finding?.id}. Read it in the library and sign it, so that it is applied in a fork and measured?`,
+            options: [
+                { id: "sign", label: "sign it" },
+                { id: "not-now", label: "not now" },
+            ],
+            context: { document: id, proposed: true, finding: record.finding?.id ?? null, kind: r.kind ?? null, target: (r.target ?? null) as JsonValue, changesAcceptance: r.changesAcceptance === true },
+            resume: { slot: "library", tool: "sign", args: { id } },
+        });
+        say("mother.recommendation.proposed", null, () => ({ id, kind: String(r.kind), finding: String(record.finding?.title ?? record.finding?.id ?? "").slice(0, 200) }));
+    };
+
     const relayPlaybook = async (proposal: Proposal, artifact: Proposal["artifacts"][number]) => {
         const file = path.join(taskDir(checkTaskId(proposal.taskId)), artifact.path);
         if (!existsSync(file)) throw new Error(`playbook ${artifact.path} is not in the workshop of task ${proposal.taskId}`);
@@ -591,11 +640,52 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                 description:
                     "What the post-procedure evaluator finds in factory tasks, read from the harness's graph by deterministic detectors (no model): artefacts of the harness (a call cut at the output limit, a task stuck in a loop, a refusal before any guard in several tasks; D4), a form of failure whose rate changed with the harness and the texts that changed (D5), a rule the models learn by being refused, answered the same way at the first retry (D2), a form one model makes and another does not on the same cases (D3), a model's own mistake (D8, nothing to recommend). Each finding with its class, the nodes it is about and the path that justifies it; a class a later detector settles says which. The forms no detector classes yet are listed apart. Read only: it changes nothing. With forks: the tasks of those forks, together (the list of forks comes with the answer).",
                 inputSchema: obj({ forks: HARNESS_FORKS }),
-                handle: (args) => {
+                handle: async (args) => {
                     const g = harnessGraphOf(args.forks);
                     const evaluation = evaluate(g);
                     for (const f of evaluation.findings) g.addFinding(f.id, { detector: f.detector, class: f.class, title: f.title }, f.about);
-                    return { ...evaluation, forks: listForks().map((f) => ({ id: f.id, createdAt: f.createdAt, parent: f.parent })).sort((a, b) => a.createdAt.localeCompare(b.createdAt)) };
+                    // The findings recommended on already (E3): the recommendation on the library's proposals shelf, signed or not.
+                    const listed = await client().call("library", "list", {});
+                    const docs = new Map(((listed.output as { documents?: Array<{ id: string; recommendation?: boolean; signature?: { valid?: boolean } | null }> } | undefined)?.documents ?? []).filter((d) => d.recommendation).map((d) => [d.id, d]));
+                    const recommended = Object.fromEntries(evaluation.findings.filter((f) => docs.has(recommendationIdOf(f))).map((f) => [f.id, { id: recommendationIdOf(f), signed: docs.get(recommendationIdOf(f))?.signature?.valid === true }]));
+                    return { ...evaluation, recommended, forks: listForks().map((f) => ({ id: f.id, createdAt: f.createdAt, parent: f.parent })).sort((a, b) => a.createdAt.localeCompare(b.createdAt)) };
+                },
+            },
+            {
+                // The evaluator's factory asked for a recommendation (2026-10-01, docs/evaluateur.fr.md, E3): one finding, the first not yet
+                // recommended on (or the one named), what the factory is given read from the harness's graph. It returns at once; the
+                // recommendation reaches the station as the factory's proposal, and the library's proposals shelf from there.
+                name: "recommend",
+                title: "Ask for a recommendation on a finding of the evaluator",
+                description:
+                    "Asks the recommendation factory for one recommendation on one finding of the post-procedure evaluator (station.harness_evaluate): the one named, or the first not yet recommended on, regressions first, then gaps of the contract, of the library, artefacts of the harness, rules stated and not followed. What the factory is given is read from the harness's graph: the finding whole, the texts it may change with what they hold now, the memory entry or the library documents it is about, the cases to replay. The recommendation goes to the library's proposals shelf, unsigned; an authorised signatory signs it or not. It changes nothing. With forks: the findings of those forks, together.",
+                inputSchema: obj({ forks: HARNESS_FORKS, finding: { type: "string", description: "a finding's id, as station.harness_evaluate gives it" }, builder: { type: "string", enum: ["reasoner", "scripted"], description: "the factory's builder: a model (default), or its script" } }),
+                handle: async (args) => {
+                    const g = harnessGraphOf(args.forks);
+                    const evaluation = evaluate(g);
+                    const listed = await client().call("library", "list", {});
+                    const proposed = new Set(((listed.output as { documents?: Array<{ id: string; recommendation?: boolean }> } | undefined)?.documents ?? []).filter((d) => d.recommendation).map((d) => d.id));
+                    const open = evaluation.findings
+                        // A finding the factory can answer: a kind its class takes, with what that kind changes (a text, the entry, a document).
+                        .filter((f) => f.recommend && feasibleKinds(askedFor(g, f)).length && !proposed.has(recommendationIdOf(f)))
+                        .sort((a, b) => RECOMMEND_ORDER.indexOf(a.class) - RECOMMEND_ORDER.indexOf(b.class));
+                    const named = typeof args.finding === "string" && args.finding ? evaluation.findings.find((f) => f.id === args.finding) : undefined;
+                    if (args.finding && !named) throw new Error(`no finding "${String(args.finding)}" in these tasks (station.harness_evaluate lists them)`);
+                    if (named && (!named.recommend || !feasibleKinds(askedFor(g, named)).length)) throw new Error(`the finding ${named.id} has nothing to recommend (${named.class}${named.recommend ? ": nothing the factory may change answers it" : ", counted only"})`);
+                    if (named && proposed.has(recommendationIdOf(named))) throw new Error(`the finding ${named.id} is recommended on already: ${recommendationIdOf(named)}, on the library's proposals shelf`);
+                    const finding = named ?? open[0];
+                    if (!finding) return { finding: null, recommendation: null, taskId: null, open: 0 };
+                    const asked = askedFor(g, finding);
+                    const r = await client().call("factory", "request", {
+                        objective: { required_outputs: [{ name: asked.id, quantity: "Recommendation" }] },
+                        observations: { recommendation: asked as unknown as JsonValue },
+                        topics: ["recommendation"],
+                        ...(args.builder === "scripted" || args.builder === "reasoner" ? { builder: args.builder } : {}),
+                        requestedBy: "station (evaluator)",
+                    });
+                    if (!r.ok) throw new Error(`the factory did not take the request: ${r.error ?? "refused"}`);
+                    say("mother.recommendation.asked", null, () => ({ id: asked.id, finding: finding.title.slice(0, 200) }));
+                    return { finding: finding.id, recommendation: asked.id, taskId: (r.output as { taskId?: string }).taskId ?? null, open: open.length };
                 },
             },
             {
@@ -679,7 +769,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                 inputSchema: obj(
                     {
                         taskId: { type: "string" },
-                        artifacts: { type: "array", items: { type: "object", properties: { kind: { type: "string", enum: ["graph", "model", "twin", "procedure", "plugin", "playbook", "adaptation"] }, path: { type: "string" }, sha256: SHA, contractSha256: SHA }, required: ["kind", "path", "sha256"] } },
+                        artifacts: { type: "array", items: { type: "object", properties: { kind: { type: "string", enum: ["graph", "model", "twin", "procedure", "plugin", "playbook", "adaptation", "recommendation"] }, path: { type: "string" }, sha256: SHA, contractSha256: SHA }, required: ["kind", "path", "sha256"] } },
                         manifestSha256: { ...SHA },
                         claims: { type: "object" },
                     },
@@ -696,6 +786,11 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     if (adaptation) {
                         await relayAdaptation(proposal, adaptation);
                         return { proposalId, status: proposal.status, ...(proposal.reason ? { reason: proposal.reason } : {}), note: proposal.status === "adopted" ? "adopted in the fork, and a snapshot taken" : "not adopted" };
+                    }
+                    const recommendation = list.find((a) => a.kind === "recommendation");
+                    if (recommendation) {
+                        await relayRecommendation(proposal, recommendation);
+                        return { proposalId, status: proposal.status, ...(proposal.reason ? { reason: proposal.reason } : {}), note: proposal.status === "awaiting-signature" ? "on the library's proposals shelf, unsigned: an authorised signatory is asked to sign it" : "the recommendation did not pass the station's check" };
                     }
                     const playbook = list.find((a) => a.kind === "playbook");
                     if (playbook) {

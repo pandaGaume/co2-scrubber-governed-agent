@@ -67,6 +67,13 @@ export function documentDigest(id: string, dir: string = LIBRARY_DOCS_DIR): stri
         hash.update("\n--playbook--\n");
         hash.update(text(playbook));
     }
+    // The recommendation, when the document is one (2026-10-01, E3): what is signed is the change itself, the text proposed and its
+    // verification, not only the page a person reads.
+    const recommendation = path.join(dir, `${id}.recommendation.json`);
+    if (existsSync(recommendation)) {
+        hash.update("\n--recommendation--\n");
+        hash.update(text(recommendation));
+    }
     return hash.digest("hex");
 }
 

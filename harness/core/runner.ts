@@ -49,6 +49,7 @@ import { applyVerdict, supervisionOfRequest, type SupervisionInput, type Verdict
 import { ONNX_TOPIC } from "../topics/onnx/index.js";
 import { PLAYBOOK_TOPIC } from "../topics/playbook/index.js";
 import { REFLECTION_TOPIC } from "../topics/reflection/index.js";
+import { RECOMMENDATION_TOPIC } from "../topics/recommendation/index.js";
 import { PROCEDURE_TOPIC } from "../topics/procedure/index.js";
 import { GRAPH_TOPIC } from "../topics/graph/index.js";
 import { CODE_TOPIC } from "../topics/code/index.js";
@@ -56,7 +57,7 @@ import { APP } from "./application.js";
 import { physics } from "./physics.js";
 
 /** The topics the constructor knows: the factories that share this loop, each with its own harness. */
-export const TOPIC_DEFINITIONS: Partial<Record<Topic, TopicDefinition>> = { onnx: ONNX_TOPIC, procedure: PROCEDURE_TOPIC, graph: GRAPH_TOPIC, code: CODE_TOPIC, playbook: PLAYBOOK_TOPIC, reflection: REFLECTION_TOPIC };
+export const TOPIC_DEFINITIONS: Partial<Record<Topic, TopicDefinition>> = { onnx: ONNX_TOPIC, procedure: PROCEDURE_TOPIC, graph: GRAPH_TOPIC, code: CODE_TOPIC, playbook: PLAYBOOK_TOPIC, reflection: REFLECTION_TOPIC, recommendation: RECOMMENDATION_TOPIC };
 
 /** What a provider built for one task receives: the task, and the last call of the loop (what a model reads in `lastOutput`). */
 export interface BuilderContext {
@@ -124,7 +125,7 @@ const relativeOrAbsolute = (file: string): string => {
     return rel.startsWith("..") ? file.split(path.sep).join("/") : rel;
 };
 
-const kindOf = (p: string): ManifestArtifact["kind"] => (p.endsWith(".onnx") ? "model" : p.endsWith(".spikypanda") ? "graph" : p.endsWith("contract.json") ? "contract" : /^procedures\/.*\.json$/.test(p) ? "procedure" : /^playbooks\/.*\.json$/.test(p) ? "playbook" : /^adaptations\/.*\.json$/.test(p) ? "adaptation" : /^forge\/[^/]+\/artifact\.json$/.test(p) ? "plugin" : "file");
+const kindOf = (p: string): ManifestArtifact["kind"] => (p.endsWith(".onnx") ? "model" : p.endsWith(".spikypanda") ? "graph" : p.endsWith("contract.json") ? "contract" : /^procedures\/.*\.json$/.test(p) ? "procedure" : /^playbooks\/.*\.json$/.test(p) ? "playbook" : /^adaptations\/.*\.json$/.test(p) ? "adaptation" : /^recommendations\/.*\.json$/.test(p) ? "recommendation" : /^forge\/[^/]+\/artifact\.json$/.test(p) ? "plugin" : "file");
 
 async function readTask(broker: Broker, taskId: string): Promise<{ task: TaskFile; sha256: string }> {
     const r = await broker.call("workspace", "read", { taskId, path: "task.json" });
@@ -593,7 +594,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         const proposedText = manifestText(manifest);
         proposedManifestSha256 = sha256Text(proposedText);
         await writeText(broker, taskId, "manifest.proposed.json", proposedText);
-        const artifacts = manifest.artifacts.filter((a) => a.kind === "model" || a.kind === "graph" || a.kind === "procedure" || a.kind === "plugin" || a.kind === "playbook" || a.kind === "adaptation").map((a) => ({ kind: a.kind, path: a.path, sha256: a.sha256, ...(a.contractSha256 ? { contractSha256: a.contractSha256 } : {}) }));
+        const artifacts = manifest.artifacts.filter((a) => a.kind === "model" || a.kind === "graph" || a.kind === "procedure" || a.kind === "plugin" || a.kind === "playbook" || a.kind === "adaptation" || a.kind === "recommendation").map((a) => ({ kind: a.kind, path: a.path, sha256: a.sha256, ...(a.contractSha256 ? { contractSha256: a.contractSha256 } : {}) }));
         const r = await broker.call(APP.authority.propose.slot, APP.authority.propose.tool, {
             taskId,
             artifacts,

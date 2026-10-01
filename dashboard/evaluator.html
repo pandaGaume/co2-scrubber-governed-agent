@@ -195,7 +195,7 @@ function renderList() {
     const groups = CLASSES.map(([c, title]) => [title, fs.filter((f) => f.class === c)]).filter(([, xs]) => xs.length);
     const row = (f) => `<button class="finding${current?.id === f.id ? " on" : ""}" type="button" data-id="${esc(f.id)}">
         <div class="t">${esc(f.title)}</div>
-        <div class="meta"><span class="pill ${esc(f.class)}">${esc(label(f.class))}</span><span class="tag">${esc(f.detector)}</span><span class="tag">${f.tasks.length} task(s)</span>${f.settledBy ? `<span class="tag">to settle</span>` : ""}</div>
+        <div class="meta"><span class="pill ${esc(f.class)}">${esc(label(f.class))}</span><span class="tag">${esc(f.detector)}</span><span class="tag">${f.tasks.length} task(s)</span>${f.settledBy ? `<span class="tag">to settle</span>` : ""}${evaluation?.recommended?.[f.id] ? `<span class="tag">${evaluation.recommended[f.id].signed ? "recommendation signed" : "recommended"}</span>` : ""}</div>
       </button>`;
     const unclassified = evaluation?.unclassified ?? [];
     $("list").innerHTML =
@@ -212,6 +212,14 @@ function renderList() {
     };
 }
 
+/** A finding's recommendation: on the proposals shelf (signed or not), or asked of the factory by a person, never by the page itself. */
+function recommendationOf(f) {
+    const r = evaluation?.recommended?.[f.id];
+    if (r) return `<h3>Its recommendation</h3><div><a class="link" href="./library.html#${encodeURIComponent(r.id)}">${esc(r.id)}</a> <span class="tag">${r.signed ? "signed: to be applied in a fork and measured" : "on the proposals shelf, unsigned"}</span></div>`;
+    if (!f.recommend) return "";
+    return `<h3>Its recommendation</h3><div><button class="btn" type="button" id="ask-recommendation" title="the recommendation factory writes one, with a model; it goes to the library's proposals shelf, unsigned, and changes nothing">ask the factory for one</button> <span class="tag" id="asked"></span></div>`;
+}
+
 const nodeButton = (id) => `<button class="node" type="button" data-node="${esc(id)}">${esc(id)}</button>`;
 
 function renderFinding() {
@@ -221,6 +229,7 @@ function renderFinding() {
       <h1>${esc(f.title)}</h1>
       <div class="meta"><span class="pill ${esc(f.class)}">${esc(label(f.class))}</span> <span class="tag">${esc(f.detector)}</span> ${f.recommend ? "" : `<span class="tag">nothing to recommend</span>`}</div>
       ${f.settledBy ? `<div class="settle">to settle: ${esc(f.settledBy)}</div>` : ""}
+      ${recommendationOf(f)}
       <h3>The path that justifies it</h3>
       <ol class="path">${f.path.map((p) => `<li>${esc(p)}</li>`).join("")}</ol>
       <h3>What it is about</h3>
@@ -251,7 +260,18 @@ async function openNode(id) {
     }
 }
 
-$("detail").addEventListener("click", (ev) => {
+$("detail").addEventListener("click", async (ev) => {
+    if (ev.target.id === "ask-recommendation" && current) {
+        ev.target.disabled = true;
+        try {
+            const r = await call("recommend", { finding: current.id, ...forksArg() });
+            $("asked").textContent = r.taskId ? `asked: ${r.recommendation}, task ${r.taskId}` : "nothing asked";
+        } catch (e) {
+            $("asked").textContent = e.message;
+            ev.target.disabled = false;
+        }
+        return;
+    }
     const b = ev.target.closest("button.node");
     if (b) openNode(b.dataset.node);
 });

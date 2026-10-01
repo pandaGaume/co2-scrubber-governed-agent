@@ -1,5 +1,5 @@
 {
-    "note": "The register of the procedure guard's rules (2026-09-30, docs/evaluateur.fr.md, E2): each check the guard makes, by a stable code, how its refusal is recognised (match: patterns over one problem of the refusal, kind included, which read the manifests of before as of now; the model reads nothing new), the texts of the contract that state it to the model before it submits (states), the conventions it assumes (applies), and its status: stated (a statement says it, checked by its phrase), tacit (intended: the model cannot act on it, or it goes without saying), gap (stated nowhere before a refusal, found by the register, awaiting a person's decision). The rules of the signed document (format.json rulesDocument) keep the document's ids and are recognised by their own words (says); what states them is written here, with the patterns of the words the guard used before the rules were the document's (older, 2026-09-28), each with an example. A statement is a file of the contract at the version a task ran under (git at its commit, the words file from the workshop's store), a JSON Pointer into it when it is JSON, and a phrase it must hold; or a library document, stated to a task only if it read it (library.read) before its first submission. tests/rules-register.test.ts holds this file to the contract as it is now. Never adaptable by the reflection.",
+    "note": "The register of the procedure guard's rules (2026-09-30, docs/evaluateur.fr.md, E2): each check the guard makes, by a stable code, how its refusal is recognised (match: patterns over one problem of the refusal, kind included, which read the manifests of before as of now; the model reads nothing new), the texts of the contract that state it to the model before it submits (states), the conventions it assumes (applies), what it concerns when it is the library rather than the contract (concerns: a fact cited where it does not bound, a document nobody signed, a rule citing a fact the library lacks: D7), and its status: stated (a statement says it, checked by its phrase), tacit (intended: the model cannot act on it, or it goes without saying), gap (stated nowhere before a refusal, found by the register, awaiting a person's decision). The rules of the signed document (format.json rulesDocument) keep the document's ids and are recognised by their own words (says); what states them is written here, with the patterns of the words the guard used before the rules were the document's (older, 2026-09-28), each with an example. A statement is a file of the contract at the version a task ran under (git at its commit, the words file from the workshop's store), a JSON Pointer into it when it is JSON, and a phrase it must hold; or a library document, stated to a task only if it read it (library.read) before its first submission. tests/rules-register.test.ts holds this file to the contract as it is now. Never adaptable by the reflection.",
     "topic": "procedure",
     "conventions": {
         "path-keys": {
@@ -78,18 +78,21 @@
         },
         {
             "code": "FACT_NOT_BOUNDING",
+            "concerns": "library",
             "match": ["^justification: \\S+ = .+ cites \\S+ .*which the signed rules do not bound it by"],
             "example": "justification: limits.co2MaxPpm = 2500 cites habitat.co2.elevatedPpm (3500 ppm), which the signed rules do not bound it by",
             "states": [{ "file": "specs/procedure/words.json", "pointer": "/brief/safetyBounds", "phrase": "the fact its signed rules bound it by" }]
         },
         {
             "code": "FACT_UNSIGNED",
+            "concerns": "library",
             "match": ["^justification: \\S+: the fact \\S+ is in \".*\", which no person has signed as valid"],
             "example": "justification: steps.1.speedPercent: the fact scrubber.minimumSpeedElevated is in \"scrubber-1-datasheet\", which no person has signed as valid: cite instead a fact of a signed document that bounds this constant",
             "states": [{ "file": "specs/procedure/words.json", "pointer": "/brief/procedure", "phrase": "library.facts says which are signed" }]
         },
         {
             "code": "FACT_CHANGED_SINCE_SIGNED",
+            "concerns": "library",
             "match": ["^justification: \\S+: \".*\" was signed by .* and has changed since"],
             "example": "justification: limits.co2AbortPpm: \"commissioning-test-safety\" was signed by A. Person and has changed since",
             "status": "tacit",
@@ -203,6 +206,7 @@
         },
         {
             "code": "RULES_UNSIGNED",
+            "concerns": "library",
             "match": ["^rules: the guard's rules are in \".*\", which no person has signed as valid"],
             "example": "rules: the guard's rules are in \"commissioning-test-safety\", which no person has signed as valid: no proposal is judged by rules nobody signed",
             "status": "tacit",
@@ -210,6 +214,7 @@
         },
         {
             "code": "RULE_FACT_MISSING",
+            "concerns": "library",
             "match": ["^shape: rule \\S+ cites the fact \\S+, which the library does not hold"],
             "example": "shape: rule floor.step cites the fact test.speedFloorPercent, which the library does not hold",
             "status": "tacit",

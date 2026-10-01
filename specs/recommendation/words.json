@@ -1,0 +1,47 @@
+{
+    "note": "What the recommendation factory says to its model and in its refusals (2026-10-01): the code fills the holes {name} and says nothing of its own.",
+    "intention": "Write the recommendation {id} for the evaluator's finding: {finding}. It is a proposal: it changes nothing until an authorised signatory signs it, and a signed one is measured in a fork before a person commits it.",
+    "capabilities": {
+        "propose": "Propose the recommendation: its kind, its target (a text of the state's targets by its file and pointer, the memory entry, or a library document), the action, the text the target holds now (current) and the text proposed, why, the effect expected, whether it changes what a guard accepts, and the verification (the cases to replay, the models, how many tasks, what is measured), with the justification of the number of tasks. The guard checks it against the finding and the target as it is now; an accepted one is written to {file} for the station to propose."
+    },
+    "brief": {
+        "plan": "Stage 1 of 3, the plan. The finding is in the state (hypothesis, field \"finding\": its class, its path in the harness's graph, its counts and evidence), with the texts you may change and what each says now (field \"targets\"), the memory entry or the library documents it is about (fields \"memory\", \"library\"), the rule it is of (field \"rule\"), the cases to replay (field \"cases\") and the conventions an example keeps (field \"conventions\"). Declare with task.plan that the recommendation is written here: no node of the catalogue, the output {name} missing, to the topic \"recommendation\".",
+        "write": "Stage 2 of 3, the recommendation. Write one, for this finding, with recommendation.propose: a kind its class allows ({kinds}), a target among those the state gives, its current text exactly as the state says it, a proposed text a model reads in English (no example a convention contradicts), why, the effect expected, and a verification that replays the finding's cases. Its number of tasks is justified.{refused}",
+        "refused": " Your last proposal was refused: {problems}. Correct what it says and propose it again, whole.",
+        "handOver": "Stage 3 of 3, hand over. The guard accepted {path}. End with task.done, the recommendation as the artifact of kind \"recommendation\"; the station puts it on the library's proposals shelf and asks an authorised signatory to sign it."
+    },
+    "requirements": {
+        "missing": "the plan needs {requirement} first: {how}"
+    },
+    "guard": {
+        "refused": "recommendation refused: {problems}",
+        "id": "the recommendation's id is \"{got}\", not the \"{id}\" the task asks for",
+        "accepted": "the recommendation {path} is already accepted: end with task.done",
+        "finding": "the finding {finding} has nothing to recommend: a model's own mistake is counted, never recommended on",
+        "kind": "a finding of class {class} takes a recommendation of kind {kinds}, not \"{got}\"",
+        "action": "a recommendation of kind {kind} takes the action {actions}, not \"{got}\"",
+        "target": "the target {target} is not one the state gives (field \"targets\"): {targets}",
+        "stale": "the current text of {target} is not what it holds now: send it exactly as the state gives it",
+        "same": "the proposed text is the text {target} holds already",
+        "empty": "the proposed text says nothing",
+        "language": "a text a model reads is written in English: the proposed text holds {chars}",
+        "dash": "the proposed text holds an em dash: use a comma, a colon or a semicolon",
+        "convention": "the proposed text names {example}, which the convention of {list} contradicts: a path names an element of {list} by its {key}, never by its position",
+        "decision": "a recommendation that changes what a guard accepts is of kind guard-decision and says so (changesAcceptance true); any other says it does not",
+        "memory": "the memory entry {got} is not the one the finding is about ({memory})",
+        "library": "the document {got} is not one the finding is about ({documents})",
+        "replay": "the verification replays the finding's cases: {unknown} are not among them ({cases})",
+        "tasks": "the verification replays {tasks} task(s): {min} at least",
+        "measure": "the verification measures what the finding is about: name {measures}"
+    },
+    "openQuestions": {
+        "plan": "the plan: the recommendation is written here (task.plan)",
+        "write": "the recommendation, checked against the finding and its target (recommendation.propose)",
+        "handOver": "hand the recommendation over (task.done)"
+    },
+    "validate": {
+        "none": "no recommendation among the claimed artifacts",
+        "notAccepted": "no recommendation was accepted by the guard in this task (recommendation.propose)",
+        "notTheFile": "claimed recommendation \"{path}\" is not the file the guard accepted ({accepted})"
+    }
+}

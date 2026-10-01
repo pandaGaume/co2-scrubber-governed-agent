@@ -278,4 +278,50 @@ Elles attendent la décision d'une personne (E3).
 
 **D6 sur l'entrée apprise par Sonnet** : elle compense `REFERENCE_NOT_A_FACT`, qu'aucun texte reçu par ses échecs n'énonçait. C'est une lacune du contrat, apprise au lieu d'être écrite, et devenue redondante depuis que le contrat l'énonce.
 
-E0 à E2 suffisent à retrouver sans modèle les huit cas, sauf l'historique fictif. E3 et E4 ferment la boucle que nous avons faite à la main pendant deux jours. Plus tard, les mêmes nœuds accueilleront la connaissance du domaine (le comportement de l'épurateur, les causes d'abort, les écarts du jumeau), reliée aux faits signés et aux paramètres du jumeau.
+E0 à E2 suffisent à retrouver sans modèle les huit cas, sauf l'historique fictif.
+
+## E3, fait (2026-10-01)
+
+**L'usine de recommandation** est le topic `recommendation` (`harness/topics/recommendation/index.ts`, `specs/recommendation/*`), construit sur le modèle de l'usine de playbooks : une conduite en trois étapes (le plan, la recommandation, la remise), un prompt et des mots en anglais, et une doublure scriptée.
+
+**Une tâche, un constat, une recommandation.** Ce que l'usine reçoit est lu dans le graphe (`lib/recommendation.ts`) :
+
+- le constat entier ;
+- les textes qu'elle peut changer, avec ce qu'ils disent aujourd'hui : les énoncés de la règle, ceux des conventions qu'elle suppose, ceux des règles du même genre, la description d'une capacité refusée, et le prompt du topic en dernier recours ;
+- l'entrée de mémoire ou les documents de la bibliothèque concernés ;
+- la règle et ses propres mots ;
+- les cas à rejouer ;
+- ce qu'on mesure ;
+- les conventions.
+
+**Le chemin et les preuves du constat** sont attachés par le harnais à ce que l'usine propose ; le modèle n'en écrit aucun.
+
+**Le garde est déterministe** et la station le refait avant de déposer. Il refuse :
+
+- un genre que la classe du constat ne prend pas (`contract`, `guard-message`, `guard-decision`, `library`, `memory`) ;
+- une cible qui n'est pas offerte ;
+- un texte « actuel » qui n'est plus celui du disque ;
+- un texte proposé identique, en français, ou avec un tiret cadratin ;
+- un exemple qu'une convention contredit (un élément de liste nommé par sa position, `/steps/0`, `abort.0` : la leçon de `/steps/0/reason`) ;
+- un changement de ce que le garde accepte qui ne se déclare pas comme tel ;
+- une vérification qui ne rejoue pas les cas du constat, en compte moins de cinq, ou ne mesure pas ce dont il s'agit.
+
+**La gouvernance.**
+
+- La recommandation acceptée est déposée sur le rayon des propositions de la bibliothèque (`library.propose`). Elle y figure comme une page que lit une personne, accompagnée de la recommandation elle-même, et la signature couvre les deux.
+- Mother l'annonce, et le rôle `authorised-signatory` est sollicité.
+- Signée, elle ne change encore rien : elle sera appliquée dans un fork et mesurée (E4).
+
+**La station.** `station.recommend` choisit le premier constat qui n'a pas encore de recommandation, dans cet ordre : régressions, lacunes de contrat, de bibliothèque, artefacts, règles dites et non suivies. Elle peut aussi prendre le constat qu'on lui nomme. Un constat qui a déjà sa recommandation, ou qui n'a rien à recommander, est refusé. La page de l'évaluateur montre la recommandation d'un constat, ou un bouton pour la demander ; c'est une personne qui le clique, jamais la page.
+
+**D7, les lacunes de la bibliothèque.** Le registre marque les règles qui concernent la bibliothèque (`concerns: "library"` : un document que personne n'a signé, un fait cité là où il ne borne pas). D7 les relève quand elles reviennent, avec les documents que nomment leurs propres refus.
+
+**Un constat clos** est un constat dont toutes les règles manquantes sont énoncées aujourd'hui. Il n'a plus rien à recommander, reste visible, et se marque « stated since ». Seul D6 fait exception : une entrée de mémoire devenue redondante se retire.
+
+**Ce que la doublure scriptée sait écrire, et que vérifie `tests/recommendation-factory.test.ts` sur le vrai corpus :**
+
+- retirer l'entrée apprise par Sonnet : une lacune comblée depuis, la mémoire devenue redondante ;
+- ajouter ses propres mots à la description d'`expected`, une règle dite et non suivie ;
+- faire signer un document (D7, dans l'atelier du dépôt : `FACT_UNSIGNED`).
+
+Tout le reste revient au modèle, qui écrit avec ce prompt et sous ce garde. E3 et E4 ferment la boucle que nous avons faite à la main pendant deux jours. Plus tard, les mêmes nœuds accueilleront la connaissance du domaine (le comportement de l'épurateur, les causes d'abort, les écarts du jumeau), reliée aux faits signés et aux paramètres du jumeau.

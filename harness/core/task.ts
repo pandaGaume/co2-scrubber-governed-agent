@@ -68,7 +68,7 @@ export function thresholdsOf(task: Pick<TaskFile["task"], "objective">): Thresho
     return { rmseMax: rmse, absoluteMax: Number.isFinite(absolute) && absolute > 0 ? absolute : null, unit: APP.thresholds.unit };
 }
 
-export const TOPICS = ["graph", "onnx", "procedure", "code", "playbook", "reflection"] as const;
+export const TOPICS = ["graph", "onnx", "procedure", "code", "playbook", "reflection", "recommendation"] as const;
 export type Topic = (typeof TOPICS)[number];
 
 /**

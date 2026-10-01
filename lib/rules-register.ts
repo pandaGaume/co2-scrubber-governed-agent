@@ -37,6 +37,8 @@ export interface RegisteredRule {
     status: RuleStatus;
     note?: string;
     signed: boolean;
+    /** What it is about when it is the library rather than the contract (D7). */
+    concerns?: "library";
 }
 
 export interface Register {
@@ -50,7 +52,7 @@ interface RegisterFile {
     topic: string;
     conventions?: Record<string, { note?: string; states: Statement[] }>;
     signed?: Record<string, { states?: Statement[]; status?: RuleStatus; note?: string; applies?: string[]; older?: string[]; examples?: string[] }>;
-    rules: Array<{ code: string; match: string[]; example?: string; states?: Statement[]; status?: RuleStatus; note?: string; applies?: string[] }>;
+    rules: Array<{ code: string; match: string[]; example?: string; states?: Statement[]; status?: RuleStatus; note?: string; applies?: string[]; concerns?: "library" }>;
 }
 
 interface SignedRuleFile {
@@ -88,6 +90,7 @@ export function loadRegister(topic: string): Register | null {
         status: r.status ?? "stated",
         ...(r.note ? { note: r.note } : {}),
         signed: false,
+        ...(r.concerns ? { concerns: r.concerns } : {}),
     }));
     const format = readJson<{ rulesDocument?: string }>(fromRoot("specs", topic, "format.json"));
     const document = format?.rulesDocument ? readJson<{ rules: SignedRuleFile[] }>(fromRoot("docs", "library", `${format.rulesDocument}.rules.json`)) : null;

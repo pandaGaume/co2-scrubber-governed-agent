@@ -1,0 +1,42 @@
+{
+    "title": "The recommendation factory: what it writes, and how it says it",
+    "note": "A factory that writes one recommendation for one finding of the post-procedure evaluator (2026-10-01, docs/evaluateur.fr.md, E3): what to change in the harness (a text of the contract, a guard's message, a guard's decision), in the library, or in the memory, why, the effect expected, and how to verify it. What it is given is the task's observations.recommendation: the finding (its class, its path in the harness's graph, its counts, its evidence: the harness attaches them, the model writes none of them), the texts it may change with what they say now, the memory entry or the library documents it is about, the cases to replay, and the conventions an example must keep. It recommends; it applies nothing: the station puts the recommendation on the library's proposals shelf, an authorised signatory signs it or not, and a signed one is applied in a fork and measured (E4). Its words are words.json, its prompt prompt.md, its own stages playbook.json.",
+    "words": "specs/recommendation/words.json",
+    "prompt": "specs/recommendation/prompt.md",
+    "playbook": "specs/recommendation/playbook.json",
+    "observation": "recommendation",
+    "file": "recommendations/{id}.json",
+    "kinds": {
+        "contract": "a text of the contract a model reads, replaced or added to: a schema's description, a key of a words file, a prompt",
+        "guard-message": "what a guard's refusal says, to say the true reason: the decision unchanged",
+        "guard-decision": "what a guard accepts: proposed only, marked as changing what is accepted",
+        "library": "a document of the library: signed by a person, a fact added, a fact made clear; on the proposals shelf, unsigned",
+        "memory": "an entry of the factory's memory: retired, or classed again"
+    },
+    "actions": {
+        "contract": ["replace", "append"],
+        "guard-message": ["replace", "append"],
+        "guard-decision": ["replace", "append"],
+        "library": ["sign", "add-fact", "clarify"],
+        "memory": ["retire", "reclassify"]
+    },
+    "classes": {
+        "contract-gap": ["contract", "guard-message"],
+        "stated-not-followed": ["contract", "guard-message"],
+        "contract-gap-or-policy": ["contract", "memory"],
+        "regression": ["contract"],
+        "harness-artefact": ["contract", "guard-message", "guard-decision"],
+        "library-gap": ["library"],
+        "learned-policy": ["memory"],
+        "domain-knowledge": ["memory", "library"]
+    },
+    "detectors": {
+        "note": "the kinds a detector's findings take besides their class's: what a memory entry is (D6) is answered in the memory",
+        "D6": ["memory"]
+    },
+    "modelFacing": ["^specs/", "/grammars/"],
+    "verification": {
+        "note": "a recommendation is measured before a person commits it: the finding's cases replayed, at least this many tasks",
+        "minTasks": 5
+    }
+}

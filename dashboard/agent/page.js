@@ -973,7 +973,9 @@ var EXCLUDED = [
   /^biomed\.(monitor_start|monitor_stop|report|move|alarm|alarm_clear)$/,
   /^station\.(registry_register|registry_report|procedure_checked|candidate_evaluated|commissioning_authorise|commissioning_reopen|procedure_run|reflect)$/,
   // The harness's graph and its evaluation are the evaluator's reading of the factories' traces (2026-09-30), not something the habitat's agent acts on.
-  /^station\.harness_(graph|evaluate)$/
+  /^station\.harness_(graph|evaluate)$/,
+  // A recommendation is the evaluator's factory's work, asked by a person or the station, signed by a person (2026-10-01, E3).
+  /^station\.recommend$/
 ];
 function replayPolicyFor(id, guardMode) {
   if (APPROVAL_REQUIRED.some((r) => r.test(id))) return "approval-required";
