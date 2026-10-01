@@ -552,3 +552,36 @@ E5 devra battre ces chiffres sur les mêmes étiquettes, puis le prouver sur un 
 
 Les étiquettes non confirmées par une personne sont marquées comme telles. Les relire est le premier travail utile pour toi : elles sont la référence de tout ce qui suit.
 
+
+## Un premier essai du diagnostic par un reasoner (2026-10-01, Sonnet 5.5)
+
+Avant E5.1, un seul appel par piste, sans outils ni prédicats : `scripts/evaluator/diagnose-trial.mjs`, sur les 17 constats aux étiquettes établies.
+
+**Le dossier de chaque piste**, construit par script et sans l'étiquette :
+- le constat tel que le détecteur le donne ;
+- pour ses trois premières tâches, les pas refusés, avec le texte complet du refus, ce qui a été envoyé et ce qui a été envoyé ensuite ;
+- les règles du registre dont relèvent ces refus, et ce que disent leurs énoncés aujourd'hui ;
+- les faits de la bibliothèque ;
+- le commit du dépôt.
+
+Coût : 198 000 tokens lus et 31 000 écrits, environ un dollar.
+
+**Le résultat, comparé aux étiquettes**
+
+| | verdict | classe | actualité |
+|---|---|---|---|
+| comme l'étiquette, au mot près | 6 / 17 | 12 / 17 | 11 / 17 |
+| sur le fond (sans l'ambiguïté de « périmé ») | 11 / 17 | 12 / 17 | 11 / 17 |
+
+**L'ambiguïté de « périmé ».** Cinq désaccords n'en sont pas. Le détecteur dit lui-même « énoncé depuis, rien à recommander », et Sonnet dit « périmé » là où l'étiquette dit « juste et clos ». La classe et l'actualité concordent. Ma consigne définissait mal « périmé » : il faut entendre « demande d'agir sur ce qui est réglé ».
+
+**Sur les refus et les corrections** (D1, D2, D3, D6, D7, D8), le fond concorde 10 fois sur 11.
+- Sur `D2:8cba194716f8`, il trouve seul la renumérotation des chemins : `steps.1` et `steps.2`, et en plus `abort.0` devenu `abort.co2`, que l'étiquette n'avait pas vu. Mais la consigne lui demandait de vérifier si des chemins avaient été renumérotés. Elle est donc inspirée de ce cas, et ce point ne prouve rien.
+- Il juge le message « is not a fact of the library » « vrai et suffisant », alors qu'il était faux. Le dossier ne contient pas le code du guard à la version des tâches, seulement le refus, qui nommait aussi le bon identifiant.
+
+**Sur D4 (troncatures, refus avant tout guard) et D5, le fond est manqué** : 2 fois incertain, 3 fois faux, 1 fois juste sur 6 pour D4, et la cause manquée pour `D5:c6d772db8922`. Il le dit lui-même dans ses doutes : le dossier ne montre ni la raison d'arrêt de l'appel, ni le profil (sa limite de sortie), ni ce qui a été envoyé quand les arguments n'ont pas passé le schéma, ni le schéma lu à l'époque, ni le lien entre les deux bras d'un protocole.
+
+**Ce que ça dit pour E5**
+- Un reasoner lit mieux les corrections que les détecteurs, et il dit ce qu'il ne voit pas au lieu de l'inventer, sauf deux fois.
+- Ses erreurs viennent du dossier : un dossier fixe ne suffit pas. Il lui faut les outils en lecture prévus par E5 : le pas tel que le modèle l'a reçu et envoyé, la raison d'arrêt, le profil, les textes et le code du guard à la version de la tâche, et la structure des forks.
+- Ses affirmations restent à vérifier par le harness : « message vrai » est vérifiable en lisant le guard à la version de la tâche, et c'est ce que doivent faire les prédicats d'E5.1.
