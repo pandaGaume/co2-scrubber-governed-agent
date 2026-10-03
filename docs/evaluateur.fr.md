@@ -796,3 +796,24 @@ En chemin, l'échec intermittent `fetch failed` de la suite de tests a trouvé s
 - L'accord de deux familles est le signal le plus net, et le plafond en cas de désaccord fait son travail.
 - Vingt pistes ne suffisent pas à fixer un seuil. Il faudra plus de pistes étiquetées, et le corpus réservé.
 - Les affirmations de la cause qui ne sont portées par aucune prédiction passent sans contrôle. C'est la prochaine faiblesse à fermer : exiger qu'une affirmation de la cause sur un fait des sources (une valeur, un chemin, les mots d'un refus) soit une prédiction.
+
+## Ce que disent les causes sans qu'aucune prédiction le teste (2026-10-03)
+
+La question posée après E5.4 : faut-il que chaque affirmation factuelle de la cause soit une prédiction exécutée par le harnais ? La mesure a été faite sur les 40 causes d'E5.4, sans aucun appel de modèle. Le détail est dans `docs/experiments/2026-10-03-cause-claims/`.
+
+**Ce qu'on trouve.** 81 affirmations ne sont testées par aucune prédiction de leur propre diagnostic, soit environ deux par cause.
+- 56 sont vérifiables avec les prédicats actuels : 49 tiennent, **2 sont fausses**, 5 restent inconnues.
+- 16 sont des faits qu'aucun prédicat ne sait dire (tokens, empreintes, comptes).
+- 9 sont des interprétations.
+
+Les deux affirmations fausses portaient chacune la conclusion de leur diagnostic :
+- Sonnet, sur `D2:dc0b` : « la règle des chemins figure déjà dans ce que lit le modèle », alors que la convention n'était dite nulle part à cette version. C'est l'appui de sa classe.
+- GPT, sur `D5:8d5e` : « ce n'est pas l'épuisement de la limite de sortie », alors que le pas est bien coupé à la limite. C'est l'appui de son verdict.
+
+**Les erreurs de `D2:8cba` n'auraient pas été attrapées.** « Remplacé 100 par 30 » est vrai sous `steps.1` ; l'erreur porte sur le sens, puisqu'il s'agit d'une renumérotation. Quant à « le message du refus était vrai », c'est discutable plutôt que faux.
+
+**Ce que ça coûterait.** Sur les huit affirmations que ma première lecture donnait fausses, six tenaient : c'est ma traduction en prédicats qui était fautive (mauvais pas, mots paraphrasés, comptes faits sur le mauvais périmètre). Un modèle forcé de traduire toutes ses affirmations ferait les mêmes erreurs, et le garde refuserait des diagnostics justes pour leur formulation.
+
+**Conclusion.** L'exigence générale ne se justifie pas sur ces données. Une règle étroite reste défendable : faire une prédiction de l'affirmation qui fonde la classe, ou le verdict quand il est « faux ». C'est là qu'étaient les deux erreurs, mais deux cas ne prouvent rien. Les désaccords d'E5.4 indiquent d'autres priorités : les pistes D4 et D5, et les étiquettes contestées.
+
+Limites : un seul lecteur, quarante causes, et des traductions qui sont les miennes.
