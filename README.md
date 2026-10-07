@@ -1,3 +1,5 @@
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+
 # co2-scrubber-governed-agent
 
 ![Night 9 of 14 on the Moon: the habitat on its batteries, the crew asleep behind two dark windows, the assistant's console glowing in the first, the message at 02:40: stop the scrubber for twenty minutes, the pumps need the power margin.](dashboard/moon-night-card.png)
