@@ -74,6 +74,12 @@ export interface ProviderProfile {
          * decode the call against the tools' schemas.
          */
         toolChoice?: "required" | "auto";
+        /**
+         * Fields added to the request asked again, once, when the answer was cut at the output limit before any call (2026-10-08,
+         * Nemotron 3 Ultra: its reasoning ran past 4096 tokens, three steps, STUCK). For Nemotron, `{"chat_template_kwargs":
+         * {"enable_thinking": false}}`: the same question answered without thinking, the call directly.
+         */
+        whenCut?: Record<string, unknown>;
         /** The sampling temperature sent; null sends none, for a model that takes only its own (0.2 when absent). */
         temperature?: number | null;
         /** The reasoning effort asked of a model that reasons (the Responses API: low, medium, high); the model's own default when absent. */

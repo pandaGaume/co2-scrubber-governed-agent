@@ -18,6 +18,11 @@
         "timeoutMs": 120000,
         "_note": "2026-10-08: Nemotron 3 Ultra 550B A55B on Nebius Token Factory: the most capable and by far the most expensive; for complex or critical tasks only (Guillaume), never the default; id as Token Factory lists it.",
         "toolChoice": "required",
+        "whenCut": {
+            "chat_template_kwargs": {
+                "enable_thinking": false
+            }
+        },
         "schemaUnsupported": [
             "uniqueItems"
         ]

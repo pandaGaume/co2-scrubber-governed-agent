@@ -76,6 +76,8 @@ export class OpenAiCompatibleProvider implements Provider {
     private requiredRefused = false;
     /** The profile's `toolChoice`, null for the mode's own (required in state mode, auto in conversation mode). */
     private readonly toolChoice: "required" | "auto" | null;
+    /** The profile's `whenCut`: what a request asked again after an answer cut before any call adds. */
+    private readonly whenCut: Record<string, unknown> | null;
     /**
      * JSON Schema keys the server's grammar does not implement (2026-10-08, Nebius Token Factory: `Grammar error: Unimplemented keys:
      * ["uniqueItems"]`, the whole request refused): learned from its refusal, then left out of the schemas the model is shown. The
@@ -96,6 +98,7 @@ export class OpenAiCompatibleProvider implements Provider {
         this.maxTokens = p.maxTokens ?? null;
         this.maxTokensParam = p.maxTokensParam ?? "max_tokens";
         this.toolChoice = p.toolChoice ?? null;
+        this.whenCut = p.whenCut ?? null;
         this.profileTemperature = p.temperature;
         this.profileTimeoutMs = p.timeoutMs;
         this.family = familyOf(profile, this.model);
@@ -177,6 +180,20 @@ export class OpenAiCompatibleProvider implements Provider {
             }
             if (!response.ok) throw new Error(`${this.baseUrl} answered HTTP ${response.status}: ${text.slice(0, 400)}`);
             completion = JSON.parse(text) as ChatCompletion;
+            // Cut at the output limit before any call (the reasoning ran out of room): asked again once, as the profile says (whenCut).
+            const first = completion.choices?.[0];
+            if (this.whenCut && first?.finish_reason === "length" && !first.message?.tool_calls?.length && !callInText(first.message?.content, new Set(input.allowedCapabilities.map((c) => c.id)))) {
+                const cutTokens = completion.usage?.completion_tokens ?? 0;
+                body = { ...body, ...this.whenCut };
+                response = await post();
+                text = await response.text();
+                if (response.ok) {
+                    completion = JSON.parse(text) as ChatCompletion;
+                    // Both answers are paid: the usage counts them together.
+                    if (completion.usage) completion.usage = { ...completion.usage, completion_tokens: (completion.usage.completion_tokens ?? 0) + cutTokens };
+                    (completion as { askedAgain?: string }).askedAgain = `cut at the output limit before any call (${cutTokens} tokens): asked again with ${JSON.stringify(this.whenCut)}`;
+                }
+            }
         } finally {
             clearTimeout(timer);
         }

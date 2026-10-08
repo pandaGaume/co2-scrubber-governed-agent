@@ -105,6 +105,19 @@ describe("a reasoning model behind an OpenAI-compatible server", () => {
         assert.ok(!JSON.stringify(next.sent[0].messages).includes("repeat") && JSON.stringify(next.sent[0].messages).split("set_speed").length < 5);
     });
 
+    it("an answer cut while still thinking is asked again once without thinking, both paid", async () => {
+        const p = { tier3: { ...profile.tier3, whenCut: { chat_template_kwargs: { enable_thinking: false } } } } as ProviderProfile;
+        const cut = { status: 200, body: { choices: [{ message: { content: "I need to write a test procedure. Let me first gather..." }, finish_reason: "length" }], usage: { prompt_tokens: 10, completion_tokens: 4096 } } };
+        const called = { status: 200, body: completion(null, { name: "scrubber__motor__set_speed", args: '{"percent":40}' }) };
+        const provider = new OpenAiCompatibleProvider(p, { systemPrompt: "p", contextMode: "state" });
+        const { sent } = await withServer([cut, called], () => provider.resolve(input));
+        assert.equal(sent.length, 2);
+        assert.equal(sent[0].chat_template_kwargs, undefined);
+        assert.deepEqual(sent[1].chat_template_kwargs, { enable_thinking: false });
+        assert.equal(provider.exchanges[0].proposedCapabilityId, "scrubber.motor.set_speed");
+        assert.equal(provider.exchanges[0].tokens?.completion, 4116);
+    });
+
     it("a text naming no allowed tool stays a report", async () => {
         const provider = new OpenAiCompatibleProvider(profile, { systemPrompt: "p" });
         await withServer([{ status: 200, body: completion('[{"name": "library__read", "parameters": {"id": "x"}}]') }], () => provider.resolve(input));

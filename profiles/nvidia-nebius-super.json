@@ -18,6 +18,11 @@
         "timeoutMs": 120000,
         "_note": "2026-10-08: Nemotron 3 Super 120B A12B on Nebius Token Factory, to compare with the Nano (profiles/nvidia-nebius.json); id as Token Factory lists it.",
         "toolChoice": "required",
+        "whenCut": {
+            "chat_template_kwargs": {
+                "enable_thinking": false
+            }
+        },
         "schemaUnsupported": [
             "uniqueItems"
         ]
