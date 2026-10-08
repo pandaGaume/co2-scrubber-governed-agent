@@ -19,6 +19,7 @@
         "biomed:setup": "python -m pip install -r requirements.txt",
         "biomed:scan": "python scripts/polar-h10-bridge.py --scan",
         "biomed:strap": "python scripts/polar-h10-bridge.py --self-test",
+        "server:stop": "node scripts/server-stop.mjs",
         "slots": "node --env-file-if-exists=.env dist/slots/run-all.js --no-broker",
         "test": "node --import ./dist/tests/lib/physics.js --test \"dist/tests/**/*.test.js\"",
         "job": "spikypanda-job",
