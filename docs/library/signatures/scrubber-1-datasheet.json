@@ -1,8 +1,7 @@
 {
     "document": "scrubber-1-datasheet",
-    "digest": "bc56e1120964144f833bc68479fb439f4e97d47fa67174e07100cf4775b54e4e",
+    "digest": "6102bb1955060226ed5f1087c9a592eb66caa3cf9ee351c3831db4664a8a06b8",
     "signedBy": "Guillaume Pelletier",
-    "signedAt": "2026-09-28T14:04:18.278Z",
-    "scope": "safety",
-    "note": "repository"
+    "signedAt": "2026-10-08T11:28:32.239Z",
+    "scope": "safety"
 }
