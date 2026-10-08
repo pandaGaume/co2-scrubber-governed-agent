@@ -359,7 +359,7 @@ export default async function activate(studio: Studio): Promise<void> {
         if (!agent) await connect();
         if (!agent || busy) return;
         current = event;
-        if (event.world?.cabin) await world.call("scrubber", "debug.set_co2", { state: event.world.cabin.state, ppm: event.world.cabin.ppm });
+        if (event.world?.cabin) await world.call("scrubber", "scrubber.co2_report", storyReading(event.world.cabin.state, event.world.cabin.ppm));
         agent.provider.begin?.(event.intention);
         monitor?.push({ kind: "intention", id: event.intention, description: event.message, minute: event.at, guard: `${guardMode} (${agent.catalogue.filter((c) => c.replayPolicy !== "never").length} tools offered)`, reasoner: agent.provider.name });
         tell({ status: "event", intention: event.intention, at: event.at, message: event.message });
@@ -402,9 +402,14 @@ export default async function activate(studio: Studio): Promise<void> {
         }
     }
 
+    /** The reading the world reports to the board, stub or real (`scrubber.co2_report`); the scene names the state (lib/cabin-co2.ts reads the thresholds, in Node only). */
+    function storyReading(state: "NOMINAL" | "ELEVATED" | "CRITICAL", ppm?: number): { ppm: number; state: string; source: string } {
+        return { ppm: typeof ppm === "number" ? Math.round(ppm) : { NOMINAL: 1200, ELEVATED: 2600, CRITICAL: 5000 }[state], state, source: "world" };
+    }
+
     async function reset(): Promise<void> {
         for (const [tool, args] of [
-            ["debug.set_co2", { state: "NOMINAL", ppm: scenario.start.co2Ppm }],
+            ["scrubber.co2_report", storyReading("NOMINAL", scenario.start.co2Ppm)],
             ["scrubber.power", { on: true }],
             ["motor.set_speed", { percent: scenario.start.scrubberCommandPercent }],
         ] as const) await world.call("scrubber", tool, { ...args });

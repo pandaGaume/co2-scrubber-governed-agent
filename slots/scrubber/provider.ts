@@ -4,9 +4,11 @@
  * firmware has, so the policy moment of the demo can be rehearsed before the
  * board publishes itself through libmcpb:
  *   - the speed envelope: a value outside [0, 100] is refused, not clamped;
- *   - the run floor (2026-10-08): software never stops the scrubber, in any
- *     state: no power off and no speed below the run floor, whoever asks; only
- *     the crew's physical switch stops it;
+ *   - the run floor (2026-10-08): when one is set, software never stops the
+ *     scrubber, in any state: no power off and no speed below it, whoever
+ *     asks; only the crew's physical switch stops it. On the board it is a
+ *     setting of its local interface (0 by default, the demonstration sets
+ *     30); here `SCRUBBER_RUN_FLOOR` stands for that setting, 30 unless said;
  *   - MIN-FLOW: while the cabin CO2 is ELEVATED, no speed below the minimum
  *     flow; while it is CRITICAL, full speed is forced and no reduction is
  *     accepted, whoever asks;
@@ -28,9 +30,12 @@ import type { Co2State } from "../../lib/factory.js";
 
 /** Compiled into the firmware: the protection cannot go below this. */
 export const MIN_FLOW_FLOOR = 40;
-/** Compiled into the firmware: no speed below this in any state, and no power
-    off. The commissioning test runs at it (test.speedFloorPercent). */
-export const RUN_FLOOR = 30;
+/** The run floor the demonstration sets on the board (its local interface, CyanMycelium lot 2): no speed below it in any
+    state, and no power off; 0 = none. The commissioning test runs at it (test.speedFloorPercent). */
+export const RUN_FLOOR = ((): number => {
+    const v = Number(process.env.SCRUBBER_RUN_FLOOR ?? 30);
+    return Number.isInteger(v) && v >= 0 && v <= 100 ? v : 30;
+})();
 const CO2_STATES: Co2State[] = ["NOMINAL", "ELEVATED", "CRITICAL"];
 const STUB_PPM: Record<Co2State, number> = { NOMINAL: 1200, ELEVATED: 2600, CRITICAL: 5000 };
 
@@ -47,14 +52,17 @@ type Refusal = string | null;
 
 const speedRule = (percent: unknown, s: ScrubberState): Refusal => {
     if (typeof percent !== "number" || percent < 0 || percent > 100) return `speed ${percent} is outside the envelope [0, 100]: refused, not clamped`;
-    if (percent < RUN_FLOOR) return `RUN FLOOR: no speed below ${RUN_FLOOR} %, in any state; only the crew's switch stops the scrubber`;
+    if (s.runFloorPercent > 0 && percent < s.runFloorPercent) return `RUN FLOOR: no speed below ${s.runFloorPercent} %, in any state; only the crew's switch stops the scrubber`;
     if (s.co2State === "CRITICAL" && percent < 100) return "MIN-FLOW: CO2 is CRITICAL, full speed is forced, no reduction is accepted";
     if (s.co2State === "ELEVATED" && percent < s.minFlowPercent) return `MIN-FLOW: CO2 is ELEVATED, no speed below ${s.minFlowPercent} %`;
     return null;
 };
 
-const powerRule = (on: unknown, s: ScrubberState): Refusal =>
-    on === false ? `RUN FLOOR: CO2 is ${s.co2State}, the scrubber cannot be powered off by software, in any state; only the crew's switch stops it` : null;
+const powerRule = (on: unknown, s: ScrubberState): Refusal => {
+    if (on !== false) return null;
+    if (s.runFloorPercent > 0) return `RUN FLOOR: CO2 is ${s.co2State}, the scrubber cannot be powered off by software, in any state; only the crew's switch stops it`;
+    return s.co2State !== "NOMINAL" ? `MIN-FLOW: CO2 is ${s.co2State}, the scrubber cannot be powered off` : null;
+};
 
 const minFlowRule = (percent: unknown): Refusal => {
     if (typeof percent !== "number" || percent < MIN_FLOW_FLOOR) return `MIN-FLOW floor: the protection cannot be set below ${MIN_FLOW_FLOOR} % (asked ${percent}); it is compiled into the firmware`;
@@ -75,6 +83,8 @@ export interface ScrubberState {
     healthResidual: number;
     profile: "adaptive" | "fixed";
     minFlowPercent: number;
+    /** The run floor, 0 = none (the board's local setting). */
+    runFloorPercent: number;
 }
 
 export function scrubberSlot(wsBase: string, log: (line: string) => void): PublishedSlot<ScrubberState> {
@@ -87,7 +97,7 @@ export function scrubberSlot(wsBase: string, log: (line: string) => void): Publi
         },
         wsBase,
         log,
-        state: { power: true, speedPercent: 33, currentAmps: 0.15, co2Ppm: 1200, co2State: "NOMINAL", healthResidual: 0.02, profile: "adaptive", minFlowPercent: MIN_FLOW_FLOOR },
+        state: { power: true, speedPercent: 33, currentAmps: 0.15, co2Ppm: 1200, co2State: "NOMINAL", healthResidual: 0.02, profile: "adaptive", minFlowPercent: MIN_FLOW_FLOOR, runFloorPercent: RUN_FLOOR },
         tools: [
             {
                 name: "motor.state",
@@ -170,6 +180,30 @@ export function scrubberSlot(wsBase: string, log: (line: string) => void): Publi
                     if (profile !== "adaptive" && profile !== "fixed") throw new Error(`profile "${profile}" is not adaptive or fixed`);
                     s.profile = profile;
                     return { profile };
+                },
+            },
+            {
+                name: "scrubber.co2_report",
+                title: "Report the cabin CO2 reading",
+                description: "The CO2 sensor's reading, as the sensor states it: ppm and state (NOMINAL, ELEVATED, CRITICAL). MIN-FLOW decides on it; when CRITICAL, full speed is forced. The same tool as on the board.",
+                inputSchema: obj(
+                    {
+                        ppm: { type: "number", minimum: 0, description: "concentration, ppm" },
+                        state: { type: "string", enum: CO2_STATES, description: "NOMINAL, ELEVATED or CRITICAL, on the cabin's thresholds" },
+                        source: { type: "string", description: "who measured it" },
+                    },
+                    ["ppm", "state"],
+                ),
+                handle: ({ ppm, state }, s) => {
+                    if (typeof ppm !== "number" || ppm < 0) throw new Error(`ppm ${ppm} is not a concentration`);
+                    if (!CO2_STATES.includes(state as Co2State)) throw new Error(`state "${state}" is not one of ${CO2_STATES.join(", ")}`);
+                    s.co2State = state as Co2State;
+                    s.co2Ppm = ppm;
+                    if (s.co2State === "CRITICAL") {
+                        s.power = true;
+                        s.speedPercent = 100;
+                    }
+                    return { co2Ppm: s.co2Ppm, co2State: s.co2State, retainedState: s.co2State, forced: s.co2State === "CRITICAL" };
                 },
             },
             {

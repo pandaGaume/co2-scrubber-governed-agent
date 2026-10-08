@@ -15,7 +15,7 @@ import type { PublishedSlot } from "../slots/lib/slot-server.js";
 import { Broker } from "../harness/lib/broker.js";
 import { startAllOrFail } from "./lib/start.js";
 
-const PORT = 3131;
+const PORT = 3213;
 const quiet = (): undefined => undefined;
 
 // This file runs in a process of its own: the tokens and the security file are this suite's, set before the broker starts.

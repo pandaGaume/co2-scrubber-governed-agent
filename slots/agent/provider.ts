@@ -39,6 +39,7 @@ import { errorMessage, readJson } from "../../lib/files.js";
 import type { Scenario, ScenarioEvent } from "../../lib/factory.js";
 import { Broker } from "../../harness/lib/broker.js";
 import { brokerAuth } from "../../harness/lib/broker-auth.js";
+import { cabinReading } from "../../lib/cabin-co2.js";
 import { ReasonerProvider } from "../../harness/providers/reasoner.js";
 import { ScriptedProvider } from "../../stand-ins/night/scripted.js";
 import type { Provider, ProviderProfile } from "../../harness/lib/provider.js";
@@ -228,7 +229,7 @@ export function agentSlot(wsBase: string, log: (line: string) => void): Publishe
         replaying anything. */
     async function resetWorld(world: Broker): Promise<void> {
         for (const [tool, args] of [
-            ["debug.set_co2", { state: "NOMINAL", ppm: scenario.start?.co2Ppm }],
+            ["scrubber.co2_report", cabinReading(scenario.start?.co2Ppm, "NOMINAL")],
             ["scrubber.power", { on: true }],
             ["motor.set_speed", { percent: scenario.start?.scrubberCommandPercent }],
         ] as const) {
@@ -244,7 +245,7 @@ export function agentSlot(wsBase: string, log: (line: string) => void): Publishe
         if (!event) return null;
         const r = await runtime();
         if (event.world?.cabin) {
-            const w = await r.world.call("scrubber", "debug.set_co2", { state: event.world.cabin.state, ppm: event.world.cabin.ppm });
+            const w = await r.world.call("scrubber", "scrubber.co2_report", cabinReading(event.world.cabin.ppm, event.world.cabin.state));
             if (!w.ok) log(`[agent] world: the cabin could not be set (${w.error})`);
         }
         state.step = 0;

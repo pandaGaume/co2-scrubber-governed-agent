@@ -39,6 +39,8 @@ const APPROVAL_REQUIRED = [/^station\.register_artifact$/, /^station\.diagnostic
 const PROTECTED_NEVER = [/^scrubber\.scrubber\.power$/, /^scrubber\.scrubber\.set_min_flow$/, /^agent\.(reset|stop)$/];
 const EXCLUDED = [
     /^scrubber\.debug\./,
+    // The sensor's cable to the board (2026-10-08): the agent never feeds the protection a reading; the world and the sensor do.
+    /^scrubber\.scrubber\.co2_report$/,
     /^[a-z]+\.grammar_/,
     /^reasoner\./,
     /^scenario\./,

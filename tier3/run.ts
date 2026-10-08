@@ -35,6 +35,7 @@ import type { Scenario } from "../lib/factory.js";
 import { PARAMETERS_FILE, SYSTEM_PROMPT_FILE, fromRoot, isMain, relativeToRoot } from "../lib/paths.js";
 import { Broker, type SlotSession } from "../harness/lib/broker.js";
 import { brokerAuth } from "../harness/lib/broker-auth.js";
+import { cabinReading } from "../lib/cabin-co2.js";
 import { createAgent, type Agent } from "./agent.js";
 import { outcomeOf, type TraceOutcome } from "./lib/evaluator.js";
 import type { CatalogueEntry } from "./lib/capabilities.js";
@@ -153,7 +154,7 @@ export async function runScenario({ providerName = "scripted:prudent", guardMode
 
     // The board starts where the scenario starts (the stub keeps the state of the previous run otherwise): NOMINAL, powered, at the start command.
     for (const [tool, args] of [
-        ["debug.set_co2", { state: "NOMINAL", ppm: scenario.start.co2Ppm }],
+        ["scrubber.co2_report", cabinReading(scenario.start.co2Ppm, "NOMINAL")],
         ["scrubber.power", { on: true }],
         ["motor.set_speed", { percent: scenario.start.scrubberCommandPercent }],
     ] as const) {
@@ -167,7 +168,7 @@ export async function runScenario({ providerName = "scripted:prudent", guardMode
     for (const event of scenario.events) {
         if (!event.intention) continue;
         if (event.world?.cabin) {
-            const w = await world.call("scrubber", "debug.set_co2", { state: event.world.cabin.state, ppm: event.world.cabin.ppm });
+            const w = await world.call("scrubber", "scrubber.co2_report", cabinReading(event.world.cabin.ppm, event.world.cabin.state));
             if (!w.ok) log(`  world: could not set the cabin (${w.error})`);
         }
         const intention: Intention = { id: event.intention, description: event.message, parameters: { minute: event.at } };

@@ -143,7 +143,16 @@ async function main(): Promise<void> {
     }
 
     // The forge in a process of its own (`slots/forge/main.ts`, `npm run forge`): what a generated plugin does at run time happens there, not here.
-    const { slots, failures } = await publishAll(wsBase, log, flag("--no-forge") ? ["forge"] : []);
+    // The real board (2026-10-08, CyanMycelium lot 2): with --board (or SCRUBBER_SOURCE=board) the stub is not published and the
+    // ESP32 occupies the `scrubber` slot itself, through libmcpb, with the same tool names; the world reports the cabin's CO2 to it
+    // (scrubber.co2_report) exactly as to the stub.
+    const board = flag("--board") || process.env.SCRUBBER_SOURCE === "board";
+    const skipped = [...(flag("--no-forge") ? ["forge"] : []), ...(board ? ["scrubber"] : [])];
+    const { slots, failures } = await publishAll(wsBase, log, skipped);
+    if (board) {
+        log("scrubber: the real board's slot (--board); the stub is not published. Until the board connects, the slot is empty and the control room shows it red");
+        for (const base of broker?.lanBases ?? []) log(`the board's Broker settings (Device/Broker on its phone page): host ${new URL(base).hostname}, port ${new URL(base).port}`);
+    }
     if (failures.length) log(`DEGRADED: ${failures.length} slot(s) not published (${failures.map((f) => f.slot).join(", ")}); the others run, the board shows the missing ones red`);
     // With the broker's authorization on (broker/security.json, npm run broker:tokens), a page needs its device's token once: the links
     // below carry it in the address (#token=...), the page keeps it and takes it out of the address bar (harness/lib/broker-auth.ts).

@@ -1011,6 +1011,8 @@ var APPROVAL_REQUIRED = [/^station\.register_artifact$/, /^station\.diagnostic_l
 var PROTECTED_NEVER = [/^scrubber\.scrubber\.power$/, /^scrubber\.scrubber\.set_min_flow$/, /^agent\.(reset|stop)$/];
 var EXCLUDED = [
   /^scrubber\.debug\./,
+  // The sensor's cable to the board (2026-10-08): the agent never feeds the protection a reading; the world and the sensor do.
+  /^scrubber\.scrubber\.co2_report$/,
   /^[a-z]+\.grammar_/,
   /^reasoner\./,
   /^scenario\./,
@@ -2384,7 +2386,7 @@ async function activate(studio) {
     if (!agent) await connect();
     if (!agent || busy) return;
     current = event;
-    if (event.world?.cabin) await world.call("scrubber", "debug.set_co2", { state: event.world.cabin.state, ppm: event.world.cabin.ppm });
+    if (event.world?.cabin) await world.call("scrubber", "scrubber.co2_report", storyReading(event.world.cabin.state, event.world.cabin.ppm));
     agent.provider.begin?.(event.intention);
     monitor?.push({ kind: "intention", id: event.intention, description: event.message, minute: event.at, guard: `${guardMode} (${agent.catalogue.filter((c) => c.replayPolicy !== "never").length} tools offered)`, reasoner: agent.provider.name });
     tell({ status: "event", intention: event.intention, at: event.at, message: event.message });
@@ -2424,9 +2426,12 @@ async function activate(studio) {
       playingAll = false;
     }
   }
+  function storyReading(state, ppm) {
+    return { ppm: typeof ppm === "number" ? Math.round(ppm) : { NOMINAL: 1200, ELEVATED: 2600, CRITICAL: 5e3 }[state], state, source: "world" };
+  }
   async function reset() {
     for (const [tool, args] of [
-      ["debug.set_co2", { state: "NOMINAL", ppm: scenario.start.co2Ppm }],
+      ["scrubber.co2_report", storyReading("NOMINAL", scenario.start.co2Ppm)],
       ["scrubber.power", { on: true }],
       ["motor.set_speed", { percent: scenario.start.scrubberCommandPercent }]
     ]) await world.call("scrubber", tool, { ...args });

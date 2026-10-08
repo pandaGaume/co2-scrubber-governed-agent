@@ -38,6 +38,7 @@ import { factoryContractOf, type TwinFactoryRequest } from "../../harness/observ
 import { inventoryOf } from "../factory/inventory.js";
 import type { Device } from "../station/registry.js";
 import { errorMessage } from "../../lib/files.js";
+import { cabinReading } from "../../lib/cabin-co2.js";
 import { loadPlaybook, playbookProblems, sayingText, signedPlaybook, type Playbook, type PlaybookFile, type Saying } from "../../harness/core/conduct.js";
 import { loadWords, say } from "../../harness/core/words.js";
 import { SIGNATORY } from "../../lib/roles.js";
@@ -292,7 +293,7 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
 
         // The stand-in world, from here: its CO2 is on the device before the procedure is written, so the factory is given the CO2 the test will start from (2026-09-28).
         const world = new TwoZoneWorldSim(run.options.world === "hidden-occupant" ? { ...LAB_WORLD, labOccupants: 3 } : LAB_WORLD);
-        await call("scrubber", "debug.set_co2", { state: "NOMINAL", ppm: Math.round(world.labPpm) });
+        await call("scrubber", "scrubber.co2_report", cabinReading(world.labPpm));
         const sensor = devices.find((d) => d.descriptor["@type"] === "Co2Sensor" && /\/lab\//.test(d.path))?.path ?? null;
         let measured = { co2Ppm: Math.round(world.labPpm), source: sensor ? `${sensor} (co2)` : "scrubber.motor.state", at: new Date().toISOString() };
         if (sensor) await call("station", "registry_report", { path: sensor, readings: { co2: measured.co2Ppm } }).catch(() => undefined);
@@ -427,7 +428,7 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
             begin(5);
             telemetry = [];
             const speedNow = async () => (await call<{ speedPercent: number }>("scrubber", "motor.state")).speedPercent;
-            await call("scrubber", "debug.set_co2", { state: "NOMINAL", ppm: Math.round(world.labPpm) });
+            await call("scrubber", "scrubber.co2_report", cabinReading(world.labPpm));
             telemetry.push(world.row(await speedNow()));
             // The test is played at a pace a room can follow (2026-09-28: sixty minutes in one second closed the medical monitoring as it opened, with two samples per person);
             // the monitoring the authorisation opened stays open until the test ends, and Mother says where the CO2 stands every ten minutes of the station's clock.
@@ -445,7 +446,7 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
                     if (secondsPerMinute > 0) await sleep(secondsPerMinute * 1000);
                     const speed = await speedNow();
                     world.step(speed);
-                    await call("scrubber", "debug.set_co2", { state: "NOMINAL", ppm: Math.round(world.labPpm) });
+                    await call("scrubber", "scrubber.co2_report", cabinReading(world.labPpm));
                     telemetry.push(world.row(speed));
                     minute++;
                     tick(minute);
@@ -528,7 +529,7 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
                         record: telemetry.length ? { first: telemetry[0], last: telemetry[telemetry.length - 1], co2LabMaxPpm: Math.max(...co2), rows: telemetry.length } : null,
                     };
                     // The world where the abort left it: the next test starts from the CO2 measured now.
-                    await call("scrubber", "debug.set_co2", { state: "NOMINAL", ppm: Math.round(world.labPpm) });
+                    await call("scrubber", "scrubber.co2_report", cabinReading(world.labPpm));
                     measured = { co2Ppm: Math.round(world.labPpm), source: sensor ? `${sensor} (co2)` : "scrubber.motor.state", at: new Date().toISOString() };
                     if (sensor) await call("station", "registry_report", { path: sensor, readings: { co2: measured.co2Ppm } }).catch(() => undefined);
                     narrate(says(stage));
