@@ -42,7 +42,7 @@ var require_harness = __commonJS({
 
 // tier3/browser/agent-page.ts
 var import_core2 = __toESM(require_core(), 1);
-var import_harness4 = __toESM(require_harness(), 1);
+var import_harness5 = __toESM(require_harness(), 1);
 
 // harness/lib/mcp-http.ts
 var PROTOCOL_VERSION = "2025-06-18";
@@ -645,6 +645,92 @@ function outcomeOf(trace) {
   return outcomeInOutput(trace.result.output) ?? (trace.result.ok ? "completed" : "error");
 }
 
+// harness/core/interpreter.ts
+var import_harness = __toESM(require_harness(), 1);
+var isObject = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
+var short = (v) => JSON.stringify(v ?? null).slice(0, 120);
+var validators = /* @__PURE__ */ new Map();
+function schemaError(schema, value) {
+  const key = JSON.stringify(schema);
+  let validate = validators.get(key);
+  if (!validate) {
+    try {
+      validate = (0, import_harness.compileInputSchema)(schema);
+    } catch {
+      return null;
+    }
+    validators.set(key, validate);
+  }
+  try {
+    validate(value);
+    return null;
+  } catch (e) {
+    return (e instanceof Error ? e.message : String(e)).replace(/^Invalid capability arguments:\s*/, "");
+  }
+}
+var IDENTIFIERS = ["id", "name", "callsign", "key", "code"];
+var typesOf = (s) => [].concat(s.type ?? []).filter((t) => typeof t === "string");
+var NUMBER = /^\s*(-?\d+(?:\.\d+)?)\s*(?:%|[a-zA-Zµ°/³²0-9 .]*)?\s*$/;
+function coerce(schema, value, at = "", changes = []) {
+  if (!isObject(schema)) return value;
+  const types = typesOf(schema);
+  const only = types.length === 1 ? types[0] : null;
+  const say = (to) => {
+    changes.push(`${at || "(the call)"}: ${short(value)} -> ${short(to)}`);
+    return to;
+  };
+  if (only === "string" && isObject(value)) {
+    const ids = IDENTIFIERS.filter((k) => typeof value[k] === "string" && value[k].length > 0);
+    if (ids.length >= 1 && new Set(ids.map((k) => value[k])).size === 1) return say(value[ids[0]]);
+    return value;
+  }
+  if (only === "string" && (typeof value === "number" || typeof value === "boolean")) return say(String(value));
+  if ((only === "number" || only === "integer") && typeof value === "string") {
+    const m = NUMBER.exec(value);
+    if (m) {
+      const n = Number(m[1]);
+      if (Number.isFinite(n) && (only === "number" || Number.isInteger(n))) return say(n);
+    }
+    return value;
+  }
+  if (only === "boolean" && typeof value === "string" && /^(true|false)$/i.test(value.trim())) return say(value.trim().toLowerCase() === "true");
+  if (only === "array") {
+    const list = Array.isArray(value) ? value : value === void 0 || value === null ? value : say([value]);
+    if (!Array.isArray(list)) return list;
+    const items = schema.items;
+    return isObject(items) ? list.map((x, i) => coerce(items, x, `${at}.${i}`.replace(/^\./, ""), changes)) : list;
+  }
+  if ((only === "object" || !only && isObject(schema.properties)) && isObject(value) && isObject(schema.properties)) {
+    const props = schema.properties;
+    const out = {};
+    for (const [k, v] of Object.entries(value)) out[k] = k in props ? coerce(props[k], v, `${at}.${k}`.replace(/^\./, ""), changes) : v;
+    return out;
+  }
+  return value;
+}
+async function interpret(capability, sent, extract) {
+  const schema = capability.inputSchema;
+  if (schema === void 0 || schema === null) return { input: sent, reading: null, error: null };
+  const first = schemaError(schema, sent);
+  if (!first) return { input: sent, reading: null, error: null };
+  const changes = [];
+  const coerced = coerce(schema, sent, "", changes);
+  if (changes.length && !schemaError(schema, coerced)) return { input: coerced, reading: { capability: capability.id, how: "coerced", sent, read: coerced, changes }, error: null };
+  if (extract) {
+    try {
+      const x = await extract({ capability: capability.id, description: capability.description ?? "", schema, sent });
+      if (x.value !== null && x.value !== void 0 && !schemaError(schema, x.value)) {
+        return { input: x.value, reading: { capability: capability.id, how: "extracted", sent, read: x.value, changes: [`${short(sent)} -> ${short(x.value)}`], model: x.model ?? null }, error: null };
+      }
+    } catch {
+    }
+  }
+  return { input: sent, reading: null, error: first };
+}
+function readingNote(r) {
+  return `your call ${r.capability} did not have the shape its schema gives; the harness read it (${r.how === "coerced" ? "by the schema" : "by an extraction"}) as ${r.changes.join("; ")}; use that shape next time. `;
+}
+
 // harness/providers/reasoner.ts
 var ReasonerProvider = class _ReasonerProvider {
   constructor(broker, model, family, description) {
@@ -702,14 +788,29 @@ var ReasonerProvider = class _ReasonerProvider {
   begin(intentionId) {
     this.conversationId = `${intentionId}#${Date.now().toString(36)}`;
   }
+  /** How the last call was read when it did not fit its schema (interpreter.ts): told to the model at the next step, then forgotten. */
+  lastReading = null;
+  /** The readings of this provider's calls, for the trace and the manifest. */
+  readings = [];
+  /** A model's extraction, through the reasoner slot's `interpret` (the use `interpret`, the least expensive model). */
+  extract = async (request) => {
+    const r = await this.broker.call("reasoner", "interpret", request);
+    if (!r.ok) return { value: null };
+    const o = r.output;
+    return { value: o.value ?? null, model: o.model ?? null };
+  };
   async resolve(input) {
     this.calls++;
     input.signal?.throwIfAborted();
+    const note = this.lastReading ? readingNote(this.lastReading) : null;
+    this.lastReading = null;
+    const features = input.state?.features ?? {};
+    const state = note ? { ...input.state, features: { ...features, readAs: note, lastOutput: `${note}${String(features.lastOutput ?? "")}` } } : input.state;
     const r = await this.broker.call("reasoner", "decide", {
       conversationId: this.conversationId,
       decisionId: input.decisionId,
       intention: input.intention,
-      state: input.state,
+      state,
       allowedCapabilities: input.allowedCapabilities,
       candidates: input.candidates,
       recentFailures: input.recentFailures,
@@ -718,6 +819,17 @@ var ReasonerProvider = class _ReasonerProvider {
     });
     if (!r.ok) throw new Error(r.error ?? "reasoner.decide failed");
     const a = r.output;
+    const capability = input.allowedCapabilities.find((c) => c.id === a.decision?.invocation?.capabilityId);
+    let reading = null;
+    if (capability && a.decision?.invocation) {
+      const read = await interpret(capability, a.decision.invocation.input, this.extract);
+      if (read.reading) {
+        reading = read.reading;
+        a.decision = { ...a.decision, invocation: { ...a.decision.invocation, input: read.input } };
+        this.lastReading = reading;
+        this.readings.push(reading);
+      }
+    }
     this.exchanges.push({
       decisionId: input.decisionId,
       model: a.model,
@@ -728,7 +840,8 @@ var ReasonerProvider = class _ReasonerProvider {
       proposedCapabilityId: a.proposedCapabilityId,
       proposedInput: a.proposedInput,
       latencyMs: a.latencyMs,
-      tokens: a.tokens ?? null
+      tokens: a.tokens ?? null,
+      ...reading ? { reading } : {}
     });
     return a.decision;
   }
@@ -913,11 +1026,11 @@ var ScriptedProvider = class {
 };
 
 // harness/core/agent.ts
-var import_harness2 = __toESM(require_harness(), 1);
+var import_harness3 = __toESM(require_harness(), 1);
 
 // harness/lib/flow.ts
 var import_core = __toESM(require_core(), 1);
-var import_harness = __toESM(require_harness(), 1);
+var import_harness2 = __toESM(require_harness(), 1);
 var V1_EDGES = [
   ["observe", "state", "context", "state"],
   ["context", "context", "lookup", "context"],
@@ -933,7 +1046,7 @@ var V1_EDGES = [
   ["evaluate", "experience", "record", "experience"]
 ];
 function buildHarnessGraph() {
-  const nodes = import_harness.V1_HARNESS_NODES.map((entry) => {
+  const nodes = import_harness2.V1_HARNESS_NODES.map((entry) => {
     const node = new entry.ctor();
     node.type = entry.type;
     node.id = node.stage;
@@ -948,23 +1061,23 @@ function buildHarnessGraph() {
     builder.withChannel(source, target, output, input);
   }
   const graph = builder.build();
-  (0, import_harness.validateHarnessGraph)(graph);
+  (0, import_harness2.validateHarnessGraph)(graph);
   return graph;
 }
 function createHarnessDriver(onNode) {
-  return (0, import_harness.createRuntimeGraphDriver)(buildHarnessGraph(), onNode);
+  return (0, import_harness2.createRuntimeGraphDriver)(buildHarnessGraph(), onNode);
 }
 
 // harness/core/agent.ts
-function createAgent({ broker, provider, capabilities, observer, evaluator, guard, policy = new import_harness2.PolicyGraph(), timeoutMs = 6e4, onStage, driver }) {
-  const runtime = new import_harness2.AdaptivePolicyRuntime({
+function createAgent({ broker, provider, capabilities, observer, evaluator, guard, policy = new import_harness3.PolicyGraph(), timeoutMs = 6e4, onStage, driver }) {
+  const runtime = new import_harness3.AdaptivePolicyRuntime({
     driver: driver ?? createHarnessDriver(),
     policy,
     fallback: provider,
     capabilities: capabilities.registry,
     observer,
     evaluator,
-    safetyGuard: guard ?? new import_harness2.AllowAllSafetyGuard(),
+    safetyGuard: guard ?? new import_harness3.AllowAllSafetyGuard(),
     timeoutMs,
     onStage
   });
@@ -972,7 +1085,7 @@ function createAgent({ broker, provider, capabilities, observer, evaluator, guar
 }
 
 // harness/core/capabilities.ts
-var import_harness3 = __toESM(require_harness(), 1);
+var import_harness4 = __toESM(require_harness(), 1);
 var outcomeInOutput2 = (output) => output && typeof output === "object" ? output.outcome ?? void 0 : void 0;
 function schemaWithout(schema, keys) {
   if (!keys.length || !schema || typeof schema !== "object" || Array.isArray(schema)) return schema;
@@ -982,7 +1095,7 @@ function schemaWithout(schema, keys) {
   return { ...schema, ...properties ? { properties } : {}, ...required ? { required } : {} };
 }
 async function buildCapabilities(broker, { profile = {}, approve, onCall } = {}) {
-  const registry = new import_harness3.CapabilityRegistry({ approve });
+  const registry = new import_harness4.CapabilityRegistry({ approve });
   const catalogue = [];
   const excluded = profile.excluded ?? [];
   const policyOf = profile.replayPolicy ?? (() => "automatic");
@@ -2161,7 +2274,7 @@ function graphFromViewer(viewer) {
   const nodes = [];
   for (const n of viewer.nodes) {
     const data = n.item.data;
-    if (data instanceof import_harness4.HarnessNode) {
+    if (data instanceof import_harness5.HarnessNode) {
       data.id = data.stage;
       nodes.push(data);
       byStage.set(data.stage, n);
@@ -2174,11 +2287,11 @@ function graphFromViewer(viewer) {
     if (c.linkKind === "config") continue;
     const from = ownerOf(c.from, "outputs")?.item.data;
     const to = ownerOf(c.to, "inputs")?.item.data;
-    if (!(from instanceof import_harness4.HarnessNode) || !(to instanceof import_harness4.HarnessNode)) continue;
+    if (!(from instanceof import_harness5.HarnessNode) || !(to instanceof import_harness5.HarnessNode)) continue;
     builder.withChannel(from, to, c.from.name, c.to.name);
   }
   const graph = builder.build();
-  (0, import_harness4.validateHarnessGraph)(graph);
+  (0, import_harness5.validateHarnessGraph)(graph);
   return { graph, byStage };
 }
 async function activate(studio) {
@@ -2287,8 +2400,8 @@ async function activate(studio) {
     if (words.getPhrase(key) === void 0) return [stage, stage];
     return [words.phrase(key, values), words.phrase(`${key}.now`, values)];
   };
-  const setStatus = (text, short, warn = false) => {
-    badge.textContent = short ?? text;
+  const setStatus = (text, short2, warn = false) => {
+    badge.textContent = short2 ?? text;
     badge.title = text;
     badge.classList.toggle("warn", warn);
   };
@@ -2334,7 +2447,7 @@ async function activate(studio) {
       broker,
       provider,
       guardMode,
-      driver: (0, import_harness4.createRuntimeGraphDriver)(built.graph),
+      driver: (0, import_harness5.createRuntimeGraphDriver)(built.graph),
       onStage,
       approve: async (decision) => {
         log("warn", `approval requested for ${decision.invocation.capabilityId}: denied (no operator at the console)`);
