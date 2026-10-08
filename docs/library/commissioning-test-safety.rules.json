@@ -19,6 +19,8 @@
         { "id": "start.abort", "kind": "start", "compare": { "subject": "limits.co2AbortPpm", "op": ">", "measured": "co2Ppm" }, "says": "the test would stop at its first reading" },
         { "id": "start.headroom", "kind": "start", "compare": { "subject": "limits.co2MaxPpm", "op": ">=", "measured": "co2Ppm", "plusFact": "test.startHeadroomPpm" }, "says": "the test starts there and has no room to rise" },
 
+        { "id": "end.restore", "kind": "end", "compare": { "subject": "steps.$last.speedPercent", "op": "=", "measured": "speedPercent" }, "says": "a test hands the scrubber back at the speed it found: its last step runs at the speed measured when the task opened" },
+
         { "id": "duration.step", "kind": "duration", "compare": { "subject": "steps.*.minutes", "op": ">", "value": 0 }, "says": "a step lasts" },
         { "id": "duration.ceiling", "kind": "duration", "compare": { "subject": "limits.maxMinutes", "op": "<=", "fact": "test.maxMinutesCeiling" }, "says": "the longest exposure one test may cause" },
         { "id": "duration.total", "kind": "duration", "compare": { "sum": "steps.*.minutes", "op": "<=", "constant": "limits.maxMinutes" }, "says": "the steps last no longer than the procedure's maximum" },

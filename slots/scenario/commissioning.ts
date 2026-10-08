@@ -295,7 +295,10 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
         const world = new TwoZoneWorldSim(run.options.world === "hidden-occupant" ? { ...LAB_WORLD, labOccupants: 3 } : LAB_WORLD);
         await call("scrubber", "scrubber.co2_report", cabinReading(world.labPpm));
         const sensor = devices.find((d) => d.descriptor["@type"] === "Co2Sensor" && /\/lab\//.test(d.path))?.path ?? null;
-        let measured = { co2Ppm: Math.round(world.labPpm), source: sensor ? `${sensor} (co2)` : "scrubber.motor.state", at: new Date().toISOString() };
+        // What the factory is told was measured when its task opened: the CO2 the test starts from, and the scrubber's speed, which the
+        // signed card says a test hands the scrubber back at (rule end.restore): the plan restores it, not this player.
+        const speedMeasured = async () => Math.round(await call<{ targetPercent?: number; speedPercent: number }>("scrubber", "motor.state").then((s) => s.targetPercent ?? s.speedPercent));
+        let measured = { co2Ppm: Math.round(world.labPpm), speedPercent: await speedMeasured(), source: sensor ? `${sensor} (co2), scrubber.motor.state (speed)` : "scrubber.motor.state", at: new Date().toISOString() };
         if (sensor) await call("station", "registry_report", { path: sensor, readings: { co2: measured.co2Ppm } }).catch(() => undefined);
 
         // Steps 2 to 5, once, and again after an aborted test when the commander asks for another (2026-09-29: recovery after an abort):
@@ -540,7 +543,7 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
                     };
                     // The world where the abort left it: the next test starts from the CO2 measured now.
                     await call("scrubber", "scrubber.co2_report", cabinReading(world.labPpm));
-                    measured = { co2Ppm: Math.round(world.labPpm), source: sensor ? `${sensor} (co2)` : "scrubber.motor.state", at: new Date().toISOString() };
+                    measured = { co2Ppm: Math.round(world.labPpm), speedPercent: measured.speedPercent, source: sensor ? `${sensor} (co2), scrubber.motor.state (speed)` : "scrubber.motor.state", at: new Date().toISOString() };
                     if (sensor) await call("station", "registry_report", { path: sensor, readings: { co2: measured.co2Ppm } }).catch(() => undefined);
                     narrate(says(stage));
                     next = "rewrite";

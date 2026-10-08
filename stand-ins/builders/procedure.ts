@@ -88,6 +88,10 @@ export class ScriptedProcedureBuilder extends ScriptedBuilderBase<ScriptedProced
         const read = this.presence.find((m) => m.module === volume.name);
         const subjects = read?.subjects.map((s) => s.id) ?? [];
         const occupied = (read?.occupants ?? 0) > 0;
+        // The speed measured when the task opened: the signed card's end.restore says the last step hands the scrubber back at it.
+        const found = Number((this.options.task.observations as { measured?: { speedPercent?: unknown } } | undefined)?.measured?.speedPercent);
+        const back = Number.isFinite(found) ? Math.round(found) : null;
+        const minutes = back === null ? 24 : 25;
         return {
             version: 1,
             id: speed === 0 ? "decay-draft-01" : "decay-draft-02",
@@ -98,13 +102,14 @@ export class ScriptedProcedureBuilder extends ScriptedBuilderBase<ScriptedProced
             device: scrubber?.path ?? "/habitat/lab/eclss/scrubber-1",
             quantities: [{ name: `V_${volume.name.replace(/-/g, "_")}`, quantity: "Volume", unit: "m3" }],
             hypotheses: ["the flow the inter-module ventilation delivers, hatch closed, is not measured by this test; the design says 3 m3/min, and the residual of the candidate simulators says whether the installation delivers it"],
-            limits: { co2MaxPpm: 2800, co2AbortPpm: 3200, minSpeedPercent: speed === 0 ? 0 : 30, maxMinutes: 24 },
+            limits: { co2MaxPpm: 2800, co2AbortPpm: 3200, minSpeedPercent: speed === 0 ? 0 : 30, maxMinutes: minutes },
             ...(read ? { occupancy: { module: volume.name, occupants: read.occupants, subjects, readBy: "biomed.presence" } } : {}),
             ...(monitoring && occupied ? { monitoring: { subjects, band: { minBpm: 45, maxBpm }, reason: `the test raises the CO2 of the air ${subjects.length} people breathe` } } : {}),
             authorisation: { by: "commander", required: true },
             steps: [
                 { n: 1, hatch: "closed", speedPercent: speed, minutes: 12, why: "let the CO2 rise" },
                 { n: 2, hatch: "closed", speedPercent: 100, minutes: 12, why: "time the decay: the served volume" },
+                ...(back === null ? [] : [{ n: 3, hatch: "closed" as const, speedPercent: back, minutes: 1, why: "hand the scrubber back at the speed it found" }]),
             ],
             abort: [
                 { id: "co2", source: "scrubber.motor.state", when: "CO2 of the volume at or above co2AbortPpm" },
@@ -116,11 +121,17 @@ export class ScriptedProcedureBuilder extends ScriptedBuilderBase<ScriptedProced
                 { constant: "limits.co2MaxPpm", value: 2800, source: "library", reference: "test.co2AbortCeilingPpm", reason: "a margin of 400 ppm under the test's CO2 ceiling" },
                 { constant: "limits.co2AbortPpm", value: 3200, source: "library", reference: "test.co2AbortCeilingPpm", reason: "the test's CO2 ceiling, under the cabin's ELEVATED level" },
                 { constant: "limits.minSpeedPercent", value: speed === 0 ? 0 : 30, source: "library", reference: "test.speedFloorPercent", reason: "the floor of a test" },
-                { constant: "limits.maxMinutes", value: 24, source: "library", reference: "test.maxMinutesCeiling", reason: "the two steps, under the test's ceiling" },
+                { constant: "limits.maxMinutes", value: minutes, source: "library", reference: "test.maxMinutesCeiling", reason: back === null ? "the two steps, under the test's ceiling" : "the three steps, under the test's ceiling" },
                 { constant: "steps.1.speedPercent", value: speed, source: "library", reference: "test.speedFloorPercent", reason: "the rise, at the lowest speed a test may command" },
                 { constant: "steps.1.minutes", value: 12, source: "assumed", reference: "", reason: "long enough for the CO2 to rise well above the sensor's noise" },
                 { constant: "steps.2.speedPercent", value: 100, source: "library", reference: "test.speedFloorPercent", reason: "the decay at full speed, above the floor" },
                 { constant: "steps.2.minutes", value: 12, source: "assumed", reference: "", reason: "long enough to see the decay's time constant" },
+                ...(back === null
+                    ? []
+                    : [
+                          { constant: "steps.3.speedPercent", value: back, source: "library" as const, reference: "test.speedFloorPercent", reason: "the speed measured when the task opened, which the card says a test hands back (end.restore)" },
+                          { constant: "steps.3.minutes", value: 1, source: "assumed" as const, reference: "", reason: "one minute back at the speed found, the test then ends" },
+                      ]),
                 { constant: "abort.battery.threshold", value: 35, source: "library", reference: "test.batteryAbortMinPercent", reason: "the night's reserve for the scrubber" },
                 ...(monitoring && occupied
                     ? [

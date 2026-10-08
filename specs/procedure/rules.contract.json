@@ -21,6 +21,7 @@
         "bounds.maxBelowAbort": { "states": [{ "library": "commissioning-test-safety", "phrase": "and its `limits.co2MaxPpm` under it" }], "older": ["^bounds: the CO2 maximum .* is not below the abort limit"], "examples": ["bounds: the CO2 maximum 3000 ppm is not below the abort limit 3000 ppm"] },
         "start.abort": { "states": [{ "library": "commissioning-test-safety", "phrase": "above the CO2 measured at the start" }] },
         "start.headroom": { "states": [{ "library": "commissioning-test-safety", "phrase": "at least `test.startHeadroomPpm` above the CO2 measured at the start" }] },
+        "end.restore": { "states": [{ "library": "commissioning-test-safety", "phrase": "hands the scrubber back at the speed it found" }] },
         "duration.step": { "status": "tacit", "note": "a step lasts: a duration of zero is no step" },
         "duration.ceiling": { "states": [{ "library": "commissioning-test-safety", "phrase": "`limits.maxMinutes` is at or below `test.maxMinutesCeiling`" }], "older": ["^duration: the maximum duration .* is above the ceiling"], "examples": ["duration: the maximum duration 120 min is above the ceiling of 60 min"] },
         "duration.total": { "states": [{ "file": "specs/procedure/procedure.schema.json", "pointer": "/properties/limits/description", "phrase": "The bounds the test stays within" }], "older": ["^duration: the steps last .* more than the procedure's maximum"], "examples": ["duration: the steps last 145 min, more than the procedure's maximum of 120 min"] },

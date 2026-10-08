@@ -8,14 +8,15 @@
  *
  * A proposal is read by path: `a.b.c`; a list is entered by its key when the
  * format declares one (`steps` by `n`, so `steps.1.minutes`), by its index
- * otherwise; `*` stands for one segment in a pattern.
+ * otherwise; `*` stands for one segment in a pattern, `$last` for the last
+ * element of the list before it (`steps.$last.speedPercent`).
  *
  * The forms of a rule (each carries an id, a kind the refusal is filed
  * under, and what it says, in the document's words):
  *
  *   compare    every value at `subject` (or the `sum` of them) against a
  *              value, a fact, another constant, or a measurement (plus a
- *              fact): `op` is one of >=, >, <=, <
+ *              fact): `op` is one of >=, >, <=, <, =
  *   present    every path named holds a number
  *   fields     every element of a list has the fields named
  *   nonEmpty   a field holds at least one non-empty text
@@ -41,7 +42,7 @@ export interface ProposalFormat {
     readers?: Record<string, string>;
 }
 
-export type Op = ">=" | ">" | "<=" | "<";
+export type Op = ">=" | ">" | "<=" | "<" | "=";
 
 interface Base {
     id: string;
@@ -141,8 +142,22 @@ export function valueAt(value: unknown, path: string, keys: Record<string, strin
     return at;
 }
 
-const OP_WORDS: Record<Op, string> = { ">=": "at least", ">": "above", "<=": "at most", "<": "below" };
-const holds = (a: number, op: Op, b: number): boolean => (op === ">=" ? a >= b : op === ">" ? a > b : op === "<=" ? a <= b : a < b);
+const OP_WORDS: Record<Op, string> = { ">=": "at least", ">": "above", "<=": "at most", "<": "below", "=": "equal to" };
+const holds = (a: number, op: Op, b: number): boolean => (op === "=" ? Math.abs(a - b) < 1e-9 : op === ">=" ? a >= b : op === ">" ? a > b : op === "<=" ? a <= b : a < b);
+
+/** A pattern with `$last` resolved: the key (or index) of the last element of the list it follows; null when that list is empty or absent. */
+function resolveLast(input: unknown, pattern: string, keys: Record<string, string>): string | null {
+    const at = pattern.split(".").indexOf("$last");
+    if (at < 0) return pattern;
+    const segments = pattern.split(".");
+    const listPath = segments.slice(0, at).join(".");
+    const list = valueAt(input, listPath, keys);
+    if (!Array.isArray(list) || list.length === 0) return null;
+    const key = keys[segments[at - 1]];
+    const last = list[list.length - 1];
+    const name = key && isObject(last) && last[key] !== undefined ? String(last[key]) : String(list.length - 1);
+    return [...segments.slice(0, at), name, ...segments.slice(at + 1)].join(".");
+}
 const shown = (n: number): string => String(Number(n.toPrecision(6)));
 
 /** The module a place names: its last segment. */
@@ -169,7 +184,10 @@ export function evaluateRules(input: unknown, doc: RulesDocument, ctx: RuleConte
             const subjects = c.sum ? (() => {
                 const values = leaves.filter((l) => matches(l.path, c.sum!) && num(l.value)).map((l) => l.value as number);
                 return values.length ? [{ path: `the sum of ${c.sum}`, value: values.reduce((a, b) => a + b, 0) }] : [];
-            })() : leaves.filter((l) => matches(l.path, c.subject ?? "") && num(l.value)).map((l) => ({ path: l.path, value: l.value as number }));
+            })() : (() => {
+                const subject = resolveLast(input, c.subject ?? "", keys);
+                return subject === null ? [] : leaves.filter((l) => matches(l.path, subject) && num(l.value)).map((l) => ({ path: l.path, value: l.value as number }));
+            })();
             let ref: number | undefined;
             let refText = "";
             if (num(c.value)) {

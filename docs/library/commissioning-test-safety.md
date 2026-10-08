@@ -20,6 +20,7 @@ The bounds every test procedure on the Lab's scrubber stays within, whoever writ
 
 - A procedure's `limits.co2AbortPpm`, and its `limits.co2MaxPpm` under it, are at or below `test.co2AbortCeilingPpm`; its maximum is also at least `test.startHeadroomPpm` above the CO2 measured at the start.
 - `limits.minSpeedPercent` and every step's `speedPercent` are at or above `test.speedFloorPercent`.
+- A test hands the scrubber back at the speed it found: its last step runs at the speed measured when the task opened, so that nothing is left at a test's speed once the test is over.
 - `limits.maxMinutes` is at or below `test.maxMinutesCeiling`.
 - A battery abort's `threshold` is at or above `test.batteryAbortMinPercent`.
 - A monitoring band's `minBpm` is at or above `test.heartRateMinBpm`, its `maxBpm` at or below `test.heartRateMaxBpm`.
