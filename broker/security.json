@@ -25,7 +25,12 @@
                 "scrubber.set_profile": "mcp.tools.actuate",
                 "scrubber.power": "mcp.tools.power",
                 "scrubber.set_min_flow": "mcp.tools.protect",
-                "debug.set_co2": "mcp.tools.sense"
+                "debug.set_co2": "mcp.tools.sense",
+                "scrubber.co2_report": "mcp.tools.sense",
+                "motor.stop": "mcp.tools.power",
+                "motor.set_current_limit": "mcp.tools.maintain",
+                "motor.set_supply_voltage": "mcp.tools.maintain",
+                "motor.set_ramp": "mcp.tools.maintain"
             },
             "/station": {
                 "answer": "mcp.tools.authorise",
@@ -66,9 +71,9 @@
             { "id": "monitor-read", "subject": "group:monitors", "role": "client", "resource": "/**" }
         ],
         "denies": [
-            { "id": "agent-never-power-protect-sense", "subject": "group:agents", "capabilities": ["mcp.tools.power", "mcp.tools.protect", "mcp.tools.sense", "mcp.tools.authorise", "mcp.tools.register", "mcp.tools.grammar", "mcp.tools.control"], "resource": "/**" },
-            { "id": "factory-never-the-board", "subject": "group:factories", "capabilities": ["mcp.tools.actuate", "mcp.tools.power", "mcp.tools.protect", "mcp.tools.sense", "mcp.tools.authorise", "mcp.tools.register", "mcp.tools.grammar", "mcp.tools.control"], "resource": "/**" },
-            { "id": "monitor-commands-nothing", "subject": "group:monitors", "capabilities": ["mcp.tools.actuate", "mcp.tools.power", "mcp.tools.protect", "mcp.tools.sense", "mcp.tools.authorise", "mcp.tools.register", "mcp.tools.grammar", "mcp.tools.control"], "resource": "/**" }
+            { "id": "agent-never-power-protect-sense", "subject": "group:agents", "capabilities": ["mcp.tools.power", "mcp.tools.protect", "mcp.tools.sense", "mcp.tools.authorise", "mcp.tools.register", "mcp.tools.grammar", "mcp.tools.control", "mcp.tools.maintain"], "resource": "/**" },
+            { "id": "factory-never-the-board", "subject": "group:factories", "capabilities": ["mcp.tools.actuate", "mcp.tools.power", "mcp.tools.protect", "mcp.tools.sense", "mcp.tools.authorise", "mcp.tools.register", "mcp.tools.grammar", "mcp.tools.control", "mcp.tools.maintain"], "resource": "/**" },
+            { "id": "monitor-commands-nothing", "subject": "group:monitors", "capabilities": ["mcp.tools.actuate", "mcp.tools.power", "mcp.tools.protect", "mcp.tools.sense", "mcp.tools.authorise", "mcp.tools.register", "mcp.tools.grammar", "mcp.tools.control", "mcp.tools.maintain"], "resource": "/**" }
         ],
         "audit": { "logAllowed": false }
     }
