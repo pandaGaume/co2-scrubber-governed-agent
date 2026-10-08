@@ -130,7 +130,9 @@ async function listSlots() {
     } catch {
         providers = [];
     }
-    return (Array.isArray(providers) ? providers : providers.providers ?? []).map((p) => (typeof p === "string" ? p : p.name)).filter((n) => n && !n.startsWith("_"));
+    // Connected ones only (2026-10-08): the broker keeps a slot in its list, `connected: false`, while sessions hang on it, and a
+    // board switched off stayed green.
+    return (Array.isArray(providers) ? providers : providers.providers ?? []).filter((p) => typeof p === "string" || p.connected !== false).map((p) => (typeof p === "string" ? p : p.name)).filter((n) => n && !n.startsWith("_"));
 }
 const grammarOf = (session) => (typeof session?.grammar === "string" ? session.grammar : null);
 const sha256 = async (text) => Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)))).map((b) => b.toString(16).padStart(2, "0")).join("");

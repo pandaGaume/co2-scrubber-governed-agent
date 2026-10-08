@@ -92,7 +92,7 @@ export class Broker {
             providers = [];
         }
         const list = Array.isArray(providers) ? (providers as Array<string | { name: string }>) : ((providers as ProvidersListed)?.providers ?? []);
-        return list.map((p) => (typeof p === "string" ? p : p.name)).filter((n) => n && !n.startsWith("_"));
+        return list.filter((p) => typeof p === "string" || (p as { connected?: boolean }).connected !== false).map((p) => (typeof p === "string" ? p : p.name)).filter((n) => n && !n.startsWith("_"));
     }
 
     /** The tools of one slot, as `tools/list` reports them to this identity. */

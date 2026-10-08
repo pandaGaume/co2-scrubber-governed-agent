@@ -151,6 +151,7 @@ async function main(): Promise<void> {
     // ESP32 occupies the `scrubber` slot itself, through libmcpb, with the same tool names; the world reports the cabin's CO2 to it
     // (scrubber.co2_report) exactly as to the stub.
     const board = flag("--board") || process.env.SCRUBBER_SOURCE === "board";
+    if (board) process.env.SCRUBBER_SOURCE = "board";
     const skipped = [...(flag("--no-forge") ? ["forge"] : []), ...(board ? ["scrubber"] : [])];
     const { slots, failures } = await publishAll(wsBase, log, skipped);
     if (board) {

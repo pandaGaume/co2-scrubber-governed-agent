@@ -187,7 +187,7 @@ var Broker = class {
       providers = [];
     }
     const list2 = Array.isArray(providers) ? providers : providers?.providers ?? [];
-    return list2.map((p) => typeof p === "string" ? p : p.name).filter((n) => n && !n.startsWith("_"));
+    return list2.filter((p) => typeof p === "string" || p.connected !== false).map((p) => typeof p === "string" ? p : p.name).filter((n) => n && !n.startsWith("_"));
   }
   /** The tools of one slot, as `tools/list` reports them to this identity. */
   async tools(slot) {

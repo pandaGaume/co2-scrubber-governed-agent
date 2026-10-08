@@ -84,7 +84,10 @@ export async function startBroker(port: number, stdio: "inherit" | "ignore" = "i
     // The browser origins follow the port: the config file names 3001, a page served on another port would get 403 on every call.
     // The local network addresses go in too, so a tablet on the same wifi can open the monitoring page and be answered.
     const origins = [`http://localhost:${port}`, `http://127.0.0.1:${port}`, ...lanBases].join(",");
-    const child = spawn(process.execPath, [brokerBin()], { cwd: ROOT, stdio, env: { ...process.env, MCP_BROKER_PORT: String(port), MCP_BROKER_ALLOWED_ORIGINS: process.env.MCP_BROKER_ALLOWED_ORIGINS ?? origins } });
+    // With the real board (2026-10-08): a board switched off is seen gone within 10 to 20 s instead of 30 to 60 (the heartbeat); not
+    // shorter, since every slot of the server shares one Node process and one socket, and a computation over the interval cuts them all.
+    const heartbeat = process.env.MCP_BROKER_PROVIDER_HEARTBEAT_MS ?? (process.env.SCRUBBER_SOURCE === "board" ? "10000" : undefined);
+    const child = spawn(process.execPath, [brokerBin()], { cwd: ROOT, stdio, env: { ...process.env, MCP_BROKER_PORT: String(port), MCP_BROKER_ALLOWED_ORIGINS: process.env.MCP_BROKER_ALLOWED_ORIGINS ?? origins, ...(heartbeat ? { MCP_BROKER_PROVIDER_HEARTBEAT_MS: heartbeat } : {}) } });
     const stop = () => {
         if (!child.killed) child.kill("SIGINT");
     };
