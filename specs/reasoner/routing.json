@@ -2,11 +2,11 @@
     "note": "Which model answers which use (2026-10-08): not one model for everything. A use is the agent (the night's decisions, no prompt file), a role whose prompt the caller names (specs/<role>/prompt.md: procedure, observer, graph, code, supervisor, diagnosis, playbook, reflection, recommendation, onnx), or compose (Mother's welcome, the narrations), or interpret (a call whose form does not fit its schema, read toward it before the guard judges it: harness/core/interpreter.ts; the least expensive model). A use set to null, or not named, takes the server's profile (REASONER_PROFILE). The reasoner slot reads this file at start; REASONER_ROUTING names another one. Every call says, in its result and in the factories' manifests, the model that answered.",
     "uses": {
         "agent": "profiles/nvidia-nebius-super.json",
-        "procedure": "profiles/nvidia-nebius-ultra.json",
-        "observer": "profiles/nvidia-nebius-ultra.json",
-        "graph": "profiles/nvidia-nebius-ultra.json",
-        "code": "profiles/nvidia-nebius-ultra.json",
-        "supervisor": "profiles/nvidia-nebius-ultra.json",
+        "procedure": "profiles/nvidia-nebius-super.json",
+        "observer": "profiles/nvidia-nebius-super.json",
+        "graph": "profiles/nvidia-nebius-super.json",
+        "code": "profiles/nvidia-nebius-super.json",
+        "supervisor": "profiles/nvidia-nebius-super.json",
         "diagnosis": null,
         "playbook": null,
         "reflection": null,
@@ -15,5 +15,5 @@
         "compose": "profiles/nvidia-nebius-super.json",
         "interpret": null
     },
-    "_film": "2026-10-08, for the video (Guillaume: everything the film shows on the best model, reduced afterwards): the night's agent, the procedure factory, the Observer, the graph and code factories and the Contract Supervisor on Nemotron 3 Ultra; Mother's composed lines on Nemotron 3 Super; the uses the film does not show take the server's profile (REASONER_PROFILE, the Nano)."
+    "_film": "2026-10-08, for the video: the uses the film shows on Nemotron 3 Super. Ultra was tried first on the factories and dropped the same day: its reasoning ran past the output limit on one step in four, and it plans every read at once where the harness runs one call per step, so it read in circles (25 steps, no procedure) where Super wrote the procedure in 9 steps for a seventh of the tokens. The uses the film does not show take the server's profile (REASONER_PROFILE, the Nano)."
 }
