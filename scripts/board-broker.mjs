@@ -13,7 +13,16 @@
  * The board's address is on its phone page (NETWORK panel). After writing,
  * restart the board (power or reset button): the section is read at start.
  */
+import { existsSync, readFileSync } from "node:fs";
 import { networkInterfaces } from "node:os";
+
+/** A variable of the environment, or of this repository's .env (the script is run with plain node). */
+const fromEnv = (name) => {
+    if (process.env[name]) return process.env[name];
+    if (!existsSync(".env")) return "";
+    const line = readFileSync(".env", "utf8").split(/\r?\n/).find((l) => l.startsWith(`${name}=`));
+    return line ? line.slice(name.length + 1).trim() : "";
+};
 
 const [board, second, third] = process.argv.slice(2);
 if (!board) {
@@ -57,9 +66,13 @@ ws.onerror = () => {
 ws.onopen = async () => {
     try {
         if (!statusOnly) {
-            const doc = JSON.stringify({ version: 1, host, port, tls: false, slot: "scrubber", token: "" });
+            // The board's provider secret (BROKER_PROVIDER_SECRET_BOARD, npm run broker:tokens): with it, the board switched off
+            // and on takes its slot back at once (broker/security.json). The search on the network stays on; the secret never
+            // travels by UDP, only in the board's handshake with the broker.
+            const token = fromEnv("BROKER_PROVIDER_SECRET_BOARD");
+            const doc = JSON.stringify({ version: 1, host, port, tls: false, slot: "scrubber", token, discover: true });
             await rpc("config.set", { section: "Device/Broker", doc });
-            console.log(`written on the board: Device/Broker ${doc}`);
+            console.log(`written on the board: Device/Broker ${doc.replace(/"token":"[^"]+"/, '"token":"(the board\'s secret)"')}`);
         }
         const s = await rpc("broker.getStatus");
         console.log(`the board's link: ${JSON.stringify(s)}`);

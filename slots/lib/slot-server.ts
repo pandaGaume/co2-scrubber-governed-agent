@@ -236,7 +236,10 @@ export function publishSlot<S extends object>(options: SlotOptions<S>): Publishe
     });
 
     let server: IMcpServer;
-    const transport = MultiplexTransport.create(slot, `${wsBase}/providers`, { aggregate: true });
+    // The server's slots authenticate as the provider demo-slots when the broker's security file names it (2026-10-08,
+    // broker/security.json): with providerTakeover always, a provider is then only ever replaced by its own principal.
+    const secret = process.env.BROKER_PROVIDER_SECRET_SLOTS;
+    const transport = MultiplexTransport.create(slot, `${wsBase}/providers`, { aggregate: true, ...(secret ? { secret } : {}) });
     try {
         server = new McpServerBuilder()
         .withName(slot)

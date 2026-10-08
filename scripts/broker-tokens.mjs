@@ -15,6 +15,9 @@ import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
 const ROLES = ["operator", "station", "agent", "factory", "monitor"];
+// The providers' secrets (broker/security.json, providers): the server's slots, and the board's, which
+// node scripts/board-broker.mjs writes into the board.
+const PROVIDERS = ["BROKER_PROVIDER_SECRET_SLOTS", "BROKER_PROVIDER_SECRET_BOARD"];
 const SECURITY = "MCP_BROKER_SECURITY_FILE";
 const off = process.argv.includes("--off");
 
@@ -24,8 +27,7 @@ const has = (name) => lines.some((l) => new RegExp(`^\\s*${name}=.+`).test(l));
 const added = [];
 
 if (!off) {
-    for (const role of ROLES) {
-        const name = `BROKER_TOKEN_${role.toUpperCase()}`;
+    for (const name of [...ROLES.map((role) => `BROKER_TOKEN_${role.toUpperCase()}`), ...PROVIDERS]) {
         if (has(name)) continue;
         lines.push(`${name}=${randomBytes(24).toString("base64url")}`);
         added.push(name);

@@ -1,15 +1,52 @@
 {
-    "description": "Who may call what, where (2026-10-08, mcp-broker 1.8.1 development authorization). On when MCP_BROKER_SECURITY_FILE=broker/security.json is set (npm run broker:tokens writes it into .env with the tokens). Every client presents the token of its role (harness/lib/broker-auth.ts); a tool no line below names is mcp.tools.call. The agent may act on the scrubber's speed, never power it off, lower its protection, feed it a CO2 reading, authorise, register, rewrite wording or stop its own loop: the board refuses below that, the crew's switch sits above.",
+    "description": "Who may call what, where (2026-10-08, mcp-broker 1.8.1 development authorization). On when MCP_BROKER_SECURITY_FILE=broker/security.json is set (npm run broker:tokens writes it into .env with the tokens). Every client presents the token of its role (harness/lib/broker-auth.ts); a tool no line below names is mcp.tools.call. The agent may act on the scrubber's speed, never power it off, lower its protection, feed it a CO2 reading, authorise, register, rewrite wording or stop its own loop: the board refuses below that, the crew's switch sits above. Providers authenticate too (2026-10-08): the server's slots as demo-slots, the board as scrubber-board, which may publish its own slot only; with providerTakeover always (.mcp-broker/config.json), a board switched off and on takes its slot back at once, and nobody else can.",
     "auth": {
         "dev": {
             "callers": [
-                { "id": "operator", "tokenEnv": "BROKER_TOKEN_OPERATOR", "user": "commander", "groups": ["operators"] },
-                { "id": "station", "tokenEnv": "BROKER_TOKEN_STATION", "service": "station", "groups": ["system"] },
-                { "id": "agent", "tokenEnv": "BROKER_TOKEN_AGENT", "service": "tier3", "groups": ["agents"] },
-                { "id": "factory", "tokenEnv": "BROKER_TOKEN_FACTORY", "service": "factory", "groups": ["factories"] },
-                { "id": "monitor", "tokenEnv": "BROKER_TOKEN_MONITOR", "user": "medical-monitor", "groups": ["monitors"] }
+                {
+                    "id": "operator",
+                    "tokenEnv": "BROKER_TOKEN_OPERATOR",
+                    "user": "commander",
+                    "groups": [
+                        "operators"
+                    ]
+                },
+                {
+                    "id": "station",
+                    "tokenEnv": "BROKER_TOKEN_STATION",
+                    "service": "station",
+                    "groups": [
+                        "system"
+                    ]
+                },
+                {
+                    "id": "agent",
+                    "tokenEnv": "BROKER_TOKEN_AGENT",
+                    "service": "tier3",
+                    "groups": [
+                        "agents"
+                    ]
+                },
+                {
+                    "id": "factory",
+                    "tokenEnv": "BROKER_TOKEN_FACTORY",
+                    "service": "factory",
+                    "groups": [
+                        "factories"
+                    ]
+                },
+                {
+                    "id": "monitor",
+                    "tokenEnv": "BROKER_TOKEN_MONITOR",
+                    "user": "medical-monitor",
+                    "groups": [
+                        "monitors"
+                    ]
+                }
             ],
-            "networks": ["lan"]
+            "networks": [
+                "lan"
+            ]
         },
         "slotResources": {
             "scrubber": "/habitat/lab/eclss/scrubber-1"
@@ -54,27 +91,154 @@
             }
         },
         "roles": {
-            "everything": { "capabilities": ["*"] },
-            "client": { "capabilities": ["mcp.tools.list", "mcp.tools.call", "mcp.resources.read", "mcp.prompts.read", "mcp.completion.use"] },
-            "actuator": { "inherits": ["client"], "capabilities": ["mcp.tools.actuate"] },
-            "broker-reader": { "capabilities": ["broker.providers.read"] }
+            "everything": {
+                "capabilities": [
+                    "*"
+                ]
+            },
+            "client": {
+                "capabilities": [
+                    "mcp.tools.list",
+                    "mcp.tools.call",
+                    "mcp.resources.read",
+                    "mcp.prompts.read",
+                    "mcp.completion.use"
+                ]
+            },
+            "actuator": {
+                "inherits": [
+                    "client"
+                ],
+                "capabilities": [
+                    "mcp.tools.actuate"
+                ]
+            },
+            "broker-reader": {
+                "capabilities": [
+                    "broker.providers.read"
+                ]
+            }
         },
         "assignments": [
-            { "id": "operator-everything", "subject": "group:operators", "role": "everything", "resource": "/**" },
-            { "id": "operator-broker", "subject": "group:operators", "role": "everything", "resource": "/_system/**" },
-            { "id": "station-everything", "subject": "group:system", "role": "everything", "resource": "/**" },
-            { "id": "station-broker", "subject": "group:system", "role": "broker-reader", "resource": "/_system/broker" },
-            { "id": "agent-habitat", "subject": "group:agents", "role": "actuator", "resource": "/**" },
-            { "id": "agent-broker", "subject": "group:agents", "role": "broker-reader", "resource": "/_system/broker" },
-            { "id": "factory-workshop", "subject": "group:factories", "role": "client", "resource": "/**" },
-            { "id": "factory-broker", "subject": "group:factories", "role": "broker-reader", "resource": "/_system/broker" },
-            { "id": "monitor-read", "subject": "group:monitors", "role": "client", "resource": "/**" }
+            {
+                "id": "operator-everything",
+                "subject": "group:operators",
+                "role": "everything",
+                "resource": "/**"
+            },
+            {
+                "id": "operator-broker",
+                "subject": "group:operators",
+                "role": "everything",
+                "resource": "/_system/**"
+            },
+            {
+                "id": "station-everything",
+                "subject": "group:system",
+                "role": "everything",
+                "resource": "/**"
+            },
+            {
+                "id": "station-broker",
+                "subject": "group:system",
+                "role": "broker-reader",
+                "resource": "/_system/broker"
+            },
+            {
+                "id": "agent-habitat",
+                "subject": "group:agents",
+                "role": "actuator",
+                "resource": "/**"
+            },
+            {
+                "id": "agent-broker",
+                "subject": "group:agents",
+                "role": "broker-reader",
+                "resource": "/_system/broker"
+            },
+            {
+                "id": "factory-workshop",
+                "subject": "group:factories",
+                "role": "client",
+                "resource": "/**"
+            },
+            {
+                "id": "factory-broker",
+                "subject": "group:factories",
+                "role": "broker-reader",
+                "resource": "/_system/broker"
+            },
+            {
+                "id": "monitor-read",
+                "subject": "group:monitors",
+                "role": "client",
+                "resource": "/**"
+            }
         ],
         "denies": [
-            { "id": "agent-never-power-protect-sense", "subject": "group:agents", "capabilities": ["mcp.tools.power", "mcp.tools.protect", "mcp.tools.sense", "mcp.tools.authorise", "mcp.tools.register", "mcp.tools.grammar", "mcp.tools.control", "mcp.tools.maintain"], "resource": "/**" },
-            { "id": "factory-never-the-board", "subject": "group:factories", "capabilities": ["mcp.tools.actuate", "mcp.tools.power", "mcp.tools.protect", "mcp.tools.sense", "mcp.tools.authorise", "mcp.tools.register", "mcp.tools.grammar", "mcp.tools.control", "mcp.tools.maintain"], "resource": "/**" },
-            { "id": "monitor-commands-nothing", "subject": "group:monitors", "capabilities": ["mcp.tools.actuate", "mcp.tools.power", "mcp.tools.protect", "mcp.tools.sense", "mcp.tools.authorise", "mcp.tools.register", "mcp.tools.grammar", "mcp.tools.control", "mcp.tools.maintain"], "resource": "/**" }
+            {
+                "id": "agent-never-power-protect-sense",
+                "subject": "group:agents",
+                "capabilities": [
+                    "mcp.tools.power",
+                    "mcp.tools.protect",
+                    "mcp.tools.sense",
+                    "mcp.tools.authorise",
+                    "mcp.tools.register",
+                    "mcp.tools.grammar",
+                    "mcp.tools.control",
+                    "mcp.tools.maintain"
+                ],
+                "resource": "/**"
+            },
+            {
+                "id": "factory-never-the-board",
+                "subject": "group:factories",
+                "capabilities": [
+                    "mcp.tools.actuate",
+                    "mcp.tools.power",
+                    "mcp.tools.protect",
+                    "mcp.tools.sense",
+                    "mcp.tools.authorise",
+                    "mcp.tools.register",
+                    "mcp.tools.grammar",
+                    "mcp.tools.control",
+                    "mcp.tools.maintain"
+                ],
+                "resource": "/**"
+            },
+            {
+                "id": "monitor-commands-nothing",
+                "subject": "group:monitors",
+                "capabilities": [
+                    "mcp.tools.actuate",
+                    "mcp.tools.power",
+                    "mcp.tools.protect",
+                    "mcp.tools.sense",
+                    "mcp.tools.authorise",
+                    "mcp.tools.register",
+                    "mcp.tools.grammar",
+                    "mcp.tools.control",
+                    "mcp.tools.maintain"
+                ],
+                "resource": "/**"
+            }
         ],
-        "audit": { "logAllowed": false }
-    }
+        "audit": {
+            "logAllowed": false
+        }
+    },
+    "providers": [
+        {
+            "id": "demo-slots",
+            "secretEnv": "BROKER_PROVIDER_SECRET_SLOTS"
+        },
+        {
+            "id": "scrubber-board",
+            "secretEnv": "BROKER_PROVIDER_SECRET_BOARD",
+            "allowedResources": [
+                "/habitat/lab/eclss/scrubber-1"
+            ]
+        }
+    ]
 }

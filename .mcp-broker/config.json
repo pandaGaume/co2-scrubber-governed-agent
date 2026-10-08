@@ -2,8 +2,8 @@
     "port": 3001,
     "host": "0.0.0.0",
     "locale": "en",
-    "providerHeartbeatIntervalMs": 3000,
-    "_providerHeartbeat": "2026-10-08: a board switched off holds its slot until its socket misses a heartbeat; at 30 s (the default) the board switched on again was refused for up to a minute (close 1008), at 3 s it is back within seconds",
+    "providerTakeover": "always",
+    "_providerTakeover": "2026-10-08: a provider that authenticates as the slot's own principal (broker/security.json, providers) takes its slot back at once, the switched-off board's dead socket included; without provider authentication the broker falls back to liveness (the 30 s heartbeat). Not a shorter heartbeat: every slot of the server shares one Node process and one socket, and a computation over a few seconds would cut them all",
     "www": {
         "open": false,
         "mounts": [

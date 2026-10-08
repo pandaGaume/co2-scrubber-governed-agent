@@ -10,6 +10,7 @@
 import { after, before, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
+import { WebSocket } from "ws";
 import type { LocalBroker } from "../slots/lib/local-broker.js";
 import type { PublishedSlot } from "../slots/lib/slot-server.js";
 import { Broker } from "../harness/lib/broker.js";
@@ -20,7 +21,19 @@ const quiet = (): undefined => undefined;
 
 // This file runs in a process of its own: the tokens and the security file are this suite's, set before the broker starts.
 for (const role of ["operator", "station", "agent", "factory", "monitor"]) process.env[`BROKER_TOKEN_${role.toUpperCase()}`] = randomBytes(24).toString("base64url");
+for (const p of ["SLOTS", "BOARD"]) process.env[`BROKER_PROVIDER_SECRET_${p}`] = randomBytes(24).toString("base64url");
 process.env.MCP_BROKER_SECURITY_FILE = "broker/security.json";
+
+/** A provider socket on `/provider/<slot>`, as the board opens it: its secret in X-Provider-Token. Resolves once open or refused. */
+function providerSocket(base: string, slot: string, secret: string | null): Promise<{ ws: WebSocket; opened: boolean; closed: Promise<{ code: number; reason: string }> }> {
+    return new Promise((resolve) => {
+        const ws = new WebSocket(`${base.replace(/^http/, "ws")}/provider/${slot}`, secret ? { headers: { "X-Provider-Token": secret } } : {});
+        const closed = new Promise<{ code: number; reason: string }>((done) => ws.on("close", (code, reason) => done({ code, reason: String(reason) })));
+        ws.on("open", () => setTimeout(() => resolve({ ws, opened: ws.readyState === WebSocket.OPEN, closed }), 300));
+        ws.on("unexpected-response", (_req, res) => resolve({ ws, opened: false, closed: Promise.resolve({ code: res.statusCode ?? 0, reason: "refused at the handshake" }) }));
+        ws.on("error", () => undefined);
+    });
+}
 
 describe("the broker's policy, with every client's token", () => {
     let broker: LocalBroker;
@@ -69,6 +82,11 @@ describe("the broker's policy, with every client's token", () => {
             assert.equal((await client.call("scrubber", "motor.state")).outcome, "completed", role);
         }
         assert.equal((await as("monitor").call("biomed", "state")).outcome, "completed");
+    });
+
+    it("does not hand a live slot of the server's to the board's secret", async () => {
+        const intruder = await providerSocket(broker.httpBase, "scrubber", process.env.BROKER_PROVIDER_SECRET_BOARD!);
+        assert.equal((await intruder.closed).code, 1008, "a live slot of another principal is not handed over");
     });
 
     it("refuses a client without a token, and the station's own calls still work", async () => {

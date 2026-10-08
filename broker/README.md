@@ -39,6 +39,17 @@ the monitoring link once on the tablet. A screen started with
 machine and from the local network (`"networks": ["lan"]`), never from a
 public address.
 
+**Providers authenticate too.** The server's slots present
+`BROKER_PROVIDER_SECRET_SLOTS` (identity `demo-slots`), the board
+`BROKER_PROVIDER_SECRET_BOARD` (identity `scrubber-board`, allowed its own
+slot only), both written by `npm run broker:tokens`; `node
+scripts/board-broker.mjs <board address>` writes the board's into its
+`Device/Broker`. With `providerTakeover: "always"` (`.mcp-broker/config.json`)
+a board switched off and on takes its slot back at once, its dead socket
+replaced by the new one of the same identity, and nobody else can take it.
+A provider without a secret is refused: a page that publishes a slot from the
+browser (the studio) cannot present one.
+
 `policy.example.json` is the earlier draft of the same rules, kept for the
 documents that cite it; `security.json` is the policy in force.
 

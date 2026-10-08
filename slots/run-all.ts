@@ -89,7 +89,9 @@ export interface Published {
 export async function publishAll(wsBase: string, logger: (line: string) => void = log, skip: string[] = []): Promise<Published> {
     const slots: PublishedSlot<object>[] = [];
     const failures: SlotFailure[] = [];
-    for (const [name, make] of SLOTS.filter(([name]) => !skip.includes(name))) {
+    // The real board holds the scrubber slot (SCRUBBER_SOURCE=board, as --board): the stub is not published, wherever the slots are started from.
+    const skipped = process.env.SCRUBBER_SOURCE === "board" ? [...skip, "scrubber"] : skip;
+    for (const [name, make] of SLOTS.filter(([name]) => !skipped.includes(name))) {
         try {
             const slot = await make(wsBase, logger);
             await slot.open();
