@@ -1,0 +1,32 @@
+{
+    "name": "nvidia-nebius-super",
+    "tier3": {
+        "wire": "openai-compatible",
+        "baseUrl": "https://api.tokenfactory.nebius.com/v1/",
+        "model": "nvidia/nemotron-3-super-120b-a12b",
+        "apiKey": {
+            "env": "NEBIUS_API_KEY"
+        },
+        "capabilities": [
+            "tools",
+            "json"
+        ],
+        "family": "nemotron",
+        "maxTokens": 4096,
+        "composeMaxTokens": 1024,
+        "temperature": 0.2,
+        "timeoutMs": 120000,
+        "_note": "2026-10-08: Nemotron 3 Super 120B A12B on Nebius Token Factory, to compare with the Nano (profiles/nvidia-nebius.json); id as Token Factory lists it."
+    },
+    "gateway": {
+        "host": "laptop",
+        "note": "the broker, the station, the regulator and the dashboard; an NVIDIA edge computer would run the same image, out of the MVP"
+    },
+    "factory": {
+        "runner": "nebius-serverless-jobs",
+        "image": "ghcr.io/pandagaume/co2-scrubber-factory:0.1.0",
+        "platform": "cpu-e1",
+        "preset": "2vcpu-8gb",
+        "timeout": "1h"
+    }
+}

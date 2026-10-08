@@ -1,0 +1,32 @@
+{
+    "name": "nvidia-nebius-ultra",
+    "tier3": {
+        "wire": "openai-compatible",
+        "baseUrl": "https://api.tokenfactory.nebius.com/v1/",
+        "model": "nvidia/Nemotron-3-Ultra-550b-a55b",
+        "apiKey": {
+            "env": "NEBIUS_API_KEY"
+        },
+        "capabilities": [
+            "tools",
+            "json"
+        ],
+        "family": "nemotron",
+        "maxTokens": 4096,
+        "composeMaxTokens": 1024,
+        "temperature": 0.2,
+        "timeoutMs": 120000,
+        "_note": "2026-10-08: Nemotron 3 Ultra 550B A55B on Nebius Token Factory: the most capable and by far the most expensive; for complex or critical tasks only (Guillaume), never the default; id as Token Factory lists it."
+    },
+    "gateway": {
+        "host": "laptop",
+        "note": "the broker, the station, the regulator and the dashboard; an NVIDIA edge computer would run the same image, out of the MVP"
+    },
+    "factory": {
+        "runner": "nebius-serverless-jobs",
+        "image": "ghcr.io/pandagaume/co2-scrubber-factory:0.1.0",
+        "platform": "cpu-e1",
+        "preset": "2vcpu-8gb",
+        "timeout": "1h"
+    }
+}
