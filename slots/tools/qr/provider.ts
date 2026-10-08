@@ -121,15 +121,20 @@ export function qrSlot(wsBase: string, log: (line: string) => void): PublishedSl
             handle: async (args, s) => {
                 const path = safePath(args.page);
                 const bases = addresses();
-                const url = `${bases[0]}${path}`;
+                // With the broker's authorization on (2026-10-08), the phone needs its token: the medical monitor and a room's screen
+                // the monitor's (they command nothing), the other pages the operator's. In the code only, never in the log.
+                const role = /^\/?(biomed|screen)\.html/.test(path) ? "MONITOR" : "OPERATOR";
+                const token = process.env.MCP_BROKER_SECURITY_FILE ? process.env[`BROKER_TOKEN_${role}`] : undefined;
+                const fragment = token ? `#token=${encodeURIComponent(token)}` : "";
+                const url = `${bases[0]}${path}${fragment}`;
                 const svg = await render(url, args.dark, args.light);
                 remember(url);
                 s.made = state.made;
-                log(`[qr] ${path} -> ${url}`);
+                log(`[qr] ${path} -> ${bases[0]}${path}${token ? " (with its token)" : ""}`);
                 // Every address is returned, not only the one drawn: a machine
                 // with two network cards answers on both, and the operator is
                 // the one who knows which one the phone is on.
-                return { url, page: path, addresses: bases.map((b) => `${b}${path}`), svg };
+                return { url, page: path, addresses: bases.map((b) => `${b}${path}${fragment}`), svg };
             },
         },
         {
