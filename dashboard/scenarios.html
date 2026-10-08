@@ -300,13 +300,30 @@ function setMode(mode, down = false) {
     m.className = `mode ${down ? "down" : mode}`;
 }
 
+/**
+ * Writes a list only when what it shows changed, and never under a hand at work (2026-10-08): rebuilt every two seconds,
+ * a click whose press and release straddled a rebuild was lost (the button pressed no longer existed), and a menu opened
+ * with the mouse closed by itself, on the PC; a phone's tap is shorter and its menu native, so it worked there.
+ */
+let pointerDown = false;
+addEventListener("pointerdown", () => (pointerDown = true), true);
+addEventListener("pointerup", () => setTimeout(() => (pointerDown = false), 0), true);
+addEventListener("pointercancel", () => (pointerDown = false), true);
+function writeList(box, html) {
+    if (box.dataset.html === html) return false;
+    if (pointerDown || (document.activeElement && box.contains(document.activeElement) && document.activeElement.tagName === "SELECT")) return false;
+    box.dataset.html = html;
+    box.innerHTML = html;
+    return true;
+}
+
 function renderNight(state) {
     const list = el("night");
     if (!night.length) {
         list.innerHTML = `<p class="note">The agent slot listed no event for this scenario.</p>`;
         return;
     }
-    list.innerHTML = night
+    const html = night
         .map((e, i) => {
             const playing = e.intention === state.intention;
             const done = state.eventIndex > i;
@@ -318,6 +335,7 @@ function renderNight(state) {
             );
         })
         .join("");
+    if (!writeList(list, html)) return;
     for (const b of list.querySelectorAll(".event")) {
         b.addEventListener("click", () => void drive("play", { intention: b.dataset.intention }));
     }
@@ -421,7 +439,7 @@ async function refreshScenarios() {
             ? `<label class="note">after each test: <select id="scenario-playbook"><option value="">the scenario's own playbook</option>${playbooks.map(option).join("")}</select></label>`
             : "";
         const builders = `<label class="note">the factories: <select id="scenario-builder"><option value="reasoner"${chosenBuilder === "reasoner" ? " selected" : ""}>the models</option><option value="scripted"${chosenBuilder === "scripted" ? " selected" : ""}>the scripts (no key; stops at the Observer)</option></select></label>`;
-        box.innerHTML =
+        const html =
             `<div class="label">the factories: commissioning</div>` + builders + conduct +
             list
                 .map((x) => {
@@ -443,6 +461,7 @@ async function refreshScenarios() {
                     );
                 })
                 .join("");
+        if (!writeList(box, html)) return;
         el("scenario-playbook")?.addEventListener("change", (e) => (chosenPlaybook = e.target.value));
         el("scenario-builder")?.addEventListener("change", (e) => (chosenBuilder = e.target.value));
         for (const b of box.querySelectorAll("[data-scenario]")) {
