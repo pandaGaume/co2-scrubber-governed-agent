@@ -91,6 +91,26 @@ describe("a reasoning model behind an OpenAI-compatible server", () => {
         assert.ok(!JSON.stringify(second.sent[0].tools).includes('"uniqueItems":true'));
     });
 
+    it("reads a call written as text, even when the repetition after it was cut, and keeps the repetition out of the transcript", async () => {
+        // What Nemotron 3 Ultra answered on 2026-10-08: the calls in the content, the same list repeated until the output limit.
+        const written = `[{"name": "scrubber__motor__set_speed", "parameters": {"percent": 40}}, {"name": "unknown__tool", "parameters": {}}, ${'{"name": "scrubber__motor__set_speed", "parameters": {"percent": 40}}, '.repeat(50)}{"name": "scrubber__mo`;
+        const cut = { status: 200, body: { choices: [{ message: { content: written }, finish_reason: "length" }], usage: { prompt_tokens: 10, completion_tokens: 4096 } } };
+        const provider = new OpenAiCompatibleProvider(profile, { systemPrompt: "p" });
+        const { result } = await withServer([cut], () => provider.resolve(input));
+        assert.equal(provider.exchanges[0].proposedCapabilityId, "scrubber.motor.set_speed");
+        assert.deepEqual(provider.exchanges[0].proposedInput, { percent: 40 });
+        assert.equal(result.invocation.capabilityId, "scrubber.motor.set_speed", "run, not refused as cut");
+        // The next request carries the call, not the fifty repetitions.
+        const next = await withServer([{ status: 200, body: completion("done") }], () => provider.resolve(input));
+        assert.ok(!JSON.stringify(next.sent[0].messages).includes("repeat") && JSON.stringify(next.sent[0].messages).split("set_speed").length < 5);
+    });
+
+    it("a text naming no allowed tool stays a report", async () => {
+        const provider = new OpenAiCompatibleProvider(profile, { systemPrompt: "p" });
+        await withServer([{ status: 200, body: completion('[{"name": "library__read", "parameters": {"id": "x"}}]') }], () => provider.resolve(input));
+        assert.equal(provider.exchanges[0].proposedCapabilityId, "crew.report");
+    });
+
     it("gives a one-shot text the room the profile says, and returns it without the reasoning", async () => {
         const { result, sent } = await withServer([{ status: 200, body: completion("<think>a welcome, two lines</think>Good evening. Fifteen slots answer.") }], () => composeText(profile, { instructions: "welcome", maxTokens: 200 }));
         assert.equal(sent[0].max_tokens, 1024, "composeMaxTokens is the least, whatever the caller asked");

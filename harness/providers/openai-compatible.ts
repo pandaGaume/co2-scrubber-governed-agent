@@ -12,7 +12,7 @@
  */
 import type { PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
 import type { Provider, ProviderExchange, ProviderProfile } from "../lib/provider.js";
-import { apiKeyFor, compactRequest, contextSizes, decisionFrom, familyOf, fromApiName, intentionText, observationText, parseJsonArgs, stripReasoning, toApiName, TRUNCATED_RESULT, truncatedDecision, type ContextMode } from "../lib/llm-common.js";
+import { apiKeyFor, callInText, compactRequest, contextSizes, decisionFrom, familyOf, fromApiName, intentionText, observationText, parseJsonArgs, stripReasoning, toApiName, TRUNCATED_RESULT, truncatedDecision, type ContextMode } from "../lib/llm-common.js";
 import { APP } from "../core/application.js";
 
 /** The JSON Schema keys each server's grammar refused, by its base URL: learned once for all the conversations with it. */
@@ -74,6 +74,8 @@ export class OpenAiCompatibleProvider implements Provider {
     private readonly profileTimeoutMs: number | undefined;
     /** The server refused `tool_choice: "required"` once (HTTP 400 naming it): `auto` from then on, a decision without a call becoming a report. */
     private requiredRefused = false;
+    /** The profile's `toolChoice`, null for the mode's own (required in state mode, auto in conversation mode). */
+    private readonly toolChoice: "required" | "auto" | null;
     /**
      * JSON Schema keys the server's grammar does not implement (2026-10-08, Nebius Token Factory: `Grammar error: Unimplemented keys:
      * ["uniqueItems"]`, the whole request refused): learned from its refusal, then left out of the schemas the model is shown. The
@@ -93,6 +95,7 @@ export class OpenAiCompatibleProvider implements Provider {
         this.apiKey = apiKeyFor(profile, ["NEBIUS_API_KEY", "OPENAI_API_KEY"]);
         this.maxTokens = p.maxTokens ?? null;
         this.maxTokensParam = p.maxTokensParam ?? "max_tokens";
+        this.toolChoice = p.toolChoice ?? null;
         this.profileTemperature = p.temperature;
         this.profileTimeoutMs = p.timeoutMs;
         this.family = familyOf(profile, this.model);
@@ -136,7 +139,7 @@ export class OpenAiCompatibleProvider implements Provider {
         // One action per step: the harness executes one decision, so the model is asked for one call at a time.
         // The output limit under the name the server takes, and a temperature only when the profile does not say the model takes none.
         const temperature = this.options.temperature ?? (this.profileTemperature === undefined ? 0.2 : this.profileTemperature);
-        const choice = (): string => (this.contextMode === "state" && !this.requiredRefused ? "required" : "auto");
+        const choice = (): string => ((this.toolChoice ?? (this.contextMode === "state" ? "required" : "auto")) === "required" && !this.requiredRefused ? "required" : "auto");
         const bodyWith = (toolChoice: string) => ({ model: this.model, messages: this.messages, tools: (tools = toolsNow()), tool_choice: toolChoice, parallel_tool_calls: false, ...(temperature === null ? {} : { temperature }), ...(this.maxTokens ? { [this.maxTokensParam]: this.maxTokens } : {}) });
         let body = bodyWith(choice());
         const started = Date.now();
@@ -180,12 +183,24 @@ export class OpenAiCompatibleProvider implements Provider {
         const latencyMs = Date.now() - started;
         if (completion.error) throw new Error(`model error: ${completion.error.message}`);
         const message = completion.choices?.[0]?.message ?? {};
-        const calls = message.tool_calls ?? [];
-        const call = calls[0] ?? null;
         // The reasoning of a thinking model, left in the content by some servers, is not the answer (stripReasoning).
-        const text = stripReasoning(message.content);
+        let text = stripReasoning(message.content);
+        let calls = message.tool_calls ?? [];
+        let cutAfterCall = false;
+        // A call written as text, not through the API (callInText): read as the call it is; the text, often the same list repeated
+        // until the limit, is not replayed to the model: its transcript holds the call, as if it had come through the API.
+        if (!calls.length) {
+            const written = callInText(text, new Set(input.allowedCapabilities.map((c) => c.id)));
+            if (written) {
+                calls = [{ id: `text-${input.decisionId ?? Date.now().toString(36)}`, type: "function", function: written }];
+                cutAfterCall = completion.choices?.[0]?.finish_reason === "length";
+                text = "";
+            }
+        }
+        const call = calls[0] ?? null;
         this.messages.push({ role: "assistant", content: text || null, ...(calls.length ? { tool_calls: calls } : {}) });
-        const truncated = completion.choices?.[0]?.finish_reason === "length";
+        // A call read whole from the text is complete even when what followed it was cut.
+        const truncated = completion.choices?.[0]?.finish_reason === "length" && !cutAfterCall;
         this.pendingCalls = calls.map((c, i) => ({ id: c.id, executed: i === 0 && !truncated, truncated }));
         const decision = truncated && call ? truncatedDecision(fromApiName(call.function.name)) : decisionFrom(call?.function.name ?? null, parseJsonArgs(call?.function.arguments), text, input.allowedCapabilities);
         const usage = completion.usage;

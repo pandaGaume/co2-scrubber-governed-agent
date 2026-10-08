@@ -12,11 +12,12 @@
             "json"
         ],
         "family": "nemotron",
-        "maxTokens": 16384,
+        "maxTokens": 4096,
         "composeMaxTokens": 1024,
         "temperature": 0.2,
-        "timeoutMs": 300000,
+        "timeoutMs": 120000,
         "_note": "2026-10-08: Nemotron 3 Super 120B A12B on Nebius Token Factory, to compare with the Nano (profiles/nvidia-nebius.json); id as Token Factory lists it.",
+        "toolChoice": "required",
         "schemaUnsupported": [
             "uniqueItems"
         ]

@@ -12,11 +12,12 @@
             "json"
         ],
         "family": "nemotron",
-        "maxTokens": 16384,
+        "maxTokens": 4096,
         "composeMaxTokens": 1024,
         "temperature": 0.2,
-        "timeoutMs": 300000,
+        "timeoutMs": 120000,
         "_note": "2026-10-08: Nemotron 3 Nano 30B A3B on Nebius Token Factory, the least expensive Nemotron (Guillaume's choice). maxTokens leaves room for the reasoning before the call; composeMaxTokens is the least a one-shot text (Mother's welcome) gets.",
+        "toolChoice": "required",
         "schemaUnsupported": [
             "uniqueItems"
         ]

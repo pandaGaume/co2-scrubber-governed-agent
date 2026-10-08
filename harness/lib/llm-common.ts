@@ -32,6 +32,47 @@ export function stripReasoning(text: string | null | undefined): string {
 }
 export const fromApiName = (name: string): string => name.replace(/__/g, ".");
 
+/**
+ * The first tool call a model wrote as text instead of through the API (2026-10-08, Nemotron 3 Ultra on Token Factory: its calls
+ * written in the content as `[{"name": "library__read", "parameters": {"id": "..."}}, ...]`, which the server's tool parser did not
+ * take, then the same list repeated until the output limit, three steps in a row, STUCK). The interpreter's principle applied to the
+ * answer itself (core/interpreter.ts): a call a reader recognises is read, not refused. Only a complete JSON object naming a tool
+ * of the allowed list, with `parameters` or `arguments`; the first one, since a step runs one call; complete even when the text
+ * after it was cut. Null when there is none.
+ */
+export function callInText(text: string | null | undefined, allowed: ReadonlySet<string>): { name: string; arguments: string } | null {
+    const s = text ?? "";
+    const opening = /\{\s*"name"\s*:/g;
+    for (let m = opening.exec(s); m; m = opening.exec(s)) {
+        // The object's end: braces counted outside strings.
+        let depth = 0;
+        let inString = false;
+        let end = -1;
+        for (let i = m.index; i < s.length; i++) {
+            const ch = s[i];
+            if (inString) {
+                if (ch === "\\") i++;
+                else if (ch === '"') inString = false;
+            } else if (ch === '"') inString = true;
+            else if (ch === "{") depth++;
+            else if (ch === "}" && --depth === 0) {
+                end = i;
+                break;
+            }
+        }
+        if (end < 0) return null; // cut before this object closed: nothing complete after it either
+        try {
+            const o = JSON.parse(s.slice(m.index, end + 1)) as { name?: unknown; parameters?: unknown; arguments?: unknown };
+            const name = typeof o.name === "string" ? o.name : "";
+            const args = o.parameters ?? o.arguments ?? {};
+            if (allowed.has(fromApiName(name)) && args && typeof args === "object" && !Array.isArray(args)) return { name, arguments: JSON.stringify(args) };
+        } catch {
+            // not JSON: the next opening is tried
+        }
+    }
+    return null;
+}
+
 /** The family of a model, from the profile or its name: the key the slots' grammars use. */
 export function familyOf(profile: ProviderProfile | null, model: string): string {
     const declared = profile?.tier3?.family;

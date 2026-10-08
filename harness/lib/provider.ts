@@ -67,6 +67,13 @@ export interface ProviderProfile {
         composeMaxTokens?: number;
         /** JSON Schema keys the server's grammar does not implement, left out of the tool schemas the model is shown (Nebius Token Factory: uniqueItems). */
         schemaUnsupported?: string[];
+        /**
+         * `required`: every step asks for a call, in conversation mode too (the default asks `auto` there, a text answer becoming a
+         * report). 2026-10-08, Nemotron on Token Factory: with `auto` its calls came as text, outside the server's tool parser and so
+         * outside any grammar, and degenerated into the same list repeated until the output limit; `required` makes the server
+         * decode the call against the tools' schemas.
+         */
+        toolChoice?: "required" | "auto";
         /** The sampling temperature sent; null sends none, for a model that takes only its own (0.2 when absent). */
         temperature?: number | null;
         /** The reasoning effort asked of a model that reasons (the Responses API: low, medium, high); the model's own default when absent. */
