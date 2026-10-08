@@ -68,6 +68,10 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
     /** The holder a question for a role is answered as, by question. */
     const chosenAs = new Map();
     const notes = [];
+    /** Reads of the questions that failed in a row (2026-10-08): one lost poll (a server restarting, a request cut) says nothing in
+        the commander's panel and keeps the questions shown; only a station that stays silent is said, once, in plain words. */
+    let missed = 0;
+    const MISSED_BEFORE_SAYING = 3;
     let open = [];
     let awaiting = [];
     /** What is at work now: the scenario's loop, the factory's tasks (2026-09-28: a room that sees nothing move does not know it must wait). */
@@ -94,6 +98,8 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
         if (r?.isError || body?.refused) throw new Error(body?.refused ?? text);
         return body?.result ?? body;
     };
+    /** A failure said to the room: a lost connection in plain words, the station's own refusal as it gave it. */
+    const plain = (e) => (/failed to fetch|networkerror|load failed/i.test(e.message) ? "the station did not answer, try again" : e.message);
     const note = (text) => {
         notes.push({ text, at: Date.now() });
         while (notes.length > 3) notes.shift();
@@ -192,11 +198,15 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
             open = questions.filter((q) => q.status === "open");
             const commissionings = await read("station://commissionings").catch(() => []);
             awaiting = commissionings.filter((c) => c.status === "awaiting-authorisation" && !open.some((q) => q.kind === "authorise" && q.context?.commissioningId === c.id));
+            if (missed >= MISSED_BEFORE_SAYING) note("The station answers again.");
+            missed = 0;
         } catch (e) {
+            // A new session at the next poll; the questions already shown stay, so an authorisation waiting is never hidden by a
+            // lost request. The cause goes to the console, not to the room.
             station = null;
-            open = [];
-            awaiting = [];
-            note(`no questions from the station: ${e.message}`);
+            missed++;
+            console.warn(`mother-chat: station://questions not read (${missed} in a row): ${e.message}`);
+            if (missed === MISSED_BEFORE_SAYING) note("The station does not answer; trying again.");
         }
         try {
             const p = await read("station://questions-policy");
@@ -217,7 +227,7 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
         try {
             await call("answer", { questionId, choice, by: answererOf(questionId), how, ...(text ? { note: text } : {}) });
         } catch (e) {
-            note(`not recorded: ${e.message}`);
+            note(`not recorded: ${plain(e)}`);
         }
         heard.delete(questionId);
         await refresh();
@@ -226,7 +236,7 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
         try {
             await call("commissioning_authorise", { commissioningId, decision, by: "commander", note: `${how} in Mother's chat` });
         } catch (e) {
-            note(`not recorded: ${e.message}`);
+            note(`not recorded: ${plain(e)}`);
         }
         await refresh();
     };
@@ -293,7 +303,7 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
         try {
             await call("questions_policy", { mode: ev.target.value });
         } catch (e) {
-            note(`standing order not set: ${e.message}`);
+            note(`standing order not set: ${plain(e)}`);
         }
         await refresh();
     });

@@ -714,11 +714,10 @@ async function hello() {
     const up = EXPECTED.filter((s) => report.slots[s]);
     const facts = [
         w("hello.night"),
-        w("hello.slots", { up: up.length, expected: EXPECTED.length, names: up.join(", ") }),
+        w("hello.slots", { up: up.length, expected: EXPECTED.length }),
         report.missing.length ? w("hello.missing", { names: report.missing.join(", ") }) : w("hello.allConnected"),
         report.versions.scrubber ? w(report.versions.scrubber.includes("stub") ? "hello.scrubberStub" : "hello.scrubberReal") : "",
         report.reasoner ? w("hello.reasoner", { model: report.reasoner.model, family: report.reasoner.family, notReady: report.reasoner.ready ? "" : w("hello.reasoner.notReady") }) : "",
-        report.voice ? w("hello.voice", { provider: report.voice.provider, model: report.voice.model && report.voice.model !== "none" ? w("hello.voice.model", { model: report.voice.model }) : "" }) : "",
         report.scenario?.events ? w("hello.scenario", { events: report.scenario.events }) : "",
     ].filter(Boolean);
     let welcome = null;
