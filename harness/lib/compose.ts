@@ -5,7 +5,7 @@
  * the answer's text back with the model, the latency and the tokens.
  */
 import type { ProviderProfile } from "./provider.js";
-import { apiKeyFor } from "./llm-common.js";
+import { apiKeyFor, stripReasoning } from "./llm-common.js";
 
 export interface Composition {
     text: string;
@@ -26,9 +26,11 @@ export async function composeText(profile: ProviderProfile | null, input: Compos
     const p = profile?.tier3;
     if (!p?.model || p.model.startsWith("<")) throw new Error("the profile must name tier3.model");
     const wire = p.wire ?? "openai-compatible";
-    const maxTokens = input.maxTokens ?? 300;
+    // A reasoning model spends tokens thinking before it writes: the profile's `composeMaxTokens` is the least it is given
+    // (2026-10-08, Nemotron), whatever the caller asked; the timeout is the profile's when it says one.
+    const maxTokens = Math.max(input.maxTokens ?? 300, p.composeMaxTokens ?? 0);
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), input.timeoutMs ?? 30000);
+    const timer = setTimeout(() => controller.abort(), input.timeoutMs ?? p.timeoutMs ?? 30000);
     const started = Date.now();
     try {
         if (wire === "anthropic-messages") {
@@ -53,7 +55,8 @@ export async function composeText(profile: ProviderProfile | null, input: Compos
         const response = await fetch(`${baseUrl}/chat/completions`, {
             method: "POST",
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKeyFor(profile, ["NEBIUS_API_KEY", "OPENAI_API_KEY"])}` },
-            body: JSON.stringify({ model: p.model, messages: [{ role: "system", content: input.instructions }, { role: "user", content: input.context ?? "Go." }], max_tokens: maxTokens, temperature: 0.4 }),
+            // The output limit under the name the server takes, and a temperature unless the profile says the model takes none.
+            body: JSON.stringify({ model: p.model, messages: [{ role: "system", content: input.instructions }, { role: "user", content: input.context ?? "Go." }], [p.maxTokensParam ?? "max_tokens"]: maxTokens, ...(p.temperature === null ? {} : { temperature: p.temperature ?? 0.4 }) }),
             signal: controller.signal,
         });
         const raw = await response.text();
@@ -61,7 +64,7 @@ export async function composeText(profile: ProviderProfile | null, input: Compos
         const r = JSON.parse(raw) as { choices?: Array<{ message?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number }; error?: { message: string } };
         if (r.error) throw new Error(`model error: ${r.error.message}`);
         const u = r.usage;
-        return { text: (r.choices?.[0]?.message?.content ?? "").trim(), model: p.model, wire, latencyMs: Date.now() - started, tokens: u ? { prompt: u.prompt_tokens ?? 0, completion: u.completion_tokens ?? 0, total: u.total_tokens ?? 0 } : null };
+        return { text: stripReasoning(r.choices?.[0]?.message?.content), model: p.model, wire, latencyMs: Date.now() - started, tokens: u ? { prompt: u.prompt_tokens ?? 0, completion: u.completion_tokens ?? 0, total: u.total_tokens ?? 0 } : null };
     } finally {
         clearTimeout(timer);
     }

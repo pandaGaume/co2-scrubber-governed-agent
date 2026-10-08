@@ -112,7 +112,18 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
     }
 
     /** What describe answers without a conversation: the model and family the profile names. */
-    const identity = () => ({ model: profile.tier3?.model ?? "?", family: familyOf(profile, profile.tier3?.model ?? ""), wire });
+    // Where the model is served (2026-10-08): the host of the profile's endpoint, and the service when it is one the page names
+    // (Nebius Token Factory); never the key. The control room's badge reads it: NVIDIA NEMOTRON · NEBIUS TOKEN FACTORY.
+    const endpointHost = ((): string | null => {
+        const base = profile.tier3?.baseUrl ?? (wire === "openai-compatible" ? (process.env.OPENAI_BASE_URL ?? "https://api.tokenfactory.nebius.com/v1") : null);
+        try {
+            return base ? new URL(base).host : null;
+        } catch {
+            return null;
+        }
+    })();
+    const servedBy = endpointHost && /tokenfactory\.nebius\.com$/.test(endpointHost) ? "Nebius Token Factory" : null;
+    const identity = () => ({ model: profile.tier3?.model ?? "?", family: familyOf(profile, profile.tier3?.model ?? ""), wire, endpoint: endpointHost, servedBy });
     /**
      * How the model is run (2026-10-01, docs/evaluateur.fr.md, E5.0): its output limit, its temperature, the effort asked of it, how
      * long an answer may take; null where the profile leaves it to the wire's default. A factory's manifest keeps them: a call cut at

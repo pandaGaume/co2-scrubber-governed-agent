@@ -3,14 +3,20 @@
     "tier3": {
         "wire": "openai-compatible",
         "baseUrl": "https://api.tokenfactory.nebius.com/v1/",
-        "model": "<nemotron model id on Token Factory>",
+        "model": "nvidia/nemotron-3-super-120b-a12b",
         "apiKey": {
             "env": "NEBIUS_API_KEY"
         },
         "capabilities": [
             "tools",
             "json"
-        ]
+        ],
+        "family": "nemotron",
+        "maxTokens": 4096,
+        "composeMaxTokens": 1024,
+        "temperature": 0.2,
+        "timeoutMs": 120000,
+        "_note": "2026-10-08: the model id as Token Factory lists Nemotron 3 Super 120B A12B (tool calling); confirm it in the Token Factory console once the account exists. maxTokens leaves room for the reasoning before the call; composeMaxTokens is the least a one-shot text (Mother's welcome) gets."
     },
     "gateway": {
         "host": "laptop",

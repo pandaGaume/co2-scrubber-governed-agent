@@ -61,6 +61,8 @@ export interface ProviderProfile {
         maxTokens?: number;
         /** How an OpenAI-compatible server names the output limit (2026-09-29: recent OpenAI models refuse max_tokens and take max_completion_tokens); max_tokens when absent. */
         maxTokensParam?: "max_tokens" | "max_completion_tokens";
+        /** The least output a one-shot text (`compose`: Mother's welcome, a narration) is given, whatever the caller asks: a reasoning model thinks first. */
+        composeMaxTokens?: number;
         /** The sampling temperature sent; null sends none, for a model that takes only its own (0.2 when absent). */
         temperature?: number | null;
         /** The reasoning effort asked of a model that reasons (the Responses API: low, medium, high); the model's own default when absent. */

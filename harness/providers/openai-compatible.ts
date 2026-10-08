@@ -12,7 +12,7 @@
  */
 import type { PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
 import type { Provider, ProviderExchange, ProviderProfile } from "../lib/provider.js";
-import { apiKeyFor, compactRequest, contextSizes, decisionFrom, familyOf, fromApiName, intentionText, observationText, parseJsonArgs, toApiName, TRUNCATED_RESULT, truncatedDecision, type ContextMode } from "../lib/llm-common.js";
+import { apiKeyFor, compactRequest, contextSizes, decisionFrom, familyOf, fromApiName, intentionText, observationText, parseJsonArgs, stripReasoning, toApiName, TRUNCATED_RESULT, truncatedDecision, type ContextMode } from "../lib/llm-common.js";
 import { APP } from "../core/application.js";
 
 interface ToolCall {
@@ -55,6 +55,8 @@ export class OpenAiCompatibleProvider implements Provider {
     private readonly maxTokensParam: "max_tokens" | "max_completion_tokens";
     private readonly profileTemperature: number | null | undefined;
     private readonly profileTimeoutMs: number | undefined;
+    /** The server refused `tool_choice: "required"` once (HTTP 400 naming it): `auto` from then on, a decision without a call becoming a report. */
+    private requiredRefused = false;
 
     constructor(
         profile: ProviderProfile | null,
@@ -106,20 +108,32 @@ export class OpenAiCompatibleProvider implements Provider {
         // One action per step: the harness executes one decision, so the model is asked for one call at a time.
         // The output limit under the name the server takes, and a temperature only when the profile does not say the model takes none.
         const temperature = this.options.temperature ?? (this.profileTemperature === undefined ? 0.2 : this.profileTemperature);
-        const body = { model: this.model, messages: this.messages, tools, tool_choice: this.contextMode === "state" ? "required" : "auto", parallel_tool_calls: false, ...(temperature === null ? {} : { temperature }), ...(this.maxTokens ? { [this.maxTokensParam]: this.maxTokens } : {}) };
+        const choice = (): string => (this.contextMode === "state" && !this.requiredRefused ? "required" : "auto");
+        const bodyWith = (toolChoice: string) => ({ model: this.model, messages: this.messages, tools, tool_choice: toolChoice, parallel_tool_calls: false, ...(temperature === null ? {} : { temperature }), ...(this.maxTokens ? { [this.maxTokensParam]: this.maxTokens } : {}) });
+        let body = bodyWith(choice());
         const started = Date.now();
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), this.options.timeoutMs ?? this.profileTimeoutMs ?? 60000);
         input.signal?.addEventListener("abort", () => controller.abort(), { once: true });
         let completion: ChatCompletion;
         try {
-            const response = await fetch(`${this.baseUrl}/chat/completions`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${this.apiKey}` },
-                body: JSON.stringify(body),
-                signal: controller.signal,
-            });
-            const text = await response.text();
+            const post = () =>
+                fetch(`${this.baseUrl}/chat/completions`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", Authorization: `Bearer ${this.apiKey}` },
+                    body: JSON.stringify(body),
+                    signal: controller.signal,
+                });
+            let response = await post();
+            let text = await response.text();
+            // A server whose tool parser does not take `required` (some vLLM deployments) says so with a 400: asked again once with
+            // `auto`, and `auto` from then on; an answer without a call is then read as a report, as in conversation mode.
+            if (response.status === 400 && body.tool_choice === "required" && /tool_choice|required/i.test(text)) {
+                this.requiredRefused = true;
+                body = bodyWith("auto");
+                response = await post();
+                text = await response.text();
+            }
             if (!response.ok) throw new Error(`${this.baseUrl} answered HTTP ${response.status}: ${text.slice(0, 400)}`);
             completion = JSON.parse(text) as ChatCompletion;
         } finally {
@@ -130,7 +144,8 @@ export class OpenAiCompatibleProvider implements Provider {
         const message = completion.choices?.[0]?.message ?? {};
         const calls = message.tool_calls ?? [];
         const call = calls[0] ?? null;
-        const text = message.content ?? "";
+        // The reasoning of a thinking model, left in the content by some servers, is not the answer (stripReasoning).
+        const text = stripReasoning(message.content);
         this.messages.push({ role: "assistant", content: text || null, ...(calls.length ? { tool_calls: calls } : {}) });
         const truncated = completion.choices?.[0]?.finish_reason === "length";
         this.pendingCalls = calls.map((c, i) => ({ id: c.id, executed: i === 0 && !truncated, truncated }));

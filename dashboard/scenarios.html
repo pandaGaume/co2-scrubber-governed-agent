@@ -177,6 +177,7 @@
     <div class="k" id="now-k">The agent</div>
     <div class="v" id="now-v">Asking the slot where it stands...</div>
     <div class="sub" id="now-sub"></div>
+    <div class="note" id="decider"></div>
   </div>
 
   <div class="lists">
@@ -327,6 +328,13 @@ function render(state) {
     setMode(state.mode);
     el("clock").textContent = state.minute === null || state.minute === undefined ? "night 9" : `night 9 · min ${state.minute}`;
 
+    // Who decides, always shown (2026-10-08): a scripted night must never pass for a model's.
+    const decider = state.decider;
+    const who = el("decider");
+    if (who) {
+        who.textContent = !decider ? "" : decider.kind === "model" ? `decided by ${decider.model}${decider.servedBy ? ` on ${decider.servedBy}` : ""}` : `SCRIPT, not a model: ${decider.reason}`;
+        who.className = decider && decider.kind === "script" ? "note bad" : "note";
+    }
     const last = state.last;
     if (state.note) {
         say("The agent", state.note, state.mode === "ended" ? "" : "refused");

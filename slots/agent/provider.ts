@@ -80,6 +80,9 @@ export interface AgentSlotState {
     guard: GuardMode;
     provider: string | null;
     family: string | null;
+    /** Who decides (2026-10-08): the model behind the reasoner slot, or the script standing in for it, and why. Kept apart from
+        `note`, which the night overwrites: a scripted night must never read as a model's. */
+    decider: { kind: "model"; model: string; servedBy: string | null } | { kind: "script"; reason: string } | null;
     capabilities: number;
     scenario: string;
 }
@@ -130,6 +133,7 @@ export function agentSlot(wsBase: string, log: (line: string) => void): Publishe
         guard: "measured",
         provider: null,
         family: null,
+        decider: null,
         capabilities: 0,
         scenario: relativeToRoot(scenarioFile),
     };
@@ -175,8 +179,17 @@ export function agentSlot(wsBase: string, log: (line: string) => void): Publishe
             if (!reasoner.description.ready) throw new Error(reasoner.description.reason ?? "no reason given");
             provider = reasoner;
             state.note = null;
+            state.decider = { kind: "model", model: reasoner.model, servedBy: reasoner.description.servedBy ?? null };
         } catch (e) {
+            // For the film (AGENT_REQUIRE_MODEL=1): no script stands in, the night does not start, and the page says why.
+            if (process.env.AGENT_REQUIRE_MODEL === "1") {
+                state.decider = { kind: "script", reason: errorMessage(e) };
+                state.note = `the reasoner is not ready (${errorMessage(e)}), and AGENT_REQUIRE_MODEL forbids the script: the night does not start`;
+                log(`[agent] ${state.note}`);
+                throw new Error(state.note);
+            }
             provider = new ScriptedProvider("prudent");
+            state.decider = { kind: "script", reason: errorMessage(e) };
             state.note = `the reasoner is not ready (${errorMessage(e)}); the scripted agent is playing`;
             log(`[agent] ${state.note}`);
         }

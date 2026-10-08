@@ -18,6 +18,9 @@ export interface ReasonerDescription {
     model: string;
     family: string;
     wire: string;
+    /** The host of the endpoint the model is reached at, and the service when it is a known one (Nebius Token Factory). */
+    endpoint?: string | null;
+    servedBy?: string | null;
     ready: boolean;
     reason: string | null;
     profile?: { file: string; sha256: string };

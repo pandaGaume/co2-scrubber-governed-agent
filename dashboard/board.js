@@ -908,7 +908,15 @@ async function main() {
     $("board").hidden = false;
     setTimeout(() => $("boot").remove(), 700);
 
-    if (report.reasoner) $("top-reasoner").textContent = `${report.reasoner.model ?? "?"}${report.reasoner.ready ? "" : " · no key"}`;
+    // Who reasons, said so it reads at a glance on camera (2026-10-08): the family and the service when both are known
+    // (NVIDIA NEMOTRON · NEBIUS TOKEN FACTORY), the model id in the tooltip; "no key" when the slot cannot answer.
+    if (report.reasoner) {
+        const r = report.reasoner;
+        const family = r.family === "nemotron" ? "NVIDIA NEMOTRON" : (r.family ?? "").toUpperCase();
+        const label = family && r.servedBy ? `${family} · ${r.servedBy.toUpperCase()}` : (r.model ?? "?");
+        $("top-reasoner").textContent = `${label}${r.ready ? "" : " · no key"}`;
+        $("top-reasoner").title = `the model behind the reasoner slot: ${r.model ?? "?"}${r.endpoint ? ` at ${r.endpoint}` : ""}`;
+    }
     if (report.voice) $("top-voice").textContent = `${report.voice.provider ?? "?"}${report.voice.ready ? "" : " · not ready"}`;
 
     await renderSlots();

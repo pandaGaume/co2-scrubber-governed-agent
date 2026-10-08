@@ -13,6 +13,23 @@ import type { ProviderProfile } from "./provider.js";
 import { APP, appSays } from "../core/application.js";
 
 export const toApiName = (capabilityId: string): string => capabilityId.replace(/\./g, "__").slice(0, 64);
+
+/**
+ * A reasoning model's answer without its reasoning (2026-10-08, Nemotron on Token Factory): the thinking some servers
+ * leave in the content between `<think>` and `</think>` never reaches the console, Mother's voice or the conversation
+ * the model is shown next. An answer still thinking when it was cut (`<think>` never closed) has no answer in it.
+ * The reasoning stays in the exchange's raw response, for the trace.
+ */
+export function stripReasoning(text: string | null | undefined): string {
+    if (!text) return "";
+    let out = text.replace(/<think>[\s\S]*?<\/think>/gi, "");
+    const open = out.search(/<think>/i);
+    if (open >= 0) out = out.slice(0, open);
+    // A server that strips the opening tag itself leaves the reasoning before a lone closing one.
+    const close = out.search(/<\/think>/i);
+    if (close >= 0) out = out.slice(close + "</think>".length);
+    return out.trim();
+}
 export const fromApiName = (name: string): string => name.replace(/__/g, ".");
 
 /** The family of a model, from the profile or its name: the key the slots' grammars use. */
