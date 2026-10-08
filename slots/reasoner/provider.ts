@@ -26,7 +26,7 @@ import { SYSTEM_PROMPT_FILE, fromRoot, relativeToRoot } from "../../lib/paths.js
 import { objectSchema as obj, publishSlot, type PublishedSlot } from "../lib/slot-server.js";
 import type { Provider, ProviderProfile } from "../../harness/lib/provider.js";
 import { familyOf } from "../../harness/lib/llm-common.js";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { oneLine, runtimeEvents } from "../lib/events.js";
 
 export interface ReasonerState {
@@ -58,12 +58,28 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
     const wire = profile.tier3?.wire ?? "openai-compatible";
     // Which model answers which use (2026-10-08, specs/reasoner/routing.json): the agent, a role named by its prompt file, compose.
     // A use the table leaves null or does not name takes the server's profile above. Data, read once at start.
+    // The table is read again whenever the file changes (2026-10-08: a rehearsal on Super, the takes on Ultra, without restarting the
+    // server); a conversation already open keeps the model it opened with.
     const routingFile = fromRoot(process.env.REASONER_ROUTING ?? "specs/reasoner/routing.json");
-    const routing = existsSync(routingFile) ? (readJson<{ uses?: Record<string, string | null> }>(routingFile).uses ?? {}) : {};
+    let routing: Record<string, string | null> = {};
+    let routingStamp = -1;
+    const routingNow = (): Record<string, string | null> => {
+        const stamp = existsSync(routingFile) ? statSync(routingFile).mtimeMs : 0;
+        if (stamp !== routingStamp) {
+            routingStamp = stamp;
+            try {
+                routing = stamp ? (readJson<{ uses?: Record<string, string | null> }>(routingFile).uses ?? {}) : {};
+                if (stamp) log(`reasoner: the model of each use, from ${relativeToRoot(routingFile)}: ${Object.entries(routing).filter(([, v]) => v).map(([k, v]) => `${k}=${v}`).join(", ") || "the server's profile for all"}`);
+            } catch (e) {
+                log(`reasoner: ${relativeToRoot(routingFile)} not read (${errorMessage(e)}); the last table read stays`);
+            }
+        }
+        return routing;
+    };
     const profiles = new Map<string, ProviderProfile>([[profileFile, profile]]);
     /** The profile of a use: its file and its content, the server's when the table names none. */
     const routed = (use: string): { file: string; profile: ProviderProfile; wire: string } => {
-        const named = routing[use];
+        const named = routingNow()[use];
         const file = named ? fromRoot(named) : profileFile;
         let p = profiles.get(file);
         if (!p) {
@@ -74,7 +90,7 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
     };
     /** The use a call is for: the role of the prompt file it names, the agent without one. */
     const useOf = (promptFile: string | undefined): string => /^specs\/([a-z0-9-]+)\/prompt\.md$/.exec(promptFile ?? "")?.[1] ?? "agent";
-    const routes = () => Object.fromEntries(Object.keys({ agent: 1, ...routing, compose: 1 }).map((use) => [use, routed(use).profile.tier3?.model ?? "?"]));
+    const routes = () => Object.fromEntries(Object.keys({ agent: 1, ...routingNow(), compose: 1 }).map((use) => [use, routed(use).profile.tier3?.model ?? "?"]));
     const systemPrompt = existsSync(SYSTEM_PROMPT_FILE) ? readFileSync(SYSTEM_PROMPT_FILE, "utf8") : "";
     const conversations = new Map<string, Provider>();
     let notReady: string | null = null;

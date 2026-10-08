@@ -1,7 +1,7 @@
 {
     "note": "Which model answers which use (2026-10-08): not one model for everything. A use is the agent (the night's decisions, no prompt file), a role whose prompt the caller names (specs/<role>/prompt.md: procedure, observer, graph, code, supervisor, diagnosis, playbook, reflection, recommendation, onnx), or compose (Mother's welcome, the narrations). A use set to null, or not named, takes the server's profile (REASONER_PROFILE). The reasoner slot reads this file at start; REASONER_ROUTING names another one. Every call says, in its result and in the factories' manifests, the model that answered.",
     "uses": {
-        "agent": "profiles/nvidia-nebius-ultra.json",
+        "agent": "profiles/nvidia-nebius-super.json",
         "procedure": "profiles/nvidia-nebius-ultra.json",
         "observer": "profiles/nvidia-nebius-ultra.json",
         "graph": "profiles/nvidia-nebius-ultra.json",
