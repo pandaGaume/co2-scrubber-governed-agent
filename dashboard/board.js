@@ -529,7 +529,11 @@ const audio = new AudioOutput(
                 startMeter?.();
                 return;
             }
-            reveal(voiceLine("", "now"), u.text ?? "");
+            // Not drawn yet (the station's list is read every few seconds, the voice can be quicker): written here, marked with the
+            // words said, so the line drawn later from the list takes this place instead of being written a second time, above.
+            const line = voiceLine("", "now");
+            line.dataset.voiced = u.text ?? "";
+            reveal(line, u.text ?? "");
             startMeter?.();
         },
         onError: (m) => voiceLine(`audio: ${m} (said once; the next line says when it answers again)`, "info"),

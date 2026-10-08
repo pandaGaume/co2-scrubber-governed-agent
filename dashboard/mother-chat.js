@@ -52,6 +52,17 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
         if (!log || !Array.isArray(lines)) return;
         const fresh = lastLine < 0 ? lines.slice(-6) : lines.filter((l) => l.n > lastLine);
         for (const l of fresh) {
+            // The voice already said it and the board wrote it where it was said (board.js, data-voiced): that line becomes Mother's,
+            // in its place, rather than the same words written again above newer lines (2026-10-08: the log read out of order, twice).
+            const voiced = [...log.querySelectorAll(".line[data-voiced]")].reverse().find((v) => v.dataset.voiced === (l.text?.en ?? ""));
+            if (voiced) {
+                delete voiced.dataset.voiced;
+                voiced.dataset.said = l.text?.en ?? "";
+                voiced.classList.add("said");
+                const who = voiced.querySelector(".who");
+                if (who) who.textContent = "mother";
+                continue;
+            }
             const el = document.createElement("div");
             el.className = "line";
             // The English text is what the station sends the voice: board.js finds the line by it when the voice plays it.
