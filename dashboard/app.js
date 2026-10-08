@@ -57,12 +57,22 @@ const POLL_MS = 2000;
 /** Four minutes of readings at one every two seconds. */
 const HISTORY = 120;
 
-/** One MCP session per slot, opened on demand and kept. */
+/** One MCP session per slot, opened on demand and kept while it works. A session that could not open (the board not yet
+    connected when the page loaded, 2026-10-08) or a call that failed is dropped, and the next poll opens a new one: kept,
+    it left the cabin on "no reading" until the page was reloaded. */
 const sessions = new Map();
 async function session(slot) {
-    if (!sessions.has(slot)) sessions.set(slot, connectMcp(base, slot, { headers: {} }));
+    if (!sessions.has(slot)) {
+        const opening = connectMcp(base, slot, { headers: {} });
+        opening.catch(() => {
+            if (sessions.get(slot) === opening) sessions.delete(slot);
+        });
+        sessions.set(slot, opening);
+    }
     return sessions.get(slot);
 }
+/** Forgets a slot's session after a failed call: the next one opens afresh (a restarted board or broker forgot it). */
+const forget = (slot) => sessions.delete(slot);
 
 // ── Badges ────────────────────────────────────────────────────────────────
 
@@ -447,6 +457,7 @@ async function refreshCabin() {
             say("cabin.text", { ppm, state, scrubber: st.power ? phrase("cabin.scrubber.on", { percent }) : phrase("cabin.scrubber.off") });
         }
     } catch (e) {
+        forget("scrubber");
         cabinUnread(`no reading: ${e.message}`);
     }
 }
