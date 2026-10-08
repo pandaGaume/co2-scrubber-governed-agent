@@ -270,6 +270,8 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
     let verdictRepeats = 0;
     // The refused proposals over the whole task, by capability and input: the same one four times with reads in between is as stuck as four in a row (the eleventh page run: task.plan refused six times on one mapping, a library read between each).
     const refusedCounts = new Map<string, number>();
+    /** Steps that were calls of a batch, handed without asking the model (call-batch.ts): outside the decisions budget. */
+    let handedSteps = 0;
     const telemetry = newTelemetry(contextMode);
     const EVIDENCE_CAP = 10;
     // A long answer goes whole to the workshop and the model reads its summary and its handle; written right after the step.
@@ -439,8 +441,14 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         }
         const n = progress.iteration + 1;
         const minutes = (Date.now() - startedAt.getTime()) / 60000;
-        if (progress.iteration >= budget.iterations) {
+        // The budget counts the model's decisions: a call of a batch handed without asking it (call-batch.ts) costs no turn; all the
+        // calls together stay bounded, at four per decision of the budget.
+        if (progress.iteration - handedSteps >= budget.iterations) {
             ended = `iteration budget spent (${budget.iterations})`;
+            break;
+        }
+        if (progress.iteration >= budget.iterations * 4) {
+            ended = `call budget spent (${budget.iterations * 4} calls, ${progress.iteration - handedSteps} decisions)`;
             break;
         }
         if (minutes >= budget.minutes) {
@@ -458,6 +466,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         const ms = Date.now() - stepStarted;
         const exchange = trace ? (provider.exchanges.find((x) => x.decisionId === trace.decisionId) ?? null) : (provider.exchanges.filter((x) => !attached.has(x.decisionId)).at(-1) ?? null);
         if (exchange) attached.add(exchange.decisionId);
+        if (exchange?.batch) handedSteps++;
         // The whole answer of a long call, written now so the model can read it at the next step by its handle.
         if (pendingArtifact) {
             const artifact: { path: string; text: string } = pendingArtifact;
@@ -471,7 +480,8 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         }
         // Where the tokens went: the model's usage, cache included, and the characters of each part of the context.
         if (exchange) {
-            telemetry.modelCalls++;
+            // A call of a batch was handed without asking the model (call-batch.ts): no model call, no tokens.
+            if (exchange.response !== null) telemetry.modelCalls++;
             const usage = ((exchange.response as { usage?: Record<string, number> } | null)?.usage ?? {}) as Record<string, number>;
             telemetry.modelInputTokens += usage.input_tokens ?? usage.prompt_tokens ?? 0;
             telemetry.modelOutputTokens += usage.output_tokens ?? usage.completion_tokens ?? 0;
@@ -503,6 +513,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
                 reason: trace.evaluation.reason ?? null,
                 ms,
                 tokens: exchange?.tokens ?? null,
+                ...(exchange?.batch ? { batch: exchange.batch } : {}),
                 ...(exchange?.reading ? { reading: { how: exchange.reading.how, changes: exchange.reading.changes, model: exchange.reading.model ?? null } } : {}),
                 // A submission that ran went through the topic's guard: it accepted it.
                 ...(topic.judges?.some((r) => r.test(trace.decision.invocation.capabilityId)) ? { judged: "accepted" as const } : {}),
@@ -524,7 +535,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             }
             lines.push({ n, decisionId: trace.decisionId, source: trace.source, trace, failed: null, exchange, call, ms });
             if (exchange?.reading) log(`[factory] step ${n}: ${exchange.reading.capability} read ${exchange.reading.how === "coerced" ? "by its schema" : `by ${exchange.reading.model ?? "a model"}`}: ${exchange.reading.changes.join("; ")}`);
-            log(`[factory] step ${n}: ${trace.decision.invocation.capabilityId} -> ${outcome} (${trace.evaluation.reason ?? ""})${trace.source === "policy" ? " [replayed]" : ""}`);
+            log(`[factory] step ${n}: ${trace.decision.invocation.capabilityId} -> ${outcome} (${trace.evaluation.reason ?? ""})${trace.source === "policy" ? " [replayed]" : ""}${exchange?.batch ? ` [call ${exchange.batch.index} of ${exchange.batch.of} of one answer]` : ""}`);
             continue;
         }
         if (exchange) {

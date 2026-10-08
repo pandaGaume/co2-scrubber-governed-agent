@@ -13,6 +13,7 @@ import type { PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
 import type { Provider, ProviderExchange, ProviderProfile } from "../lib/provider.js";
 import { apiKeyFor, compactRequest, contextSizes, cutAtOutputLimit, decisionFrom, familyOf, fromApiName, intentionText, observationText, parseJsonArgs, toApiName, TRUNCATED_RESULT, truncatedDecision, type ContextMode } from "../lib/llm-common.js";
 import { APP } from "../core/application.js";
+import { CallBatch, distinctCalls } from "../lib/call-batch.js";
 
 interface OutputItem {
     type: string;
@@ -51,6 +52,11 @@ export class OpenAiResponsesProvider implements Provider {
     /** The conversation mode's chain: the last response, and its tool calls waiting for their result. */
     private previous: string | null = null;
     private pendingCalls: Array<{ id: string; executed: boolean; truncated: boolean }> = [];
+    /** The calls of the last answer still to hand to the loop, and the results of those that ran (harness/lib/call-batch.ts). */
+    private batch: CallBatch | null = null;
+    private batchResults: Array<{ id: string; content: string }> = [];
+    private batchDropped: string[] = [];
+    private batchSummary: string | null = null;
     private started = false;
 
     constructor(
@@ -86,6 +92,19 @@ export class OpenAiResponsesProvider implements Provider {
 
     async resolve(input: PolicyFallbackInput): Promise<PolicyDecision> {
         this.calls++;
+        if (this.batch) {
+            const batch = this.batch;
+            const next = batch.advance(input.state.features as Record<string, unknown>, new Set(input.allowedCapabilities.map((c) => c.id)));
+            if (next) {
+                const decision = decisionFrom(next.name, next.args, "", input.allowedCapabilities);
+                this.exchanges.push({ decisionId: input.decisionId, model: this.model, request: null, response: null, decision, proposedCapabilityId: fromApiName(next.name), proposedInput: next.args, latencyMs: 0, tokens: null, batch: batch.position });
+                return decision;
+            }
+            this.batch = null;
+            if (this.contextMode === "state") this.batchSummary = batch.summary();
+            this.batchResults = [...batch.results(), ...this.batchDropped.map((id) => ({ id, content: "not executed: the same call as an earlier one in this answer" }))];
+            this.batchDropped = [];
+        }
         const state = this.contextMode === "state";
         const items: InputItem[] = [];
         if (state || !this.previous) {
@@ -93,9 +112,15 @@ export class OpenAiResponsesProvider implements Provider {
         } else {
             // The tool calls of the previous answer, each with its result: only the first was executed.
             const f = input.state.features;
+            for (const r of this.batchResults) items.push({ type: "function_call_output", call_id: r.id, output: r.content });
             for (const call of this.pendingCalls) items.push({ type: "function_call_output", call_id: call.id, output: call.truncated ? TRUNCATED_RESULT : call.executed ? `${String(f.lastOutcome || "unknown")}: ${String(f.lastOutput || "no output")}` : "not executed: the harness runs one action per step; call it again at the next step if it is still needed" });
         }
+        this.batchResults = [];
         items.push({ role: "user", content: observationText(input) });
+        if (this.batchSummary) {
+            items.push({ role: "user", content: this.batchSummary });
+            this.batchSummary = null;
+        }
         this.started = true;
         const tools = input.allowedCapabilities.map((c) => ({ type: "function", name: toApiName(c.id), description: c.description, parameters: c.inputSchema ?? { type: "object" }, strict: false }));
         const body = {
@@ -104,7 +129,7 @@ export class OpenAiResponsesProvider implements Provider {
             input: items,
             tools,
             tool_choice: state ? "required" : "auto",
-            parallel_tool_calls: false,
+            parallel_tool_calls: true,
             // Nothing kept at the provider in the state mode: the harness's state is the memory.
             store: !state,
             ...(!state && this.previous ? { previous_response_id: this.previous } : {}),
@@ -139,6 +164,12 @@ export class OpenAiResponsesProvider implements Provider {
         const truncated = cutAtOutputLimit(result);
         this.previous = result.id ?? null;
         this.pendingCalls = calls.map((c, i) => ({ id: c.call_id ?? "", executed: i === 0 && !truncated, truncated }));
+        const distinct = distinctCalls(calls, (c) => [c.name ?? "", c.arguments]);
+        if (distinct.length > 1 && !truncated) {
+            this.batch = new CallBatch(distinct.map((c) => ({ id: c.call_id ?? "", name: c.name!, args: parseJsonArgs(c.arguments), result: null })), input.state.features as Record<string, unknown>);
+            this.pendingCalls = [];
+            this.batchDropped = calls.filter((c) => !distinct.includes(c)).map((c) => c.call_id ?? "");
+        }
         const decision = truncated && call ? truncatedDecision(fromApiName(call.name!)) : decisionFrom(call?.name ?? null, parseJsonArgs(call?.arguments), text, input.allowedCapabilities);
         const messages = [{ role: "system", content: this.options.systemPrompt }, ...items.map((x) => ("role" in x ? { role: x.role, content: x.content } : { role: "tool", content: x.output }))];
         const usage = result.usage;

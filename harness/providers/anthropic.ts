@@ -13,6 +13,7 @@ import type { PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
 import type { Provider, ProviderExchange, ProviderProfile } from "../lib/provider.js";
 import { apiKeyFor, compactRequest, contextSizes, decisionFrom, familyOf, fromApiName, intentionText, observationText, parseJsonArgs, toApiName, TRUNCATED_RESULT, truncatedDecision, type ContextMode } from "../lib/llm-common.js";
 import { APP } from "../core/application.js";
+import { CallBatch, distinctCalls } from "../lib/call-batch.js";
 
 type ContentBlock = { type: "text"; text: string } | { type: "tool_use"; id: string; name: string; input: unknown } | { type: "tool_result"; tool_use_id: string; content: string };
 interface Message {
@@ -49,6 +50,14 @@ export class AnthropicProvider implements Provider {
     private messages: Message[] = [];
     /** The tool_use blocks of the last answer: the first one was executed, the others were not (one action per step); none when the answer was cut. */
     private pendingToolUses: Array<{ id: string; executed: boolean; truncated: boolean }> = [];
+    /** The tool uses of the last answer still to hand to the loop, and the results of those that ran (harness/lib/call-batch.ts). */
+    private batch: CallBatch | null = null;
+    /** The results of a finished batch, sent as tool_result blocks in the next message. */
+    private batchResults: Array<{ id: string; content: string }> = [];
+    /** The tool uses of the batch's answer left out as repeats: each still gets its tool_result. */
+    private batchDropped: string[] = [];
+    /** In the state mode, a finished batch's results, said with the next observation (CallBatch.summary). */
+    private batchSummary: string | null = null;
     /** The output limit per answer: the profile's `tier3.maxTokens`, 4096 by default (a procedure written as one tool call runs past 1024). */
     private readonly maxTokens: number;
 
@@ -81,12 +90,30 @@ export class AnthropicProvider implements Provider {
 
     async resolve(input: PolicyFallbackInput): Promise<PolicyDecision> {
         this.calls++;
+        // Several tool uses in the last answer: the next one goes to the loop without asking the model; when the last has run,
+        // every result goes back at once, each under its tool_use id.
+        if (this.batch) {
+            const batch = this.batch;
+            const next = batch.advance(input.state.features as Record<string, unknown>, new Set(input.allowedCapabilities.map((c) => c.id)));
+            if (next) {
+                const decision = decisionFrom(next.name, next.args, "", input.allowedCapabilities);
+                this.exchanges.push({ decisionId: input.decisionId, model: this.model, request: null, response: null, decision, proposedCapabilityId: fromApiName(next.name), proposedInput: next.args, latencyMs: 0, tokens: null, batch: batch.position });
+                return decision;
+            }
+            this.batch = null;
+            if (this.contextMode === "state") this.batchSummary = batch.summary();
+            this.batchResults = [...batch.results(), ...this.batchDropped.map((id) => ({ id, content: "not executed: the same call as an earlier one in this answer" }))];
+            this.batchDropped = [];
+        }
         const blocks: ContentBlock[] = [];
         // In the state mode nothing is replayed: the conversation starts again at every step, from the state.
         if (this.contextMode === "state") {
             this.messages = [];
             this.pendingToolUses = [];
+            this.batchResults = [];
         }
+        for (const r of this.batchResults) blocks.push({ type: "tool_result", tool_use_id: r.id, content: r.content });
+        this.batchResults = [];
         // Every tool_use of the previous answer needs a tool_result in this message, or the API refuses the conversation.
         const f = input.state.features;
         for (const use of this.pendingToolUses) {
@@ -95,17 +122,21 @@ export class AnthropicProvider implements Provider {
         this.pendingToolUses = [];
         if (this.messages.length === 0) blocks.push({ type: "text", text: intentionText(input) });
         blocks.push({ type: "text", text: observationText(input) });
+        if (this.batchSummary) {
+            blocks.push({ type: "text", text: this.batchSummary });
+            this.batchSummary = null;
+        }
         this.messages.push({ role: "user", content: blocks });
 
         const tools = input.allowedCapabilities.map((c) => ({ name: toApiName(c.id), description: c.description, input_schema: c.inputSchema ?? { type: "object" } }));
-        // One action per step: the harness executes one decision, so the model is asked for one call at a time.
+        // Several tool uses in one answer are taken (call-batch.ts): each runs as its own step, the results go back together.
         // The system prompt is a role's fixed text (the agent's, a topic's, the Observer's): marked for the provider's cache, so
         // the tools and the prompt, which come first and do not change, are not billed again at every step; what varies follows.
         const system = [{ type: "text", text: this.options.systemPrompt, cache_control: { type: "ephemeral" } }];
         // A Claude 5 model (Opus 5.5, Sonnet 5, Fable) always thinks, and a fixed temperature is refused with it: the sampling is the model's there.
         const thinksAlways = /^claude-(opus-5|sonnet-5|fable|mythos)/.test(this.model);
         // On the state mode (the factories, the Observer, the Supervisor) an answer is a tool call and nothing else: a text before it is tokens and seconds nobody reads (2026-09-28: a thousand characters of thinking aloud before each procedure). A model that always thinks is left to auto, which its thinking needs.
-        const toolChoice = this.contextMode === "state" && !thinksAlways ? { type: "any", disable_parallel_tool_use: true } : { type: "auto", disable_parallel_tool_use: true };
+        const toolChoice = this.contextMode === "state" && !thinksAlways ? { type: "any", disable_parallel_tool_use: false } : { type: "auto", disable_parallel_tool_use: false };
         const body = { model: this.model, system, messages: this.messages, tools, tool_choice: toolChoice, max_tokens: this.maxTokens, ...(thinksAlways ? {} : { temperature: this.options.temperature ?? 0.2 }) };
         const started = Date.now();
         const controller = new AbortController();
@@ -137,6 +168,12 @@ export class AnthropicProvider implements Provider {
             .join("\n");
         const truncated = result.stop_reason === "max_tokens";
         this.pendingToolUses = toolUses.map((u, i) => ({ id: u.id, executed: i === 0 && !truncated, truncated }));
+        const distinctUses = distinctCalls(toolUses, (u) => [u.name, u.input]);
+        if (distinctUses.length > 1 && !truncated) {
+            this.batch = new CallBatch(distinctUses.map((u) => ({ id: u.id, name: u.name, args: parseJsonArgs(u.input), result: null })), input.state.features as Record<string, unknown>);
+            this.pendingToolUses = [];
+            this.batchDropped = toolUses.filter((u) => !distinctUses.includes(u)).map((u) => u.id);
+        }
         const decision = truncated && toolUse ? truncatedDecision(fromApiName(toolUse.name)) : decisionFrom(toolUse?.name ?? null, parseJsonArgs(toolUse?.input), text, input.allowedCapabilities);
         const usage = result.usage;
         this.exchanges.push({

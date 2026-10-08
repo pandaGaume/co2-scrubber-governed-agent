@@ -40,6 +40,7 @@ interface DecideAnswer {
     tokens: ProviderExchange["tokens"];
     exchange: { request: unknown; response: unknown };
     context?: ProviderExchange["context"] | null;
+    batch?: { index: number; of: number };
 }
 
 export class ReasonerProvider implements Provider {
@@ -166,6 +167,7 @@ export class ReasonerProvider implements Provider {
             latencyMs: a.latencyMs,
             tokens: a.tokens ?? null,
             ...(reading ? { reading } : {}),
+            ...(a.batch ? { batch: a.batch } : {}),
         });
         return a.decision;
     }

@@ -79,3 +79,19 @@ describe("the interpreter reads a call toward its schema", () => {
         assert.match(String(r.error), /required property 'monitoring'/);
     });
 });
+
+describe("a revision is read as the model wrote it", () => {
+    it("Nano's correction: a path as a key and a value with its justification set the limit and file the justification once", async () => {
+        const { revised } = await import("../harness/topics/procedure/index.js");
+        const draft = { limits: { co2MaxPpm: 3200, co2AbortPpm: 3200 }, steps: [{ n: 1, speedPercent: 40 }, { n: 2, speedPercent: 100 }], justifications: [] } as never;
+        const justification = { value: 3199, source: "library", reference: "test.co2AbortCeilingPpm", reason: "below the abort" };
+        const r = revised(draft, { "limits.co2MaxPpm": justification, "steps.2.speedPercent": 90 }, [{ constant: "limits.co2MaxPpm", ...justification }]);
+        const p = r.procedure as unknown as { limits: { co2MaxPpm: number }; steps: Array<{ speedPercent: number }>; justifications: Array<{ constant: string }> };
+        assert.equal(p.limits.co2MaxPpm, 3199);
+        assert.equal(p.steps[1].speedPercent, 90, "steps.2 is the step whose n is 2");
+        assert.equal(p.justifications.filter((j) => j.constant === "limits.co2MaxPpm").length, 1);
+        assert.ok(!("limits.co2MaxPpm" in (r.procedure as object)), "no root key named after the path");
+        assert.equal((draft as { limits: { co2MaxPpm: number } }).limits.co2MaxPpm, 3200, "the draft is not touched");
+        assert.ok(r.changes.some((c) => c.includes("read as the path limits.co2MaxPpm")));
+    });
+});

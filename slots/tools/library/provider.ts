@@ -282,10 +282,19 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
             name: "facts",
             inputSchema: objectSchema({ id: { type: "string" } }),
             handle: (args, s) => {
-                const docs = typeof args.id === "string" && args.id ? s.documents.filter((d) => d.id === args.id) : s.documents;
-                if (typeof args.id === "string" && args.id && !docs.length) throw new Error(`no document "${String(args.id)}" in the library`);
+                const asked = typeof args.id === "string" ? args.id : "";
+                const docs = asked ? s.documents.filter((d) => d.id === asked) : s.documents;
                 // Each fact carries whether its document is signed and still as signed: a safety limit is justified only by a signed one (2026-09-28).
-                return { facts: docs.flatMap((d) => { const signature = signatureOf(d.id, d.dir, s.sigDir); return d.facts.map((f) => ({ ...f, source: d.id, signed: signature })); }) };
+                const factsOf = (d: (typeof s.documents)[number]) => {
+                    const signature = signatureOf(d.id, d.dir, s.sigDir);
+                    return d.facts.map((f) => ({ ...f, source: d.id, signed: signature }));
+                };
+                if (docs.length) return { facts: docs.flatMap(factsOf) };
+                // An id that is a fact's, not a document's, is read as what it names (2026-10-08: Nemotron asked library.facts for
+                // "test.speedFloorPercent" and twenty other facts by their own ids, each refused, many times over).
+                const named = s.documents.flatMap(factsOf).filter((f) => (f as { id?: unknown }).id === asked);
+                if (named.length) return { facts: named, readAs: `"${asked}" is a fact, not a document: here it is, from ${named.map((f) => f.source).join(", ")}; library.facts takes a document id, or none for every fact` };
+                throw new Error(`no document or fact "${asked}" in the library; library.facts takes a document id (${s.documents.filter((d) => d.facts.length).map((d) => d.id).join(", ")}) or none for every fact`);
             },
         },
         {

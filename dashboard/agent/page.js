@@ -841,7 +841,8 @@ var ReasonerProvider = class _ReasonerProvider {
       proposedInput: a.proposedInput,
       latencyMs: a.latencyMs,
       tokens: a.tokens ?? null,
-      ...reading ? { reading } : {}
+      ...reading ? { reading } : {},
+      ...a.batch ? { batch: a.batch } : {}
     });
     return a.decision;
   }

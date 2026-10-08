@@ -12,7 +12,8 @@
  */
 import type { PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
 import type { Provider, ProviderExchange, ProviderProfile } from "../lib/provider.js";
-import { apiKeyFor, callInText, compactRequest, contextSizes, decisionFrom, familyOf, fromApiName, intentionText, observationText, parseJsonArgs, stripReasoning, toApiName, TRUNCATED_RESULT, truncatedDecision, type ContextMode } from "../lib/llm-common.js";
+import { CallBatch, completeArgs, distinctCalls } from "../lib/call-batch.js";
+import { apiKeyFor, callInText, callsInText, compactRequest, contextSizes, decisionFrom, familyOf, fromApiName, intentionText, observationText, parseJsonArgs, stripReasoning, toApiName, TRUNCATED_RESULT, truncatedDecision, type ContextMode } from "../lib/llm-common.js";
 import { APP } from "../core/application.js";
 
 /** The JSON Schema keys each server's grammar refused, by its base URL: learned once for all the conversations with it. */
@@ -122,8 +123,28 @@ export class OpenAiCompatibleProvider implements Provider {
         return this.options.contextMode ?? "conversation";
     }
 
+    /** The calls of the last answer still to hand to the loop, and the results of those that ran (harness/lib/call-batch.ts). */
+    private batch: CallBatch | null = null;
+    /** In the state mode, a finished batch's results, said with the next observation (CallBatch.summary). */
+    private batchSummary: string | null = null;
+
     async resolve(input: PolicyFallbackInput): Promise<PolicyDecision> {
         this.calls++;
+        // Several calls in the last answer: the next one goes to the loop without asking the model; when the last has run, every
+        // result is sent back at once, each under its call's id.
+        if (this.batch) {
+            const batch = this.batch;
+            const next = batch.advance(input.state.features as Record<string, unknown>, new Set(input.allowedCapabilities.map((c) => c.id)));
+            if (next) {
+                const decision = decisionFrom(next.name, next.args, "", input.allowedCapabilities);
+                this.exchanges.push({ decisionId: input.decisionId, model: this.model, request: null, response: null, decision, proposedCapabilityId: fromApiName(next.name), proposedInput: next.args, latencyMs: 0, tokens: null, batch: batch.position });
+                return decision;
+            }
+            this.batch = null;
+            this.pendingCalls = [];
+            if (this.contextMode !== "state") for (const r of batch.results()) this.messages.push({ role: "tool", tool_call_id: r.id, content: r.content });
+            else this.batchSummary = batch.summary();
+        }
         if (this.contextMode === "state") {
             this.messages = [{ role: "system", content: this.options.systemPrompt }];
             this.pendingCalls = [];
@@ -136,14 +157,18 @@ export class OpenAiCompatibleProvider implements Provider {
         this.pendingCalls = [];
         if (!this.messages.some((m) => m.role === "user")) this.messages.push({ role: "user", content: intentionText(input) });
         this.messages.push({ role: "user", content: observationText(input) });
+        if (this.batchSummary) {
+            this.messages.push({ role: "user", content: this.batchSummary });
+            this.batchSummary = null;
+        }
 
         const toolsNow = () => input.allowedCapabilities.map((c) => ({ type: "function", function: { name: toApiName(c.id), description: c.description, parameters: withoutKeys(c.inputSchema ?? { type: "object" }, this.unimplemented) } }));
         let tools = toolsNow();
-        // One action per step: the harness executes one decision, so the model is asked for one call at a time.
+        // Several calls in one answer are taken (call-batch.ts): each runs as its own step, the results go back together.
         // The output limit under the name the server takes, and a temperature only when the profile does not say the model takes none.
         const temperature = this.options.temperature ?? (this.profileTemperature === undefined ? 0.2 : this.profileTemperature);
         const choice = (): string => ((this.toolChoice ?? (this.contextMode === "state" ? "required" : "auto")) === "required" && !this.requiredRefused ? "required" : "auto");
-        const bodyWith = (toolChoice: string) => ({ model: this.model, messages: this.messages, tools: (tools = toolsNow()), tool_choice: toolChoice, parallel_tool_calls: false, ...(temperature === null ? {} : { temperature }), ...(this.maxTokens ? { [this.maxTokensParam]: this.maxTokens } : {}) });
+        const bodyWith = (toolChoice: string) => ({ model: this.model, messages: this.messages, tools: (tools = toolsNow()), tool_choice: toolChoice, parallel_tool_calls: true, ...(temperature === null ? {} : { temperature }), ...(this.maxTokens ? { [this.maxTokensParam]: this.maxTokens } : {}) });
         let body = bodyWith(choice());
         const started = Date.now();
         const controller = new AbortController();
@@ -207,18 +232,32 @@ export class OpenAiCompatibleProvider implements Provider {
         // A call written as text, not through the API (callInText): read as the call it is; the text, often the same list repeated
         // until the limit, is not replayed to the model: its transcript holds the call, as if it had come through the API.
         if (!calls.length) {
-            const written = callInText(text, new Set(input.allowedCapabilities.map((c) => c.id)));
-            if (written) {
-                calls = [{ id: `text-${input.decisionId ?? Date.now().toString(36)}`, type: "function", function: written }];
+            const written = callsInText(text, new Set(input.allowedCapabilities.map((c) => c.id)));
+            if (written.length) {
+                calls = written.map((w, i) => ({ id: `text-${input.decisionId ?? Date.now().toString(36)}-${i}`, type: "function", function: w }));
                 cutAfterCall = completion.choices?.[0]?.finish_reason === "length";
                 text = "";
             }
         }
+        // Cut at the output limit with several calls: the complete ones are kept, the last one's unfinished arguments do not parse.
+        if (calls.length > 1 && completion.choices?.[0]?.finish_reason === "length") {
+            const complete = calls.filter((c) => completeArgs(c.function.arguments) !== null);
+            if (complete.length) {
+                calls = complete;
+                cutAfterCall = true;
+            }
+        }
+        calls = distinctCalls(calls, (c) => [c.function.name, c.function.arguments]);
         const call = calls[0] ?? null;
         this.messages.push({ role: "assistant", content: text || null, ...(calls.length ? { tool_calls: calls } : {}) });
         // A call read whole from the text is complete even when what followed it was cut.
         const truncated = completion.choices?.[0]?.finish_reason === "length" && !cutAfterCall;
         this.pendingCalls = calls.map((c, i) => ({ id: c.id, executed: i === 0 && !truncated, truncated }));
+        // Several complete calls: a batch, the first handed now, the others at the next steps; their results go back together.
+        if (calls.length > 1 && !truncated) {
+            this.batch = new CallBatch(calls.map((c) => ({ id: c.id, name: c.function.name, args: completeArgs(c.function.arguments) ?? {}, result: null })), input.state.features as Record<string, unknown>);
+            this.pendingCalls = [];
+        }
         const decision = truncated && call ? truncatedDecision(fromApiName(call.function.name)) : decisionFrom(call?.function.name ?? null, parseJsonArgs(call?.function.arguments), text, input.allowedCapabilities);
         const usage = completion.usage;
         this.exchanges.push({

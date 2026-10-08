@@ -23,6 +23,8 @@ export interface ProviderExchange {
     proposedInput: JsonValue;
     /** How the harness read the call when its form did not fit its schema (core/interpreter.ts): what the guard judged instead of proposedInput. */
     reading?: import("../core/interpreter.js").Reading;
+    /** A call of a batch handed without asking the model (harness/lib/call-batch.ts): its place in the answer. */
+    batch?: { index: number; of: number };
     latencyMs: number;
     tokens: { prompt: number; completion: number; total: number } | null;
 }

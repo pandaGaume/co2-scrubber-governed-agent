@@ -48,6 +48,8 @@ export interface DecideResult {
     exchange: { request: unknown; response: unknown };
     /** Where the characters of the request went, and the context mode (the adapter's `context`). */
     context?: Record<string, number | string> | null;
+    /** A call of an answer that held several, handed without asking the model (harness/lib/call-batch.ts). */
+    batch?: { index: number; of: number };
 }
 
 const MAX_CONVERSATIONS = 16;
@@ -336,6 +338,7 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
                         tokens: x?.tokens ?? null,
                         exchange: { request: x?.request ?? null, response: x?.response ?? null },
                         context: x?.context ?? null,
+                        ...(x?.batch ? { batch: x.batch } : {}),
                     };
                     // What the model proposed against what the harness will run.
                     // When the two differ the governance overrode the model, and

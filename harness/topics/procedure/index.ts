@@ -55,7 +55,7 @@ import * as path from "node:path";
 import { fromRoot } from "../../../lib/paths.js";
 import { checkProcedure, constantsOf, envelopeOf, FORMAT, problemLines, rulesAndFacts, safetyOf, type MeasuredStart, type PresenceRead, type ProcedureCheck } from "./check.js";
 import { checkJustifications, JUSTIFICATIONS_SCHEMA, justificationProblems as commonJustificationProblems, type Justified, type ReadSources } from "../../core/justify.js";
-import { factsBounding, leavesOf, matches, valueAt, type RulesDocument } from "../../core/rules.js";
+import { factsBounding, leavesOf, matches, setAt, valueAt, type RulesDocument } from "../../core/rules.js";
 import { loadWords, say, viewOf } from "../../core/words.js";
 import { problemOf } from "../../core/problems.js";
 import { coerce, schemaError } from "../../core/interpreter.js";
@@ -205,20 +205,45 @@ export function reviseDraft(draft: ProcedureLike, changes: unknown, justificatio
 
 /** The revision applied to the draft, read toward the schema, with what that reading changed. */
 export function revised(draft: ProcedureLike, changes: unknown, justifications: unknown): { procedure: ProcedureLike; changes: string[] } {
-    const merge = (base: unknown, patch: unknown): unknown => {
-        if (!isObject(base) || !isObject(patch)) return patch;
+    // A revision as a model writes it is read as what it means (core/interpreter.ts; 2026-10-08, Nemotron Nano: its correction
+    // `"limits.co2MaxPpm": {"value": 3199, "source": "library", "reference": "test.co2AbortCeilingPpm", "reason": "..."}` was merged
+    // as a new root key, the limit stayed 3200, the same refusal three times, STUCK): a key that is a path sets that path, a value
+    // that is a justification ({value, source, reference, reason}) sets its value and is filed as the justification of that constant.
+    const readings: string[] = [];
+    const inline: Array<Record<string, unknown>> = [];
+    const dotted: Array<[string, unknown]> = [];
+    const JUSTIFICATION_KEYS = new Set(["value", "source", "reference", "reason", "unit", "sources", "cite"]);
+    const isJustified = (v: unknown): v is Record<string, unknown> => isObject(v) && "value" in v && Object.keys(v).every((k) => JUSTIFICATION_KEYS.has(k));
+    const valueOf = (path: string, v: unknown): unknown => {
+        if (!isJustified(v)) return v;
+        if (v.source !== undefined || v.reference !== undefined) inline.push({ constant: path, value: v.value as JsonValue, ...(v.source !== undefined ? { source: v.source } : {}), ...(v.reference !== undefined ? { reference: v.reference } : {}), ...(v.reason !== undefined ? { reason: v.reason } : {}) });
+        readings.push(`${path}: a value with its justification, read as ${JSON.stringify(v.value)} and the justification of ${path}`);
+        return v.value;
+    };
+    const merge = (base: unknown, patch: unknown, at: string): unknown => {
+        if (!isObject(base) || !isObject(patch)) return valueOf(at, patch);
         const out: Record<string, unknown> = { ...base };
         for (const [k, v] of Object.entries(patch)) {
-            if (v === null) delete out[k];
-            else out[k] = merge(base[k], v);
+            const path = at ? `${at}.${k}` : k;
+            if (k.includes(".")) dotted.push([path, v]);
+            else if (v === null) delete out[k];
+            else out[k] = merge(base[k], v, path);
         }
         return out;
     };
     const { justifications: inChanges, ...rest } = isObject(changes) ? changes : {};
-    const merged = merge(draft, rest) as ProcedureLike;
-    const sent = [...(Array.isArray(inChanges) ? inChanges : []), ...(Array.isArray(justifications) ? justifications : [])].filter(isObject);
+    // A copy: a path set below must not reach the draft through an object the merge kept as it was.
+    const merged = structuredClone(merge(draft, rest, "")) as ProcedureLike;
+    for (const [path, v] of dotted) {
+        if (setAt(merged, path, FORMAT.keys, valueOf(path, v))) readings.push(`"${path}" as a key: read as the path ${path}`);
+        else readings.push(`"${path}" as a key leads nowhere in the procedure: left out`);
+    }
+    // One justification per constant: the one given last (a model may give it inline and again in justifications).
+    const given = [...(Array.isArray(inChanges) ? inChanges : []), ...(Array.isArray(justifications) ? justifications : []), ...inline].filter(isObject);
+    const sent = given.filter((j, i) => !given.slice(i + 1).some((x) => x.constant !== undefined && x.constant === j.constant));
     const kept = (Array.isArray(draft.justifications) ? draft.justifications : []).filter((j) => !sent.some((x) => x.constant === j.constant));
-    return readWhole({ ...merged, justifications: [...kept, ...sent] });
+    const whole = readWhole({ ...merged, justifications: [...kept, ...sent] });
+    return { procedure: whole.procedure, changes: [...readings, ...whole.changes] };
 }
 
 /**

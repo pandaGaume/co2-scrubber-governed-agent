@@ -41,6 +41,12 @@ export const fromApiName = (name: string): string => name.replace(/__/g, ".");
  * after it was cut. Null when there is none.
  */
 export function callInText(text: string | null | undefined, allowed: ReadonlySet<string>): { name: string; arguments: string } | null {
+    return callsInText(text, allowed, 1)[0] ?? null;
+}
+
+/** Every complete call written as text, in order (the batch takes them all: harness/lib/call-batch.ts); `limit` stops early. */
+export function callsInText(text: string | null | undefined, allowed: ReadonlySet<string>, limit = Infinity): Array<{ name: string; arguments: string }> {
+    const found: Array<{ name: string; arguments: string }> = [];
     const s = text ?? "";
     const opening = /\{\s*"name"\s*:/g;
     for (let m = opening.exec(s); m; m = opening.exec(s)) {
@@ -60,17 +66,21 @@ export function callInText(text: string | null | undefined, allowed: ReadonlySet
                 break;
             }
         }
-        if (end < 0) return null; // cut before this object closed: nothing complete after it either
+        if (end < 0) break; // cut before this object closed: nothing complete after it either
         try {
             const o = JSON.parse(s.slice(m.index, end + 1)) as { name?: unknown; parameters?: unknown; arguments?: unknown };
             const name = typeof o.name === "string" ? o.name : "";
             const args = o.parameters ?? o.arguments ?? {};
-            if (allowed.has(fromApiName(name)) && args && typeof args === "object" && !Array.isArray(args)) return { name, arguments: JSON.stringify(args) };
+            if (allowed.has(fromApiName(name)) && args && typeof args === "object" && !Array.isArray(args)) {
+                found.push({ name, arguments: JSON.stringify(args) });
+                if (found.length >= limit) break;
+                opening.lastIndex = end + 1;
+            }
         } catch {
             // not JSON: the next opening is tried
         }
     }
-    return null;
+    return found;
 }
 
 /** The family of a model, from the profile or its name: the key the slots' grammars use. */

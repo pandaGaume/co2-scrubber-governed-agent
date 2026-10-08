@@ -100,9 +100,10 @@ describe("a reasoning model behind an OpenAI-compatible server", () => {
         assert.equal(provider.exchanges[0].proposedCapabilityId, "scrubber.motor.set_speed");
         assert.deepEqual(provider.exchanges[0].proposedInput, { percent: 40 });
         assert.equal(result.invocation.capabilityId, "scrubber.motor.set_speed", "run, not refused as cut");
-        // The next request carries the call, not the fifty repetitions.
+        // The fifty repetitions are one call (distinctCalls): the next request asks the model again, carrying that call alone.
         const next = await withServer([{ status: 200, body: completion("done") }], () => provider.resolve(input));
-        assert.ok(!JSON.stringify(next.sent[0].messages).includes("repeat") && JSON.stringify(next.sent[0].messages).split("set_speed").length < 5);
+        assert.equal(next.sent.length, 1);
+        assert.ok(JSON.stringify(next.sent[0].messages).split("set_speed").length < 5);
     });
 
     it("an answer cut while still thinking is asked again once without thinking, both paid", async () => {

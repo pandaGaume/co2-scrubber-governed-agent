@@ -169,13 +169,40 @@ What each node does at the factory (`docs/harness-stages.fr.md` has the same lis
 3. **lookup**: the memory's candidates for that key, each with its statistics.
 4. **gate**: a promoted candidate still available is replayed (`policy`: the model is not called); otherwise `fallback`.
 5. **request**: what the model will receive: the state, the intention, the capabilities allowed now, the candidates not judged sure enough, the recent failures in this context.
-6. **reason**: the provider answers one decision: a capability and an input. A capability outside the allowed list stops the step. The input is then **read** before anything judges it (the interpreter, chapter 7.2): a call whose form does not fit its schema is read toward it, and what was read is what goes on.
+6. **reason**: the provider answers one decision: a capability and an input. A capability outside the allowed list stops the step. An answer that held several calls gives them one per step, without asking the model again (4.1). The input is then **read** before anything judges it (the interpreter, chapter 7.2): a call whose form does not fit its schema is read toward it, and what was read is what goes on.
 7. **merge**: the two paths meet; the source (`policy` or `fallback`) is counted.
 8. **guard**: the input as the interpreter read it, against the capability's schema (Ajv), then the guard's rules (chapter 7). A refusal stops the step: nothing is executed, the reason goes into the state (`lastRefusal`) and the trace, and the step counts one iteration.
 9. **execute**: the capability runs: a broker call bound to the task (the model never writes the task's id; the harness binds it and files a document's name under the task once), or a local capability in process.
 10. **observe-after**: the workshop read again; the runner records what the call answered (compact), which capability was read, what changed.
 11. **evaluate**: the reward of the step (chapter 7.3) and, at `task.done`, the topic's validator.
 12. **record**: the experience goes into the memory; the trace line and the manifest are written.
+
+### 4.1 Several calls in one answer
+
+A model that knows it needs ten reads asks for the ten at once. On 2026-10-08 Nemotron 3 Ultra planned 6 to 29 calls per answer on the procedure factory (the installation, the register, the presence, the method, every safety fact...). The harness ran the first and answered "not executed" to the others; the model, in state mode, planned them all again at the next step: 25 steps of reading in circles, no procedure. A harness that can take one call can take ten, and a small model running locally pays for every turn it is asked again.
+
+So an answer may hold several calls (`harness/lib/call-batch.ts`, for every wire: `openai-compatible`, `anthropic-messages`, `openai-responses`; the servers are told `parallel_tool_calls: true`, `disable_parallel_tool_use: false`):
+
+1. **the calls are kept in their order** and the first goes to the loop as this step's decision;
+2. **each of the others is handed to the loop at the next steps without asking the model**: it goes through the whole loop as if the model had asked it alone (the interpreter, the schema, the guard, execution, observe-after, evaluate, record, the memory). Nothing of the governance is bypassed, and every call keeps its own trace line and manifest step (`batch: {index, of}`; the log says `[call 2 of 5 of one answer]`);
+3. **each result is read from the state at the next step and buffered** (`lastOutcome`, `lastOutput`; `lastRefusal` when the harness refused it);
+4. **when the last call has run, the model is asked again once, with every result under its own call id** (a `tool` message per `tool_call_id`, a `tool_result` per `tool_use_id`, a `function_call_output` per `call_id`): the `whenAll` of the answer, one model turn for the whole batch.
+
+What ends a batch before its end:
+
+- **a refusal by the harness** (the guard, the schema, the allowlist): what was refused changes what the rest means, so the calls after it are not run and the model decides again with the refusal and the results so far. A call that ran and failed (a device that answered an error, a document that does not exist) is a result like any other: the batch goes on;
+- **a call no longer allowed at its step** (the step's allowlist moved);
+- **another decision in between** (the memory replayed a learned step): the state no longer answers the batch's call.
+
+What a batch is not:
+
+- **not parallel execution.** The calls run one after the other, in the order the model wrote them. An action on a device follows the order its author gave, a read after a write reads what the write did, and each call is judged by the guard against the state the previous ones left. What is parallel is the model's side: one answer, all the results back at once;
+- **not repetition.** The same tool with the same arguments twice in one answer is kept once (`distinctCalls`): Nemotron repeated its whole list until the output limit, and an action asked twice in one breath is not meant twice. The repeats still get an answer ("not executed: the same call as an earlier one in this answer"), the APIs requiring one per call id;
+- **not a way around the budget.** The budget counts the model's decisions, so a call handed from a batch costs no turn; all the calls together stay bounded at four per decision of the budget (`call budget spent`).
+
+An answer cut at the output limit keeps its complete calls: the last one's unfinished arguments do not parse, it is left out, and the batch runs the others. A call written as text instead of through the API is read the same way (`callsInText`, all the complete ones).
+
+Measured on the same procedure factory on Ultra: 4 model turns for 25 calls where it took 25 turns before.
 
 Around the loop, the runner (`harness/core/runner.ts`, `runTask`) does what a step cannot: it reads the context once at the start (the library's shelf, the telemetry's shape, the facts and their contract report, chapter 9), it counts the budgets, and it ends a task before its budget when going on would be waste:
 
@@ -270,7 +297,7 @@ The interpreter has **no authority**: it reads, it touches nothing. What it read
 
 Every reading is kept: `sent`, `read`, how (`coerced` or `extracted`, with the model), each change as `path: sent -> read`. It goes into the exchange (`reading`), the manifest's step (`reading`) and the runner's log (`step n: procedure.submit read by its schema: monitoring.subjects.0: {...} -> "fe-1"`). The model is told at the next step, with what its call returned (`readAs`, and in front of `lastOutput`): it learns the form from a result, not from a refusal.
 
-A capability whose input is free by design reads the whole it builds: `procedure.revise` takes `changes`, a free object, so its values are out of the call's schema; the revised procedure is read toward `procedure.submit`'s schema (`readWhole`, the same reading in the guard and at execution), and what still does not fit is refused naming the path, what the schema expects and what was sent.
+A capability whose input is free by design reads the whole it builds: `procedure.revise` takes `changes`, a free object, so its values are out of the call's schema; the revised procedure is read toward `procedure.submit`'s schema (`readWhole`, the same reading in the guard and at execution), and what still does not fit is refused naming the path, what the schema expects and what was sent. A revision is also read as a model writes it: a key that is a path (`"limits.co2MaxPpm": 3199`) sets that path, in the rules' path language (`steps.2` is the step whose `n` is 2), and a value given with its justification (`{"value": 3199, "source": "library", "reference": "test.co2AbortCeilingPpm", "reason": ...}`) sets the value and is filed as that constant's justification, once. On 2026-10-08 Nemotron Nano corrected its CO2 maximum exactly so at its second try; merged as a new root key, the limit stayed at 3200 and the same refusal came back three times, STUCK. The model had understood; the harness had not read it.
 
 Then the schema: the capability's input schema (Ajv). A tool's schema is the slot's, minus the bound fields, with `additionalProperties: false` where the slot says so.
 
@@ -483,6 +510,7 @@ What is missing, in the order the work is planned: the identifiability chain and
 | `harness/core/agent.ts` | the agent: the loop with its six services |
 | `harness/core/runner.ts` | a task run end to end: the context read once, the loop, the early ends, the manifest, the proposal, the recipes saved |
 | `harness/core/capabilities.ts`, `task-capabilities.ts` | the catalogue from the broker with its bindings; `task.plan`, `task.done`, `task.fail`, `task.ask` |
+| `harness/lib/call-batch.ts` | several calls in one answer: handed to the loop one per step without asking the model, the results buffered and sent back together |
 | `harness/core/interpreter.ts` | the interpreter: a call read toward its schema before it is judged (the schema-guided reading, then a model's extraction) |
 | `harness/core/builder-guard.ts` | the constructor's guard; the plan's problems |
 | `harness/core/task-evaluator.ts` | the reward of a step; the validator at `task.done` |
