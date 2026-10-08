@@ -44,7 +44,7 @@
  * the runtime checked the world did not move.
  */
 import { withBase } from "../../core/base.js";
-import type { CapabilityResult, Intention, JsonValue } from "@spiky-panda/harness";
+import { compileInputSchema, type CapabilityResult, type Intention, type JsonValue } from "@spiky-panda/harness";
 import type { LocalCapability } from "../../core/capabilities.js";
 import type { TaskFile } from "../../core/task.js";
 import type { TopicState } from "../../core/reasoning-state.js";
@@ -213,6 +213,25 @@ export function reviseDraft(draft: ProcedureLike, changes: unknown, justificatio
     const sent = [...(Array.isArray(inChanges) ? inChanges : []), ...(Array.isArray(justifications) ? justifications : [])].filter(isObject);
     const kept = (Array.isArray(draft.justifications) ? draft.justifications : []).filter((j) => !sent.some((x) => x.constant === j.constant));
     return { ...merged, justifications: [...kept, ...sent] };
+}
+
+/** The revised procedure checked against the submitted one's schema: null when it fits, else what does not, with what was sent there. */
+let validateWhole: ((input: unknown) => void) | null = null;
+export function shapeProblems(procedure: ProcedureLike): string | null {
+    validateWhole ??= compileInputSchema(PROCEDURE_SCHEMA as unknown as JsonValue) as (input: unknown) => void;
+    try {
+        validateWhole(procedure);
+        return null;
+    } catch (e) {
+        const text = (e instanceof Error ? e.message : String(e)).replace(/^Invalid capability arguments:\s*/, "");
+        const points = text.split(/,\s*(?=data)/).map((m) => {
+            const at = /^data((?:\/[^\s]*)?)\s/.exec(m)?.[1] ?? "";
+            const keys = at.split("/").filter(Boolean);
+            const sent = keys.reduce<unknown>((x, k) => (x && typeof x === "object" ? (x as Record<string, unknown>)[k] : undefined), procedure);
+            return w("guard.shape", { path: keys.join(".") || "the procedure", says: m.replace(/^data(?:\/[^\s]*)?\s/, ""), sent: JSON.stringify(sent ?? null).slice(0, 160) });
+        });
+        return points.join("; ");
+    }
 }
 
 /** The schema of a revision: the fields that change, and the justifications of the constants that change. */
@@ -489,6 +508,10 @@ async function guardProcedure(capabilityId: string, input: JsonValue, context: T
         if (!draft) return [w("draft.none", { minutes: draftMinutes() })];
         const r = (input ?? {}) as { changes?: unknown; justifications?: unknown };
         procedure = reviseDraft(draft, r.changes, r.justifications);
+        // The revised whole has the shape procedure.submit's schema gives it: `changes` is free, its values are not (2026-10-08, Nemotron:
+        // monitoring.subjects revised as objects, which no schema refused and the rule then read as "[object Object]", five times).
+        const shape = shapeProblems(procedure);
+        if (shape) return [shape];
     }
     const presence = presenceOf(context.progress);
     const measured = measuredOf(context.task);

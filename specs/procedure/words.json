@@ -51,6 +51,7 @@
     "guard": {
         "refused": "procedure refused: {problems}",
         "id": "id \"{id}\" must be lower case letters, digits and dashes (it names the file)",
+        "shape": "{path} {says} (sent: {sent}); a change gives a field the value procedure.submit's schema describes for it",
         "quantity": "quantity \"{name}\": {reason} ({code})",
         "quantityUnitAlone": " The unit {unit} alone is one of {quantity} (physics.units_normalize with the unit alone says which quantity takes a unit).",
         "quantityDeclared": " The register declares {device}'s {property} as {quantity} in {unit} (factory.inventory, measures)."

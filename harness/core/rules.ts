@@ -269,7 +269,8 @@ export function evaluateRules(input: unknown, doc: RulesDocument, ctx: RuleConte
                 if (flagged.length) add(rule, `${module} holds ${flagged.map((s) => s.callsign ?? s.id).join(", ")} under ${w.blocked.flag}: ${w.blocked.says}`, w.place, w.blocked.kind ?? rule.kind, { expected: `no one under ${w.blocked.flag} in ${module}` });
             }
             const named = valueAt(input, w.subjects, keys);
-            const watched = new Set(Array.isArray(named) ? named.map(String) : []);
+            // An element that is not an id is shown as sent, never as "[object Object]" (2026-10-08: the model read its own ids refused).
+            const watched = new Set(Array.isArray(named) ? named.map((x) => (typeof x === "string" ? x : JSON.stringify(x))) : []);
             const unwatched = read.subjects.filter((s) => !watched.has(s.id));
             const everyone = read.subjects.map((s) => `"${s.id}"`).join(", ");
             if (!Array.isArray(named) || !named.length) add(rule, `${module} is occupied (${read.occupants}) and ${w.subjects} names no one${says(rule)}`, w.subjects, rule.kind, { expected: `every occupant read: ${everyone}` });
