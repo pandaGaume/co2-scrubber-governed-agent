@@ -44,6 +44,10 @@ export interface AudioOutputEvents {
 }
 
 const POLL_MS = 700;
+/** A tick held longer than this is given up, and the loop goes on (2026-10-08). */
+const STUCK_MS = 90_000;
+/** The longest a line may play when the player never gives its length. */
+const LINE_MAX_MS = 60_000;
 
 /** A clock that keeps ticking when the page is hidden: a worker's timer is not slowed down the way a page's is. */
 function startClock(ms: number, onTick: () => void): () => void {
@@ -72,6 +76,10 @@ export class AudioOutput {
     private playing: QueueItem | null = null;
     private readonly played = new Set<string>();
     private busy = false;
+    /** When the tick that holds `busy` began: a tick stuck past `STUCK_MS` gives the loop back (2026-10-08). */
+    private busySince = 0;
+    /** Ends the line being played, whatever stops it: its end, an error, a cut, the watchdog. */
+    private finishCurrent: (() => void) | null = null;
     private lastPending = 0;
     /** The last poll failure reported, so the same one is not repeated every tick. */
     private pollFailure: string | null = null;
@@ -116,6 +124,9 @@ export class AudioOutput {
         this.el.pause();
         this.el.removeAttribute("src");
         this.playing = null;
+        // The line's wait ends here too: a cut that left it waiting for an end that never comes held the loop, and Mother
+        // fell silent until SOUND OFF and ON (2026-10-08, a second simulation started while she spoke).
+        this.finishCurrent?.();
     }
 
     /**
@@ -172,8 +183,10 @@ export class AudioOutput {
     }
 
     private async tick(): Promise<void> {
-        if (this.busy) return;
+        // A tick that never returned (a request or a line that hung) gives the loop back after STUCK_MS.
+        if (this.busy && performance.now() - this.busySince < STUCK_MS) return;
         this.busy = true;
+        this.busySince = performance.now();
         try {
             const session = await this.broker.session("speech");
             const r = await session.request<{ contents: Array<{ text?: string }> }>("resources/read", { uri: "speech://queue" });
@@ -185,6 +198,7 @@ export class AudioOutput {
             this.lastPending = q.pending.filter((p) => p.seq > q.stopMark && !this.played.has(p.utteranceId)).length;
             if (this.playing && this.playing.seq <= q.stopMark) this.cut();
             if (this.playing) return;
+            this.finishCurrent = null;
             // A hidden page leaves the utterances to the visible one (the Control Board behind the factory's window, or open twice).
             if (document.hidden) return;
             const next = q.pending.find((p) => p.seq > q.stopMark && !this.played.has(p.utteranceId));
@@ -227,13 +241,27 @@ export class AudioOutput {
         this.events.onPlay?.(item);
         const started = performance.now();
         await new Promise<void>((resolve) => {
+            let done = false;
+            let watchdog = 0;
             const finish = () => {
+                if (done) return;
+                done = true;
+                window.clearInterval(watchdog);
                 this.el.onended = null;
                 this.el.onerror = null;
+                this.finishCurrent = null;
                 URL.revokeObjectURL(url);
                 this.envelope = null;
                 resolve();
             };
+            this.finishCurrent = finish;
+            // The player does not always say it ended (paused by the browser, a source replaced, a second page's audio): a line
+            // over by its own length, or paused a while after it began, is ended here, and the next one plays.
+            watchdog = window.setInterval(() => {
+                const elapsed = performance.now() - started;
+                const length = Number.isFinite(this.el.duration) && this.el.duration > 0 ? this.el.duration * 1000 : null;
+                if (this.el.ended || (length !== null && elapsed > length + 3000) || (length === null && elapsed > LINE_MAX_MS) || (this.el.paused && elapsed > 2000)) finish();
+            }, 1000);
             this.el.onended = finish;
             this.el.onerror = () => {
                 this.events.onError?.(`could not play ${item.utteranceId} (${c.mimeType ?? item.mimeType})`);

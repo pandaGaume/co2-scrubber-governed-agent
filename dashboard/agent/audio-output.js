@@ -1,5 +1,7 @@
 // tier3/browser/audio-output.ts
 var POLL_MS = 700;
+var STUCK_MS = 9e4;
+var LINE_MAX_MS = 6e4;
 function startClock(ms, onTick) {
   try {
     const worker = new Worker(URL.createObjectURL(new Blob([`setInterval(() => postMessage(0), ${ms});`], { type: "text/javascript" })));
@@ -26,6 +28,10 @@ var AudioOutput = class {
   playing = null;
   played = /* @__PURE__ */ new Set();
   busy = false;
+  /** When the tick that holds `busy` began: a tick stuck past `STUCK_MS` gives the loop back (2026-10-08). */
+  busySince = 0;
+  /** Ends the line being played, whatever stops it: its end, an error, a cut, the watchdog. */
+  finishCurrent = null;
   lastPending = 0;
   /** The last poll failure reported, so the same one is not repeated every tick. */
   pollFailure = null;
@@ -58,6 +64,7 @@ var AudioOutput = class {
     this.el.pause();
     this.el.removeAttribute("src");
     this.playing = null;
+    this.finishCurrent?.();
   }
   /**
    * The shape of the sentence being said, and how far through it we are.
@@ -111,8 +118,9 @@ var AudioOutput = class {
     }
   }
   async tick() {
-    if (this.busy) return;
+    if (this.busy && performance.now() - this.busySince < STUCK_MS) return;
     this.busy = true;
+    this.busySince = performance.now();
     try {
       const session = await this.broker.session("speech");
       const r = await session.request("resources/read", { uri: "speech://queue" });
@@ -124,6 +132,7 @@ var AudioOutput = class {
       this.lastPending = q.pending.filter((p) => p.seq > q.stopMark && !this.played.has(p.utteranceId)).length;
       if (this.playing && this.playing.seq <= q.stopMark) this.cut();
       if (this.playing) return;
+      this.finishCurrent = null;
       if (document.hidden) return;
       const next = q.pending.find((p) => p.seq > q.stopMark && !this.played.has(p.utteranceId));
       if (next) await this.play(next, session);
@@ -158,13 +167,25 @@ var AudioOutput = class {
     this.events.onPlay?.(item);
     const started = performance.now();
     await new Promise((resolve) => {
+      let done = false;
+      let watchdog = 0;
       const finish = () => {
+        if (done) return;
+        done = true;
+        window.clearInterval(watchdog);
         this.el.onended = null;
         this.el.onerror = null;
+        this.finishCurrent = null;
         URL.revokeObjectURL(url);
         this.envelope = null;
         resolve();
       };
+      this.finishCurrent = finish;
+      watchdog = window.setInterval(() => {
+        const elapsed = performance.now() - started;
+        const length = Number.isFinite(this.el.duration) && this.el.duration > 0 ? this.el.duration * 1e3 : null;
+        if (this.el.ended || length !== null && elapsed > length + 3e3 || length === null && elapsed > LINE_MAX_MS || this.el.paused && elapsed > 2e3) finish();
+      }, 1e3);
       this.el.onended = finish;
       this.el.onerror = () => {
         this.events.onError?.(`could not play ${item.utteranceId} (${c.mimeType ?? item.mimeType})`);
