@@ -503,6 +503,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
                 reason: trace.evaluation.reason ?? null,
                 ms,
                 tokens: exchange?.tokens ?? null,
+                ...(exchange?.reading ? { reading: { how: exchange.reading.how, changes: exchange.reading.changes, model: exchange.reading.model ?? null } } : {}),
                 // A submission that ran went through the topic's guard: it accepted it.
                 ...(topic.judges?.some((r) => r.test(trace.decision.invocation.capabilityId)) ? { judged: "accepted" as const } : {}),
             });
@@ -522,6 +523,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
                 verdictRepeats = 0;
             }
             lines.push({ n, decisionId: trace.decisionId, source: trace.source, trace, failed: null, exchange, call, ms });
+            if (exchange?.reading) log(`[factory] step ${n}: ${exchange.reading.capability} read ${exchange.reading.how === "coerced" ? "by its schema" : `by ${exchange.reading.model ?? "a model"}`}: ${exchange.reading.changes.join("; ")}`);
             log(`[factory] step ${n}: ${trace.decision.invocation.capabilityId} -> ${outcome} (${trace.evaluation.reason ?? ""})${trace.source === "policy" ? " [replayed]" : ""}`);
             continue;
         }

@@ -21,6 +21,8 @@ export interface ProviderExchange {
     /** What the model named before any substitution (a tool the profile forbids becomes a crew report): the scorecard counts attempts here. */
     proposedCapabilityId: string;
     proposedInput: JsonValue;
+    /** How the harness read the call when its form did not fit its schema (core/interpreter.ts): what the guard judged instead of proposedInput. */
+    reading?: import("../core/interpreter.js").Reading;
     latencyMs: number;
     tokens: { prompt: number; completion: number; total: number } | null;
 }

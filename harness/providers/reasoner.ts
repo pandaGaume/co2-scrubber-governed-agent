@@ -13,6 +13,7 @@
 import type { JsonValue, PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
 import type { Broker } from "../lib/broker.js";
 import type { Provider, ProviderExchange } from "../lib/provider.js";
+import { interpret, readingNote, type Extractor, type Reading } from "../core/interpreter.js";
 
 export interface ReasonerDescription {
     model: string;
@@ -107,14 +108,32 @@ export class ReasonerProvider implements Provider {
         this.conversationId = `${intentionId}#${Date.now().toString(36)}`;
     }
 
+    /** How the last call was read when it did not fit its schema (interpreter.ts): told to the model at the next step, then forgotten. */
+    private lastReading: Reading | null = null;
+    /** The readings of this provider's calls, for the trace and the manifest. */
+    readonly readings: Reading[] = [];
+
+    /** A model's extraction, through the reasoner slot's `interpret` (the use `interpret`, the least expensive model). */
+    private readonly extract: Extractor = async (request) => {
+        const r = await this.broker.call("reasoner", "interpret", request as unknown as Record<string, JsonValue>);
+        if (!r.ok) return { value: null };
+        const o = r.output as { value?: JsonValue | null; model?: string | null };
+        return { value: o.value ?? null, model: o.model ?? null };
+    };
+
     async resolve(input: PolicyFallbackInput): Promise<PolicyDecision> {
         this.calls++;
         input.signal?.throwIfAborted();
+        // How the last call was read goes with what it returned, so the model learns the form from the result, not from a refusal.
+        const note = this.lastReading ? readingNote(this.lastReading) : null;
+        this.lastReading = null;
+        const features = (input.state?.features ?? {}) as Record<string, JsonValue>;
+        const state = note ? { ...input.state, features: { ...features, readAs: note, lastOutput: `${note}${String(features.lastOutput ?? "")}` } } : input.state;
         const r = await this.broker.call("reasoner", "decide", {
             conversationId: this.conversationId,
             decisionId: input.decisionId,
             intention: input.intention,
-            state: input.state,
+            state,
             allowedCapabilities: input.allowedCapabilities,
             candidates: input.candidates,
             recentFailures: input.recentFailures,
@@ -123,6 +142,18 @@ export class ReasonerProvider implements Provider {
         });
         if (!r.ok) throw new Error(r.error ?? "reasoner.decide failed");
         const a = r.output as DecideAnswer;
+        // Read before it is judged (interpreter.ts): a call whose form does not fit its schema is read toward it; the guard judges what was read.
+        const capability = input.allowedCapabilities.find((c) => c.id === a.decision?.invocation?.capabilityId);
+        let reading: Reading | null = null;
+        if (capability && a.decision?.invocation) {
+            const read = await interpret(capability as { id: string; description?: string; inputSchema?: JsonValue }, a.decision.invocation.input, this.extract);
+            if (read.reading) {
+                reading = read.reading;
+                a.decision = { ...a.decision, invocation: { ...a.decision.invocation, input: read.input } };
+                this.lastReading = reading;
+                this.readings.push(reading);
+            }
+        }
         this.exchanges.push({
             decisionId: input.decisionId,
             model: a.model,
@@ -134,6 +165,7 @@ export class ReasonerProvider implements Provider {
             proposedInput: a.proposedInput,
             latencyMs: a.latencyMs,
             tokens: a.tokens ?? null,
+            ...(reading ? { reading } : {}),
         });
         return a.decision;
     }

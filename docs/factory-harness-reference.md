@@ -169,9 +169,9 @@ What each node does at the factory (`docs/harness-stages.fr.md` has the same lis
 3. **lookup**: the memory's candidates for that key, each with its statistics.
 4. **gate**: a promoted candidate still available is replayed (`policy`: the model is not called); otherwise `fallback`.
 5. **request**: what the model will receive: the state, the intention, the capabilities allowed now, the candidates not judged sure enough, the recent failures in this context.
-6. **reason**: the provider answers one decision: a capability and an input. A capability outside the allowed list stops the step.
+6. **reason**: the provider answers one decision: a capability and an input. A capability outside the allowed list stops the step. The input is then **read** before anything judges it (the interpreter, chapter 7.2): a call whose form does not fit its schema is read toward it, and what was read is what goes on.
 7. **merge**: the two paths meet; the source (`policy` or `fallback`) is counted.
-8. **guard**: the input against the capability's schema (Ajv), then the guard's rules (chapter 7). A refusal stops the step: nothing is executed, the reason goes into the state (`lastRefusal`) and the trace, and the step counts one iteration.
+8. **guard**: the input as the interpreter read it, against the capability's schema (Ajv), then the guard's rules (chapter 7). A refusal stops the step: nothing is executed, the reason goes into the state (`lastRefusal`) and the trace, and the step counts one iteration.
 9. **execute**: the capability runs: a broker call bound to the task (the model never writes the task's id; the harness binds it and files a document's name under the task once), or a local capability in process.
 10. **observe-after**: the workshop read again; the runner records what the call answered (compact), which capability was read, what changed.
 11. **evaluate**: the reward of the step (chapter 7.3) and, at `task.done`, the topic's validator.
@@ -255,9 +255,24 @@ In passage 10 the code factory's catalogue had 27 capabilities: the forge's (tem
 
 A refusal is a step: it counts, it is traced, and its reason and input go into the state for the next step. The budgets are not the guard's; the runner counts them.
 
-### 7.2 The schema
+### 7.2 The interpreter, then the schema
 
-Before the guard, the capability's input schema (Ajv). A tool's schema is the slot's, minus the bound fields, with `additionalProperties: false` where the slot says so: a `claims` given as a sentence where an object is expected is refused here, with the schema's words.
+A model says what it means in a shape of its own. On 2026-10-08 Nemotron asked for the lab's occupants to be watched as `monitoring.subjects: [{"id":"fe-1","bandMin":45,"bandMax":120}, ...]` where the schema asks `["fe-1","fe-2"]`: the intention was right, the form was not, and the harness refused the form five times, the model ending by removing its occupants, then STUCK. OpenAI's models and Haiku guessed the form, which hid the gap. A language model is made to read past form; the harness was not using that. The analysis of the answers expected a formalism no reader needs.
+
+So between **reason** and **guard** sits the interpreter (`harness/core/interpreter.ts`), generic, for every capability of every factory and of the habitat's agent, whatever model answers:
+
+1. the call fits its schema: nothing is touched;
+2. it does not: a deterministic reading guided by the schema, free, allowed only reductions that cannot be ambiguous: an object carrying one identifier (`id`, `name`, `callsign`, `key`, `code`) where a string is expected, a number written with its unit (`"30 %"`) where a number is, `"true"`/`"false"` where a boolean is, a lone value where a list is. It never invents a value: an object with two different identifiers stays as sent;
+3. still not: an extraction by a model, through the reasoner slot's `interpret` tool, asked only "find in these arguments the elements this schema asks for, never invent one, null if a required one is not there". It runs on the use `interpret` of `specs/reasoner/routing.json`, the least expensive model, and only on a schema failure;
+4. still not: the call is left as sent, and the schema refuses it with its own words, as before.
+
+The interpreter has **no authority**: it reads, it touches nothing. What it reads goes to the schema and the guard, which judge it as they judge anything; a wrong reading is refused there. It is the architecture's rule applied inside the harness: the more something thinks, the less it may touch.
+
+Every reading is kept: `sent`, `read`, how (`coerced` or `extracted`, with the model), each change as `path: sent -> read`. It goes into the exchange (`reading`), the manifest's step (`reading`) and the runner's log (`step n: procedure.submit read by its schema: monitoring.subjects.0: {...} -> "fe-1"`). The model is told at the next step, with what its call returned (`readAs`, and in front of `lastOutput`): it learns the form from a result, not from a refusal.
+
+A capability whose input is free by design reads the whole it builds: `procedure.revise` takes `changes`, a free object, so its values are out of the call's schema; the revised procedure is read toward `procedure.submit`'s schema (`readWhole`, the same reading in the guard and at execution), and what still does not fit is refused naming the path, what the schema expects and what was sent.
+
+Then the schema: the capability's input schema (Ajv). A tool's schema is the slot's, minus the bound fields, with `additionalProperties: false` where the slot says so.
 
 ### 7.3 The evaluator
 
@@ -468,6 +483,7 @@ What is missing, in the order the work is planned: the identifiability chain and
 | `harness/core/agent.ts` | the agent: the loop with its six services |
 | `harness/core/runner.ts` | a task run end to end: the context read once, the loop, the early ends, the manifest, the proposal, the recipes saved |
 | `harness/core/capabilities.ts`, `task-capabilities.ts` | the catalogue from the broker with its bindings; `task.plan`, `task.done`, `task.fail`, `task.ask` |
+| `harness/core/interpreter.ts` | the interpreter: a call read toward its schema before it is judged (the schema-guided reading, then a model's extraction) |
 | `harness/core/builder-guard.ts` | the constructor's guard; the plan's problems |
 | `harness/core/task-evaluator.ts` | the reward of a step; the validator at `task.done` |
 | `harness/core/workspace-observer.ts` | the workshop read; the progress kept across steps |

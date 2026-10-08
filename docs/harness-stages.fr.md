@@ -91,6 +91,8 @@ Le paquet accepte l'une des deux entrées (la seule qui arrive) et compte la sou
 
 ### 8. `guard` (`decision` → `authorized`)
 
+**Avant la garde, l'interprète** (`harness/core/interpreter.ts`, ajouté le 8 octobre 2026). Un modèle dit ce qu'il veut dans une forme à lui : Nemotron a demandé la surveillance des occupants sous la forme `[{"id":"fe-1","bandMin":45,"bandMax":120}]` là où le schéma attend `["fe-1"]`. Le harnais refusait la forme alors que l'intention était juste. L'appel est désormais lu avant d'être jugé : s'il respecte son schéma, rien ne change ; sinon une lecture déterministe guidée par le schéma, gratuite, limitée aux réductions sans ambiguïté (un objet qui porte un seul identifiant, un nombre écrit avec son unité, une valeur seule là où une liste est attendue) ; sinon une extraction par le modèle le moins cher (l'outil `interpret` du slot reasoner, l'usage `interpret` de `specs/reasoner/routing.json`) ; sinon l'appel reste tel qu'envoyé et le schéma le refuse comme avant. L'interprète n'a aucune autorité : ce qu'il lit passe par le schéma et la garde, qui le jugent comme le reste. Chaque lecture est tracée (envoyé, lu, comment) et dite au modèle au pas suivant, avec le résultat de son appel. Le détail est au chapitre 7.2 de `docs/factory-harness-reference.md`.
+
 Le paquet fait deux vérifications : l'entrée de l'outil contre son schéma (Ajv), puis `guard.validate(decision, context)`. Un refus arrête le pas avec la raison ; rien n'est exécuté, rien n'est enregistré dans la mémoire.
 
 - Station : profil `measured`, la garde accepte tout, tout est jugé dehors (la politique du broker, la carte) ; profil `protected`, elle refuse une vitesse hors de [0, 100], une réduction en CRITICAL, une vitesse sous le débit minimal hors NOMINAL.

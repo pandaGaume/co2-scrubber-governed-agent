@@ -236,6 +236,50 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
                 },
             },
             {
+                name: "interpret",
+                title: "Read a call toward its schema",
+                description: "A tool call whose arguments do not fit the tool's input schema, read toward it by a model (harness/core/interpreter.ts): give the capability, its description, its schema and the arguments sent; get the value read (JSON that fits the schema, or null when the model found nothing it could read without inventing). No authority: the guard judges what is read. The model of the use interpret (specs/reasoner/routing.json).",
+                inputSchema: obj({ capability: { type: "string" }, description: { type: "string" }, schema: { type: "object" }, sent: { description: "the arguments as the model sent them" } }, ["capability", "schema"]),
+                handle: async (args, s) => {
+                    const asked = `interpret ${String(args.capability)}`;
+                    runtimeEvents.append("model.asked", { ...identity("interpret"), kindOfCall: "interpret", asked });
+                    const started = Date.now();
+                    try {
+                        const composition = await composeText(routed("interpret").profile, {
+                            instructions: [
+                                `A model called the tool ${String(args.capability)} with arguments that do not fit the tool's input schema.`,
+                                "Find in those arguments the elements the schema asks for, and write them in the schema's shape.",
+                                "Use only what the arguments say: never invent a value, never add an element they do not carry; leave out an optional field you cannot read.",
+                                "If a required element is not in the arguments, answer null.",
+                                "Answer with the JSON value alone: no text, no code fence.",
+                            ].join(" "),
+                            context: [`Tool description: ${String(args.description ?? "")}`, `Input schema: ${JSON.stringify(args.schema)}`, `Arguments sent: ${JSON.stringify(args.sent ?? null)}`].join("\n"),
+                            maxTokens: 2048,
+                        });
+                        s.calls++;
+                        const text = composition.text.replace(/^\s*```(?:json)?\s*|\s*```\s*$/g, "").trim();
+                        let value: unknown = null;
+                        try {
+                            value = JSON.parse(text);
+                        } catch {
+                            const m = /[{[][\s\S]*[}\]]/.exec(text);
+                            if (m) {
+                                try {
+                                    value = JSON.parse(m[0]);
+                                } catch {
+                                    value = null;
+                                }
+                            }
+                        }
+                        runtimeEvents.append("model.answered", { ...identity("interpret"), kindOfCall: "interpret", asked, answered: oneLine(text), latencyMs: composition.latencyMs, tokens: composition.tokens ?? null });
+                        return { value, model: composition.model, latencyMs: composition.latencyMs, tokens: composition.tokens ?? null };
+                    } catch (e) {
+                        runtimeEvents.append("model.failed", { ...identity("interpret"), kindOfCall: "interpret", asked, reason: oneLine(errorMessage(e)), latencyMs: Date.now() - started });
+                        throw e;
+                    }
+                },
+            },
+            {
                 name: "decide",
                 title: "One decision",
                 description: "One decision of the model for one step: give the intention, the observed state, the allowed capabilities (id, description, inputSchema), the learned candidates and the recent failures; get the decision, what the model proposed, the model, latency, tokens and the raw exchange. Same conversationId across the steps of one event.",

@@ -58,6 +58,7 @@ import { checkJustifications, JUSTIFICATIONS_SCHEMA, justificationProblems as co
 import { factsBounding, leavesOf, matches, valueAt, type RulesDocument } from "../../core/rules.js";
 import { loadWords, say, viewOf } from "../../core/words.js";
 import { problemOf } from "../../core/problems.js";
+import { coerce, schemaError } from "../../core/interpreter.js";
 import { physics } from "../../core/physics.js";
 import { signatureOf } from "../../lib/signatures.js";
 import { loadPlaybook, sayingText, type Evidence } from "../../core/conduct.js";
@@ -199,6 +200,11 @@ const isObject = (v: unknown): v is Record<string, unknown> => Boolean(v) && typ
  * removes it; the justifications merge by constant (those sent replace theirs, the others stay).
  */
 export function reviseDraft(draft: ProcedureLike, changes: unknown, justifications: unknown): ProcedureLike {
+    return revised(draft, changes, justifications).procedure;
+}
+
+/** The revision applied to the draft, read toward the schema, with what that reading changed. */
+export function revised(draft: ProcedureLike, changes: unknown, justifications: unknown): { procedure: ProcedureLike; changes: string[] } {
     const merge = (base: unknown, patch: unknown): unknown => {
         if (!isObject(base) || !isObject(patch)) return patch;
         const out: Record<string, unknown> = { ...base };
@@ -212,7 +218,19 @@ export function reviseDraft(draft: ProcedureLike, changes: unknown, justificatio
     const merged = merge(draft, rest) as ProcedureLike;
     const sent = [...(Array.isArray(inChanges) ? inChanges : []), ...(Array.isArray(justifications) ? justifications : [])].filter(isObject);
     const kept = (Array.isArray(draft.justifications) ? draft.justifications : []).filter((j) => !sent.some((x) => x.constant === j.constant));
-    return { ...merged, justifications: [...kept, ...sent] };
+    return readWhole({ ...merged, justifications: [...kept, ...sent] });
+}
+
+/**
+ * The revised whole read toward procedure.submit's schema (core/interpreter.ts): `changes` is free, so the interpreter's reading of
+ * the call cannot reach its values; the whole is read here, the same way in the guard and at execution. Only the schema-guided
+ * reductions (an object carrying one id where an id is expected...); a whole that still does not fit is left to the guard.
+ */
+export function readWhole(procedure: ProcedureLike): { procedure: ProcedureLike; changes: string[] } {
+    if (!schemaError(PROCEDURE_SCHEMA as unknown as JsonValue, procedure)) return { procedure, changes: [] };
+    const changes: string[] = [];
+    const read = coerce(PROCEDURE_SCHEMA, procedure, "", changes) as ProcedureLike;
+    return changes.length && !schemaError(PROCEDURE_SCHEMA as unknown as JsonValue, read) ? { procedure: read, changes } : { procedure, changes: [] };
 }
 
 /** The revised procedure checked against the submitted one's schema: null when it fits, else what does not, with what was sent there. */
@@ -418,7 +436,14 @@ function reviseCapability(context: TopicContext): LocalCapability {
             if (done) return { ok: false, error: w("draft.accepted", { path: done.path }), output: { outcome: "refused" } };
             if (!draft) return { ok: false, error: w("draft.noneAtExecution"), output: { outcome: "refused" } };
             const r = (input ?? {}) as { changes?: unknown; justifications?: unknown };
-            return writeAccepted(context, reviseDraft(draft, r.changes, r.justifications));
+            const whole = revised(draft, r.changes, r.justifications);
+            const result = await writeAccepted(context, whole.procedure);
+            // How the revision was read toward the schema, said with the result (core/interpreter.ts): the model learns the form from it.
+            const asSent = whole.changes;
+            if (asSent.length && result.output && typeof result.output === "object" && !Array.isArray(result.output)) {
+                (result.output as Record<string, JsonValue>).readAs = `the revision did not have the shape procedure.submit's schema gives; it was read as ${asSent.join("; ")}; use that shape next time`;
+            }
+            return result;
         },
     };
 }
