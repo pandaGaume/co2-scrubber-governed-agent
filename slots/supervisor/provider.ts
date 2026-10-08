@@ -41,7 +41,7 @@ export function supervisorSlot(wsBase: string, log: (line: string) => void, opti
     const modelOf =
         options.provider ??
         (async (broker: Broker): Promise<Provider> => {
-            const reasoner = await ReasonerProvider.connect(broker);
+            const reasoner = await ReasonerProvider.connect(broker, SUPERVISOR_PROMPT);
             if (!reasoner.description.ready) throw new Error(`the reasoner is not ready: ${reasoner.description.reason ?? "no reason given"}`);
             reasoner.usePrompt(SUPERVISOR_PROMPT);
             reasoner.useContext("state");

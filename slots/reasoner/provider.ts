@@ -56,6 +56,25 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
     const profileFile = fromRoot(process.env.REASONER_PROFILE ?? "profiles/anthropic.json");
     const profile = readJson<ProviderProfile>(profileFile);
     const wire = profile.tier3?.wire ?? "openai-compatible";
+    // Which model answers which use (2026-10-08, specs/reasoner/routing.json): the agent, a role named by its prompt file, compose.
+    // A use the table leaves null or does not name takes the server's profile above. Data, read once at start.
+    const routingFile = fromRoot(process.env.REASONER_ROUTING ?? "specs/reasoner/routing.json");
+    const routing = existsSync(routingFile) ? (readJson<{ uses?: Record<string, string | null> }>(routingFile).uses ?? {}) : {};
+    const profiles = new Map<string, ProviderProfile>([[profileFile, profile]]);
+    /** The profile of a use: its file and its content, the server's when the table names none. */
+    const routed = (use: string): { file: string; profile: ProviderProfile; wire: string } => {
+        const named = routing[use];
+        const file = named ? fromRoot(named) : profileFile;
+        let p = profiles.get(file);
+        if (!p) {
+            p = readJson<ProviderProfile>(file);
+            profiles.set(file, p);
+        }
+        return { file, profile: p, wire: p.tier3?.wire ?? "openai-compatible" };
+    };
+    /** The use a call is for: the role of the prompt file it names, the agent without one. */
+    const useOf = (promptFile: string | undefined): string => /^specs\/([a-z0-9-]+)\/prompt\.md$/.exec(promptFile ?? "")?.[1] ?? "agent";
+    const routes = () => Object.fromEntries(Object.keys({ agent: 1, ...routing, compose: 1 }).map((use) => [use, routed(use).profile.tier3?.model ?? "?"]));
     const systemPrompt = existsSync(SYSTEM_PROMPT_FILE) ? readFileSync(SYSTEM_PROMPT_FILE, "utf8") : "";
     const conversations = new Map<string, Provider>();
     let notReady: string | null = null;
@@ -84,6 +103,7 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
         if (existing) return existing;
         let provider: Provider;
         const prompt = promptOf(promptFile);
+        const { profile, wire } = routed(useOf(promptFile));
         // The context mode is the conversation's: `state` for a loop whose harness rebuilds the reasoning state at every step, the transcript replayed otherwise.
         const mode = contextMode === "state" ? "state" : "conversation";
         try {
@@ -123,7 +143,10 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
         }
     })();
     const servedBy = endpointHost && /tokenfactory\.nebius\.com$/.test(endpointHost) ? "Nebius Token Factory" : null;
-    const identity = () => ({ model: profile.tier3?.model ?? "?", family: familyOf(profile, profile.tier3?.model ?? ""), wire, endpoint: endpointHost, servedBy });
+    const identity = (use = "agent") => {
+        const r = routed(use);
+        return { use, model: r.profile.tier3?.model ?? "?", family: familyOf(r.profile, r.profile.tier3?.model ?? ""), wire: r.wire, endpoint: endpointHost, servedBy };
+    };
     /**
      * How the model is run (2026-10-01, docs/evaluateur.fr.md, E5.0): its output limit, its temperature, the effort asked of it, how
      * long an answer may take; null where the profile leaves it to the wire's default. A factory's manifest keeps them: a call cut at
@@ -152,22 +175,24 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
             {
                 name: "describe",
                 title: "Which model answers",
-                description: "The model, its family (what the slots' grammars key on), the wire, whether a key is present, and the profile file with its sha256.",
-                inputSchema: obj({}),
-                handle: async () => {
+                description: "The model, its family (what the slots' grammars key on), the wire, whether a key is present, and the profile file with its sha256; for one use (agent by default, or the prompt file a role's calls will name), and the model of every use.",
+                inputSchema: obj({ prompt: { type: "string", description: "the prompt file the caller's decisions will name (specs/<role>/prompt.md): the model of that role" } }),
+                handle: async (args) => {
+                    const use = useOf(typeof args.prompt === "string" ? args.prompt : undefined);
                     let ready = notReady === null;
                     let reason: string | null = notReady;
                     if (ready && conversations.size === 0) {
                         // Probe the key without spending a call: constructing the adapter reads the environment.
                         try {
-                            await providerFor("__probe__", "probe");
+                            await providerFor("__probe__", "probe", typeof args.prompt === "string" ? args.prompt : undefined);
                             conversations.delete("__probe__");
                         } catch (e) {
                             ready = false;
                             reason = errorMessage(e);
                         }
                     }
-                    return { ...identity(), ready, reason, profile: { file: relativeToRoot(profileFile), sha256: sha256File(profileFile) }, settings: settingsOf(profile), promptSha256: existsSync(SYSTEM_PROMPT_FILE) ? sha256File(SYSTEM_PROMPT_FILE) : null };
+                    const r = routed(use);
+                    return { ...identity(use), ready, reason, profile: { file: relativeToRoot(r.file), sha256: sha256File(r.file) }, settings: settingsOf(r.profile), promptSha256: existsSync(SYSTEM_PROMPT_FILE) ? sha256File(SYSTEM_PROMPT_FILE) : null, routes: routes() };
                 },
             },
             {
@@ -175,19 +200,20 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
                 title: "One text, no tools",
                 description: "A text from the model with no tool call and no conversation: instructions (what to write, for whom, how long) and a context (the facts to phrase, which the text must not go beyond). Returns the text, the model, latency, tokens. For the station's spoken lines that are not decisions (a welcome from the boot report).",
                 inputSchema: obj({ instructions: { type: "string", description: "what to write, for whom, how long" }, context: { type: "string", description: "the facts to phrase; the text must not add any" }, maxTokens: { type: "number", description: "default 300" } }, ["instructions"]),
+                // The model of the use compose (specs/reasoner/routing.json).
                 handle: async (args, s) => {
                     // Said before the wait, so a reader watching the log sees the
                     // question standing while the model is still thinking.
                     const asked = oneLine(args.instructions);
-                    runtimeEvents.append("model.asked", { ...identity(), kindOfCall: "compose", asked });
+                    runtimeEvents.append("model.asked", { ...identity("compose"), kindOfCall: "compose", asked });
                     const started = Date.now();
                     try {
-                        const composition = await composeText(profile, { instructions: String(args.instructions ?? ""), context: typeof args.context === "string" ? args.context : undefined, maxTokens: typeof args.maxTokens === "number" ? args.maxTokens : undefined });
+                        const composition = await composeText(routed("compose").profile, { instructions: String(args.instructions ?? ""), context: typeof args.context === "string" ? args.context : undefined, maxTokens: typeof args.maxTokens === "number" ? args.maxTokens : undefined });
                         s.calls++;
-                        runtimeEvents.append("model.answered", { ...identity(), kindOfCall: "compose", asked, answered: oneLine(composition.text), latencyMs: composition.latencyMs, tokens: composition.tokens ?? null });
-                        return { ...composition, family: identity().family };
+                        runtimeEvents.append("model.answered", { ...identity("compose"), kindOfCall: "compose", asked, answered: oneLine(composition.text), latencyMs: composition.latencyMs, tokens: composition.tokens ?? null });
+                        return { ...composition, family: identity("compose").family };
                     } catch (e) {
-                        runtimeEvents.append("model.failed", { ...identity(), kindOfCall: "compose", asked, reason: oneLine(errorMessage(e)), latencyMs: Date.now() - started });
+                        runtimeEvents.append("model.failed", { ...identity("compose"), kindOfCall: "compose", asked, reason: oneLine(errorMessage(e)), latencyMs: Date.now() - started });
                         throw e;
                     }
                 },
@@ -271,7 +297,7 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
                 },
             },
         ],
-        resources: [{ uri: "reasoner://profile", name: "Profile", description: "The profile the reasoner runs with (no key in it)", read: () => profile }],
+        resources: [{ uri: "reasoner://profile", name: "Profile", description: "The profile the reasoner runs with (no key in it), and the model of every use (specs/reasoner/routing.json)", read: () => ({ ...profile, routes: routes() }) }],
     });
 }
 

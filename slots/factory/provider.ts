@@ -306,7 +306,7 @@ function launch(httpBase: string, taskId: string, topic: Topic, builder: Builder
         else {
             const prompt = TOPIC_DEFINITIONS[topic]?.prompt;
             if (!prompt) throw new Error(`topic ${topic} has no prompt for a model yet: ask for builder "scripted"`);
-            const reasoner = await ReasonerProvider.connect(broker);
+            const reasoner = await ReasonerProvider.connect(broker, prompt);
             if (!reasoner.description.ready) throw new Error(`the reasoner is not ready: ${reasoner.description.reason ?? "no reason given"}`);
             reasoner.usePrompt(prompt);
             // Every factory runs on the reasoning state: the model reads the state the harness rebuilds at every step, never the transcript (the refactoring of 2026-09-25); since 2026-09-28 the onnx topic has one too.
@@ -317,7 +317,7 @@ function launch(httpBase: string, taskId: string, topic: Topic, builder: Builder
         }
         // The Contract Supervisor beside the builder, when a model is ready: the same reasoner slot, its own prompt, the state mode; a scripted builder runs without it.
         const supervisor: RunTaskOptions["supervisor"] = builder === "scripted" ? undefined : async (input) => {
-            const model = await ReasonerProvider.connect(broker);
+            const model = await ReasonerProvider.connect(broker, SUPERVISOR_PROMPT);
             if (!model.description.ready) return null;
             model.usePrompt(SUPERVISOR_PROMPT);
             model.useContext("state");

@@ -656,9 +656,13 @@ var ReasonerProvider = class _ReasonerProvider {
   exchanges = [];
   calls = 0;
   conversationId = "idle";
-  /** Asks the slot which model answers; throws when the slot is absent, reports `ready: false` when it has no key. */
-  static async connect(broker) {
-    const r = await broker.call("reasoner", "describe", {});
+  /**
+   * Asks the slot which model answers; throws when the slot is absent, reports `ready: false` when it has no key. `prompt`: the
+   * role's prompt file this provider's decisions will name (`usePrompt`), so the model, family and settings are that role's
+   * (specs/reasoner/routing.json); the agent's without one.
+   */
+  static async connect(broker, prompt) {
+    const r = await broker.call("reasoner", "describe", prompt ? { prompt } : {});
     if (!r.ok) throw new Error(`the reasoner slot did not answer describe: ${r.error}`);
     const d = r.output;
     return new _ReasonerProvider(broker, d.model, d.family, d);

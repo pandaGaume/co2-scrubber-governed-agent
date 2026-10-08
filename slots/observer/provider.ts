@@ -50,7 +50,7 @@ export function observerSlot(wsBase: string, log: (line: string) => void, option
     const modelOf =
         options.provider ??
         (async (broker: Broker): Promise<Provider> => {
-            const reasoner = await ReasonerProvider.connect(broker);
+            const reasoner = await ReasonerProvider.connect(broker, OBSERVER_PROMPT);
             if (!reasoner.description.ready) throw new Error(`the reasoner is not ready: ${reasoner.description.reason ?? "no reason given"}`);
             reasoner.usePrompt(OBSERVER_PROMPT);
             // The Observer runs on the state (2026-09-25): each step is one message the loop rebuilds, nothing is replayed.
@@ -87,7 +87,7 @@ export function observerSlot(wsBase: string, log: (line: string) => void, option
                             const cleared = new Map<string, string>();
                             const review = async (request: TwinFactoryRequest): Promise<string[]> => {
                                 try {
-                                    const model = await ReasonerProvider.connect(broker);
+                                    const model = await ReasonerProvider.connect(broker, SUPERVISOR_PROMPT);
                                     if (!model.description.ready) return [];
                                     model.usePrompt(SUPERVISOR_PROMPT);
                                     model.useContext("state");
