@@ -190,7 +190,8 @@ async function main(): Promise<void> {
     const discovery = broker && !fork ? startDiscovery(port, log) : null;
     // The board opens the factory's window itself, beside it, on the key press that ends its boot (a second window opened
     // here would cover the board, and a covered page is a hidden page: its timers slow down and the sound with them).
-    if (!flag("--no-open") && !flag("--no-broker")) openBrowser(`${httpBase}/`);
+    // The page it opens carries the operator's token when the broker's authorization is on: it keeps it, and the next ones need no link.
+    if (!flag("--no-open") && !flag("--no-broker")) openBrowser(`${httpBase}/${withToken("operator")}`);
 
     const stop = async () => {
         discovery?.close();
