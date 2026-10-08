@@ -428,6 +428,8 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
             begin(5);
             telemetry = [];
             const speedNow = async () => (await call<{ speedPercent: number }>("scrubber", "motor.state")).speedPercent;
+            // The speed the scrubber ran at before the test: it goes back to it once the test is over (2026-10-08: the board stayed at the test's last step).
+            const before = await call<{ targetPercent?: number; speedPercent: number }>("scrubber", "motor.state").then((s) => s.targetPercent ?? s.speedPercent).catch(() => null);
             await call("scrubber", "scrubber.co2_report", cabinReading(world.labPpm));
             telemetry.push(world.row(await speedNow()));
             // The test is played at a pace a room can follow (2026-09-28: sixty minutes in one second closed the medical monitoring as it opened, with two samples per person);
@@ -454,6 +456,14 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
                 },
             });
             end(5, { steps: executed.report?.steps?.length ?? 0, minutes: telemetry.length - 1, aborted: (executed as { aborted?: unknown }).aborted ?? null } as JsonValue);
+            if (typeof before === "number") {
+                try {
+                    await call("scrubber", "motor.set_speed", { percent: Math.round(before) });
+                    narrate(`The test is over: the scrubber is back at ${Math.round(before)} percent.`);
+                } catch (e) {
+                    narrate(`The test is over; the scrubber could not go back to ${Math.round(before)} percent: ${errorMessage(e)}`);
+                }
+            }
 
             // What follows a test is the process playbook's (2026-09-29, docs/comportement-en-donnees.fr.md, section 2): the event is the
             // test's end; the position (the aborts so far, the commander's answer) is kept in the run between two events.

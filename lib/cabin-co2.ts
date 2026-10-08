@@ -30,7 +30,39 @@ const STORY_PPM: Record<Co2State, number> = { NOMINAL: 1200, ELEVATED: 2600, CRI
  */
 export function cabinReading(ppm: number | undefined, state?: Co2State): { ppm: number; state: Co2State; source: string } {
     const value = typeof ppm === "number" ? Math.round(ppm) : STORY_PPM[state ?? "NOMINAL"];
-    return { ppm: value, state: state ?? co2StateOf(value), source: "world" };
+    latest = { ppm: value, state: state ?? co2StateOf(value), source: "world" };
+    return latest;
+}
+
+/** The cabin's last reading, as the world last reported it; null until a scene reported one. */
+let latest: { ppm: number; state: Co2State; source: string } | null = null;
+export const latestCabinReading = () => latest;
+
+/**
+ * The cabin's sensor (2026-10-08): the board holds a reading for 5 s, then retains ELEVATED at least (silence never
+ * relaxes its protection). A scene reports the cabin while it plays; between scenes nobody did, and the board, quite
+ * rightly, held the minimum flow of 40 % after a commissioning. The sensor says the last reading again every second,
+ * as a real sensor would, until a scene reports a new one. Nothing before a first reading: the board keeps no CO2 rule.
+ */
+export function startCabinSensor(report: (reading: { ppm: number; state: Co2State; source: string }) => Promise<unknown>, log: (line: string) => void, everyMs = 1000): { stop(): void } {
+    let failing = false;
+    let busy = false;
+    const timer = setInterval(() => {
+        const reading = latest;
+        if (!reading || busy) return;
+        busy = true;
+        report({ ...reading, source: "cabin-sensor" })
+            .then(() => {
+                if (failing) log(`cabin sensor: the board receives the CO2 again (${reading.ppm} ppm, ${reading.state})`);
+                failing = false;
+            })
+            .catch((e: unknown) => {
+                if (!failing) log(`cabin sensor: the board does not receive the CO2 (${e instanceof Error ? e.message : String(e)}); trying every second`);
+                failing = true;
+            })
+            .finally(() => (busy = false));
+    }, everyMs);
+    return { stop: () => clearInterval(timer) };
 }
 
 /** NOMINAL below the elevated threshold, ELEVATED up to the critical one, CRITICAL at or above it. */

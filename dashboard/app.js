@@ -404,7 +404,9 @@ async function refreshCabin() {
         const result = await s.callTool("motor.state", {});
         const payload = JSON.parse(toolText(result));
         const st = payload.result ?? payload;
-        const state = String(st.co2State ?? "NOMINAL").toUpperCase();
+        // The state the board's protection decides on (2026-10-08): a reading it holds stale counts ELEVATED there, and the
+        // room must not say NOMINAL while the board holds the minimum flow. The stub has no retained state: its reported one.
+        const state = String(st.co2RetainedState ?? st.co2State ?? "NOMINAL").toUpperCase();
         const ppm = Number(st.co2Ppm);
         const percent = Number(st.speedPercent);
         const residual = Number(st.healthResidual);

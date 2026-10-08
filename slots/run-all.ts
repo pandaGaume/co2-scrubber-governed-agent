@@ -15,6 +15,8 @@
 import { exec } from "node:child_process";
 import { isMain, forkDir, forkId } from "../lib/paths.js";
 import { startBroker, type LocalBroker } from "./lib/local-broker.js";
+import { Broker } from "../harness/lib/broker.js";
+import { startCabinSensor } from "../lib/cabin-co2.js";
 import { scrubberSlot } from "./scrubber/provider.js";
 import { twinSlot } from "./twin/provider.js";
 import { stationSlot } from "./station/provider.js";
@@ -153,6 +155,12 @@ async function main(): Promise<void> {
     const { slots, failures } = await publishAll(wsBase, log, skipped);
     if (board) {
         log("scrubber: the real board's slot (--board); the stub is not published. Until the board connects, the slot is empty and the control room shows it red");
+        // The cabin's sensor: the last reading of the world, said to the board every second (lib/cabin-co2.ts).
+        const sensorClient = new Broker(httpBase, { name: "cabin-sensor", version: "0" }, "station");
+        startCabinSensor(async (reading) => {
+            const r = await sensorClient.call("scrubber", "scrubber.co2_report", reading);
+            if (!r.ok) throw new Error(r.error ?? "refused");
+        }, log);
         for (const base of broker?.lanBases ?? []) log(`the board dials this broker at host ${new URL(base).hostname}, port ${new URL(base).port}: set it once with node scripts/board-broker.mjs <board address>, then restart the board`);
     }
     if (failures.length) log(`DEGRADED: ${failures.length} slot(s) not published (${failures.map((f) => f.slot).join(", ")}); the others run, the board shows the missing ones red`);
