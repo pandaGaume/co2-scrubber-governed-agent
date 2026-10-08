@@ -13,7 +13,7 @@
 import type { JsonValue, PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
 import type { Broker } from "../lib/broker.js";
 import type { Provider, ProviderExchange } from "../lib/provider.js";
-import { interpret, readingNote, type Extractor, type Reading } from "../core/interpreter.js";
+import { interpret, readingNote, type Extractor, type MeaningReader, type Reading } from "../core/interpreter.js";
 
 export interface ReasonerDescription {
     model: string;
@@ -122,9 +122,32 @@ export class ReasonerProvider implements Provider {
         return { value: o.value ?? null, model: o.model ?? null };
     };
 
+    /** What a call meant, read by a capable model through the reasoner slot's `interpret` (mode meaning, the use `meaning`). */
+    readonly readMeaning: MeaningReader = async (request) => {
+        const r = await this.broker.call("reasoner", "interpret", { ...request, mode: "meaning" } as unknown as Record<string, JsonValue>);
+        if (!r.ok) return { value: null };
+        const o = r.output as { value?: JsonValue | null; model?: string | null };
+        return { value: o.value ?? null, model: o.model ?? null };
+    };
+
+    /** A decision given at the next step without asking the model (what a refused call meant). */
+    private queued: { decision: PolicyDecision; reading: Reading } | null = null;
+    queue(decision: PolicyDecision, reading: Reading): void {
+        this.queued = { decision, reading };
+    }
+
     async resolve(input: PolicyFallbackInput): Promise<PolicyDecision> {
         this.calls++;
         input.signal?.throwIfAborted();
+        // What a refused call meant, read by the harness: run as the model's next decision, through the whole loop; the model is told after.
+        const queued = this.queued;
+        this.queued = null;
+        if (queued && input.allowedCapabilities.some((c) => c.id === queued.decision.invocation.capabilityId)) {
+            this.lastReading = queued.reading;
+            this.readings.push(queued.reading);
+            this.exchanges.push({ decisionId: input.decisionId, model: queued.reading.model ?? this.model, request: null, response: null, decision: queued.decision, proposedCapabilityId: queued.decision.invocation.capabilityId, proposedInput: queued.decision.invocation.input, latencyMs: 0, tokens: null, reading: queued.reading });
+            return queued.decision;
+        }
         // How the last call was read goes with what it returned, so the model learns the form from the result, not from a refusal.
         const note = this.lastReading ? readingNote(this.lastReading) : null;
         this.lastReading = null;

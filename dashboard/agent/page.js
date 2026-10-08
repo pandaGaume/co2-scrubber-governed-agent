@@ -728,6 +728,7 @@ async function interpret(capability, sent, extract) {
   return { input: sent, reading: null, error: first };
 }
 function readingNote(r) {
+  if (r.how === "meant") return `your call ${r.capability} had the right form but did not change what was refused; the harness read what you meant and ran it: ${r.changes.join("; ")}; write it that way next time. `;
   return `your call ${r.capability} did not have the shape its schema gives; the harness read it (${r.how === "coerced" ? "by the schema" : "by an extraction"}) as ${r.changes.join("; ")}; use that shape next time. `;
 }
 
@@ -799,9 +800,29 @@ var ReasonerProvider = class _ReasonerProvider {
     const o = r.output;
     return { value: o.value ?? null, model: o.model ?? null };
   };
+  /** What a call meant, read by a capable model through the reasoner slot's `interpret` (mode meaning, the use `meaning`). */
+  readMeaning = async (request) => {
+    const r = await this.broker.call("reasoner", "interpret", { ...request, mode: "meaning" });
+    if (!r.ok) return { value: null };
+    const o = r.output;
+    return { value: o.value ?? null, model: o.model ?? null };
+  };
+  /** A decision given at the next step without asking the model (what a refused call meant). */
+  queued = null;
+  queue(decision, reading) {
+    this.queued = { decision, reading };
+  }
   async resolve(input) {
     this.calls++;
     input.signal?.throwIfAborted();
+    const queued = this.queued;
+    this.queued = null;
+    if (queued && input.allowedCapabilities.some((c) => c.id === queued.decision.invocation.capabilityId)) {
+      this.lastReading = queued.reading;
+      this.readings.push(queued.reading);
+      this.exchanges.push({ decisionId: input.decisionId, model: queued.reading.model ?? this.model, request: null, response: null, decision: queued.decision, proposedCapabilityId: queued.decision.invocation.capabilityId, proposedInput: queued.decision.invocation.input, latencyMs: 0, tokens: null, reading: queued.reading });
+      return queued.decision;
+    }
     const note = this.lastReading ? readingNote(this.lastReading) : null;
     this.lastReading = null;
     const features = input.state?.features ?? {};

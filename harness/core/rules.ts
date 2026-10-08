@@ -142,32 +142,6 @@ export function valueAt(value: unknown, path: string, keys: Record<string, strin
     return at;
 }
 
-/** Sets the value at a path, in the same path language as valueAt (a list's element by its key); false when the path does not lead anywhere. */
-export function setAt(value: unknown, path: string, keys: Record<string, string>, v: unknown): boolean {
-    const segs = path.split(".");
-    let at: unknown = value;
-    let name = "";
-    for (let i = 0; i < segs.length; i++) {
-        const seg = segs[i]!;
-        const last = i === segs.length - 1;
-        if (Array.isArray(at)) {
-            const key = keys[name];
-            const index = key ? at.findIndex((x) => isObject(x) && String(x[key]) === seg) : Number(seg);
-            if (index < 0 || index >= at.length || !Number.isInteger(index)) return false;
-            if (last) at[index] = v;
-            else at = at[index];
-        } else if (isObject(at)) {
-            if (last) at[seg] = v;
-            else {
-                if (at[seg] === undefined) at[seg] = {};
-                at = at[seg];
-                name = seg;
-            }
-        } else return false;
-    }
-    return true;
-}
-
 const OP_WORDS: Record<Op, string> = { ">=": "at least", ">": "above", "<=": "at most", "<": "below", "=": "equal to" };
 const holds = (a: number, op: Op, b: number): boolean => (op === "=" ? Math.abs(a - b) < 1e-9 : op === ">=" ? a >= b : op === ">" ? a > b : op === "<=" ? a <= b : a < b);
 

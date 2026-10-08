@@ -44,6 +44,10 @@ export interface Provider extends PolicyFallback {
     readonly settings?: Record<string, string | number | null>;
     /** The profile it is run from, with its sha256. */
     readonly profile?: { file: string; sha256: string };
+    /** Reads what a call meant when its form passed but it moved nothing refused (core/interpreter.ts, the second trigger); absent: not read. */
+    readMeaning?: import("../core/interpreter.js").MeaningReader;
+    /** A decision to give at the next step without asking the model (what a call meant, read by `readMeaning`). */
+    queue?(decision: PolicyDecision, reading: import("../core/interpreter.js").Reading): void;
 }
 
 /**

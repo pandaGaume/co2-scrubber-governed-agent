@@ -33,7 +33,7 @@ export interface ManifestStep {
     /** A call the model's answer did not finish (the output limit): not run, judged by nobody. */
     truncated?: boolean;
     /** The call did not fit its schema and the harness read it (core/interpreter.ts): how, and what changed; the guard judged what was read. */
-    reading?: { how: "coerced" | "extracted"; changes: string[]; model?: string | null };
+    reading?: { how: "coerced" | "extracted" | "meant"; changes: string[]; model?: string | null };
     /** A call of an answer that held several, handed without asking the model again (harness/lib/call-batch.ts). */
     batch?: { index: number; of: number };
 }

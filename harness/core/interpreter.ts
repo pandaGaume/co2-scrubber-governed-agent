@@ -24,8 +24,8 @@ import { compileInputSchema, type JsonValue } from "@spiky-panda/harness";
 
 export interface Reading {
     capability: string;
-    /** `coerced`: the schema-guided reading; `extracted`: a model's extraction. */
-    how: "coerced" | "extracted";
+    /** `coerced`: the schema-guided reading; `extracted`: a model's extraction; `meant`: a model's reading of what a call meant (the second trigger). */
+    how: "coerced" | "extracted" | "meant";
     sent: JsonValue;
     read: JsonValue;
     /** Each change, `path: what was sent -> what was read`. */
@@ -137,5 +137,60 @@ export async function interpret(capability: { id: string; description?: string; 
 
 /** What the model reads at the next step about how its last call was read. */
 export function readingNote(r: Reading): string {
+    if (r.how === "meant") return `your call ${r.capability} had the right form but did not change what was refused; the harness read what you meant and ran it: ${r.changes.join("; ")}; write it that way next time. `;
     return `your call ${r.capability} did not have the shape its schema gives; the harness read it (${r.how === "coerced" ? "by the schema" : "by an extraction"}) as ${r.changes.join("; ")}; use that shape next time. `;
+}
+
+/**
+ * The second trigger: the meaning (2026-10-08). A schema checks a form; a call can have the right form and not do what its author
+ * meant. Nemotron Nano corrected its CO2 maximum as `"limits.co2MaxPpm": {"value": 3199, ...}` inside a free `changes` object: the
+ * schema passed, the harness merged a new root key, the limit stayed at 3200, and the guard refused the same point three times.
+ * The model had understood the refusal; the harness had not read the answer.
+ *
+ * The signal is generic: a refusal on the same points as the one before, where a point's value did not move although the model
+ * sent something else. Then a model is asked what the call meant, given the points refused with what is expected there, the call
+ * sent and its stated reason, and writes it in the tool's form, or null. A capable model for that (the use `meaning` of
+ * routing.json); asked once per points refused, so a misreading is not repeated. What it reads goes back through the whole loop:
+ * the guard judges it as anything else.
+ */
+export interface MeaningRequest {
+    capability: string;
+    description: string;
+    schema: JsonValue;
+    /** The arguments the model sent. */
+    sent: JsonValue;
+    /** The points refused, each with its path, what is expected there and what is there now. */
+    refused: Array<{ path?: string; expected?: string; got?: string; says: string }>;
+    /** What the model said it meant (its rationale, or the reasons it wrote in the call). */
+    intent: string;
+}
+export type MeaningReader = (request: MeaningRequest) => Promise<{ value: JsonValue | null; model?: string | null }>;
+
+/**
+ * The points a call did not move: those of the refusal before it on the same paths, whose value is still the same, while the call
+ * itself differs from the one refused before. Empty when the call moved them, when the points differ, or when it is the same call.
+ */
+export function unmoved(
+    before: { key: string; problems: Array<{ path?: string; got?: string }> } | null,
+    now: { key: string; problems: Array<{ path?: string; got?: string; expected?: string; says: string }> },
+    inputBefore: unknown,
+    input: unknown,
+): Array<{ path?: string; got?: string; expected?: string; says: string }> {
+    if (!before || before.key !== now.key) return [];
+    if (JSON.stringify(inputBefore ?? null) === JSON.stringify(input ?? null)) return [];
+    return now.problems.filter((p) => p.path && p.got !== undefined && before.problems.some((b) => b.path === p.path && b.got === p.got));
+}
+
+/** Reads what a call meant, toward its schema: the value read when it fits the schema and differs from what was sent, else null. */
+export async function readMeaning(request: MeaningRequest, reader: MeaningReader): Promise<{ input: JsonValue; reading: Reading } | null> {
+    try {
+        const r = await reader(request);
+        if (r.value === null || r.value === undefined) return null;
+        if (schemaError(request.schema, r.value)) return null;
+        if (JSON.stringify(r.value) === JSON.stringify(request.sent)) return null;
+        const points = request.refused.map((p) => p.path ?? p.says).join(", ");
+        return { input: r.value, reading: { capability: request.capability, how: "meant", sent: request.sent, read: r.value, changes: [`what the call meant for ${points}: ${short(r.value)}`], model: r.model ?? null } };
+    } catch {
+        return null;
+    }
 }

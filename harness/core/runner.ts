@@ -34,6 +34,7 @@ import { intentionFor, loadRecipes, saveRecipes, taskSignature } from "./recipes
 import { NEVER_REPLAYED, proposalKey, restrictReplays } from "./replay.js";
 import { justificationHelp, noteSources } from "./justify.js";
 import { noteRefusal, STUCK_AFTER } from "./problems.js";
+import { readMeaning, unmoved } from "./interpreter.js";
 import { cutAtOutputLimit, truncatedRefusal } from "../lib/llm-common.js";
 import { episodeOf, type Episode, type StepLike } from "./episodes.js";
 import { workingMemory } from "../../lib/working-memory.js";
@@ -272,6 +273,10 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
     const refusedCounts = new Map<string, number>();
     /** Steps that were calls of a batch, handed without asking the model (call-batch.ts): outside the decisions budget. */
     let handedSteps = 0;
+    /** The input of the last refused call, whatever came between: what a refusal on the same points is compared with (interpreter.ts, the meaning). */
+    let lastRefusedInput: unknown = undefined;
+    /** The points whose meaning was already read once: a misreading is not repeated. */
+    const meantKeys = new Set<string>();
     const telemetry = newTelemetry(contextMode);
     const EVIDENCE_CAP = 10;
     // A long answer goes whole to the workshop and the model reads its summary and its handle; written right after the step.
@@ -466,7 +471,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         const ms = Date.now() - stepStarted;
         const exchange = trace ? (provider.exchanges.find((x) => x.decisionId === trace.decisionId) ?? null) : (provider.exchanges.filter((x) => !attached.has(x.decisionId)).at(-1) ?? null);
         if (exchange) attached.add(exchange.decisionId);
-        if (exchange?.batch) handedSteps++;
+        if (exchange?.batch || (exchange?.reading?.how === "meant" && exchange.response === null)) handedSteps++;
         // The whole answer of a long call, written now so the model can read it at the next step by its handle.
         if (pendingArtifact) {
             const artifact: { path: string; text: string } = pendingArtifact;
@@ -557,7 +562,27 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             }
             // Every refusal, whatever refused, as problems with their points (problems.ts): the guard's own when it left them, its words read otherwise;
             // a safety constant the guard found justified by no fact the rules name says its unit and the facts to cite there.
+            const streakBefore = progress.refusal ? { ...progress.refusal } : null;
             const streak = noteRefusal(progress, exchange.proposedCapabilityId, failed ?? "refused");
+            // The meaning (interpreter.ts, the second trigger): refused on the same points as before, a point's value unmoved although the
+            // call changed. Its form passed, so the form is not the problem: a capable model reads what the call meant, and that reading
+            // is the next step's decision, through the whole loop; this refusal does not count toward STUCK, once per points refused.
+            let meant = false;
+            const still = unmoved(streakBefore, streak, lastRefusedInput, exchange.proposedInput);
+            lastRefusedInput = exchange.proposedInput;
+            const entry = capabilities.catalogue.find((c) => c.id === exchange.proposedCapabilityId);
+            if (still.length && !truncated && !meantKeys.has(streak.key) && provider.readMeaning && provider.queue && entry?.inputSchema) {
+                meantKeys.add(streak.key);
+                const read = await readMeaning(
+                    { capability: entry.id, description: entry.description, schema: entry.inputSchema as JsonValue, sent: (exchange.proposedInput ?? null) as JsonValue, refused: still, intent: String((exchange.decision as { rationale?: unknown } | null)?.rationale ?? "") },
+                    provider.readMeaning,
+                );
+                if (read) {
+                    provider.queue({ action: { id: entry.id, description: entry.description }, invocation: { actionId: entry.id, capabilityId: entry.id, input: read.input }, rationale: read.reading.changes.join("; ") }, read.reading);
+                    meant = true;
+                    log(`[factory] step ${n}: ${entry.id} moved nothing refused (${still.map((p) => p.path).join(", ")}); read by ${read.reading.model ?? "a model"} as what it meant, run at the next step`);
+                } else log(`[factory] step ${n}: ${entry.id} moved nothing refused (${still.map((p) => p.path).join(", ")}); what it meant could not be read`);
+            }
             noteProposal(exchange.proposedCapabilityId, exchange.proposedInput);
             made.add(proposalKey(exchange.proposedCapabilityId, exchange.proposedInput));
             const refusedKey = `${exchange.proposedCapabilityId}:${JSON.stringify(exchange.proposedInput ?? null)}`;
@@ -571,7 +596,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             lines.push({ n, decisionId: exchange.decisionId ?? null, source: "refused", trace: null, failed, exchange, call: null, ms });
             log(`[factory] step ${n}: ${exchange.proposedCapabilityId} -> stopped by the harness (${failed})`);
             // The same points refused STUCK_AFTER times in a row, whatever the input changed: the task ends, naming them, rather than spend its budget (2026-09-28: nineteen refusals of one speed).
-            if (streak.times >= STUCK_AFTER) {
+            if (streak.times >= STUCK_AFTER && !meant) {
                 const points = [...new Set(streak.problems.map((p) => p.path ?? p.kind ?? "the proposal"))].join(", ");
                 ended = `STUCK: ${exchange.proposedCapabilityId} refused ${streak.times} times in a row on the same point(s), ${points}: ${String(failed ?? "refused").slice(0, 400)}`;
                 progress.failure = ended;
