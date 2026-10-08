@@ -63,6 +63,8 @@ export interface ProviderProfile {
         maxTokensParam?: "max_tokens" | "max_completion_tokens";
         /** The least output a one-shot text (`compose`: Mother's welcome, a narration) is given, whatever the caller asks: a reasoning model thinks first. */
         composeMaxTokens?: number;
+        /** JSON Schema keys the server's grammar does not implement, left out of the tool schemas the model is shown (Nebius Token Factory: uniqueItems). */
+        schemaUnsupported?: string[];
         /** The sampling temperature sent; null sends none, for a model that takes only its own (0.2 when absent). */
         temperature?: number | null;
         /** The reasoning effort asked of a model that reasons (the Responses API: low, medium, high); the model's own default when absent. */

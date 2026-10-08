@@ -15,6 +15,23 @@ import type { Provider, ProviderExchange, ProviderProfile } from "../lib/provide
 import { apiKeyFor, compactRequest, contextSizes, decisionFrom, familyOf, fromApiName, intentionText, observationText, parseJsonArgs, stripReasoning, toApiName, TRUNCATED_RESULT, truncatedDecision, type ContextMode } from "../lib/llm-common.js";
 import { APP } from "../core/application.js";
 
+/** The JSON Schema keys each server's grammar refused, by its base URL: learned once for all the conversations with it. */
+const UNIMPLEMENTED = new Map<string, Set<string>>();
+
+/** A JSON Schema without the keys named, at every depth (a property named like a key is a property, kept). */
+function withoutKeys(schema: unknown, keys: ReadonlySet<string>): unknown {
+    if (!keys.size || schema === null || typeof schema !== "object") return schema;
+    if (Array.isArray(schema)) return schema.map((x) => withoutKeys(x, keys));
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(schema as Record<string, unknown>)) {
+        if (keys.has(k)) continue;
+        if (k === "properties" && v && typeof v === "object" && !Array.isArray(v)) {
+            out[k] = Object.fromEntries(Object.entries(v as Record<string, unknown>).map(([name, sub]) => [name, withoutKeys(sub, keys)]));
+        } else out[k] = withoutKeys(v, keys);
+    }
+    return out;
+}
+
 interface ToolCall {
     id: string;
     type: "function";
@@ -57,6 +74,12 @@ export class OpenAiCompatibleProvider implements Provider {
     private readonly profileTimeoutMs: number | undefined;
     /** The server refused `tool_choice: "required"` once (HTTP 400 naming it): `auto` from then on, a decision without a call becoming a report. */
     private requiredRefused = false;
+    /**
+     * JSON Schema keys the server's grammar does not implement (2026-10-08, Nebius Token Factory: `Grammar error: Unimplemented keys:
+     * ["uniqueItems"]`, the whole request refused): learned from its refusal, then left out of the schemas the model is shown. The
+     * arguments are still checked whole by the harness's guard; only the decoding constraint loses them.
+     */
+    private readonly unimplemented: Set<string>;
 
     constructor(
         profile: ProviderProfile | null,
@@ -73,6 +96,10 @@ export class OpenAiCompatibleProvider implements Provider {
         this.profileTemperature = p.temperature;
         this.profileTimeoutMs = p.timeoutMs;
         this.family = familyOf(profile, this.model);
+        // Shared by every conversation with this server, seeded by the profile's `schemaUnsupported` (a refusal learned once).
+        const known = UNIMPLEMENTED.get(this.baseUrl) ?? new Set<string>(p.schemaUnsupported ?? []);
+        UNIMPLEMENTED.set(this.baseUrl, known);
+        this.unimplemented = known;
         this.messages = [{ role: "system", content: options.systemPrompt }];
     }
 
@@ -104,12 +131,13 @@ export class OpenAiCompatibleProvider implements Provider {
         if (!this.messages.some((m) => m.role === "user")) this.messages.push({ role: "user", content: intentionText(input) });
         this.messages.push({ role: "user", content: observationText(input) });
 
-        const tools = input.allowedCapabilities.map((c) => ({ type: "function", function: { name: toApiName(c.id), description: c.description, parameters: c.inputSchema ?? { type: "object" } } }));
+        const toolsNow = () => input.allowedCapabilities.map((c) => ({ type: "function", function: { name: toApiName(c.id), description: c.description, parameters: withoutKeys(c.inputSchema ?? { type: "object" }, this.unimplemented) } }));
+        let tools = toolsNow();
         // One action per step: the harness executes one decision, so the model is asked for one call at a time.
         // The output limit under the name the server takes, and a temperature only when the profile does not say the model takes none.
         const temperature = this.options.temperature ?? (this.profileTemperature === undefined ? 0.2 : this.profileTemperature);
         const choice = (): string => (this.contextMode === "state" && !this.requiredRefused ? "required" : "auto");
-        const bodyWith = (toolChoice: string) => ({ model: this.model, messages: this.messages, tools, tool_choice: toolChoice, parallel_tool_calls: false, ...(temperature === null ? {} : { temperature }), ...(this.maxTokens ? { [this.maxTokensParam]: this.maxTokens } : {}) });
+        const bodyWith = (toolChoice: string) => ({ model: this.model, messages: this.messages, tools: (tools = toolsNow()), tool_choice: toolChoice, parallel_tool_calls: false, ...(temperature === null ? {} : { temperature }), ...(this.maxTokens ? { [this.maxTokensParam]: this.maxTokens } : {}) });
         let body = bodyWith(choice());
         const started = Date.now();
         const controller = new AbortController();
@@ -126,6 +154,16 @@ export class OpenAiCompatibleProvider implements Provider {
                 });
             let response = await post();
             let text = await response.text();
+            // A grammar that cannot compile a key of a schema refuses the whole request: the keys it names are left out, and it is asked again (at most twice).
+            for (let again = 0; again < 2 && response.status === 400; again++) {
+                const keys = /Unimplemented keys:\s*\[([^\]]*)\]/i.exec(text.replace(/\\"/g, '"'))?.[1];
+                const named = (keys ?? "").split(",").map((k) => k.trim().replace(/^"+|"+$/g, "")).filter(Boolean);
+                if (!named.length || named.every((k) => this.unimplemented.has(k))) break;
+                for (const k of named) this.unimplemented.add(k);
+                body = bodyWith(String(body.tool_choice));
+                response = await post();
+                text = await response.text();
+            }
             // A server whose tool parser does not take `required` (some vLLM deployments) says so with a 400: asked again once with
             // `auto`, and `auto` from then on; an answer without a call is then read as a report, as in conversation mode.
             if (response.status === 400 && body.tool_choice === "required" && /tool_choice|required/i.test(text)) {

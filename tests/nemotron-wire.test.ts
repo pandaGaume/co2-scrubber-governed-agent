@@ -74,6 +74,23 @@ describe("a reasoning model behind an OpenAI-compatible server", () => {
         assert.deepEqual(second.sent.map((b) => b.tool_choice), ["auto"], "required is not tried again");
     });
 
+    it("leaves out the schema keys the server's grammar refuses, asks again, and keeps them out for every conversation", async () => {
+        const schema = { type: "object", properties: { steps: { type: "array", uniqueItems: true, items: { type: "object", properties: { uniqueItems: { type: "boolean" } } } } } };
+        const withSchema = { ...input, allowedCapabilities: [{ id: "procedure.submit", description: "submit", inputSchema: schema }] } as unknown as typeof input;
+        const p = { tier3: { ...profile.tier3, baseUrl: "http://grammar.test/v1" } } as ProviderProfile;
+        const refused = { status: 400, body: '{"error":{"message":"Grammar error: Unimplemented keys: [\\"uniqueItems\\"]","type":"BadRequestError","code":400}}' };
+        const called = { status: 200, body: completion("", { name: "procedure__submit", args: "{}" }) };
+        const first = await withServer([refused, called], () => new OpenAiCompatibleProvider(p, { systemPrompt: "p", contextMode: "state" }).resolve(withSchema));
+        assert.equal(first.sent.length, 2);
+        const shown = JSON.stringify(first.sent[1].tools);
+        assert.ok(!shown.includes('"uniqueItems":true'), "the key is left out");
+        assert.ok(shown.includes('"uniqueItems":{"type":"boolean"}'), "a property that bears the name is kept");
+        // A new conversation with the same server: no refusal to learn from again.
+        const second = await withServer([called], () => new OpenAiCompatibleProvider(p, { systemPrompt: "p", contextMode: "state" }).resolve(withSchema));
+        assert.equal(second.sent.length, 1);
+        assert.ok(!JSON.stringify(second.sent[0].tools).includes('"uniqueItems":true'));
+    });
+
     it("gives a one-shot text the room the profile says, and returns it without the reasoning", async () => {
         const { result, sent } = await withServer([{ status: 200, body: completion("<think>a welcome, two lines</think>Good evening. Fifteen slots answer.") }], () => composeText(profile, { instructions: "welcome", maxTokens: 200 }));
         assert.equal(sent[0].max_tokens, 1024, "composeMaxTokens is the least, whatever the caller asked");
