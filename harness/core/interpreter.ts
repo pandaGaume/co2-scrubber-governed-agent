@@ -167,30 +167,42 @@ export interface MeaningRequest {
 export type MeaningReader = (request: MeaningRequest) => Promise<{ value: JsonValue | null; model?: string | null }>;
 
 /**
- * The points a call did not move: those of the refusal before it on the same paths, whose value is still the same, while the call
- * itself differs from the one refused before. Empty when the call moved them, when the points differ, or when it is the same call.
+ * The points a call did not move: refused again at the same path with the same value as at the refusal before it. The call may be
+ * the same one sent again: a model that resends its correction believes it made it (2026-10-08, Nano sent the same revise three
+ * times, each time "limits.co2MaxPpm": {"value": 3100} as a key, the limit still 3200). Empty when nothing refused stayed in place.
  */
 export function unmoved(
-    before: { key: string; problems: Array<{ path?: string; got?: string }> } | null,
-    now: { key: string; problems: Array<{ path?: string; got?: string; expected?: string; says: string }> },
-    inputBefore: unknown,
-    input: unknown,
+    before: { problems: Array<{ path?: string; got?: string }> } | null,
+    now: { problems: Array<{ path?: string; got?: string; expected?: string; says: string }> },
 ): Array<{ path?: string; got?: string; expected?: string; says: string }> {
-    if (!before || before.key !== now.key) return [];
-    if (JSON.stringify(inputBefore ?? null) === JSON.stringify(input ?? null)) return [];
+    if (!before) return [];
     return now.problems.filter((p) => p.path && p.got !== undefined && before.problems.some((b) => b.path === p.path && b.got === p.got));
 }
 
-/** Reads what a call meant, toward its schema: the value read when it fits the schema and differs from what was sent, else null. */
-export async function readMeaning(request: MeaningRequest, reader: MeaningReader): Promise<{ input: JsonValue; reading: Reading } | null> {
+/** What a reading of the meaning gave, kept as evidence whether it was used or not: the value read, or why nothing was. */
+export interface MeaningOutcome {
+    /** The points it was asked about. */
+    points: string[];
+    model: string | null;
+    /** `read`: run at the next step; `null`: the model could not tell; `invalid`: what it wrote does not fit the schema; `same`: it wrote what was sent; `failed`: the call to it failed. */
+    result: "read" | "null" | "invalid" | "same" | "failed";
+    /** What it wrote, or why it failed. */
+    detail: string;
+}
+
+/** Reads what a call meant, toward its schema: the value read when it fits the schema and differs from what was sent; the outcome kept either way. */
+export async function readMeaning(request: MeaningRequest, reader: MeaningReader): Promise<{ input: JsonValue; reading: Reading; outcome: MeaningOutcome } | { outcome: MeaningOutcome }> {
+    const points = request.refused.map((p) => p.path ?? p.says);
     try {
         const r = await reader(request);
-        if (r.value === null || r.value === undefined) return null;
-        if (schemaError(request.schema, r.value)) return null;
-        if (JSON.stringify(r.value) === JSON.stringify(request.sent)) return null;
-        const points = request.refused.map((p) => p.path ?? p.says).join(", ");
-        return { input: r.value, reading: { capability: request.capability, how: "meant", sent: request.sent, read: r.value, changes: [`what the call meant for ${points}: ${short(r.value)}`], model: r.model ?? null } };
-    } catch {
-        return null;
+        const model = r.model ?? null;
+        if (r.value === null || r.value === undefined) return { outcome: { points, model, result: "null", detail: "the model could not tell what the call meant" } };
+        const error = schemaError(request.schema, r.value);
+        if (error) return { outcome: { points, model, result: "invalid", detail: `${short(r.value)}: ${error}` } };
+        if (JSON.stringify(r.value) === JSON.stringify(request.sent)) return { outcome: { points, model, result: "same", detail: "the model wrote back what was sent" } };
+        const reading: Reading = { capability: request.capability, how: "meant", sent: request.sent, read: r.value, changes: [`what the call meant for ${points.join(", ")}: ${short(r.value)}`], model };
+        return { input: r.value, reading, outcome: { points, model, result: "read", detail: JSON.stringify(r.value).slice(0, 2000) } };
+    } catch (e) {
+        return { outcome: { points, model: null, result: "failed", detail: e instanceof Error ? e.message : String(e) } };
     }
 }

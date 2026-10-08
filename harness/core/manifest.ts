@@ -34,6 +34,8 @@ export interface ManifestStep {
     truncated?: boolean;
     /** The call did not fit its schema and the harness read it (core/interpreter.ts): how, and what changed; the guard judged what was read. */
     reading?: { how: "coerced" | "extracted" | "meant"; changes: string[]; model?: string | null };
+    /** A refused call that moved nothing refused, its meaning read by a model (core/interpreter.ts, the second trigger): kept whether it was used or not. */
+    meaning?: import("./interpreter.js").MeaningOutcome;
     /** A call of an answer that held several, handed without asking the model again (harness/lib/call-batch.ts). */
     batch?: { index: number; of: number };
 }

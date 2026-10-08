@@ -255,13 +255,32 @@ export function shapeProblems(procedure: ProcedureLike): string | null {
 }
 
 /** The schema of a revision: the fields that change, and the justifications of the constants that change. */
+/**
+ * What a revision may change: a partial procedure, the same fields as procedure.submit's, none required, nothing else (2026-10-08).
+ * `changes` was a free object: every model filled the gap its own way (Nemotron Nano and Super wrote `"limits.co2MaxPpm":
+ * {"value": 3100}`), the schema passed it, the merge added a root key, the limit stayed, STUCK. The harness does not take the last
+ * model's convention: it states one form, strictly, so a server that decodes against the schema cannot write another, and a
+ * call in another form fails the schema and goes to the interpreter (core/interpreter.ts), which reads it back to this form.
+ * An object's fields change alone (none of them required); a list is replaced whole, so its items keep their schema.
+ */
+function partialOf(schema: Record<string, unknown>): Record<string, unknown> {
+    const properties = (schema.properties ?? {}) as Record<string, Record<string, unknown>>;
+    const partial = (p: Record<string, unknown>): Record<string, unknown> => {
+        if (p.type !== "object" || !p.properties) return p;
+        const { required: _required, ...rest } = p;
+        return { ...rest, additionalProperties: false };
+    };
+    return { type: "object", properties: Object.fromEntries(Object.entries(properties).filter(([k]) => k !== "justifications").map(([k, p]) => [k, partial(p)])), additionalProperties: false };
+}
+
 const REVISE_SCHEMA = {
     type: "object",
     properties: {
-        changes: { type: "object", description: w("capabilities.reviseChanges") },
+        changes: { ...partialOf(PROCEDURE_SCHEMA), description: w("capabilities.reviseChanges") },
         justifications: JUSTIFICATIONS_SCHEMA,
     },
     required: ["changes"],
+    additionalProperties: false,
 } as const;
 
 /** The topic's record in the task's progress, created on first use. */

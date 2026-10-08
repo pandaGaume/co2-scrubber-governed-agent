@@ -45,7 +45,7 @@
     "capabilities": {
         "submit": "Submit the test procedure: the file the test will be run from, later, by others. It is checked before it is written; a procedure that does not pass comes back with the reasons, and stays kept for a revision. The procedure accepted is written as {file} in the workshop, with its sha256.",
         "revise": "Correct the procedure checked last by sending only what changes (and the justifications of the constants that change): the harness applies it to the whole procedure it keeps for a few minutes, and checks the whole again. Accepted, it is written as procedure.submit writes it. When nothing is kept (none checked yet, or kept too long), submit the whole procedure again.",
-        "reviseChanges": "Only what changes in the procedure checked last: an object merges key by key (a field of an object changes alone), a list replaces the whole list, null removes a field.",
+        "reviseChanges": "Only what changes in the procedure checked last, as a part of the procedure with its own fields (procedure.submit's): {\"limits\": {\"co2MaxPpm\": 3100}} changes that limit alone; a list replaces the whole list; the justifications go in justifications, not here.",
         "analyse": "Analyse why the last test was aborted, before any new procedure: the cause, the evidence in the last test's record, why the last procedure did not prevent it, and the changes the new one makes, each a field of the procedure. Checked before it is kept; the new procedure must make these changes."
     },
     "guard": {

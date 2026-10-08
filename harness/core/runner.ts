@@ -273,8 +273,6 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
     const refusedCounts = new Map<string, number>();
     /** Steps that were calls of a batch, handed without asking the model (call-batch.ts): outside the decisions budget. */
     let handedSteps = 0;
-    /** The input of the last refused call, whatever came between: what a refusal on the same points is compared with (interpreter.ts, the meaning). */
-    let lastRefusedInput: unknown = undefined;
     /** The points whose meaning was already read once: a misreading is not repeated. */
     const meantKeys = new Set<string>();
     const telemetry = newTelemetry(contextMode);
@@ -564,24 +562,26 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             // a safety constant the guard found justified by no fact the rules name says its unit and the facts to cite there.
             const streakBefore = progress.refusal ? { ...progress.refusal } : null;
             const streak = noteRefusal(progress, exchange.proposedCapabilityId, failed ?? "refused");
-            // The meaning (interpreter.ts, the second trigger): refused on the same points as before, a point's value unmoved although the
-            // call changed. Its form passed, so the form is not the problem: a capable model reads what the call meant, and that reading
-            // is the next step's decision, through the whole loop; this refusal does not count toward STUCK, once per points refused.
+            // The meaning (interpreter.ts, the second trigger): refused again at a path whose value did not move. The form passed, so the
+            // form is not the problem: a capable model reads what the call meant, and that reading is the next step's decision, through
+            // the whole loop; this refusal does not count toward STUCK; once per capability and points.
             let meant = false;
-            const still = unmoved(streakBefore, streak, lastRefusedInput, exchange.proposedInput);
-            lastRefusedInput = exchange.proposedInput;
+            let meaning: import("./interpreter.js").MeaningOutcome | null = null;
+            const still = unmoved(streakBefore, streak);
+            const stillKey = `${exchange.proposedCapabilityId}:${still.map((p) => p.path).sort().join("|")}`;
             const entry = capabilities.catalogue.find((c) => c.id === exchange.proposedCapabilityId);
-            if (still.length && !truncated && !meantKeys.has(streak.key) && provider.readMeaning && provider.queue && entry?.inputSchema) {
-                meantKeys.add(streak.key);
+            if (still.length && !truncated && !meantKeys.has(stillKey) && provider.readMeaning && provider.queue && entry?.inputSchema) {
+                meantKeys.add(stillKey);
                 const read = await readMeaning(
                     { capability: entry.id, description: entry.description, schema: entry.inputSchema as JsonValue, sent: (exchange.proposedInput ?? null) as JsonValue, refused: still, intent: String((exchange.decision as { rationale?: unknown } | null)?.rationale ?? "") },
                     provider.readMeaning,
                 );
-                if (read) {
+                meaning = read.outcome;
+                if ("input" in read) {
                     provider.queue({ action: { id: entry.id, description: entry.description }, invocation: { actionId: entry.id, capabilityId: entry.id, input: read.input }, rationale: read.reading.changes.join("; ") }, read.reading);
                     meant = true;
-                    log(`[factory] step ${n}: ${entry.id} moved nothing refused (${still.map((p) => p.path).join(", ")}); read by ${read.reading.model ?? "a model"} as what it meant, run at the next step`);
-                } else log(`[factory] step ${n}: ${entry.id} moved nothing refused (${still.map((p) => p.path).join(", ")}); what it meant could not be read`);
+                }
+                log(`[factory] step ${n}: ${entry.id} moved nothing refused (${read.outcome.points.join(", ")}); its meaning read by ${read.outcome.model ?? "a model"}: ${read.outcome.result}${meant ? ", run at the next step" : `, ${read.outcome.detail.slice(0, 300)}`}`);
             }
             noteProposal(exchange.proposedCapabilityId, exchange.proposedInput);
             made.add(proposalKey(exchange.proposedCapabilityId, exchange.proposedInput));
@@ -592,7 +592,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             // Refused by the topic's guard, or by the harness before it (the step's allowlist, a schema, a call repeated): only the first is the guard's judgement.
             const byGuard = topic.judges?.some((r) => r.test(exchange.proposedCapabilityId)) && progress.guardRefused?.capability === exchange.proposedCapabilityId && String(failed ?? "").includes(progress.guardRefused.reason);
             progress.guardRefused = null;
-            manifest.steps.push({ n, decisionId: exchange.decisionId ?? null, source: "refused", capability: exchange.proposedCapabilityId, input: exchange.proposedInput, outcome: "refused", summary: failed, reward: null, reason: failed, ms, tokens: exchange.tokens, ...(byGuard ? { judged: "refused" as const } : {}), ...(truncated ? { truncated: true } : {}) });
+            manifest.steps.push({ n, decisionId: exchange.decisionId ?? null, source: "refused", capability: exchange.proposedCapabilityId, input: exchange.proposedInput, outcome: "refused", summary: failed, reward: null, reason: failed, ms, tokens: exchange.tokens, ...(byGuard ? { judged: "refused" as const } : {}), ...(truncated ? { truncated: true } : {}), ...(meaning ? { meaning } : {}) });
             lines.push({ n, decisionId: exchange.decisionId ?? null, source: "refused", trace: null, failed, exchange, call: null, ms });
             log(`[factory] step ${n}: ${exchange.proposedCapabilityId} -> stopped by the harness (${failed})`);
             // The same points refused STUCK_AFTER times in a row, whatever the input changed: the task ends, naming them, rather than spend its budget (2026-09-28: nineteen refusals of one speed).

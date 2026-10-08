@@ -84,12 +84,11 @@ describe("the meaning: a call whose form passed but moved nothing refused", () =
     const refusedBefore = { key: "limits.co2MaxPpm", problems: [{ path: "limits.co2MaxPpm", got: "3200", expected: "below limits.co2AbortPpm = 3200", says: "bounds" }] };
     const nanoRevise = { changes: { "limits.co2MaxPpm": { value: 3199, source: "library", reference: "test.co2AbortCeilingPpm", reason: "must be below abort threshold" } } };
 
-    it("is seen: the same points refused, the value unmoved, the call changed", () => {
-        const still = unmoved(refusedBefore, refusedBefore, { limits: { co2MaxPpm: 3200 } }, nanoRevise);
-        assert.deepEqual(still.map((p) => p.path), ["limits.co2MaxPpm"]);
-        assert.equal(unmoved(refusedBefore, refusedBefore, nanoRevise, nanoRevise).length, 0, "the same call again is a repeat, not a misreading");
-        assert.equal(unmoved(refusedBefore, { ...refusedBefore, problems: [{ ...refusedBefore.problems[0], got: "3199" }] }, {}, nanoRevise).length, 0, "the value moved");
-        assert.equal(unmoved(null, refusedBefore, {}, nanoRevise).length, 0, "a first refusal");
+    it("is seen: refused again at a path whose value did not move, the same call sent again included", () => {
+        const still = unmoved(refusedBefore, { problems: [...refusedBefore.problems, { path: "steps.1.minutes", got: "10", says: "x" }] });
+        assert.deepEqual(still.map((p) => p.path), ["limits.co2MaxPpm"], "only the points refused both times");
+        assert.equal(unmoved(refusedBefore, { problems: [{ ...refusedBefore.problems[0], got: "3199" }] }).length, 0, "the value moved");
+        assert.equal(unmoved(null, refusedBefore).length, 0, "a first refusal");
     });
 
     it("is read by a model into the tool's form, checked by the schema, and differs from what was sent", async () => {
@@ -100,11 +99,14 @@ describe("the meaning: a call whose form passed but moved nothing refused", () =
             return { value: { changes: { limits: { co2MaxPpm: 3199 } }, justifications: [{ constant: "limits.co2MaxPpm", value: 3199, source: "library", reference: "test.co2AbortCeilingPpm" }] }, model: "super" };
         });
         assert.ok(asked, "the reader was asked");
-        assert.equal(read?.reading.how, "meant");
-        assert.equal(read?.reading.model, "super");
-        assert.deepEqual((read?.input as { changes: unknown }).changes, { limits: { co2MaxPpm: 3199 } });
-        assert.match(readingNote(read!.reading), /had the right form but did not change what was refused/);
+        assert.ok("input" in read);
+        assert.equal(read.reading.how, "meant");
+        assert.equal(read.reading.model, "super");
+        assert.equal(read.outcome.result, "read");
+        assert.deepEqual((read.input as { changes: unknown }).changes, { limits: { co2MaxPpm: 3199 } });
+        assert.match(readingNote(read.reading), /had the right form but did not change what was refused/);
         const same = await readMeaning({ capability: "procedure.revise", description: "", schema, sent: nanoRevise as unknown as JsonValue, refused: [], intent: "" }, async () => ({ value: nanoRevise as unknown as JsonValue }));
-        assert.equal(same, null, "a reading that says what was sent changes nothing");
+        assert.ok(!("input" in same), "a reading that says what was sent changes nothing");
+        assert.equal(same.outcome.result, "same");
     });
 });
