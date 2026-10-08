@@ -3,7 +3,7 @@
     "tier3": {
         "wire": "openai-compatible",
         "baseUrl": "https://api.tokenfactory.nebius.com/v1/",
-        "model": "nvidia/nemotron-3-super-120b-a12b",
+        "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
         "apiKey": {
             "env": "NEBIUS_API_KEY"
         },
@@ -16,7 +16,7 @@
         "composeMaxTokens": 1024,
         "temperature": 0.2,
         "timeoutMs": 120000,
-        "_note": "2026-10-08: the model id as Token Factory lists Nemotron 3 Super 120B A12B (tool calling); confirm it in the Token Factory console once the account exists. maxTokens leaves room for the reasoning before the call; composeMaxTokens is the least a one-shot text (Mother's welcome) gets."
+        "_note": "2026-10-08: Nemotron 3 Nano 30B A3B on Nebius Token Factory, the least expensive Nemotron (Guillaume's choice). maxTokens leaves room for the reasoning before the call; composeMaxTokens is the least a one-shot text (Mother's welcome) gets."
     },
     "gateway": {
         "host": "laptop",
