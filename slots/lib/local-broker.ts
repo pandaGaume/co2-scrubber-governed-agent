@@ -65,7 +65,8 @@ export async function waitForBroker(httpBase: string, timeoutMs = 15_000): Promi
                 headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream" },
                 body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "wait-for-broker", version: "0" } } }),
             });
-            if (r.ok) return true;
+            // 401: the broker is up and its authorization is on (broker/security.json); this probe holds no token on purpose.
+            if (r.ok || r.status === 401) return true;
         } catch {
             // not up yet
         }

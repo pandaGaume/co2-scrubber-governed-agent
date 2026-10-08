@@ -38,6 +38,7 @@ import { DEFAULT_SCENARIO_FILE, fromRoot, relativeToRoot } from "../../lib/paths
 import { errorMessage, readJson } from "../../lib/files.js";
 import type { Scenario, ScenarioEvent } from "../../lib/factory.js";
 import { Broker } from "../../harness/lib/broker.js";
+import { brokerAuth } from "../../harness/lib/broker-auth.js";
 import { ReasonerProvider } from "../../harness/providers/reasoner.js";
 import { ScriptedProvider } from "../../stand-ins/night/scripted.js";
 import type { Provider, ProviderProfile } from "../../harness/lib/provider.js";
@@ -161,7 +162,7 @@ export function agentSlot(wsBase: string, log: (line: string) => void): Publishe
         again on every reset, so a reset really is a fresh agent. */
     async function build(): Promise<Runtime> {
         const profile = readJson<ProviderProfile>(profileFile);
-        const headers: Record<string, string> = profile?.tier3?.subjectToken ? { Authorization: `Bearer ${profile.tier3.subjectToken}` } : {};
+        const headers: Record<string, string> = profile?.tier3?.subjectToken ? { Authorization: `Bearer ${profile.tier3.subjectToken}` } : brokerAuth("agent");
         // The model is reached through the `reasoner` slot, never directly:
         // that is what puts every call to it in the trace and in the log. When
         // that slot has no key the scripted agent plays instead and the page
@@ -182,7 +183,7 @@ export function agentSlot(wsBase: string, log: (line: string) => void): Publishe
         if (provider instanceof ReasonerProvider) provider.useBroker(broker);
         // The world is played under its own name: setting the cabin is not
         // something the agent may do, and the trace must not suggest it did.
-        const world = new Broker(httpBase, { name: "scenario-runner", version: "0.1.0" });
+        const world = new Broker(httpBase, { name: "scenario-runner", version: "0.1.0" }, "station");
         const agent = await createAgent({
             broker,
             provider,

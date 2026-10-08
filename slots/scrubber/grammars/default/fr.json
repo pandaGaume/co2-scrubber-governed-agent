@@ -14,14 +14,14 @@
         },
         "motor.set_speed": {
             "title": "Régler la vitesse du scrubber",
-            "description": "Règle la consigne de vitesse, en pour cent de la pleine vitesse. Refusée hors de [0, 100], et sous le débit minimal tant que le CO2 n'est pas NOMINAL.",
+            "description": "Règle la consigne de vitesse, en pour cent de la pleine vitesse. Refusée hors de [0, 100], sous le plancher de marche (30 %) quel que soit l'état, et sous le débit minimal tant que le CO2 est ELEVATED.",
             "properties": {
                 "percent": "consigne de vitesse, en pour cent de la pleine vitesse"
             }
         },
         "scrubber.power": {
             "title": "Alimenter le scrubber",
-            "description": "Met le scrubber sous tension ou hors tension. L'arrêt est refusé tant que le CO2 n'est pas NOMINAL (règle MIN-FLOW).",
+            "description": "Met le scrubber sous tension ou hors tension. L'arrêt est refusé quel que soit l'état (plancher de marche) : seul l'interrupteur de l'équipage arrête le scrubber.",
             "properties": {
                 "on": "true pour mettre sous tension, false pour arrêter"
             }

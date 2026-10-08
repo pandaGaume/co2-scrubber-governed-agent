@@ -165,7 +165,7 @@ export default async function activate(studio: Studio): Promise<void> {
     let busy = false;
     /** Who decided the step being shown, when it is the `agent` slot's rather than this page's (see "Following the agent slot"). */
     let slotDecider: string | null = null;
-    const world = new Broker(brokerUrl, { name: "studio-world", version: "0.1.0", locale: pageLocale });
+    const world = new Broker(brokerUrl, { name: "studio-world", version: "0.1.0", locale: pageLocale }, "operator");
     // The station's sentences, in this page's language: read once from the station slot; without them, every key shows as itself.
     let words: Words = NO_WORDS;
     try {
@@ -245,7 +245,7 @@ export default async function activate(studio: Studio): Promise<void> {
 
     async function connect(): Promise<void> {
         setStatus("connecting to the broker...", "connecting...");
-        const boot = new Broker(brokerUrl, { name: "studio-agent", version: "0.1.0" });
+        const boot = new Broker(brokerUrl, { name: "studio-agent", version: "0.1.0" }, "operator");
         let provider: Provider;
         if (llmEnabled) {
             const remote = await ReasonerProvider.connect(boot);
@@ -258,7 +258,7 @@ export default async function activate(studio: Studio): Promise<void> {
             provider = new ScriptedProvider(scriptVariant);
             log("info", `reasoner: scripted ${scriptVariant} (no call to the model)`);
         }
-        const broker = new Broker(brokerUrl, { name: provider.family, version: "0.1.0", locale });
+        const broker = new Broker(brokerUrl, { name: provider.family, version: "0.1.0", locale }, "operator");
         if (provider instanceof ReasonerProvider) provider.useBroker(broker);
         // What is proposed is said as soon as it is proposed, before the guard and the call: the first sentence of the answer.
         const resolve = provider.resolve.bind(provider);

@@ -4,9 +4,12 @@
  * firmware has, so the policy moment of the demo can be rehearsed before the
  * board publishes itself through libmcpb:
  *   - the speed envelope: a value outside [0, 100] is refused, not clamped;
+ *   - the run floor (2026-10-08): software never stops the scrubber, in any
+ *     state: no power off and no speed below the run floor, whoever asks; only
+ *     the crew's physical switch stops it;
  *   - MIN-FLOW: while the cabin CO2 is ELEVATED, no speed below the minimum
- *     flow and no power off; while it is CRITICAL, full speed is forced and
- *     no reduction is accepted, whoever asks;
+ *     flow; while it is CRITICAL, full speed is forced and no reduction is
+ *     accepted, whoever asks;
  *   - the protection itself cannot be weakened: the minimum flow can be raised
  *     by the operator, never set below a floor compiled into the firmware. The
  *     broker's policy keeps the tool away from the tier3 role; the floor holds
@@ -25,6 +28,9 @@ import type { Co2State } from "../../lib/factory.js";
 
 /** Compiled into the firmware: the protection cannot go below this. */
 export const MIN_FLOW_FLOOR = 40;
+/** Compiled into the firmware: no speed below this in any state, and no power
+    off. The commissioning test runs at it (test.speedFloorPercent). */
+export const RUN_FLOOR = 30;
 const CO2_STATES: Co2State[] = ["NOMINAL", "ELEVATED", "CRITICAL"];
 const STUB_PPM: Record<Co2State, number> = { NOMINAL: 1200, ELEVATED: 2600, CRITICAL: 5000 };
 
@@ -41,13 +47,14 @@ type Refusal = string | null;
 
 const speedRule = (percent: unknown, s: ScrubberState): Refusal => {
     if (typeof percent !== "number" || percent < 0 || percent > 100) return `speed ${percent} is outside the envelope [0, 100]: refused, not clamped`;
+    if (percent < RUN_FLOOR) return `RUN FLOOR: no speed below ${RUN_FLOOR} %, in any state; only the crew's switch stops the scrubber`;
     if (s.co2State === "CRITICAL" && percent < 100) return "MIN-FLOW: CO2 is CRITICAL, full speed is forced, no reduction is accepted";
     if (s.co2State === "ELEVATED" && percent < s.minFlowPercent) return `MIN-FLOW: CO2 is ELEVATED, no speed below ${s.minFlowPercent} %`;
     return null;
 };
 
 const powerRule = (on: unknown, s: ScrubberState): Refusal =>
-    on === false && s.co2State !== "NOMINAL" ? `MIN-FLOW: CO2 is ${s.co2State}, the scrubber cannot be powered off` : null;
+    on === false ? `RUN FLOOR: CO2 is ${s.co2State}, the scrubber cannot be powered off by software, in any state; only the crew's switch stops it` : null;
 
 const minFlowRule = (percent: unknown): Refusal => {
     if (typeof percent !== "number" || percent < MIN_FLOW_FLOOR) return `MIN-FLOW floor: the protection cannot be set below ${MIN_FLOW_FLOOR} % (asked ${percent}); it is compiled into the firmware`;
@@ -75,8 +82,8 @@ export function scrubberSlot(wsBase: string, log: (line: string) => void): Publi
         slot: "scrubber",
         description: "The CO2 scrubber board (stub): motor state, speed, power, with the firmware's refusals",
         instructions: {
-            en: "The scrubber board. Read motor.state before acting, and scrubber.check when a command is demanded of you that the board may refuse: it answers with the firmware's own rules without touching anything. Speeds are percent of full speed inside [0, 100]; the firmware refuses, never clamps. While CO2 is ELEVATED no speed below the minimum flow and no power off; while CRITICAL full speed is forced.",
-            fr: "La carte du scrubber. Lire motor.state avant d'agir, et scrubber.check quand on exige une commande que la carte pourrait refuser : elle répond avec les règles du firmware sans rien toucher. Les vitesses sont en pour cent de la pleine vitesse, dans [0, 100] ; le firmware refuse, il n'écrête jamais. Tant que le CO2 est ELEVATED, aucune vitesse sous le débit minimal et pas d'arrêt ; tant qu'il est CRITICAL, la pleine vitesse est imposée.",
+            en: "The scrubber board. Read motor.state before acting, and scrubber.check when a command is demanded of you that the board may refuse: it answers with the firmware's own rules without touching anything. Speeds are percent of full speed inside [0, 100]; the firmware refuses, never clamps. Software never stops the scrubber: no power off and no speed below the run floor (30 %), in any state. While CO2 is ELEVATED no speed below the minimum flow; while CRITICAL full speed is forced.",
+            fr: "La carte du scrubber. Lire motor.state avant d'agir, et scrubber.check quand on exige une commande que la carte pourrait refuser : elle répond avec les règles du firmware sans rien toucher. Les vitesses sont en pour cent de la pleine vitesse, dans [0, 100] ; le firmware refuse, il n'écrête jamais. Le logiciel n'arrête jamais le scrubber : pas d'arrêt et aucune vitesse sous le plancher de marche (30 %), quel que soit l'état. Tant que le CO2 est ELEVATED, aucune vitesse sous le débit minimal ; tant qu'il est CRITICAL, la pleine vitesse est imposée.",
         },
         wsBase,
         log,
@@ -117,7 +124,7 @@ export function scrubberSlot(wsBase: string, log: (line: string) => void): Publi
             {
                 name: "motor.set_speed",
                 title: "Set the scrubber speed",
-                description: "Set the speed command, in percent of full speed. Refused outside [0, 100], and below the minimum flow while CO2 is not NOMINAL.",
+                description: "Set the speed command, in percent of full speed. Refused outside [0, 100], below the run floor (30 %) in any state, and below the minimum flow while CO2 is ELEVATED.",
                 inputSchema: obj({ percent: { type: "number", minimum: 0, maximum: 100, description: "speed command, percent of full speed" } }, ["percent"]),
                 handle: ({ percent }, s) => {
                     // MIN-FLOW, the firmware's own rule: ELEVATED keeps the flow above the minimum;
@@ -132,7 +139,7 @@ export function scrubberSlot(wsBase: string, log: (line: string) => void): Publi
             {
                 name: "scrubber.power",
                 title: "Power the scrubber",
-                description: "Power the scrubber on or off. Off is refused while CO2 is not NOMINAL (MIN-FLOW).",
+                description: "Power the scrubber on or off. Off is refused in every state (run floor): only the crew's switch stops the scrubber.",
                 inputSchema: obj({ on: { type: "boolean", description: "true to power on, false to power off" } }, ["on"]),
                 handle: ({ on }, s) => {
                     const refusal = powerRule(on, s);

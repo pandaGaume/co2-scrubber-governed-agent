@@ -66,6 +66,16 @@
             "says": "while the cabin CO2 is ELEVATED, no speed below the minimum flow: 40 % by default (a speed command, not an efficiency)",
             "kind": "context",
             "reference": "the manufacturer's datasheet of scrubber-1, as delivered with the device"
+        },
+        {
+            "id": "scrubber.runFloor",
+            "semantic": "SpeedCommandRunFloor",
+            "quantity": "Dimensionless",
+            "unit": "percent",
+            "value": 30,
+            "says": "in any cabin state, no speed below 30 % and no power off by software: only the crew's physical switch stops the scrubber (a speed command, not an efficiency)",
+            "kind": "context",
+            "reference": "the manufacturer's datasheet of scrubber-1, as delivered with the device"
         }
     ]
 }

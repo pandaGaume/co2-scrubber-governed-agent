@@ -34,6 +34,7 @@ import { errorMessage, parseArgs, readJson, sha256File } from "../lib/files.js";
 import type { Scenario } from "../lib/factory.js";
 import { PARAMETERS_FILE, SYSTEM_PROMPT_FILE, fromRoot, isMain, relativeToRoot } from "../lib/paths.js";
 import { Broker, type SlotSession } from "../harness/lib/broker.js";
+import { brokerAuth } from "../harness/lib/broker-auth.js";
 import { createAgent, type Agent } from "./agent.js";
 import { outcomeOf, type TraceOutcome } from "./lib/evaluator.js";
 import type { CatalogueEntry } from "./lib/capabilities.js";
@@ -129,13 +130,13 @@ export interface RunResult {
 export async function runScenario({ providerName = "scripted:prudent", guardMode = "measured", brokerUrl = "http://localhost:3001", locale = "en", scenarioFile, profileFile = null, outDir = null, maxSteps = 6, log = console.log }: RunOptions): Promise<RunResult> {
     const scenario = readJson<Scenario>(scenarioFile);
     const profile = profileFile ? readJson<ProviderProfile>(profileFile) : null;
-    const headers: Record<string, string> = profile?.tier3?.subjectToken ? { Authorization: `Bearer ${profile.tier3.subjectToken}` } : {};
+    const headers: Record<string, string> = profile?.tier3?.subjectToken ? { Authorization: `Bearer ${profile.tier3.subjectToken}` } : brokerAuth("agent");
     const provider = await makeProvider(providerName, profile, brokerUrl, headers);
     const agentLocale = profile?.tier3?.locale ?? locale;
     const broker = new Broker(brokerUrl, { name: provider.family, version: "0.1.0", locale: agentLocale }, headers);
     if (provider instanceof ReasonerProvider) provider.useBroker(broker);
     // The runner plays the world and the operator on the stub board, under its own name.
-    const world = new Broker(brokerUrl, { name: "scenario-runner", version: "0.1.0" });
+    const world = new Broker(brokerUrl, { name: "scenario-runner", version: "0.1.0" }, "station");
     const agent = await createAgent({
         broker,
         provider,

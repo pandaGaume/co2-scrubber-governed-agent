@@ -13,6 +13,7 @@
  */
 import type { McpTool } from "@cyanmycelium/mcp-core";
 import { McpRpcError, connectMcp, grammarOf, toolText, type ClientIdentity, type McpSession } from "./mcp-http.js";
+import { brokerAuth, type BrokerRole } from "./broker-auth.js";
 
 export type Outcome = "completed" | "refused" | "deny" | "error";
 export const OUTCOMES: readonly Outcome[] = ["completed", "refused", "deny", "error"];
@@ -38,17 +39,21 @@ interface ProvidersListed {
 
 export class Broker {
     private readonly sessions = new Map<string, Promise<McpSession>>();
+    private readonly headers: Record<string, string>;
 
     /**
      * @param base      http://host:port of the broker
      * @param identity  the agent as the slots see it: `clientInfo.name` (its family) and locale
-     * @param headers   e.g. { Authorization: "Bearer <tier3 token>" } when the policy is on
+     * @param auth      the role it calls as (its token read from `BROKER_TOKEN_<ROLE>`, harness/lib/broker-auth.ts),
+     *                  or the headers themselves, e.g. { Authorization: "Bearer <token>" }; none when the broker's authorization is off
      */
     constructor(
         public readonly base: string,
         public readonly identity: ClientIdentity,
-        private readonly headers: Record<string, string> = {},
-    ) {}
+        auth: BrokerRole | Record<string, string> = {},
+    ) {
+        this.headers = typeof auth === "string" ? brokerAuth(auth) : auth;
+    }
 
     session(slot: string): Promise<McpSession> {
         let s = this.sessions.get(slot);

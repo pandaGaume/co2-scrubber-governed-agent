@@ -422,10 +422,10 @@ var McpBehaviorBase = class {
   get mimeType() {
     return this._mimeType;
   }
-  readResourceAsync(_uri) {
+  readResourceAsync(_uri, _request) {
     return Promise.resolve(void 0);
   }
-  executeToolAsync(_uri, _toolName, _args) {
+  executeToolAsync(_uri, _toolName, _args, _request) {
     return Promise.resolve(McpToolResults.error(`Tool not implemented: ${_toolName}`));
   }
   getResources() {

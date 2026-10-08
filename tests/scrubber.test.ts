@@ -59,7 +59,7 @@ describe("the scrubber board", () => {
         const sent = await call("scrubber.power", { on: false });
         assert.ok(checked.refused, "the check refuses while the cabin is ELEVATED");
         assert.ok(sent.refused, "and so does the command");
-        assert.match(String(checked.refused), /MIN-FLOW: CO2 is ELEVATED, the scrubber cannot be powered off/u);
+        assert.match(String(checked.refused), /RUN FLOOR: CO2 is ELEVATED, the scrubber cannot be powered off by software/u);
         // The same sentence, plus the one thing that differs between them.
         assert.equal(String(checked.refused), `${String(sent.refused)} (checked, not executed)`);
     });
@@ -73,10 +73,21 @@ describe("the scrubber board", () => {
 
         await cabin("NOMINAL");
         const nominal = await state();
-        const accepted = await call("scrubber.check", { command: "power_off" });
-        assert.equal(accepted.refused, null, "while NOMINAL the board would accept the power off");
+        const accepted = await call("scrubber.check", { command: "set_speed", percent: 30 });
+        assert.equal(accepted.refused, null, "while NOMINAL the board would accept the run floor");
         assert.equal(accepted.value.executed, false, "and says it did not do it");
         assert.deepEqual(await state(), nominal, "an accepted check changes nothing either");
+    });
+
+    it("never stops the scrubber by software, NOMINAL included", async () => {
+        await cabin("NOMINAL");
+        const off = await call("scrubber.power", { on: false });
+        assert.match(String(off.refused), /RUN FLOOR: CO2 is NOMINAL, the scrubber cannot be powered off by software/u);
+        const zero = await call("motor.set_speed", { percent: 0 });
+        assert.match(String(zero.refused), /RUN FLOOR: no speed below 30 %/u);
+        const low = await call("scrubber.check", { command: "set_speed", percent: 29 });
+        assert.match(String(low.refused), /RUN FLOOR/u);
+        assert.equal((await state()).power, true, "the scrubber still runs");
     });
 
     it("answers for the protection the way the protection answers", async () => {

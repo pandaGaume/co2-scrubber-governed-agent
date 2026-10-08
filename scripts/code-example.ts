@@ -52,7 +52,7 @@ async function main(): Promise<void> {
     process.env.BIOMED_PROVIDER = "simulated";
     process.env.FACTORY_RECIPES_DIR = path.join(outDir, "recipes");
     const started = await startAll(3161, () => undefined, "ignore");
-    const operator = new Broker(started.broker.httpBase, { name: "operator", version: "0", locale: "en" });
+    const operator = new Broker(started.broker.httpBase, { name: "operator", version: "0", locale: "en" }, "operator");
     const call = async <T>(slot: string, tool: string, a: Record<string, unknown> = {}): Promise<T> => {
         const r = await operator.call(slot, tool, a);
         if (!r.ok) throw new Error(`${slot}.${tool}: ${r.error ?? r.outcome}`);

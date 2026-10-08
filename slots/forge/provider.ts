@@ -488,7 +488,7 @@ export function forgeSlot(wsBase: string, log: (line: string) => void, options: 
                 // Proposed to the station, and nowhere else: Mother keeps it, the commander authorises, the twin loads. The forge does not push.
                 let stationProposalId: string | null = null;
                 let note = "";
-                const broker = new Broker(httpBase, { name: "forge", version: VERSION, locale: "en" });
+                const broker = new Broker(httpBase, { name: "forge", version: VERSION, locale: "en" }, "factory");
                 try {
                     const r = await broker.call("station", "propose", { taskId, artifacts: [{ kind: "plugin", path: rel, sha256: artifactSha256, contractSha256: loaded.sha256 }], manifestSha256: artifactSha256, claims: { ...((args.claims as Record<string, unknown> | undefined) ?? {}), plugin, types: loaded.types, acceptance: artifact.acceptance ? { ok: artifact.acceptance.ok, behaviors: artifact.acceptance.behaviors.length } : null } });
                     if (r.ok) {

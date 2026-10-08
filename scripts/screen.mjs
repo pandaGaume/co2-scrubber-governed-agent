@@ -16,6 +16,9 @@
  *
  * Options: --name <text> (default: this machine's name), --kiosk,
  * --port <udp port> (default 41234), --timeout <seconds> (default 60),
+ * --token <token> (the screen's broker token when the demo's broker
+ * authorization is on: BROKER_TOKEN_MONITOR of the demo's .env; the page keeps
+ * it, so once per browser is enough; never sent in the discovery answer),
  * --dry-run (print the address, open nothing).
  */
 import { createSocket } from "node:dgram";
@@ -31,6 +34,7 @@ const flag = (name) => args.includes(name);
 const name = option("--name", hostname());
 const udpPort = Number(option("--port", "41234"));
 const timeoutS = Number(option("--timeout", "60"));
+const token = option("--token", "");
 
 /** This machine's IPv4 networks: where to broadcast the question, and which answer is reachable from here. */
 const nets = [];
@@ -82,7 +86,7 @@ socket.on("message", (data) => {
     clearTimeout(giveUp);
     clearInterval(again);
     const base = answer.bases.find(reachable) ?? answer.bases[0];
-    const url = `${base}${answer.screen ?? "/screen.html"}?name=${encodeURIComponent(name)}`;
+    const url = `${base}${answer.screen ?? "/screen.html"}?name=${encodeURIComponent(name)}${token ? `#token=${encodeURIComponent(token)}` : ""}`;
     console.log(`found ${answer.name ?? "the demo"} at ${base}; this screen is "${name}": ${url}`);
     if (!flag("--dry-run")) open(url);
     socket.close();

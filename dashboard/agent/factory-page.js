@@ -116,19 +116,45 @@ function grammarOf(session) {
   return session.grammar ?? null;
 }
 
+// harness/lib/broker-auth.ts
+var STORAGE_KEY = "broker.token";
+function pageToken() {
+  if (typeof window === "undefined") return null;
+  try {
+    const match = /(?:^#|&)token=([^&]+)/.exec(window.location.hash);
+    if (match) {
+      const token = decodeURIComponent(match[1]);
+      window.localStorage.setItem(STORAGE_KEY, token);
+      const rest = window.location.hash.replace(/(?:^#|&)token=[^&]+/, "").replace(/^&/, "");
+      window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}${rest ? `#${rest}` : ""}`);
+      return token;
+    }
+    return window.localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+function brokerAuth(role) {
+  const env = typeof process !== "undefined" && process.env ? process.env : void 0;
+  const token = env ? env[`BROKER_TOKEN_${role.toUpperCase()}`] : pageToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 // harness/lib/broker.ts
 var Broker = class {
   /**
    * @param base      http://host:port of the broker
    * @param identity  the agent as the slots see it: `clientInfo.name` (its family) and locale
-   * @param headers   e.g. { Authorization: "Bearer <tier3 token>" } when the policy is on
+   * @param auth      the role it calls as (its token read from `BROKER_TOKEN_<ROLE>`, harness/lib/broker-auth.ts),
+   *                  or the headers themselves, e.g. { Authorization: "Bearer <token>" }; none when the broker's authorization is off
    */
-  constructor(base, identity, headers = {}) {
+  constructor(base, identity, auth = {}) {
     this.base = base;
     this.identity = identity;
-    this.headers = headers;
+    this.headers = typeof auth === "string" ? brokerAuth(auth) : auth;
   }
   sessions = /* @__PURE__ */ new Map();
+  headers;
   session(slot) {
     let s = this.sessions.get(slot);
     if (!s) {
@@ -905,10 +931,10 @@ var McpBehaviorBase = class {
   get mimeType() {
     return this._mimeType;
   }
-  readResourceAsync(_uri) {
+  readResourceAsync(_uri, _request) {
     return Promise.resolve(void 0);
   }
-  executeToolAsync(_uri, _toolName, _args) {
+  executeToolAsync(_uri, _toolName, _args, _request) {
     return Promise.resolve(McpToolResults.error(`Tool not implemented: ${_toolName}`));
   }
   getResources() {
@@ -1367,7 +1393,7 @@ async function activate(studio) {
   const slowMs = Math.max(2e3, Number(params.get("slow") ?? 15e3));
   const pinned = params.get("task");
   const locale = params.get("locale") ?? "en-US";
-  const broker = new Broker(brokerUrl, { name: "studio-factory", version: "0.1.0", locale });
+  const broker = new Broker(brokerUrl, { name: "studio-factory", version: "0.1.0", locale }, "operator");
   const { words, grammar } = await loadWords(await broker.session("factory"));
   const p = (key, values = {}) => words.phrase(key, values);
   const initialView = { mode: params.get("view") === "fit" ? "fit" : "follow", threshold: Number(params.get("threshold") ?? 120), zoom: Number(params.get("zoom") ?? 1) };

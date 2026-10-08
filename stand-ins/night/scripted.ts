@@ -52,9 +52,9 @@ const EXERCISE: CrewGroupJson[] = [
 
 const shared: Script = {
     "energy-request": [
-        (s) => sweep(s, [20, 30, 40, 50], ASLEEP, 200),
-        () => setSpeed(20, "the twin says 20 % keeps four sleepers NOMINAL until the morning; the lowest safe flow"),
-        () => report("Power margin: I lowered the scrubber to 20 % for the night. The twin predicts the cabin stays NOMINAL until the crew wakes."),
+        (s) => sweep(s, [30, 40, 50, 60], ASLEEP, 200),
+        () => setSpeed(30, "the twin says 30 % keeps four sleepers NOMINAL until the morning; the lowest flow the board runs at"),
+        () => report("Power margin: I lowered the scrubber to 30 % for the night. The twin predicts the cabin stays NOMINAL until the crew wakes."),
     ],
     "load-rises": [
         (s) => timeToCritical(s, EXERCISE, 60),

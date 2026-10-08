@@ -113,7 +113,7 @@ describe("slot grammars through the broker", () => {
         const s = await session("scrubber", "curl", undefined);
         assert.equal(grammarOf(s), null);
         const tools = await s.listTools();
-        assert.equal(tools.find((t) => t.name === "motor.set_speed")?.description, "Set the speed command, in percent of full speed. Refused outside [0, 100], and below the minimum flow while CO2 is not NOMINAL.");
+        assert.equal(tools.find((t) => t.name === "motor.set_speed")?.description, "Set the speed command, in percent of full speed. Refused outside [0, 100], below the run floor (30 %) in any state, and below the minimum flow while CO2 is ELEVATED.");
     });
 
     it("the operator rewrites one wording at runtime and the agent's next tools/list carries it", async () => {

@@ -188,10 +188,10 @@ describe("the library's typed facts, through the broker", () => {
         const one = await broker.call("library", "facts", { id: "station-topology" });
         assert.ok(one.ok && (one.output as { facts: unknown[] }).facts.length === 4);
         const read = await broker.call("library", "read", { id: "scrubber-1-datasheet" });
-        assert.ok(read.ok && (read.output as { facts: unknown[] }).facts.length === 5);
+        assert.ok(read.ok && (read.output as { facts: unknown[] }).facts.length === 6);
         const list = await broker.call("library", "list", {});
         const doc = (list.output as { documents: Array<{ id: string; facts: number }> }).documents.find((d) => d.id === "scrubber-1-datasheet");
-        assert.equal(doc?.facts, 5);
+        assert.equal(doc?.facts, 6);
         const none = await broker.call("library", "facts", { id: "nowhere" });
         assert.ok(!none.ok);
     });

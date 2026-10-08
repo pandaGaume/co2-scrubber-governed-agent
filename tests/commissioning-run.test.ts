@@ -73,7 +73,7 @@ describe("the commissioning chain played by the slot, the commander deciding", (
         recipesDir = mkdtempSync(path.join(tmpdir(), "recipes-run-"));
         process.env.FACTORY_RECIPES_DIR = recipesDir;
         ({ broker: local, slots } = await startAllOrFail(PORT));
-        operator = new Broker(local.httpBase, { name: "operator-test", version: "0", locale: "en" });
+        operator = new Broker(local.httpBase, { name: "operator-test", version: "0", locale: "en" }, "operator");
     });
     after(async () => {
         delete process.env.SPEECH_PROVIDER;
@@ -239,7 +239,7 @@ describe("a run that starts with the library unsigned, an authorised signatory s
         recipesDir = mkdtempSync(path.join(tmpdir(), "recipes-signature-"));
         process.env.FACTORY_RECIPES_DIR = recipesDir;
         ({ broker: local, slots } = await startAllOrFail(PORT + 1));
-        operator = new Broker(local.httpBase, { name: "operator-test", version: "0", locale: "en" });
+        operator = new Broker(local.httpBase, { name: "operator-test", version: "0", locale: "en" }, "operator");
     });
     after(async () => {
         delete process.env.SPEECH_PROVIDER;

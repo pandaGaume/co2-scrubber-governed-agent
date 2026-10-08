@@ -162,19 +162,45 @@ function grammarOf(session) {
   return session.grammar ?? null;
 }
 
+// harness/lib/broker-auth.ts
+var STORAGE_KEY = "broker.token";
+function pageToken() {
+  if (typeof window === "undefined") return null;
+  try {
+    const match = /(?:^#|&)token=([^&]+)/.exec(window.location.hash);
+    if (match) {
+      const token = decodeURIComponent(match[1]);
+      window.localStorage.setItem(STORAGE_KEY, token);
+      const rest = window.location.hash.replace(/(?:^#|&)token=[^&]+/, "").replace(/^&/, "");
+      window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}${rest ? `#${rest}` : ""}`);
+      return token;
+    }
+    return window.localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+function brokerAuth(role) {
+  const env = typeof process !== "undefined" && process.env ? process.env : void 0;
+  const token = env ? env[`BROKER_TOKEN_${role.toUpperCase()}`] : pageToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 // harness/lib/broker.ts
 var Broker = class {
   /**
    * @param base      http://host:port of the broker
    * @param identity  the agent as the slots see it: `clientInfo.name` (its family) and locale
-   * @param headers   e.g. { Authorization: "Bearer <tier3 token>" } when the policy is on
+   * @param auth      the role it calls as (its token read from `BROKER_TOKEN_<ROLE>`, harness/lib/broker-auth.ts),
+   *                  or the headers themselves, e.g. { Authorization: "Bearer <token>" }; none when the broker's authorization is off
    */
-  constructor(base, identity, headers = {}) {
+  constructor(base, identity, auth = {}) {
     this.base = base;
     this.identity = identity;
-    this.headers = headers;
+    this.headers = typeof auth === "string" ? brokerAuth(auth) : auth;
   }
   sessions = /* @__PURE__ */ new Map();
+  headers;
   session(slot) {
     let s = this.sessions.get(slot);
     if (!s) {
@@ -787,9 +813,9 @@ var EXERCISE = [
 ];
 var shared = {
   "energy-request": [
-    (s) => sweep(s, [20, 30, 40, 50], ASLEEP, 200),
-    () => setSpeed(20, "the twin says 20 % keeps four sleepers NOMINAL until the morning; the lowest safe flow"),
-    () => report("Power margin: I lowered the scrubber to 20 % for the night. The twin predicts the cabin stays NOMINAL until the crew wakes.")
+    (s) => sweep(s, [30, 40, 50, 60], ASLEEP, 200),
+    () => setSpeed(30, "the twin says 30 % keeps four sleepers NOMINAL until the morning; the lowest flow the board runs at"),
+    () => report("Power margin: I lowered the scrubber to 30 % for the night. The twin predicts the cabin stays NOMINAL until the crew wakes.")
   ],
   "load-rises": [
     (s) => timeToCritical(s, EXERCISE, 60),
@@ -1779,10 +1805,10 @@ var McpBehaviorBase = class {
   get mimeType() {
     return this._mimeType;
   }
-  readResourceAsync(_uri) {
+  readResourceAsync(_uri, _request) {
     return Promise.resolve(void 0);
   }
-  executeToolAsync(_uri, _toolName, _args) {
+  executeToolAsync(_uri, _toolName, _args, _request) {
     return Promise.resolve(McpToolResults.error(`Tool not implemented: ${_toolName}`));
   }
   getResources() {
@@ -2187,7 +2213,7 @@ async function activate(studio) {
   let current = null;
   let busy = false;
   let slotDecider = null;
-  const world = new Broker(brokerUrl, { name: "studio-world", version: "0.1.0", locale: pageLocale });
+  const world = new Broker(brokerUrl, { name: "studio-world", version: "0.1.0", locale: pageLocale }, "operator");
   let words = NO_WORDS;
   try {
     const loaded = await loadWords(await world.session("station"));
@@ -2252,7 +2278,7 @@ async function activate(studio) {
   };
   async function connect() {
     setStatus("connecting to the broker...", "connecting...");
-    const boot = new Broker(brokerUrl, { name: "studio-agent", version: "0.1.0" });
+    const boot = new Broker(brokerUrl, { name: "studio-agent", version: "0.1.0" }, "operator");
     let provider;
     if (llmEnabled) {
       const remote = await ReasonerProvider.connect(boot);
@@ -2265,7 +2291,7 @@ async function activate(studio) {
       provider = new ScriptedProvider(scriptVariant);
       log("info", `reasoner: scripted ${scriptVariant} (no call to the model)`);
     }
-    const broker = new Broker(brokerUrl, { name: provider.family, version: "0.1.0", locale });
+    const broker = new Broker(brokerUrl, { name: provider.family, version: "0.1.0", locale }, "operator");
     if (provider instanceof ReasonerProvider) provider.useBroker(broker);
     const resolve = provider.resolve.bind(provider);
     provider.resolve = async (input) => {

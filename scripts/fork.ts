@@ -61,7 +61,7 @@ function run(id: string, port: number, learn: string | undefined, profile: strin
 /** Mother reflects in a running fork: the patterns of its traces, and the reflection's task when there are some. */
 async function reflect(id: string, port: number, builder: string | undefined): Promise<void> {
     readFork(id);
-    const broker = new Broker(`http://localhost:${port}`, { name: "fork-cli", version: "0", locale: "en" });
+    const broker = new Broker(`http://localhost:${port}`, { name: "fork-cli", version: "0", locale: "en" }, "operator");
     try {
         const env = await broker
             .session("station")

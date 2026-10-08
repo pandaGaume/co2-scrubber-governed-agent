@@ -145,15 +145,23 @@ async function main(): Promise<void> {
     // The forge in a process of its own (`slots/forge/main.ts`, `npm run forge`): what a generated plugin does at run time happens there, not here.
     const { slots, failures } = await publishAll(wsBase, log, flag("--no-forge") ? ["forge"] : []);
     if (failures.length) log(`DEGRADED: ${failures.length} slot(s) not published (${failures.map((f) => f.slot).join(", ")}); the others run, the board shows the missing ones red`);
-    log(`dashboard: ${httpBase}/   slots: ${slots.map((s) => s.slot).join(", ")}   introspection: ${httpBase}/_broker/mcp`);
+    // With the broker's authorization on (broker/security.json, npm run broker:tokens), a page needs its device's token once: the links
+    // below carry it in the address (#token=...), the page keeps it and takes it out of the address bar (harness/lib/broker-auth.ts).
+    const secured = Boolean(process.env.MCP_BROKER_SECURITY_FILE);
+    const withToken = (role: "operator" | "monitor"): string => {
+        const token = process.env[`BROKER_TOKEN_${role.toUpperCase()}`];
+        return secured && token ? `#token=${encodeURIComponent(token)}` : "";
+    };
+    if (secured) log(`broker authorization ON (${process.env.MCP_BROKER_SECURITY_FILE}): every client presents its role's token; the links below carry the page's`);
+    log(`dashboard: ${httpBase}/${withToken("operator")}   slots: ${slots.map((s) => s.slot).join(", ")}   introspection: ${httpBase}/_broker/mcp`);
     // The medical monitoring page is meant to be held in someone's hands, on a
     // tablet, away from the machine. Say where to point it rather than making
     // anyone look the address up on a filming day.
     // The simulation is driven from a phone in someone's hand, beside the room.
     for (const base of broker?.lanBases ?? []) {
-        log(`medical monitoring, on another device on this network: ${base}/biomed.html`);
-        log(`the scenarios, from a phone on this network:           ${base}/scenarios.html`);
-        log(`a screen of the room (or run scripts/screen.mjs on it): ${base}/screen.html`);
+        log(`medical monitoring, on another device on this network: ${base}/biomed.html${withToken("monitor")}`);
+        log(`the scenarios, from a phone on this network:           ${base}/scenarios.html${withToken("operator")}`);
+        log(`a screen of the room (or run scripts/screen.mjs on it): ${base}/screen.html${withToken("monitor")}`);
     }
     // The room's other machines find this one by asking on the network (`scripts/screen.mjs`), not by an address typed in.
     // A fork does not answer for the room: its screens find the repository's server, not it.

@@ -12,13 +12,13 @@
             }
         },
         "motor.set_speed": {
-            "description": "Set scrubber speed. Refused outside [0, 100] and below minimum flow unless CO2 is NOMINAL.",
+            "description": "Set scrubber speed. Refused outside [0, 100], below 30 % in any state, and below minimum flow while CO2 is ELEVATED.",
             "properties": {
                 "percent": "number, percent of full speed, 0 to 100"
             }
         },
         "scrubber.power": {
-            "description": "Power on or off. Off refused unless CO2 is NOMINAL.",
+            "description": "Power on or off. Off refused in every state.",
             "properties": {
                 "on": "boolean; false = off"
             }

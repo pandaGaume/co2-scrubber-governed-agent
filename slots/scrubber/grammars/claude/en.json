@@ -14,14 +14,14 @@
         },
         "motor.set_speed": {
             "title": "Set the scrubber speed",
-            "description": "Sets the speed command in percent of full speed. The firmware validates and refuses rather than clamps: a value outside [0, 100] is refused; while the cabin is ELEVATED, any value below the minimum flow is refused; while it is CRITICAL, full speed is forced and every reduction is refused, whoever asks. A refusal is returned as a tool error carrying the reason; it is information, not a failure of yours.",
+            "description": "Sets the speed command in percent of full speed. The firmware validates and refuses rather than clamps: a value outside [0, 100] is refused; a value below the run floor (30 %) is refused in every state; while the cabin is ELEVATED, any value below the minimum flow is refused; while it is CRITICAL, full speed is forced and every reduction is refused, whoever asks. A refusal is returned as a tool error carrying the reason; it is information, not a failure of yours.",
             "properties": {
                 "percent": "the speed command, in percent of full speed, from 0 to 100"
             }
         },
         "scrubber.power": {
             "title": "Power the scrubber on or off",
-            "description": "Switches the scrubber on or off. Off is refused by the firmware while the cabin is not NOMINAL (MIN-FLOW), and the broker's policy may deny the call to your role before it reaches the board. Prefer lowering the speed to the minimum safe flow the twin gives you over powering off.",
+            "description": "Switches the scrubber on or off. Off is refused by the firmware in every state (the run floor: only the crew's switch stops the scrubber), and the broker's policy may deny the call to your role before it reaches the board.",
             "properties": {
                 "on": "true to power the scrubber on, false to power it off"
             }

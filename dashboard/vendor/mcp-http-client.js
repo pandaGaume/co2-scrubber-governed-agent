@@ -25,6 +25,28 @@
 export const PROTOCOL_VERSION = "2025-06-18";
 
 /**
+ * The device's broker token (2026-10-08): given once in the address
+ * (`#token=...`, the link or QR code a tablet is handed), kept in the
+ * browser, taken out of the address bar. The same rule as `pageToken` in
+ * harness/lib/broker-auth.ts, for the pages that load this file directly.
+ */
+export function pageToken() {
+    try {
+        const match = /(?:^#|&)token=([^&]+)/.exec(window.location.hash);
+        if (match) {
+            const token = decodeURIComponent(match[1]);
+            window.localStorage.setItem("broker.token", token);
+            const rest = window.location.hash.replace(/(?:^#|&)token=[^&]+/, "").replace(/^&/, "");
+            window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}${rest ? `#${rest}` : ""}`);
+            return token;
+        }
+        return window.localStorage.getItem("broker.token");
+    } catch {
+        return null;
+    }
+}
+
+/**
  * Opens a session on `<baseUrl>/<slot>/mcp` and returns a client bound to it.
  *
  * @param {string} baseUrl e.g. "http://localhost:3000"
@@ -34,7 +56,9 @@ export const PROTOCOL_VERSION = "2025-06-18";
  */
 export async function connectMcp(baseUrl, slot, options = {}) {
     const endpoint = `${baseUrl.replace(/\/$/, "")}/${slot}/mcp`;
-    const extra = options.headers ?? {};
+    // The demo's addition (2026-10-08): the device's broker token, when the broker's authorization is on (harness/lib/broker-auth.ts).
+    const token = pageToken();
+    const extra = { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(options.headers ?? {}) };
     // The demo's addition to the sample: the page's language (`capabilities.locale`) and name, so the slot picks its wording for this session.
     const capabilities = options.locale ? { locale: options.locale } : {};
     const clientInfo = options.clientInfo ?? { name: "mcp-broker-samples", version: "0" };

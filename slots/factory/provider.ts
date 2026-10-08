@@ -161,7 +161,7 @@ function handOff(httpBase: string, taskId: string, topic: Topic, builder: Builde
     const run = s.runs[taskId];
     const task = taskOf(taskId).task;
     const ask = async (question: Record<string, unknown>): Promise<string | null> => {
-        const broker = new Broker(httpBase, { name: "factory", version: VERSION, locale: "en" });
+        const broker = new Broker(httpBase, { name: "factory", version: VERSION, locale: "en" }, "factory");
         try {
             const r = await broker.call("station", "ask", question);
             if (!r.ok) {
@@ -293,7 +293,7 @@ function launch(httpBase: string, taskId: string, topic: Topic, builder: Builder
     const run: TaskRun = { startedAt: new Date().toISOString(), builder: builder === "scripted" ? `scripted:${topic}` : "reasoner", lastStage: null, ended: null };
     s.runs[taskId] = run;
     const runtimeSlot = taskOf(taskId).task.runtime ?? (topic === "code" ? "forge" : "twin");
-    const broker = new Broker(httpBase, { name: "factory", version: VERSION, locale: "en" });
+    const broker = new Broker(httpBase, { name: "factory", version: VERSION, locale: "en" }, "factory");
     void (async () => {
         // The builder: the script of the topic only when asked for by name; otherwise the model behind the reasoner slot, reading the topic's prompt.
         let provider: RunTaskOptions["provider"];
@@ -474,7 +474,7 @@ export function factorySlot(wsBase: string, log: (line: string) => void): Publis
             name: "inventory",
             inputSchema: obj({}),
             handle: async () => {
-                const reader = new Broker(httpBase, { name: "factory", version: VERSION, locale: "en" });
+                const reader = new Broker(httpBase, { name: "factory", version: VERSION, locale: "en" }, "factory");
                 try {
                     const r = await reader.call("station", "registry_list", {});
                     if (!r.ok) throw new Error(`the station's register did not answer: ${r.error ?? r.outcome}`);

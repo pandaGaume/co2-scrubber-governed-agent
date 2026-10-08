@@ -79,7 +79,7 @@ export function observerSlot(wsBase: string, log: (line: string) => void, option
                     const entry: ObserverEntry = { ok: false, request: null, attempts: [], reads: [], id: `r${(s.requests.length + 1).toString().padStart(4, "0")}`, at: new Date().toISOString(), taskId: null, status: "running" } as unknown as ObserverEntry;
                     s.requests.push(entry);
                     const work = async (): Promise<ObserverEntry> => {
-                        const broker = new Broker(httpBase, { name: "observer", version: VERSION, locale: "en" });
+                        const broker = new Broker(httpBase, { name: "observer", version: VERSION, locale: "en" }, "factory");
                         try {
                             const attempts = typeof args.attempts === "number" && args.attempts >= 1 ? Math.min(8, Math.floor(args.attempts)) : 4;
                             // The Contract Supervisor reviews each request the guard accepts (the same reasoner slot, its own prompt): its findings for the Observer send it back into its loop, so a request is corrected here and not refused at the start of a factory task.

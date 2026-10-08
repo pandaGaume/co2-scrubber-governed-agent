@@ -62,7 +62,7 @@ export function supervisorSlot(wsBase: string, log: (line: string) => void, opti
                 const facts = (Array.isArray(args.facts) ? args.facts : []) as Fact[];
                 const required = Array.isArray(args.required) ? (args.required as string[]) : [];
                 const input: SupervisionInput = { facts, report: reviewContracts(facts, required), assumptions: Array.isArray(args.assumptions) ? (args.assumptions as string[]) : [], hypotheses: Array.isArray(args.hypotheses) ? (args.hypotheses as string[]) : [], symbols: (args.symbols as Record<string, string> | undefined) ?? {}, fitted: Array.isArray(args.fitted) ? (args.fitted as string[]) : [], required };
-                const broker = new Broker(httpBase, { name: "supervisor", version: VERSION, locale: "en" });
+                const broker = new Broker(httpBase, { name: "supervisor", version: VERSION, locale: "en" }, "factory");
                 try {
                     return await run(broker, input, s);
                 } finally {
@@ -74,7 +74,7 @@ export function supervisorSlot(wsBase: string, log: (line: string) => void, opti
             name: "review_request",
             inputSchema: objectSchema({ request: { type: "object" }, devices: { type: "array", items: { type: "object" } }, required: { type: "array", items: { type: "string" } } }, ["request"]),
             handle: async (args, s) => {
-                const broker = new Broker(httpBase, { name: "supervisor", version: VERSION, locale: "en" });
+                const broker = new Broker(httpBase, { name: "supervisor", version: VERSION, locale: "en" }, "factory");
                 try {
                     const r = await broker.call("library", "facts", {});
                     const libraryFacts = r.ok ? ((r.output as { facts?: Array<LibraryFact & { source: string }> }).facts ?? []) : [];

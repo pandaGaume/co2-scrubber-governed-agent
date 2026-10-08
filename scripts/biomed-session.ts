@@ -47,7 +47,7 @@ export async function main(argv: string[]): Promise<void> {
         return i >= 0 && argv[i + 1] ? argv[i + 1] : fallback;
     };
     const port = Number(option("port", String(DEFAULT_PORT)));
-    const broker = new Broker(`http://localhost:${port}`, { name: "operator", version: "0.1.0", locale: "en" });
+    const broker = new Broker(`http://localhost:${port}`, { name: "operator", version: "0.1.0", locale: "en" }, "operator");
 
     try {
         const session = await broker.session("biomed");

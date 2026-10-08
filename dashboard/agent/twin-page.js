@@ -116,19 +116,45 @@ function grammarOf(session) {
   return session.grammar ?? null;
 }
 
+// harness/lib/broker-auth.ts
+var STORAGE_KEY = "broker.token";
+function pageToken() {
+  if (typeof window === "undefined") return null;
+  try {
+    const match = /(?:^#|&)token=([^&]+)/.exec(window.location.hash);
+    if (match) {
+      const token = decodeURIComponent(match[1]);
+      window.localStorage.setItem(STORAGE_KEY, token);
+      const rest = window.location.hash.replace(/(?:^#|&)token=[^&]+/, "").replace(/^&/, "");
+      window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}${rest ? `#${rest}` : ""}`);
+      return token;
+    }
+    return window.localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+function brokerAuth(role) {
+  const env = typeof process !== "undefined" && process.env ? process.env : void 0;
+  const token = env ? env[`BROKER_TOKEN_${role.toUpperCase()}`] : pageToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 // harness/lib/broker.ts
 var Broker = class {
   /**
    * @param base      http://host:port of the broker
    * @param identity  the agent as the slots see it: `clientInfo.name` (its family) and locale
-   * @param headers   e.g. { Authorization: "Bearer <tier3 token>" } when the policy is on
+   * @param auth      the role it calls as (its token read from `BROKER_TOKEN_<ROLE>`, harness/lib/broker-auth.ts),
+   *                  or the headers themselves, e.g. { Authorization: "Bearer <token>" }; none when the broker's authorization is off
    */
-  constructor(base, identity, headers = {}) {
+  constructor(base, identity, auth = {}) {
     this.base = base;
     this.identity = identity;
-    this.headers = headers;
+    this.headers = typeof auth === "string" ? brokerAuth(auth) : auth;
   }
   sessions = /* @__PURE__ */ new Map();
+  headers;
   session(slot) {
     let s = this.sessions.get(slot);
     if (!s) {
@@ -420,7 +446,7 @@ async function activate(studio) {
   const brokerUrl = params.get("broker") ?? location.origin;
   const seconds = Math.max(1, Number(params.get("seconds") ?? 6));
   const slowMs = Math.max(2e3, Number(params.get("slow") ?? 15e3));
-  const broker = new Broker(brokerUrl, { name: "studio-twin", version: "0.1.0" });
+  const broker = new Broker(brokerUrl, { name: "studio-twin", version: "0.1.0" }, "operator");
   const log = (level, message) => studio.log(level, SOURCE, message);
   installLoopStyle(STYLE);
   const viewer = studio.getViewer();

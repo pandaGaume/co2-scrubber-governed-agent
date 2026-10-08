@@ -24,6 +24,7 @@ These are properties of the machine, the same wherever it is installed: a model 
 ## Rules the board enforces (firmware, not configurable by the agent)
 
 - A speed outside 0 to 100 % is refused, not clamped.
+- Software never stops the scrubber, in any cabin state: a power off is refused, and so is any speed below the run floor of 30 %. Only the crew's physical switch stops it.
 - While the cabin CO2 is ELEVATED, no speed below the minimum flow (40 % by default, never set below 40 %).
 - While it is CRITICAL, full speed is forced and any reduction refused.
 

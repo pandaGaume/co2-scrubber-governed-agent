@@ -137,7 +137,7 @@ export function scenarioSlot(wsBase: string, log: (line: string) => void, option
     };
 
     let broker: Broker | null = null;
-    const client = () => (broker ??= new Broker(httpBase, { name: "scenario-desk", version: "0.1.0" }));
+    const client = () => (broker ??= new Broker(httpBase, { name: "scenario-desk", version: "0.1.0" }, "station"));
 
     const find = (id: unknown): DraftRecord => {
         const found = state.drafts.find((d) => d.id === String(id));

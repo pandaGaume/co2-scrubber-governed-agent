@@ -89,7 +89,7 @@ export default async function activate(studio: Studio): Promise<void> {
     const slowMs = Math.max(2000, Number(params.get("slow") ?? 15000));
     const pinned = params.get("task");
     const locale = params.get("locale") ?? "en-US";
-    const broker = new Broker(brokerUrl, { name: "studio-factory", version: "0.1.0", locale });
+    const broker = new Broker(brokerUrl, { name: "studio-factory", version: "0.1.0", locale }, "operator");
     const { words, grammar } = await loadWords(await broker.session("factory"));
     const p = (key: string, values: Record<string, unknown> = {}) => words.phrase(key, values);
     const initialView = { mode: (params.get("view") === "fit" ? "fit" : "follow") as ViewMode, threshold: Number(params.get("threshold") ?? 120), zoom: Number(params.get("zoom") ?? 1) };

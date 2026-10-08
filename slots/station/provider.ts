@@ -180,7 +180,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
     const words = loadWords(grammarsDir);
     let broker: Broker | null = null;
     /** Mother's own client of the broker: she reads the monitor and opens its sessions as the station, in the broker's trace. */
-    const client = (): Broker => (broker ??= new Broker(httpBase, { name: "station", version: VERSION, locale: "en" }));
+    const client = (): Broker => (broker ??= new Broker(httpBase, { name: "station", version: VERSION, locale: "en" }, "station"));
     const state: StationState = { artifacts: {}, pushed: [], journal: [], proposals: [], devices: {}, commissionings: [], mother: [], questions: [], questionsPolicy: { ...DEFAULT_POLICY, byKind: {} } };
     let notify: (uri: string, meta: Record<string, unknown>) => void = () => undefined;
 

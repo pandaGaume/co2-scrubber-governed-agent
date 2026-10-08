@@ -12,13 +12,13 @@
             }
         },
         "motor.set_speed": {
-            "description": "Set the speed command in percent of full speed. Argument percent: a number from 0 to 100, required. Refused when outside 0-100; refused below minFlowPercent when co2State is ELEVATED; refused below 100 when co2State is CRITICAL.",
+            "description": "Set the speed command in percent of full speed. Argument percent: a number from 0 to 100, required. Refused when outside 0-100; refused below 30 in every state; refused below minFlowPercent when co2State is ELEVATED; refused below 100 when co2State is CRITICAL.",
             "properties": {
                 "percent": "number, required, from 0 to 100, percent of full speed"
             }
         },
         "scrubber.power": {
-            "description": "Power the scrubber on or off. Argument on: boolean, required; true means on, false means off. Off is refused when co2State is ELEVATED or CRITICAL.",
+            "description": "Power the scrubber on or off. Argument on: boolean, required; true means on, false means off. Off is refused in every state.",
             "properties": {
                 "on": "boolean, required: true = on, false = off"
             }

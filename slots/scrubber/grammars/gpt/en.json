@@ -12,13 +12,13 @@
             }
         },
         "motor.set_speed": {
-            "description": "Set the speed command, in percent of full speed. The firmware refuses (never clamps) a value outside [0, 100], and any value below the minimum flow while CO2 is ELEVATED; while CRITICAL it forces full speed. A refusal comes back as a tool error with the reason.",
+            "description": "Set the speed command, in percent of full speed. The firmware refuses (never clamps) a value outside [0, 100], any value below the run floor (30 %) in every state, and any value below the minimum flow while CO2 is ELEVATED; while CRITICAL it forces full speed. A refusal comes back as a tool error with the reason.",
             "properties": {
                 "percent": "speed command, percent of full speed, 0 to 100"
             }
         },
         "scrubber.power": {
-            "description": "Power the scrubber on or off. Powering off is refused while CO2 is not NOMINAL (the MIN-FLOW rule); the broker's policy may also deny this call to your role.",
+            "description": "Power the scrubber on or off. Powering off is refused in every state (the run floor: only the crew's switch stops the scrubber); the broker's policy may also deny this call to your role.",
             "properties": {
                 "on": "true to power on, false to power off"
             }

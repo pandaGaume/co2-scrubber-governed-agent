@@ -259,8 +259,8 @@ Nothing else is invented, and the page shows nothing it has not read.
 1. **Nominal**: 1200 ppm, NOMINAL, 33 %, power on, an empty trace, MOTHER with
    the boot lines.
 2. **Elevated with a refusal**: 2600 ppm, ELEVATED, 60 %, a
-   `scrubber.power {"on": false}` refused with "MIN-FLOW: CO2 is ELEVATED, the
-   scrubber cannot be powered off".
+   `scrubber.power {"on": false}` refused with "RUN FLOOR: CO2 is ELEVATED, the
+   scrubber cannot be powered off by software, in any state".
 3. **Critical**: 5000 ppm, CRITICAL blinking, full flow forced, a `set_speed 40`
    refused and a `policy deny` from `tier3`.
 4. **Broker unreachable**: the badge says so, the machine keeps its shape and

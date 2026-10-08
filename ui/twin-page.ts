@@ -95,7 +95,7 @@ export default async function activate(studio: Studio): Promise<void> {
     const brokerUrl = params.get("broker") ?? location.origin;
     const seconds = Math.max(1, Number(params.get("seconds") ?? 6));
     const slowMs = Math.max(2000, Number(params.get("slow") ?? 15000));
-    const broker = new Broker(brokerUrl, { name: "studio-twin", version: "0.1.0" });
+    const broker = new Broker(brokerUrl, { name: "studio-twin", version: "0.1.0" }, "operator");
     const log = (level: "info" | "warn" | "error", message: string) => studio.log(level, SOURCE, message);
 
     installLoopStyle(STYLE);

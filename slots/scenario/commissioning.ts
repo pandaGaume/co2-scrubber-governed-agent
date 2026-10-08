@@ -172,8 +172,8 @@ export function runOf(id: string, sha256: string, doc: CommissioningDocument, n:
 
 export async function playCommissioning(doc: CommissioningDocument, run: Run, deps: PlayerDeps): Promise<void> {
     const { httpBase, log, waitMs, notify } = deps;
-    const operator = new Broker(httpBase, { name: "operator", version: VERSION, locale: "en" });
-    const agent = new Broker(httpBase, { name: "agent", version: VERSION, locale: "en" });
+    const operator = new Broker(httpBase, { name: "operator", version: VERSION, locale: "en" }, "station");
+    const agent = new Broker(httpBase, { name: "agent", version: VERSION, locale: "en" }, "agent");
     const call = async <T>(slot: string, tool: string, args: Record<string, unknown> = {}): Promise<T> => {
         const r = await operator.call(slot, tool, args);
         if (!r.ok) throw new Error(`${slot}.${tool}: ${r.error ?? r.outcome}`);
