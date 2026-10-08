@@ -905,7 +905,10 @@ loadSlots()
     .catch((e) => {
         const bb = $("badge-broker");
         if (bb) {
-            bb.innerHTML = `<i class="dot"></i>broker: unreachable (${escapeHtml(e.message)})`;
+            // A page without its device's token (2026-10-08: the broker's authorization on) is not a broker down: say what to do.
+            bb.innerHTML = /HTTP 401/.test(e.message)
+                ? `<i class="dot"></i>this page has no token: open once the dashboard link the server printed (…/#token=…)`
+                : `<i class="dot"></i>broker: unreachable (${escapeHtml(e.message)})`;
             bb.className = "badge down";
         }
         cabinUnread("no link to the broker");

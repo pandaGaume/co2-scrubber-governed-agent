@@ -76,6 +76,7 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
         }
         return routing;
     };
+    routingNow(); // said once at start, in the server's log
     const profiles = new Map<string, ProviderProfile>([[profileFile, profile]]);
     /** The profile of a use: its file and its content, the server's when the table names none. */
     const routed = (use: string): { file: string; profile: ProviderProfile; wire: string } => {
