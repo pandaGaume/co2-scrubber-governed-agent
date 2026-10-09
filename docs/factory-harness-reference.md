@@ -224,7 +224,7 @@ This is the centre of the harness. Since 2026-09-25 no factory replays its trans
 
 | field | what it holds | written by |
 |---|---|---|
-| `marchingOrder` | first in the state, when the topic has a conduct: every stage of the work in order, each with its goal (one sentence) and the tools that serve it, and where the task stands on each (`passed`, `current`, `next`); `closedNow`, the tools closed at this step and why | the topic (`TopicDefinition.marchingOrder`), read off the conduct graph that judges (`Playbook.marchingOrder`); the goals, tools and order are the playbook's data (`bag.goal`, `bag.tools`, `bag.order`) |
+| `marchingOrder` | first in the state, when the topic has a conduct: every stage of the work in order, each with its goal (one sentence) and the tools that serve it, and where the task stands on each (`passed`, `current`, `next`); `allowedNow`, the current stage's tools not closed; `closedNow`, the tools closed at this step and why; `doneWhen`, what must hold before handing over, each item met or not (5.1) | the topic (`TopicDefinition.marchingOrder`), read off the conduct graph that judges (`Playbook.marchingOrder`); the goals, tools and order are the playbook's data (`bag.goal`, `bag.tools`, `bag.order`) |
 | `brief` | the harness's words for this step: where the work stands, what is still to be found, which tools do it; first in the message | the topic (`briefOf`), from the progress |
 | `phase`, `iteration`, `budget` | `plan` or `build`; the steps and sandbox runs left; never the clock | the runner |
 | `invariants` | what does not move during the task: the objective and its outputs, the thresholds, the constraints; the known constants with their status (documented, band, device) and source; what is missing; the hypotheses; who and what was observed (persons; devices with what they let one command); the telemetry's columns and span; the shelf (the reference graphs, each with its variables and their status: known, device, fitted with bounds, band) unless the topic leaves it out; the contract report of the facts | the runner, once at the start |
@@ -232,7 +232,7 @@ This is the centre of the harness. Since 2026-09-25 no factory replays its trans
 | `hypothesis` | what the topic holds as the current answer: the candidate under test with its variables and their status; the plugin with its sources whole; the template; the contract | the topic (`state`) |
 | `evaluation` | what the last evaluation said, compact: the residuals and where the curves part; the diagnostics of a build; the checks refused; the behaviors of a contract that failed with the value measured | the topic |
 | `lastAction` | the last call, its outcome, its answer made compact, the handle of its whole answer in the workshop; a failed call keeps its error whole | the runner |
-| `lastRefusal`, `refusals` | the last call the harness stopped: the capability, why, the input whole; and the last refusal of each capability, kept until that capability completes | the runner |
+| `lastRefusal`, `refusals` | the last call the harness stopped: the capability, why, the input whole, and its problems (each point, what is expected, what was sent, what depends on it: `dependentPaths`, 5.2); and the last refusal of each capability, kept until that capability completes | the runner |
 | `requirements` | the evidence a phase needs before the next, each true or false: a phase moves on facts, not on a reasonable-looking call | the topic (`requirementsOf`) |
 | `openQuestions` | what the topic says is still to be found | the topic |
 | `nextActions` | the capabilities the model may call now | the capabilities' catalogue |
@@ -242,6 +242,35 @@ Two rules make it work. What the model must correct must be in the state whole: 
 What it cost and what it gave, measured (`docs/harness-refactoring.fr.md`): the procedure factory from 228 k to 42 k input tokens on the same example and model, the Observer from 104 k to 61 k; and a loop that corrects what it wrote instead of writing it again from nothing. The size of the state is kept in the trace for every step; in passage 10 the code factory's state went from 2,871 characters at the first step to 19,817 at the eleventh, most of it the plugin's sources carried whole.
 
 The state journal at the head of every rendered trace (`scripts/render-trace.ts`) is the state in one line per step: the phase, the budget left, the unmet requirements, the contract report, the hypothesis, the diagnosis, the refusal, the open questions, the weight, then the call and its outcome. It is the fastest way to read a passage.
+
+### 5.1 The marching order (2026-10-09)
+
+A model given only the current stage's brief has to guess the order of the work: a strong model guesses it, a small one fails on it every time (Nemotron Nano asked the commander to authorise a procedure the guard had never accepted, after declaring a plan that named the device as a node). The conduct graph that judges each call already holds the order: its stages in sequence, what passes each one, what each gate closes. The state now opens with it, as data the model can follow:
+
+- `stages`: every stage in order, a goal in one sentence, the tools that serve it, and where the task stands on it (`passed`, `current`, `next`);
+- `allowedNow`: the current stage's tools that are not closed;
+- `closedNow`: the tools closed at this step, each with the reason the gate gives;
+- `doneWhen`: what must hold before handing over, each item met or not (for the procedure factory: the installation, the presence and the method read, an analysis when a test was aborted, a plan or the signed norm, the procedure accepted by the guard, the hand-over itself).
+
+The goals, the tools and the order are the playbook's data (`bag.goal`, `bag.tools`, `bag.order` on each stage), read by `Playbook.marchingOrder` and `conductView` (`harness/core/conduct.ts`); each topic with a conduct gives its `TopicDefinition.marchingOrder` (the procedure, diagnosis, playbook, recommendation and reflection factories). The graph, code and onnx factories have no conduct graph yet, and so no marching order: their briefs still say their stages one at a time.
+
+It is the same graph that judges and that guides: what the model reads as the order is what the guard enforces, and a stage's tools are the ones a step offers (chapter 6). No second description of the work can drift from the first. The kernel says how to work from it (5.3).
+
+### 5.2 A refusal as corrections (2026-10-09)
+
+`lastRefusal.problems` gives each point refused with its path, what is expected there, what was sent, and `dependentPaths`: what must change with it, and nothing else. They are read off the rules a person signed (`dependentsOf`, `harness/core/rules.ts`): a value goes with its justification (`justifications[constant=<path>]`), a justification with the value it justifies, and a constant the rules compare with another goes with that other (`limits.co2MaxPpm` under `limits.co2AbortPpm`; a step's `minutes` with `limits.maxMinutes`, which their sum must stay under). A topic whose guard gives no rules still gets the first: a value with its justification. The kernel tells the model to change the point and its dependents, nothing else: a refused reference does not move a speed, and a moved limit takes its justification with it.
+
+### 5.3 What a model is told: mission, kernel, policy (2026-10-09)
+
+A factory's system prompt is three levels, each said once (`harness/core/base.ts`, `promptWithSocle`):
+
+| level | file | what it says |
+|---|---|---|
+| the mission | `specs/<topic>/prompt.md` | what this factory makes, for whom, in this domain: the procedure factory writes a test sheet, never runs it, rests the test on the signed norm, prefers a measurement that disturbs nothing |
+| the kernel | `harness/core/kernel.md` | how the harness runs any work: the marching order, the turn in six steps (read, take from the state, read only what is missing, act, correct a refusal with its dependents, hand over when `doneWhen` is met), the calls and what may go in one answer, the refusals, the memory as advice, the end and its exits |
+| the policy | `harness/core/policy.md` | the engineering rules every factory keeps: every number justified, asked of the library (`library.justify`) rather than composed; which source for what (a safety constant only by a signed fact, on its safe side); units never converted by hand; look up rather than guess |
+
+**No tool is described in a prompt.** Every factory's prompt had a catalogue of its tools (`What you can use`), and the socle a second one (`What every factory reaches`), which said each tool again, not always the same way: a small model could read two sets of permissions. A tool is now described once, in its own definition (its slot's grammar, or the capability's description), which is what the model is given with it; the conformance test checks that every tool a topic allows has its description there, and the kernel and the policy name a tool only where a rule needs it. The mission keeps what is the domain's alone: what a contract is, what a generated node is, what the state of a diagnosis holds.
 
 ---
 
@@ -334,12 +363,6 @@ The validator is the topic's: the claimed artifact is the very file the code bui
 
 ---
 
-### 5.1 The marching order (2026-10-09)
-
-A model given only the current stage's brief has to guess the order of the work: a strong model guesses it, a small one fails on it every time (Nemotron Nano asked the commander to authorise a procedure the guard had never accepted, after declaring a plan that named the device as a node). The conduct graph that judges each call already holds the order: its stages in sequence, what passes each one, what each gate closes. The state now shows it whole, first, as data the model can follow: the stages in order with a goal in one sentence and their tools, where the task stands on each, and what is closed now with the reason. The socle says how to work from it: on the `current` stage only, with its tools, never back to a passed one, never ahead to a next one; take from the state what it holds, call a tool only for what it does not; after a refusal, change what each point names and what depends on it, nothing else.
-
-It is the same graph that judges and that guides: what the model reads as the order is what the guard enforces, and a stage's tools are the ones a step offers (chapter 6). No second description of the work can drift from the first.
-
 ## 8. The topics: what specialises the same loop
 
 A topic is a `TopicDefinition` (`harness/core/topic.ts`):
@@ -384,6 +407,8 @@ MEASURED > DEVICE > DOCUMENTED > LIBRARY > DERIVED > ASSUMED
 Two facts with the same id must agree once converted through the units service, within a tolerance; when they do not, the lower authority is told to revise. `taskFacts` gathers the three sources of a task: the request's known constants (by fact id when the Observer cites one), the register's devices (their properties named through the library's sidecars: a property no sidecar names is nobody's claim), the library's facts. `reviewContracts` gives the report: `CONSISTENT`, `CONFLICT` with each conflict's reason and who revises, `MISSING` when a required fact is absent. The runner reads it once at the start; a `CONFLICT` ends the task before any step (chapter 4).
 
 **The domain enters here and only here**: the library's sidecars (`docs/library/<id>.facts.json`) name the facts a document states, each with the register property it corresponds to when a device carries it; the register's devices declare their properties with a quantity and a unit; the Observer cites a fact by id. The layer itself has no word of a scrubber or a hatch.
+
+**What justifies a number is asked, not composed** (2026-10-09). A model used to build each justification itself from the policy's words: which source, which fact, which side, the fact's id or the document's. Small models picked the right document and the wrong fact, raised a limit to the bound they were told to cite, called a guess a measurement. The library now answers it (`library.justify`, a read): given a constant's path and its value, it says whether the signed rules make it a safety constant, which facts of signed documents bound it (each with its side, its signature as it stands and whether the value respects it), and the justification to copy when one holds; when none holds, why (the value does not respect the bound: change the value, not the reference; the document is not signed; nothing signed bounds it, so it is not set). For any other constant it names the sources that may justify it. The physics tools do the same for a derived number: `units_convert` and `units_relate` answer with `cite`, the justification to write (source `derived`, the formula and its values as the reference). The guard still checks every justification as before: the library's answer is the rule made available before the call, not a second judge.
 
 **The units** (`harness/lib/units.ts`, slot `physics`): the substrate's unit system, UCUM codes as identities; a unit is resolved against its quantity, converted, judged compatible (any unit that converts passes a vocabulary rule, not the string); a constant is checked against the document it cites. Dimensionless constants are not checked against documents.
 
@@ -551,6 +576,7 @@ The id is the test's name, its start time and four random characters (`scenario-
 | `harness/core/agent.ts` | the agent: the loop with its six services |
 | `harness/core/runner.ts` | a task run end to end: the context read once, the loop, the early ends, the manifest, the proposal, the recipes saved |
 | `harness/core/capabilities.ts`, `task-capabilities.ts` | the catalogue from the broker with its bindings; `task.plan`, `task.done`, `task.fail`, `task.ask` |
+| `harness/core/kernel.md`, `harness/core/policy.md` | the kernel and the policy every factory's prompt carries after its mission (5.3) |
 | `harness/lib/run-log.ts` | the test's log: `.logs/<id>/README.md` and `log.md`, every step node by node and every model call whole, the cacheable parts marked |
 | `harness/lib/call-batch.ts` | several calls in one answer: handed to the loop one per step without asking the model, the results buffered and sent back together |
 | `harness/core/interpreter.ts` | the interpreter: a call read toward its schema before it is judged (the schema-guided reading, then a model's extraction) |
