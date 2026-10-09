@@ -148,7 +148,9 @@ export class RunLog {
             outcome ? outcome.text : "_running: the outcome is written when the test ends._",
             "",
             ...(this.tasks.length ? ["### Harness tasks", "", ...this.tasks.map((t) => `- ${t}`), ""] : []),
-            ...(models.length ? ["## Language model calls", "", "| model | calls | prompt tokens | served from cache | completion tokens |", "|---|---|---|---|---|", ...models, ""] : []),
+            "## Language model calls",
+            "",
+            ...(models.length ? ["| model | calls | prompt tokens | served from cache | completion tokens |", "|---|---|---|---|---|", ...models, ""] : [outcome ? "None: no language model was called in this test." : "None so far.", ""]),
             `The whole account, step by step and call by call, is in [log.md](log.md) (${this.steps} harness steps, ${this.llmCalls} language model calls).`,
             "",
         ];

@@ -180,10 +180,15 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
     const testLog = openRunLog({
         name: `scenario-${run.scenario}`,
         description: `The scenario \`${run.scenario}\` (specs/scenario-${run.scenario}.json, sha256 ${run.sha256.slice(0, 12)}) played by the scenario slot as run ${run.id}: its ten loops, from the device registered to the twin proposed (the procedure factory, the relay, the commander's authorisation, the test on the board or its stand-in, the report, the Observer, the graph factory, the references, the proposal). Builder ${run.options.builder}${run.options.playbook ? `, playbook ${run.options.playbook}` : ""}.`,
+        // Only what this run uses: with the scripted builder no model is called, whatever the profile and the routing say.
         facts: {
             "run": run.id,
-            "server profile": process.env.REASONER_PROFILE ?? "profiles/anthropic.json",
-            "routing": routingExists(routingFile) ? JSON.stringify((JSON.parse(readRouting(routingFile, "utf8")) as { uses?: unknown }).uses ?? {}) : "none",
+            ...(run.options.builder === "scripted"
+                ? { models: "none: the scripted builder stands in for every model (the Observer's request is given by the caller)" }
+                : {
+                      "server profile": process.env.REASONER_PROFILE ? process.env.REASONER_PROFILE : "profiles/anthropic.json (the reasoner slot's default: REASONER_PROFILE is not set)",
+                      routing: routingExists(routingFile) ? JSON.stringify((JSON.parse(readRouting(routingFile, "utf8")) as { uses?: unknown }).uses ?? {}) : "none",
+                  }),
             "scrubber": process.env.SCRUBBER_SOURCE === "board" ? "the real board" : "the stand-in",
         },
     });

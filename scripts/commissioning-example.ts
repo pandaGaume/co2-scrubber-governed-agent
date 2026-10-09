@@ -104,7 +104,7 @@ async function main(): Promise<void> {
         description: "The whole commissioning on the models, from the device plugged in to the twin proposed, in one process on its own broker (port 3160), the room a stand-in world of two zones: the registration, the procedure factory (a model), the relay, the authorisation (the script stands for the commander), the execution, the report, the Observer (a model), the graph factory (a model), the references, the proposal.",
         command: process.argv.slice(1).map((a) => path.basename(a)).join(" "),
         facts: {
-            "server profile": process.env.REASONER_PROFILE ?? "profiles/anthropic.json",
+            "server profile": process.env.REASONER_PROFILE ? process.env.REASONER_PROFILE : "profiles/anthropic.json (the reasoner slot's default: REASONER_PROFILE is not set)",
             "routing": existsSync(routingFile) ? JSON.stringify((JSON.parse(readFileSync(routingFile, "utf8")) as { uses?: unknown }).uses ?? {}) : "none",
             "journal": relativeToRoot(path.join(outDir, "journal.md")),
         },
