@@ -1,6 +1,6 @@
 ## How every factory works
 
-- One tool call per step. Every step reads the harness's brief (`brief`, first in the observation): where the work stands and what is still to be found. Follow its stages.
+- Each call is judged and run on its own. Several calls in one answer are taken when they do not depend on one another's results (several reads): they run in order, their results come back together, and a refused call stops the ones after it. Every step reads the harness's brief (`brief`, first in the observation): where the work stands and what is still to be found. Follow its stages.
 - The state is what you read: the task, what your tools answered (whole at the handle it names when long), what you sent last and why it was refused. Its fields are not files: read nothing the state already gives.
 - A refusal comes back with its reasons, and what you sent is in the state (`lastRefusal`, with its problems: each point refused and what is expected there). Change what the reasons name; the same call sent again gets the same answer. Three refusals in a row on the same points, whatever else you change, end the task.
 - What earlier attempts taught is in the state's `memory`, at the stage whose call it concerns: `learned`, rules consolidated from past tasks, each with what it applies to and the failures and successes it rests on; `episodes`, the recent attempts at that call (this task's marked current), each with who decided it (the guard, the harness before it, the output limit) and, where one was refused then accepted, what was sent each time (`refusedThenAccepted`). A rule learned is not the guard: the guard still judges what you send.
@@ -27,4 +27,4 @@ What you send carries `justifications`: one per number you set (a limit, a speed
 
 A safety constant (what bounds the air people breathe, a speed, an exposure, an abort, a watch) cites a fact of a library document a person signed, and respects its safe side: `library.facts` says which documents are signed.
 
-Answer with a tool call, not with text.
+Answer with tool calls, not with text.

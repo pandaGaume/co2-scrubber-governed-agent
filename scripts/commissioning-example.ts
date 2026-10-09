@@ -185,7 +185,9 @@ async function main(): Promise<void> {
         const p = await factoryLoop(reqP.taskId);
         const procedureTrace = traceOfTask(2, "procedure-factory", reqP.taskId, "specs/procedure/prompt.md");
         operator.take(); // the polling of the task is the script's, not the loop's
-        const scorecard = JSON.parse(readFileSync(path.join(taskDir(reqP.taskId), "scorecard.json"), "utf8"));
+        // A factory that ended without a procedure writes no scorecard: its own end is the cause, said as such, not a missing file.
+        const scorecardFile = path.join(taskDir(reqP.taskId), "scorecard.json");
+        const scorecard = existsSync(scorecardFile) ? JSON.parse(readFileSync(scorecardFile, "utf8")) : null;
         void procedureTrace;
         await record(
             {

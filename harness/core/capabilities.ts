@@ -78,6 +78,8 @@ export interface CapabilityProfile {
 
 export interface BuildCapabilitiesOptions {
     profile?: CapabilityProfile;
+    /** Whether a capability is offered at this step (the topic's conduct, `TopicDefinition.closed`); all of them when absent. */
+    available?: (id: string) => boolean;
     approve?: CapabilityRegistryOptions["approve"];
     onCall?: (call: CapabilityCall) => void;
 }
@@ -94,7 +96,8 @@ function schemaWithout(schema: JsonValue, keys: string[]): JsonValue {
 }
 
 /** Registers the broker's tools and the profile's local capabilities. */
-export async function buildCapabilities(broker: Broker, { profile = {}, approve, onCall }: BuildCapabilitiesOptions = {}): Promise<{ registry: CapabilityRegistry; catalogue: CatalogueEntry[] }> {
+export async function buildCapabilities(broker: Broker, { profile = {}, approve, onCall, available }: BuildCapabilitiesOptions = {}): Promise<{ registry: CapabilityRegistry; catalogue: CatalogueEntry[] }> {
+    const offered = (id: string) => (available ? { isAvailable: () => available(id) } : {});
     const registry = new CapabilityRegistry({ approve });
     const catalogue: CatalogueEntry[] = [];
     const excluded = profile.excluded ?? [];
@@ -111,6 +114,7 @@ export async function buildCapabilities(broker: Broker, { profile = {}, approve,
             const descriptor: CapabilityDescriptor = { id, description, inputSchema: schemaWithout((tool.inputSchema ?? { type: "object" }) as JsonValue, Object.keys(constants)), replayPolicy };
             registry.register({
                 descriptor,
+                ...offered(id),
                 async execute(input: JsonValue, context: ExecutionContext): Promise<CapabilityResult> {
                     context.signal?.throwIfAborted();
                     const started = Date.now();
@@ -131,6 +135,7 @@ export async function buildCapabilities(broker: Broker, { profile = {}, approve,
         const replayPolicy = local.replayPolicy ?? "automatic";
         registry.register({
             descriptor: { id: local.id, description: local.description, inputSchema: local.inputSchema, replayPolicy },
+            ...offered(local.id),
             async execute(input: JsonValue, context: ExecutionContext): Promise<CapabilityResult> {
                 context.signal?.throwIfAborted();
                 const started = Date.now();

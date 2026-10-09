@@ -114,8 +114,13 @@ export class RunLog {
     private readonly firstSeen = new Map<string, number>();
     private steps = 0;
     private closed = false;
+    /** The harness task running, and when the last one ended: a call that answers after its task ended is late. */
+    private task: { id: string; since: number } | null = null;
+    private lastEnded: { id: string; at: number } | null = null;
     /** How each harness task of the test ended, for the README. */
     private readonly tasks: string[] = [];
+    /** Calls answered after their task ended. */
+    private late = 0;
 
     constructor(
         private readonly meta: RunLogMeta,
@@ -163,6 +168,7 @@ export class RunLog {
             "## Language model calls",
             "",
             ...(models.length ? ["| model | calls | prompt tokens | served from cache | completion tokens |", "|---|---|---|---|---|", ...models, ""] : [outcome ? "None: no language model was called in this test." : "None so far.", ""]),
+            ...(this.late ? [`**${this.late} call(s) answered after their task had ended** (the harness had stopped waiting): counted above, run by nobody, marked LATE in log.md.`, ""] : []),
             `The whole account, step by step and call by call, is in [log.md](log.md) (${this.steps} harness steps, ${this.llmCalls} language model calls).`,
             "",
         ];
@@ -192,6 +198,10 @@ export class RunLog {
         const req = readRequest(body);
         if (!req) return;
         const n = ++this.llmCalls;
+        // Asked while a task ran, answered after it ended: the harness had stopped waiting (its decision timed out); the tokens are spent all the same.
+        const askedAt = Date.now() - ms;
+        const late = !this.task && this.lastEnded && askedAt < this.lastEnded.at ? this.lastEnded : null;
+        if (late) this.late++;
         const usage = (response as { usage?: Record<string, unknown> } | null)?.usage;
         const stats = this.byModel.get(req.model) ?? { calls: 0, prompt: 0, cached: 0, completion: 0 };
         stats.calls++;
@@ -208,7 +218,7 @@ export class RunLog {
         if (previous) while (prefix < previous.messages.length && prefix < req.messages.length && JSON.stringify(previous.messages[prefix]) === JSON.stringify(req.messages[prefix])) prefix++;
         this.lastOf.set(conversation, { call: n, messages: req.messages });
 
-        const out = [`### Language model call ${n}: ${req.model} (${ms} ms, HTTP ${status})`, "", `- endpoint: \`${url}\``, `- settings: \`${JSON.stringify(req.settings)}\``, `- cache reported by the server: ${cacheOf(usage)}`, ""];
+        const out = [`### Language model call ${n}: ${req.model} (${ms} ms, HTTP ${status})${late ? ` LATE: answered after task ${late.id} ended` : ""}`, "", ...(late ? [`- **late**: asked ${new Date(askedAt).toISOString()}, task ${late.id} ended ${new Date(late.at).toISOString()}, answered ${new Date().toISOString()}. The harness had stopped waiting: this answer was run by nobody, and its tokens are not in the task's telemetry, though they are spent.`] : []), `- endpoint: \`${url}\``, `- settings: \`${JSON.stringify(req.settings)}\``, `- cache reported by the server: ${cacheOf(usage)}`, ""];
         const once = (key: string, title: string, value: unknown): void => {
             const seen = this.firstSeen.get(key);
             if (seen) out.push(`**${title}** (cacheable): the same as in call ${seen} (sha256 ${key.split(":")[1]}).`, "");
@@ -228,8 +238,15 @@ export class RunLog {
         this.append(out.join("\n"));
     }
 
+    /** A harness task starts: the calls from now on are its own. */
+    taskStarted(taskId: string): void {
+        this.task = { id: taskId, since: Date.now() };
+    }
+
     /** A harness task ended: kept for the README's outcome. */
     taskEnded(taskId: string, topic: string, model: string, state: string, ended: string, steps: number): void {
+        this.lastEnded = { id: taskId, at: Date.now() };
+        if (this.task?.id === taskId) this.task = null;
         this.tasks.push(`${taskId} (${topic}, ${model}): ${state} after ${steps} step(s): ${ended.slice(0, 400)}`);
         this.writeReadme(null);
     }

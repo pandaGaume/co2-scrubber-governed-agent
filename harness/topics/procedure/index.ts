@@ -851,6 +851,8 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
 }
 
 export const PROCEDURE_TOPIC: TopicDefinition = {
+    // The stage's tools only: what the conduct's gates refuse now is not shown (the guard refuses it still).
+    closed: (progress, task) => PLAYBOOK.evaluate(evidenceOf(progress, task)).refusing.flatMap((g) => g.capabilities),
     name: "procedure",
     tools: PROCEDURE_TOOLS,
     // A proposal is written from this task's device, presence, measurement and signed library: never copied from the memory of another task, nor the claim that names its file.

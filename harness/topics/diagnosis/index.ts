@@ -548,6 +548,8 @@ function intentionOf(task: TaskFile["task"], generic: Intention): Intention {
 }
 
 export const DIAGNOSIS_TOPIC: TopicDefinition = {
+    // The stage's tools only: what the conduct's gates refuse now is not shown (the guard refuses it still).
+    closed: (progress, _task) => DIAGNOSIS_CONDUCT.evaluate(evidenceOf(progress)).refusing.flatMap((g) => g.capabilities),
     name: "diagnosis",
     tools: DIAGNOSIS_TOOLS,
     // A diagnosis and its reads are this task's lead's, never replayed from another's.

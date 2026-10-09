@@ -939,9 +939,10 @@ var application_default = {
     }
   },
   words: {
-    chooseOne: "Choose exactly one tool call now. To speak to the crew, call {report}; to hand back, call {ask}.",
+    chooseOne: "Answer with tool calls, among the tools you are given now. Several in one answer are taken when they do not depend on one another's results: they run in order, each judged on its own, and a refused call stops the ones after it. To speak to the crew, call {report}; to hand back, call {ask}.",
+    chooseTools: "Answer with tool calls, among the tools you are given now. Several in one answer are taken when they do not depend on one another's results: they run in order, each judged on its own, and a refused call stops the ones after it.",
     situation: 'Situation "{id}" (story minute {minute}): {description}',
-    textIgnored: "Your last answer was text, which nobody reads here: answer with one tool call. ",
+    textIgnored: "Your last answer was text, which nobody reads here: answer with tool calls. ",
     sameQuantity: " (a person's CO2 is a mass flow, and it is not a leak)",
     producedExample: " A quantity and a unit in common are not enough: a person's CO2 output is a mass flow too, and it is not a leak."
   }
@@ -1116,7 +1117,8 @@ function schemaWithout(schema, keys) {
   const required = Array.isArray(s.required) ? s.required.filter((k) => typeof k !== "string" || !keys.includes(k)) : void 0;
   return { ...schema, ...properties ? { properties } : {}, ...required ? { required } : {} };
 }
-async function buildCapabilities(broker, { profile = {}, approve, onCall } = {}) {
+async function buildCapabilities(broker, { profile = {}, approve, onCall, available } = {}) {
+  const offered = (id) => available ? { isAvailable: () => available(id) } : {};
   const registry = new import_harness4.CapabilityRegistry({ approve });
   const catalogue = [];
   const excluded = profile.excluded ?? [];
@@ -1133,6 +1135,7 @@ async function buildCapabilities(broker, { profile = {}, approve, onCall } = {})
       const descriptor = { id, description, inputSchema: schemaWithout(tool.inputSchema ?? { type: "object" }, Object.keys(constants)), replayPolicy };
       registry.register({
         descriptor,
+        ...offered(id),
         async execute(input, context) {
           context.signal?.throwIfAborted();
           const started = Date.now();
@@ -1152,6 +1155,7 @@ async function buildCapabilities(broker, { profile = {}, approve, onCall } = {})
     const replayPolicy = local.replayPolicy ?? "automatic";
     registry.register({
       descriptor: { id: local.id, description: local.description, inputSchema: local.inputSchema, replayPolicy },
+      ...offered(local.id),
       async execute(input, context) {
         context.signal?.throwIfAborted();
         const started = Date.now();

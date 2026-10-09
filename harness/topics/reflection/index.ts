@@ -260,6 +260,8 @@ function intentionOf(task: TaskFile["task"], generic: Intention): Intention {
 }
 
 export const REFLECTION_TOPIC: TopicDefinition = {
+    // The stage's tools only: what the conduct's gates refuse now is not shown (the guard refuses it still).
+    closed: (progress, _task) => REFLECTION_CONDUCT.evaluate(evidenceOf(progress)).refusing.flatMap((g) => g.capabilities),
     name: "reflection",
     tools: REFLECTION_TOOLS,
     // An adaptation answers this task's patterns, never replayed from another's.

@@ -392,6 +392,8 @@ function intentionOf(task: TaskFile["task"], generic: Intention): Intention {
 }
 
 export const RECOMMENDATION_TOPIC: TopicDefinition = {
+    // The stage's tools only: what the conduct's gates refuse now is not shown (the guard refuses it still).
+    closed: (progress, _task) => RECOMMENDATION_CONDUCT.evaluate(evidenceOf(progress)).refusing.flatMap((g) => g.capabilities),
     name: "recommendation",
     tools: RECOMMENDATION_TOOLS,
     // A recommendation is written for this task's finding, never replayed from another's.

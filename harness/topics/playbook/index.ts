@@ -250,6 +250,8 @@ function intentionOf(task: TaskFile["task"], generic: Intention): Intention {
 }
 
 export const PLAYBOOK_TOPIC: TopicDefinition = {
+    // The stage's tools only: what the conduct's gates refuse now is not shown (the guard refuses it still).
+    closed: (progress, _task) => PLAYBOOK_CONDUCT.evaluate(evidenceOf(progress)).refusing.flatMap((g) => g.capabilities),
     name: "playbook",
     tools: PLAYBOOK_TOOLS,
     // A playbook is written for this task's change, never replayed from another's.

@@ -52,6 +52,24 @@ export interface Verdict {
     status: VerdictStatus;
     findings: Finding[];
     note?: string;
+    /** What the verdict was given to judge, set by the harness (not the model): a CONSISTENT verdict means no more than this. */
+    scope?: string;
+}
+
+/**
+ * What a supervision has to judge (2026-10-09): the producers, the facts, the assumptions, hypotheses and symbols. A verdict is
+ * worth what it was given: CONSISTENT on one producer's facts alone says that producer agrees with itself, not that a model of
+ * the room agrees with the library (an outside review read "CONSISTENT" as more than that).
+ */
+export function scopeOf(input: SupervisionInput): { producers: string[]; facts: number; assumptions: number; hypotheses: number; symbols: number; fitted: number; text: string; acrossProducers: boolean } {
+    const producers = [...new Set(input.facts.map((f) => f.producer))];
+    const assumptions = list(input.assumptions).length;
+    const hypotheses = list(input.hypotheses).length;
+    const symbols = Object.keys(input.symbols ?? {}).length;
+    const fitted = list(input.fitted).length;
+    const acrossProducers = producers.length > 1 || assumptions + hypotheses + symbols + fitted > 0;
+    const text = `${input.facts.length} fact(s) from ${producers.length} producer(s) (${producers.join(", ") || "none"}), ${assumptions} assumption(s), ${hypotheses} hypothesis(es), ${symbols} symbol(s)${fitted ? `, ${fitted} fitted downstream` : ""}`;
+    return { producers, facts: input.facts.length, assumptions, hypotheses, symbols, fitted, text, acrossProducers };
 }
 
 export const VERDICT_SCHEMA = {
@@ -280,7 +298,7 @@ export async function supervise({ provider, input, attempts = 2 }: SuperviseOpti
         }
         const check = checkVerdict(decision.invocation.input, input);
         done.push({ n, ok: check.ok, problems: check.problems, proposed: JSON.stringify(decision.invocation.input).slice(0, 2000) });
-        if (check.ok) return { ok: true, verdict: decision.invocation.input as unknown as Verdict, attempts: done, provider: { name: provider.name, model: provider.model, family: provider.family } };
+        if (check.ok) return { ok: true, verdict: { ...(decision.invocation.input as unknown as Verdict), scope: `judged on ${scopeOf(input).text}` }, attempts: done, provider: { name: provider.name, model: provider.model, family: provider.family } };
     }
     return { ok: false, verdict: null, attempts: done, provider: { name: provider.name, model: provider.model, family: provider.family } };
 }

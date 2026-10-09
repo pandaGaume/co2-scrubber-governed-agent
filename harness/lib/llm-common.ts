@@ -111,7 +111,10 @@ export function observationText(input: PolicyFallbackInput): string {
     const lines = f.state && typeof f.state === "object" ? [`Observation at this step (state ${input.state.id}). The harness's brief: ${String(f.brief ?? "")}`, "Reasoning state (the harness's, rebuilt every step; the conversation is not replayed):", JSON.stringify(f.state, null, 0)] : [`Observation at this step (state ${input.state.id}):`, JSON.stringify(f, null, 0)];
     if (input.candidates.length) lines.push(`Learned decisions the harness considered but did not trust enough: ${input.candidates.map((c) => c.action.id).join(", ")}.`);
     if (input.recentFailures.length) lines.push(`Recent failures: ${input.recentFailures.map((e) => `${e.decision.invocation.capabilityId} -> ${e.result.error ?? "failed"}`).join("; ")}.`);
-    lines.push(appSays("chooseOne", { report: toApiName(APP.text.report), ask: toApiName(APP.text.ask) }));
+    // The crew's tools are named only to a loop that has them (2026-10-09: every factory and the supervisor were told to call
+    // crew__report and crew__ask, which none of them is given).
+    const given = new Set(input.allowedCapabilities.map((c) => c.id));
+    lines.push(given.has(APP.text.report) && given.has(APP.text.ask) ? appSays("chooseOne", { report: toApiName(APP.text.report), ask: toApiName(APP.text.ask) }) : appSays("chooseTools", {}));
     return lines.join("\n");
 }
 

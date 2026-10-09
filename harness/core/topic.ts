@@ -40,6 +40,12 @@ export interface TopicDefinition {
     /** The capabilities the loop may call on this topic; anything else is refused by the guard. */
     tools: ReadonlyArray<RegExp>;
     /**
+     * The capabilities the topic's conduct closes at this step (its playbook's gates refusing them now): not shown to the model,
+     * so a step's tools are its stage's (2026-10-09: the procedure factory showed 26 tools and the procedure's whole schemas,
+     * 13 000 prompt tokens, to a model that had to read the inventory first). The guard still refuses them if proposed.
+     */
+    closed?: (progress: Progress, task: TaskFile["task"]) => string[];
+    /**
      * The capabilities the builder decides every time, never replayed from the recipes (2026-09-28): those whose
      * input is made of this task's readings (the procedure submitted, the plugin written for this contract). The
      * rules every topic shares (no call repeated in a task, no question nor failure) are in `replay.ts`.

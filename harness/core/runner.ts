@@ -47,7 +47,7 @@ import { DEFAULT_BUDGET, topicFor, type TaskFile, type TaskState, type Topic } f
 import type { TopicDefinition } from "./topic.js";
 import { createWorkspaceObserver, isArtifact, listWorkshop, newProgress, type Progress } from "./workspace-observer.js";
 import { type ContractReport, type LibraryFact } from "./contracts.js";
-import { applyVerdict, supervisionOfRequest, type SupervisionInput, type Verdict, reviewDigest } from "../supervisor/supervisor.js";
+import { applyVerdict, scopeOf, supervisionOfRequest, type SupervisionInput, type Verdict, reviewDigest } from "../supervisor/supervisor.js";
 import { ONNX_TOPIC } from "../topics/onnx/index.js";
 import { PLAYBOOK_TOPIC } from "../topics/playbook/index.js";
 import { REFLECTION_TOPIC } from "../topics/reflection/index.js";
@@ -169,10 +169,17 @@ async function contractsOf(broker: Broker, task: TaskFile["task"], supervisor: R
         return input.report;
     }
     if (!supervisor) return input.report;
+    // Nothing across producers to judge (one producer's facts, no assumption, hypothesis, symbol or fitted variable): the rules have
+    // compared what can be compared, and a model would only restate them; it is not asked, and the log says on what the report stands.
+    const scope = scopeOf(input);
+    if (!scope.acrossProducers) {
+        log(`[factory] supervisor not asked: nothing across producers to judge (${scope.text}); the deterministic report stands`);
+        return input.report;
+    }
     try {
         const verdict = await supervisor(input);
         if (!verdict) return input.report;
-        log(`[factory] supervisor: ${verdict.status}${verdict.findings.length ? ` (${verdict.findings.map((f) => `${f.fact}: ${f.producer} to ${f.required_action.toLowerCase()}`).join("; ")})` : ""}`);
+        log(`[factory] supervisor: ${verdict.status}${verdict.findings.length ? ` (${verdict.findings.map((f) => `${f.fact}: ${f.producer} to ${f.required_action.toLowerCase()}`).join("; ")})` : ""}${verdict.scope ? `, ${verdict.scope}` : ""}`);
         return applyVerdict(input.report, verdict);
     } catch (e) {
         // A supervisor that cannot answer (no model, a timeout) leaves the deterministic report alone, and says so.
@@ -280,7 +287,19 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
     const EVIDENCE_CAP = 10;
     // A long answer goes whole to the workshop and the model reads its summary and its handle; written right after the step.
     let pendingArtifact: { path: string; text: string } | null = null;
+    // The stage's tools (TopicDefinition.closed): computed once per step, the conduct read on the progress as it stands.
+    let closedAt = "";
+    let closedNow = new Set<string>();
+    const closed = (): Set<string> => {
+        const key = `${progress.iteration}|${progress.phase}`;
+        if (key !== closedAt) {
+            closedAt = key;
+            closedNow = new Set(topic.closed?.(progress, task) ?? []);
+        }
+        return closedNow;
+    };
     const capabilities = await buildCapabilities(broker, {
+        available: (id) => !closed().has(id),
         profile: {
             included: topic.tools,
             // A document's name is filed under the task once: a builder that gives back the name a build answered (already under the task) is not prefixed again (the sixth passage lost ten steps on t/t/t/name).
@@ -380,7 +399,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             taskId,
             progress,
             () => topic.brief?.(progress, task) ?? "",
-            () => reasoningStateOf({ task, progress, budget, nextActions: capabilities.catalogue.map((c) => c.id), shelf: topic.shelf === false ? [] : progress.context.shelf, telemetry: progress.context.telemetry, contracts: progress.context.contracts, runsSpent: topic.runsSpent?.(progress), shown: topic.observation ? [topic.observation] : [], topic: topic.state?.(progress, task), memory: memoryNow() }),
+            () => reasoningStateOf({ task, progress, budget, nextActions: capabilities.catalogue.map((c) => c.id).filter((id) => !closed().has(id)), shelf: topic.shelf === false ? [] : progress.context.shelf, telemetry: progress.context.telemetry, contracts: progress.context.contracts, runsSpent: topic.runsSpent?.(progress), shown: topic.observation ? [topic.observation] : [], topic: topic.state?.(progress, task), memory: memoryNow() }),
             () => topic.key?.(progress) ?? "",
             contextMode,
         ),
@@ -430,6 +449,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
     await writeText(broker, taskId, "manifest.json", manifestText(manifest));
     onProgress?.(manifest);
     log(`[factory] task ${taskId}: topic ${topicId}, signature ${signature.id}, ${capabilities.catalogue.length} tools, recipes ${recipes.loaded ? `${recipes.experiences} experiences` : "none"}`);
+    runLog()?.taskStarted(taskId);
     runLog()?.section(`Task ${taskId} (${topicId}) starts`, { model: provider.model, provider: provider.name, settings: provider.settings ?? null, contextMode, budget, tools: capabilities.catalogue.map((c) => c.id), request: task });
 
     const lines: TraceLine[] = [];
