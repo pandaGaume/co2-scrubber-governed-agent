@@ -20,7 +20,7 @@ import { loadWords, missingWords } from "../harness/core/words.js";
 import { RECOVERY_PLAYBOOK } from "../slots/scenario/commissioning.js";
 import { PLAYBOOK, WORDS } from "../harness/topics/procedure/index.js";
 
-const PROOFS = ["procedureAccepted", "installationRead", "methodRead", "planPhase", "previous", "analysisAccepted", "planDeclared", "signedNorm"] as const;
+const PROOFS = ["procedureAccepted", "installationRead", "methodRead", "planPhase", "previous", "analysisAccepted", "signedNorm"] as const;
 
 const everyEvent = (): Evidence[] =>
     Array.from({ length: 1 << PROOFS.length }, (_, n) => Object.fromEntries(PROOFS.map((p, i) => [p, Boolean(n & (1 << i))])) as Evidence);
@@ -35,14 +35,13 @@ function stageByCode(e: Evidence): string {
     return "procedure";
 }
 
-/** The conduct refusals as the guard made them until 2026-09-29, by capability; since 2026-10-09, no plan, no procedure (a plan declared, or a signed norm read). */
+/** The conduct refusals as the guard made them until 2026-09-29, by capability. */
 function refusalsByCode(e: Evidence, capability: string): string[] {
     if (capability === "task.plan") return [...(e.installationRead ? [] : ["plan-needs-installation"]), ...(e.methodRead ? [] : ["plan-needs-method"])];
     if (capability !== "procedure.submit" && capability !== "procedure.revise") return [];
-    const noPlan = !e.planDeclared && !e.signedNorm ? ["procedure-needs-plan"] : [];
-    if (e.previous && !e.analysisAccepted && !e.procedureAccepted) return [...noPlan, "analysis-first"];
-    if (e.procedureAccepted) return [...noPlan, "already-accepted"];
-    return noPlan;
+    if (e.previous && !e.analysisAccepted && !e.procedureAccepted) return ["analysis-first"];
+    if (e.procedureAccepted) return ["already-accepted"];
+    return [];
 }
 
 describe("the procedure factory's playbook", () => {

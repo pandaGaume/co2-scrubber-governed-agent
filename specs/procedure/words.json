@@ -41,7 +41,6 @@
         "none": "no procedure is kept to revise (none checked yet in this task, or kept longer than {minutes} minutes): submit the whole procedure with procedure.submit",
         "noneAtExecution": "no procedure is kept to revise: submit the whole procedure with procedure.submit",
         "accepted": "the procedure is already accepted ({path}): nothing more to revise or submit; end with task.done, {path} as the artifact",
-        "needsPlan": "no plan, no procedure: follow a norm a person signed (a method card the library lists, read with library.read, its signature valid) and cite it in method, or declare the plan with task.plan",
         "kept": "whole, for {minutes} minutes after its check: send only what changes with procedure.revise"
     },
     "capabilities": {
@@ -53,7 +52,6 @@
     "guard": {
         "refused": "procedure refused: {problems}",
         "id": "id \"{id}\" must be lower case letters, digits and dashes (it names the file)",
-        "citeNorm": "the task has declared no plan, so the procedure follows the signed norm it read: cite it in method, \"{norm}\" exactly (signed by {by})",
         "shape": "{path} {says} (sent: {sent}); a change gives a field the value procedure.submit's schema describes for it",
         "quantity": "quantity \"{name}\": {reason} ({code})",
         "quantityUnitAlone": " The unit {unit} alone is one of {quantity} (physics.units_normalize with the unit alone says which quantity takes a unit).",

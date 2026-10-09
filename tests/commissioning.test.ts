@@ -175,8 +175,6 @@ describe("the procedure's guard, alone", () => {
             },
         } as unknown as Broker;
         const progress = newProgress();
-        // A plan declared (no plan, no procedure, 2026-10-09): what is under test here is the draft and the analysis, not the plan.
-        progress.plan = { selected_nodes: [], missing_capabilities: [] };
         progress.reads["biomed.presence"] = { at: "now", value: { modules: LAB_OCCUPIED.modules } as unknown as JsonValue };
         progress.sources.library.push("method-concentration-decay");
         const context = { broker, taskId: "t-revise", task: { objective: { required_outputs: [], constraints: {} }, observations: {}, data: [] } as unknown as TaskFile["task"], progress, runtimeSlot: "twin" };
@@ -228,7 +226,6 @@ describe("the procedure's guard, alone", () => {
         const later = newProgress();
         later.reads = progress.reads;
         later.sources = progress.sources;
-        later.plan = progress.plan;
         const laterContext = { ...context, progress: later };
         await PROCEDURE_TOPIC.guard!("procedure.submit", { ...withoutWatch, id: "decay-test-02", justifications } as unknown as JsonValue, laterContext);
         assert.ok(draftOf(later));
@@ -303,8 +300,6 @@ describe("the procedure's guard, alone", () => {
             },
         } as unknown as Broker;
         const progress = newProgress();
-        // A plan declared (no plan, no procedure, 2026-10-09): what is under test here is the draft and the analysis, not the plan.
-        progress.plan = { selected_nodes: [], missing_capabilities: [] };
         progress.reads["biomed.presence"] = { at: "now", value: { modules: LAB_OCCUPIED.modules } as unknown as JsonValue };
         progress.sources.library.push("method-concentration-decay");
         const previous = { procedureId: "decay-test-01", procedure: PROCEDURE, aborted: { condition: "vitals", reason: "FE-1: critical health alarm: chest pain", step: 1 }, minutesRun: 3 };
