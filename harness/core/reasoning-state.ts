@@ -115,6 +115,8 @@ export interface StateInputs {
     topic?: TopicState;
     /** The memory this step reads, when there is any (the runner's context builder). */
     memory?: JsonValue | null;
+    /** The topic's marching order, when it has a conduct (`TopicDefinition.marchingOrder`): shown first. */
+    marchingOrder?: JsonValue;
 }
 
 const str = (v: unknown): string => (typeof v === "string" ? v : v === undefined || v === null ? "" : JSON.stringify(v));
@@ -180,6 +182,8 @@ export function reasoningStateOf(inputs: StateInputs): ReasoningState {
     const { task, progress, budget, nextActions, shelf, telemetry, topic = {} } = inputs;
     const last = progress.lastCall;
     return {
+        // The order of the work and where the task stands in it, first: what a small model needs before anything else.
+        ...(inputs.marchingOrder ? { marchingOrder: inputs.marchingOrder } : {}),
         phase: progress.phase,
         iteration: progress.iteration,
         budget: {

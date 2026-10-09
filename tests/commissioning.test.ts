@@ -416,15 +416,15 @@ describe("the register, the inventory, the decay", () => {
         assert.equal(searchLibrary(docs, "time constant equilibrium")[0]?.id, "co2-mass-balance");
         const task = { objective: { required_outputs: [{ name: "V_lab", quantity: "Volume", unit: "m3" }], constraints: {} }, observations: {} } as unknown as Parameters<typeof briefOf>[1];
         const progress = newProgress();
-        assert.match(briefOf(progress, task), /^Stage 1 of 5, the situation.*biomed\.presence/);
+        assert.match(briefOf(progress, task), /^Stage 1 of 6, the situation.*biomed\.presence/);
         progress.reads["factory.inventory"] = { at: "t", value: { unknowns: [{ what: "served volume of lab", quantity: "Volume", unit: "m3", how: "measured" }] } };
-        assert.match(briefOf(progress, task), /^Stage 2 of 5, the method.*The quantity to measure: Volume\. Find the methods that measure them \(library\.methods\)/);
+        assert.match(briefOf(progress, task), /^Stage 2 of 6, the method.*The quantity to measure: Volume\. Find the methods that measure them \(library\.methods\)/);
         // A card is one the library listed for the quantity (library.methods): a document's name says nothing of it.
         progress.reads["library.methods"] = { at: "t", value: { methods: [{ id: "method-concentration-decay" }] } };
         progress.reads["library.read"] = { at: "t", value: { id: "method-concentration-decay" } };
-        assert.match(briefOf(progress, task), /^Stage 3 of 5, the plan/);
+        assert.match(briefOf(progress, task), /^Stage 3 of 6, the plan/);
         progress.phase = "build";
-        assert.match(briefOf(progress, task), /^Stage 4 of 5, the procedure\. Write it by the rules of application of method-concentration-decay/);
+        assert.match(briefOf(progress, task), /^Stage 5 of 6, the procedure\. Write it by the rules of application of method-concentration-decay/);
         // The brief names the tools, never what a good procedure concludes from them.
         assert.doesNotMatch(briefOf(newProgress(), task) + briefOf(progress, task), /monitor the|monitoring of|30 ?%|never stop/i);
     });

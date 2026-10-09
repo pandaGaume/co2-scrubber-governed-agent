@@ -399,7 +399,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             taskId,
             progress,
             () => topic.brief?.(progress, task) ?? "",
-            () => reasoningStateOf({ task, progress, budget, nextActions: capabilities.catalogue.map((c) => c.id).filter((id) => !closed().has(id)), shelf: topic.shelf === false ? [] : progress.context.shelf, telemetry: progress.context.telemetry, contracts: progress.context.contracts, runsSpent: topic.runsSpent?.(progress), shown: topic.observation ? [topic.observation] : [], topic: topic.state?.(progress, task), memory: memoryNow() }),
+            () => reasoningStateOf({ task, progress, budget, nextActions: capabilities.catalogue.map((c) => c.id).filter((id) => !closed().has(id)), shelf: topic.shelf === false ? [] : progress.context.shelf, telemetry: progress.context.telemetry, contracts: progress.context.contracts, runsSpent: topic.runsSpent?.(progress), shown: topic.observation ? [topic.observation] : [], topic: topic.state?.(progress, task), memory: memoryNow(), marchingOrder: topic.marchingOrder?.(progress, task) }),
             () => topic.key?.(progress) ?? "",
             contextMode,
         ),

@@ -66,6 +66,17 @@ describe("the procedure factory's playbook", () => {
         assert.deepEqual(missingWords(WORDS, PLAYBOOK.words()), []);
     });
 
+    it("gives its marching order: every stage once, in order, each with its goal and tools, the current one where the graph is (2026-10-09)", () => {
+        for (const e of everyEvent()) {
+            const order = PLAYBOOK.marchingOrder(e);
+            assert.deepEqual(order.map((s) => s.stage), ["situation", "method", "plan", "analysis", "procedure", "hand-over"]);
+            assert.ok(order.every((s) => s.goal && s.tools.length), "a goal and tools for every stage");
+            const here = order.findIndex((s) => s.status === "current");
+            assert.equal(order[here].stage, PLAYBOOK.evaluate(e).stage.id, JSON.stringify(e));
+            assert.ok(order.every((s, i) => s.status === (i < here ? "passed" : i === here ? "current" : "next")));
+        }
+    });
+
     it("is fast: the mechanism that runs the harness, one pass per event", () => {
         const events = everyEvent();
         const n = 2000;

@@ -60,6 +60,21 @@ export interface Saying {
     bag: Record<string, unknown>;
     view?: string;
     vars?: Record<string, SayVar>;
+    /** A stage's goal in one sentence, for the marching order the model reads (`marchingOrder`). */
+    goal?: string;
+    /** The capabilities that serve the stage, for the marching order. */
+    tools?: string[];
+    /** Where the stage stands in the marching order (1 first); the file's order when absent. */
+    order?: number;
+}
+
+/** One stage of the marching order: what it is for, with what, and where the task stands on it. */
+export interface MarchingStep {
+    step: number;
+    stage: string;
+    goal: string;
+    tools: string[];
+    status: "passed" | "current" | "next";
 }
 export interface Gate extends Saying {
     capabilities: string[];
@@ -171,7 +186,17 @@ class GateNode extends ConductNode {
 
 const sayingOf = (id: string, bag: Record<string, unknown>, file: string): Saying => {
     if (typeof bag.says !== "string") throw new Error(`${file}: "${id}" says nothing (bag.says, a key of the words)`);
-    return { id, says: bag.says, bag, ...(typeof bag.action === "string" ? { action: bag.action } : {}), ...(typeof bag.view === "string" ? { view: bag.view } : {}), ...(bag.vars && typeof bag.vars === "object" ? { vars: bag.vars as Record<string, SayVar> } : {}) };
+    return {
+        id,
+        says: bag.says,
+        bag,
+        ...(typeof bag.action === "string" ? { action: bag.action } : {}),
+        ...(typeof bag.view === "string" ? { view: bag.view } : {}),
+        ...(bag.vars && typeof bag.vars === "object" ? { vars: bag.vars as Record<string, SayVar> } : {}),
+        ...(typeof bag.goal === "string" ? { goal: bag.goal } : {}),
+        ...(Array.isArray(bag.tools) ? { tools: bag.tools.map(String) } : {}),
+        ...(typeof bag.order === "number" ? { order: bag.order } : {}),
+    };
 };
 
 const portOf = (end: string, file: string): [string, string] => {
@@ -267,6 +292,18 @@ export class Playbook {
         const stage = this.stages.find((s) => s.id === session.active[0]) as Saying;
         const refusing = session.refusing.map((id) => this.gates[this.gateOrder.get(id) as number]).sort((a, b) => (this.gateOrder.get(a.id) ?? 0) - (this.gateOrder.get(b.id) ?? 0));
         return { stage, refusing };
+    }
+
+    /**
+     * The marching order (2026-10-09): every stage in order, each with its goal, the tools that serve it, and where the task stands
+     * on it (passed, current, next), read off the same graph that judges. A small model given only the current stage's brief fails
+     * on the order of the work (a plan or a procedure first?); given the whole order and its place in it, it follows it.
+     */
+    marchingOrder(evidence: Evidence): MarchingStep[] {
+        const current = this.evaluate(evidence).stage.id;
+        const ordered = this.stages.map((s, i) => ({ s, at: s.order ?? i + 1 })).sort((a, b) => a.at - b.at);
+        const here = ordered.findIndex((x) => x.s.id === current);
+        return ordered.map((x, i) => ({ step: i + 1, stage: x.s.id, goal: x.s.goal ?? "", tools: x.s.tools ?? [], status: i < here ? "passed" : i === here ? "current" : "next" }));
     }
 
     /** The keys of the words the playbook says: the conformance test checks the words hold them. */

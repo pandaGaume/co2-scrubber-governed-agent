@@ -37,6 +37,12 @@ export interface TopicContext {
 
 export interface TopicDefinition {
     name: Topic;
+    /**
+     * The marching order the model reads first in its state (2026-10-09): the stages of the work in order, each with its goal and its
+     * tools, where the task stands on each (passed, current, next), and what is closed now and why; read off the conduct graph that
+     * judges. A small model given only the current stage fails on the order of the work.
+     */
+    marchingOrder?: (progress: Progress, task: TaskFile["task"]) => JsonValue;
     /** The capabilities the loop may call on this topic; anything else is refused by the guard. */
     tools: ReadonlyArray<RegExp>;
     /**

@@ -224,6 +224,7 @@ This is the centre of the harness. Since 2026-09-25 no factory replays its trans
 
 | field | what it holds | written by |
 |---|---|---|
+| `marchingOrder` | first in the state, when the topic has a conduct: every stage of the work in order, each with its goal (one sentence) and the tools that serve it, and where the task stands on each (`passed`, `current`, `next`); `closedNow`, the tools closed at this step and why | the topic (`TopicDefinition.marchingOrder`), read off the conduct graph that judges (`Playbook.marchingOrder`); the goals, tools and order are the playbook's data (`bag.goal`, `bag.tools`, `bag.order`) |
 | `brief` | the harness's words for this step: where the work stands, what is still to be found, which tools do it; first in the message | the topic (`briefOf`), from the progress |
 | `phase`, `iteration`, `budget` | `plan` or `build`; the steps and sandbox runs left; never the clock | the runner |
 | `invariants` | what does not move during the task: the objective and its outputs, the thresholds, the constraints; the known constants with their status (documented, band, device) and source; what is missing; the hypotheses; who and what was observed (persons; devices with what they let one command); the telemetry's columns and span; the shelf (the reference graphs, each with its variables and their status: known, device, fitted with bounds, band) unless the topic leaves it out; the contract report of the facts | the runner, once at the start |
@@ -332,6 +333,12 @@ Then the schema: the capability's input schema (Ajv). A tool's schema is the slo
 The validator is the topic's: the claimed artifact is the very file the code built (same path, same sha256): the candidate `graph.evaluate` kept and that passed; the procedure the guard accepted; the plugin artifact the forge signed. A plan that declares a capability missing refuses the hand-over of a graph. The claims that go with the proposal are built by code from what was measured (a candidate's parameters with value, unit, name and status; a plugin's tests, checks and acceptance), and the model's summary is a note beside them.
 
 ---
+
+### 5.1 The marching order (2026-10-09)
+
+A model given only the current stage's brief has to guess the order of the work: a strong model guesses it, a small one fails on it every time (Nemotron Nano asked the commander to authorise a procedure the guard had never accepted, after declaring a plan that named the device as a node). The conduct graph that judges each call already holds the order: its stages in sequence, what passes each one, what each gate closes. The state now shows it whole, first, as data the model can follow: the stages in order with a goal in one sentence and their tools, where the task stands on each, and what is closed now with the reason. The socle says how to work from it: on the `current` stage only, with its tools, never back to a passed one, never ahead to a next one; take from the state what it holds, call a tool only for what it does not; after a refusal, change what each point names and what depends on it, nothing else.
+
+It is the same graph that judges and that guides: what the model reads as the order is what the guard enforces, and a stage's tools are the ones a step offers (chapter 6). No second description of the work can drift from the first.
 
 ## 8. The topics: what specialises the same loop
 

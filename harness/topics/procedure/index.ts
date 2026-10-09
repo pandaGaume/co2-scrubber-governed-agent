@@ -880,7 +880,18 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
     return sayingText(PLAYBOOK.evaluate(evidenceOf(progress, task)).stage, w, viewsOf(progress, task));
 }
 
+/** The marching order the state shows (2026-10-09): every stage with its goal and tools and where the task is, and what is closed now, with why. */
+export function marchingOrderOf(progress: Progress, task: TaskFile["task"]): JsonValue {
+    const evidence = evidenceOf(progress, task);
+    const views = viewsOf(progress, task);
+    return {
+        stages: PLAYBOOK.marchingOrder(evidence),
+        closedNow: PLAYBOOK.evaluate(evidence).refusing.map((g) => ({ tools: g.capabilities, why: sayingText(g, w, views) })),
+    } as unknown as JsonValue;
+}
+
 export const PROCEDURE_TOPIC: TopicDefinition = {
+    marchingOrder: marchingOrderOf,
     // The stage's tools only: what the conduct's gates refuse now is not shown (the guard refuses it still).
     closed: (progress, task) => PLAYBOOK.evaluate(evidenceOf(progress, task)).refusing.flatMap((g) => g.capabilities),
     name: "procedure",
