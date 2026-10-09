@@ -1,4 +1,9 @@
 {
+    "doneWhen": {
+        "plan": "a plan declared with task.plan, the output missing to the topic \"diagnosis\"",
+        "accepted": "the diagnosis accepted by the guard",
+        "handedOver": "handed over with task.done, the accepted file as the artifact (kind \"diagnosis\")"
+    },
     "note": "What the diagnosis factory says to its model and in its refusals (2026-10-01, E5.2): the code fills the holes {name} and says nothing of its own.",
     "intention": "Diagnose the lead {id} of the harness's evaluator: {lead}. Say what really caused it, its class, whether it is still true, the nodes of the harness's graph it rests on, and predictions the harness checks. You decide nothing: the harness runs your predictions and computes the confidence.",
     "capabilities": {

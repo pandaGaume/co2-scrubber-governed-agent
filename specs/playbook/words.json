@@ -1,4 +1,9 @@
 {
+    "doneWhen": {
+        "plan": "a plan declared with task.plan, the output missing to the topic \"playbook\"",
+        "accepted": "the playbook accepted by the guard",
+        "handedOver": "handed over with task.done, the accepted file as the artifact (kind \"playbook\")"
+    },
     "note": "What the playbook factory says to its model and in its refusals (2026-09-29): the code fills the holes {name} and says nothing of its own.",
     "intention": "Write the playbook {id} ({title}): {change}. It is a proposal: it conducts nothing until an authorised signatory signs it.",
     "capabilities": {

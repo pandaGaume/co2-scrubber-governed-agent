@@ -21,7 +21,7 @@ import { fromRoot } from "../../../lib/paths.js";
 import { statementText } from "../../../lib/rules-register.js";
 import { withBase } from "../../core/base.js";
 import type { LocalCapability } from "../../core/capabilities.js";
-import { loadPlaybook, sayingText, type Evidence } from "../../core/conduct.js";
+import { conductView, loadPlaybook, sayingText, type Evidence } from "../../core/conduct.js";
 import { JUSTIFICATIONS_SCHEMA, type Justified } from "../../core/justify.js";
 import type { TopicState } from "../../core/reasoning-state.js";
 import type { TaskFile } from "../../core/task.js";
@@ -392,6 +392,18 @@ function intentionOf(task: TaskFile["task"], generic: Intention): Intention {
 }
 
 export const RECOMMENDATION_TOPIC: TopicDefinition = {
+    // The marching order the state shows first (conduct.ts, conductView), and what must hold before handing over.
+    marchingOrder: (progress, task) => {
+        const e = evidenceOf(progress);
+        return {
+            ...conductView(RECOMMENDATION_CONDUCT, e, w, viewsOf(progress, task)),
+            doneWhen: [
+                { item: w("doneWhen.plan"), met: Boolean(e.planDeclared) },
+                { item: w("doneWhen.accepted"), met: Boolean(e.recommendationAccepted) },
+                { item: w("doneWhen.handedOver"), met: progress.done !== null },
+            ],
+        } as unknown as JsonValue;
+    },
     // The stage's tools only: what the conduct's gates refuse now is not shown (the guard refuses it still).
     closed: (progress, _task) => RECOMMENDATION_CONDUCT.evaluate(evidenceOf(progress)).refusing.flatMap((g) => g.capabilities),
     name: "recommendation",

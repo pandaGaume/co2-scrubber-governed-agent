@@ -1,4 +1,9 @@
 {
+    "doneWhen": {
+        "plan": "a plan declared with task.plan, the output missing to the topic \"recommendation\"",
+        "accepted": "the recommendation accepted by the guard",
+        "handedOver": "handed over with task.done, the accepted file as the artifact (kind \"recommendation\")"
+    },
     "note": "What the recommendation factory says to its model and in its refusals (2026-10-01): the code fills the holes {name} and says nothing of its own.",
     "intention": "Write the recommendation {id} for the evaluator's finding: {finding}. It is a proposal: it changes nothing until an authorised signatory signs it, and a signed one is measured in a fork before a person commits it.",
     "capabilities": {

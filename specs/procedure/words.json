@@ -37,6 +37,11 @@
         "analysed": " The analysis of the aborted test is accepted (field \"analysis\"): the procedure must change what it names ({paths}).",
         "safetyBounds": ": the state says, for each of them, the fact its signed rules bound it by and on which side, which is the single fact to cite, by its id alone as the reference (the facts that support the value and the engineering rationale go in reason), or, for one no rule binds, the signed facts the guard accepts when the value respects their side (field \"safetyBounds\"); a path names a step by its n and an abort condition by its id, never by its position in the list (steps.1.speedPercent, abort.co2.threshold)"
     },
+    "doneWhen": {
+        "plan": "a plan: declared with task.plan, or the signed norm read (the method card a person signed)",
+        "accepted": "the procedure accepted by the guard (its limits, its steps, its aborts, the watch of the occupants and every justification checked)",
+        "handedOver": "handed over with task.done, the accepted procedure's file as the artifact"
+    },
     "draft": {
         "none": "no procedure is kept to revise (none checked yet in this task, or kept longer than {minutes} minutes): submit the whole procedure with procedure.submit",
         "noneAtExecution": "no procedure is kept to revise: submit the whole procedure with procedure.submit",

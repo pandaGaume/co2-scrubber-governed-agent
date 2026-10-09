@@ -318,6 +318,21 @@ export class Playbook {
     }
 }
 
+/**
+ * What the state shows of a topic's conduct (2026-10-09): the marching order, the tools of the current stage that may be called now,
+ * and what is closed now with why, said in the topic's words. Each topic adds what must hold before handing over (`doneWhen`).
+ */
+export function conductView(playbook: Playbook, evidence: Evidence, say: (key: string, vars?: Record<string, string | number>) => string, views: Record<string, () => Record<string, string | number>>): { stages: MarchingStep[]; allowedNow: string[]; closedNow: Array<{ tools: string[]; why: string }> } {
+    const stages = playbook.marchingOrder(evidence);
+    const refusing = playbook.evaluate(evidence).refusing;
+    const closed = new Set(refusing.flatMap((g) => g.capabilities));
+    return {
+        stages,
+        allowedNow: (stages.find((s) => s.status === "current")?.tools ?? []).filter((t) => !closed.has(t)),
+        closedNow: refusing.map((g) => ({ tools: g.capabilities, why: sayingText(g, say, views) })),
+    };
+}
+
 export function loadPlaybook(file: string): Playbook {
     return new Playbook(file, JSON.parse(readFileSync(fromRoot(...file.split("/")), "utf8")) as PlaybookFile);
 }

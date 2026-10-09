@@ -35,6 +35,7 @@ import { NEVER_REPLAYED, proposalKey, restrictReplays } from "./replay.js";
 import { justificationHelp, noteSources } from "./justify.js";
 import { noteRefusal, STUCK_AFTER } from "./problems.js";
 import { readMeaning, unmoved } from "./interpreter.js";
+import { dependentsOf } from "./rules.js";
 import { runLog, type StepEntry } from "../lib/run-log.js";
 import { cutAtOutputLimit, truncatedRefusal } from "../lib/llm-common.js";
 import { episodeOf, type Episode, type StepLike } from "./episodes.js";
@@ -627,6 +628,8 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             // a safety constant the guard found justified by no fact the rules name says its unit and the facts to cite there.
             const streakBefore = progress.refusal ? { ...progress.refusal } : null;
             const streak = noteRefusal(progress, exchange.proposedCapabilityId, failed ?? "refused");
+            // What depends on each point, when the topic's guard did not say (dependentsOf with no rules): a value goes with its justification.
+            if (topic.justified) for (const p of streak.problems) if (p.path && !p.dependentPaths) p.dependentPaths = dependentsOf(null, p.path, p.kind);
             // The meaning (interpreter.ts, the second trigger): refused again at a path whose value did not move. The form passed, so the
             // form is not the problem: a capable model reads what the call meant, and that reading is the next step's decision, through
             // the whole loop; this refusal does not count toward STUCK; once per capability and points.

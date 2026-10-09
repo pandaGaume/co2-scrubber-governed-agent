@@ -55,13 +55,13 @@ import * as path from "node:path";
 import { fromRoot } from "../../../lib/paths.js";
 import { checkProcedure, constantsOf, envelopeOf, FORMAT, problemLines, rulesAndFacts, safetyOf, type MeasuredStart, type PresenceRead, type ProcedureCheck } from "./check.js";
 import { checkJustifications, JUSTIFICATIONS_SCHEMA, justificationProblems as commonJustificationProblems, type Justified, type ReadSources } from "../../core/justify.js";
-import { factsBounding, leavesOf, matches, valueAt, type RulesDocument } from "../../core/rules.js";
+import { dependentsOf, factsBounding, leavesOf, matches, valueAt, type RulesDocument } from "../../core/rules.js";
 import { loadWords, say, viewOf } from "../../core/words.js";
 import { problemOf } from "../../core/problems.js";
 import { coerce, schemaError } from "../../core/interpreter.js";
 import { physics } from "../../core/physics.js";
 import { signatureOf } from "../../lib/signatures.js";
-import { loadPlaybook, sayingText, type Evidence } from "../../core/conduct.js";
+import { conductView, loadPlaybook, sayingText, type Evidence } from "../../core/conduct.js";
 export { constantsOf } from "./check.js";
 
 /** A proposal as the topic handles it: whatever the format's schema describes; the topic reads it only by the format's paths. */
@@ -78,7 +78,7 @@ export const PROCEDURE_WORD_KEYS = [
     "brief.handOver", "brief.situation", "brief.method", "brief.methodListed", "brief.methodFind", "brief.methodNotACard", "brief.plan", "brief.planOutput", "brief.planUnit",
     "brief.procedure", "brief.safetyBounds", "brief.presenceRead", "brief.presenceUnread", "brief.measured", "brief.measuredSource", "brief.refused", "brief.refusedKept", "brief.refusedWhole",
     "intentionPrevious", "requirements.analysisAccepted", "brief.analysis", "brief.analysed", "analysis.first", "analysis.noPrevious", "analysis.cause", "analysis.path", "analysis.unchanged", "analysis.done", "capabilities.analyse",
-    "draft.none", "draft.noneAtExecution", "draft.accepted", "draft.kept", "brief.planIsNorm", "capabilities.submit", "capabilities.revise", "capabilities.reviseChanges", "guard.refused", "guard.id", "guard.quantity", "guard.quantityUnitAlone", "guard.quantityDeclared",
+    "draft.none", "draft.noneAtExecution", "draft.accepted", "draft.kept", "brief.planIsNorm", "doneWhen.plan", "doneWhen.accepted", "doneWhen.handedOver", "capabilities.submit", "capabilities.revise", "capabilities.reviseChanges", "guard.refused", "guard.id", "guard.quantity", "guard.quantityUnitAlone", "guard.quantityDeclared",
 ];
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -605,7 +605,8 @@ async function guardProcedure(capabilityId: string, input: JsonValue, context: T
     if (!check.ok)
         context.progress.pendingProblems = check.problems.map((p) => {
             const path = p.path ?? problemOf(`${p.kind}: ${p.message}`).path;
-            return { says: `${p.kind}: ${p.message}`, kind: p.kind, ...(path ? { path } : {}), ...(p.expected ? { expected: p.expected } : {}), ...(p.got !== undefined ? { got: p.got } : {}) };
+            const dependentPaths = path ? dependentsOf(rules, path, p.kind) : [];
+            return { says: `${p.kind}: ${p.message}`, kind: p.kind, ...(path ? { path } : {}), ...(p.expected ? { expected: p.expected } : {}), ...(p.got !== undefined ? { got: p.got } : {}), ...(dependentPaths.length ? { dependentPaths } : {}) };
         });
     // An accepted submission is recorded by the capability, after execution; a refusal is recorded here, since nothing executes.
     // Nothing the observation reads is written for an accepted decision: a state that moved between the decision and its execution makes it stale.
@@ -858,14 +859,21 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
     return sayingText(PLAYBOOK.evaluate(evidenceOf(progress, task)).stage, w, viewsOf(progress, task));
 }
 
-/** The marching order the state shows (2026-10-09): every stage with its goal and tools and where the task is, and what is closed now, with why. */
+/**
+ * The marching order the state shows (2026-10-09): every stage with its goal and tools and where the task is; the tools of the current
+ * stage that may be called now; what is closed now, with why; and what must hold before handing over, each item met or not.
+ */
 export function marchingOrderOf(progress: Progress, task: TaskFile["task"]): JsonValue {
-    const evidence = evidenceOf(progress, task);
-    const views = viewsOf(progress, task);
-    return {
-        stages: PLAYBOOK.marchingOrder(evidence),
-        closedNow: PLAYBOOK.evaluate(evidence).refusing.map((g) => ({ tools: g.capabilities, why: sayingText(g, w, views) })),
-    } as unknown as JsonValue;
+    const r = requirementsOf(progress, task);
+    const doneWhen = [
+        ...FORMAT.requirements.map((req) => ({ item: w(`requirements.${req}Read`), met: Boolean(r[`${req}Read`]) })),
+        { item: w("requirements.methodRead"), met: Boolean(r.methodRead) },
+        ...(previousOf(task) ? [{ item: w("requirements.analysisAccepted"), met: Boolean(r.analysisAccepted) }] : []),
+        { item: w("doneWhen.plan"), met: Boolean(r.planDeclared || r.signedNorm) },
+        { item: w("doneWhen.accepted"), met: Boolean(r.procedureAccepted) },
+        { item: w("doneWhen.handedOver"), met: progress.done !== null },
+    ];
+    return { ...conductView(PLAYBOOK, evidenceOf(progress, task), w, viewsOf(progress, task)), doneWhen } as unknown as JsonValue;
 }
 
 export const PROCEDURE_TOPIC: TopicDefinition = {

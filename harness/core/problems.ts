@@ -23,6 +23,8 @@ export interface Problem {
     expected?: string;
     /** What was sent there. */
     got?: string;
+    /** What must change with this point, nothing else (`rules.ts`, dependentsOf): its justification, the constants the rules compare it with. */
+    dependentPaths?: string[];
 }
 
 /** What the next prompt says of the refusals of this task: the last one's problems, and how many refusals in a row were on the same points. */

@@ -304,6 +304,24 @@ export function factsBounding(doc: RulesDocument | null, constant: string, seen:
     return [...out];
 }
 
+/**
+ * What depends on a refused point (2026-10-09): what must change with it, and nothing else. A value goes with its justification (and a
+ * justification with the value it justifies); a constant the signed rules compare with another (a maximum under an abort, a sum of
+ * durations under a ceiling) goes with that other. Read off the rules a person signed, never guessed.
+ */
+export function dependentsOf(doc: RulesDocument | null, path: string, kind?: string): string[] {
+    const out = new Set<string>([kind === "justification" ? path : `justifications[constant=${path}]`]);
+    for (const rule of doc?.rules ?? []) {
+        if (!("compare" in rule)) continue;
+        const { subject, sum, constant } = rule.compare;
+        const side = subject ?? sum;
+        if (side && constant && matches(path, side)) out.add(constant);
+        if (side && constant && matches(path, constant)) out.add(side);
+    }
+    if (kind !== "justification") out.delete(path);
+    return [...out];
+}
+
 /** The problem a rules document unsigned, or changed since it was signed, makes of every proposal: nothing is judged by rules nobody signed. */
 export function unsignedRules(doc: RulesDocument): RuleProblem | null {
     const signing = `a person reviews it and signs it on the library page of the control room (library.html), or: npm run library:sign -- ${doc.document} "<name>"`;

@@ -1,4 +1,9 @@
 {
+    "doneWhen": {
+        "plan": "a plan declared with task.plan, the output missing to the topic \"reflection\"",
+        "accepted": "the answer (a memory entry or a playbook patch) accepted by the guard",
+        "handedOver": "handed over with task.done, the accepted file as the artifact (kind \"adaptation\")"
+    },
     "note": "What the reflection factory says to its model and in its refusals (2026-09-29): the code fills the holes {name} and says nothing of its own.",
     "intention": "Read the patterns of the traces ({count}) and the recent episodes they come from, and answer them with one thing: an entry of a factory's memory (a rule learned from what was refused and what was then accepted), or an adaptation of a playbook's conduct. It is taken in a fork only, and measured there.",
     "capabilities": {
