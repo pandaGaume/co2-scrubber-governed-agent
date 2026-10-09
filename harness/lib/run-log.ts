@@ -111,6 +111,8 @@ export class RunLog {
     private readonly firstSeen = new Map<string, number>();
     private steps = 0;
     private closed = false;
+    /** How each harness task of the test ended, for the README. */
+    private readonly tasks: string[] = [];
 
     constructor(private readonly meta: RunLogMeta) {
         this.id = `${meta.name.replace(/[^a-z0-9-]+/gi, "-").toLowerCase()}-${stamp(this.started)}-${Math.random().toString(36).slice(2, 6)}`;
@@ -145,6 +147,7 @@ export class RunLog {
             "",
             outcome ? outcome.text : "_running: the outcome is written when the test ends._",
             "",
+            ...(this.tasks.length ? ["### Harness tasks", "", ...this.tasks.map((t) => `- ${t}`), ""] : []),
             ...(models.length ? ["## Language model calls", "", "| model | calls | prompt tokens | served from cache | completion tokens |", "|---|---|---|---|---|", ...models, ""] : []),
             `The whole account, step by step and call by call, is in [log.md](log.md) (${this.steps} harness steps, ${this.llmCalls} language model calls).`,
             "",
@@ -209,6 +212,12 @@ export class RunLog {
         });
         out.push("**answer**:", "", json(response), "");
         this.append(out.join("\n"));
+    }
+
+    /** A harness task ended: kept for the README's outcome. */
+    taskEnded(taskId: string, topic: string, model: string, state: string, ended: string, steps: number): void {
+        this.tasks.push(`${taskId} (${topic}, ${model}): ${state} after ${steps} step(s): ${ended.slice(0, 400)}`);
+        this.writeReadme(null);
     }
 
     /** Ends the test: its outcome into the README. */

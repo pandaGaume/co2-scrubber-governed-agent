@@ -675,6 +675,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
     const finalPhase = progress.phase as string;
     manifest.state = finalPhase === "done" ? "done" : finalPhase === "waiting" ? "waiting" : "failed";
     runLog()?.section(`Task ${taskId} (${topicId}) ends: ${finalPhase}`, { ended: ended ?? null, steps: progress.iteration, telemetry });
+    runLog()?.taskEnded(taskId, topicId, provider.model, finalPhase, ended ?? progress.failure ?? finalPhase, progress.iteration);
     manifest.ended = ended ?? (finalPhase === "done" ? `contract held after ${progress.iteration} step(s)` : finalPhase === "waiting" ? (progress.failure ?? "waiting for the commander") : progress.failure !== null ? `the builder gave up: ${progress.failure}` : "not done");
     manifest.endedAt = new Date().toISOString();
     await writeText(broker, taskId, "trace.jsonl", lines.map((l) => JSON.stringify(l)).join("\n") + "\n");
