@@ -1,0 +1,210 @@
+{
+  "note": "The zones the harness map's page frames, by the labels of their nodes, and the tint of each proposed node (scripts/build-harness-map.ts).",
+  "zones": [
+    {
+      "id": "acteurs",
+      "label": "personnes, station, broker",
+      "members": [
+        "HUMAIN  commandant : autorise chaque test, répond dans le panneau de Mother",
+        "HUMAIN  signataire autorisé : signe normes, règles, faits, playbooks",
+        "STATION · MOTHER  registre, mises en service, questions, relais des procédures",
+        "PAGES  salle de contrôle, scénarios, moniteur médical, cette carte",
+        "BROKER MCP  rôles, jetons, politique ; chaque slot est un fournisseur d'outils"
+      ]
+    },
+    {
+      "id": "slots",
+      "label": "slots, modèles",
+      "members": [
+        "SLOT library  normes, faits, règles signés ; justify",
+        "SLOT physics  unités, relations ; cite",
+        "SLOT workspace  fichiers des tâches",
+        "SLOT twin · forge  catalogue, bac à sable, code",
+        "SLOT biomed  présence, moniteur",
+        "SLOT factory  demandes, tâches, inventaire",
+        "SLOT scenario  joue les mises en service",
+        "SLOT scrubber  carte ESP32, Modbus : dernière autorité",
+        "SLOT reasoner  un modèle par usage (routing.json)",
+        "MONDE RÉEL  turbine, capteurs de CO2",
+        "MODÈLE  Nemotron 3 Super : agent, procédure, graphe, code, Observer, Superviseur, compose, sens",
+        "MODÈLE  Nemotron 3 Nano, profil du serveur : diagnostic, playbook, réflexion, recommandation, onnx, forme",
+        "MODÈLE  Nemotron 3 Ultra : essayé le 8 octobre, écarté"
+      ]
+    },
+    {
+      "id": "runner",
+      "label": "runner",
+      "members": [
+        "RUNNER  contexte lu une fois : étagère, télémétrie, rapport de contrats",
+        "RUNNER  Superviseur de contrats appelé quand plusieurs producteurs donnent des faits",
+        "RUNNER  catalogue : outils du broker et locaux, moins ceux que la conduite ferme",
+        "RUNNER  un pas par appel, jusqu'à task.done accepté par le validateur ou le budget épuisé",
+        "RUNNER  fins anticipées : SOURCE_CONFLICT, STUCK, MISSING_CAPABILITY, WAITING",
+        "RUNNER  fin : trace, manifeste, proposition à la station, recettes, journal .logs"
+      ]
+    },
+    {
+      "id": "loop-a",
+      "label": "étapes 1 à 6",
+      "members": [
+        "1  observe : l'état reconstruit",
+        "2  context : la clé de mémoire",
+        "3  lookup : les décisions apprises",
+        "4  gate : rejouer ou demander",
+        "5  request : ce qui part au modèle",
+        "6  reason : le modèle décide",
+        "DÉCISIONS APPRISES  recettes par signature de tâche ; une décision promue est rejouée sans modèle",
+        "FOURNISSEUR  slot reasoner : profil, protocole, modèle par usage ; l'état, pas la conversation",
+        "LOT D'APPELS  jusqu'à 4 appels par réponse, passés un à un, rendus ensemble",
+        "RÉPONSE COUPÉE  relance sans réflexion ; appels écrits en texte relus",
+        "JOURNAL DE TEST  chaque appel au modèle : entrées, parties en cache, sorties (.logs)",
+        "PROPOSÉ · ICI  request recevrait le prompt du fabricant (plus bas)",
+        "PROPOSÉ · ICI  le tour du modèle suivrait la boucle cognitive (plus bas)"
+      ]
+    },
+    {
+      "id": "etat",
+      "label": "état",
+      "members": [
+        "ÉTAT  ordre de marche : étapes, allowedNow, closedNow, doneWhen",
+        "ÉTAT  invariants : objectif, constantes connues (statut, source), inconnues, hypothèses, observé",
+        "ÉTAT  où : phase, itération, budget ; nextActions",
+        "ÉTAT  preuves compactes, sources citables, hypothèse courante, évaluation",
+        "ÉTAT  lastAction ; lastRefusal : chaque point, attendu, envoyé, dependentPaths",
+        "ÉTAT  exigences, questions ouvertes ; mémoire en conseil, jamais en autorité"
+      ]
+    },
+    {
+      "id": "loop-b",
+      "label": "étapes 7 à 12",
+      "members": [
+        "7  merge : politique ou modèle",
+        "8  guard : le jugement",
+        "9  execute : l'outil tourne",
+        "10  observe-after : l'atelier relu",
+        "11  evaluate : la récompense",
+        "12  record : l'expérience gardée",
+        "INTERPRÈTE DE FORME  schéma tenu : rien ; sinon coercition, puis extraction (Nano)",
+        "EXÉCUTION  l'outil d'un slot par le broker, ou une capacité locale",
+        "ÉVALUATEUR  récompense du pas ; à task.done, le validateur du sujet",
+        "MÉMOIRE  épisodes, règles apprises : candidate, essai, consolidée",
+        "GARDE 1  schéma de l'outil (Ajv)",
+        "GARDE 2  constructeur : outil du sujet, chemins, appel répété, task.plan conforme",
+        "GARDE 3  sujet : portes de la conduite, règles signées, justifications",
+        "REFUS NOTÉ  chaque point : chemin, attendu, envoyé, dependentPaths ; revient dans l'état",
+        "LECTEUR DE SENS  même point, même valeur : Super lit l'intention, rejouée au pas suivant",
+        "STUCK  trois refus de suite sur les mêmes points : la tâche s'arrête"
+      ]
+    },
+    {
+      "id": "agents",
+      "label": "sous-agents, usines",
+      "members": [
+        "SOUS-AGENT  Observer : description et télémétrie vers la demande de jumeau ; un outil, son garde, 3 essais",
+        "SOUS-AGENT  Superviseur de contrats : faits typés et rapport déterministe vers un verdict typé ; ne corrige rien",
+        "SOUS-AGENT  compose : un texte sans outil ni conversation, les phrases de Mother",
+        "SOUS-AGENT  agent de nuit : décisions sur l'épurateur, la même boucle à douze étapes",
+        "USINE  une tâche = runTask(sujet) : mission, outils, garde, conduite, validateur",
+        "USINES AVEC ORDRE DE MARCHE  procédure, diagnostic, playbook, recommandation, réflexion",
+        "USINES SANS GRAPHE DE CONDUITE  graphe, code, onnx : étapes dites une à une",
+        "PASSAGE DE RELAIS  un besoin de code ouvre l'usine de code, la demande est rejouée ensuite"
+      ]
+    },
+    {
+      "id": "cadre",
+      "label": "cadre",
+      "members": [
+        "PROPOSÉ · CADRE  la deuxième image : un brief court, le reste découvert",
+        "CADRE 1  brief initial : mission + contraintes + succès",
+        "AUJOURD'HUI  mission, noyau, politique ; le succès est doneWhen, dans l'état",
+        "CADRE 2  modèle : choisit la prochaine action",
+        "AUJOURD'HUI  étape 6 reason ; un modèle par usage",
+        "CADRE 3  harnais / broker : découverte, outils, validation, état, preuves, mémoire",
+        "MANQUE  la découverte : chaque appel porte tous les outils ouverts (26 à 27, trv7)",
+        "CADRE 4  soumission : garde + correction éventuelle",
+        "AUJOURD'HUI  étape 8 ; refus avec dependentPaths ; lecteur de sens",
+        "CADRE 5  terminé",
+        "AUJOURD'HUI  task.done, jugé par le validateur du sujet"
+      ]
+    },
+    {
+      "id": "prompt",
+      "label": "fabricant de prompt",
+      "members": [
+        "PROPOSÉ · FABRICANT DE PROMPT  un sous-agent, à l'entrée d'une étape et après un refus",
+        "1 EXPOSER  les outils utiles de l'étape par nom et titre, les références, les points refusés",
+        "2 FAIRE CHOISIR  appel contraint : une enum des noms exposés",
+        "3 EXPLIQUER  définition des choisis ; faits par library.justify ; dépendants",
+        "4 ARRÊTER  la liste finale, deux tours au plus",
+        "5 ASSEMBLER  mission + noyau + politique + le choisi + l'état, vers request",
+        "RECETTES DE CONTEXTE  la sélection qui a mené à une acceptation, rejouée sans dialogue",
+        "AUJOURD'HUI  26 à 27 outils entiers à chaque appel ; 21 700 jetons de prompt par appel en moyenne (trv7, Nano)",
+        "MÊME BOUCLE  outils (point 2 de la revue)",
+        "MÊME BOUCLE  références (point 4)",
+        "MÊME BOUCLE  corrections (point 5)",
+        "MÊME BOUCLE  règles de sortie (point 8)",
+        "QUESTION  qui choisit : le modèle de l'usine, ou un autre plus petit ?",
+        "QUESTION  quand dialoguer : à chaque étape, à chaque refus, ou faute de recette ?",
+        "QUESTION  un prompt qui change perd le préfixe en cache (67 % servi du cache, trv7)"
+      ]
+    },
+    {
+      "id": "cognitif",
+      "label": "boucle cognitive",
+      "members": [
+        "PROPOSÉ · BOUCLE COGNITIVE  la première image : le tour du modèle",
+        "COGNITIF 1  observer : acquérir des faits",
+        "AUJOURD'HUI  noyau, tours 1 et 2 : brief, ordre de marche, refus, état",
+        "COGNITIF 2  inférer : inconnues et hypothèses",
+        "MANQUE  aucun tour ne le demande ; l'état porte missingInformation, hypotheses, openQuestions",
+        "COGNITIF 3  enquêter : choisir et utiliser les outils",
+        "AUJOURD'HUI  noyau, tours 3 et 4 : appeler pour ce qui manque ; allowedNow ; lot d'appels",
+        "COGNITIF 4  évaluer : preuves et alternatives",
+        "EN PARTIE  tour 5, après un refus ; ni preuves ni alternatives pesées",
+        "COGNITIF 5  décider : conclure, poursuivre ou soumettre",
+        "AUJOURD'HUI  tour 6 : remettre quand doneWhen est tenu ; sinon task.ask ou task.fail"
+      ]
+    }
+  ],
+  "tints": {
+    "PROPOSÉ · ICI  request recevrait le prompt du fabricant (plus bas)": "proposed",
+    "PROPOSÉ · ICI  le tour du modèle suivrait la boucle cognitive (plus bas)": "proposed",
+    "PROPOSÉ · CADRE  la deuxième image : un brief court, le reste découvert": "proposed",
+    "CADRE 1  brief initial : mission + contraintes + succès": "proposed",
+    "AUJOURD'HUI  mission, noyau, politique ; le succès est doneWhen, dans l'état": "today",
+    "CADRE 2  modèle : choisit la prochaine action": "proposed",
+    "AUJOURD'HUI  étape 6 reason ; un modèle par usage": "today",
+    "CADRE 3  harnais / broker : découverte, outils, validation, état, preuves, mémoire": "proposed",
+    "MANQUE  la découverte : chaque appel porte tous les outils ouverts (26 à 27, trv7)": "missing",
+    "CADRE 4  soumission : garde + correction éventuelle": "proposed",
+    "AUJOURD'HUI  étape 8 ; refus avec dependentPaths ; lecteur de sens": "today",
+    "CADRE 5  terminé": "proposed",
+    "AUJOURD'HUI  task.done, jugé par le validateur du sujet": "today",
+    "PROPOSÉ · FABRICANT DE PROMPT  un sous-agent, à l'entrée d'une étape et après un refus": "proposed",
+    "1 EXPOSER  les outils utiles de l'étape par nom et titre, les références, les points refusés": "proposed",
+    "2 FAIRE CHOISIR  appel contraint : une enum des noms exposés": "proposed",
+    "3 EXPLIQUER  définition des choisis ; faits par library.justify ; dépendants": "proposed",
+    "4 ARRÊTER  la liste finale, deux tours au plus": "proposed",
+    "5 ASSEMBLER  mission + noyau + politique + le choisi + l'état, vers request": "proposed",
+    "RECETTES DE CONTEXTE  la sélection qui a mené à une acceptation, rejouée sans dialogue": "proposed",
+    "AUJOURD'HUI  26 à 27 outils entiers à chaque appel ; 21 700 jetons de prompt par appel en moyenne (trv7, Nano)": "today",
+    "MÊME BOUCLE  outils (point 2 de la revue)": "proposed",
+    "MÊME BOUCLE  références (point 4)": "proposed",
+    "MÊME BOUCLE  corrections (point 5)": "proposed",
+    "MÊME BOUCLE  règles de sortie (point 8)": "proposed",
+    "QUESTION  qui choisit : le modèle de l'usine, ou un autre plus petit ?": "question",
+    "QUESTION  quand dialoguer : à chaque étape, à chaque refus, ou faute de recette ?": "question",
+    "QUESTION  un prompt qui change perd le préfixe en cache (67 % servi du cache, trv7)": "question",
+    "PROPOSÉ · BOUCLE COGNITIVE  la première image : le tour du modèle": "proposed",
+    "COGNITIF 1  observer : acquérir des faits": "proposed",
+    "AUJOURD'HUI  noyau, tours 1 et 2 : brief, ordre de marche, refus, état": "today",
+    "COGNITIF 2  inférer : inconnues et hypothèses": "proposed",
+    "MANQUE  aucun tour ne le demande ; l'état porte missingInformation, hypotheses, openQuestions": "missing",
+    "COGNITIF 3  enquêter : choisir et utiliser les outils": "proposed",
+    "AUJOURD'HUI  noyau, tours 3 et 4 : appeler pour ce qui manque ; allowedNow ; lot d'appels": "today",
+    "COGNITIF 4  évaluer : preuves et alternatives": "proposed",
+    "EN PARTIE  tour 5, après un refus ; ni preuves ni alternatives pesées": "partial",
+    "COGNITIF 5  décider : conclure, poursuivre ou soumettre": "proposed",
+    "AUJOURD'HUI  tour 6 : remettre quand doneWhen est tenu ; sinon task.ask ou task.fail": "today"
+  }
+}

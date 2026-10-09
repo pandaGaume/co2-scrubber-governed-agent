@@ -51,6 +51,8 @@ export async function buildAgentPage(outDir = fromRoot("dashboard", "agent")): P
         [fromRoot("ui", "twin-loader.ts"), "twin.js"],
         [fromRoot("ui", "twin-page.ts"), "twin-page.js"],
         [fromRoot("ui", "habitat-loader.ts"), "habitat.js"],
+        // The harness map, opened in the studio to be read (scripts/build-harness-map.ts).
+        [fromRoot("ui", "map-loader.ts"), "map.js"],
         // What a slot pushes, alone, for the control room (plain JS): the same code as the studio pages'.
         [fromRoot("ui", "pushes.ts"), "pushes.js"],
     ] as const) {

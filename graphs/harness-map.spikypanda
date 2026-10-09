@@ -1,0 +1,4312 @@
+{
+  "version": 3,
+  "layout": {
+    "nodes": [
+      {
+        "id": "observe",
+        "x": 0,
+        "y": 0,
+        "typeId": "Harness.Observation:state",
+        "inputs": [],
+        "outputs": [
+          {
+            "name": "state",
+            "type": "harness.state",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "context",
+        "x": 262,
+        "y": 0,
+        "typeId": "Harness.Policy:context",
+        "inputs": [
+          {
+            "name": "state",
+            "type": "harness.state",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "context",
+            "type": "harness.context",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "lookup",
+        "x": 524,
+        "y": 0,
+        "typeId": "Harness.Policy:lookup",
+        "inputs": [
+          {
+            "name": "context",
+            "type": "harness.context",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "candidates",
+            "type": "harness.candidates",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "gate",
+        "x": 786,
+        "y": 0,
+        "typeId": "Harness.Policy:confidence-gate",
+        "inputs": [
+          {
+            "name": "candidates",
+            "type": "harness.candidates",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "policy",
+            "type": "harness.decision",
+            "direction": "output"
+          },
+          {
+            "name": "fallback",
+            "type": "harness.uncertain",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "request",
+        "x": 1048,
+        "y": 150,
+        "typeId": "Harness.Reasoning:request",
+        "inputs": [
+          {
+            "name": "fallback",
+            "type": "harness.uncertain",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "request",
+            "type": "harness.request",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "reason",
+        "x": 1310,
+        "y": 150,
+        "typeId": "Harness.Reasoning:provider",
+        "inputs": [
+          {
+            "name": "request",
+            "type": "harness.request",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "decision",
+            "type": "harness.decision",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "merge",
+        "x": 1572,
+        "y": 0,
+        "typeId": "Harness.Policy:merge",
+        "inputs": [
+          {
+            "name": "policy",
+            "type": "harness.decision",
+            "direction": "input"
+          },
+          {
+            "name": "reasoning",
+            "type": "harness.decision",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "decision",
+            "type": "harness.merged",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "guard",
+        "x": 1834,
+        "y": 0,
+        "typeId": "Harness.Safety:guard",
+        "inputs": [
+          {
+            "name": "decision",
+            "type": "harness.merged",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "authorized",
+            "type": "harness.authorized",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "execute",
+        "x": 2096,
+        "y": 0,
+        "typeId": "Harness.Execution:capability",
+        "inputs": [
+          {
+            "name": "authorized",
+            "type": "harness.authorized",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "result",
+            "type": "harness.result",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "observe-after",
+        "x": 2358,
+        "y": 0,
+        "typeId": "Harness.Observation:outcome",
+        "inputs": [
+          {
+            "name": "result",
+            "type": "harness.result",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "outcome",
+            "type": "harness.outcome",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "evaluate",
+        "x": 2620,
+        "y": 0,
+        "typeId": "Harness.Learning:evaluate",
+        "inputs": [
+          {
+            "name": "outcome",
+            "type": "harness.outcome",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "experience",
+            "type": "harness.experience",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "record",
+        "x": 2882,
+        "y": 0,
+        "typeId": "Harness.Learning:record",
+        "inputs": [
+          {
+            "name": "experience",
+            "type": "harness.experience",
+            "direction": "input"
+          }
+        ],
+        "outputs": []
+      },
+      {
+        "id": "commander",
+        "x": 0,
+        "y": -1560,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "signatory",
+        "x": 546,
+        "y": -1560,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "station",
+        "x": 0,
+        "y": -1414,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "pages",
+        "x": 564,
+        "y": -1414,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "broker",
+        "x": 0,
+        "y": -1268,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "s-library",
+        "x": 1300,
+        "y": -1560,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "s-physics",
+        "x": 1706,
+        "y": -1560,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "s-workspace",
+        "x": 2026,
+        "y": -1560,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "s-twin",
+        "x": 1300,
+        "y": -1414,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "s-biomed",
+        "x": 1675,
+        "y": -1414,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "s-factory",
+        "x": 1953,
+        "y": -1414,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "s-scenario",
+        "x": 1300,
+        "y": -1268,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "s-scrubber",
+        "x": 1632,
+        "y": -1268,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "s-reasoner",
+        "x": 2050,
+        "y": -1268,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "world",
+        "x": 1632,
+        "y": -1122,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "m-super",
+        "x": 2481,
+        "y": -1560,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "m-nano",
+        "x": 2481,
+        "y": -1414,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "m-ultra",
+        "x": 2481,
+        "y": -1268,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "r-context",
+        "x": -667,
+        "y": -300,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "r-supervisor",
+        "x": -667,
+        "y": -154,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "r-catalogue",
+        "x": -667,
+        "y": -8,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "r-loop",
+        "x": -667,
+        "y": 138,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "r-ends",
+        "x": -667,
+        "y": 284,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "r-end",
+        "x": -667,
+        "y": 430,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "decisions",
+        "x": 262,
+        "y": -150,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "st-order",
+        "x": 0,
+        "y": 170,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "st-invariants",
+        "x": 0,
+        "y": 316,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "st-where",
+        "x": 0,
+        "y": 462,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "st-evidence",
+        "x": 0,
+        "y": 608,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "st-last",
+        "x": 0,
+        "y": 754,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "st-memory",
+        "x": 0,
+        "y": 900,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "provider",
+        "x": 1048,
+        "y": 320,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "batch",
+        "x": 1048,
+        "y": 466,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "retry",
+        "x": 1048,
+        "y": 612,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "runlog",
+        "x": 1048,
+        "y": 758,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "p-here",
+        "x": 1048,
+        "y": 0,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "c-here",
+        "x": 1048,
+        "y": -150,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "interpreter",
+        "x": 1572,
+        "y": -150,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "execution",
+        "x": 2161,
+        "y": -150,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "evaluator",
+        "x": 2652,
+        "y": -150,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "memory",
+        "x": 2882,
+        "y": -296,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "g-schema",
+        "x": 1834,
+        "y": -296,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "g-builder",
+        "x": 1834,
+        "y": -442,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "g-topic",
+        "x": 1834,
+        "y": -588,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "refusal",
+        "x": 1834,
+        "y": 170,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "meaning",
+        "x": 1834,
+        "y": 316,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "stuck",
+        "x": 1834,
+        "y": 462,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "a-observer",
+        "x": 0,
+        "y": 1250,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "a-supervisor",
+        "x": 735,
+        "y": 1250,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "a-compose",
+        "x": 0,
+        "y": 1396,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "a-night",
+        "x": 576,
+        "y": 1396,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "f-task",
+        "x": 0,
+        "y": 1542,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "f-conduct",
+        "x": 576,
+        "y": 1542,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "f-noconduct",
+        "x": 0,
+        "y": 1688,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "handoff",
+        "x": 546,
+        "y": 1688,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "p-frame",
+        "x": 1800,
+        "y": 1250,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "p-brief",
+        "x": 1800,
+        "y": 1396,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "n-brief",
+        "x": 2389,
+        "y": 1396,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "p-model",
+        "x": 1800,
+        "y": 1542,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "n-model",
+        "x": 2389,
+        "y": 1542,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "p-harness",
+        "x": 1800,
+        "y": 1688,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "n-harness",
+        "x": 2389,
+        "y": 1688,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "p-submit",
+        "x": 1800,
+        "y": 1834,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "n-submit",
+        "x": 2389,
+        "y": 1834,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "p-done",
+        "x": 1800,
+        "y": 1980,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "n-done",
+        "x": 2389,
+        "y": 1980,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "p-builder",
+        "x": 0,
+        "y": 2350,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "p-expose",
+        "x": 0,
+        "y": 2496,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "p-choose",
+        "x": 0,
+        "y": 2642,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "p-explain",
+        "x": 0,
+        "y": 2788,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "p-stop",
+        "x": 0,
+        "y": 2934,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "p-assemble",
+        "x": 0,
+        "y": 3080,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "p-recipes",
+        "x": 650,
+        "y": 2350,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "n-builder",
+        "x": 650,
+        "y": 2496,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "p-tools",
+        "x": 650,
+        "y": 2642,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "p-refs",
+        "x": 650,
+        "y": 2788,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "p-fix",
+        "x": 650,
+        "y": 2934,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "p-out",
+        "x": 650,
+        "y": 3080,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "q-who",
+        "x": 0,
+        "y": 3226,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "q-when",
+        "x": 515,
+        "y": 3226,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "q-cache",
+        "x": 1098,
+        "y": 3226,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "c-head",
+        "x": 1800,
+        "y": 2350,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "c-observe",
+        "x": 1800,
+        "y": 2496,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "n-observe",
+        "x": 2224,
+        "y": 2496,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "c-infer",
+        "x": 1800,
+        "y": 2642,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "n-infer",
+        "x": 2224,
+        "y": 2642,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "c-investigate",
+        "x": 1800,
+        "y": 2788,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "n-investigate",
+        "x": 2224,
+        "y": 2788,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "c-evaluate",
+        "x": 1800,
+        "y": 2934,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "n-evaluate",
+        "x": 2224,
+        "y": 2934,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "c-decide",
+        "x": 1800,
+        "y": 3080,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      },
+      {
+        "id": "n-decide",
+        "x": 2224,
+        "y": 3080,
+        "typeId": "Logic.Flow:sequence",
+        "inputs": [
+          {
+            "name": "in",
+            "type": "trigger",
+            "direction": "input"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "then_0",
+            "type": "trigger",
+            "direction": "output"
+          }
+        ]
+      }
+    ],
+    "connections": [
+      {
+        "id": "observe:state->context:state",
+        "fromNodeId": "observe",
+        "fromPortIndex": 0,
+        "toNodeId": "context",
+        "toPortIndex": 0
+      },
+      {
+        "id": "context:context->lookup:context",
+        "fromNodeId": "context",
+        "fromPortIndex": 0,
+        "toNodeId": "lookup",
+        "toPortIndex": 0
+      },
+      {
+        "id": "lookup:candidates->gate:candidates",
+        "fromNodeId": "lookup",
+        "fromPortIndex": 0,
+        "toNodeId": "gate",
+        "toPortIndex": 0
+      },
+      {
+        "id": "gate:policy->merge:policy",
+        "fromNodeId": "gate",
+        "fromPortIndex": 0,
+        "toNodeId": "merge",
+        "toPortIndex": 0
+      },
+      {
+        "id": "gate:fallback->request:fallback",
+        "fromNodeId": "gate",
+        "fromPortIndex": 1,
+        "toNodeId": "request",
+        "toPortIndex": 0
+      },
+      {
+        "id": "request:request->reason:request",
+        "fromNodeId": "request",
+        "fromPortIndex": 0,
+        "toNodeId": "reason",
+        "toPortIndex": 0
+      },
+      {
+        "id": "reason:decision->merge:reasoning",
+        "fromNodeId": "reason",
+        "fromPortIndex": 0,
+        "toNodeId": "merge",
+        "toPortIndex": 1
+      },
+      {
+        "id": "merge:decision->guard:decision",
+        "fromNodeId": "merge",
+        "fromPortIndex": 0,
+        "toNodeId": "guard",
+        "toPortIndex": 0
+      },
+      {
+        "id": "guard:authorized->execute:authorized",
+        "fromNodeId": "guard",
+        "fromPortIndex": 0,
+        "toNodeId": "execute",
+        "toPortIndex": 0
+      },
+      {
+        "id": "execute:result->observe-after:result",
+        "fromNodeId": "execute",
+        "fromPortIndex": 0,
+        "toNodeId": "observe-after",
+        "toPortIndex": 0
+      },
+      {
+        "id": "observe-after:outcome->evaluate:outcome",
+        "fromNodeId": "observe-after",
+        "fromPortIndex": 0,
+        "toNodeId": "evaluate",
+        "toPortIndex": 0
+      },
+      {
+        "id": "evaluate:experience->record:experience",
+        "fromNodeId": "evaluate",
+        "fromPortIndex": 0,
+        "toNodeId": "record",
+        "toPortIndex": 0
+      },
+      {
+        "id": "commander:then_0->station:in",
+        "fromNodeId": "commander",
+        "fromPortIndex": 0,
+        "toNodeId": "station",
+        "toPortIndex": 0
+      },
+      {
+        "id": "signatory:then_0->s-library:in",
+        "fromNodeId": "signatory",
+        "fromPortIndex": 0,
+        "toNodeId": "s-library",
+        "toPortIndex": 0
+      },
+      {
+        "id": "pages:then_0->broker:in",
+        "fromNodeId": "pages",
+        "fromPortIndex": 0,
+        "toNodeId": "broker",
+        "toPortIndex": 0
+      },
+      {
+        "id": "station:then_0->broker:in",
+        "fromNodeId": "station",
+        "fromPortIndex": 0,
+        "toNodeId": "broker",
+        "toPortIndex": 0
+      },
+      {
+        "id": "broker:then_0->s-library:in",
+        "fromNodeId": "broker",
+        "fromPortIndex": 0,
+        "toNodeId": "s-library",
+        "toPortIndex": 0
+      },
+      {
+        "id": "broker:then_0->s-physics:in",
+        "fromNodeId": "broker",
+        "fromPortIndex": 0,
+        "toNodeId": "s-physics",
+        "toPortIndex": 0
+      },
+      {
+        "id": "broker:then_0->s-workspace:in",
+        "fromNodeId": "broker",
+        "fromPortIndex": 0,
+        "toNodeId": "s-workspace",
+        "toPortIndex": 0
+      },
+      {
+        "id": "broker:then_0->s-twin:in",
+        "fromNodeId": "broker",
+        "fromPortIndex": 0,
+        "toNodeId": "s-twin",
+        "toPortIndex": 0
+      },
+      {
+        "id": "broker:then_0->s-biomed:in",
+        "fromNodeId": "broker",
+        "fromPortIndex": 0,
+        "toNodeId": "s-biomed",
+        "toPortIndex": 0
+      },
+      {
+        "id": "broker:then_0->s-factory:in",
+        "fromNodeId": "broker",
+        "fromPortIndex": 0,
+        "toNodeId": "s-factory",
+        "toPortIndex": 0
+      },
+      {
+        "id": "broker:then_0->s-scenario:in",
+        "fromNodeId": "broker",
+        "fromPortIndex": 0,
+        "toNodeId": "s-scenario",
+        "toPortIndex": 0
+      },
+      {
+        "id": "broker:then_0->s-scrubber:in",
+        "fromNodeId": "broker",
+        "fromPortIndex": 0,
+        "toNodeId": "s-scrubber",
+        "toPortIndex": 0
+      },
+      {
+        "id": "broker:then_0->s-reasoner:in",
+        "fromNodeId": "broker",
+        "fromPortIndex": 0,
+        "toNodeId": "s-reasoner",
+        "toPortIndex": 0
+      },
+      {
+        "id": "s-scrubber:then_0->world:in",
+        "fromNodeId": "s-scrubber",
+        "fromPortIndex": 0,
+        "toNodeId": "world",
+        "toPortIndex": 0
+      },
+      {
+        "id": "s-reasoner:then_0->m-super:in",
+        "fromNodeId": "s-reasoner",
+        "fromPortIndex": 0,
+        "toNodeId": "m-super",
+        "toPortIndex": 0
+      },
+      {
+        "id": "s-reasoner:then_0->m-nano:in",
+        "fromNodeId": "s-reasoner",
+        "fromPortIndex": 0,
+        "toNodeId": "m-nano",
+        "toPortIndex": 0
+      },
+      {
+        "id": "r-context:then_0->r-supervisor:in",
+        "fromNodeId": "r-context",
+        "fromPortIndex": 0,
+        "toNodeId": "r-supervisor",
+        "toPortIndex": 0
+      },
+      {
+        "id": "r-supervisor:then_0->r-catalogue:in",
+        "fromNodeId": "r-supervisor",
+        "fromPortIndex": 0,
+        "toNodeId": "r-catalogue",
+        "toPortIndex": 0
+      },
+      {
+        "id": "r-catalogue:then_0->r-loop:in",
+        "fromNodeId": "r-catalogue",
+        "fromPortIndex": 0,
+        "toNodeId": "r-loop",
+        "toPortIndex": 0
+      },
+      {
+        "id": "r-loop:then_0->r-ends:in",
+        "fromNodeId": "r-loop",
+        "fromPortIndex": 0,
+        "toNodeId": "r-ends",
+        "toPortIndex": 0
+      },
+      {
+        "id": "r-loop:then_0->r-end:in",
+        "fromNodeId": "r-loop",
+        "fromPortIndex": 0,
+        "toNodeId": "r-end",
+        "toPortIndex": 0
+      },
+      {
+        "id": "r-supervisor:then_0->a-supervisor:in",
+        "fromNodeId": "r-supervisor",
+        "fromPortIndex": 0,
+        "toNodeId": "a-supervisor",
+        "toPortIndex": 0
+      },
+      {
+        "id": "provider:then_0->batch:in",
+        "fromNodeId": "provider",
+        "fromPortIndex": 0,
+        "toNodeId": "batch",
+        "toPortIndex": 0
+      },
+      {
+        "id": "batch:then_0->retry:in",
+        "fromNodeId": "batch",
+        "fromPortIndex": 0,
+        "toNodeId": "retry",
+        "toPortIndex": 0
+      },
+      {
+        "id": "provider:then_0->s-reasoner:in",
+        "fromNodeId": "provider",
+        "fromPortIndex": 0,
+        "toNodeId": "s-reasoner",
+        "toPortIndex": 0
+      },
+      {
+        "id": "interpreter:then_0->g-schema:in",
+        "fromNodeId": "interpreter",
+        "fromPortIndex": 0,
+        "toNodeId": "g-schema",
+        "toPortIndex": 0
+      },
+      {
+        "id": "g-schema:then_0->g-builder:in",
+        "fromNodeId": "g-schema",
+        "fromPortIndex": 0,
+        "toNodeId": "g-builder",
+        "toPortIndex": 0
+      },
+      {
+        "id": "g-builder:then_0->g-topic:in",
+        "fromNodeId": "g-builder",
+        "fromPortIndex": 0,
+        "toNodeId": "g-topic",
+        "toPortIndex": 0
+      },
+      {
+        "id": "refusal:then_0->meaning:in",
+        "fromNodeId": "refusal",
+        "fromPortIndex": 0,
+        "toNodeId": "meaning",
+        "toPortIndex": 0
+      },
+      {
+        "id": "meaning:then_0->stuck:in",
+        "fromNodeId": "meaning",
+        "fromPortIndex": 0,
+        "toNodeId": "stuck",
+        "toPortIndex": 0
+      },
+      {
+        "id": "refusal:then_0->st-last:in",
+        "fromNodeId": "refusal",
+        "fromPortIndex": 0,
+        "toNodeId": "st-last",
+        "toPortIndex": 0
+      },
+      {
+        "id": "execution:then_0->broker:in",
+        "fromNodeId": "execution",
+        "fromPortIndex": 0,
+        "toNodeId": "broker",
+        "toPortIndex": 0
+      },
+      {
+        "id": "memory:then_0->st-memory:in",
+        "fromNodeId": "memory",
+        "fromPortIndex": 0,
+        "toNodeId": "st-memory",
+        "toPortIndex": 0
+      },
+      {
+        "id": "a-observer:then_0->f-noconduct:in",
+        "fromNodeId": "a-observer",
+        "fromPortIndex": 0,
+        "toNodeId": "f-noconduct",
+        "toPortIndex": 0
+      },
+      {
+        "id": "f-task:then_0->f-conduct:in",
+        "fromNodeId": "f-task",
+        "fromPortIndex": 0,
+        "toNodeId": "f-conduct",
+        "toPortIndex": 0
+      },
+      {
+        "id": "f-task:then_0->f-noconduct:in",
+        "fromNodeId": "f-task",
+        "fromPortIndex": 0,
+        "toNodeId": "f-noconduct",
+        "toPortIndex": 0
+      },
+      {
+        "id": "f-noconduct:then_0->handoff:in",
+        "fromNodeId": "f-noconduct",
+        "fromPortIndex": 0,
+        "toNodeId": "handoff",
+        "toPortIndex": 0
+      },
+      {
+        "id": "p-frame:then_0->p-brief:in",
+        "fromNodeId": "p-frame",
+        "fromPortIndex": 0,
+        "toNodeId": "p-brief",
+        "toPortIndex": 0
+      },
+      {
+        "id": "p-brief:then_0->p-model:in",
+        "fromNodeId": "p-brief",
+        "fromPortIndex": 0,
+        "toNodeId": "p-model",
+        "toPortIndex": 0
+      },
+      {
+        "id": "p-model:then_0->p-harness:in",
+        "fromNodeId": "p-model",
+        "fromPortIndex": 0,
+        "toNodeId": "p-harness",
+        "toPortIndex": 0
+      },
+      {
+        "id": "p-harness:then_0->p-submit:in",
+        "fromNodeId": "p-harness",
+        "fromPortIndex": 0,
+        "toNodeId": "p-submit",
+        "toPortIndex": 0
+      },
+      {
+        "id": "p-submit:then_0->p-done:in",
+        "fromNodeId": "p-submit",
+        "fromPortIndex": 0,
+        "toNodeId": "p-done",
+        "toPortIndex": 0
+      },
+      {
+        "id": "p-harness:then_0->p-model:in",
+        "fromNodeId": "p-harness",
+        "fromPortIndex": 0,
+        "toNodeId": "p-model",
+        "toPortIndex": 0
+      },
+      {
+        "id": "p-submit:then_0->p-model:in",
+        "fromNodeId": "p-submit",
+        "fromPortIndex": 0,
+        "toNodeId": "p-model",
+        "toPortIndex": 0
+      },
+      {
+        "id": "p-builder:then_0->p-expose:in",
+        "fromNodeId": "p-builder",
+        "fromPortIndex": 0,
+        "toNodeId": "p-expose",
+        "toPortIndex": 0
+      },
+      {
+        "id": "p-expose:then_0->p-choose:in",
+        "fromNodeId": "p-expose",
+        "fromPortIndex": 0,
+        "toNodeId": "p-choose",
+        "toPortIndex": 0
+      },
+      {
+        "id": "p-choose:then_0->p-explain:in",
+        "fromNodeId": "p-choose",
+        "fromPortIndex": 0,
+        "toNodeId": "p-explain",
+        "toPortIndex": 0
+      },
+      {
+        "id": "p-explain:then_0->p-stop:in",
+        "fromNodeId": "p-explain",
+        "fromPortIndex": 0,
+        "toNodeId": "p-stop",
+        "toPortIndex": 0
+      },
+      {
+        "id": "p-stop:then_0->p-assemble:in",
+        "fromNodeId": "p-stop",
+        "fromPortIndex": 0,
+        "toNodeId": "p-assemble",
+        "toPortIndex": 0
+      },
+      {
+        "id": "p-stop:then_0->p-choose:in",
+        "fromNodeId": "p-stop",
+        "fromPortIndex": 0,
+        "toNodeId": "p-choose",
+        "toPortIndex": 0
+      },
+      {
+        "id": "p-builder:then_0->p-recipes:in",
+        "fromNodeId": "p-builder",
+        "fromPortIndex": 0,
+        "toNodeId": "p-recipes",
+        "toPortIndex": 0
+      },
+      {
+        "id": "p-recipes:then_0->p-assemble:in",
+        "fromNodeId": "p-recipes",
+        "fromPortIndex": 0,
+        "toNodeId": "p-assemble",
+        "toPortIndex": 0
+      },
+      {
+        "id": "p-expose:then_0->p-tools:in",
+        "fromNodeId": "p-expose",
+        "fromPortIndex": 0,
+        "toNodeId": "p-tools",
+        "toPortIndex": 0
+      },
+      {
+        "id": "p-tools:then_0->p-refs:in",
+        "fromNodeId": "p-tools",
+        "fromPortIndex": 0,
+        "toNodeId": "p-refs",
+        "toPortIndex": 0
+      },
+      {
+        "id": "p-refs:then_0->p-fix:in",
+        "fromNodeId": "p-refs",
+        "fromPortIndex": 0,
+        "toNodeId": "p-fix",
+        "toPortIndex": 0
+      },
+      {
+        "id": "p-fix:then_0->p-out:in",
+        "fromNodeId": "p-fix",
+        "fromPortIndex": 0,
+        "toNodeId": "p-out",
+        "toPortIndex": 0
+      },
+      {
+        "id": "p-assemble:then_0->p-here:in",
+        "fromNodeId": "p-assemble",
+        "fromPortIndex": 0,
+        "toNodeId": "p-here",
+        "toPortIndex": 0
+      },
+      {
+        "id": "c-here:then_0->c-head:in",
+        "fromNodeId": "c-here",
+        "fromPortIndex": 0,
+        "toNodeId": "c-head",
+        "toPortIndex": 0
+      },
+      {
+        "id": "c-head:then_0->c-observe:in",
+        "fromNodeId": "c-head",
+        "fromPortIndex": 0,
+        "toNodeId": "c-observe",
+        "toPortIndex": 0
+      },
+      {
+        "id": "c-observe:then_0->c-infer:in",
+        "fromNodeId": "c-observe",
+        "fromPortIndex": 0,
+        "toNodeId": "c-infer",
+        "toPortIndex": 0
+      },
+      {
+        "id": "c-infer:then_0->c-investigate:in",
+        "fromNodeId": "c-infer",
+        "fromPortIndex": 0,
+        "toNodeId": "c-investigate",
+        "toPortIndex": 0
+      },
+      {
+        "id": "c-investigate:then_0->c-evaluate:in",
+        "fromNodeId": "c-investigate",
+        "fromPortIndex": 0,
+        "toNodeId": "c-evaluate",
+        "toPortIndex": 0
+      },
+      {
+        "id": "c-evaluate:then_0->c-decide:in",
+        "fromNodeId": "c-evaluate",
+        "fromPortIndex": 0,
+        "toNodeId": "c-decide",
+        "toPortIndex": 0
+      },
+      {
+        "id": "c-decide:then_0->c-observe:in",
+        "fromNodeId": "c-decide",
+        "fromPortIndex": 0,
+        "toNodeId": "c-observe",
+        "toPortIndex": 0
+      }
+    ]
+  },
+  "model": {
+    "nodes": [
+      {
+        "id": "observe",
+        "label": "1  observe : l'état reconstruit",
+        "typeId": "Harness.Observation:state",
+        "data": {
+          "type": "Harness.Observation:state",
+          "enabled": true
+        }
+      },
+      {
+        "id": "context",
+        "label": "2  context : la clé de mémoire",
+        "typeId": "Harness.Policy:context",
+        "data": {
+          "type": "Harness.Policy:context",
+          "enabled": true
+        }
+      },
+      {
+        "id": "lookup",
+        "label": "3  lookup : les décisions apprises",
+        "typeId": "Harness.Policy:lookup",
+        "data": {
+          "type": "Harness.Policy:lookup",
+          "enabled": true
+        }
+      },
+      {
+        "id": "gate",
+        "label": "4  gate : rejouer ou demander",
+        "typeId": "Harness.Policy:confidence-gate",
+        "data": {
+          "type": "Harness.Policy:confidence-gate",
+          "enabled": true
+        }
+      },
+      {
+        "id": "request",
+        "label": "5  request : ce qui part au modèle",
+        "typeId": "Harness.Reasoning:request",
+        "data": {
+          "type": "Harness.Reasoning:request",
+          "enabled": true
+        }
+      },
+      {
+        "id": "reason",
+        "label": "6  reason : le modèle décide",
+        "typeId": "Harness.Reasoning:provider",
+        "data": {
+          "type": "Harness.Reasoning:provider",
+          "enabled": true
+        }
+      },
+      {
+        "id": "merge",
+        "label": "7  merge : politique ou modèle",
+        "typeId": "Harness.Policy:merge",
+        "data": {
+          "type": "Harness.Policy:merge",
+          "enabled": true
+        }
+      },
+      {
+        "id": "guard",
+        "label": "8  guard : le jugement",
+        "typeId": "Harness.Safety:guard",
+        "data": {
+          "type": "Harness.Safety:guard",
+          "enabled": true
+        }
+      },
+      {
+        "id": "execute",
+        "label": "9  execute : l'outil tourne",
+        "typeId": "Harness.Execution:capability",
+        "data": {
+          "type": "Harness.Execution:capability",
+          "enabled": true
+        }
+      },
+      {
+        "id": "observe-after",
+        "label": "10  observe-after : l'atelier relu",
+        "typeId": "Harness.Observation:outcome",
+        "data": {
+          "type": "Harness.Observation:outcome",
+          "enabled": true
+        }
+      },
+      {
+        "id": "evaluate",
+        "label": "11  evaluate : la récompense",
+        "typeId": "Harness.Learning:evaluate",
+        "data": {
+          "type": "Harness.Learning:evaluate",
+          "enabled": true
+        }
+      },
+      {
+        "id": "record",
+        "label": "12  record : l'expérience gardée",
+        "typeId": "Harness.Learning:record",
+        "data": {
+          "type": "Harness.Learning:record",
+          "enabled": true
+        }
+      },
+      {
+        "id": "commander",
+        "label": "HUMAIN  commandant : autorise chaque test, répond dans le panneau de Mother",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "signatory",
+        "label": "HUMAIN  signataire autorisé : signe normes, règles, faits, playbooks",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "station",
+        "label": "STATION · MOTHER  registre, mises en service, questions, relais des procédures",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "pages",
+        "label": "PAGES  salle de contrôle, scénarios, moniteur médical, cette carte",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "broker",
+        "label": "BROKER MCP  rôles, jetons, politique ; chaque slot est un fournisseur d'outils",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "s-library",
+        "label": "SLOT library  normes, faits, règles signés ; justify",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "s-physics",
+        "label": "SLOT physics  unités, relations ; cite",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "s-workspace",
+        "label": "SLOT workspace  fichiers des tâches",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "s-twin",
+        "label": "SLOT twin · forge  catalogue, bac à sable, code",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "s-biomed",
+        "label": "SLOT biomed  présence, moniteur",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "s-factory",
+        "label": "SLOT factory  demandes, tâches, inventaire",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "s-scenario",
+        "label": "SLOT scenario  joue les mises en service",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "s-scrubber",
+        "label": "SLOT scrubber  carte ESP32, Modbus : dernière autorité",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "s-reasoner",
+        "label": "SLOT reasoner  un modèle par usage (routing.json)",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "world",
+        "label": "MONDE RÉEL  turbine, capteurs de CO2",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "m-super",
+        "label": "MODÈLE  Nemotron 3 Super : agent, procédure, graphe, code, Observer, Superviseur, compose, sens",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "m-nano",
+        "label": "MODÈLE  Nemotron 3 Nano, profil du serveur : diagnostic, playbook, réflexion, recommandation, onnx, forme",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "m-ultra",
+        "label": "MODÈLE  Nemotron 3 Ultra : essayé le 8 octobre, écarté",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "r-context",
+        "label": "RUNNER  contexte lu une fois : étagère, télémétrie, rapport de contrats",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "r-supervisor",
+        "label": "RUNNER  Superviseur de contrats appelé quand plusieurs producteurs donnent des faits",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "r-catalogue",
+        "label": "RUNNER  catalogue : outils du broker et locaux, moins ceux que la conduite ferme",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "r-loop",
+        "label": "RUNNER  un pas par appel, jusqu'à task.done accepté par le validateur ou le budget épuisé",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "r-ends",
+        "label": "RUNNER  fins anticipées : SOURCE_CONFLICT, STUCK, MISSING_CAPABILITY, WAITING",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "r-end",
+        "label": "RUNNER  fin : trace, manifeste, proposition à la station, recettes, journal .logs",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "decisions",
+        "label": "DÉCISIONS APPRISES  recettes par signature de tâche ; une décision promue est rejouée sans modèle",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "st-order",
+        "label": "ÉTAT  ordre de marche : étapes, allowedNow, closedNow, doneWhen",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "st-invariants",
+        "label": "ÉTAT  invariants : objectif, constantes connues (statut, source), inconnues, hypothèses, observé",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "st-where",
+        "label": "ÉTAT  où : phase, itération, budget ; nextActions",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "st-evidence",
+        "label": "ÉTAT  preuves compactes, sources citables, hypothèse courante, évaluation",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "st-last",
+        "label": "ÉTAT  lastAction ; lastRefusal : chaque point, attendu, envoyé, dependentPaths",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "st-memory",
+        "label": "ÉTAT  exigences, questions ouvertes ; mémoire en conseil, jamais en autorité",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "provider",
+        "label": "FOURNISSEUR  slot reasoner : profil, protocole, modèle par usage ; l'état, pas la conversation",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "batch",
+        "label": "LOT D'APPELS  jusqu'à 4 appels par réponse, passés un à un, rendus ensemble",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "retry",
+        "label": "RÉPONSE COUPÉE  relance sans réflexion ; appels écrits en texte relus",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "runlog",
+        "label": "JOURNAL DE TEST  chaque appel au modèle : entrées, parties en cache, sorties (.logs)",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "p-here",
+        "label": "PROPOSÉ · ICI  request recevrait le prompt du fabricant (plus bas)",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "c-here",
+        "label": "PROPOSÉ · ICI  le tour du modèle suivrait la boucle cognitive (plus bas)",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "interpreter",
+        "label": "INTERPRÈTE DE FORME  schéma tenu : rien ; sinon coercition, puis extraction (Nano)",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "execution",
+        "label": "EXÉCUTION  l'outil d'un slot par le broker, ou une capacité locale",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "evaluator",
+        "label": "ÉVALUATEUR  récompense du pas ; à task.done, le validateur du sujet",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "memory",
+        "label": "MÉMOIRE  épisodes, règles apprises : candidate, essai, consolidée",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "g-schema",
+        "label": "GARDE 1  schéma de l'outil (Ajv)",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "g-builder",
+        "label": "GARDE 2  constructeur : outil du sujet, chemins, appel répété, task.plan conforme",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "g-topic",
+        "label": "GARDE 3  sujet : portes de la conduite, règles signées, justifications",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "refusal",
+        "label": "REFUS NOTÉ  chaque point : chemin, attendu, envoyé, dependentPaths ; revient dans l'état",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "meaning",
+        "label": "LECTEUR DE SENS  même point, même valeur : Super lit l'intention, rejouée au pas suivant",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "stuck",
+        "label": "STUCK  trois refus de suite sur les mêmes points : la tâche s'arrête",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "a-observer",
+        "label": "SOUS-AGENT  Observer : description et télémétrie vers la demande de jumeau ; un outil, son garde, 3 essais",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "a-supervisor",
+        "label": "SOUS-AGENT  Superviseur de contrats : faits typés et rapport déterministe vers un verdict typé ; ne corrige rien",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "a-compose",
+        "label": "SOUS-AGENT  compose : un texte sans outil ni conversation, les phrases de Mother",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "a-night",
+        "label": "SOUS-AGENT  agent de nuit : décisions sur l'épurateur, la même boucle à douze étapes",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "f-task",
+        "label": "USINE  une tâche = runTask(sujet) : mission, outils, garde, conduite, validateur",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "f-conduct",
+        "label": "USINES AVEC ORDRE DE MARCHE  procédure, diagnostic, playbook, recommandation, réflexion",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "f-noconduct",
+        "label": "USINES SANS GRAPHE DE CONDUITE  graphe, code, onnx : étapes dites une à une",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "handoff",
+        "label": "PASSAGE DE RELAIS  un besoin de code ouvre l'usine de code, la demande est rejouée ensuite",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "p-frame",
+        "label": "PROPOSÉ · CADRE  la deuxième image : un brief court, le reste découvert",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "p-brief",
+        "label": "CADRE 1  brief initial : mission + contraintes + succès",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "n-brief",
+        "label": "AUJOURD'HUI  mission, noyau, politique ; le succès est doneWhen, dans l'état",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "p-model",
+        "label": "CADRE 2  modèle : choisit la prochaine action",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "n-model",
+        "label": "AUJOURD'HUI  étape 6 reason ; un modèle par usage",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "p-harness",
+        "label": "CADRE 3  harnais / broker : découverte, outils, validation, état, preuves, mémoire",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "n-harness",
+        "label": "MANQUE  la découverte : chaque appel porte tous les outils ouverts (26 à 27, trv7)",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "p-submit",
+        "label": "CADRE 4  soumission : garde + correction éventuelle",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "n-submit",
+        "label": "AUJOURD'HUI  étape 8 ; refus avec dependentPaths ; lecteur de sens",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "p-done",
+        "label": "CADRE 5  terminé",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "n-done",
+        "label": "AUJOURD'HUI  task.done, jugé par le validateur du sujet",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "p-builder",
+        "label": "PROPOSÉ · FABRICANT DE PROMPT  un sous-agent, à l'entrée d'une étape et après un refus",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "p-expose",
+        "label": "1 EXPOSER  les outils utiles de l'étape par nom et titre, les références, les points refusés",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "p-choose",
+        "label": "2 FAIRE CHOISIR  appel contraint : une enum des noms exposés",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "p-explain",
+        "label": "3 EXPLIQUER  définition des choisis ; faits par library.justify ; dépendants",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "p-stop",
+        "label": "4 ARRÊTER  la liste finale, deux tours au plus",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "p-assemble",
+        "label": "5 ASSEMBLER  mission + noyau + politique + le choisi + l'état, vers request",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "p-recipes",
+        "label": "RECETTES DE CONTEXTE  la sélection qui a mené à une acceptation, rejouée sans dialogue",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "n-builder",
+        "label": "AUJOURD'HUI  26 à 27 outils entiers à chaque appel ; 21 700 jetons de prompt par appel en moyenne (trv7, Nano)",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "p-tools",
+        "label": "MÊME BOUCLE  outils (point 2 de la revue)",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "p-refs",
+        "label": "MÊME BOUCLE  références (point 4)",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "p-fix",
+        "label": "MÊME BOUCLE  corrections (point 5)",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "p-out",
+        "label": "MÊME BOUCLE  règles de sortie (point 8)",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "q-who",
+        "label": "QUESTION  qui choisit : le modèle de l'usine, ou un autre plus petit ?",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "q-when",
+        "label": "QUESTION  quand dialoguer : à chaque étape, à chaque refus, ou faute de recette ?",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "q-cache",
+        "label": "QUESTION  un prompt qui change perd le préfixe en cache (67 % servi du cache, trv7)",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "c-head",
+        "label": "PROPOSÉ · BOUCLE COGNITIVE  la première image : le tour du modèle",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "c-observe",
+        "label": "COGNITIF 1  observer : acquérir des faits",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "n-observe",
+        "label": "AUJOURD'HUI  noyau, tours 1 et 2 : brief, ordre de marche, refus, état",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "c-infer",
+        "label": "COGNITIF 2  inférer : inconnues et hypothèses",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "n-infer",
+        "label": "MANQUE  aucun tour ne le demande ; l'état porte missingInformation, hypotheses, openQuestions",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "c-investigate",
+        "label": "COGNITIF 3  enquêter : choisir et utiliser les outils",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "n-investigate",
+        "label": "AUJOURD'HUI  noyau, tours 3 et 4 : appeler pour ce qui manque ; allowedNow ; lot d'appels",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "c-evaluate",
+        "label": "COGNITIF 4  évaluer : preuves et alternatives",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "n-evaluate",
+        "label": "EN PARTIE  tour 5, après un refus ; ni preuves ni alternatives pesées",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "c-decide",
+        "label": "COGNITIF 5  décider : conclure, poursuivre ou soumettre",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      },
+      {
+        "id": "n-decide",
+        "label": "AUJOURD'HUI  tour 6 : remettre quand doneWhen est tenu ; sinon task.ask ou task.fail",
+        "typeId": "Logic.Flow:sequence",
+        "data": {
+          "enabled": true
+        }
+      }
+    ],
+    "connections": [
+      {
+        "id": "observe:state->context:state",
+        "from": {
+          "node": "observe",
+          "port": "state"
+        },
+        "to": {
+          "node": "context",
+          "port": "state"
+        }
+      },
+      {
+        "id": "context:context->lookup:context",
+        "from": {
+          "node": "context",
+          "port": "context"
+        },
+        "to": {
+          "node": "lookup",
+          "port": "context"
+        }
+      },
+      {
+        "id": "lookup:candidates->gate:candidates",
+        "from": {
+          "node": "lookup",
+          "port": "candidates"
+        },
+        "to": {
+          "node": "gate",
+          "port": "candidates"
+        }
+      },
+      {
+        "id": "gate:policy->merge:policy",
+        "from": {
+          "node": "gate",
+          "port": "policy"
+        },
+        "to": {
+          "node": "merge",
+          "port": "policy"
+        }
+      },
+      {
+        "id": "gate:fallback->request:fallback",
+        "from": {
+          "node": "gate",
+          "port": "fallback"
+        },
+        "to": {
+          "node": "request",
+          "port": "fallback"
+        }
+      },
+      {
+        "id": "request:request->reason:request",
+        "from": {
+          "node": "request",
+          "port": "request"
+        },
+        "to": {
+          "node": "reason",
+          "port": "request"
+        }
+      },
+      {
+        "id": "reason:decision->merge:reasoning",
+        "from": {
+          "node": "reason",
+          "port": "decision"
+        },
+        "to": {
+          "node": "merge",
+          "port": "reasoning"
+        }
+      },
+      {
+        "id": "merge:decision->guard:decision",
+        "from": {
+          "node": "merge",
+          "port": "decision"
+        },
+        "to": {
+          "node": "guard",
+          "port": "decision"
+        }
+      },
+      {
+        "id": "guard:authorized->execute:authorized",
+        "from": {
+          "node": "guard",
+          "port": "authorized"
+        },
+        "to": {
+          "node": "execute",
+          "port": "authorized"
+        }
+      },
+      {
+        "id": "execute:result->observe-after:result",
+        "from": {
+          "node": "execute",
+          "port": "result"
+        },
+        "to": {
+          "node": "observe-after",
+          "port": "result"
+        }
+      },
+      {
+        "id": "observe-after:outcome->evaluate:outcome",
+        "from": {
+          "node": "observe-after",
+          "port": "outcome"
+        },
+        "to": {
+          "node": "evaluate",
+          "port": "outcome"
+        }
+      },
+      {
+        "id": "evaluate:experience->record:experience",
+        "from": {
+          "node": "evaluate",
+          "port": "experience"
+        },
+        "to": {
+          "node": "record",
+          "port": "experience"
+        }
+      },
+      {
+        "id": "commander:then_0->station:in",
+        "from": {
+          "node": "commander",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "station",
+          "port": "in"
+        }
+      },
+      {
+        "id": "signatory:then_0->s-library:in",
+        "from": {
+          "node": "signatory",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "s-library",
+          "port": "in"
+        }
+      },
+      {
+        "id": "pages:then_0->broker:in",
+        "from": {
+          "node": "pages",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "broker",
+          "port": "in"
+        }
+      },
+      {
+        "id": "station:then_0->broker:in",
+        "from": {
+          "node": "station",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "broker",
+          "port": "in"
+        }
+      },
+      {
+        "id": "broker:then_0->s-library:in",
+        "from": {
+          "node": "broker",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "s-library",
+          "port": "in"
+        }
+      },
+      {
+        "id": "broker:then_0->s-physics:in",
+        "from": {
+          "node": "broker",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "s-physics",
+          "port": "in"
+        }
+      },
+      {
+        "id": "broker:then_0->s-workspace:in",
+        "from": {
+          "node": "broker",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "s-workspace",
+          "port": "in"
+        }
+      },
+      {
+        "id": "broker:then_0->s-twin:in",
+        "from": {
+          "node": "broker",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "s-twin",
+          "port": "in"
+        }
+      },
+      {
+        "id": "broker:then_0->s-biomed:in",
+        "from": {
+          "node": "broker",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "s-biomed",
+          "port": "in"
+        }
+      },
+      {
+        "id": "broker:then_0->s-factory:in",
+        "from": {
+          "node": "broker",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "s-factory",
+          "port": "in"
+        }
+      },
+      {
+        "id": "broker:then_0->s-scenario:in",
+        "from": {
+          "node": "broker",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "s-scenario",
+          "port": "in"
+        }
+      },
+      {
+        "id": "broker:then_0->s-scrubber:in",
+        "from": {
+          "node": "broker",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "s-scrubber",
+          "port": "in"
+        }
+      },
+      {
+        "id": "broker:then_0->s-reasoner:in",
+        "from": {
+          "node": "broker",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "s-reasoner",
+          "port": "in"
+        }
+      },
+      {
+        "id": "s-scrubber:then_0->world:in",
+        "from": {
+          "node": "s-scrubber",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "world",
+          "port": "in"
+        }
+      },
+      {
+        "id": "s-reasoner:then_0->m-super:in",
+        "from": {
+          "node": "s-reasoner",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "m-super",
+          "port": "in"
+        }
+      },
+      {
+        "id": "s-reasoner:then_0->m-nano:in",
+        "from": {
+          "node": "s-reasoner",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "m-nano",
+          "port": "in"
+        }
+      },
+      {
+        "id": "r-context:then_0->r-supervisor:in",
+        "from": {
+          "node": "r-context",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "r-supervisor",
+          "port": "in"
+        }
+      },
+      {
+        "id": "r-supervisor:then_0->r-catalogue:in",
+        "from": {
+          "node": "r-supervisor",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "r-catalogue",
+          "port": "in"
+        }
+      },
+      {
+        "id": "r-catalogue:then_0->r-loop:in",
+        "from": {
+          "node": "r-catalogue",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "r-loop",
+          "port": "in"
+        }
+      },
+      {
+        "id": "r-loop:then_0->r-ends:in",
+        "from": {
+          "node": "r-loop",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "r-ends",
+          "port": "in"
+        }
+      },
+      {
+        "id": "r-loop:then_0->r-end:in",
+        "from": {
+          "node": "r-loop",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "r-end",
+          "port": "in"
+        }
+      },
+      {
+        "id": "r-supervisor:then_0->a-supervisor:in",
+        "from": {
+          "node": "r-supervisor",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "a-supervisor",
+          "port": "in"
+        }
+      },
+      {
+        "id": "provider:then_0->batch:in",
+        "from": {
+          "node": "provider",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "batch",
+          "port": "in"
+        }
+      },
+      {
+        "id": "batch:then_0->retry:in",
+        "from": {
+          "node": "batch",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "retry",
+          "port": "in"
+        }
+      },
+      {
+        "id": "provider:then_0->s-reasoner:in",
+        "from": {
+          "node": "provider",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "s-reasoner",
+          "port": "in"
+        }
+      },
+      {
+        "id": "interpreter:then_0->g-schema:in",
+        "from": {
+          "node": "interpreter",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "g-schema",
+          "port": "in"
+        }
+      },
+      {
+        "id": "g-schema:then_0->g-builder:in",
+        "from": {
+          "node": "g-schema",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "g-builder",
+          "port": "in"
+        }
+      },
+      {
+        "id": "g-builder:then_0->g-topic:in",
+        "from": {
+          "node": "g-builder",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "g-topic",
+          "port": "in"
+        }
+      },
+      {
+        "id": "refusal:then_0->meaning:in",
+        "from": {
+          "node": "refusal",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "meaning",
+          "port": "in"
+        }
+      },
+      {
+        "id": "meaning:then_0->stuck:in",
+        "from": {
+          "node": "meaning",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "stuck",
+          "port": "in"
+        }
+      },
+      {
+        "id": "refusal:then_0->st-last:in",
+        "from": {
+          "node": "refusal",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "st-last",
+          "port": "in"
+        }
+      },
+      {
+        "id": "execution:then_0->broker:in",
+        "from": {
+          "node": "execution",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "broker",
+          "port": "in"
+        }
+      },
+      {
+        "id": "memory:then_0->st-memory:in",
+        "from": {
+          "node": "memory",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "st-memory",
+          "port": "in"
+        }
+      },
+      {
+        "id": "a-observer:then_0->f-noconduct:in",
+        "from": {
+          "node": "a-observer",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "f-noconduct",
+          "port": "in"
+        }
+      },
+      {
+        "id": "f-task:then_0->f-conduct:in",
+        "from": {
+          "node": "f-task",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "f-conduct",
+          "port": "in"
+        }
+      },
+      {
+        "id": "f-task:then_0->f-noconduct:in",
+        "from": {
+          "node": "f-task",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "f-noconduct",
+          "port": "in"
+        }
+      },
+      {
+        "id": "f-noconduct:then_0->handoff:in",
+        "from": {
+          "node": "f-noconduct",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "handoff",
+          "port": "in"
+        }
+      },
+      {
+        "id": "p-frame:then_0->p-brief:in",
+        "from": {
+          "node": "p-frame",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "p-brief",
+          "port": "in"
+        }
+      },
+      {
+        "id": "p-brief:then_0->p-model:in",
+        "from": {
+          "node": "p-brief",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "p-model",
+          "port": "in"
+        }
+      },
+      {
+        "id": "p-model:then_0->p-harness:in",
+        "from": {
+          "node": "p-model",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "p-harness",
+          "port": "in"
+        }
+      },
+      {
+        "id": "p-harness:then_0->p-submit:in",
+        "from": {
+          "node": "p-harness",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "p-submit",
+          "port": "in"
+        }
+      },
+      {
+        "id": "p-submit:then_0->p-done:in",
+        "from": {
+          "node": "p-submit",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "p-done",
+          "port": "in"
+        }
+      },
+      {
+        "id": "p-harness:then_0->p-model:in",
+        "from": {
+          "node": "p-harness",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "p-model",
+          "port": "in"
+        }
+      },
+      {
+        "id": "p-submit:then_0->p-model:in",
+        "from": {
+          "node": "p-submit",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "p-model",
+          "port": "in"
+        }
+      },
+      {
+        "id": "p-builder:then_0->p-expose:in",
+        "from": {
+          "node": "p-builder",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "p-expose",
+          "port": "in"
+        }
+      },
+      {
+        "id": "p-expose:then_0->p-choose:in",
+        "from": {
+          "node": "p-expose",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "p-choose",
+          "port": "in"
+        }
+      },
+      {
+        "id": "p-choose:then_0->p-explain:in",
+        "from": {
+          "node": "p-choose",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "p-explain",
+          "port": "in"
+        }
+      },
+      {
+        "id": "p-explain:then_0->p-stop:in",
+        "from": {
+          "node": "p-explain",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "p-stop",
+          "port": "in"
+        }
+      },
+      {
+        "id": "p-stop:then_0->p-assemble:in",
+        "from": {
+          "node": "p-stop",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "p-assemble",
+          "port": "in"
+        }
+      },
+      {
+        "id": "p-stop:then_0->p-choose:in",
+        "from": {
+          "node": "p-stop",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "p-choose",
+          "port": "in"
+        }
+      },
+      {
+        "id": "p-builder:then_0->p-recipes:in",
+        "from": {
+          "node": "p-builder",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "p-recipes",
+          "port": "in"
+        }
+      },
+      {
+        "id": "p-recipes:then_0->p-assemble:in",
+        "from": {
+          "node": "p-recipes",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "p-assemble",
+          "port": "in"
+        }
+      },
+      {
+        "id": "p-expose:then_0->p-tools:in",
+        "from": {
+          "node": "p-expose",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "p-tools",
+          "port": "in"
+        }
+      },
+      {
+        "id": "p-tools:then_0->p-refs:in",
+        "from": {
+          "node": "p-tools",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "p-refs",
+          "port": "in"
+        }
+      },
+      {
+        "id": "p-refs:then_0->p-fix:in",
+        "from": {
+          "node": "p-refs",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "p-fix",
+          "port": "in"
+        }
+      },
+      {
+        "id": "p-fix:then_0->p-out:in",
+        "from": {
+          "node": "p-fix",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "p-out",
+          "port": "in"
+        }
+      },
+      {
+        "id": "p-assemble:then_0->p-here:in",
+        "from": {
+          "node": "p-assemble",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "p-here",
+          "port": "in"
+        }
+      },
+      {
+        "id": "c-here:then_0->c-head:in",
+        "from": {
+          "node": "c-here",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "c-head",
+          "port": "in"
+        }
+      },
+      {
+        "id": "c-head:then_0->c-observe:in",
+        "from": {
+          "node": "c-head",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "c-observe",
+          "port": "in"
+        }
+      },
+      {
+        "id": "c-observe:then_0->c-infer:in",
+        "from": {
+          "node": "c-observe",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "c-infer",
+          "port": "in"
+        }
+      },
+      {
+        "id": "c-infer:then_0->c-investigate:in",
+        "from": {
+          "node": "c-infer",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "c-investigate",
+          "port": "in"
+        }
+      },
+      {
+        "id": "c-investigate:then_0->c-evaluate:in",
+        "from": {
+          "node": "c-investigate",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "c-evaluate",
+          "port": "in"
+        }
+      },
+      {
+        "id": "c-evaluate:then_0->c-decide:in",
+        "from": {
+          "node": "c-evaluate",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "c-decide",
+          "port": "in"
+        }
+      },
+      {
+        "id": "c-decide:then_0->c-observe:in",
+        "from": {
+          "node": "c-decide",
+          "port": "then_0"
+        },
+        "to": {
+          "node": "c-observe",
+          "port": "in"
+        }
+      }
+    ]
+  },
+  "dashboards": [
+    {
+      "id": "main",
+      "name": "Main",
+      "tiles": []
+    }
+  ]
+}
