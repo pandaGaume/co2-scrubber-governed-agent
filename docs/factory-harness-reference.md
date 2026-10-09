@@ -523,7 +523,7 @@ Every test leaves an account of how the harness worked, outside the repository (
 .logs/<test id>/log.md      what happened, in order, under the same id
 ```
 
-The id is the test's name, its start time and four random characters (`scenario-commissioning-20261009-073755-l1wx`). A test is a scenario played by the scenario slot (each run opens its log and closes it with the loops' table) or the commissioning example (`scripts/commissioning-example.ts`); one log is open at a time in a process.
+The id is the test's name, its start time and four random characters (`scenario-commissioning-20261009-073755-l1wx`). A test is a scenario played by the scenario slot (each run opens its log and closes it with the loops' table) or the commissioning example (`scripts/commissioning-example.ts`); one log is open at a time in a process. `npm test` writes none: its scenarios run on scripts and call no model; `RUN_LOG=1` asks for them.
 
 `log.md` holds, in the order they happened:
 

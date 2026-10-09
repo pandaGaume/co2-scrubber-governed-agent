@@ -192,7 +192,7 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
             "scrubber": process.env.SCRUBBER_SOURCE === "board" ? "the real board" : "the stand-in",
         },
     });
-    log(`[scenario] ${run.id}: test log ${testLog.id} (.logs/${testLog.id}/)`);
+    if (testLog.enabled) log(`[scenario] ${run.id}: test log ${testLog.id} (.logs/${testLog.id}/)`);
     const operator = new Broker(httpBase, { name: "operator", version: VERSION, locale: "en" }, "station");
     const agent = new Broker(httpBase, { name: "agent", version: VERSION, locale: "en" }, "agent");
     const call = async <T>(slot: string, tool: string, args: Record<string, unknown> = {}): Promise<T> => {

@@ -13,6 +13,9 @@
  * written beside it: the mark says what could be cached, the server's figure says what was.
  *
  * One log is open at a time in a process (`runLog()`); `openRunLog` closes the one before. Nothing is logged when none is open.
+ *
+ * Not under `npm test` (node --test sets NODE_TEST_CONTEXT): its scenarios run on scripts, call no model, and a log of each would
+ * bury the trials' logs; `RUN_LOG=1` asks for them anyway.
  */
 import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
@@ -114,9 +117,17 @@ export class RunLog {
     /** How each harness task of the test ended, for the README. */
     private readonly tasks: string[] = [];
 
-    constructor(private readonly meta: RunLogMeta) {
+    constructor(
+        private readonly meta: RunLogMeta,
+        /** False under npm test: nothing is written (see above). */
+        readonly enabled = true,
+    ) {
         this.id = `${meta.name.replace(/[^a-z0-9-]+/gi, "-").toLowerCase()}-${stamp(this.started)}-${Math.random().toString(36).slice(2, 6)}`;
         this.dir = fromRoot(path.join(".logs", this.id));
+        if (!enabled) {
+            this.closed = true;
+            return;
+        }
         mkdirSync(this.dir, { recursive: true });
         this.writeReadme(null);
         writeFileSync(path.join(this.dir, "log.md"), `# Log of ${this.id}\n\nTest \`${this.id}\` (see README.md). Started ${this.started.toISOString()}.\n\nEach harness step is written node by node (observe, context, lookup, gate, reason, interpret, guard, execute, observe-after, evaluate, record): what each node got and what it gave. Each language model call is written whole where it happened: the request, its parts marked \`cacheable\` when they repeat the start of the previous request of the same conversation, the cache the server reports, and the answer.\n`);
@@ -128,6 +139,7 @@ export class RunLog {
     }
 
     private writeReadme(outcome: { text: string; facts?: Record<string, string> } | null): void {
+        if (!this.enabled) return;
         const facts = { ...(this.meta.facts ?? {}), ...(outcome?.facts ?? {}) };
         const models = [...this.byModel.entries()].map(([m, s]) => `| ${m} | ${s.calls} | ${s.prompt} | ${s.cached} | ${s.completion} |`);
         const lines = [
@@ -224,7 +236,7 @@ export class RunLog {
 
     /** Ends the test: its outcome into the README. */
     close(outcome: string, facts?: Record<string, string>): void {
-        if (this.closed) return;
+        if (this.closed || !this.enabled) return;
         this.append(`## End\n\nEnded ${new Date().toISOString()}: ${outcome}`);
         this.writeReadme({ text: outcome, facts });
         this.closed = true;
@@ -243,6 +255,11 @@ export function runLog(): RunLog | null {
 /** Opens a test's log (closing the one before), and takes the language model calls at the wire from now on. */
 export function openRunLog(meta: RunLogMeta): RunLog {
     current?.close("closed: another test started");
+    // Under npm test, a log that writes nothing and is not the process's current one, unless RUN_LOG=1.
+    if (process.env.NODE_TEST_CONTEXT && process.env.RUN_LOG !== "1") {
+        current = null;
+        return new RunLog(meta, false);
+    }
     current = new RunLog(meta);
     if (!installed) {
         installed = true;
