@@ -73,7 +73,8 @@ export function physicsSlot(wsBase: string, log: (line: string) => void): Publis
             handle: (args) => {
                 const c = convertValue(Number(args.value), ref(args.from), ref(args.to));
                 if (!c.ok) throw new Error(`${c.code}: ${c.reason}`);
-                return { value: c.value, factor: c.factor, from: c.from, to: c.to };
+                // The justification of the converted number, to write as it is: the conversion is its formula.
+                return { value: c.value, factor: c.factor, from: c.from, to: c.to, cite: { source: "derived", reference: `${Number(args.value)} x ${c.factor} (${JSON.stringify(c.from)} -> ${JSON.stringify(c.to)}) = ${c.value}` } };
             },
         },
         {

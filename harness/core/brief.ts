@@ -1,7 +1,7 @@
 /**
  * What every factory's brief says the same way (2026-09-28, the socle's fifth
  * point): the rules a builder follows at every step are said once, in the
- * socle's prompt (`socle.md`); the brief says where this task stands, and
+ * socle's prompt (`kernel.md, policy.md`); the brief says where this task stands, and
  * these sentences, which every topic writes alike, are written here once.
  */
 import type { Progress } from "./workspace-observer.js";

@@ -31,7 +31,7 @@ export const NEVER_REPLAYED: ReadonlyArray<RegExp> = [/^task\.(fail|ask)$/];
  * the topic, as `neverReplayed` or `replayedActions` (`tests/conformance.test.ts`).
  */
 export const READ_CAPABILITIES: ReadonlyArray<RegExp> = [
-    /^library\.(list|methods|search|read|facts|graphs|graph)$/,
+    /^library\.(list|methods|search|read|facts|justify|graphs|graph)$/,
     /^web\.search$/,
     /^physics\.units_(normalize|convert|compatible|validate_connection|relations|relate|knowledge)$/,
     /^workspace\.(list|read)$/,

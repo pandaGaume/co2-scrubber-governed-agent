@@ -11,18 +11,25 @@
  *                      between quantities (a volume flow as a mass flow)
  *   the task           its plan, its claim, its failure, its question
  *
- * A model is told of them once, in `socle.md`, which the reasoner adds to
- * every factory's prompt. `tests/conformance.test.ts` checks every topic
- * against it.
+ * A factory's prompt is three levels (2026-10-09), each said once:
+ *
+ *   the mission        the topic's own (`specs/<topic>/prompt.md`): what this factory makes, for whom, in this domain
+ *   the kernel         how the harness runs any work (`kernel.md`): the marching order, the turn, the calls, the refusals, the end
+ *   the policy         the engineering rules every factory keeps (`policy.md`): every number justified, which source for what,
+ *                      units never converted by hand
+ *
+ * No tool is described in a prompt: a tool is described once, in its own definition (its slot's grammar, or the capability's
+ * description), which is what the model is given with it. `tests/conformance.test.ts` checks every topic against this.
  */
 import { readFileSync } from "node:fs";
 import { fromRoot } from "../../lib/paths.js";
 
-export const SOCLE_PROMPT = "harness/core/socle.md";
+/** The kernel and the policy, in the order the model reads them after its mission. */
+export const SOCLE_PROMPTS: ReadonlyArray<string> = ["harness/core/kernel.md", "harness/core/policy.md"];
 
-/** A factory's prompt as the model reads it: the topic's own, then what every factory reaches. */
+/** A factory's prompt as the model reads it: the mission, then the kernel, then the policy. */
 export function promptWithSocle(topicPrompt: string): string {
-    return `${topicPrompt.trimEnd()}\n\n${readFileSync(fromRoot(SOCLE_PROMPT), "utf8").trim()}\n`;
+    return [topicPrompt.trimEnd(), ...SOCLE_PROMPTS.map((file) => readFileSync(fromRoot(file), "utf8").trim())].join("\n\n") + "\n";
 }
 
 export const BASE_CAPABILITIES: ReadonlyArray<string> = [
@@ -31,6 +38,7 @@ export const BASE_CAPABILITIES: ReadonlyArray<string> = [
     "library.search",
     "library.read",
     "library.facts",
+    "library.justify",
     "web.search",
     "physics.units_normalize",
     "physics.units_convert",

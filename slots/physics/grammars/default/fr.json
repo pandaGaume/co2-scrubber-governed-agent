@@ -10,7 +10,7 @@
         },
         "units_convert": {
             "title": "Convertir une valeur",
-            "description": "Une valeur convertie d'une unité vers une autre de la même grandeur, par les tables du substrat ; refusée entre grandeurs (m3/min vers kg/s n'est pas une conversion)."
+            "description": "Une valeur convertie d'une unité vers une autre de la même grandeur, par les tables du substrat ; refusée entre grandeurs (m3/min vers kg/s n'est pas une conversion). Sa réponse porte cite, la justification du nombre converti (source derived, la conversion en référence), à écrire telle quelle."
         },
         "units_compatible": {
             "title": "Comparer deux unités",
@@ -26,7 +26,7 @@
         },
         "units_relate": {
             "title": "Convertir vers une grandeur liée",
-            "description": "Une valeur convertie d'une grandeur vers une grandeur liée (units_relations les liste), au lieu de refaire la physique : 0,69 g/min de CO2 en L/min, 1000 ppm en mg/m3, les kg/s d'un épurateur sur un volume de 30 m3 en ppm par minute. La réponse nomme la formule et dit quels paramètres ont été donnés et lesquels ont pris la valeur par défaut de la cabine (101 325 Pa, 293,15 K, la masse molaire du CO2). Refusé si aucune relation ne relie les deux grandeurs, ou si un paramètre sans valeur par défaut (un volume) manque.",
+            "description": "Une valeur convertie d'une grandeur vers une grandeur liée (units_relations les liste), au lieu de refaire la physique : 0,69 g/min de CO2 en L/min, 1000 ppm en mg/m3, les kg/s d'un épurateur sur un volume de 30 m3 en ppm par minute. La réponse nomme la formule et dit quels paramètres ont été donnés et lesquels ont pris la valeur par défaut de la cabine (101 325 Pa, 293,15 K, la masse molaire du CO2). Refusé si aucune relation ne relie les deux grandeurs, ou si un paramètre sans valeur par défaut (un volume) manque. Sa réponse porte cite, la justification du nombre obtenu (source derived, la formule et ses valeurs en référence), à écrire telle quelle.",
             "properties": {
                 "value": "la valeur, dans l'unité de départ",
                 "from": "sa grandeur et son unité, par exemple {quantity: MassFlow, unit: g/min}",

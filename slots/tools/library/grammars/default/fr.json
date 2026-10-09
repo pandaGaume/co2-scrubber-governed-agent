@@ -8,6 +8,11 @@
             "title": "Le catalogue",
             "description": "Tous les documents de la bibliothèque : identifiant, titre, résumé, les grandeurs que mesure une fiche de méthode, sha256 et taille."
         },
+        "justify": {
+            "title": "Ce qui justifie un nombre",
+            "description": "Ce qui justifie un nombre qu'une proposition fixe, d'après la bibliothèque : si c'est une constante de sécurité, les faits signés qui la bornent avec leur côté sûr et si la valeur les respecte, et la justification à écrire quand l'un tient ; sinon, les sources admises.",
+            "properties": { "constant": "le chemin de la constante dans la proposition", "value": "sa valeur", "range": "pour des bornes, [min, max] au lieu de value" }
+        },
         "methods": {
             "title": "Les méthodes qui mesurent une grandeur",
             "description": "Les fiches de méthode de la bibliothèque qui mesurent la grandeur donnée (Volume, AirChange, VolumetricFlow...) : identifiant, titre, résumé, ce que chacune mesure. Une fiche porte le principe de la méthode et ses règles d'application ; la lire avec read.",

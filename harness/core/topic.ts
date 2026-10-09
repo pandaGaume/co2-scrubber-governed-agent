@@ -81,7 +81,7 @@ export interface TopicDefinition {
     guard?(capabilityId: string, input: JsonValue, context: TopicContext): string[] | Promise<string[]>;
     /** The intention the loop is stepped with, when the generic "build what produces" does not say the work. */
     intention?(task: TaskFile["task"], generic: Intention): Intention;
-    /** The prompt file of the topic, relative to the repository (`specs/<topic>/prompt.md`), for a builder that is a language model; the reasoner adds the socle's (`base.ts`, `socle.md`). */
+    /** The prompt file of the topic, relative to the repository (`specs/<topic>/prompt.md`), for a builder that is a language model; the reasoner adds the socle's (`base.ts`, `kernel.md, policy.md`). */
     prompt?: string;
     /**
      * The field of the task's observations the topic's own state shows already (its format's `observation`): left out of the

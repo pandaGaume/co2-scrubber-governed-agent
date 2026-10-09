@@ -88,6 +88,8 @@ export interface Related {
     formula: string;
     direction: "forward" | "inverse";
     parameters: Record<string, { value: number; unit: string; given: boolean; fact?: string }>;
+    /** The justification of a number derived this way: source derived, the formula and its values as the reference. */
+    cite: { source: "derived"; reference: string };
 }
 
 const same = (a: string, b: string): boolean => (canonicalQuantity(a) ?? a).toLowerCase() === (canonicalQuantity(b) ?? b).toLowerCase();
@@ -174,5 +176,7 @@ export function relate(value: number, from: UnitRef & { quantity: string }, to: 
         formula: relation.formula,
         direction,
         parameters,
+        // The justification of a number derived this way, to write as it is (2026-10-09: the reference of a derived value is its formula, given by the tool, not composed).
+        cite: { source: "derived", reference: `${relation.formula} (${Object.entries(parameters).map(([k, v]) => `${k} = ${v.value}${v.unit ? ` ${v.unit}` : ""}`).join(", ")}; ${value} ${from.unit} -> ${fromSide(out, outSide, to)} ${to.unit})` },
     };
 }

@@ -41,7 +41,7 @@
         "monitoring.bandMax": { "states": [{ "library": "commissioning-test-safety", "phrase": "its `maxBpm` at or below" }] },
         "shape.place": { "states": [{ "file": "specs/procedure/procedure.schema.json", "pointer": "/properties/volume/description", "phrase": "ISA-95 path of the volume under test" }] },
         "shape.device": { "states": [{ "file": "specs/procedure/procedure.schema.json", "pointer": "/properties/device/description", "phrase": "ISA-95 path of the device the steps command" }] },
-        "shape.limits": { "states": [{ "file": "specs/procedure/prompt.md", "phrase": "`limits.co2MaxPpm`, `limits.co2AbortPpm`, `limits.minSpeedPercent`, `limits.maxMinutes`" }] },
+        "shape.limits": { "states": [{ "file": "specs/procedure/procedure.schema.json", "pointer": "/properties/limits/required", "phrase": "co2AbortPpm" }] },
         "shape.steps": { "states": [{ "file": "specs/procedure/procedure.schema.json", "pointer": "/properties/steps/items/required", "phrase": "speedPercent" }] }
     },
     "rules": [

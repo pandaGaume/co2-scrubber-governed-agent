@@ -10,7 +10,7 @@
         },
         "units_convert": {
             "title": "Convert a value",
-            "description": "A value converted from one unit to another of the same quantity, by the substrate's tables; refused across quantities (m3/min to kg/s is not a conversion)."
+            "description": "A value converted from one unit to another of the same quantity, by the substrate's tables; refused across quantities (m3/min to kg/s is not a conversion). Its answer carries cite, the justification of the converted number (source derived, the conversion as the reference), to write as it is."
         },
         "units_compatible": {
             "title": "Compare two units",
@@ -26,7 +26,7 @@
         },
         "units_relate": {
             "title": "Convert to a related quantity",
-            "description": "A value converted from one quantity to a related one (units_relations lists them), instead of redoing the physics: 0.69 g/min of CO2 as L/min, 1000 ppm as mg/m3, a scrubber's kg/s from a 30 m3 volume as ppm per minute. The answer names the formula and says which parameters were given and which took the cabin's default (101 325 Pa, 293.15 K, CO2's molar mass). Refused when no relation ties the two quantities, or a parameter without a default (a volume) is missing.",
+            "description": "A value converted from one quantity to a related one (units_relations lists them), instead of redoing the physics: 0.69 g/min of CO2 as L/min, 1000 ppm as mg/m3, a scrubber's kg/s from a 30 m3 volume as ppm per minute. The answer names the formula and says which parameters were given and which took the cabin's default (101 325 Pa, 293.15 K, CO2's molar mass). Refused when no relation ties the two quantities, or a parameter without a default (a volume) is missing. Its answer carries cite, the justification of the number obtained (source derived, the formula with its values as the reference), to write as it is.",
             "properties": {
                 "value": "the value, in the from unit",
                 "from": "its quantity and unit, e.g. {quantity: MassFlow, unit: g/min}",

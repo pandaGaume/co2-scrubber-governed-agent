@@ -8,10 +8,12 @@
  *   base       the topic reaches every capability of the socle (`base.ts`)
  *   tools      each of its tool patterns names a capability that exists (a
  *              published tool, a task's own, the topic's own)
- *   model      a topic a model builds on has its prompt, its brief, its state,
- *              and the prompt it reads (the topic's, then the socle's) names
- *              every capability it may call, and says each of the socle's
- *              rules once: the topic's own prompt does not say them again
+ *   model      a topic a model builds on has its prompt, its brief, its state;
+ *              the prompt it reads (its mission, then the kernel and the
+ *              policy) says each of the socle's rules once, the mission not
+ *              again; and every capability it may call is described in its
+ *              own definition, which is the only place a tool is described
+ *              (2026-10-09: no tool catalogue in a prompt)
  *   replay     each capability it allows is a read, or classed by the topic
  *              once: never replayed, or a replayed action (`replay.ts`)
  *   declared   each pattern it classes names a capability it allows
@@ -71,6 +73,8 @@ describe("every factory against the socle", () => {
     let published: string[] = [];
     /** The input schema of every published tool, by id. */
     const schemas = new Map<string, unknown>();
+    /** The description of every published tool, by id: where a tool is described, once. */
+    const descriptions = new Map<string, string>();
 
     before(async () => {
         process.env.SPEECH_PROVIDER = "silent";
@@ -80,6 +84,7 @@ describe("every factory against the socle", () => {
             for (const t of await broker.tools(slot)) {
                 published.push(`${slot}.${t.name}`);
                 schemas.set(`${slot}.${t.name}`, t.inputSchema);
+                descriptions.set(`${slot}.${t.name}`, t.description ?? "");
             }
         published = [...new Set(published)].sort();
     });
@@ -109,7 +114,9 @@ describe("every factory against the socle", () => {
             if (!topic.brief) found.push("model|brief");
             if (!topic.state) found.push("model|state");
             const text = existsSync(fromRoot(topic.prompt)) ? promptWithSocle(readFileSync(fromRoot(topic.prompt), "utf8")) : "";
-            for (const id of allowed) if (!own.includes(id) || id.startsWith("task.")) if (!text.includes(`\`${id}\``)) found.push(`model|unnamed ${id}`);
+            // A tool is described once, in its own definition, never in a prompt: each one the topic allows has its description there.
+            const describedBy = (id: string): string => locals.find((c) => c.id === id)?.description ?? descriptions.get(id) ?? "";
+            for (const id of allowed) if (!describedBy(id).trim()) found.push(`model|undescribed ${id}`);
             for (const rule of SOCLE_RULES) if (text.split(rule).length - 1 !== 1) found.push(`model|says "${rule}" ${text.split(rule).length - 1} times`);
         }
         const never = [...NEVER_REPLAYED, ...(topic.neverReplayed ?? [])];
