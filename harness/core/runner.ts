@@ -35,6 +35,7 @@ import { NEVER_REPLAYED, proposalKey, restrictReplays } from "./replay.js";
 import { justificationHelp, noteSources } from "./justify.js";
 import { noteRefusal, STUCK_AFTER } from "./problems.js";
 import { readMeaning, unmoved } from "./interpreter.js";
+import { runLog, type StepEntry } from "../lib/run-log.js";
 import { cutAtOutputLimit, truncatedRefusal } from "../lib/llm-common.js";
 import { episodeOf, type Episode, type StepLike } from "./episodes.js";
 import { workingMemory } from "../../lib/working-memory.js";
@@ -338,6 +339,38 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         const learned = learnedEntries.filter((e) => relevantTo(stage, e.appliesTo)).map(entryView);
         return learned.length || episodes.length ? ({ ...(learned.length ? { learned } : {}), ...(episodes.length ? { episodes } : {}) } as JsonValue) : null;
     };
+    const stageStarts = new Map<string, number>();
+    const stageMs = new Map<string, number>();
+    /** The test's log entry of one step (run-log.ts): each node with what it got and gave, from the trace, the exchange and the refusal. */
+    const logStep = (n: number, decisionId: string | null, trace: DecisionTrace | null, exchange: ProviderExchange | null, refused: string | null, extra: StepEntry["nodes"] = []): void => {
+        const log = runLog();
+        if (!log) return;
+        const ms = (stage: string) => (decisionId ? stageMs.get(`${decisionId}:${stage}`) : undefined);
+        const state = trace?.stateBefore;
+        const nodes: StepEntry["nodes"] = [
+            { node: "observe", output: state ? { id: state.id, features: state.features } : "(not reached the trace: see the refusal)", ms: ms("observe") },
+            { node: "context / lookup / gate", output: trace ? { source: trace.source, ...(trace.candidateScore !== undefined ? { candidateScore: trace.candidateScore, candidateConfidence: trace.candidateConfidence } : {}) } : exchange ? { source: exchange.response === null ? (exchange.batch ? "a call of the model's last answer (batch)" : "the harness's reading, not the model") : "fallback: the model was asked" } : undefined, ms: ms("gate") },
+            {
+                node: "reason",
+                input: exchange ? (exchange.response === null ? "no model call at this step" : "the language model call written just above") : undefined,
+                output: exchange ? { proposed: exchange.proposedCapabilityId, input: exchange.proposedInput, tokens: exchange.tokens, ...(exchange.batch ? { batch: exchange.batch } : {}) } : trace ? { decision: trace.decision } : undefined,
+                ms: ms("reason"),
+            },
+            ...(exchange?.reading ? [{ node: "interpret", input: exchange.reading.sent, output: { how: exchange.reading.how, read: exchange.reading.read, changes: exchange.reading.changes, model: exchange.reading.model ?? null } }] : []),
+            { node: "guard", input: trace ? trace.decision.invocation : exchange ? { capability: exchange.proposedCapabilityId, input: exchange.proposedInput } : undefined, output: refused ? `refused: ${refused}` : trace ? "accepted" : undefined, ms: ms("guard") },
+            ...extra,
+        ];
+        if (trace) {
+            nodes.push(
+                { node: "execute", input: trace.decision.invocation, output: trace.result, ms: ms("execute") },
+                { node: "observe-after", output: { id: trace.stateAfter.id }, ms: ms("observe-after") },
+                { node: "evaluate", output: trace.evaluation, ms: ms("evaluate") },
+                { node: "record", output: `kept in the memory under ${trace.stateBefore.id}`, ms: ms("record") },
+            );
+        }
+        log.step({ task: taskId, topic: topicId, n, nodes, outcome: refused ? `${exchange?.proposedCapabilityId ?? "?"} refused` : trace ? `${trace.decision.invocation.capabilityId} ${String((trace.result.output as { outcome?: string } | undefined)?.outcome ?? (trace.result.ok ? "completed" : "error"))}` : "no proposal" });
+    };
+
     const agent = createAgent({
         broker,
         provider,
@@ -354,8 +387,18 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         evaluator: createTaskEvaluator({ broker, taskId, task, topic, progress }),
         guard: createBuilderGuard({ broker, task, topic, runtimeSlot, taskId, progress }),
         policy: recipes.policy,
-        timeoutMs,
-        onStage,
+        // A decision waits at least as long as the model is given, and a margin for the slot (2026-10-09: Nano answered in 60.3 s,
+        // its profile gives 120 s, the step's 60 s cut it first, "Decision timeout").
+        timeoutMs: Math.max(timeoutMs, Number(provider.settings?.timeoutMs ?? 0) + 30000),
+        // Each node's time, for the test's log (run-log.ts); the caller's own listener still gets every event.
+        onStage: (event: StageEvent) => {
+            if (event.status === "start") stageStarts.set(`${event.decisionId}:${event.stage}`, Date.now());
+            else {
+                const t = stageStarts.get(`${event.decisionId}:${event.stage}`);
+                if (t !== undefined) stageMs.set(`${event.decisionId}:${event.stage}`, Date.now() - t);
+            }
+            onStage?.(event);
+        },
     });
 
     const manifest: Manifest = {
@@ -387,6 +430,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
     await writeText(broker, taskId, "manifest.json", manifestText(manifest));
     onProgress?.(manifest);
     log(`[factory] task ${taskId}: topic ${topicId}, signature ${signature.id}, ${capabilities.catalogue.length} tools, recipes ${recipes.loaded ? `${recipes.experiences} experiences` : "none"}`);
+    runLog()?.section(`Task ${taskId} (${topicId}) starts`, { model: provider.model, provider: provider.name, settings: provider.settings ?? null, contextMode, budget, tools: capabilities.catalogue.map((c) => c.id), request: task });
 
     const lines: TraceLine[] = [];
     const attached = new Set<string | undefined>();
@@ -538,6 +582,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             }
             lines.push({ n, decisionId: trace.decisionId, source: trace.source, trace, failed: null, exchange, call, ms });
             if (exchange?.reading) log(`[factory] step ${n}: ${exchange.reading.capability} read ${exchange.reading.how === "coerced" ? "by its schema" : `by ${exchange.reading.model ?? "a model"}`}: ${exchange.reading.changes.join("; ")}`);
+            logStep(n, trace.decisionId, trace, exchange, null);
             log(`[factory] step ${n}: ${trace.decision.invocation.capabilityId} -> ${outcome} (${trace.evaluation.reason ?? ""})${trace.source === "policy" ? " [replayed]" : ""}${exchange?.batch ? ` [call ${exchange.batch.index} of ${exchange.batch.of} of one answer]` : ""}`);
             continue;
         }
@@ -594,6 +639,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             progress.guardRefused = null;
             manifest.steps.push({ n, decisionId: exchange.decisionId ?? null, source: "refused", capability: exchange.proposedCapabilityId, input: exchange.proposedInput, outcome: "refused", summary: failed, reward: null, reason: failed, ms, tokens: exchange.tokens, ...(byGuard ? { judged: "refused" as const } : {}), ...(truncated ? { truncated: true } : {}), ...(meaning ? { meaning } : {}) });
             lines.push({ n, decisionId: exchange.decisionId ?? null, source: "refused", trace: null, failed, exchange, call: null, ms });
+            logStep(n, exchange.decisionId ?? null, null, exchange, failed ?? "refused", meaning ? [{ node: "interpret (meaning)", input: { refused: meaning.points }, output: meaning }] : []);
             log(`[factory] step ${n}: ${exchange.proposedCapabilityId} -> stopped by the harness (${failed})`);
             // The same points refused STUCK_AFTER times in a row, whatever the input changed: the task ends, naming them, rather than spend its budget (2026-09-28: nineteen refusals of one speed).
             if (streak.times >= STUCK_AFTER && !meant) {
@@ -606,6 +652,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             continue;
         }
         // No proposal was made: the reasoner itself failed (the endpoint, the key, the network). Repeating the call would repeat the failure.
+        runLog()?.step({ task: taskId, topic: topicId, n, nodes: [{ node: "reason", output: `failed: ${failed}`, ms }], outcome: `no proposal: ${failed}` });
         manifest.steps.push({ n, decisionId: null, source: "failed", capability: null, input: null, outcome: "failed", summary: failed, reward: null, reason: failed, ms, tokens: null });
         lines.push({ n, decisionId: null, source: "failed", trace: null, failed, exchange: null, call: null, ms });
         ended = `the reasoner failed: ${failed}`;
@@ -627,6 +674,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
     manifest.sandbox = progress.sandbox;
     const finalPhase = progress.phase as string;
     manifest.state = finalPhase === "done" ? "done" : finalPhase === "waiting" ? "waiting" : "failed";
+    runLog()?.section(`Task ${taskId} (${topicId}) ends: ${finalPhase}`, { ended: ended ?? null, steps: progress.iteration, telemetry });
     manifest.ended = ended ?? (finalPhase === "done" ? `contract held after ${progress.iteration} step(s)` : finalPhase === "waiting" ? (progress.failure ?? "waiting for the commander") : progress.failure !== null ? `the builder gave up: ${progress.failure}` : "not done");
     manifest.endedAt = new Date().toISOString();
     await writeText(broker, taskId, "trace.jsonl", lines.map((l) => JSON.stringify(l)).join("\n") + "\n");

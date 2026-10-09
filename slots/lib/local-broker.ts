@@ -87,7 +87,11 @@ export async function startBroker(port: number, stdio: "inherit" | "ignore" = "i
     // With the real board (2026-10-08): a board switched off is seen gone within 10 to 20 s instead of 30 to 60 (the heartbeat); not
     // shorter, since every slot of the server shares one Node process and one socket, and a computation over the interval cuts them all.
     const heartbeat = process.env.MCP_BROKER_PROVIDER_HEARTBEAT_MS ?? (process.env.SCRUBBER_SOURCE === "board" ? "10000" : undefined);
-    const child = spawn(process.execPath, [brokerBin()], { cwd: ROOT, stdio, env: { ...process.env, MCP_BROKER_PORT: String(port), MCP_BROKER_ALLOWED_ORIGINS: process.env.MCP_BROKER_ALLOWED_ORIGINS ?? origins, ...(heartbeat ? { MCP_BROKER_PROVIDER_HEARTBEAT_MS: heartbeat } : {}) } });
+    // A tool may answer late when a model answers late: the reasoner waits for its model up to the profile's timeout (120 s on
+    // Nebius) and the interpreter may ask another; the broker's own 60 s default cut the reasoner first (2026-10-09, Token Factory
+    // answering in 25 to 52 s, one call past 60 s: "Provider reasoner did not respond").
+    const requestTimeout = process.env.MCP_BROKER_PROVIDER_REQUEST_TIMEOUT_MS ?? "300000";
+    const child = spawn(process.execPath, [brokerBin()], { cwd: ROOT, stdio, env: { ...process.env, MCP_BROKER_PORT: String(port), MCP_BROKER_ALLOWED_ORIGINS: process.env.MCP_BROKER_ALLOWED_ORIGINS ?? origins, MCP_BROKER_PROVIDER_REQUEST_TIMEOUT_MS: requestTimeout, ...(heartbeat ? { MCP_BROKER_PROVIDER_HEARTBEAT_MS: heartbeat } : {}) } });
     const stop = () => {
         if (!child.killed) child.kill("SIGINT");
     };

@@ -33,6 +33,7 @@ import * as path from "node:path";
 import { fromRoot, isMain, relativeToRoot } from "../lib/paths.js";
 import { errorMessage } from "../lib/files.js";
 import { startAll } from "../slots/run-all.js";
+import { openRunLog } from "../harness/lib/run-log.js";
 import { Broker, type CallResult } from "../harness/lib/broker.js";
 import { ReasonerProvider } from "../harness/providers/reasoner.js";
 import { observe, OBSERVER_PROMPT } from "../harness/observer/observer.js";
@@ -96,6 +97,19 @@ async function main(): Promise<void> {
     process.env.SPEECH_PROVIDER = "silent";
     process.env.BIOMED_PROVIDER = "simulated";
     process.env.FACTORY_RECIPES_DIR = path.join(outDir, "recipes");
+    // The test's log (harness/lib/run-log.ts): .logs/<id>/README.md and log.md, every step node by node and every model call whole.
+    const routingFile = fromRoot(process.env.REASONER_ROUTING ?? "specs/reasoner/routing.json");
+    const testLog = openRunLog({
+        name: "commissioning-example",
+        description: "The whole commissioning on the models, from the device plugged in to the twin proposed, in one process on its own broker (port 3160), the room a stand-in world of two zones: the registration, the procedure factory (a model), the relay, the authorisation (the script stands for the commander), the execution, the report, the Observer (a model), the graph factory (a model), the references, the proposal.",
+        command: process.argv.slice(1).map((a) => path.basename(a)).join(" "),
+        facts: {
+            "server profile": process.env.REASONER_PROFILE ?? "profiles/anthropic.json",
+            "routing": existsSync(routingFile) ? JSON.stringify((JSON.parse(readFileSync(routingFile, "utf8")) as { uses?: unknown }).uses ?? {}) : "none",
+            "journal": relativeToRoot(path.join(outDir, "journal.md")),
+        },
+    });
+    console.log(`test log: .logs/${testLog.id}/`);
     const started = await startAll(3160, () => undefined, "ignore");
     const operator = new CountingBroker(started.broker.httpBase, { name: "operator", version: "0", locale: "fr" });
     const agent = new CountingBroker(started.broker.httpBase, { name: "agent", version: "0", locale: "en" });
@@ -411,6 +425,7 @@ async function main(): Promise<void> {
         const journal = { stamp, world: LAB_WORLD, loops, telemetry };
         writeFileSync(path.join(outDir, "journal.json"), JSON.stringify(journal, null, 2));
         writeFileSync(path.join(outDir, "journal.md"), markdownOf(journal));
+        testLog.close(loops.map((l) => `- loop ${l.n} ${l.name}: ${l.decisions ?? "-"} decision(s), ${l.modelCalls ?? "-"} model call(s), ${Math.round(l.ms / 1000)} s${l.name === "stopped" ? `: ${String(l.output).slice(0, 300)}` : ""}`).join("\n"));
         console.log(`journal: ${relativeToRoot(path.join(outDir, "journal.md"))}; the whole trace of the model loops under ${relativeToRoot(traceDir)}/`);
         await operator.close();
         await agent.close();

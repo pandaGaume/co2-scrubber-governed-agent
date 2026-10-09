@@ -12,3 +12,6 @@ dist/
 # copied at build from @spiky-panda/plugin-harness (npm run build)
 dashboard/agent/SpkPluginHarness.js
 dashboard/agent/SpkPluginHarness.js.map
+
+# the test logs (harness/lib/run-log.ts): .logs/<test id>/README.md and log.md
+.logs/

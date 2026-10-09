@@ -514,6 +514,24 @@ What is missing, in the order the work is planned: the identifiability chain and
 
 ---
 
+## 16. The test's log
+
+Every test leaves an account of how the harness worked, outside the repository (`harness/lib/run-log.ts`, `.logs/` is ignored by git):
+
+```
+.logs/<test id>/README.md   the test: its id, when, the command, the commit, the profile and the routing, what it exercises; at the end its outcome and, per model, the calls, the prompt tokens, those the server served from its cache, the completion tokens
+.logs/<test id>/log.md      what happened, in order, under the same id
+```
+
+The id is the test's name, its start time and four random characters (`scenario-commissioning-20261009-073755-l1wx`). A test is a scenario played by the scenario slot (each run opens its log and closes it with the loops' table) or the commissioning example (`scripts/commissioning-example.ts`); one log is open at a time in a process.
+
+`log.md` holds, in the order they happened:
+
+- **each harness step, node by node**, folded: what `observe` gave (the state's id and features, the reasoning state whole), the source at `context / lookup / gate` (the memory's candidate and its score, the model, a call of a batch, the harness's own reading), what `reason` proposed (capability, input, tokens, its place in a batch), what `interpret` read (form or meaning, the model that read it), the `guard`'s verdict with the refusal whole, what `execute` returned, `observe-after`, the `evaluate` reward, what `record` kept; each node with its time;
+- **each language model call, whole**, taken at the wire (`fetch`), whatever slot or wire made it (a factory's decision, the interpreter, a composed line): the endpoint, the sampling (`tool_choice`, temperature, output limit), the system prompt and the tools' schemas written in full the first time and named by their sha256 after, the messages, and the answer as the server gave it (the reasoning, the calls, `finish_reason`, `usage`);
+- **what can be cached, and what was**: a part is marked `cacheable` when it repeats, byte for byte, the start of the previous request of the same conversation (same model, system prompt and tools), since providers cache a request's prefix; beside it the server's own figure (`prompt_tokens_details.cached_tokens`, `prompt_cache_hit_tokens`, `cache_read_input_tokens`). The mark says what could be served from the cache, the server says what was;
+- the scenario's loops as they start and end, Mother's lines, each task's start (model, settings, context mode, budget, tools, the request) and end (how it ended, the telemetry).
+
 ## Annex A. The map of the files
 
 | path | role |
@@ -522,6 +540,7 @@ What is missing, in the order the work is planned: the identifiability chain and
 | `harness/core/agent.ts` | the agent: the loop with its six services |
 | `harness/core/runner.ts` | a task run end to end: the context read once, the loop, the early ends, the manifest, the proposal, the recipes saved |
 | `harness/core/capabilities.ts`, `task-capabilities.ts` | the catalogue from the broker with its bindings; `task.plan`, `task.done`, `task.fail`, `task.ask` |
+| `harness/lib/run-log.ts` | the test's log: `.logs/<id>/README.md` and `log.md`, every step node by node and every model call whole, the cacheable parts marked |
 | `harness/lib/call-batch.ts` | several calls in one answer: handed to the loop one per step without asking the model, the results buffered and sent back together |
 | `harness/core/interpreter.ts` | the interpreter: a call read toward its schema before it is judged (the schema-guided reading, then a model's extraction) |
 | `harness/core/builder-guard.ts` | the constructor's guard; the plan's problems |

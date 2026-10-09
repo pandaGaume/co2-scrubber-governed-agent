@@ -42,6 +42,8 @@ import { cabinReading } from "../../lib/cabin-co2.js";
 import { loadPlaybook, playbookProblems, sayingText, signedPlaybook, type Playbook, type PlaybookFile, type Saying } from "../../harness/core/conduct.js";
 import { loadWords, say } from "../../harness/core/words.js";
 import { SIGNATORY } from "../../lib/roles.js";
+import { openRunLog, runLog } from "../../harness/lib/run-log.js";
+import { readFileSync as readRouting, existsSync as routingExists } from "node:fs";
 
 /** What the commissioning does once a test ended, unless the document names another playbook; and what that playbook says. */
 export const RECOVERY_PLAYBOOK = "specs/commissioning/recovery.playbook.json";
@@ -173,6 +175,19 @@ export function runOf(id: string, sha256: string, doc: CommissioningDocument, n:
 
 export async function playCommissioning(doc: CommissioningDocument, run: Run, deps: PlayerDeps): Promise<void> {
     const { httpBase, log, waitMs, notify } = deps;
+    // Every run is a test with its own log (harness/lib/run-log.ts): .logs/<id>/README.md and log.md.
+    const routingFile = fromRoot(process.env.REASONER_ROUTING ?? "specs/reasoner/routing.json");
+    const testLog = openRunLog({
+        name: `scenario-${run.scenario}`,
+        description: `The scenario \`${run.scenario}\` (specs/scenario-${run.scenario}.json, sha256 ${run.sha256.slice(0, 12)}) played by the scenario slot as run ${run.id}: its ten loops, from the device registered to the twin proposed (the procedure factory, the relay, the commander's authorisation, the test on the board or its stand-in, the report, the Observer, the graph factory, the references, the proposal). Builder ${run.options.builder}${run.options.playbook ? `, playbook ${run.options.playbook}` : ""}.`,
+        facts: {
+            "run": run.id,
+            "server profile": process.env.REASONER_PROFILE ?? "profiles/anthropic.json",
+            "routing": routingExists(routingFile) ? JSON.stringify((JSON.parse(readRouting(routingFile, "utf8")) as { uses?: unknown }).uses ?? {}) : "none",
+            "scrubber": process.env.SCRUBBER_SOURCE === "board" ? "the real board" : "the stand-in",
+        },
+    });
+    log(`[scenario] ${run.id}: test log ${testLog.id} (.logs/${testLog.id}/)`);
     const operator = new Broker(httpBase, { name: "operator", version: VERSION, locale: "en" }, "station");
     const agent = new Broker(httpBase, { name: "agent", version: VERSION, locale: "en" }, "agent");
     const call = async <T>(slot: string, tool: string, args: Record<string, unknown> = {}): Promise<T> => {
@@ -184,6 +199,7 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
     /** Mother tells the room where the run stands: said, not awaited; a station that does not answer never holds the run back. */
     const said: Array<Promise<unknown>> = [];
     const narrate = (text: string): void => {
+        runLog()?.section(`Mother: ${text}`);
         said.push(operator.call("station", "narrate", { text, from: "scenario", ...(run.commissioningId ? { commissioningId: run.commissioningId } : {}) }).catch(() => undefined));
     };
     /** How often a factory at work is given news of, seconds. */
@@ -193,6 +209,7 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
         l.status = "running";
         l.startedAt = new Date().toISOString();
         if (note) l.note = note;
+        runLog()?.section(`Loop ${n} (${l.name}) starts${note ? `: ${note}` : ""}`);
         notify();
     };
     const end = (n: number, output?: JsonValue, note?: string) => {
@@ -201,6 +218,7 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
         l.endedAt = new Date().toISOString();
         if (output !== undefined) l.output = output;
         if (note) l.note = note;
+        runLog()?.section(`Loop ${n} (${l.name}) done${note ? `: ${note}` : ""}`, output);
         notify();
     };
     const wait = (n: number, waitingFor: string) => {
@@ -731,6 +749,7 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
         if (fresh) await operator.call("library", "signatures_scope", { scope: "repository" }).catch(() => undefined);
         run.endedAt = new Date().toISOString();
         for (const l of run.loops) if (l.status === "pending") l.status = "skipped";
+        testLog.close(`${run.status}: ${run.ended ?? ""}\n\n| loop | status | note |\n|---|---|---|\n${run.loops.map((l) => `| ${l.n} ${l.name} | ${l.status} | ${String(l.note ?? "").replace(/\|/g, "/").slice(0, 200)} |`).join("\n")}`, { tasks: run.tasks.join(", ") || "none" });
         notify();
         // The run as it ended: a trace the reflection reads.
         keepRun();
