@@ -175,6 +175,8 @@ describe("the procedure's guard, alone", () => {
             },
         } as unknown as Broker;
         const progress = newProgress();
+        // A plan declared (no plan, no procedure, 2026-10-09): what is under test here is the draft and the analysis, not the plan.
+        progress.plan = { selected_nodes: [], missing_capabilities: [] };
         progress.reads["biomed.presence"] = { at: "now", value: { modules: LAB_OCCUPIED.modules } as unknown as JsonValue };
         progress.sources.library.push("method-concentration-decay");
         const context = { broker, taskId: "t-revise", task: { objective: { required_outputs: [], constraints: {} }, observations: {}, data: [] } as unknown as TaskFile["task"], progress, runtimeSlot: "twin" };
@@ -226,6 +228,7 @@ describe("the procedure's guard, alone", () => {
         const later = newProgress();
         later.reads = progress.reads;
         later.sources = progress.sources;
+        later.plan = progress.plan;
         const laterContext = { ...context, progress: later };
         await PROCEDURE_TOPIC.guard!("procedure.submit", { ...withoutWatch, id: "decay-test-02", justifications } as unknown as JsonValue, laterContext);
         assert.ok(draftOf(later));
@@ -300,6 +303,8 @@ describe("the procedure's guard, alone", () => {
             },
         } as unknown as Broker;
         const progress = newProgress();
+        // A plan declared (no plan, no procedure, 2026-10-09): what is under test here is the draft and the analysis, not the plan.
+        progress.plan = { selected_nodes: [], missing_capabilities: [] };
         progress.reads["biomed.presence"] = { at: "now", value: { modules: LAB_OCCUPIED.modules } as unknown as JsonValue };
         progress.sources.library.push("method-concentration-decay");
         const previous = { procedureId: "decay-test-01", procedure: PROCEDURE, aborted: { condition: "vitals", reason: "FE-1: critical health alarm: chest pain", step: 1 }, minutesRun: 3 };
@@ -428,7 +433,7 @@ describe("the register, the inventory, the decay", () => {
         const task = { objective: { required_outputs: [{ name: "V_lab", quantity: "Volume", unit: "m3" }], constraints: {} }, observations: {} } as unknown as Parameters<typeof briefOf>[1];
         const progress = newProgress();
         let s = stateOfTopic(progress, task);
-        assert.deepEqual(s.requirements, { installationRead: false, presenceRead: false, methodRead: false, planDeclared: false, procedureAccepted: false });
+        assert.deepEqual(s.requirements, { installationRead: false, presenceRead: false, methodRead: false, signedNorm: false, planDeclared: false, procedureAccepted: false });
         assert.equal((s.hypothesis as { installation: unknown }).installation, null);
         assert.ok(s.openQuestions!.some((q) => /factory\.inventory/.test(q)) && s.openQuestions!.some((q) => /library\.methods/.test(q)));
         progress.reads["factory.inventory"] = {
@@ -444,7 +449,7 @@ describe("the register, the inventory, the decay", () => {
         progress.reads["library.read"] = { at: "t", value: { id: "method-concentration-decay", text: "# Concentration decay\n\nRules of application: the hatch closed, the rise below the limit." } };
         progress.reads["biomed.presence"] = { at: "t", value: { modules: [{ module: "lab", occupants: 2, subjects: [{ id: "fe-1" }, { id: "fe-2" }] }] } };
         s = stateOfTopic(progress, task);
-        assert.deepEqual(s.requirements, { installationRead: true, presenceRead: true, methodRead: true, planDeclared: false, procedureAccepted: false });
+        assert.deepEqual(s.requirements, { installationRead: true, presenceRead: true, methodRead: true, signedNorm: false, planDeclared: false, procedureAccepted: false });
         const h = s.hypothesis as { installation: { unknowns: Array<{ what: string }>; underCommissioning: Array<{ path: string; measures: unknown[] }> }; presence: Array<{ module: string }>; method: { id: string; card: string } };
         assert.equal(h.installation.underCommissioning[0].path, "/habitat/lab/eclss/scrubber-1");
         assert.deepEqual(h.installation.underCommissioning[0].measures, [{ property: "speed", quantity: "Ratio", unit: "percent" }], "as the inventory gives it: the spec's view keeps fields, it rewrites nothing");

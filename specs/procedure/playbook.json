@@ -7,6 +7,8 @@
         { "id": "installation-read", "type": "conduct.evidence", "bag": { "evidence": "installationRead" } },
         { "id": "method-read", "type": "conduct.evidence", "bag": { "evidence": "methodRead" } },
         { "id": "plan-phase", "type": "conduct.evidence", "bag": { "evidence": "planPhase" } },
+        { "id": "plan-declared", "type": "conduct.evidence", "bag": { "evidence": "planDeclared" } },
+        { "id": "signed-norm", "type": "conduct.evidence", "bag": { "evidence": "signedNorm" } },
         { "id": "aborted-before", "type": "conduct.evidence", "bag": { "evidence": "previous" } },
         { "id": "analysis-accepted", "type": "conduct.evidence", "bag": { "evidence": "analysisAccepted" } },
 
@@ -14,6 +16,9 @@
         { "id": "not-installation-read", "type": "conduct.not" },
         { "id": "not-method-read", "type": "conduct.not" },
         { "id": "plan-done", "type": "conduct.not" },
+        { "id": "plan-passes", "type": "conduct.any" },
+        { "id": "has-plan", "type": "conduct.any" },
+        { "id": "no-plan", "type": "conduct.not" },
         { "id": "first-test", "type": "conduct.not" },
         { "id": "not-analysed", "type": "conduct.not" },
         { "id": "analysis-passes", "type": "conduct.any" },
@@ -28,6 +33,7 @@
 
         { "id": "plan-needs-installation", "type": "conduct.gate", "bag": { "capabilities": ["task.plan"], "says": "requirements.missing", "vars": { "requirement": "installationRead", "how": { "word": "requirements.installationRead" } } } },
         { "id": "plan-needs-method", "type": "conduct.gate", "bag": { "capabilities": ["task.plan"], "says": "requirements.missing", "vars": { "requirement": "methodRead", "how": { "word": "requirements.methodRead" } } } },
+        { "id": "procedure-needs-plan", "type": "conduct.gate", "bag": { "capabilities": ["procedure.submit", "procedure.revise"], "says": "draft.needsPlan" } },
         { "id": "analysis-first", "type": "conduct.gate", "bag": { "capabilities": ["procedure.submit", "procedure.revise"], "says": "analysis.first", "view": "stopped" } },
         { "id": "already-accepted", "type": "conduct.gate", "bag": { "capabilities": ["procedure.submit", "procedure.revise"], "says": "draft.accepted", "view": "accepted" } }
     ],
@@ -48,7 +54,9 @@
         { "from": "situation.next", "to": "method.entered" },
         { "from": "method-read.value", "to": "method.passes" },
         { "from": "method.next", "to": "plan.entered" },
-        { "from": "plan-done.value", "to": "plan.passes" },
+        { "from": "plan-done.value", "to": "plan-passes.in0" },
+        { "from": "signed-norm.value", "to": "plan-passes.in1" },
+        { "from": "plan-passes.value", "to": "plan.passes" },
         { "from": "plan.next", "to": "analysis.entered" },
         { "from": "analysis-passes.value", "to": "analysis.passes" },
         { "from": "analysis.next", "to": "procedure.entered" },
@@ -59,6 +67,10 @@
         { "from": "not-analysed.value", "to": "analysis-owed.in1" },
         { "from": "not-accepted.value", "to": "analysis-owed.in2" },
         { "from": "analysis-owed.value", "to": "analysis-first.refuses" },
-        { "from": "accepted.value", "to": "already-accepted.refuses" }
+        { "from": "accepted.value", "to": "already-accepted.refuses" },
+        { "from": "plan-declared.value", "to": "has-plan.in0" },
+        { "from": "signed-norm.value", "to": "has-plan.in1" },
+        { "from": "has-plan.value", "to": "no-plan.in" },
+        { "from": "no-plan.value", "to": "procedure-needs-plan.refuses" }
     ]
 }

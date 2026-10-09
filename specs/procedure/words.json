@@ -21,10 +21,11 @@
         "methodListed": " The library listed {listed}: read the card of the one you choose (library.read, its id exactly).",
         "methodFind": " Find the methods that measure them (library.methods), and read the card of the one you choose (library.read): it holds the method's rules of application.",
         "methodNotACard": " You read \"{id}\", which is not one of the method cards; read one of them, once.",
+        "planIsNorm": " The plan is the norm you read, {method}, signed by {by}: no plan to declare; the procedure follows it and cites it in method (\"{method}\").",
         "plan": "Stage 3 of 5, the plan. You read the method card {method} (the state holds it whole, under hypothesis, field \"method\"; nothing to read again). Declare with task.plan what no node of the catalogue produces: selected_nodes empty (this topic builds no graph), and one entry per required output in missing_capabilities, {names}, with its reason and the topic \"procedure\"; required_output is the name exactly, nothing added to it.",
         "planOutput": "required_output \"{name}\" (quantity \"{quantity}\"{unit})",
         "planUnit": ", unit \"{unit}\"",
-        "procedure": "Stage 4 of 5, the procedure. Write it by the rules of application of {method} (the card is in the state, under hypothesis, field \"method\"), for this installation (in the state under hypothesis, field \"installation\": its volumes, openings, unknowns and the device under commissioning) and {presence}; the medical monitor is there too (field \"monitor\") once read with biomed.describe: on standby now, which is how it waits between tests; the station starts it when the commander authorises the test, for the subjects your procedure names in monitoring. These are fields of the state, not files: read nothing the state already gives.{start} Every constant you set is justified in justifications. The safety constants (the CO2 limits, the minimum speed and every step's speed, the maximum duration, the abort thresholds, the heart-rate band) cite a fact of a library document a person signed (library.facts says which are signed, and each limit's safe side) and respect it{bounds}; the other constants (the steps' durations) cite what you read (field \"sources\"), the measurement, a calculation, or an assumption said as such. Submit with procedure.submit.{refused}{analysed}",
+        "procedure": "Stage 4 of 5, the procedure. Write it by the rules of application of {method} (the card is in the state, under hypothesis, field \"method\"), for this installation (in the state under hypothesis, field \"installation\": its volumes, openings, unknowns and the device under commissioning) and {presence}; the medical monitor is there too (field \"monitor\") once read with biomed.describe: on standby now, which is how it waits between tests; the station starts it when the commander authorises the test, for the subjects your procedure names in monitoring. These are fields of the state, not files: read nothing the state already gives.{start} Every constant you set is justified in justifications. The safety constants (the CO2 limits, the minimum speed and every step's speed, the maximum duration, the abort thresholds, the heart-rate band) cite a fact of a library document a person signed (library.facts says which are signed, and each limit's safe side) and respect it{bounds}; the other constants (the steps' durations) cite what you read (field \"sources\"), the measurement, a calculation, or an assumption said as such. Submit with procedure.submit.{plan}{refused}{analysed}",
         "presenceRead": "who is in each module (field \"presence\")",
         "presenceUnread": "not yet who is in the volume: read biomed.presence before submitting",
         "measured": " Measured when this task opened: {values}{source}; the test starts from it (field \"measured\").",
@@ -40,6 +41,7 @@
         "none": "no procedure is kept to revise (none checked yet in this task, or kept longer than {minutes} minutes): submit the whole procedure with procedure.submit",
         "noneAtExecution": "no procedure is kept to revise: submit the whole procedure with procedure.submit",
         "accepted": "the procedure is already accepted ({path}): nothing more to revise or submit; end with task.done, {path} as the artifact",
+        "needsPlan": "no plan, no procedure: follow a norm a person signed (a method card the library lists, read with library.read, its signature valid) and cite it in method, or declare the plan with task.plan",
         "kept": "whole, for {minutes} minutes after its check: send only what changes with procedure.revise"
     },
     "capabilities": {
@@ -51,6 +53,7 @@
     "guard": {
         "refused": "procedure refused: {problems}",
         "id": "id \"{id}\" must be lower case letters, digits and dashes (it names the file)",
+        "citeNorm": "the task has declared no plan, so the procedure follows the signed norm it read: cite it in method, \"{norm}\" exactly (signed by {by})",
         "shape": "{path} {says} (sent: {sent}); a change gives a field the value procedure.submit's schema describes for it",
         "quantity": "quantity \"{name}\": {reason} ({code})",
         "quantityUnitAlone": " The unit {unit} alone is one of {quantity} (physics.units_normalize with the unit alone says which quantity takes a unit).",

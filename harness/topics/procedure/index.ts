@@ -49,7 +49,7 @@ import type { LocalCapability } from "../../core/capabilities.js";
 import type { TaskFile } from "../../core/task.js";
 import type { TopicState } from "../../core/reasoning-state.js";
 import type { TopicContext, TopicDefinition, Validation } from "../../core/topic.js";
-import type { DoneClaim, Progress, WorkshopFile } from "../../core/workspace-observer.js";
+import type { DoneClaim, Plan, Progress, WorkshopFile } from "../../core/workspace-observer.js";
 import { readdirSync, readFileSync } from "node:fs";
 import * as path from "node:path";
 import { fromRoot } from "../../../lib/paths.js";
@@ -78,7 +78,7 @@ export const PROCEDURE_WORD_KEYS = [
     "brief.handOver", "brief.situation", "brief.method", "brief.methodListed", "brief.methodFind", "brief.methodNotACard", "brief.plan", "brief.planOutput", "brief.planUnit",
     "brief.procedure", "brief.safetyBounds", "brief.presenceRead", "brief.presenceUnread", "brief.measured", "brief.measuredSource", "brief.refused", "brief.refusedKept", "brief.refusedWhole",
     "intentionPrevious", "requirements.analysisAccepted", "brief.analysis", "brief.analysed", "analysis.first", "analysis.noPrevious", "analysis.cause", "analysis.path", "analysis.unchanged", "analysis.done", "capabilities.analyse",
-    "draft.none", "draft.noneAtExecution", "draft.accepted", "draft.kept", "capabilities.submit", "capabilities.revise", "capabilities.reviseChanges", "guard.refused", "guard.id", "guard.quantity", "guard.quantityUnitAlone", "guard.quantityDeclared",
+    "draft.none", "draft.noneAtExecution", "draft.accepted", "draft.kept", "draft.needsPlan", "brief.planIsNorm", "guard.citeNorm", "capabilities.submit", "capabilities.revise", "capabilities.reviseChanges", "guard.refused", "guard.id", "guard.quantity", "guard.quantityUnitAlone", "guard.quantityDeclared",
 ];
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -168,6 +168,12 @@ interface ProcedureTopicState {
     method?: string;
     /** The card whole, as read: the state carries it, the model reads it once. */
     methodCard?: string;
+    /**
+     * Who signed that card, when its signature held as it was read (2026-10-09): a signed method card is a signed norm, and the
+     * test plan rests on it. No plan, no procedure: the plan is the one the task declared (task.plan), or the signed norm the
+     * procedure cites in its method.
+     */
+    methodSigned?: { by: string; at: string } | null;
 }
 
 const ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
@@ -321,6 +327,8 @@ function noteMethod(progress: Progress): ProcedureTopicState {
     if (!state.method && typeof lastRead?.id === "string" && methodsListed(progress).includes(lastRead.id)) {
         state.method = lastRead.id;
         if (typeof lastRead.text === "string") state.methodCard = lastRead.text;
+        const signature = (lastRead as { signature?: { by?: unknown; at?: unknown; valid?: unknown } | null }).signature;
+        state.methodSigned = signature?.valid === true ? { by: String(signature.by ?? ""), at: String(signature.at ?? "") } : null;
     }
     return state;
 }
@@ -432,6 +440,17 @@ async function writeAccepted(context: TopicContext, procedure: ProcedureLike): P
     state.accepted = { path, sha256, procedureId: text(procedure, FORMAT.id) };
     // Accepted: the draft has served.
     state.draft = null;
+    // Accepted without a plan of its own: the plan is the signed norm it cites, written as the task's plan, the norm named with who signed it.
+    if (!progress.plan && state.method && state.methodSigned && text(procedure, FORMAT.method) === state.method) {
+        const plan: Plan = {
+            signed: { id: state.method, by: state.methodSigned.by, at: state.methodSigned.at },
+            selected_nodes: [],
+            missing_capabilities: context.task.objective.required_outputs.map((o) => ({ required_output: o.name, quantity: o.quantity, ...(o.unit ? { unit: o.unit } : {}), reason: `measured by the signed norm ${state.method} (signed by ${state.methodSigned!.by})`, topic: "procedure" })),
+        };
+        await broker.call("workspace", "write", { taskId, path: "plan.json", text: JSON.stringify(plan, null, 2) + "\n" });
+        progress.plan = plan;
+        progress.phase = "build";
+    }
     await broker.call("workspace", "write", { taskId, path: "scorecard.json", text: JSON.stringify(scorecardOf(progress), null, 2) + "\n" });
     return { ok: true, output: { outcome: "completed", value: { accepted: true, path, sha256, steps: stepsOf(procedure).length, minutes: minutesOf(procedure) } } };
 }
@@ -489,6 +508,8 @@ export function requirementsOf(progress: Progress, task?: TaskFile["task"]): Rec
     return {
         ...Object.fromEntries(FORMAT.requirements.map((r) => [`${r}Read`, readOf(progress, r) !== undefined])),
         methodRead: Boolean(state.method),
+        // The method card read is a norm a person signed: the plan the procedure may follow and cite, instead of declaring one.
+        signedNorm: Boolean(state.method && state.methodSigned),
         planDeclared: progress.plan !== null,
         // A task that follows an aborted test analyses it before any proposal.
         ...(task && previousOf(task) ? { analysisAccepted: Boolean(state.analysis) } : {}),
@@ -575,6 +596,13 @@ async function guardProcedure(capabilityId: string, input: JsonValue, context: T
     for (const message of unchangedOf(procedure, stateOf(context.progress).analysis, previous)) {
         check.problems.push({ kind: "analysis", message });
         check.ok = false;
+    }
+    // No plan, no procedure (2026-10-09): without a plan the task declared, the procedure follows the signed norm it read and cites it.
+    if (!context.progress.plan) {
+        const norm = stateOf(context.progress);
+        if (!norm.method || !norm.methodSigned) check.problems.push({ kind: "plan", message: w("draft.needsPlan") });
+        else if (text(procedure, FORMAT.method) !== norm.method) check.problems.push({ kind: "plan", message: w("guard.citeNorm", { norm: norm.method, by: norm.methodSigned.by }), path: FORMAT.method, expected: norm.method, got: text(procedure, FORMAT.method) });
+        if (check.problems.some((p) => p.kind === "plan")) check.ok = false;
     }
     // The quantities the proposal measures, in units the unit system knows for them (2026-09-25): a unit invented here would travel into the report.
     const quantities = valueAt(procedure, FORMAT.quantities, FORMAT.keys);
@@ -824,6 +852,8 @@ function viewsOf(progress: Progress, task: TaskFile["task"]): Record<string, () 
             const values = measured ? Object.entries(measured).filter(([, v]) => typeof v === "number").map(([k, v]) => `${k} ${Math.round((v as number) * 100) / 100}`) : [];
             return {
                 method: state.method ?? "",
+                // Without a declared plan, the plan is the signed norm: said, with what citing it means.
+                plan: !progress.plan && state.method && state.methodSigned ? w("brief.planIsNorm", { method: state.method, by: state.methodSigned.by }) : "",
                 presence: presenceOf(progress) ? w("brief.presenceRead") : w("brief.presenceUnread"),
                 start: values.length ? w("brief.measured", { values: values.join(", "), source: typeof measured?.source === "string" ? w("brief.measuredSource", { source: measured.source }) : "" }) : "",
                 refused: refused(),

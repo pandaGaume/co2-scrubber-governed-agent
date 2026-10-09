@@ -40,6 +40,8 @@ export interface MissingCapability {
 }
 
 export interface Plan {
+    /** The plan is a norm a person signed (the procedure factory's method card), not the model's own: which, by whom, when. */
+    signed?: { id: string; by: string; at: string };
     selected_nodes: string[];
     missing_capabilities: MissingCapability[];
     /** For a required output judged against no column: which selected type produces it, on which output port (2026-09-27: a leak counted as produced by a person's CO2 output, MassFlow in kg/s both, and the twin held while ignoring it). */
