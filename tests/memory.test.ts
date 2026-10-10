@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { createHash } from "node:crypto";
 import { episodesOf } from "../lib/working-memory.js";
-import { enterCandidate, evidenceFor, memoryConfig, memoryProblems, promote, readyForTrial, relevantTo, type Remembered } from "../lib/memory.js";
+import { enterCandidate, episodeView, evidenceFor, memoryConfig, memoryProblems, promote, readyForTrial, relevantTo, type Remembered } from "../lib/memory.js";
 import { readLedger } from "../lib/adaptations.js";
 import type { Pattern } from "../lib/reflection.js";
 import { PROCEDURE_TOPIC } from "../harness/topics/procedure/index.js";
@@ -28,6 +28,27 @@ const good = (over: Partial<Remembered["memory"]> = {}): Remembered => ({
     evidence: [PATTERN.id],
 });
 
+describe("an episode as a model reads it", () => {
+    it("another task's comes as a lesson marked past, its points by path, never the words of its refusals (run xykl, 2026-10-10)", () => {
+        const e = EPISODES[0];
+        const refused = e.attempts.find((a) => a.outcome === "GUARD_REJECTED");
+        assert.ok(refused && refused.problems.length, "the fixture holds a refusal with its problems");
+        const past = episodeView(e) as unknown as { pastTask: string; lesson: { refusedOn: string[] }; attempts?: unknown };
+        assert.equal(past.pastTask, e.taskId);
+        assert.equal(past.attempts, undefined, "no attempt by attempt: a lesson");
+        assert.ok(past.lesson.refusedOn.length && past.lesson.refusedOn.every((p) => / at |^[a-z]+$/.test(p)), "the points by kind and path");
+        for (const p of refused.problems) assert.ok(!JSON.stringify(past).includes(p.says), "the words of a refusal are not repeated");
+    });
+
+    it("this task's says its attempts and the points they were refused on, the words left to lastRefusal", () => {
+        const e = EPISODES[0];
+        const now = episodeView(e, true) as unknown as { current: boolean; attempts: Array<{ call: string; outcome: string; refusedOn?: string[] }> };
+        assert.equal(now.current, true);
+        const refused = now.attempts.find((a) => a.outcome === "GUARD_REJECTED");
+        assert.ok(refused?.refusedOn?.length && refused.refusedOn.every((p) => p.length < 160));
+    });
+});
+
 describe("the memory's evidence, from real episodes", () => {
     it("the failures of a form of mistake and the successes that answered it, counted from the working memory", () => {
         assert.deepEqual(evidenceFor(EPISODES, [FAMILY]), { failures: EPISODES.map((e) => e.id), successes: EPISODES.map((e) => e.id) });
@@ -36,8 +57,8 @@ describe("the memory's evidence, from real episodes", () => {
         assert.equal(readyForTrial({ failures: ["a", "b"], successes: ["a"] }, cfg), true);
         assert.equal(readyForTrial({ failures: ["a", "b"], successes: [] }, cfg), false, "failures alone never make a trial: a success must have answered them");
         assert.equal(readyForTrial({ failures: ["a"], successes: ["a"] }, cfg), false);
-        // The repository's settings: both memories read; a fork turns either off for an ablation.
-        assert.deepEqual([cfg.workingMemory.previousTasks, cfg.longTerm.read], [true, true]);
+        // The repository's settings since 2026-10-10: the session only (the long-term memory was corrupted); a fork turns either on again.
+        assert.deepEqual([cfg.workingMemory.previousTasks, cfg.longTerm.read], [false, false]);
     });
 
     it("an entry proposed is checked: its episodes, what it applies to, no fact's value, nothing said again", () => {

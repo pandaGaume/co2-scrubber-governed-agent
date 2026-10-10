@@ -254,7 +254,7 @@ export const PLAYBOOK_TOPIC: TopicDefinition = {
     marchingOrder: (progress, task) => {
         const e = evidenceOf(progress);
         return {
-            ...conductView(PLAYBOOK_CONDUCT, e, w, viewsOf(progress, task)),
+            ...conductView(PLAYBOOK_CONDUCT, e, w, viewsOf(progress, task), Object.keys(progress.reads)),
             doneWhen: [
                 { item: w("doneWhen.plan"), met: Boolean(e.planDeclared) },
                 { item: w("doneWhen.accepted"), met: Boolean(e.playbookAccepted) },

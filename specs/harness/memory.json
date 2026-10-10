@@ -1,13 +1,14 @@
 {
     "title": "The memory of the factories: episodes, the working memory, consolidation, the long-term memory",
+    "session": "2026-10-10, Guillaume: the long-term memory is corrupted (episodes of tasks whose reasoning was cut at 4096 tokens; the raw refusal texts of earlier tasks fed Nano a repetition loop in run xykl): only the session is read, this task's own episode (previousTasks false, longTerm.read false); the recipes moved out of the workshop (outputs/memory-archive/2026-10-10). The past tasks stay on disk as the station's history; the memory no longer reads them.",
     "note": "2026-09-29, the memory audit (lib/memory.ts, lib/working-memory.ts, harness/core/episodes.ts). The manifests are the ground truth; an episode is a task's submissions read from them; the working memory is the last episodes of a topic, rebuilt from the manifests; the long-term memory is what was learned from them, consolidated: a file per domain in the fork's workshop (file), never the topic's words. A factory reads, at the stage that calls a capability, the episodes and the learned entries about it (shown); previousTasks false shows it only this task's episode, and longTerm.read false keeps the learned entries out of its state (ablations). A reflection's entry is a candidate until the working memory holds enough failures of its form and enough successes that answered it (trial); in trial it is in force, and after judgeAfter tasks of its topic it is consolidated when its mistake shows less often than before, rejected otherwise. Never adaptable by the reflection (specs/harness/**).",
     "workingMemory": {
         "size": 10,
         "shown": 5,
-        "previousTasks": true
+        "previousTasks": false
     },
     "longTerm": {
-        "read": true
+        "read": false
     },
     "consolidation": {
         "trial": {

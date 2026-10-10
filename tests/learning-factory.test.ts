@@ -12,7 +12,7 @@
  */
 import { after, before, describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { createFork, forkHistory, forkPath } from "../lib/fork.js";
@@ -35,6 +35,10 @@ describe("the procedure factory learns from its episodes, in a fork: a memory, n
     it("two refusals answered by accepted retries become a candidate, then a trial the next tasks read and pass with, then a consolidated entry", async () => {
         createFork("factory-remembers");
         const dir = forkPath("factory-remembers");
+        // The repository reads the session only since 2026-10-10 (its long-term memory was corrupted): a fork that learns turns both memories on.
+        const settingsFile = path.join(dir, "specs", "harness", "memory.json");
+        const settings = JSON.parse(readFileSync(settingsFile, "utf8")) as { workingMemory: Record<string, unknown> };
+        writeFileSync(settingsFile, JSON.stringify({ ...settings, workingMemory: { ...settings.workingMemory, previousTasks: true }, longTerm: { read: true } }, null, 2));
         const repositoryWords = readFileSync(fromRepository(...WORDS.split("/")), "utf8");
         Object.assign(process.env, { FORK_DIR: dir, SPEECH_PROVIDER: "silent", STATION_VOICE: "off", BIOMED_PROVIDER: "simulated", STATION_REMIND_SECONDS: "0", CAD_MCP_URL: "http://127.0.0.1:1/mcp" });
         delete process.env.FORK_LEARNING;

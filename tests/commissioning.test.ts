@@ -192,16 +192,16 @@ describe("the procedure's guard, alone", () => {
         const { monitoring: _unwatched, ...withoutWatch } = PROCEDURE;
         const guard = (id: string, input: unknown) => PROCEDURE_TOPIC.guard!(id, input as JsonValue, context);
         // A revision before any procedure was checked: nothing is kept.
-        assert.match((await guard("procedure.revise", { changes: {} })).join(), /no procedure is kept to revise.*submit the whole procedure with procedure\.submit/);
+        assert.match((await guard("procedure.revise", { update: {} })).join(), /no procedure is kept to revise.*submit the whole procedure with procedure\.submit/);
         // The whole procedure, refused for the watch it does not ask: kept whole.
         assert.match((await guard("procedure.submit", { ...withoutWatch, justifications })).join(), /monitoring/);
         assert.equal(draftOf(progress)?.id, "decay-test-01");
         assert.equal(draftOf(progress)?.monitoring, undefined);
         // A revision carrying only the watch, and one justification changed: applied to the draft, checked whole, allowed.
-        const revision = { changes: { monitoring: { subjects: ["fe-1", "fe-2"] } }, justifications: [{ constant: "steps.2.minutes", value: 12, source: "assumed", reference: "one time constant", reason: "long enough" }] };
+        const revision = { update: { monitoring: { subjects: ["fe-1", "fe-2"] } }, justifications: [{ constant: "steps.2.minutes", value: 12, source: "assumed", reference: "one time constant", reason: "long enough" }] };
         assert.deepEqual(await guard("procedure.revise", revision), []);
         assert.equal(draftOf(progress)?.monitoring, undefined, "an accepted decision changes nothing the observation reads: the draft stays as refused until the revision executes");
-        const draft = reviseDraft(draftOf(progress)!, revision.changes, revision.justifications);
+        const draft = reviseDraft(draftOf(progress)!, revision.update, revision.justifications);
         assert.deepEqual(draft.monitoring, { subjects: ["fe-1", "fe-2"] });
         assert.deepEqual(draft.limits, PROCEDURE.limits, "what the revision does not name stays");
         assert.equal(draft.justifications?.length, 8, "the justifications merge by constant");
@@ -685,7 +685,7 @@ describe("the commissioning, through the broker", () => {
             protected override next(state: Parameters<ScriptedProcedureBuilder["resolve"]>[0]["state"]) {
                 if (/procedure refused:/.test(String(state.features.lastRefusal ?? ""))) {
                     this.tries++;
-                    return { action: { id: "procedure.revise", description: "procedure.revise" }, invocation: { actionId: "procedure.revise", capabilityId: "procedure.revise", input: { changes: { purpose: `the same test, said again (${this.tries})` } } as JsonValue }, rationale: "insists" };
+                    return { action: { id: "procedure.revise", description: "procedure.revise" }, invocation: { actionId: "procedure.revise", capabilityId: "procedure.revise", input: { update: { purpose: `the same test, said again (${this.tries})` } } as JsonValue }, rationale: "insists" };
                 }
                 return super.next(state);
             }

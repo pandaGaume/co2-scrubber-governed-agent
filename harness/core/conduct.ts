@@ -75,6 +75,8 @@ export interface MarchingStep {
     goal: string;
     tools: string[];
     status: "passed" | "current" | "next";
+    /** On the current stage: its tools that have already answered in this task, their answers in the state (2026-10-10). */
+    answered?: string[];
 }
 export interface Gate extends Saying {
     capabilities: string[];
@@ -321,9 +323,15 @@ export class Playbook {
 /**
  * What the state shows of a topic's conduct (2026-10-09): the marching order, the tools of the current stage that may be called now,
  * and what is closed now with why, said in the topic's words. Each topic adds what must hold before handing over (`doneWhen`).
+ * `answered` names the tools that have answered in this task: the current stage says which of its own did (2026-10-10, run xykl:
+ * Nano called library.methods again at the stage whose goal names it first, its answer already in the state).
  */
-export function conductView(playbook: Playbook, evidence: Evidence, say: (key: string, vars?: Record<string, string | number>) => string, views: Record<string, () => Record<string, string | number>>): { stages: MarchingStep[]; allowedNow: string[]; closedNow: Array<{ tools: string[]; why: string }> } {
-    const stages = playbook.marchingOrder(evidence);
+export function conductView(playbook: Playbook, evidence: Evidence, say: (key: string, vars?: Record<string, string | number>) => string, views: Record<string, () => Record<string, string | number>>, answered: Iterable<string> = []): { stages: MarchingStep[]; allowedNow: string[]; closedNow: Array<{ tools: string[]; why: string }> } {
+    const done = new Set(answered);
+    const stages = playbook.marchingOrder(evidence).map((s) => {
+        const own = s.status === "current" ? s.tools.filter((t) => done.has(t)) : [];
+        return own.length ? { ...s, answered: own } : s;
+    });
     const refusing = playbook.evaluate(evidence).refusing;
     const closed = new Set(refusing.flatMap((g) => g.capabilities));
     return {

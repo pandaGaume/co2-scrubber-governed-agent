@@ -98,7 +98,10 @@ describe("the contract layer, generic: facts, authority, conflicts", () => {
         } as unknown as Partial<TwinFactoryRequest>;
         const context = { documentsRead: ["scrubber-1-datasheet", "station-topology"], documents: { "scrubber-1-datasheet": "", "station-topology": "" }, facts };
         const check = (known: unknown[], more: Partial<TwinFactoryRequest> = {}) => checkTwinRequest({ ...base, ...more, known } as unknown as Partial<TwinFactoryRequest>, context);
-        assert.match(check([{ symbol: "eta", name: "efficiency", value: 0.3, unit: "ratio", source: "scrubber-1-datasheet" }]).problems.join("; "), /^facts: known constant "eta" cites "scrubber-1-datasheet", which states its facts by id: give factId, one of scrubber.flowAtFull/);
+        // Without its factId: the one fact its value and unit hold against is named (run xykl, 2026-10-10: four requests refused on it); none or several, the list.
+        assert.match(check([{ symbol: "eta", name: "efficiency", value: 0.3, unit: "ratio", source: "scrubber-1-datasheet" }]).problems.join("; "), /^facts: known constant "eta" = 0\.3 ratio cites "scrubber-1-datasheet", which states its facts by id: its value is the fact "scrubber\.singlePassEfficiency" .*write factId "scrubber\.singlePassEfficiency" in that constant/);
+        assert.match(check([{ symbol: "tau", name: "lag", value: 3.33, unit: "min", source: "scrubber-1-datasheet" }]).problems.join("; "), /write factId "scrubber\.lagTimeConstant"/);
+        assert.match(check([{ symbol: "eta", name: "efficiency", value: 0.5, unit: "ratio", source: "scrubber-1-datasheet" }]).problems.join("; "), /^facts: known constant "eta" cites "scrubber-1-datasheet", which states its facts by id: give factId, one of scrubber.flowAtFull/);
         assert.match(check([{ symbol: "eta", name: "efficiency", value: 0.3, unit: "ratio", source: "scrubber-1-datasheet", factId: "scrubber.efficiency" }]).problems.join("; "), /cites fact "scrubber.efficiency", which "scrubber-1-datasheet" does not state/);
         // The fifth passage's mistake: 40 % is the speed floor, not the efficiency; with the fact cited, the guard says so.
         const forty = check([{ symbol: "eta", name: "efficiency", value: 40, unit: "percent", source: "scrubber-1-datasheet", factId: "scrubber.singlePassEfficiency" }]);

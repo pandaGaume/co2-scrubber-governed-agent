@@ -307,10 +307,13 @@ export function factsBounding(doc: RulesDocument | null, constant: string, seen:
 /**
  * What depends on a refused point (2026-10-09): what must change with it, and nothing else. A value goes with its justification (and a
  * justification with the value it justifies); a constant the signed rules compare with another (a maximum under an abort, a sum of
- * durations under a ceiling) goes with that other. Read off the rules a person signed, never guessed.
+ * durations under a ceiling) goes with that other. Read off the rules a person signed, never guessed. A justification refused is said
+ * at the path of the value it justifies, so its own entry is named first among its dependents (2026-10-10, run xykl: refused on
+ * "steps.2.minutes: the justification says 30, what you sent sets 15", Nano read the path as the value's and moved values three times,
+ * never the justification).
  */
 export function dependentsOf(doc: RulesDocument | null, path: string, kind?: string): string[] {
-    const out = new Set<string>([kind === "justification" ? path : `justifications[constant=${path}]`]);
+    const out = new Set<string>(kind === "justification" ? [`justifications[constant=${path}]`, path] : [`justifications[constant=${path}]`]);
     for (const rule of doc?.rules ?? []) {
         if (!("compare" in rule)) continue;
         const { subject, sum, constant } = rule.compare;

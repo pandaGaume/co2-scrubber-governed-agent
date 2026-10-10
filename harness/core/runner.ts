@@ -561,7 +561,11 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         const call = calls.at(-1)?.decisionId === trace?.decisionId ? (calls.at(-1) ?? null) : null;
         progress.iteration = n;
         if (trace) {
-            progress.lastRefusal = null;
+            // A refused call that acts stays in the state, its points with it, while the model reads (2026-10-10, run xykl: ten
+            // library.justify reads after a refused procedure.revise erased it, and the next revise was written blind); a call that
+            // acts, executed, ends it, as it ends the streak below. A refused read is forgotten at the next step that runs.
+            const isRead = (id: string): boolean => READ_CAPABILITIES.some((r) => r.test(id));
+            if (!(progress.lastRefusal && !isRead(progress.lastRefusal.capability) && isRead(trace.decision.invocation.capabilityId))) progress.lastRefusal = null;
             if (trace.result.ok) delete progress.refusals[trace.decision.invocation.capabilityId];
             if (trace.result.ok && progress.justify?.capability === trace.decision.invocation.capabilityId) progress.justify = null;
             progress.misjustified = null;

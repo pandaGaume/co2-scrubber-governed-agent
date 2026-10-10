@@ -66,15 +66,15 @@ export class ScriptedProcedureBuilder extends ScriptedBuilderBase<ScriptedProced
     private revision(next: Procedure): JsonValue {
         const before = (this.lastSent ?? {}) as unknown as Record<string, unknown>;
         const after = next as unknown as Record<string, unknown>;
-        const changes: Record<string, unknown> = {};
+        const update: Record<string, unknown> = {};
         for (const k of new Set([...Object.keys(before), ...Object.keys(after)])) {
             if (k === "justifications") continue;
-            if (!(k in after)) changes[k] = null;
-            else if (JSON.stringify(before[k]) !== JSON.stringify(after[k])) changes[k] = after[k];
+            if (!(k in after)) update[k] = null;
+            else if (JSON.stringify(before[k]) !== JSON.stringify(after[k])) update[k] = after[k];
         }
         const had = new Set((this.lastSent?.justifications ?? []).map((j) => `${j.constant}=${JSON.stringify(j.value)}`));
         const justifications = (next.justifications ?? []).filter((j) => !had.has(`${j.constant}=${JSON.stringify(j.value)}`));
-        return { changes, justifications } as unknown as JsonValue;
+        return { update, justifications } as unknown as JsonValue;
     }
 
     /** The procedure the script writes: two steps, hatch closed, the rise at `speed`. */

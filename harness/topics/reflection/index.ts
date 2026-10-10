@@ -264,7 +264,7 @@ export const REFLECTION_TOPIC: TopicDefinition = {
     marchingOrder: (progress, task) => {
         const e = evidenceOf(progress);
         return {
-            ...conductView(REFLECTION_CONDUCT, e, w, viewsOf(progress, task)),
+            ...conductView(REFLECTION_CONDUCT, e, w, viewsOf(progress, task), Object.keys(progress.reads)),
             doneWhen: [
                 { item: w("doneWhen.plan"), met: Boolean(e.planDeclared) },
                 { item: w("doneWhen.accepted"), met: Boolean(e.adaptationAccepted) },

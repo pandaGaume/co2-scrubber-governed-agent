@@ -26,9 +26,10 @@ describe("what a refused point carries: what depends on it", () => {
         assert.deepEqual(dependentsOf(RULES, "steps.2.minutes").sort(), ["justifications[constant=steps.2.minutes]", "limits.maxMinutes"].sort());
     });
 
-    it("a justification refused goes with the value it justifies", () => {
-        assert.ok(dependentsOf(RULES, "steps.1.minutes", "justification").includes("steps.1.minutes"));
-        assert.ok(!dependentsOf(RULES, "steps.1.minutes", "justification").includes("justifications[constant=steps.1.minutes]"));
+    it("a justification refused names its own entry first, then the value it justifies", () => {
+        const deps = dependentsOf(RULES, "steps.1.minutes", "justification");
+        assert.equal(deps[0], "justifications[constant=steps.1.minutes]", "the point is said at the value's path: the entry to change is named");
+        assert.ok(deps.includes("steps.1.minutes"));
     });
 
     it("without rules, a value goes at least with its justification", () => {
@@ -43,5 +44,16 @@ describe("the procedure factory's marching order in the state", () => {
         assert.deepEqual(order.allowedNow, ["factory.inventory", "biomed.presence", "biomed.describe"]);
         assert.ok(order.closedNow.some((c) => c.tools.includes("task.plan")), "the plan needs the readings first");
         assert.ok(order.doneWhen.length >= 6 && order.doneWhen.every((d) => d.item && d.met === false));
+    });
+
+    it("the current stage names its tools that have already answered (run xykl, step 3: library.methods asked again)", () => {
+        const progress = newProgress();
+        progress.reads["factory.inventory"] = { at: "2026-10-10T08:39:00.000Z", value: {} };
+        progress.reads["library.methods"] = { at: "2026-10-10T08:39:05.000Z", value: { quantity: "Volume", methods: [] } };
+        const order = marchingOrderOf(progress, TASK) as unknown as { stages: Array<{ stage: string; status: string; answered?: string[] }> };
+        const current = order.stages.find((s) => s.status === "current");
+        assert.equal(current?.stage, "method");
+        assert.deepEqual(current?.answered, ["library.methods"], "its answer is in the state: not to be asked again");
+        assert.ok(order.stages.filter((s) => s.status !== "current").every((s) => s.answered === undefined), "said on the current stage only");
     });
 });

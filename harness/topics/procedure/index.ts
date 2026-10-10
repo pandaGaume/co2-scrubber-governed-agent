@@ -157,7 +157,7 @@ interface ProcedureTopicState {
     submissions: Submission[];
     /**
      * The last proposal checked, whole, kept for a few minutes (2026-09-28): a refusal is corrected by sending only what
-     * changes (procedure.revise), not the whole proposal again (three thousand tokens and thirty seconds each time).
+     * changes (procedure.revise, its update), not the whole proposal again (three thousand tokens and thirty seconds each time).
      * Erased once one is accepted; an expired draft is a whole proposal to submit again.
      */
     draft?: { procedure: ProcedureLike; at: number } | null;
@@ -201,12 +201,12 @@ const isObject = (v: unknown): v is Record<string, unknown> => Boolean(v) && typ
  * A revision applied to the cached draft: an object merges key by key, a list or a value replaces what it names, a null
  * removes it; the justifications merge by constant (those sent replace theirs, the others stay).
  */
-export function reviseDraft(draft: ProcedureLike, changes: unknown, justifications: unknown): ProcedureLike {
-    return revised(draft, changes, justifications).procedure;
+export function reviseDraft(draft: ProcedureLike, update: unknown, justifications: unknown): ProcedureLike {
+    return revised(draft, update, justifications).procedure;
 }
 
 /** The revision applied to the draft, read toward the schema, with what that reading changed. */
-export function revised(draft: ProcedureLike, changes: unknown, justifications: unknown): { procedure: ProcedureLike; changes: string[] } {
+export function revised(draft: ProcedureLike, update: unknown, justifications: unknown): { procedure: ProcedureLike; changes: string[] } {
     const merge = (base: unknown, patch: unknown): unknown => {
         if (!isObject(base) || !isObject(patch)) return patch;
         const out: Record<string, unknown> = { ...base };
@@ -216,17 +216,17 @@ export function revised(draft: ProcedureLike, changes: unknown, justifications: 
         }
         return out;
     };
-    const { justifications: inChanges, ...rest } = isObject(changes) ? changes : {};
+    const { justifications: inUpdate, ...rest } = isObject(update) ? update : {};
     const merged = merge(draft, rest) as ProcedureLike;
     // A revision whose form passes but does not mean what it says (a path as a key, a value with its justification) is read by
     // its meaning when the guard refuses the same points again (core/interpreter.ts, the second trigger), not by rules written here.
-    const sent = [...(Array.isArray(inChanges) ? inChanges : []), ...(Array.isArray(justifications) ? justifications : [])].filter(isObject);
+    const sent = [...(Array.isArray(inUpdate) ? inUpdate : []), ...(Array.isArray(justifications) ? justifications : [])].filter(isObject);
     const kept = (Array.isArray(draft.justifications) ? draft.justifications : []).filter((j) => !sent.some((x) => x.constant === j.constant));
     return readWhole({ ...merged, justifications: [...kept, ...sent] });
 }
 
 /**
- * The revised whole read toward procedure.submit's schema (core/interpreter.ts): `changes` is free, so the interpreter's reading of
+ * The revised whole read toward procedure.submit's schema (core/interpreter.ts): `update` is a part of the procedure, so the interpreter's reading of
  * the call cannot reach its values; the whole is read here, the same way in the guard and at execution. Only the schema-guided
  * reductions (an object carrying one id where an id is expected...); a whole that still does not fit is left to the guard.
  */
@@ -256,9 +256,10 @@ export function shapeProblems(procedure: ProcedureLike): string | null {
     }
 }
 
-/** The schema of a revision: the fields that change, and the justifications of the constants that change. */
 /**
  * What a revision may change: a partial procedure, the same fields as procedure.submit's, none required, nothing else (2026-10-08).
+ * Its name is `update` since 2026-10-10: it was `changes`, the name procedure.analyse gives its list of {path, change, prevents},
+ * and Nano wrote a revision in the analysis's form (run xykl), its justifications lost on the way to the call.
  * `changes` was a free object: every model filled the gap its own way (Nemotron Nano and Super wrote `"limits.co2MaxPpm":
  * {"value": 3100}`), the schema passed it, the merge added a root key, the limit stayed, STUCK. The harness does not take the last
  * model's convention: it states one form, strictly, so a server that decodes against the schema cannot write another, and a
@@ -278,10 +279,10 @@ function partialOf(schema: Record<string, unknown>): Record<string, unknown> {
 const REVISE_SCHEMA = {
     type: "object",
     properties: {
-        changes: { ...partialOf(PROCEDURE_SCHEMA), description: w("capabilities.reviseChanges") },
+        update: { ...partialOf(PROCEDURE_SCHEMA), description: w("capabilities.reviseChanges") },
         justifications: JUSTIFICATIONS_SCHEMA,
     },
-    required: ["changes"],
+    required: ["update"],
     additionalProperties: false,
 } as const;
 
@@ -358,7 +359,7 @@ export const PROCEDURE_JUSTIFIED: Justified = {
 /** The declaration with what the signed rules say: their safety constants, and the facts they cite as the envelope. */
 /**
  * What an episode keeps of a submission or a revision (2026-09-29, the memory audit, `episodes.ts`): each constant's
- * justification by its path (the value, the source, the reference), and a revision's changes by path; the rest of a
+ * justification by its path (the value, the source, the reference), and a revision's update by path (`changes` before 2026-10-10); the rest of a
  * procedure is its draft's, not what an attempt is refused or accepted on.
  */
 export function procedureDigest(input: JsonValue): Record<string, JsonValue> {
@@ -368,7 +369,8 @@ export function procedureDigest(input: JsonValue): Record<string, JsonValue> {
         else if (at) out[at] = { value: v as JsonValue };
     };
     const i = isObject(input) ? input : {};
-    if (isObject(i.changes)) flat(i.changes, "");
+    const update = isObject(i.update) ? i.update : i.changes;
+    if (isObject(update)) flat(update, "");
     for (const j of Array.isArray(i.justifications) ? i.justifications : [])
         if (isObject(j) && typeof j.constant === "string") out[j.constant] = { value: (j.value ?? null) as JsonValue, source: (j.source ?? null) as JsonValue, reference: (j.reference ?? null) as JsonValue };
     return out;
@@ -460,8 +462,8 @@ function reviseCapability(context: TopicContext): LocalCapability {
             const done = stateOf(context.progress).accepted;
             if (done) return { ok: false, error: w("draft.accepted", { path: done.path }), output: { outcome: "refused" } };
             if (!draft) return { ok: false, error: w("draft.noneAtExecution"), output: { outcome: "refused" } };
-            const r = (input ?? {}) as { changes?: unknown; justifications?: unknown };
-            const whole = revised(draft, r.changes, r.justifications);
+            const r = (input ?? {}) as { update?: unknown; justifications?: unknown };
+            const whole = revised(draft, r.update, r.justifications);
             const result = await writeAccepted(context, whole.procedure);
             // How the revision was read toward the schema, said with the result (core/interpreter.ts): the model learns the form from it.
             const asSent = whole.changes;
@@ -558,9 +560,9 @@ async function guardProcedure(capabilityId: string, input: JsonValue, context: T
     if (capabilityId === "procedure.revise") {
         const draft = draftOf(context.progress);
         if (!draft) return [w("draft.none", { minutes: draftMinutes() })];
-        const r = (input ?? {}) as { changes?: unknown; justifications?: unknown };
-        procedure = reviseDraft(draft, r.changes, r.justifications);
-        // The revised whole has the shape procedure.submit's schema gives it: `changes` is free, its values are not (2026-10-08, Nemotron:
+        const r = (input ?? {}) as { update?: unknown; justifications?: unknown };
+        procedure = reviseDraft(draft, r.update, r.justifications);
+        // The revised whole has the shape procedure.submit's schema gives it: `update` is a part of it, its values are checked whole (2026-10-08, Nemotron:
         // monitoring.subjects revised as objects, which no schema refused and the rule then read as "[object Object]", five times).
         const shape = shapeProblems(procedure);
         if (shape) return [shape];
@@ -873,7 +875,7 @@ export function marchingOrderOf(progress: Progress, task: TaskFile["task"]): Jso
         { item: w("doneWhen.accepted"), met: Boolean(r.procedureAccepted) },
         { item: w("doneWhen.handedOver"), met: progress.done !== null },
     ];
-    return { ...conductView(PLAYBOOK, evidenceOf(progress, task), w, viewsOf(progress, task)), doneWhen } as unknown as JsonValue;
+    return { ...conductView(PLAYBOOK, evidenceOf(progress, task), w, viewsOf(progress, task), Object.keys(progress.reads)), doneWhen } as unknown as JsonValue;
 }
 
 export const PROCEDURE_TOPIC: TopicDefinition = {

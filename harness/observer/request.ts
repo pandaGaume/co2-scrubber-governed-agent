@@ -244,7 +244,15 @@ export function checkTwinRequest(input: unknown, context: CheckContext = {}): Re
             // The document states its facts by id: the constant cites one, and is judged against that fact alone (an efficiency is never compared with a speed because both are ratios).
             const facts = context.facts[k.source];
             const fact = k.factId ? facts.find((f) => f.id === k.factId) : undefined;
-            if (!k.factId) problems.push(`facts: known constant "${k.symbol}" cites "${k.source}", which states its facts by id: give factId, one of ${facts.map((f) => `${f.id} (${f.semantic}, ${f.value} ${f.unit})`).join(", ")}`);
+            // The facts the value written holds against (its value and its unit, by the unit system): when one alone does, the
+            // refusal names it, the id to write (2026-10-10, run xykl: four requests refused on the same missing factIds, the guard
+            // listing six facts each time, when 0.3 ratio, 3.33 min, 1 m3/min and 0.44 g/min each matched one fact exactly).
+            // Several hold once converted (0.3 ratio and a floor of 30 percent): the one stated in the very unit written, when one alone is.
+            const matching = !k.factId ? facts.filter((f) => checkKnownAgainstFact({ value: k.value, unit: k.unit, ...(k.quantity ? { quantity: k.quantity } : {}) }, f).verdict === "OK") : [];
+            const sameUnit = matching.filter((f) => f.unit === k.unit);
+            const one = matching.length === 1 ? matching[0] : sameUnit.length === 1 ? sameUnit[0] : null;
+            if (!k.factId && one) problems.push(`facts: known constant "${k.symbol}" = ${k.value} ${k.unit} cites "${k.source}", which states its facts by id: its value is the fact "${one.id}" (${one.semantic}, ${one.value} ${one.unit}): write factId "${one.id}" in that constant`);
+            else if (!k.factId) problems.push(`facts: known constant "${k.symbol}" cites "${k.source}", which states its facts by id: give factId, one of ${facts.map((f) => `${f.id} (${f.semantic}, ${f.value} ${f.unit})`).join(", ")}`);
             else if (!fact) problems.push(`facts: known constant "${k.symbol}" cites fact "${k.factId}", which "${k.source}" does not state; its facts are ${facts.map((f) => f.id).join(", ")}`);
             else {
                 const verdict = checkKnownAgainstFact({ value: k.value, unit: k.unit, ...(k.quantity ? { quantity: k.quantity } : {}) }, fact);

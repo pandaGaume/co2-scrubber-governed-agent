@@ -95,18 +95,37 @@ export const relevantTo = (stage: string, appliesTo: string[]): boolean => appli
 /** An entry as a factory reads it. */
 export const entryView = (e: MemoryEntry): JsonValue => ({ rule: e.rule, kind: e.kind, appliesTo: e.appliesTo, status: e.status, ...(e.confidence ? { confidence: e.confidence } : {}), evidence: { failures: e.evidence.failures.length, successes: e.evidence.successes.length } });
 
-/** An episode as a model reads it: each attempt with who decided it and why, and what was refused then accepted. */
+/** The points an attempt was refused on, by kind and path: never the words of the refusal. */
+const pointsOf = (a: Episode["attempts"][number]): string[] => a.problems.slice(0, 6).map((p) => (p.path ? `${p.kind ?? "refused"} at ${p.path}` : (p.kind ?? "refused")));
+
+/**
+ * An episode as a model reads it. This task's (the session): each attempt with who decided it, the points it was refused on by
+ * kind and path, and what was refused then accepted; the last refusal's words are in the state's lastRefusal. Another task's, when
+ * the settings read previous tasks, comes as a lesson marked past: the points it was refused on and what was accepted after, never
+ * the words of its refusals (2026-10-10, run xykl: Nano read an earlier task's "abort.refused.threshold = 0 is a safety constant
+ * with no justification" as its own and wrote it again and again for 16384 tokens).
+ */
 export function episodeView(e: Episode, current = false): JsonValue {
+    const contrasts = e.contrasts.map((c) => ({ field: c.path, refused: c.rejected.argument, accepted: c.accepted?.argument ?? null }));
+    if (!current)
+        return {
+            pastTask: e.taskId,
+            lesson: {
+                outcome: e.finalOutcome,
+                refusedOn: [...new Set(e.attempts.filter((a) => a.outcome === "GUARD_REJECTED").flatMap(pointsOf))],
+                ...(contrasts.length ? { acceptedAfter: contrasts } : {}),
+            },
+        } as JsonValue;
     return {
         episode: e.id,
-        ...(current ? { current: true } : {}),
+        current: true,
         outcome: e.finalOutcome,
         attempts: e.attempts.map((a) => ({
             call: a.capability,
             outcome: a.outcome,
-            ...(a.outcome === "GUARD_REJECTED" ? { refusedOn: a.problems.slice(0, 4).map((p) => p.says.slice(0, 240)) } : a.outcome !== "ACCEPTED" && a.reason ? { reason: a.reason.slice(0, 240) } : {}),
+            ...(a.outcome === "GUARD_REJECTED" ? { refusedOn: a.problems.length ? pointsOf(a) : [(a.reason ?? "refused").slice(0, 240)] } : a.outcome !== "ACCEPTED" && a.reason ? { reason: a.reason.slice(0, 240) } : {}),
         })),
-        ...(e.contrasts.length ? { refusedThenAccepted: e.contrasts.map((c) => ({ field: c.path, refused: c.rejected.argument, accepted: c.accepted?.argument ?? null })) } : {}),
+        ...(contrasts.length ? { refusedThenAccepted: contrasts } : {}),
     } as JsonValue;
 }
 
