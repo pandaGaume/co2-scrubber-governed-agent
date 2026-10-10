@@ -72,11 +72,13 @@ describe("the interpreter reads a call toward its schema", () => {
         assert.equal(r.reading?.how, "coerced");
     });
 
-    it("never guesses: an object with two different identifiers stays as sent", () => {
+    it("an object carrying its id is read as its id; without an id, two different identifiers stay as sent (2026-10-10, run 22)", () => {
         const changes: string[] = [];
-        const read = coerce({ type: "string" }, { id: "fe-1", name: "Wren" }, "", changes);
-        assert.deepEqual(read, { id: "fe-1", name: "Wren" });
-        assert.equal(changes.length, 0);
+        assert.equal(coerce({ type: "string" }, { id: "fe-1", callsign: "FE-1", name: "A. Pelletier" }, "", changes), "fe-1");
+        assert.equal(changes.length, 1);
+        const none: string[] = [];
+        assert.deepEqual(coerce({ type: "string" }, { callsign: "FE-1", name: "Wren" }, "", none), { callsign: "FE-1", name: "Wren" });
+        assert.equal(none.length, 0);
     });
 
     it("what the schema-guided reading cannot fix goes to the model's extraction, which the schema checks again", async () => {

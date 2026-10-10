@@ -254,7 +254,8 @@ export function justificationProblems(constants: Constant[], given: unknown[], r
                 break;
             case "envelope": {
                 const bounds = Object.keys(options.envelope ?? {}).filter((k) => typeof (options.envelope ?? {})[k] === "number");
-                if (!bounds.includes(ref)) problems.push(`${c.constant}: "${ref}" is not a bound of the guard's envelope (${bounds.join(", ") || "this factory has none"})`);
+                // What to cite instead, said (2026-10-10, run 22: the graph factory cited "habitat.V.bounds" as an envelope it does not have).
+                if (!bounds.includes(ref)) problems.push(`${c.constant}: "${ref}" is not a bound of the guard's envelope (${bounds.join(", ") || "this factory has none"}): cite where the bound comes from instead (library: the graph or the document read, by its id and a path inside it, habitat.variables.V; derived: its formula; assumed: what it rests on)`);
                 break;
             }
             case "derived":

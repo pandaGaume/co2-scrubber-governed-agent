@@ -101,6 +101,9 @@ export function coerce(schema: unknown, value: unknown, at = "", changes: string
         return to;
     };
     if (only === "string" && isObject(value)) {
+        // Its id when it carries one: the schema asks for an identifier, and an object's id is it, whatever its name or callsign says
+        // (2026-10-10, run 22: {id: "fe-1", callsign: "FE-1", name: "A. Pelletier"} for an occupant, refused as two identifiers).
+        if (typeof value.id === "string" && value.id.length > 0) return say(value.id);
         const ids = IDENTIFIERS.filter((k) => typeof value[k] === "string" && (value[k] as string).length > 0);
         if (ids.length >= 1 && new Set(ids.map((k) => value[k])).size === 1) return say(value[ids[0]!]);
         return value;
