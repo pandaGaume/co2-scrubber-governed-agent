@@ -445,6 +445,11 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             () => reasoningStateOf({ task, progress, budget, nextActions: capabilities.catalogue.map((c) => c.id).filter((id) => offered(id)), ...projectionOf(), shelf: topic.shelf === false ? [] : progress.context.shelf, telemetry: progress.context.telemetry, contracts: progress.context.contracts, runsSpent: topic.runsSpent?.(progress), shown: topic.observation ? [topic.observation] : [], topic: topic.state?.(progress, task), memory: memoryNow(), marchingOrder: topic.marchingOrder?.(progress, task) }),
             () => topic.key?.(progress) ?? "",
             contextMode,
+            // One call per answer where the stage's work is an action, not a read (its own tools hold one that is neither a read nor the task's).
+            () => {
+                stage();
+                return Boolean(stageInfo && stageInfo.tools.some((id) => !id.startsWith("task.") && !READ_CAPABILITIES.some((r) => r.test(id))));
+            },
         ),
         evaluator: createTaskEvaluator({ broker, taskId, task, topic, progress }),
         guard: createBuilderGuard({ broker, task, topic, runtimeSlot, taskId, progress }),

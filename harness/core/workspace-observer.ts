@@ -157,7 +157,7 @@ export function briefWithNotes(progress: Progress, topicBrief: string): string {
     return (progress.lastRefusal?.capability === APP.text.report ? appSays("textIgnored") : "") + refusal + justificationNote(progress.justify) + topicBrief;
 }
 
-export function createWorkspaceObserver(broker: Broker, taskId: string, progress: Progress, brief: () => string = () => "", state?: () => ReasoningState, key: () => string = () => "", contextMode: "conversation" | "state" = "conversation"): StateObserver {
+export function createWorkspaceObserver(broker: Broker, taskId: string, progress: Progress, brief: () => string = () => "", state?: () => ReasoningState, key: () => string = () => "", contextMode: "conversation" | "state" = "conversation", oneCall: () => boolean = () => false): StateObserver {
     return {
         async observe(): Promise<WorkshopState> {
             const files = await listWorkshop(broker, taskId);
@@ -168,6 +168,10 @@ export function createWorkspaceObserver(broker: Broker, taskId: string, progress
             const features: WorkshopFeatures = {
                 // A text answer is not read here: the loop turns it into a crew report, which a factory does not have; said in the brief, so the builder answers with a tool.
                 brief: briefWithNotes(progress, brief()),
+                // A stage whose work is an action (a submission, a plan, an evaluation): one call per answer, the provider says so to the
+                // model's server; several only where the stage reads (2026-10-10, runs 12 to 16: Nemotron Super wrote the same procedure.submit
+                // up to 15 times in one answer, to the output limit, 16 000 tokens and 60 s for one call).
+                oneCall: oneCall(),
                 phase: progress.phase,
                 iteration: progress.iteration,
                 files: files.length,

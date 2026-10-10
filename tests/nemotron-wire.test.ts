@@ -138,6 +138,15 @@ describe("a reasoning model behind an OpenAI-compatible server", () => {
         assert.notEqual(cut.result.invocation.capabilityId, "scrubber.motor.set_speed");
     });
 
+    it("one call per answer where the stage's work is an action; several where it reads (2026-10-10, runs 12 to 16)", async () => {
+        const called = { status: 200, body: completion(null, { name: "scrubber__motor__set_speed", args: '{"percent":40}' }) };
+        const act = { ...input, state: { id: "s", features: { oneCall: true } } } as unknown as PolicyFallbackInput;
+        const one = await withServer([called], () => new OpenAiCompatibleProvider(profile, { systemPrompt: "p", contextMode: "state" }).resolve(act));
+        assert.equal(one.sent[0].parallel_tool_calls, false);
+        const read = await withServer([called], () => new OpenAiCompatibleProvider(profile, { systemPrompt: "p", contextMode: "state" }).resolve(input));
+        assert.equal(read.sent[0].parallel_tool_calls, true);
+    });
+
     it("the end of a cut reasoning, its lines said once: a reasoning cut at the limit repeats itself", () => {
         const loop = ["We read the card.", ...Array.from({ length: 400 }, () => "Thus call procedure.submit."), "Now produce that."].join("\n");
         const text = cutRetryText(loop);

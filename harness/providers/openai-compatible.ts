@@ -191,7 +191,7 @@ export class OpenAiCompatibleProvider implements Provider {
         // The output limit under the name the server takes, and a temperature only when the profile does not say the model takes none.
         const temperature = this.options.temperature ?? (this.profileTemperature === undefined ? 0.2 : this.profileTemperature);
         const choice = (): string => ((this.toolChoice ?? (this.contextMode === "state" ? "required" : "auto")) === "required" && !this.requiredRefused ? "required" : "auto");
-        const bodyWith = (toolChoice: string) => ({ model: this.model, messages: this.messages, tools: (tools = toolsNow()), tool_choice: toolChoice, parallel_tool_calls: true, ...(temperature === null ? {} : { temperature }), ...(this.maxTokens ? { [this.maxTokensParam]: this.maxTokens } : {}) });
+        const bodyWith = (toolChoice: string) => ({ model: this.model, messages: this.messages, tools: (tools = toolsNow()), tool_choice: toolChoice, parallel_tool_calls: input.state.features.oneCall !== true, ...(temperature === null ? {} : { temperature }), ...(this.maxTokens ? { [this.maxTokensParam]: this.maxTokens } : {}) });
         let body = bodyWith(choice());
         const started = Date.now();
         const controller = new AbortController();

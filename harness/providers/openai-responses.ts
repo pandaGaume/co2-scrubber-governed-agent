@@ -129,7 +129,8 @@ export class OpenAiResponsesProvider implements Provider {
             input: items,
             tools,
             tool_choice: state ? "required" : "auto",
-            parallel_tool_calls: true,
+            // One call per answer where the stage's work is an action (features.oneCall, workspace-observer.ts).
+            parallel_tool_calls: input.state.features.oneCall !== true,
             // Nothing kept at the provider in the state mode: the harness's state is the memory.
             store: !state,
             ...(!state && this.previous ? { previous_response_id: this.previous } : {}),
