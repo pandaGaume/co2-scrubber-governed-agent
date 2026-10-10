@@ -12,11 +12,11 @@
             "json"
         ],
         "family": "nemotron",
-        "maxTokens": 4096,
+        "maxTokens": 16384,
         "composeMaxTokens": 1024,
         "temperature": 0.2,
-        "timeoutMs": 120000,
-        "_note": "2026-10-08: Nemotron 3 Nano 30B A3B on Nebius Token Factory, the least expensive Nemotron (Guillaume's choice). maxTokens leaves room for the reasoning before the call; composeMaxTokens is the least a one-shot text (Mother's welcome) gets.",
+        "timeoutMs": 240000,
+        "_note": "2026-10-08: Nemotron 3 Nano 30B A3B on Nebius Token Factory, the least expensive Nemotron (Guillaume's choice). maxTokens leaves room for the reasoning before the call; composeMaxTokens is the least a one-shot text (Mother's welcome) gets. 2026-10-10: maxTokens 4096 to 16384 (Guillaume's call): at 4096, 18 of the 19 reasoning answers after step 5 of the trv7 run were cut before their call, and the retry without reasoning decided instead; timeoutMs 240000 so that a long answer is not cut by the clock (under the broker's 300 s).",
         "toolChoice": "required",
         "whenCut": {
             "chat_template_kwargs": {
