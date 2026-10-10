@@ -202,6 +202,12 @@ export function withFactIds(input: unknown, facts: Record<string, LibraryFact[]>
                 k = rest as typeof k;
                 read.push(`known "${k.symbol}": ${end} ${sent[end]} is its value, no band: left out`);
             }
+        // Two ends at zero around a value that is not: the fields filled in, no band (run 9: "min": 0, "max": 0 on nine constants).
+        if (k.min === 0 && k.max === 0 && k.value !== 0) {
+            const { min: _min, max: _max, ...rest } = k;
+            k = rest as typeof k;
+            read.push(`known "${k.symbol}": min 0 and max 0 around ${k.value} is no band: left out`);
+        }
         if (k.factId || !k.unit || !k.source || !facts[k.source]?.length) return k;
         const fact = factHolding(k, facts[k.source]);
         if (!fact) return k;

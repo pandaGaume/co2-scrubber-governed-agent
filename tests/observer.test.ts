@@ -111,6 +111,8 @@ describe("the Observer's guard and its telemetry", () => {
             { symbol: "tau", name: "lag", value: 3.33, unit: "min", source: "scrubber-1-datasheet", min: 3.33, max: 3.33 },
             { symbol: "eta_sp", name: "efficiency", value: 0.3, unit: "dimensionless", source: "scrubber-1-datasheet" },
             { symbol: "G", name: "a band", value: 0.3, unit: "L/min", source: "nasa-crew-metabolic-loads", min: 0.2, max: 0.4 },
+            // Run 9: the fields filled in with zeros around a value that is not.
+            { symbol: "N", name: "crew", value: 4, unit: "1", source: "nasa-crew-metabolic-loads", min: 0, max: 0 },
         ];
         const { input, read } = withFactIds({ ...REQUEST, known }, facts) as { input: TwinFactoryRequest; read: string[] };
         assert.deepEqual(input.known!.map((k) => [k.symbol, k.factId ?? null, k.min ?? null, k.max ?? null]), [
@@ -120,8 +122,9 @@ describe("the Observer's guard and its telemetry", () => {
             ["eta_sp", null, null, null],
             // A real band, and a document without typed facts here: untouched.
             ["G", null, 0.2, 0.4],
+            ["N", null, null, null],
         ]);
-        assert.equal(read.length, 5);
+        assert.equal(read.length, 6);
         assert.match(read.join("; "), /known "Qe_full" = 1 m3\/min is the fact "scrubber.effectiveFlowAtFull" of "scrubber-1-datasheet" \(1 m3\/min\): factId written/);
         // Read, the request no longer carries the two points the guard refused on.
         const problems = checkTwinRequest(input, { documentsRead: ["scrubber-1-datasheet"], facts }).problems.join("; ");
