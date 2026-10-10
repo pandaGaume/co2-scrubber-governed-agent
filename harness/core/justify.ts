@@ -218,6 +218,17 @@ const named = (constant: string): string => `(a justification names it by its pa
 const shown = (v: unknown): string => (Array.isArray(v) ? `[${v.join(", ")}]` : String(v));
 const asJustifications = (given: unknown[]): Array<Partial<Justification>> => given.filter((j): j is Partial<Justification> => Boolean(j) && typeof j === "object");
 
+/**
+ * The source read a library reference names: the id itself, or the id followed by a path inside it (2026-10-10, run 8: Nemotron Nano
+ * cited "habitat.variables.V", the variable V of the graph habitat it had read, and was refused for it, then tried to read "habitat"
+ * as a document, twice). The longest id read that the reference starts with, before a separator; null when none.
+ */
+export function librarySourceOf(reference: string, read: ReadonlyArray<string>): string | null {
+    if (read.includes(reference)) return reference;
+    const named = read.filter((id) => id && reference.length > id.length && reference.startsWith(id) && /^[.#/: (\[]/.test(reference.slice(id.length)));
+    return named.sort((a, b) => b.length - a.length)[0] ?? null;
+}
+
 /** The problems of the numbers the model justifies: none unjustified, each with a reason and a source this task can cite. Its value is the one at its path: never compared with anything a justification says. */
 export function justificationProblems(constants: Constant[], given: unknown[], read: ReadSources, options: { measured: boolean; envelope?: Record<string, unknown> }): string[] {
     const problems: string[] = [];
@@ -233,7 +244,7 @@ export function justificationProblems(constants: Constant[], given: unknown[], r
         const ref = String(j.reference ?? "").trim();
         switch (j.source) {
             case "library":
-                if (!read.library.includes(ref)) problems.push(`${c.constant}: "${ref}" is not a library document or fact read in this task (${read.library.slice(0, 12).join(", ") || "none read"}): read it, or cite another source`);
+                if (!librarySourceOf(ref, read.library)) problems.push(`${c.constant}: "${ref}" is not a library document or fact read in this task (${read.library.slice(0, 12).join(", ") || "none read"}): read it, or cite another source`);
                 break;
             case "web":
                 if (!read.web.includes(ref)) problems.push(`${c.constant}: "${ref}" is not a page a web search returned in this task: search, and cite a URL it returned`);

@@ -9,7 +9,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import type { JsonValue } from "@spiky-panda/harness";
-import { checkJustifications, helpForRefusal, justificationHelp, justificationNote, justificationOf, justificationProblems, justificationsFor, noteSources, numbersOf, recordedJustifications, safetyJustifications, safetyProblems, type Justified, type ReadSources, type SignedFact } from "../harness/core/justify.js";
+import { checkJustifications, helpForRefusal, justificationHelp, librarySourceOf, justificationNote, justificationOf, justificationProblems, justificationsFor, noteSources, numbersOf, recordedJustifications, safetyJustifications, safetyProblems, type Justified, type ReadSources, type SignedFact } from "../harness/core/justify.js";
 import { compactOutput, fitted } from "../harness/core/compact.js";
 import { CANDIDATE_JUSTIFIED, candidateConstants } from "../harness/topics/graph/index.js";
 import { reasoningStateOf } from "../harness/core/reasoning-state.js";
@@ -100,6 +100,19 @@ describe("the justification of constants, common to every factory", () => {
         ]);
         // What is left to justify after a refusal: the numbers the model chose, never a safety one.
         assert.deepEqual(justificationHelp(justified, { justifications: [] } as unknown as JsonValue), { missing: [{ constant: "steps.2.minutes", value: 12 }], unmatched: [] });
+    });
+
+    it("a library reference names a source read by its id, or by its id and a path inside it (2026-10-10, run 8: habitat.variables.V)", () => {
+        const read = ["habitat", "station-topology", "nasa-crew-metabolic-loads", "scrubber.flowAtFull"];
+        assert.equal(librarySourceOf("habitat", read), "habitat");
+        assert.equal(librarySourceOf("habitat.variables.V", read), "habitat");
+        assert.equal(librarySourceOf("station-topology#volumes", read), "station-topology");
+        assert.equal(librarySourceOf("scrubber.flowAtFull", read), "scrubber.flowAtFull");
+        // A name that only begins like one read is not it, nor a source never read.
+        assert.equal(librarySourceOf("habitat-b", read), null);
+        assert.equal(librarySourceOf("co2-scrubbers.flow", read), null);
+        const problems = justificationProblems([{ constant: "fit.V", value: 35 }], [{ constant: "fit.V", source: "library", reference: "habitat.variables.V", reason: "the graph's volume" }], { library: read, web: [] }, { measured: false });
+        assert.deepEqual(problems, []);
     });
 
     it("after a refusal, what is left to justify is what the guard refused as unjustified, never a constant the topic's declaration cannot tell is a safety one (2026-10-10, run 6)", () => {

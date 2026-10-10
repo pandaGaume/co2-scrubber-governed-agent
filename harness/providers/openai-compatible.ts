@@ -45,9 +45,32 @@ interface ChatMessage {
     tool_call_id?: string;
 }
 interface ChatCompletion {
-    choices?: Array<{ message?: { content?: string | null; tool_calls?: ToolCall[] }; finish_reason?: string }>;
+    choices?: Array<{ message?: { content?: string | null; tool_calls?: ToolCall[]; reasoning?: string | null; reasoning_content?: string | null }; finish_reason?: string }>;
     usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
     error?: { message?: string };
+}
+
+/** How much of a cut reasoning the retry reads: its end, where a reasoning concludes. */
+const CUT_TAIL_CHARS = 6000;
+
+/**
+ * What the retry after an answer cut before its call is told (2026-10-10, runs 5 to 8): the end of the reasoning that was cut, its
+ * lines said once (a reasoning cut at the limit often repeats itself), and to answer with the call it concluded on. Asked again
+ * blind, the retry without reasoning decided from nothing: the inventory read again at the procedure stage, after a reasoning that
+ * had written the whole procedure and was cut on "Now produce that".
+ */
+export function cutRetryText(reasoning: string): string {
+    const seen = new Set<string>();
+    const lines = reasoning.split(/\r?\n/).filter((line) => {
+        const key = line.trim();
+        if (!key) return false;
+        if (seen.has(key) && key.length > 3) return false;
+        seen.add(key);
+        return true;
+    });
+    const kept = lines.join("\n");
+    const tail = kept.length > CUT_TAIL_CHARS ? `...${kept.slice(-CUT_TAIL_CHARS)}` : kept;
+    return `Your previous answer to this step was cut at the output limit before its call. The end of its reasoning, its lines said once:\n<<<\n${tail}\n>>>\nIf it concluded on a call, answer now with that call, its arguments whole. Otherwise answer with the call the state and the brief ask for now. Do not reason again: answer with the call.`;
 }
 
 export interface OpenAiCompatibleOptions {
@@ -209,7 +232,9 @@ export class OpenAiCompatibleProvider implements Provider {
             const first = completion.choices?.[0];
             if (this.whenCut && first?.finish_reason === "length" && !first.message?.tool_calls?.length && !callInText(first.message?.content, new Set(input.allowedCapabilities.map((c) => c.id)))) {
                 const cutTokens = completion.usage?.completion_tokens ?? 0;
-                body = { ...body, ...this.whenCut };
+                // The retry reads the end of what was cut: its conclusion is often there, whole (cutRetryText).
+                const cut = String(first.message?.reasoning ?? first.message?.reasoning_content ?? first.message?.content ?? "");
+                body = { ...body, ...this.whenCut, ...(cut.trim() ? { messages: [...this.messages, { role: "user", content: cutRetryText(cut) }] } : {}) };
                 response = await post();
                 text = await response.text();
                 if (response.ok) {

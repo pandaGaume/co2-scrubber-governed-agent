@@ -9,7 +9,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { OpenAiCompatibleProvider } from "../harness/providers/openai-compatible.js";
+import { cutRetryText, OpenAiCompatibleProvider } from "../harness/providers/openai-compatible.js";
 import { composeText } from "../harness/lib/compose.js";
 import { stripReasoning } from "../harness/lib/llm-common.js";
 import type { PolicyFallbackInput } from "@spiky-panda/harness";
@@ -117,6 +117,20 @@ describe("a reasoning model behind an OpenAI-compatible server", () => {
         assert.deepEqual(sent[1].chat_template_kwargs, { enable_thinking: false });
         assert.equal(provider.exchanges[0].proposedCapabilityId, "scrubber.motor.set_speed");
         assert.equal(provider.exchanges[0].tokens?.completion, 4116);
+        // The retry reads the end of what was cut, its conclusion there (2026-10-10, runs 5 to 8: asked blind, it read the inventory again).
+        const last = (sent[1].messages as Array<{ role: string; content: string }>).at(-1)!;
+        assert.equal(last.role, "user");
+        assert.match(last.content, /^Your previous answer to this step was cut at the output limit before its call\. The end of its reasoning, its lines said once:\n<<<\nI need to write a test procedure\. Let me first gather\.\.\.\n>>>\nIf it concluded on a call, answer now with that call/);
+        // The conversation itself does not keep it: the next step is asked from the state alone.
+        assert.ok(!JSON.stringify((provider as unknown as { messages: unknown[] }).messages).includes("cut at the output limit before its call"));
+    });
+
+    it("the end of a cut reasoning, its lines said once: a reasoning cut at the limit repeats itself", () => {
+        const loop = ["We read the card.", ...Array.from({ length: 400 }, () => "Thus call procedure.submit."), "Now produce that."].join("\n");
+        const text = cutRetryText(loop);
+        assert.equal(text.split("Thus call procedure.submit.").length - 1, 1);
+        assert.match(text, /We read the card\.\nThus call procedure\.submit\.\nNow produce that\.\n>>>/);
+        assert.ok(cutRetryText("x".repeat(20000)).includes("...xxxx"), "the end of a long one, not its start");
     });
 
     it("a text naming no allowed tool stays a report", async () => {
