@@ -88,6 +88,8 @@ export interface ProviderProfile {
         whenCut?: Record<string, unknown>;
         /** The sampling temperature sent; null sends none, for a model that takes only its own (0.2 when absent). */
         temperature?: number | null;
+        /** The nucleus kept when sampling (top_p: the most probable candidates whose probabilities add up to it); the server's default when absent. */
+        topP?: number;
         /** The reasoning effort asked of a model that reasons (the Responses API: low, medium, high); the model's own default when absent. */
         reasoningEffort?: string;
         /** How long one answer may take, in milliseconds (60000 when absent): a model that reasons long is not cut by the harness's clock. */

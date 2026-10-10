@@ -14,9 +14,10 @@
         "family": "nemotron",
         "maxTokens": 16384,
         "composeMaxTokens": 1024,
-        "temperature": 0.2,
+        "temperature": 0.6,
+        "topP": 0.95,
         "timeoutMs": 240000,
-        "_note": "2026-10-08: Nemotron 3 Super 120B A12B on Nebius Token Factory, to compare with the Nano (profiles/nvidia-nebius.json); id as Token Factory lists it. 2026-10-10: maxTokens 4096 to 16384 and timeoutMs 120000 to 240000, as the Nano (at 4096 a reasoning model is cut before its call, then decided by the retry without reasoning).",
+        "_note": "2026-10-08: Nemotron 3 Super 120B A12B on Nebius Token Factory, to compare with the Nano (profiles/nvidia-nebius.json); id as Token Factory lists it. 2026-10-10: maxTokens 4096 to 16384 and timeoutMs 120000 to 240000, as the Nano (at 4096 a reasoning model is cut before its call, then decided by the retry without reasoning). Temperature 0.2 to 0.6 and topP 0.95, what NVIDIA recommends for tool calling (Unsloth's guide, citing NVIDIA): at 0.2 the same procedure.submit was written up to 15 times in one answer, to the output limit (runs 12 to 16).",
         "toolChoice": "required",
         "whenCut": {
             "chat_template_kwargs": {

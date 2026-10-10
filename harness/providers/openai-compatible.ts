@@ -95,6 +95,8 @@ export class OpenAiCompatibleProvider implements Provider {
     private readonly maxTokens: number | null;
     private readonly maxTokensParam: "max_tokens" | "max_completion_tokens";
     private readonly profileTemperature: number | null | undefined;
+    /** The profile's top_p, sent only when given. */
+    private readonly profileTopP: number | undefined;
     private readonly profileTimeoutMs: number | undefined;
     /** The server refused `tool_choice: "required"` once (HTTP 400 naming it): `auto` from then on, a decision without a call becoming a report. */
     private requiredRefused = false;
@@ -124,6 +126,7 @@ export class OpenAiCompatibleProvider implements Provider {
         this.toolChoice = p.toolChoice ?? null;
         this.whenCut = p.whenCut ?? null;
         this.profileTemperature = p.temperature;
+        this.profileTopP = p.topP;
         this.profileTimeoutMs = p.timeoutMs;
         this.family = familyOf(profile, this.model);
         // Shared by every conversation with this server, seeded by the profile's `schemaUnsupported` (a refusal learned once).
@@ -191,7 +194,7 @@ export class OpenAiCompatibleProvider implements Provider {
         // The output limit under the name the server takes, and a temperature only when the profile does not say the model takes none.
         const temperature = this.options.temperature ?? (this.profileTemperature === undefined ? 0.2 : this.profileTemperature);
         const choice = (): string => ((this.toolChoice ?? (this.contextMode === "state" ? "required" : "auto")) === "required" && !this.requiredRefused ? "required" : "auto");
-        const bodyWith = (toolChoice: string) => ({ model: this.model, messages: this.messages, tools: (tools = toolsNow()), tool_choice: toolChoice, parallel_tool_calls: input.state.features.oneCall !== true, ...(temperature === null ? {} : { temperature }), ...(this.maxTokens ? { [this.maxTokensParam]: this.maxTokens } : {}) });
+        const bodyWith = (toolChoice: string) => ({ model: this.model, messages: this.messages, tools: (tools = toolsNow()), tool_choice: toolChoice, parallel_tool_calls: input.state.features.oneCall !== true, ...(temperature === null ? {} : { temperature }), ...(this.profileTopP !== undefined ? { top_p: this.profileTopP } : {}), ...(this.maxTokens ? { [this.maxTokensParam]: this.maxTokens } : {}) });
         let body = bodyWith(choice());
         const started = Date.now();
         const controller = new AbortController();

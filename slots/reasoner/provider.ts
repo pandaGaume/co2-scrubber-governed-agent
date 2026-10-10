@@ -175,6 +175,7 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
         maxTokens: p.tier3?.maxTokens ?? null,
         maxTokensParam: p.tier3?.maxTokensParam ?? null,
         temperature: p.tier3?.temperature === undefined ? null : p.tier3.temperature,
+        topP: p.tier3?.topP ?? null,
         reasoningEffort: p.tier3?.reasoningEffort ?? null,
         timeoutMs: p.tier3?.timeoutMs ?? null,
     });
