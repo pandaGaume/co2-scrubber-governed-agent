@@ -154,10 +154,11 @@ export function evaluateCapability(context: TopicContext, runtimeSlot = "twin"):
     };
 }
 
-export function validateGraph(claim: DoneClaim, files: WorkshopFile[], progress: Progress): Validation {
+export function validateGraph(claim: DoneClaim, files: WorkshopFile[], progress: Progress, task?: TaskFile["task"]): Validation {
     const problems: string[] = [];
-    // A required output the plan mapped to a type: the candidate handed over holds that type, or the mapping was words.
-    const mapped = Object.entries(progress.plan?.produced ?? {});
+    // A required output the plan mapped to a type: the candidate handed over holds that type, or the mapping was words; not one a telemetry column judges (the graph produces it).
+    const judged = judgedOutputs(task);
+    const mapped = Object.entries(progress.plan?.produced ?? {}).filter(([name]) => !judged.has(name));
     for (const g of claim.artifacts.filter((a) => a.kind === "graph" || a.kind === "twin")) {
         const candidate = candidatesOf(progress).find((c) => c.path === g.path);
         for (const [name, m] of mapped) if (candidate && !candidate.types.includes(m.type)) problems.push(gw("validate.unmapped", { type: m.type, name, n: candidate.n, port: m.port }));
@@ -207,7 +208,7 @@ export function requirementsOf(progress: Progress, task: TaskFile["task"]): Reco
 function evidenceOf(progress: Progress, task: TaskFile["task"]): Evidence {
     const requirements = requirementsOf(progress, task);
     const last = stateOf(progress).candidates.at(-1);
-    const needLast = last?.pass && last.graph ? addNeededFor(progress, last.graph, last.types) : null;
+    const needLast = last?.pass && last.graph ? addNeededFor(progress, last.graph, last.types, task) : null;
     return {
         contextMet: HOW_KEYS.every((k) => requirements[k]),
         planAccepted: requirements.planAccepted,
@@ -324,10 +325,10 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
           })
         : "";
     // A type the plan maps outside the library graph (a generated node): the evaluation holds it through add, said here with the exact wiring, before the first candidate and before a hand-over.
-    const needFirst = reference ? addNeededFor(progress, REFERENCE_GRAPH_ID) : null;
+    const needFirst = reference ? addNeededFor(progress, REFERENCE_GRAPH_ID, [], task) : null;
     if (!last) return gw("brief.first", { start, also: needFirst ? gw("brief.firstAlso", { sentence: addSentence(needFirst, REFERENCE_GRAPH_ID) }) : "", threshold, held, refused });
     const where = last.residuals.map((r) => gw("brief.where", { column: r.column, rmse: r.rmse, unit: UNIT, worst: r.worst, minute: r.worstMinute })).join("; ");
-    const needLast = last.graph ? addNeededFor(progress, last.graph, last.types) : null;
+    const needLast = last.graph ? addNeededFor(progress, last.graph, last.types, task) : null;
     if (last.diagnosis === "PASS" && needLast) return gw("brief.notYet", { n: last.n, path: last.path, where, types: needLast.types.map((t) => `"${t}"`).join(", "), graph: last.graph ?? "", add: JSON.stringify(needLast.add), sinks: needLast.where });
     if (last.diagnosis === "PASS") return gw("brief.handOver", { n: last.n, path: last.path, where });
     if (last.diagnosis === "INVALID_EVALUATION") return gw("brief.invalid", { n: last.n, diagnostics: (last.diagnostics ?? []).map((d) => `${d.reason}${d.column ? ` on ${d.column}` : ""}${d.minute !== undefined ? ` at minute ${d.minute}` : ""}${d.detail ? ` (${d.detail})` : ""}`).join("; "), refused });
@@ -368,8 +369,21 @@ function intentionOf(task: TaskFile["task"], generic: Intention): Intention {
  * library graph without the node it had mapped, then reworded task.done against the validator's verdict until its budget or STUCK ended it).
  * `present`: the types already held (the candidate's, or the call's add). Null when nothing is short.
  */
-export function addNeededFor(progress: Progress, graphId: string, present: string[] = []): { types: string[]; add: { nodes: Array<{ id: string; typeId: string; params: Record<string, never> }>; connections: Array<{ from: [string, string]; to: [string, string] }> }; where: string } | null {
-    const mapped = Object.entries(progress.plan?.produced ?? {});
+/** The required outputs a telemetry column judges (the request's validation.compare): the reference graph produces them by its own volumes and sensors. */
+export function judgedOutputs(task: TaskFile["task"] | undefined): Set<string> {
+    const compare = ((task?.requirements as { validation?: { compare?: Array<{ output?: unknown }> } } | undefined)?.validation?.compare) ?? [];
+    return new Set(compare.map((c) => String(c?.output ?? "")).filter(Boolean));
+}
+
+/**
+ * What a library graph lacks of what the plan maps, and the add that brings it (2026-10-10, run 20): only for an output no telemetry column
+ * judges (a judged one the graph produces by its own volumes: mapping it to another node asked for a node nobody needed, six evaluations
+ * refused for it); its output wired into a volume only when it is a quantity the volume adds up (the format's sink.quantities): a
+ * concentration wired as a source made a twin 985 000 ppm off.
+ */
+export function addNeededFor(progress: Progress, graphId: string, present: string[] = [], task?: TaskFile["task"]): { types: string[]; add: { nodes: Array<{ id: string; typeId: string; params: Record<string, never> }>; connections: Array<{ from: [string, string]; to: [string, string] }> }; where: string; notSource: string } | null {
+    const judged = judgedOutputs(task);
+    const mapped = Object.entries(progress.plan?.produced ?? {}).filter(([name]) => !judged.has(name));
     if (!mapped.length) return null;
     const entry = loadGraphLibrary().find((g) => g.template.id === graphId);
     if (!entry) return null;
@@ -388,14 +402,22 @@ export function addNeededFor(progress: Progress, graphId: string, present: strin
         });
     const first = sinks[0];
     const nodes = short.map(([, m], i) => ({ id: `generated-${i + 1}`, typeId: m.type, params: {} as Record<string, never> }));
-    const connections = first ? short.map(([, m], i): { from: [string, string]; to: [string, string] } => ({ from: [`generated-${i + 1}`, m.port], to: [first.id, `${prefix}${first.next + i}`] })) : [];
+    // Wired into a volume only what the volume adds up: the required output's quantity against the sink's.
+    const accepted = GRAPH_FORMAT.sink.quantities ?? [];
+    const quantityOf = (name: string): string | undefined => task?.objective?.required_outputs?.find((o) => o.name === name)?.quantity;
+    // A quantity not known here (no task given) is wired as before; a known one only when the volume adds it up.
+    const isSource = (name: string): boolean => { const q = quantityOf(name); return !accepted.length || q === undefined || accepted.includes(q); };
+    const sources = short.map((entry, i) => ({ entry, i })).filter(({ entry }) => isSource(entry[0]));
+    const connections = first ? sources.map(({ entry: [, m], i }, k): { from: [string, string]; to: [string, string] } => ({ from: [`generated-${i + 1}`, m.port], to: [first.id, `${prefix}${first.next + k}`] })) : [];
+    const notSourceOf = short.find(([name]) => !isSource(name));
+    const notSource = notSourceOf ? gw("add.notSource", { port: notSourceOf[1].port, quantity: quantityOf(notSourceOf[0]) ?? "?", accepted: accepted.join(" or ") }) : "";
     const where = sinks.map((a) => gw("add.sink", { id: a.id, port: `${prefix}${a.next}` })).join(", ");
-    return { types: short.map(([, m]) => m.type), add: { nodes, connections }, where };
+    return { types: short.map(([, m]) => m.type), add: { nodes, connections }, where, notSource };
 }
 
 /** The sentence the brief and the guard say about a mapped type the graph does not hold. */
 function addSentence(need: NonNullable<ReturnType<typeof addNeededFor>>, graphId: string): string {
-    return gw("add.sentence", { types: need.types.map((t) => `"${t}"`).join(", "), graph: graphId, add: JSON.stringify(need.add), sinks: need.where });
+    return gw("add.sentence", { types: need.types.map((t) => `"${t}"`).join(", "), graph: graphId, add: JSON.stringify(need.add), sinks: need.where, notSource: need.notSource });
 }
 
 /** The topic's own refusals: a plan before its evidence is in (the phase moves on facts, not on a call); a library-graph evaluation short of a type the plan maps. */
@@ -403,7 +425,7 @@ function guardGraph(capabilityId: string, input: JsonValue, context: TopicContex
     if (capabilityId === "graph.evaluate") {
         const call = input && typeof input === "object" && !Array.isArray(input) ? (input as { graph?: unknown; add?: { nodes?: Array<{ typeId?: unknown }> } }) : null;
         if (call && typeof call.graph === "string") {
-            const need = addNeededFor(context.progress, call.graph, (call.add?.nodes ?? []).map((n) => String(n?.typeId ?? "")));
+            const need = addNeededFor(context.progress, call.graph, (call.add?.nodes ?? []).map((n) => String(n?.typeId ?? "")), context.task);
             if (need) return [addSentence(need, call.graph)];
         }
         return [];
@@ -436,7 +458,7 @@ export const GRAPH_TOPIC: TopicDefinition = {
     // A candidate is evaluated again against this task's data, a plan checked again by the guard, a claim by the validator: a recipe here is a first try, judged.
     replayedActions: [/^task\.(plan|done)$/, /^graph\.evaluate$/],
     justified: CANDIDATE_JUSTIFIED,
-    validate: (claim, files, progress) => validateGraph(claim, files, progress),
+    validate: (claim, files, progress, task) => validateGraph(claim, files, progress, task),
     local: (context) => [evaluateCapability(context, context.runtimeSlot ?? "twin")],
     guard: guardGraph,
     state: stateOfTopic,

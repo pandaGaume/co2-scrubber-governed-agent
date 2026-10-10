@@ -272,6 +272,10 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
     const made = new Set<string>();
     restrictReplays(recipes.policy, [...NEVER_REPLAYED, ...(topic.neverReplayed ?? [])], made, (id) => offered(id));
     const progress = newProgress();
+    // What the request cites is citable from the first step (2026-10-10, run 20): the facts and documents its known constants name, read
+    // upstream by the Observer and carried in the task. The graph factory cited them, and was refused "not read in this task" four times.
+    for (const k of (((task.requirements ?? {}) as { known?: Array<{ factId?: unknown; source?: unknown }> }).known ?? []))
+        for (const id of [k?.factId, k?.source]) if (typeof id === "string" && id && !progress.sources.library.includes(id)) progress.sources.library.push(id);
     const calls: CapabilityCall[] = [];
     const provider = typeof providerOrBuild === "function" ? providerOrBuild({ taskId, task, topic: topicId, lastCall: () => progress.lastCall, read: (id) => progress.reads[id]?.value ?? null }) : providerOrBuild;
     const profileFile = fromRoot(file.profile ?? "");

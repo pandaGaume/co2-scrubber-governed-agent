@@ -69,6 +69,20 @@ describe("the hand-off's rules, without a broker", () => {
         assert.match(String(problems), /holds no node of that type: evaluate it with add/);
         assert.deepEqual(GRAPH_TOPIC.guard!("graph.evaluate", { graph: "habitat", add: { nodes: [{ id: "x", typeId: LEAK_TYPE }], connections: [] } }, context), []);
     });
+    it("the add asked only for an output no telemetry column judges, and a concentration never wired into a volume (2026-10-10, run 20)", () => {
+        const progress = newProgress();
+        progress.plan = { selected_nodes: [], missing_capabilities: [], produced: { "CO2 in Lab": { type: "Physics.LifeSupport:cabin-air", port: "co2Ppm" } } };
+        const judgedTask = { objective: { required_outputs: [{ name: "CO2 in Lab", quantity: "Concentration", unit: "ppm" }], constraints: {} }, requirements: { validation: { compare: [{ output: "CO2 in Lab", against: "co2_lab_ppm" }] } } } as unknown as TaskFile["task"];
+        // Judged by the telemetry: the reference graph produces it, no node to add.
+        assert.equal(addNeededFor(progress, "habitat", [], judgedTask), null);
+        // Asked by the description, a concentration: the node added, nothing wired into a volume, and why.
+        const askedTask = { ...judgedTask, requirements: {} } as unknown as TaskFile["task"];
+        const need = addNeededFor(progress, "habitat", [], askedTask);
+        assert.ok(need);
+        assert.deepEqual(need.add.connections, []);
+        assert.match(need.notSource, /Its output co2Ppm is a Concentration, which the graph's volumes do not add up \(they add Mass or MassFlow\)/);
+    });
+
     it("a plan's missing capability for the code factory carries a contract the forge can run; the requests are built from the task", async () => {
         const task = { id: "t", objective: { required_outputs: [{ name: "leak_co2", quantity: "MassFlow", unit: "kg/s" }], constraints: {} }, observations: {}, data: [], budget: { iterations: 1, minutes: 1, twinPoints: 1 }, requestedBy: "x", requestedAt: "t" } as unknown as TaskFile["task"];
         const options = { broker: { call: async () => ({ ok: false, outcome: "refused" }) } as never, task, topic: GRAPH_TOPIC };

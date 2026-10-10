@@ -119,6 +119,15 @@ export function coerce(schema: unknown, value: unknown, at = "", changes: string
         return value;
     }
     if (only === "boolean" && typeof value === "string" && /^(true|false)$/i.test(value.trim())) return say(value.trim().toLowerCase() === "true");
+    // A pair of pairs where an object {from, to} of two pairs is asked (a connection, 2026-10-10, run 20: [["a", "out"], ["b", "in"]]): read as
+    // the object, the first the source, the second the destination; the schema says it, the reading guesses nothing.
+    if ((only === "object" || (!only && isObject(schema.properties))) && Array.isArray(value) && value.length === 2 && isObject(schema.properties)) {
+        const props = schema.properties as Record<string, unknown>;
+        const keys = Object.keys(props);
+        const pair = (v: unknown) => Array.isArray(v) && v.length === 2 && v.every((x) => typeof x === "string");
+        const required = Array.isArray(schema.required) ? (schema.required as string[]) : [];
+        if (keys.length === 2 && keys.every((k) => typesOf(props[k] as Schema).includes("array")) && required.length === 2 && value.every(pair)) return say({ [required[0]!]: value[0], [required[1]!]: value[1] });
+    }
     if (only === "array") {
         const list = Array.isArray(value) ? value : value === undefined || value === null ? value : (say([value]) as unknown[]);
         if (!Array.isArray(list)) return list;

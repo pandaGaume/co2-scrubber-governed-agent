@@ -52,8 +52,9 @@
         "lacks": "Against the station's reference graph, candidate {n} lacks: {wires}. "
     },
     "add": {
-        "sentence": "the plan says {types} produce(s) a required output, and graph \"{graph}\" holds no node of that type: evaluate it with add wiring the node into the module the request names, for instance add: {add} (the graph's sinks: {sinks}; params left empty keep the values the contract set)",
-        "sink": "{id} (its next free input: {port})"
+        "sentence": "the plan says {types} produce(s) a required output, and graph \"{graph}\" holds no node of that type: evaluate it with add, for instance add: {add} (the graph's sinks: {sinks}; params left empty keep the values the contract set).{notSource}",
+        "sink": "{id} (its next free input: {port})",
+        "notSource": " Its output {port} is a {quantity}, which the graph's volumes do not add up (they add {accepted}): add the node and wire its inputs from the graph; its output is read where it is, never wired into a volume."
     },
     "validate": {
         "unmapped": "the plan says \"{type}\" produces \"{name}\", and candidate {n} holds no node of that type: evaluate a candidate that holds it (for a library graph, graph.evaluate with the same graph and add: {nodes: [{id: \"<an id>\", typeId: \"{type}\", params: {...}}], connections: [{from: [\"<that id>\", \"{port}\"], to: [\"<a node of the graph>\", \"<its input>\"]}]}; library.graph gives the graph's node ids and their inputs)",

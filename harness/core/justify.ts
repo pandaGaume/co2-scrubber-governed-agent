@@ -244,7 +244,7 @@ export function justificationProblems(constants: Constant[], given: unknown[], r
         const ref = String(j.reference ?? "").trim();
         switch (j.source) {
             case "library":
-                if (!librarySourceOf(ref, read.library)) problems.push(`${c.constant}: "${ref}" is not a library document or fact read in this task (${read.library.slice(0, 12).join(", ") || "none read"}): read it, or cite another source`);
+                if (!librarySourceOf(ref, read.library)) problems.push(`${c.constant}: "${ref}" is not a library document or fact read in this task (${read.library.slice(0, 12).join(", ") || "none read"}): read it (library.read for a document, library.facts for a fact), or cite another source`);
                 break;
             case "web":
                 if (!read.web.includes(ref)) problems.push(`${c.constant}: "${ref}" is not a page a web search returned in this task: search, and cite a URL it returned`);

@@ -64,6 +64,14 @@ describe("the interpreter reads a call toward its schema", () => {
         assert.equal(((PROCEDURE_SCHEMA as { properties: Record<string, { pattern?: string }> }).properties.id.pattern), FILE_ID_PATTERN);
     });
 
+    it("a connection written as a pair of pairs is read as {from, to} (2026-10-10, run 20)", async () => {
+        const pairOf = { type: "array", items: { type: "string" }, minItems: 2, maxItems: 2 };
+        const schema = { type: "object", properties: { connections: { type: "array", items: { type: "object", properties: { from: pairOf, to: pairOf }, required: ["from", "to"] } } }, required: ["connections"] } as unknown as JsonValue;
+        const r = await interpret({ id: "graph.evaluate", inputSchema: schema }, { connections: [[["generated-1", "co2Ppm"], ["lab", "delta_CO2_2"]]] });
+        assert.deepEqual(r.input, { connections: [{ from: ["generated-1", "co2Ppm"], to: ["lab", "delta_CO2_2"] }] });
+        assert.equal(r.reading?.how, "coerced");
+    });
+
     it("never guesses: an object with two different identifiers stays as sent", () => {
         const changes: string[] = [];
         const read = coerce({ type: "string" }, { id: "fe-1", name: "Wren" }, "", changes);

@@ -11,7 +11,7 @@
                 "connections": { "type": "array", "items": { "type": "object", "properties": { "from": { "type": "array", "items": { "type": "string" }, "minItems": 2, "maxItems": 2 }, "to": { "type": "array", "items": { "type": "string" }, "minItems": 2, "maxItems": 2 } }, "required": ["from", "to"] } }
             },
             "required": ["nodes", "connections"],
-            "description": "With graph: nodes and connections added to the library graph once instantiated (a generated node wired into it: its output into an atmosphere's next delta_CO2_<k> input, for instance). The graph's own nodes keep their ids."
+            "description": "With graph: nodes and connections added to the library graph once instantiated (a generated source of gas wired into it: its output into an atmosphere's next delta_CO2_<k> input, for instance; a node whose output is a concentration is read where it is, never wired into a volume). The graph's own nodes keep their ids. A connection is {from: [node, port], to: [node, port]}."
         },
         "persons": {
             "type": "array",

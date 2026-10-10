@@ -6,7 +6,7 @@
     "evaluateSchema": "specs/graph/evaluate.schema.json",
     "reference": "habitat",
     "comparison": "graphs/cabin.spikypanda",
-    "sink": { "type": "Physics.Scene:atmosphere", "port": "delta_CO2_" },
+    "sink": { "type": "Physics.Scene:atmosphere", "port": "delta_CO2_", "quantities": ["Mass", "MassFlow"] },
     "notify": { "slot": "station", "tool": "candidate_evaluated" },
     "flatSlope": 2,
     "frame": "^Control\\.Sim:|^Physics\\.Scene:(?!atmosphere)",

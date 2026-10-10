@@ -19,7 +19,7 @@ export interface GraphFormat {
     /** A saved twin kept for comparison, relative to the repository. */
     comparison: string;
     /** Where a generated node's output enters the reference graph: the node type that sums the sources, the prefix of its numbered inputs. */
-    sink: { type: string; port: string };
+    sink: { type: string; port: string; quantities?: string[] };
     notify?: { slot: string; tool: string };
     /** Below this slope, in the residual's unit per minute, a first minute reads flat: noise, not a trend. */
     flatSlope: number;
