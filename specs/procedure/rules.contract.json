@@ -121,8 +121,9 @@
         },
         {
             "code": "SAFETY_UNBOUNDED",
-            "match": ["^justification: \\S+ = .+ is a safety constant no signed fact bounds: leave it out"],
-            "example": "justification: abort.co2.threshold = 3200 is a safety constant no signed fact bounds: leave it out (the harness sets no safety number that nothing signed justifies)",
+            "match": ["^justification: \\S+ = .+ is a safety constant no signed fact bounds: leave (it|out the field)"],
+            "example": "justification: abort.co2.threshold = 3200 is a safety constant no signed fact bounds: leave out the field threshold alone: abort.co2 stays, without it (the harness sets no safety number that nothing signed justifies)",
+            "examples": ["justification: abort.co2.threshold = 3200 is a safety constant no signed fact bounds: leave it out (the harness sets no safety number that nothing signed justifies)"],
             "states": [{ "file": "specs/procedure/words.json", "pointer": "/brief/procedure", "phrase": "a safety field that no signed fact bounds is left out" }],
             "applies": ["path-keys"]
         },

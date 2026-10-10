@@ -29,7 +29,7 @@ describe("the safety constants and the signed facts that bound them, in the proc
         const abort = all.find((b) => b.constant === "abort.*.threshold");
         assert.ok(abort, all.map((b) => b.constant).join(", "));
         assert.deepEqual(abort.within, []);
-        assert.match(abort.note ?? "", /^no signed fact bounds it: leave it out \(abort\.battery\.threshold has its own bound, above\)$/);
+        assert.match(abort.note ?? "", /^no signed fact bounds it: leave out the field threshold alone: abort\.\* stays, without it \(abort\.battery\.threshold has its own bound, above\)$/);
         // Every numeric field of the schema the safety patterns cover is in the map, by its bound or as one to leave out.
         for (const c of ["limits.co2MaxPpm", "limits.co2AbortPpm", "limits.minSpeedPercent", "limits.maxMinutes", "steps.*.speedPercent", "abort.*.threshold", "monitoring.band.minBpm", "monitoring.band.maxBpm"]) assert.ok(all.some((b) => b.constant === c), c);
     });

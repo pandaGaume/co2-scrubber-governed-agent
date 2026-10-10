@@ -147,7 +147,7 @@ describe("the procedure's guard, alone", () => {
         assert.match(safetyProblems(over, signed(true), RULES).join("; "), /limits\.co2AbortPpm = 3400 does not respect test\.co2AbortCeilingPpm = 3200 ppm, a fact of a signed document: set it at or below it/);
         // A safety field no signed fact bounds (a threshold on the CO2 abort, run trv7): left out.
         const threshold = { ...PROCEDURE, abort: (PROCEDURE.abort ?? []).map((x) => (x.id === "co2" ? { ...x, threshold: 3200 } : x)) };
-        assert.match(safetyProblems(threshold, signed(true), RULES).join("; "), /abort\.co2\.threshold = 3200 is a safety constant no signed fact bounds: leave it out/);
+        assert.match(safetyProblems(threshold, signed(true), RULES).join("; "), /abort\.co2\.threshold = 3200 is a safety constant no signed fact bounds: leave out the field threshold alone: abort\.co2 stays, without it/);
     });
 
     it("a refused procedure stays kept whole for a few minutes: a revision sends only what changes, is applied to it and checked whole; the draft is erased once a procedure is accepted, and expires (2026-09-28)", async () => {

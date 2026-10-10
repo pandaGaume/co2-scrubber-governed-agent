@@ -9,7 +9,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import type { JsonValue } from "@spiky-panda/harness";
-import { checkJustifications, justificationHelp, justificationNote, justificationOf, justificationProblems, justificationsFor, noteSources, numbersOf, recordedJustifications, safetyJustifications, safetyProblems, type ReadSources, type SignedFact } from "../harness/core/justify.js";
+import { checkJustifications, helpForRefusal, justificationHelp, justificationNote, justificationOf, justificationProblems, justificationsFor, noteSources, numbersOf, recordedJustifications, safetyJustifications, safetyProblems, type Justified, type ReadSources, type SignedFact } from "../harness/core/justify.js";
 import { compactOutput, fitted } from "../harness/core/compact.js";
 import { CANDIDATE_JUSTIFIED, candidateConstants } from "../harness/topics/graph/index.js";
 import { reasoningStateOf } from "../harness/core/reasoning-state.js";
@@ -84,7 +84,7 @@ describe("the justification of constants, common to every factory", () => {
     it("a safety constant: judged by the harness against the facts the signed rules bound it by, whatever a justification says; one nothing signed bounds is left out (2026-10-10)", () => {
         assert.deepEqual(safetyProblems([{ constant: "steps.2.speedPercent", value: 100 }], [FLOOR, FLOW], boundBy), [], "above the signed floor");
         assert.match(safetyProblems([{ constant: "steps.1.speedPercent", value: 20 }], [FLOOR], boundBy).join(), /^steps\.1\.speedPercent = 20 does not respect test\.speedFloorPercent = 30 percent, a fact of a signed document: set it at or above it$/);
-        assert.match(safetyProblems([{ constant: "abort.co2.threshold", value: 3200 }], [FLOOR], boundBy).join(), /^abort\.co2\.threshold = 3200 is a safety constant no signed fact bounds: leave it out/);
+        assert.match(safetyProblems([{ constant: "abort.co2.threshold", value: 3200 }], [FLOOR], boundBy).join(), /^abort\.co2\.threshold = 3200 is a safety constant no signed fact bounds: leave out the field threshold alone: abort.co2 stays, without it/);
         // The fact that bounds it in a document nobody signed: task.fail naming it, only a person signs.
         const unsigned = { ...FLOOR, source: "scrubber-1-datasheet", signed: null } as unknown as SignedFact;
         assert.match(safetyProblems([{ constant: "steps.1.speedPercent", value: 40 }], [unsigned], boundBy).join(), /the fact test\.speedFloorPercent is in "scrubber-1-datasheet", which no person has signed as valid: a safety constant is bounded by a signed document only; if none bounds it, end with task\.fail/);
@@ -102,6 +102,17 @@ describe("the justification of constants, common to every factory", () => {
         assert.deepEqual(justificationHelp(justified, { justifications: [] } as unknown as JsonValue), { missing: [{ constant: "steps.2.minutes", value: 12 }], unmatched: [] });
     });
 
+    it("after a refusal, what is left to justify is what the guard refused as unjustified, never a constant the topic's declaration cannot tell is a safety one (2026-10-10, run 6)", () => {
+        // The topic's declaration without the signed rules: every number looks like the model's.
+        const declared: Justified = { capability: /^p\.submit$/, constants: () => [{ constant: "limits.co2AbortPpm", value: 3000 }, { constant: "steps.1.minutes", value: 30 }, { constant: "abort.co2.threshold", value: 3000 }] };
+        const sent = { limits: { co2AbortPpm: 3000 }, steps: { "1": { minutes: 30 } }, abort: { co2: { threshold: 3000 } }, justifications: [] } as unknown as JsonValue;
+        // Refused on the unbounded threshold alone: nothing to justify, so nothing said about justifying.
+        assert.equal(helpForRefusal(declared, sent, [{ says: "justification: abort.co2.threshold = 3000 is a safety constant no signed fact bounds: leave out the field threshold alone: abort.co2 stays, without it", path: "abort.co2.threshold" }]), null);
+        // Refused on a duration without justification: that one, not the safety limit beside it.
+        const help = helpForRefusal(declared, sent, [{ says: "justification: steps.1.minutes = 30 has no justification (a justification names it by its path)", path: "steps.1.minutes" }]);
+        assert.deepEqual(help?.missing.map((c) => c.constant), ["steps.1.minutes"]);
+    });
+
     it("the check of a call reads the library's facts only when it sets a safety constant, and the scripts justify as a model must", async () => {
         let asked = 0;
         const broker = { call: async () => { asked++; return { ok: true, outcome: "completed", output: { facts: [] } }; } } as unknown as Broker;
@@ -112,7 +123,7 @@ describe("the justification of constants, common to every factory", () => {
         assert.equal(asked, 0, "no safety constant: the library is not asked");
         const problems = await checkJustifications({ capability: /^x$/, constants: () => [{ constant: "limit", value: 1 }], safety: /^limit$/ }, { justifications: [] } as unknown as JsonValue, { broker, task: { observations: {}, data: [] } as never, progress });
         assert.equal(asked, 1);
-        assert.match(problems.join(), /limit = 1 is a safety constant no signed fact bounds: leave it out/);
+        assert.match(problems.join(), /limit = 1 is a safety constant no signed fact bounds: leave out the field limit/);
         // A constant no rule of the script names is said assumed, and said to have no stated source; no value.
         assert.deepEqual(justificationsFor([{ constant: "z", value: 1 }], []), [{ constant: "z", source: "assumed", reference: "no rule of the script", reason: "set by the script without a stated source" }]);
     });

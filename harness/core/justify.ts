@@ -123,6 +123,20 @@ export function justificationHelp(justified: Justified, input: JsonValue): Pick<
     return { missing, unmatched };
 }
 
+/**
+ * What is left to justify after a refusal: what the guard refused as unjustified (its points saying a path "has no justification"),
+ * and nothing else. The guard alone knows which constants the signed rules make safety ones, the harness's to justify: read from the
+ * topic's declaration, the help listed eleven safety constants to justify in the brief that said to leave one out (2026-10-10, run 6),
+ * and Nemotron Nano went round between the two.
+ */
+export function helpForRefusal(justified: Justified, whole: JsonValue | null, problems: ReadonlyArray<{ says: string; path?: string }>): Pick<JustificationHelp, "missing" | "unmatched"> | null {
+    const refused = new Set(problems.filter((p) => p.path && / has no justification /.test(p.says)).map((p) => p.path!));
+    if (!refused.size || whole === null) return null;
+    const found = justificationHelp(justified, whole);
+    const missing = found.missing.filter((c) => refused.has(c.constant));
+    return missing.length ? { ...found, missing } : null;
+}
+
 /** The brief's words for it: said at the top of the brief, differently at each repetition. */
 export function justificationNote(help: JustificationHelp | null | undefined): string {
     if (!help || !help.missing.length) return "";
@@ -264,12 +278,22 @@ const SIGNING = 'a person reviews it and signs it on the library page of the con
  * document the signed rules bound it by; a safety constant no signed fact bounds is not set. What a model wrote in its
  * justifications for them is not read: their justification is the harness's (`safetyJustifications`).
  */
+/**
+ * What leaving a field out means, said by its path: the field alone, the element that holds it staying (2026-10-10, run 6: "leave it
+ * out" said of abort.co2.threshold, Nemotron Nano took out the abort condition co2 itself, then put it back with its threshold, three
+ * times).
+ */
+export function leaveOut(path: string): string {
+    const at = path.lastIndexOf(".");
+    return at < 0 ? `leave out the field ${path}` : `leave out the field ${path.slice(at + 1)} alone: ${path.slice(0, at)} stays, without it`;
+}
+
 export function safetyProblems(constants: Constant[], facts: SignedFact[], boundBy?: (constant: string) => string[]): string[] {
     const problems: string[] = [];
     for (const c of constants) {
         const bounding = boundingOf(c.constant, facts, boundBy);
         if (!bounding.ids.length) {
-            problems.push(`${c.constant} = ${shown(c.value)} is a safety constant no signed fact bounds: leave it out (the harness sets no safety number that nothing signed justifies)`);
+            problems.push(`${c.constant} = ${shown(c.value)} is a safety constant no signed fact bounds: ${leaveOut(c.constant)} (the harness sets no safety number that nothing signed justifies)`);
             continue;
         }
         if (!bounding.facts.length) {

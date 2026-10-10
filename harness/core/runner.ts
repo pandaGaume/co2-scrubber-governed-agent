@@ -32,7 +32,7 @@ import { compactOutput } from "./compact.js";
 import { reasoningStateOf } from "./reasoning-state.js";
 import { intentionFor, loadRecipes, saveRecipes, taskSignature } from "./recipes.js";
 import { NEVER_REPLAYED, proposalKey, restrictReplays } from "./replay.js";
-import { justificationHelp, noteSources } from "./justify.js";
+import { helpForRefusal, noteSources } from "./justify.js";
 import { noteRefusal, STUCK_AFTER } from "./problems.js";
 import { readMeaning, unmoved } from "./interpreter.js";
 import { dependentsOf } from "./rules.js";
@@ -634,17 +634,17 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             // The harness stopped the step (the guard, the schema, a capability outside the list, a timeout): the model reads the reason at the next step.
             progress.lastRefusal = { capability: exchange.proposedCapabilityId, reason: failed ?? "refused", input: (exchange.proposedInput ?? null) as JsonValue };
             progress.refusals[exchange.proposedCapabilityId] = { reason: failed ?? "refused", input: (exchange.proposedInput ?? null) as JsonValue, at: new Date().toISOString() };
-            // A refusal of the call that carries constants: what is left unjustified goes into the context, named as the guard names it (justify.ts).
-            if (topic.justified?.capability.test(exchange.proposedCapabilityId)) {
-                const whole = topic.justified.whole ? topic.justified.whole(exchange.proposedCapabilityId, (exchange.proposedInput ?? null) as JsonValue, progress) : ((exchange.proposedInput ?? null) as JsonValue);
-                const help = whole ? justificationHelp(topic.justified, whole) : null;
-                const times = progress.justify?.capability === exchange.proposedCapabilityId || (progress.justify && topic.justified.capability.test(progress.justify.capability)) ? (progress.justify?.times ?? 0) + 1 : 1;
-                progress.justify = help && help.missing.length ? { capability: exchange.proposedCapabilityId, times, ...help } : null;
-            }
             // Every refusal, whatever refused, as problems with their points (problems.ts): the guard's own when it left them, its words read otherwise;
             // a safety constant the guard found justified by no fact the rules name says its unit and the facts to cite there.
             const streakBefore = progress.refusal ? { ...progress.refusal } : null;
             const streak = noteRefusal(progress, exchange.proposedCapabilityId, failed ?? "refused");
+            // A refusal of the call that carries constants: what the guard refused as unjustified goes into the context, named as it names it, and nothing else (justify.ts, helpForRefusal).
+            if (topic.justified?.capability.test(exchange.proposedCapabilityId)) {
+                const whole = topic.justified.whole ? topic.justified.whole(exchange.proposedCapabilityId, (exchange.proposedInput ?? null) as JsonValue, progress) : ((exchange.proposedInput ?? null) as JsonValue);
+                const help = helpForRefusal(topic.justified, whole ?? null, streak.problems);
+                const times = progress.justify?.capability === exchange.proposedCapabilityId || (progress.justify && topic.justified.capability.test(progress.justify.capability)) ? (progress.justify?.times ?? 0) + 1 : 1;
+                progress.justify = help ? { capability: exchange.proposedCapabilityId, times, ...help } : null;
+            }
             // What depends on each point, when the topic's guard did not say (dependentsOf with no rules): a value goes with its justification.
             if (topic.justified) for (const p of streak.problems) if (p.path && !p.dependentPaths) p.dependentPaths = dependentsOf(null, p.path, p.kind);
             // The meaning (interpreter.ts, the second trigger): refused again at a path whose value did not move. The form passed, so the

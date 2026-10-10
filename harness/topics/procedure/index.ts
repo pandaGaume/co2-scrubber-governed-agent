@@ -54,7 +54,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import * as path from "node:path";
 import { fromRoot } from "../../../lib/paths.js";
 import { checkProcedure, constantsOf, envelopeOf, FORMAT, problemLines, rulesAndFacts, safetyOf, type MeasuredStart, type PresenceRead, type ProcedureCheck } from "./check.js";
-import { checkJustifications, JUSTIFICATIONS_SCHEMA, justificationProblems as commonJustificationProblems, recordedJustifications, type Justified, type ReadSources } from "../../core/justify.js";
+import { checkJustifications, JUSTIFICATIONS_SCHEMA, justificationProblems as commonJustificationProblems, leaveOut, recordedJustifications, type Justified, type ReadSources } from "../../core/justify.js";
 import { dependentsOf, factsBounding, leavesOf, matches, valueAt, type RulesDocument } from "../../core/rules.js";
 import { loadWords, say, viewOf } from "../../core/words.js";
 import { problemOf } from "../../core/problems.js";
@@ -709,7 +709,7 @@ export function safetyBoundsOf(): SafetyBound[] {
         .filter((c) => isSafety(c) && !subjects.includes(c))
         .map((constant) => {
             const ruled = subjects.filter((s) => matches(s, constant));
-            return { constant, within: [], note: `no signed fact bounds it: leave it out${ruled.length ? ` (${ruled.join(", ")} has its own bound, above)` : ""}` };
+            return { constant, within: [], note: `no signed fact bounds it: ${leaveOut(constant)}${ruled.length ? ` (${ruled.join(", ")} has its own bound, above)` : ""}` };
         });
     return [...bound, ...unbound];
 }
