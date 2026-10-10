@@ -91,7 +91,7 @@ export interface TwinFactoryRequest {
     validation: { criteria: string[]; compare?: Array<{ output: string; against: string }> };
 }
 
-const Q = { type: "object", properties: { name: { type: "string" }, quantity: { type: "string" }, unit: { type: "string" }, column: { type: "string", description: "the telemetry column it is read from, when it is measured" } }, required: ["name", "quantity", "unit"] } as const;
+const Q = { type: "object", properties: { name: { type: "string" }, quantity: { type: "string" }, unit: { type: "string" }, column: { type: "string", description: "the telemetry column it is read from, one the summary lists; left out when it is not measured (its value is then what the description says)" } }, required: ["name", "quantity", "unit"] } as const;
 
 export const TWIN_REQUEST_SCHEMA = {
     type: "object",
@@ -237,7 +237,7 @@ export function checkTwinRequest(input: unknown, context: CheckContext = {}): Re
     const columns = context.telemetryColumns;
     if (columns) {
         for (const section of ["observables", "controls", "inputs", "external_influences"] as const) {
-            for (const q of list(r[section] as Array<{ name?: string; column?: string }> | undefined)) if (q?.column && !columns.includes(q.column)) problems.push(`facts: ${section} "${String(q.name)}" is read from column "${q.column}", which the telemetry does not have (${columns.join(", ") || "no column"})`);
+            for (const q of list(r[section] as Array<{ name?: string; column?: string }> | undefined)) if (q?.column && !columns.includes(q.column)) problems.push(`facts: ${section} "${String(q.name)}" is read from column "${q.column}", which the telemetry does not have (${columns.join(", ") || "no column"}): if it is not measured, keep it without a column (its value is what the description says), or name a column the telemetry has`);
         }
     }
 

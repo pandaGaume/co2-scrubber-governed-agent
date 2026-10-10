@@ -28,6 +28,6 @@ A document that states its facts by id (`library.facts`, and a read document's `
 
 An assumption is not a requirement. What you assume (the flow the ventilation delivers, a device that responds at once) goes under assumptions, never under required behaviours or constraints: the factory must stay free to find it false against the telemetry. The same holds for a number obtained under an assumption (an apparent volume, computed as if there were one room): it is an assumption too, not a constraint and not a known constant.
 
-Stay with the facts you were given. Name a telemetry column only if the summary lists it; a column that does not vary says nothing about dynamics. Every quantity has its unit. Where the description is silent, write it under missing information rather than fill it in.
+Stay with the facts you were given. Name a telemetry column only if the summary lists it; a column that does not vary says nothing about dynamics. A control, an input or an influence that matters but is not measured (the state of a hatch, the crew's activity) is kept without a column: its value is what the description says of it, and the factory reads it there. Every quantity has its unit. Where the description is silent, write it under missing information rather than fill it in.
 
 Hand over the whole request in one call to `observer.submit`. If it comes back refused, change what the reasons name and send it again, whole. Once it is accepted, hand it over with `task.done`.
