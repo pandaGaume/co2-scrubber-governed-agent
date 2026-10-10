@@ -285,8 +285,8 @@ async function main(): Promise<void> {
                 decisions: obs.attempts.length + obs.reads.length,
                 modelCalls: model.exchanges.length,
                 tokens: obsTokens,
-                refusals: obs.attempts.filter((a) => !a.ok).map((a) => ({ step: a.n, what: "observer.request", why: short(a.problems.join("; "), 400) })),
-                steps: obs.attempts.map((a) => ({ n: a.n, source: "model", capability: "observer.request", outcome: a.ok ? "accepted" : "refused", note: short(a.problems.join("; ")) })),
+                refusals: obs.attempts.filter((a) => !a.ok).map((a) => ({ step: a.n, what: "observer.submit", why: short(a.problems.join("; "), 400) })),
+                steps: obs.attempts.map((a) => ({ n: a.n, source: "model", capability: "observer.submit", outcome: a.ok ? "accepted" : "refused", note: short(a.problems.join("; ")) })),
                 output: { accepted: obs.ok, libraryReads: obs.reads, request: obs.request, description, supervisor: { verdicts, model: supervisorModel.name, calls: supervisorModel.exchanges.length, tokens: supervisorModel.exchanges.reduce((a, x) => ({ input: a.input + (x.tokens?.prompt ?? 0), output: a.output + (x.tokens?.completion ?? 0) }), { input: 0, output: 0 }) } },
             },
             t0,
@@ -294,7 +294,7 @@ async function main(): Promise<void> {
         // The Observer's trace, in the same shape as a task's: one line per model call, the request it proposed and the guard's answer.
         const observerLines: RenderableLine[] = model.exchanges.map((x, i) => {
             const attempt = obs.attempts.find((a) => a.n === i + 1);
-            const isRequest = x.proposedCapabilityId === "observer.request";
+            const isRequest = x.proposedCapabilityId === "observer.submit";
             return {
                 n: i + 1,
                 source: "model",

@@ -52,6 +52,7 @@ import { applyVerdict, scopeOf, supervisionOfRequest, type SupervisionInput, typ
 import { ONNX_TOPIC } from "../topics/onnx/index.js";
 import { PLAYBOOK_TOPIC } from "../topics/playbook/index.js";
 import { REFLECTION_TOPIC } from "../topics/reflection/index.js";
+import { OBSERVER_TOPIC } from "../topics/observer/index.js";
 import { RECOMMENDATION_TOPIC } from "../topics/recommendation/index.js";
 import { DIAGNOSIS_TOPIC } from "../topics/diagnosis/index.js";
 import { PROCEDURE_TOPIC } from "../topics/procedure/index.js";
@@ -61,7 +62,7 @@ import { APP } from "./application.js";
 import { physics } from "./physics.js";
 
 /** The topics the constructor knows: the factories that share this loop, each with its own harness. */
-export const TOPIC_DEFINITIONS: Partial<Record<Topic, TopicDefinition>> = { onnx: ONNX_TOPIC, procedure: PROCEDURE_TOPIC, graph: GRAPH_TOPIC, code: CODE_TOPIC, playbook: PLAYBOOK_TOPIC, reflection: REFLECTION_TOPIC, recommendation: RECOMMENDATION_TOPIC, diagnosis: DIAGNOSIS_TOPIC };
+export const TOPIC_DEFINITIONS: Partial<Record<Topic, TopicDefinition>> = { onnx: ONNX_TOPIC, procedure: PROCEDURE_TOPIC, graph: GRAPH_TOPIC, code: CODE_TOPIC, playbook: PLAYBOOK_TOPIC, reflection: REFLECTION_TOPIC, recommendation: RECOMMENDATION_TOPIC, diagnosis: DIAGNOSIS_TOPIC, observer: OBSERVER_TOPIC };
 
 /** What a provider built for one task receives: the task, and the last call of the loop (what a model reads in `lastOutput`). */
 export interface BuilderContext {
@@ -138,7 +139,7 @@ const relativeOrAbsolute = (file: string): string => {
     return rel.startsWith("..") ? file.split(path.sep).join("/") : rel;
 };
 
-const kindOf = (p: string): ManifestArtifact["kind"] => (p.endsWith(".onnx") ? "model" : p.endsWith(".spikypanda") ? "graph" : p.endsWith("contract.json") ? "contract" : /^procedures\/.*\.json$/.test(p) ? "procedure" : /^playbooks\/.*\.json$/.test(p) ? "playbook" : /^adaptations\/.*\.json$/.test(p) ? "adaptation" : /^recommendations\/.*\.json$/.test(p) ? "recommendation" : /^diagnoses\/.*\.json$/.test(p) ? "diagnosis" : /^forge\/[^/]+\/artifact\.json$/.test(p) ? "plugin" : "file");
+const kindOf = (p: string): ManifestArtifact["kind"] => (p.endsWith(".onnx") ? "model" : p.endsWith(".spikypanda") ? "graph" : p.endsWith("contract.json") ? "contract" : /^procedures\/.*\.json$/.test(p) ? "procedure" : /^playbooks\/.*\.json$/.test(p) ? "playbook" : /^adaptations\/.*\.json$/.test(p) ? "adaptation" : /^recommendations\/.*\.json$/.test(p) ? "recommendation" : /^diagnoses\/.*\.json$/.test(p) ? "diagnosis" : /^requests\/.*\.json$/.test(p) ? "request" : /^forge\/[^/]+\/artifact\.json$/.test(p) ? "plugin" : "file");
 
 async function readTask(broker: Broker, taskId: string): Promise<{ task: TaskFile; sha256: string }> {
     const r = await broker.call("workspace", "read", { taskId, path: "task.json" });
@@ -623,6 +624,13 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             // A call the output limit cut was never judged: it became a report the step's allowlist refuses; the model reads why it went nowhere, not that refusal.
             const truncated = cutAtOutputLimit(exchange.response);
             if (truncated) failed = truncatedRefusal(exchange.proposedCapabilityId, exchange.tokens?.completion ?? null);
+            // A tool the conduct closes at this stage is not in the step's list: the model reads why it is closed, the gate's words, not
+            // "outside the allowlist" (2026-10-10: the Observer's request before any read went nowhere and said nothing of why).
+            else if (/outside the allowlist/.test(failed ?? "") && closed().has(exchange.proposedCapabilityId)) {
+                const order = topic.marchingOrder?.(progress, task) as { closedNow?: Array<{ tools: string[]; why: string }> } | undefined;
+                const why = (order?.closedNow ?? []).filter((c) => c.tools.includes(exchange.proposedCapabilityId)).map((c) => c.why);
+                if (why.length) failed = `${exchange.proposedCapabilityId} is closed at this stage: ${why.join("; ")}`;
+            }
             // The harness stopped the step (the guard, the schema, a capability outside the list, a timeout): the model reads the reason at the next step.
             progress.lastRefusal = { capability: exchange.proposedCapabilityId, reason: failed ?? "refused", input: (exchange.proposedInput ?? null) as JsonValue };
             progress.refusals[exchange.proposedCapabilityId] = { reason: failed ?? "refused", input: (exchange.proposedInput ?? null) as JsonValue, at: new Date().toISOString() };
@@ -718,7 +726,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         const proposedText = manifestText(manifest);
         proposedManifestSha256 = sha256Text(proposedText);
         await writeText(broker, taskId, "manifest.proposed.json", proposedText);
-        const artifacts = manifest.artifacts.filter((a) => a.kind === "model" || a.kind === "graph" || a.kind === "procedure" || a.kind === "plugin" || a.kind === "playbook" || a.kind === "adaptation" || a.kind === "recommendation" || a.kind === "diagnosis").map((a) => ({ kind: a.kind, path: a.path, sha256: a.sha256, ...(a.contractSha256 ? { contractSha256: a.contractSha256 } : {}) }));
+        const artifacts = manifest.artifacts.filter((a) => a.kind === "model" || a.kind === "graph" || a.kind === "procedure" || a.kind === "plugin" || a.kind === "playbook" || a.kind === "adaptation" || a.kind === "recommendation" || a.kind === "diagnosis" || a.kind === "request").map((a) => ({ kind: a.kind, path: a.path, sha256: a.sha256, ...(a.contractSha256 ? { contractSha256: a.contractSha256 } : {}) }));
         const r = await broker.call(APP.authority.propose.slot, APP.authority.propose.tool, {
             taskId,
             artifacts,

@@ -1,14 +1,35 @@
 {
-    "note": "What the Observer's harness says to its model (2026-09-28, zero domain in the harness): the code fills the holes {name}.",
+    "note": "What the Observer's harness says to its model (2026-09-28, zero domain in the harness; 2026-10-10, on the factories' harness): the code fills the holes {name}.",
     "intention": "Formulate the TWIN_FACTORY_REQUEST for the system described in the observation.",
-    "capability": "Hand over the TWIN_FACTORY_REQUEST: what the twin must represent, receive, simulate, expose, and how it will be judged. It is checked before it reaches the factory; a refused request comes back with its reasons.",
-    "shelf": "The library holds: {documents}. ",
-    "read": "You read {read} (the state holds them under evidence: the last one whole, the earlier ones by their lines with a number); read nothing twice.",
+    "capability": "Hand over the TWIN_FACTORY_REQUEST: what the twin must represent, receive, simulate, expose, and how it will be judged. It is checked before it reaches the factory; a refused request comes back with its reasons. An accepted one is written to {file}.",
+    "read": "You read {read} (their answers are in the state); read nothing twice.",
     "readNothing": "You read nothing yet.",
-    "readsLeft": "{n} read(s) left.",
-    "noReadLeft": "No read left: hand over the request.",
-    "refused": "Step {step}. Your request {n} was refused: {problems}. The state holds it whole (lastAttempt.proposed): change what these reasons name and hand it over again with {capability}; {attempts} attempt(s) left. {read} {reads}",
-    "first": "Step {step}. Read in the library what the description leaves open (the datasheets, the topology, the metabolic loads), then hand over the request with {capability}; {attempts} attempt(s). {read} {reads}",
+    "brief": {
+        "read": "Stage 1 of 3, read. The system is in the state (hypothesis: the description, the telemetry's summary, the quantities the factories share, the library's documents). Read in the library what the description leaves open: the devices' datasheets, the station's topology and metrics (library.read gives a document whole, library.facts the facts a document states by id). {read}",
+        "request": "Stage 2 of 3, the request. Hand over the whole TWIN_FACTORY_REQUEST with observer.submit; {attempts} attempt(s) left. {read}",
+        "handOver": "Stage 3 of 3, hand over. The request is accepted ({path}): end with task.done, it as the artifact of kind \"request\"."
+    },
+    "guard": {
+        "refused": "request refused: {problems}",
+        "readFirst": "read first: what the description leaves open is in the library (library.read), then hand over the request",
+        "accepted": "the request {path} is already accepted: end with task.done",
+        "noAttemptLeft": "no attempt left ({used} request(s) refused): end with task.fail and the reasons that still stand"
+    },
+    "doneWhen": {
+        "read": "at least one document of the library read",
+        "accepted": "the request accepted by the guard (observer.submit)",
+        "handedOver": "handed over with task.done, the accepted file as the artifact (kind \"request\")"
+    },
+    "openQuestions": {
+        "read": "what the description leaves open, read in the library (library.read)",
+        "request": "the request, whole and checked (observer.submit)",
+        "handOver": "hand the request over (task.done)"
+    },
+    "validate": {
+        "none": "no request among the claimed artifacts",
+        "notAccepted": "no request was accepted by the guard in this task (observer.submit)",
+        "notTheFile": "claimed request \"{path}\" is not the file the guard accepted ({accepted})"
+    },
     "schema": {
         "factIdExample": "the fact's id in the library's typed facts (library.facts, or the facts a read document lists), when the document states them: scrubber.singlePassEfficiency, never a symbol of your own",
         "known": "The constants the documentation gives (a device's datasheet, the station's metrics), each with its source: the factory holds them and never fits them."

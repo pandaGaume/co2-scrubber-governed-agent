@@ -7,7 +7,9 @@
  */
 import { after, before, describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import * as path from "node:path";
 import type { JsonValue, PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
 import type { LocalBroker } from "../slots/lib/local-broker.js";
 import type { PublishedSlot } from "../slots/lib/slot-server.js";
@@ -23,6 +25,7 @@ import { newProgress } from "../harness/core/workspace-observer.js";
 import { requirementsOf } from "../harness/topics/graph/index.js";
 import type { TaskFile } from "../harness/core/task.js";
 import { fromRoot } from "../lib/paths.js";
+import { taskDir } from "../slots/tools/lib/workshop.js";
 
 const PORT = 3129;
 const DEVICES = (JSON.parse(readFileSync(fromRoot("specs", "commissioning-devices.json"), "utf8")) as { devices: unknown[] }).devices;
@@ -176,15 +179,19 @@ describe("the Observer sent back by the supervisor, and the slot, through the br
             readonly exchanges: ProviderExchange[] = [];
             readonly contextMode = "state" as const;
             calls = 0;
+            sent = 0;
             async resolve(input: PolicyFallbackInput): Promise<PolicyDecision> {
                 this.calls++;
-                const first = this.calls === 1;
-                if (first) {
-                    // The datasheet first, so the fact cited is a document read.
-                    return { action: { id: "library.read", description: "" }, invocation: { actionId: "library.read", capabilityId: "library.read", input: { id: "scrubber-1-datasheet" } }, rationale: "the datasheet" };
-                }
-                const capabilityId = input.allowedCapabilities[0].id;
-                return { action: { id: capabilityId, description: capabilityId }, invocation: { actionId: capabilityId, capabilityId, input: (this.calls === 2 ? accepted : corrected) as unknown as JsonValue }, rationale: "stand-in" };
+                const call = (capabilityId: string, x: unknown): PolicyDecision => {
+                    const decision: PolicyDecision = { action: { id: capabilityId, description: capabilityId }, invocation: { actionId: capabilityId, capabilityId, input: x as JsonValue }, rationale: "stand-in" };
+                    this.exchanges.push({ decisionId: input.decisionId, model: this.model, request: null, response: null, decision, proposedCapabilityId: capabilityId, proposedInput: x as JsonValue, latencyMs: 0, tokens: null } as unknown as ProviderExchange);
+                    return decision;
+                };
+                // On the factories' harness (2026-10-10): the datasheet first, so the fact cited is a document read; the requests; the accepted one handed over.
+                const requirements = ((input.state.features as { state?: { requirements?: Record<string, boolean> } }).state?.requirements ?? {}) as Record<string, boolean>;
+                if (requirements.requestAccepted) return call("task.done", { summary: "the request, accepted", artifacts: [{ kind: "request", path: "requests/twin-request.json" }] });
+                if (!requirements.documentRead) return call("library.read", { id: "scrubber-1-datasheet" });
+                return call("observer.submit", this.sent++ === 0 ? accepted : corrected);
             }
         }
         const review = async (request: TwinFactoryRequest): Promise<string[]> => {
@@ -192,7 +199,8 @@ describe("the Observer sent back by the supervisor, and the slot, through the br
             const isolated = (request.assumptions ?? []).some((a) => /nothing crosses/.test(a));
             return isolated ? ["supervisor: assumption on assumption:1, REVISE: the topology documents the ventilation through the ducts with the hatch closed"] : [];
         };
-        const result = await observe({ provider: new Model(), broker, description: "The Lab of a lunar habitat: one CO2 scrubber, a CO2 sensor, a hatch to hab-b.", review });
+        const result = await observe({ provider: new Model(), broker, description: "The Lab of a lunar habitat: one CO2 scrubber, a CO2 sensor, a hatch to hab-b.", review, recipesDir: mkdtempSync(path.join(tmpdir(), "supervisor-recipes-")) });
+        if (existsSync(taskDir(result.observerTask))) rmSync(taskDir(result.observerTask), { recursive: true, force: true });
         assert.equal(result.ok, true, JSON.stringify(result.attempts));
         assert.deepEqual(result.attempts.map((a) => a.ok), [false, true]);
         assert.match(result.attempts[0].problems[0], /^supervisor: assumption on assumption:1, REVISE/);

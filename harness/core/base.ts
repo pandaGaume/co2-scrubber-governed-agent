@@ -27,9 +27,23 @@ import { fromRoot } from "../../lib/paths.js";
 /** The kernel and the policy, in the order the model reads them after its mission. */
 export const SOCLE_PROMPTS: ReadonlyArray<string> = ["harness/core/kernel.md", "harness/core/policy.md"];
 
-/** A factory's prompt as the model reads it: the mission, then the kernel, then the policy. */
-export function promptWithSocle(topicPrompt: string): string {
-    return [topicPrompt.trimEnd(), ...SOCLE_PROMPTS.map((file) => readFileSync(fromRoot(file), "utf8").trim())].join("\n\n") + "\n";
+/**
+ * What a role reads after its mission when it is not what every factory reads (2026-10-10, the Observer on the factories'
+ * harness): the Observer the kernel only, since its numbers are its known constants, each cited by its document and its fact
+ * in the request's own schema, never justified in `justifications`; the Contract Supervisor nothing, since it reviews a
+ * report and calls none of the socle's tools.
+ */
+const SOCLE_OF_ROLE: Readonly<Record<string, ReadonlyArray<string>>> = { observer: ["harness/core/kernel.md"], supervisor: [] };
+
+/** The socle's files a role reads after its mission, by the role its prompt file names (`specs/<role>/prompt.md`). */
+export function socleOf(promptFile: string): ReadonlyArray<string> {
+    const role = /^specs\/([a-z0-9-]+)\/prompt\.md$/.exec(promptFile)?.[1] ?? "";
+    return SOCLE_OF_ROLE[role] ?? SOCLE_PROMPTS;
+}
+
+/** A role's prompt as the model reads it: the mission, then its socle (every factory: the kernel, then the policy). */
+export function promptWithSocle(topicPrompt: string, socle: ReadonlyArray<string> = SOCLE_PROMPTS): string {
+    return [topicPrompt.trimEnd(), ...socle.map((file) => readFileSync(fromRoot(file), "utf8").trim())].join("\n\n") + "\n";
 }
 
 export const BASE_CAPABILITIES: ReadonlyArray<string> = [

@@ -2,18 +2,20 @@
  * The Twin Requirement Observer (`harness/observer/`): the guard of a
  * TWIN_FACTORY_REQUEST (the shape, the separation from the node catalogue,
  * the facts of the telemetry), the summary of the telemetry the model is
- * given instead of the rows, and the loop through the broker: a model whose
- * first request names a node of the catalogue is refused with the reason,
- * its second is accepted and becomes a factory task carrying the
- * requirements whole. The model here is a stand-in that plays two answers;
- * the demo's is the one behind the reasoner slot, and the slot says so
- * plainly when that one is not ready.
+ * given instead of the rows, and the Observer through the broker, a task of
+ * the factories' harness since 2026-10-10: a model whose first request names
+ * a node of the catalogue is refused with the reason in its next prompt, its
+ * second is accepted, handed over, and becomes a factory task carrying the
+ * requirements whole; its conduct (read first, so many attempts) is the
+ * playbook's. The model here is a stand-in; the demo's is the one behind the
+ * reasoner slot, and the slot says so plainly when that one is not ready.
  *
  *     node --test dist/tests/
  */
 import { after, before, describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import * as path from "node:path";
 import type { JsonValue, PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
 import type { LocalBroker } from "../slots/lib/local-broker.js";
@@ -23,7 +25,7 @@ import { Broker } from "../harness/lib/broker.js";
 import type { Provider, ProviderExchange } from "../harness/lib/provider.js";
 import { checkTwinRequest, factoryContractOf, type TwinFactoryRequest, hedgedNumbers } from "../harness/observer/request.js";
 import { summarizeTelemetry } from "../harness/observer/telemetry.js";
-import { numericLines, observe, observerBrief } from "../harness/observer/observer.js";
+import { observe } from "../harness/observer/observer.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
 
 const PORT = 3122;
@@ -118,56 +120,64 @@ describe("the Observer's guard and its telemetry", () => {
     });
 });
 
-/** A stand-in for the model: its first request names a node, its second does not. It reads what it is shown, like a model. */
-class TwoAnswers implements Provider {
+/** What a stand-in reads of the state the harness rebuilds at every step. */
+interface Seen {
+    brief: string;
+    lastCapability: string;
+    state: {
+        hypothesis: { description: string; telemetry: { rows?: number } | string; quantities: string; documents: string };
+        requirements: Record<string, boolean>;
+        marchingOrder: { stages: Array<{ step: number; status: string }>; allowedNow: string[]; closedNow: Array<{ tools: string[]; why: string }> };
+        lastRefusal: { capability: string; reason: string } | null;
+    };
+}
+
+/**
+ * A stand-in for the model on the factories' harness: it reads the datasheet, hands over its requests in turn, and hands the
+ * accepted one over; when the request is closed to it (no attempt left), it ends with task.fail. `eager` hands a request over
+ * before reading, as a model that skips the marching order would. It reads what it is shown, like a model.
+ */
+class StandIn implements Provider {
     readonly name = "stand-in:observer";
     readonly model = "stand-in";
     readonly family = "stand-in";
     readonly exchanges: ProviderExchange[] = [];
+    readonly contextMode = "state" as const;
     calls = 0;
-    seen: Array<Record<string, JsonValue>> = [];
+    sent = 0;
+    seen: Seen[] = [];
+    constructor(
+        private readonly requests: TwinFactoryRequest[],
+        private readonly eager = false,
+    ) {}
     async resolve(input: PolicyFallbackInput): Promise<PolicyDecision> {
         this.calls++;
-        this.seen.push(input.state.features as Record<string, JsonValue>);
-        const request = this.calls === 1 ? { ...REQUEST, entities: [...REQUEST.entities, { name: "Physics.LifeSupport:cabin-air" }] } : REQUEST;
-        const capabilityId = input.allowedCapabilities[0].id;
-        return { action: { id: capabilityId, description: capabilityId }, invocation: { actionId: capabilityId, capabilityId, input: request as unknown as JsonValue }, rationale: "stand-in" };
+        const seen = input.state.features as unknown as Seen;
+        this.seen.push(seen);
+        // Each answer recorded as a provider records it: the runner reads a refused proposal there.
+        const call = (capabilityId: string, x: unknown): PolicyDecision => {
+            const decision: PolicyDecision = { action: { id: capabilityId, description: capabilityId }, invocation: { actionId: capabilityId, capabilityId, input: x as JsonValue }, rationale: "stand-in" };
+            this.exchanges.push({ decisionId: input.decisionId, model: this.model, request: null, response: null, decision, proposedCapabilityId: capabilityId, proposedInput: x as JsonValue, latencyMs: 0, tokens: null } as unknown as ProviderExchange);
+            return decision;
+        };
+        const s = seen.state;
+        if (s.requirements.requestAccepted) return call("task.done", { summary: "the twin factory request, accepted", artifacts: [{ kind: "request", path: "requests/twin-request.json" }] });
+        if (!s.requirements.documentRead && !(this.eager && this.sent === 0)) return call("library.read", { id: "scrubber-1-datasheet" });
+        if (s.requirements.documentRead && !s.marchingOrder.allowedNow.includes("observer.submit")) return call("task.fail", { reason: s.marchingOrder.closedNow.map((c) => c.why).join("; ") });
+        return call("observer.submit", this.requests[Math.min(this.sent++, this.requests.length - 1)]);
     }
 }
 
-/** The same stand-in on the state: it reads a datasheet first, and its second request is what the state hands it back, corrected. */
-class OnTheState extends TwoAnswers {
-    readonly contextMode = "state" as const;
-    override async resolve(input: PolicyFallbackInput): Promise<PolicyDecision> {
-        const features = input.state.features as { state?: { evidence?: Record<string, string>; lastAttempt?: { proposed?: JsonValue } | null } };
-        const read = Object.keys(features.state?.evidence ?? {});
-        if (!read.length) {
-            this.seen.push(input.state.features as Record<string, JsonValue>);
-            return { action: { id: "library.read", description: "" }, invocation: { actionId: "library.read", capabilityId: "library.read", input: { id: "scrubber-1-datasheet" } }, rationale: "the datasheet first" };
-        }
-        const decision = await super.resolve(input);
-        // After the refusal, the model corrects what the state hands it, rather than writing again from nothing.
-        const proposed = features.state?.lastAttempt?.proposed as { entities?: Array<{ name: string }> } | undefined;
-        if (!proposed) return decision;
-        const corrected = { ...proposed, entities: proposed.entities!.filter((e) => !/:/.test(e.name)) } as unknown as JsonValue;
-        return { ...decision, invocation: { ...decision.invocation, input: corrected } };
-    }
-}
+const WITH_NODE = { ...REQUEST, entities: [...REQUEST.entities, { name: "Physics.LifeSupport:cabin-air" }] } as TwinFactoryRequest;
+const DESCRIPTION = "The Lab of a lunar habitat: one CO2 scrubber, a CO2 sensor, a hatch to hab-b.";
 
-describe("the Observer on the reasoning state (2026-09-25)", () => {
-    it("the brief and the numeric lines are deterministic", () => {
-        assert.match(observerBrief({ step: 1, attemptsLeft: 3, readsLeft: 6, read: [] }), /^Step 1\. Read in the library.*You read nothing yet\. 6 read\(s\) left\.$/);
-        assert.match(observerBrief({ step: 3, attemptsLeft: 2, readsLeft: 4, read: ["a", "b"], last: { n: 1, ok: false, problems: ["separation: x"], proposed: "" } }), /^Step 3\. Your request 1 was refused: separation: x\. The state holds it whole \(lastAttempt\.proposed\).*You read a, b/);
-        assert.equal(numericLines("# Title\nno number here\nFlow at full speed: 3.3 m3/min\n\nEfficiency 0.85"), "Flow at full speed: 3.3 m3/min\nEfficiency 0.85");
-        assert.equal(numericLines("a 1\nb 2\nc 3", 4), "a 1\n...");
-    });
-});
-
-describe("the Observer, through the broker", () => {
+describe("the Observer, a task of the factories' harness, through the broker", () => {
     let local: LocalBroker;
     let slots: PublishedSlot<object>[];
     let broker: Broker;
     const tasks: string[] = [];
+    // The recipes of these tasks, kept apart: a read replayed from another test would not be the stand-in's.
+    const recipesDir = mkdtempSync(path.join(tmpdir(), "observer-recipes-"));
 
     before(async () => {
         process.env.SPEECH_PROVIDER = "silent";
@@ -180,19 +190,33 @@ describe("the Observer, through the broker", () => {
         for (const s of slots ?? []) await s.close().catch(() => undefined);
         await local?.stop();
         for (const t of tasks) if (existsSync(taskDir(t))) rmSync(taskDir(t), { recursive: true, force: true });
+        rmSync(recipesDir, { recursive: true, force: true });
     });
 
-    it("a request naming a node of the real catalogue is refused with the reason, the corrected one becomes a factory task with its requirements", async () => {
-        const model = new TwoAnswers();
-        const result = await observe({ provider: model, broker, description: "The Lab of a lunar habitat: one CO2 scrubber, a CO2 sensor, a hatch to hab-b.", telemetry: ROWS });
-        assert.equal(result.ok, true);
+    it("a request naming a node of the real catalogue is refused with the reason in the next prompt, the corrected one is handed over and becomes a factory task with its requirements", async () => {
+        const model = new StandIn([WITH_NODE, REQUEST]);
+        const result = await observe({ provider: model, broker, description: DESCRIPTION, telemetry: ROWS, recipesDir });
+        tasks.push(result.observerTask);
+        assert.equal(result.ok, true, JSON.stringify(result.attempts));
+        assert.equal(result.state, "proposed", String(result.ended));
         assert.deepEqual(result.attempts.map((a) => a.ok), [false, true]);
-        assert.match(result.attempts[0].problems[0], /separation/);
+        assert.match(result.attempts[0].problems[0], /^separation/);
+        assert.deepEqual(result.reads, ["library.read scrubber-1-datasheet"]);
         // What the model was shown: the description and the computed summary, never the rows and never the catalogue.
-        assert.equal(model.seen[0].description, "The Lab of a lunar habitat: one CO2 scrubber, a CO2 sensor, a hatch to hab-b.");
-        assert.equal((model.seen[0].telemetry as { rows: number }).rows, 25);
-        assert.doesNotMatch(JSON.stringify(model.seen), /registry|Physics\.Transform/);
-        assert.match(String(model.seen[1].lastRefusal), /^observer\.request: separation/);
+        assert.equal(model.seen[0].state.hypothesis.description, DESCRIPTION);
+        assert.equal((model.seen[0].state.hypothesis.telemetry as { rows: number }).rows, 25);
+        assert.match(model.seen[0].state.hypothesis.quantities, /Concentration \(/);
+        assert.match(model.seen[0].state.hypothesis.documents, /scrubber-1-datasheet/);
+        assert.doesNotMatch(JSON.stringify(model.seen), /registry_list|Physics\.Transform/);
+        // After the refusal: the brief opens on it, the state holds it.
+        const after = model.seen[2];
+        assert.match(after.brief, /^Your last observer\.submit was refused, on \d+ point\(s\):.*separation/s);
+        assert.equal(after.state.lastRefusal?.capability, "observer.submit");
+        // The request handed over is the accepted file, and the station received it.
+        const manifest = JSON.parse(readFileSync(path.join(taskDir(result.observerTask), "manifest.json"), "utf8")) as { artifacts: Array<{ kind: string; path: string }>; topic: string; proposal: { status: string } | null };
+        assert.equal(manifest.topic, "observer");
+        assert.deepEqual(manifest.artifacts.filter((a) => a.kind === "request").map((a) => a.path), ["requests/twin-request.json"]);
+        assert.equal(manifest.proposal?.status, "received");
         // The contract names no factory: the Observer does not know which one will build.
         assert.equal("topics" in factoryContractOf(result.request!), false);
         const r = await broker.call("factory", "request", { ...factoryContractOf(result.request!), requestedBy: "observer", run: false });
@@ -206,26 +230,28 @@ describe("the Observer, through the broker", () => {
         assert.equal(task.task.objective.required_outputs.length, 1);
     });
 
-    it("on the state: each step carries the documents read and the last refused request whole, nothing is replayed", async () => {
-        const model = new OnTheState();
-        const result = await observe({ provider: model, broker, description: "The Lab of a lunar habitat: one CO2 scrubber, a CO2 sensor, a hatch to hab-b.", telemetry: ROWS });
+    it("its conduct: the marching order shows reading first with the request closed, a request before any read is refused by the playbook's gate and is not an attempt", async () => {
+        const model = new StandIn([REQUEST], true);
+        const result = await observe({ provider: model, broker, description: DESCRIPTION, telemetry: ROWS, recipesDir });
+        tasks.push(result.observerTask);
         assert.equal(result.ok, true, JSON.stringify(result.attempts));
-        assert.deepEqual(result.reads, ["library.read scrubber-1-datasheet"]);
-        assert.deepEqual(result.attempts.map((a) => a.ok), [false, true]);
-        const states = model.seen.map((f) => f.state as { evidence: Record<string, string>; lastAttempt: { n: number; problems: string[]; proposed: { entities: Array<{ name: string }> } } | null; nextActions: string[] });
-        assert.equal(states.length, 3);
-        // Step 1: nothing read, the brief says to read; the features carry only the brief and the state.
-        assert.deepEqual(Object.keys(model.seen[0]).sort(), ["brief", "state"]);
-        assert.match(String(model.seen[0].brief), /^Step 1\. Read in the library/);
-        assert.deepEqual(states[0].evidence, {});
-        // Step 2: the datasheet read is in the state, whole (the last read), and its numbers are there.
-        assert.match(states[1].evidence["library.read scrubber-1-datasheet"], /m3\/min/);
-        assert.equal(states[1].lastAttempt, null);
-        // Step 3: the refused request is in the state whole, with its reasons; the model corrected it from there.
-        assert.match(String(model.seen[2].brief), /^Step 3\. Your request 1 was refused: separation/);
-        assert.equal(states[2].lastAttempt?.n, 1);
-        assert.ok(states[2].lastAttempt?.proposed.entities.some((e) => e.name === "Physics.LifeSupport:cabin-air"), "the refused request whole, node name included");
-        assert.doesNotMatch(JSON.stringify(model.seen), /registry|Physics\.Transform/);
+        const first = model.seen[0].state.marchingOrder;
+        assert.deepEqual(first.stages.map((s) => `${s.step}:${s.status}`), ["1:current", "2:next", "3:next"]);
+        assert.ok(!first.allowedNow.includes("observer.submit"));
+        assert.match(first.closedNow.map((c) => c.why).join("; "), /^read first/);
+        // The request sent anyway is refused by the gate, said in the next prompt; it is not one of the attempts.
+        assert.match(model.seen[1].brief, /^Your last observer\.submit was refused, on 1 point\(s\):.*read first/s);
+        assert.deepEqual(result.attempts.map((a) => a.ok), [true]);
+    });
+
+    it("so many attempts and no more: the request closed once they are spent, the task ends with task.fail", async () => {
+        const model = new StandIn([WITH_NODE]);
+        const result = await observe({ provider: model, broker, description: DESCRIPTION, telemetry: ROWS, attempts: 2, recipesDir });
+        tasks.push(result.observerTask);
+        assert.equal(result.ok, false);
+        assert.equal(result.state, "failed");
+        assert.deepEqual(result.attempts.map((a) => a.ok), [false, false]);
+        assert.match(model.seen.at(-1)!.state.marchingOrder.closedNow.map((c) => c.why).join("; "), /no attempt left \(2 request\(s\) refused\)/);
     });
 
     it("the observer slot says plainly when no model is ready, rather than answering without one", async () => {

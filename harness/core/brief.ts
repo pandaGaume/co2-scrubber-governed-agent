@@ -12,5 +12,9 @@ export function refusedNote(progress: Progress, capabilityId: string): string {
     return r ? ` Your last ${capabilityId} was refused: ${r.reason}. What you sent is in the state (lastRefusal); change what the reasons name.` : "";
 }
 
-/** The rules the socle's prompt says once, by a phrase each: a topic's own prompt does not say them again (`tests/conformance.test.ts`). */
-export const SOCLE_RULES: ReadonlyArray<string> = ["Each call is judged and run on its own", "Answer with tool calls, not with text.", "end with `task.fail` and the reason", "Every number you set is accounted for"];
+/** The rules the socle's prompt says once, by a phrase each and by the file that says it: a topic's own prompt does not say them again (`tests/conformance.test.ts`). */
+export const SOCLE_RULES_OF: Readonly<Record<string, ReadonlyArray<string>>> = {
+    "harness/core/kernel.md": ["Each call is judged and run on its own", "Answer with tool calls, not with text.", "end with `task.fail` and the reason"],
+    "harness/core/policy.md": ["Every number you set is accounted for"],
+};
+export const SOCLE_RULES: ReadonlyArray<string> = Object.values(SOCLE_RULES_OF).flat();

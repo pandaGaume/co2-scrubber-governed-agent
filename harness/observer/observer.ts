@@ -4,66 +4,46 @@
  *
  *     description / telemetry
  *               |
- *            OBSERVER     (a language model, its prompt, this guard)
+ *            OBSERVER     (a language model, its prompt, the factories' harness)
  *               |
  *     "what the twin must be able to do"
  *               |
  *      TWIN_FACTORY_REQUEST  -> the factory, with the node catalogue
  *
- * It runs on the same `reasoner` slot as the factory's builder: one model,
- * two roles, and the role is the prompt. The Observer's prompt
- * (`specs/observer/prompt.md`) is generic and fixed, the same bytes for
- * every system, so the provider keeps it in its cache; what changes from one
- * call to the next (the description, the summary of the telemetry, the
- * reasons of a refusal) is the observation, sent after it.
+ * Since 2026-10-10 the Observer is a topic of the factories' harness
+ * (`harness/topics/observer/index.ts`): a task of the factory, run by
+ * `runTask` like every factory, with its marching order, its guard, the
+ * refusal and its points in the next prompt, the interpreter, the batches,
+ * the session's memory, the manifest and the run log. Before, it ran a loop
+ * of its own here, and none of that reached it.
  *
- * The model is offered one capability, `observer.request`, whose schema is
- * the request's. What it proposes is checked by code (`request.ts`: shape,
- * separation from the catalogue, facts of the telemetry); a refused request
- * goes back to it with the reasons, three attempts at most. The catalogue
- * is read here, by the guard, to refuse a request that names a node type;
- * the model is never shown it. It is shown the vocabulary of quantities the
- * catalogue's signatures speak (Concentration in ppm...), so what the twin
- * must expose is named the way a factory can match it.
- *
- * Before writing, the model may read the library (the devices' datasheets,
- * the station's topology and metrics), a few reads at most: what the
- * description leaves open is often documented there, and an assumption the
- * documentation contradicts is not an assumption.
- *
- * With a provider in the `state` context mode (2026-09-25) nothing is
- * replayed: each step is one message carrying the whole of what the
- * Observer needs, rebuilt here. The description, the telemetry's summary
- * and the vocabulary; the documents it read, the last one whole and the
- * earlier ones by the lines that carry a number (a constant with its unit
- * is what a datasheet is read for); the last refused request whole with
- * its reasons, so the model corrects it rather than writes it again; and
- * the harness's brief. The provider's mode decides, not this loop.
+ * `observe` keeps its contract for its callers (the observer slot, the
+ * commissioning): it computes what the task is given (the telemetry's
+ * summary, the vocabulary of quantities the catalogue's signatures speak,
+ * the library's documents), opens the task without starting it, runs it on
+ * the caller's model, and reads the outcome back (the request accepted, the
+ * attempts and what the guard or the Contract Supervisor said of each, the
+ * library reads). The model runs on the `reasoner` slot as the factories'
+ * builders do, with the Observer's prompt and the kernel of the socle.
  */
-import type { JsonValue, PolicyFallbackInput } from "@spiky-panda/harness";
 import type { Broker } from "../lib/broker.js";
 import type { Provider } from "../lib/provider.js";
-import { checkTwinRequest, TWIN_REQUEST_SCHEMA, type TwinFactoryRequest, type VocabularyEntry } from "./request.js";
-import type { LibraryFact } from "../core/contracts.js";
+import { runTask } from "../core/runner.js";
 import { summarizeTelemetry, type TelemetrySummary } from "./telemetry.js";
-import { loadWords, say } from "../core/words.js";
-import { physics } from "../core/physics.js";
+import type { TwinFactoryRequest } from "./request.js";
+import { catalogueOf, closeSession, libraryDocuments, OBSERVER_OBSERVATION, OBSERVER_PROMPT, OBSERVER_REQUEST_FILE, openSession, type ObserveAttempt, type ObserverObservation } from "../topics/observer/index.js";
 
-/** What the Observer's harness says to its model: the spec's words (`specs/observer/words.json`). */
-export const OBSERVER_WORDS = loadWords("specs/observer/words.json");
-const ow = (key: string, vars?: Record<string, string | number>): string => say(OBSERVER_WORDS, key, vars);
-
-export const OBSERVER_PROMPT = "specs/observer/prompt.md";
-export const OBSERVER_CAPABILITY = "observer.request";
+export { OBSERVER_CAPABILITY, OBSERVER_PROMPT, OBSERVER_WORDS, type ObserveAttempt } from "../topics/observer/index.js";
 
 export interface ObserveOptions {
-    /** The model: a `ReasonerProvider` on the `reasoner` slot with `OBSERVER_PROMPT`, in the demo. */
+    /** The model: a `ReasonerProvider` on the `reasoner` slot with `OBSERVER_PROMPT`, in the state mode, in the demo. */
     provider: Provider;
-    /** Where the guard reads the catalogue's type ids from (`twin.registry_list_nodes`); without it only the id pattern is refused. */
-    broker?: Broker;
+    /** The broker the task runs through: the factory opens it, the guard reads the catalogue and the library through it. */
+    broker: Broker;
     runtimeSlot?: string;
     description: string;
     telemetry?: Array<Record<string, unknown>>;
+    /** How many requests the guard may refuse before the task ends; three when absent. */
     attempts?: number;
     /**
      * A review after the guard (2026-09-25, night): the Contract Supervisor, asked once the deterministic
@@ -71,13 +51,11 @@ export interface ObserveOptions {
      * and the model corrects. Nothing when absent.
      */
     review?: (request: TwinFactoryRequest) => Promise<string[]>;
-}
-
-export interface ObserveAttempt {
-    n: number;
-    ok: boolean;
-    problems: string[];
-    proposed: string;
+    /** The task's step budget; twenty decisions when absent, as every factory's. */
+    iterations?: number;
+    /** Where the recipes of the topics live; `_recipes/` next to the workshops when absent (a test keeps its own). */
+    recipesDir?: string;
+    log?: (line: string) => void;
 }
 
 export interface ObserveResult {
@@ -88,216 +66,55 @@ export interface ObserveResult {
     reads: string[];
     telemetry: TelemetrySummary | null;
     provider: { name: string; model: string; family: string };
+    /** The factory task the Observer ran as: its workshop holds the manifest, the trace and the request. */
+    observerTask: string;
+    /** How the task ended (`proposed`, `failed`...), and why when it says. */
+    state: string;
+    ended: string | null;
 }
 
-interface Signed {
-    type: string;
-    signature?: { inputs?: Record<string, { quantity?: string; unit?: string }>; outputs?: Record<string, { quantity?: string; unit?: string }> } | null;
-}
-
-/**
- * What the guard reads from the catalogue: its type ids, to refuse a request
- * that names one, and the quantities its signatures speak of, the shared
- * vocabulary. The model is shown the vocabulary (the names of quantities and
- * their units), never the types.
- */
-async function catalogueOf(broker: Broker | undefined, slot: string): Promise<{ types: string[]; vocabulary: VocabularyEntry[] }> {
-    if (!broker) return { types: [], vocabulary: [] };
-    const r = await broker.call(slot, "registry_list_nodes", {});
-    const listed = r.ok ? (r.output as { types?: Signed[] }).types : undefined;
-    const types = Array.isArray(listed) ? listed : [];
-    const units = new Map<string, Set<string>>();
-    for (const t of types) {
-        for (const port of [...Object.values(t.signature?.inputs ?? {}), ...Object.values(t.signature?.outputs ?? {})]) {
-            // A quantity the units service does not know cannot be asked of a factory: nothing could produce it, and no contract could be written in it (2026-09-28: "ConcentrationRate" asked, a graph task spent its budget on it).
-            if (!port?.quantity || !physics().canonicalQuantity(port.quantity)) continue;
-            const set = units.get(port.quantity) ?? new Set<string>();
-            if (port.unit) set.add(port.unit);
-            units.set(port.quantity, set);
-        }
-    }
-    return { types: types.map((t) => t.type), vocabulary: [...units].map(([quantity, u]) => ({ quantity, units: [...u].sort() })).sort((a, b) => a.quantity.localeCompare(b.quantity)) };
-}
-
-/** The library: the documentation of the devices and of the station, where the Observer checks what the description leaves open. Read-only, never the catalogue. */
-const LIBRARY_TOOLS = ["list", "search", "read", "facts"] as const;
-/** The units, deterministic: a conversion the model must not do in its head. Not a read, not an attempt. */
-const UNITS_TOOLS = ["units_convert", "units_validate_connection", "units_normalize", "units_relate"] as const;
-export const OBSERVER_MAX_READS = 6;
-/** Characters of the last document read kept whole in the state; the earlier ones keep only their numeric lines. */
-const READ_WHOLE_CHARS = 8000;
-const READ_LINES_CHARS = 2000;
-
-/** The lines of a text that carry a number: what a datasheet or a topology is read for, with the unit beside it. */
-export function numericLines(text: string, limit = READ_LINES_CHARS): string {
-    const kept: string[] = [];
-    let size = 0;
-    for (const raw of text.split(/\r?\n/)) {
-        const line = raw.trim();
-        if (!/\d/.test(line) || /^#/.test(line)) continue;
-        if (size + line.length + 1 > limit) {
-            kept.push("...");
-            break;
-        }
-        kept.push(line);
-        size += line.length + 1;
-    }
-    return kept.join("\n");
-}
-
-/** What a read is kept as in the state: a document whole (the last one) or by its numeric lines, a search or a list as its answer, bounded. */
-function evidenceOf(id: string, output: unknown, whole: boolean): string {
-    const o = output && typeof output === "object" ? (output as Record<string, unknown>) : {};
-    if (id === "library.read" && typeof o.text === "string") return whole ? o.text.slice(0, READ_WHOLE_CHARS) : numericLines(o.text);
-    const text = JSON.stringify(output ?? null);
-    return text.length <= READ_LINES_CHARS ? text : `${text.slice(0, READ_LINES_CHARS)}...`;
-}
-
-async function libraryCapabilities(broker: Broker | undefined): Promise<Array<{ id: string; description: string; inputSchema: never; replayPolicy: "automatic" }>> {
-    if (!broker) return [];
-    try {
-        const tools = await broker.tools("library");
-        return tools.filter((t) => (LIBRARY_TOOLS as readonly string[]).includes(t.name)).map((t) => ({ id: `library.${t.name}`, description: t.description ?? `library.${t.name}`, inputSchema: t.inputSchema as never, replayPolicy: "automatic" as const }));
-    } catch {
-        return [];
-    }
-}
-
-async function unitsCapabilities(broker: Broker | undefined): Promise<Array<{ id: string; description: string; inputSchema: never; replayPolicy: "automatic" }>> {
-    if (!broker) return [];
-    try {
-        const tools = await broker.tools("physics");
-        return tools.filter((t) => (UNITS_TOOLS as readonly string[]).includes(t.name)).map((t) => ({ id: `physics.${t.name}`, description: t.description ?? `physics.${t.name}`, inputSchema: t.inputSchema as never, replayPolicy: "automatic" as const }));
-    } catch {
-        return [];
-    }
-}
-
-/** The library's typed facts, by document: what the guard judges a known constant against. */
-async function libraryFacts(broker: Broker | undefined): Promise<Record<string, LibraryFact[]>> {
-    if (!broker) return {};
-    const r = await broker.call("library", "facts", {});
-    const facts = r.ok ? (r.output as { facts?: Array<LibraryFact & { source: string }> }).facts : undefined;
-    const out: Record<string, LibraryFact[]> = {};
-    for (const f of Array.isArray(facts) ? facts : []) out[f.source] = [...(out[f.source] ?? []), f];
-    return out;
-}
-
-/** The library's documents in one line each: id, title, what it says. */
-async function libraryShelf(broker: Broker): Promise<string> {
-    const r = await broker.call("library", "list", {});
-    const docs = r.ok ? (r.output as { documents?: Array<{ id: string; title: string; summary?: string }> }).documents : undefined;
-    if (!Array.isArray(docs) || !docs.length) return "";
-    return ow("shelf", { documents: docs.map((d) => `${d.id} (${d.title}${d.summary ? `: ${d.summary.slice(0, 160)}` : ""})`).join("; ") });
-}
-
-/** The harness's brief to the Observer at a step: where it stands, what it read, why its last request was refused. Deterministic. */
-export function observerBrief(x: { step: number; attemptsLeft: number; readsLeft: number; read: string[]; last?: ObserveAttempt }): string {
-    const read = x.read.length ? ow("read", { read: x.read.join(", ") }) : ow("readNothing");
-    const reads = x.readsLeft > 0 ? ow("readsLeft", { n: x.readsLeft }) : ow("noReadLeft");
-    if (x.last) return ow("refused", { step: x.step, n: x.last.n, problems: x.last.problems.join("; "), capability: OBSERVER_CAPABILITY, attempts: x.attemptsLeft, read, reads });
-    return ow("first", { step: x.step, capability: OBSERVER_CAPABILITY, attempts: x.attemptsLeft, read, reads });
-}
-
-export async function observe({ provider, broker, runtimeSlot = "twin", description, telemetry, attempts = 3, review }: ObserveOptions): Promise<ObserveResult> {
+export async function observe({ provider, broker, runtimeSlot = "twin", description, telemetry, attempts = 3, review, iterations, recipesDir, log }: ObserveOptions): Promise<ObserveResult> {
     const summary = telemetry?.length ? summarizeTelemetry(telemetry) : null;
-    const columns = summary ? summary.columns.map((c) => c.column) : [];
-    const { types, vocabulary } = await catalogueOf(broker, runtimeSlot);
-    const library = await libraryCapabilities(broker);
-    const units = await unitsCapabilities(broker);
-    const facts = library.length ? await libraryFacts(broker) : {};
-    // What the library holds, given up front: the model knows a datasheet exists before it thinks of searching for one.
-    const shelf = library.length && broker ? await libraryShelf(broker) : "";
-    const intention = { id: "observe", description: ow("intention") };
-    const allowed = [{ id: OBSERVER_CAPABILITY, description: ow("capability"), inputSchema: TWIN_REQUEST_SCHEMA as never, replayPolicy: "automatic" as const }, ...library];
-    const withUnits = (list: typeof allowed) => [...list, ...units];
-    const done: ObserveAttempt[] = [];
-    const reads: string[] = [];
-    const documentsRead: string[] = [];
-    const documents: Record<string, string> = {};
-    // The state mode: what was read stays in the observation (the evidence), the last refused request whole; nothing is replayed.
-    const stateMode = (provider as { contextMode?: unknown }).contextMode === "state";
-    const evidence: Array<{ key: string; output: unknown; ok: boolean }> = [];
-    let lastProposal: JsonValue | null = null;
-    let lastRead: { id: string; ok: boolean; text: string } | null = null;
-    provider.begin?.(`observe#${Date.now().toString(36)}`);
-    for (let n = 1, step = 1; n <= attempts; step++) {
-        const last = done.at(-1);
-        const readsLeft = library.length ? OBSERVER_MAX_READS - reads.length : 0;
-        const quantities = vocabulary.length ? vocabulary.map((v) => `${v.quantity} (${v.units.join(", ") || "no unit"})`).join("; ") : "";
-        const libraryLine = library.length ? `${shelf}${readsLeft > 0 ? `library.read gives a document whole (${readsLeft} read(s) left)` : "no read left: hand over the request"}` : "";
-        const features = stateMode
-            ? {
-                  brief: observerBrief({ step, attemptsLeft: attempts - n + 1, readsLeft, read: documentsRead, last }),
-                  state: {
-                      description,
-                      telemetry: summary ? (summary as never) : "none supplied",
-                      ...(quantities ? { quantities } : {}),
-                      ...(libraryLine ? { library: libraryLine } : {}),
-                      evidence: Object.fromEntries(evidence.map((e, i) => [e.key, e.ok ? evidenceOf(e.key.split(" ")[0], e.output, i === evidence.length - 1) : `refused: ${String(e.output)}`])),
-                      lastAttempt: last ? { n: last.n, problems: last.problems, proposed: lastProposal } : null,
-                      earlierAttempts: done.slice(0, -1).map((a) => ({ n: a.n, problems: a.problems })),
-                      nextActions: withUnits(readsLeft > 0 ? allowed : allowed.slice(0, 1)).map((c) => c.id),
-                  },
-              }
-            : {
-                  description,
-                  telemetry: summary ? (summary as never) : "none supplied",
-                  ...(quantities ? { quantities } : {}),
-                  ...(libraryLine ? { library: libraryLine } : {}),
-                  lastOutcome: lastRead ? (lastRead.ok ? "completed" : "refused") : last ? "refused" : "",
-                  lastOutput: lastRead ? lastRead.text : last ? last.problems.join("; ") : "",
-                  lastRefusal: last ? `${OBSERVER_CAPABILITY}: ${last.problems.join("; ")}` : "",
-              };
-        const input: PolicyFallbackInput = {
-            decisionId: `observe-${step}`,
-            intention,
-            // The variable part: the system, its telemetry as computed facts, the shared vocabulary, what the library answered, why the last attempt was refused.
-            state: { id: `observe:${step}`, features },
-            allowedCapabilities: withUnits(readsLeft > 0 ? allowed : allowed.slice(0, 1)),
-            candidates: [],
-            recentFailures: [],
-        } as unknown as PolicyFallbackInput;
-        const decision = await provider.resolve(input);
-        const id = decision.invocation.capabilityId;
-        if (id.startsWith("physics.") && broker) {
-            // A conversion is not a read and not an attempt: the answer goes into the evidence, the model writes the number it gave back.
-            const r = await broker.call("physics", id.slice("physics.".length), (decision.invocation.input ?? {}) as Record<string, unknown>);
-            const key = `${id} ${JSON.stringify(decision.invocation.input ?? {}).slice(0, 80)}`;
-            lastRead = { id, ok: r.ok, text: (r.ok ? JSON.stringify(r.output) : String(r.error ?? r.outcome)).slice(0, 2000) };
-            evidence.push({ key, output: r.ok ? r.output : (r.error ?? r.outcome), ok: r.ok });
-            continue;
+    const { vocabulary } = await catalogueOf(broker, runtimeSlot);
+    const observation: ObserverObservation = { description, telemetry: summary, quantities: vocabulary, documents: await libraryDocuments(broker), attempts, runtimeSlot };
+    const opened = await broker.call("factory", "request", {
+        objective: { required_outputs: [{ name: "twin-request", quantity: "TwinFactoryRequest" }] },
+        observations: { [OBSERVER_OBSERVATION]: observation },
+        topics: ["observer"],
+        ...(iterations ? { budget: { iterations } } : {}),
+        requestedBy: "observer",
+        run: false,
+    });
+    if (!opened.ok) throw new Error(`the factory did not open the Observer's task: ${opened.error ?? opened.outcome}`);
+    const taskId = (opened.output as { taskId: string }).taskId;
+    const session = openSession(taskId, review);
+    try {
+        const r = await runTask({ broker, provider, taskId, topic: "observer", runtimeSlot, promptFile: OBSERVER_PROMPT, ...(recipesDir ? { recipesDir } : {}), ...(log ? { log } : {}) });
+        const accepted = session.attempts.some((a) => a.ok);
+        let request: TwinFactoryRequest | null = null;
+        if (accepted) {
+            const read = await broker.call("workspace", "read", { taskId, path: OBSERVER_REQUEST_FILE });
+            if (read.ok) request = JSON.parse((read.output as { text: string }).text) as TwinFactoryRequest;
         }
-        if (id.startsWith("library.") && readsLeft > 0 && broker) {
-            // A read is not an attempt: the model checks the documentation, then writes.
-            const r = await broker.call("library", id.slice("library.".length), (decision.invocation.input ?? {}) as Record<string, unknown>);
-            const args = decision.invocation.input as { id?: string; query?: string } | null;
-            const key = `${id}${args?.id ? ` ${args.id}` : args?.query ? ` "${args.query}"` : ""}`;
-            reads.push(key);
-            if (id === "library.read" && r.ok && args?.id) {
-                documentsRead.push(String(args.id));
-                const text = (r.output as { text?: unknown }).text;
-                if (typeof text === "string") documents[String(args.id)] = text;
-            }
-            lastRead = { id, ok: r.ok, text: (r.ok ? JSON.stringify(r.output) : String(r.error ?? r.outcome)).slice(0, 8000) };
-            evidence.push({ key, output: r.ok ? r.output : (r.error ?? r.outcome), ok: r.ok });
-            continue;
-        }
-        lastRead = null;
-        lastProposal = (decision.invocation.input ?? null) as JsonValue;
-        if (id !== OBSERVER_CAPABILITY) {
-            done.push({ n: n++, ok: false, problems: [`the answer was not a call to ${OBSERVER_CAPABILITY} (${id})`], proposed: JSON.stringify(decision.invocation.input).slice(0, 2000) });
-            continue;
-        }
-        const check = checkTwinRequest(decision.invocation.input, { catalogueTypes: types, telemetryColumns: summary ? columns : undefined, vocabulary, description, ...(library.length ? { documentsRead, documents, facts } : {}) });
-        // The supervisor's review, only on a request the deterministic guard accepted: what the rules on numbers cannot see.
-        const reviewed = check.ok && review ? await review(decision.invocation.input as unknown as TwinFactoryRequest) : [];
-        if (reviewed.length) {
-            check.ok = false;
-            check.problems = reviewed;
-        }
-        done.push({ n: n++, ok: check.ok, problems: check.problems, proposed: JSON.stringify(decision.invocation.input).slice(0, 2000) });
-        if (check.ok) return { ok: true, request: decision.invocation.input as unknown as TwinFactoryRequest, attempts: done, reads, telemetry: summary, provider: { name: provider.name, model: provider.model, family: provider.family } };
+        // The library reads, as the manifest recorded them: each by its document or its query.
+        const reads = r.manifest.steps
+            .filter((s) => s.capability?.startsWith("library.") && s.outcome === "completed")
+            .map((s) => {
+                const args = (s.input ?? {}) as { id?: unknown; query?: unknown };
+                return `${s.capability}${typeof args.id === "string" ? ` ${args.id}` : typeof args.query === "string" ? ` "${args.query}"` : ""}`;
+            });
+        return {
+            ok: request !== null,
+            request,
+            attempts: session.attempts,
+            reads,
+            telemetry: summary,
+            provider: { name: provider.name, model: provider.model, family: provider.family },
+            observerTask: taskId,
+            state: r.state,
+            ended: (r.manifest as { ended?: string | null }).ended ?? null,
+        };
+    } finally {
+        closeSession(taskId);
     }
-    return { ok: false, request: null, attempts: done, reads, telemetry: summary, provider: { name: provider.name, model: provider.model, family: provider.family } };
 }

@@ -40,8 +40,8 @@ import { startAllOrFail } from "./lib/start.js";
 import { Broker } from "../harness/lib/broker.js";
 import { fromRoot } from "../lib/paths.js";
 import { TOPIC_DEFINITIONS } from "../harness/core/runner.js";
-import { BASE_CAPABILITIES, promptWithSocle } from "../harness/core/base.js";
-import { SOCLE_RULES } from "../harness/core/brief.js";
+import { BASE_CAPABILITIES, promptWithSocle, socleOf } from "../harness/core/base.js";
+import { SOCLE_RULES_OF } from "../harness/core/brief.js";
 import { NEVER_REPLAYED, READ_CAPABILITIES } from "../harness/core/replay.js";
 import { JUSTIFICATIONS_SCHEMA } from "../harness/core/justify.js";
 import { taskCapabilities } from "../harness/core/task-capabilities.js";
@@ -113,11 +113,13 @@ describe("every factory against the socle", () => {
             if (!existsSync(fromRoot(topic.prompt)) || !readFileSync(fromRoot(topic.prompt), "utf8").trim()) found.push(`model|${topic.prompt}`);
             if (!topic.brief) found.push("model|brief");
             if (!topic.state) found.push("model|state");
-            const text = existsSync(fromRoot(topic.prompt)) ? promptWithSocle(readFileSync(fromRoot(topic.prompt), "utf8")) : "";
+            const socle = socleOf(topic.prompt);
+            const text = existsSync(fromRoot(topic.prompt)) ? promptWithSocle(readFileSync(fromRoot(topic.prompt), "utf8"), socle) : "";
             // A tool is described once, in its own definition, never in a prompt: each one the topic allows has its description there.
             const describedBy = (id: string): string => locals.find((c) => c.id === id)?.description ?? descriptions.get(id) ?? "";
             for (const id of allowed) if (!describedBy(id).trim()) found.push(`model|undescribed ${id}`);
-            for (const rule of SOCLE_RULES) if (text.split(rule).length - 1 !== 1) found.push(`model|says "${rule}" ${text.split(rule).length - 1} times`);
+            // The rules of the files its role reads, each once (2026-10-10: the Observer reads the kernel, not the policy).
+            for (const rule of socle.flatMap((file) => SOCLE_RULES_OF[file] ?? [])) if (text.split(rule).length - 1 !== 1) found.push(`model|says "${rule}" ${text.split(rule).length - 1} times`);
         }
         const never = [...NEVER_REPLAYED, ...(topic.neverReplayed ?? [])];
         const replayed = topic.replayedActions ?? [];
@@ -128,7 +130,11 @@ describe("every factory against the socle", () => {
             if (n === a) found.push(`replay|${id}`);
         }
         for (const r of [...(topic.neverReplayed ?? []), ...replayed]) if (!allowed.some((id) => r.test(id))) found.push(`declared|${String(r)}`);
-        if (!topic.justified) found.push("justify|none");
+        // Where its constants are, for a topic whose role reads the policy (2026-10-10: the Observer cites its known constants by fact, in its own schema).
+        const readsPolicy = !topic.prompt || socleOf(topic.prompt).includes("harness/core/policy.md");
+        if (!topic.justified) {
+            if (readsPolicy) found.push("justify|none");
+        }
         else {
             const carriers = allowed.filter((id) => topic.justified!.capability.test(id));
             if (!carriers.length) found.push(`justify|${String(topic.justified.capability)}`);

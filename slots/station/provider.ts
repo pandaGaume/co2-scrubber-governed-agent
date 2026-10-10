@@ -888,7 +888,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                 inputSchema: obj(
                     {
                         taskId: { type: "string" },
-                        artifacts: { type: "array", items: { type: "object", properties: { kind: { type: "string", enum: ["graph", "model", "twin", "procedure", "plugin", "playbook", "adaptation", "recommendation", "diagnosis"] }, path: { type: "string" }, sha256: SHA, contractSha256: SHA }, required: ["kind", "path", "sha256"] } },
+                        artifacts: { type: "array", items: { type: "object", properties: { kind: { type: "string", enum: ["graph", "model", "twin", "procedure", "plugin", "playbook", "adaptation", "recommendation", "diagnosis", "request"] }, path: { type: "string" }, sha256: SHA, contractSha256: SHA }, required: ["kind", "path", "sha256"] } },
                         manifestSha256: { ...SHA },
                         claims: { type: "object" },
                     },
@@ -926,6 +926,8 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                         await relayProcedure(proposal, procedure);
                         return { proposalId, status: proposal.status, ...(proposal.reason ? { reason: proposal.reason } : {}), note: proposal.status === "relayed" ? "relayed to the commander: the procedure waits for the authorisation" : "the procedure did not pass Mother's check" };
                     }
+                    // The Observer's request (2026-10-10, on the factories' harness): what a twin must do, for whoever asked the Observer; the station keeps it, a factory task is opened by the caller.
+                    if (list.some((a) => a.kind === "request")) return { proposalId, status: proposal.status, note: "the Observer's request, received: the caller forwards it to a factory" };
                     return { proposalId, status: proposal.status, note: "received; the twin's judgment (twin.evaluate) is not built yet: the proposal waits" };
                 },
             },

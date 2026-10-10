@@ -18,7 +18,7 @@
  * slot still publishes: `describe` says it is not ready and `decide`
  * refuses with the reason, so the page and the runner can say so.
  */
-import { promptWithSocle } from "../../harness/core/base.js";
+import { promptWithSocle, socleOf } from "../../harness/core/base.js";
 import type { CapabilityDescriptor, Experience, Intention, PolicyCandidate, PolicyFallbackInput, State } from "@spiky-panda/harness";
 import { errorMessage, readJson, sha256File } from "../../lib/files.js";
 import { composeText } from "../../harness/lib/compose.js";
@@ -112,8 +112,8 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
         if (!role) throw new Error(`prompt "${file}" is not a role's prompt file (specs/<role>/prompt.md)`);
         const full = fromRoot(file);
         if (!existsSync(full)) throw new Error(`prompt "${file}" does not exist`);
-        // A factory's prompt is its topic's, then what every factory reaches (the socle, said once); the Observer's and the Supervisor's are whole.
-        return role === "observer" || role === "supervisor" ? readFileSync(full, "utf8") : promptWithSocle(readFileSync(full, "utf8"));
+        // A role's prompt is its mission, then its socle, said once (base.ts): every factory the kernel and the policy, the Observer the kernel, the Supervisor nothing.
+        return promptWithSocle(readFileSync(full, "utf8"), socleOf(file));
     }
 
     /** A provider instance per conversation: the adapters keep one conversation each. */
