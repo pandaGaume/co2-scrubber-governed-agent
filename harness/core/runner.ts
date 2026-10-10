@@ -361,6 +361,11 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             progress.lastCall = call;
             calls.push(call);
             if (call.result.ok) progress.reads[call.id] = { at: new Date().toISOString(), value: (call.result.output ?? null) as JsonValue };
+            // A document read whole: kept in the task's memory of documents, shown in the state beyond the evidence's last ten answers.
+            if (call.result.ok && call.id === "library.read") {
+                const o = (call.result.output ?? {}) as { id?: unknown; title?: unknown; text?: unknown };
+                if (typeof o.id === "string" && typeof o.text === "string" && !progress.documents.some((d) => d.id === o.id)) progress.documents.push({ id: o.id, title: typeof o.title === "string" ? o.title : o.id, text: o.text, step: progress.iteration });
+            }
             // What a justification may cite, noted on every call, replays included.
             noteSources(progress.sources, call);
             const whole = call.result.ok ? (call.result.output ?? null) : { error: call.result.error ?? null, outcome: call.result.outcome };

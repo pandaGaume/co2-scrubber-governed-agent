@@ -187,6 +187,13 @@ export function createBuilderGuard(options: BuilderGuardOptions): SafetyGuard {
                 // A failed call repeated as it was fails as it did (2026-09-26, the first passage of the code topic: the same plugin_build refused seventeen times): its error is in the state; what it names is what changes.
                 return { allowed: false, reason: `${id} with the same input was the previous step, and failed: ${String(last.result.error ?? last.result.outcome).slice(0, 300)}. The same call fails the same way: change what the error names, or call something else.` };
             }
+            // A document read in this task is not read again (2026-10-10, run 24: 76 reads, the same documents three times over, the budget spent):
+            // its lines are in the state, the last one whole.
+            if (id === "library.read") {
+                const asked = String((decision.invocation.input as { id?: unknown } | null)?.id ?? "");
+                const read = options.progress?.documents.find((d) => d.id === asked);
+                if (read) return { allowed: false, reason: `library.read: "${asked}" was read at step ${read.step}: it is in the state (readDocuments: the last document whole, the earlier ones by their lines with a number); for a passage of it, library.search with its words` };
+            }
             if (id === "task.plan") {
                 const problems = await planProblems(decision.invocation.input as unknown as Plan, options);
                 if (problems.length) return { allowed: false, reason: `plan refused: ${problems.join("; ")}` };

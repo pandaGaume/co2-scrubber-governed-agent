@@ -184,6 +184,32 @@ export function invariantsOf(task: TaskFile["task"], shelf: StateInvariants["she
     };
 }
 
+/** How much of the last document read the state holds whole, and of each earlier one, by its lines with a number. */
+const LAST_DOCUMENT_CHARS = 6000;
+const EARLIER_DOCUMENT_CHARS = 800;
+
+/** The lines of a text that carry a number, its headings left out: what a datasheet, a topology or a card is read for, with the unit beside it. */
+export function numericLines(text: string, limit = EARLIER_DOCUMENT_CHARS): string {
+    const kept: string[] = [];
+    let size = 0;
+    for (const raw of text.split(/\r?\n/)) {
+        const line = raw.trim();
+        if (!/\d/.test(line) || /^#/.test(line)) continue;
+        if (size + line.length + 1 > limit) {
+            kept.push("...");
+            break;
+        }
+        kept.push(line);
+        size += line.length + 1;
+    }
+    return kept.join("\n");
+}
+
+/** The documents read, as the state shows them: the last whole (bounded), the earlier by their lines with a number. */
+export function readDocumentsOf(documents: ReadonlyArray<{ id: string; title: string; text: string; step: number }>): Record<string, JsonValue> {
+    return Object.fromEntries(documents.map((d, i) => [d.id, { title: d.title, step: d.step, ...(i === documents.length - 1 ? { text: d.text.length > LAST_DOCUMENT_CHARS ? `${d.text.slice(0, LAST_DOCUMENT_CHARS)}...` : d.text } : { lines: numericLines(d.text) }) }]));
+}
+
 export function reasoningStateOf(inputs: StateInputs): ReasoningState {
     const { task, progress, budget, nextActions, shelf, telemetry, topic = {} } = inputs;
     // The projection (2026-10-10, docs/registre-des-affirmations.fr.md): the sections of the topic's state the stage shows, the answers of
@@ -191,7 +217,8 @@ export function reasoningStateOf(inputs: StateInputs): ReasoningState {
     const hypothesis = inputs.shows && topic.hypothesis && typeof topic.hypothesis === "object" && !Array.isArray(topic.hypothesis)
         ? (Object.fromEntries(Object.entries(topic.hypothesis as Record<string, JsonValue>).filter(([k]) => inputs.shows!.includes(k))) as JsonValue)
         : (topic.hypothesis ?? null);
-    const evidence = Object.entries(progress.evidence).filter(([k]) => !inputs.evidenceOf || inputs.evidenceOf(k.split(" ")[0]));
+    // A document read is in readDocuments, whole or by its lines with a number: the evidence does not repeat it.
+    const evidence = Object.entries(progress.evidence).filter(([k]) => (!inputs.evidenceOf || inputs.evidenceOf(k.split(" ")[0])) && !(k.startsWith("library.read ") && progress.documents.some((d) => `library.read ${d.id}` === k)));
     const last = progress.lastCall;
     return {
         // The order of the work and where the task stands in it, first: what a small model needs before anything else.
@@ -204,6 +231,7 @@ export function reasoningStateOf(inputs: StateInputs): ReasoningState {
         },
         invariants: invariantsOf(task, shelf, telemetry, inputs.contracts, inputs.shown) as StateInvariants & Record<string, JsonValue>,
         evidence: Object.fromEntries(evidence.map(([k, e]) => [k, e.summary])),
+        ...(progress.documents.length ? { readDocuments: readDocumentsOf(progress.documents) } : {}),
         hypothesis,
         ...(inputs.claims?.length ? { claims: inputs.claims } : {}),
         lastAction: last ? { capability: last.id, outcome: last.result.outcome, summary: (progress.lastSummary ?? null) as JsonValue, artifact: progress.lastArtifact ?? null } : null,

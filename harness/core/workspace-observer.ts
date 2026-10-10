@@ -97,6 +97,11 @@ export interface Progress {
     topic: Record<string, JsonValue>;
     /** The task's claims, each with its source and status (claims.ts, docs/registre-des-affirmations.fr.md); written to claims.json at the end. */
     claims: ClaimsState;
+    /**
+     * Every document the task read, in order, whole (2026-10-10, run 24): the state shows them all, the last whole and the earlier by the
+     * lines that carry a number, beyond the evidence's last ten answers; a document read is not read again.
+     */
+    documents: Array<{ id: string; title: string; text: string; step: number }>;
     /** What the task read so far, each answer compact, by capability and argument (`evidence:` in the state); the oldest dropped past the cap. */
     evidence: Record<string, { at: string; summary: JsonValue }>;
     /** What the runner read once at the start, for the state and the topics' requirements: the library's shelf, the telemetry's shape. */
@@ -109,7 +114,7 @@ export interface Progress {
 }
 
 export function newProgress(): Progress {
-    return { phase: "plan", iteration: 0, plan: null, done: null, lastCall: null, repeats: 0, lastSummary: null, lastArtifact: null, lastRefusal: null, refusals: {}, checkedModels: [], sandbox: null, failure: null, reads: {}, sources: { library: [], web: [] }, justify: null, topic: {}, claims: newClaims(), evidence: {}, context: { shelf: [], telemetry: null } };
+    return { phase: "plan", iteration: 0, plan: null, done: null, lastCall: null, repeats: 0, lastSummary: null, lastArtifact: null, lastRefusal: null, refusals: {}, checkedModels: [], sandbox: null, failure: null, reads: {}, sources: { library: [], web: [] }, justify: null, topic: {}, claims: newClaims(), documents: [], evidence: {}, context: { shelf: [], telemetry: null } };
 }
 
 export interface WorkshopFeatures extends Record<string, JsonValue> {
