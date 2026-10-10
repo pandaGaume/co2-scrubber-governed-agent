@@ -264,8 +264,10 @@ export class OpenAiCompatibleProvider implements Provider {
                 text = "";
             }
         }
-        // Cut at the output limit with several calls: the complete ones are kept, the last one's unfinished arguments do not parse.
-        if (calls.length > 1 && completion.choices?.[0]?.finish_reason === "length") {
+        // Cut at the output limit with calls: the complete ones are kept, an unfinished one's arguments do not parse. One call whose
+        // arguments parse whole was cut after it, not in it (2026-10-10, run 12: Nemotron Super wrote procedure.submit to its last
+        // brace, then went on to the limit; the call was refused as cut three times, STUCK, though it was complete).
+        if (calls.length >= 1 && completion.choices?.[0]?.finish_reason === "length") {
             const complete = calls.filter((c) => completeArgs(c.function.arguments) !== null);
             if (complete.length) {
                 calls = complete;

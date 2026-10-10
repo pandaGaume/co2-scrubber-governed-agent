@@ -125,6 +125,19 @@ describe("a reasoning model behind an OpenAI-compatible server", () => {
         assert.ok(!JSON.stringify((provider as unknown as { messages: unknown[] }).messages).includes("cut at the output limit before its call"));
     });
 
+    it("a call returned whole, then the answer cut at the limit after it, is run, not refused as cut (2026-10-10, run 12)", async () => {
+        const whole = { status: 200, body: { choices: [{ message: { content: null, tool_calls: [{ id: "c1", type: "function", function: { name: "scrubber__motor__set_speed", arguments: '{"percent": 40}' } }] }, finish_reason: "length" }], usage: { prompt_tokens: 10, completion_tokens: 16384 } } };
+        const provider = new OpenAiCompatibleProvider(profile, { systemPrompt: "p", contextMode: "state" });
+        const { result } = await withServer([whole], () => provider.resolve(input));
+        assert.equal(result.invocation.capabilityId, "scrubber.motor.set_speed");
+        assert.deepEqual(result.invocation.input, { percent: 40 });
+        // Its arguments cut inside: refused as cut, as before.
+        const cutInside = { status: 200, body: { choices: [{ message: { content: null, tool_calls: [{ id: "c2", type: "function", function: { name: "scrubber__motor__set_speed", arguments: '{"percent": 4' } }] }, finish_reason: "length" }], usage: { prompt_tokens: 10, completion_tokens: 16384 } } };
+        const second = new OpenAiCompatibleProvider(profile, { systemPrompt: "p", contextMode: "state" });
+        const cut = await withServer([cutInside], () => second.resolve(input));
+        assert.notEqual(cut.result.invocation.capabilityId, "scrubber.motor.set_speed");
+    });
+
     it("the end of a cut reasoning, its lines said once: a reasoning cut at the limit repeats itself", () => {
         const loop = ["We read the card.", ...Array.from({ length: 400 }, () => "Thus call procedure.submit."), "Now produce that."].join("\n");
         const text = cutRetryText(loop);
