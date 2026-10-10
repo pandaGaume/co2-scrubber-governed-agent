@@ -231,7 +231,15 @@ export function checkTwinRequest(input: unknown, context: CheckContext = {}): Re
     // Separation: the Observer states needs, it never names what the catalogue already holds.
     const text = JSON.stringify(r);
     const named = new Set<string>([...(text.match(NODE_ID) ?? []), ...list(context.catalogueTypes).filter((t) => text.includes(t))]);
-    if (named.size) problems.push(`separation: the request names node types of the catalogue (${[...named].slice(0, 5).join(", ")}); state what the twin must do, the factory chooses the nodes`);
+    // Where they are, and what to write instead (2026-10-10, run 23: three refusals on node ids in entities[].kind, the refusal naming them but not where).
+    const at: string[] = [];
+    const walk = (v: unknown, path: string): void => {
+        if (typeof v === "string") { if ([...named].some((n) => v.includes(n))) at.push(path); }
+        else if (Array.isArray(v)) v.forEach((x, i) => walk(x, `${path}.${i}`));
+        else if (v && typeof v === "object") for (const [k, x] of Object.entries(v)) walk(x, path ? `${path}.${k}` : k);
+    };
+    if (named.size) walk(r, "");
+    if (named.size) problems.push(`separation: the request names node types of the catalogue (${[...named].slice(0, 5).join(", ")}) at ${at.slice(0, 8).join(", ")}${at.length > 8 ? ", ..." : ""}; write there what it is, in words (an air volume, a device, a group of people, a schedule): the factory chooses the nodes`);
 
     // Facts: a column named must be one the telemetry has.
     const columns = context.telemetryColumns;

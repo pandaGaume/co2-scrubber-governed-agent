@@ -45,6 +45,8 @@ export interface TopicDefinition {
     marchingOrder?: (progress: Progress, task: TaskFile["task"]) => JsonValue;
     /** The capabilities the loop may call on this topic; anything else is refused by the guard. */
     tools: ReadonlyArray<RegExp>;
+    /** Constants the topic binds to tools it calls, never shown to the model (the Observer: the library's documents it is not shown). */
+    bindings?: Array<{ match: RegExp; constants: Record<string, JsonValue> }>;
     /**
      * The capabilities the topic's conduct closes at this step (its playbook's gates refusing them now): not shown to the model,
      * so a step's tools are its stage's (2026-10-09: the procedure factory showed 26 tools and the procedure's whole schemas,

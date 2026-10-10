@@ -1,0 +1,13 @@
+{
+    "note": "The library as the Observer sees it (2026-10-10, run 23): the documents written for a factory, which name the catalogue's nodes or say how a factory builds, are not shown to the Observer, which states needs and must not formulate them in terms of what exists. Listed here, not in the documents, which are signed.",
+    "notShown": [
+        {
+            "id": "method-twin-graph",
+            "why": "the graph factory's method card: it names the catalogue's nodes (Physics.LifeSupport:cabin-air...), which the Observer must not know"
+        },
+        {
+            "id": "capability-contract",
+            "why": "the code factory's card: how a missing node's contract is written"
+        }
+    ]
+}

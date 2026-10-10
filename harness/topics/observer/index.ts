@@ -15,6 +15,8 @@
  * speak is, so what the twin must expose is named the way a factory can match it.
  */
 import type { CapabilityResult, Intention, JsonValue } from "@spiky-panda/harness";
+import { readFileSync } from "node:fs";
+import { fromRoot } from "../../../lib/paths.js";
 import type { Broker } from "../../lib/broker.js";
 import { BASE_CAPABILITIES, withBase } from "../../core/base.js";
 import type { LocalCapability } from "../../core/capabilities.js";
@@ -45,6 +47,10 @@ const CANDIDATES = 5;
 export const OBSERVER_REQUEST_FILE = "requests/twin-request.json";
 /** The field of the task's observations the topic reads and shows itself. */
 export const OBSERVER_OBSERVATION = "observer";
+
+/** The library's documents the Observer is not shown, and why (specs/observer/library.json): the factories' cards, which name the catalogue. */
+export const OBSERVER_LIBRARY = JSON.parse(readFileSync(fromRoot("specs", "observer", "library.json"), "utf8")) as { notShown: Array<{ id: string; why: string }> };
+const NOT_SHOWN = OBSERVER_LIBRARY.notShown.map((d) => d.id);
 
 /** The Observer's own conduct, run once per step. */
 export const OBSERVER_CONDUCT = loadPlaybook("specs/observer/playbook.json");
@@ -184,7 +190,7 @@ async function libraryFacts(broker: Broker): Promise<Record<string, LibraryFact[
 
 /** The library's documents, each with its title and what it says: given up front, so the model knows a datasheet exists before it thinks of searching for one. */
 export async function libraryDocuments(broker: Broker): Promise<ObserverObservation["documents"]> {
-    const r = await broker.call("library", "list", {});
+    const r = await broker.call("library", "list", { exclude: NOT_SHOWN });
     const docs = r.ok ? (r.output as { documents?: Array<{ id: string; title: string; summary?: string }> }).documents : undefined;
     return Array.isArray(docs) ? docs.map((d) => ({ id: d.id, title: d.title, ...(d.summary ? { summary: d.summary.slice(0, 160) } : {}) })) : [];
 }
@@ -317,6 +323,12 @@ async function guardObserver(capabilityId: string, input: JsonValue, context: To
     // A way out entered: its tools only.
     if (stage.exit && !(stage.tools ?? []).includes(capabilityId)) refused.push(sayingText(stage, w, views));
     if (refused.length) return refused;
+    // A document the Observer is not shown, read by its id: refused with why (its list and its searches leave it out already).
+    if (/^library\.(read|facts)$/.test(capabilityId)) {
+        const id = String((input as { id?: unknown } | null)?.id ?? "");
+        const hidden = OBSERVER_LIBRARY.notShown.find((d) => d.id === id);
+        return hidden ? [`"${id}" is not shown to the Observer: ${hidden.why}`] : [];
+    }
     if (capabilityId === OBSERVER_CHOOSE) return chooseProblems(input, context);
     if (capabilityId !== OBSERVER_CAPABILITY) return [];
     const problems = await requestProblems(input, context);
@@ -482,6 +494,8 @@ export const OBSERVER_TOPIC: TopicDefinition = {
     },
     name: "observer",
     tools: OBSERVER_TOOLS,
+    // The library as the Observer sees it: its searches and lists leave out the factories' cards.
+    bindings: [{ match: /^library\.(search|list)$/, constants: { exclude: NOT_SHOWN } }],
     // A request is made of this task's description and readings, never replayed from another's.
     neverReplayed: [/^observer\.(submit|needs|choose)$/, /^task\.done$/],
     judges: [/^observer\.submit$/],

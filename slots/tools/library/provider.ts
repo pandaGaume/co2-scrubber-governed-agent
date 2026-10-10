@@ -266,9 +266,9 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
     const tools: SlotTool<LibraryState>[] = [
         {
             name: "list",
-            inputSchema: objectSchema({}),
-            handle: (_args, s) => ({
-                documents: s.documents.map(({ id, title, summary, measures, sha256, bytes, facts, rules, playbook, recommendation, dir, proposed }) => ({ id, title, summary, measures, sha256, bytes, facts: facts.length, rules: rules ? rules.rules.length : 0, playbook, recommendation, proposed, signature: signatureOf(id, dir, s.sigDir) })),
+            inputSchema: objectSchema({ exclude: { type: "array", items: { type: "string" }, description: "documents not to list (what a reader is not shown)" } }),
+            handle: (args, s) => ({
+                documents: s.documents.filter((d) => !(Array.isArray(args.exclude) && (args.exclude as unknown[]).includes(d.id))).map(({ id, title, summary, measures, sha256, bytes, facts, rules, playbook, recommendation, dir, proposed }) => ({ id, title, summary, measures, sha256, bytes, facts: facts.length, rules: rules ? rules.rules.length : 0, playbook, recommendation, proposed, signature: signatureOf(id, dir, s.sigDir) })),
                 // Who signs from the control room, and where the signatures go: what the library page says before a person signs.
                 signer: person || null,
                 // The fork the library is, when it runs in one: a signature made here binds nothing outside it.
@@ -333,8 +333,8 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
         },
         {
             name: "search",
-            inputSchema: objectSchema({ query: { type: "string" }, limit: { type: "number" } }, ["query"]),
-            handle: (args, s) => ({ query: String(args.query), results: searchLibrary(s.documents, String(args.query ?? ""), typeof args.limit === "number" ? args.limit : 5) }),
+            inputSchema: objectSchema({ query: { type: "string" }, limit: { type: "number" }, exclude: { type: "array", items: { type: "string" }, description: "documents not to search (what a reader is not shown)" } }, ["query"]),
+            handle: (args, s) => ({ query: String(args.query), results: searchLibrary(s.documents.filter((d) => !(Array.isArray(args.exclude) && (args.exclude as unknown[]).includes(d.id))), String(args.query ?? ""), typeof args.limit === "number" ? args.limit : 5) }),
         },
         {
             name: "graphs",
@@ -395,7 +395,14 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
             inputSchema: objectSchema({ id: { type: "string" } }, ["id"]),
             handle: (args, s) => {
                 const d = s.documents.find((x) => x.id === args.id);
-                if (!d) throw new Error(`no document "${String(args.id)}" in the library (${s.documents.map((x) => x.id).join(", ")})`);
+                if (!d) {
+                    // A fact's id is read as the fact (2026-10-10, run 23: seven reads of fact ids, each "no document"); a tool's name is said to be one.
+                    const asked = String(args.id ?? "");
+                    const fact = s.documents.flatMap((x) => x.facts.map((f) => ({ ...f, source: x.id, signed: signatureOf(x.id, x.dir, s.sigDir) }))).find((f) => (f as { id?: unknown }).id === asked);
+                    if (fact) return { fact, readAs: `"${asked}" is a fact of "${fact.source}", not a document: here it is (library.read ${fact.source} gives the document whole)` };
+                    if (/^[a-z]+\.[a-z_]+$/.test(asked) && !asked.includes("-")) throw new Error(`"${asked}" looks like a tool, not a document: call the tool ${asked}; library.read takes a document's id (${s.documents.map((x) => x.id).join(", ")})`);
+                    throw new Error(`no document "${asked}" in the library (${s.documents.map((x) => x.id).join(", ")})`);
+                }
                 s.reads.push({ id: d.id, sha256: d.sha256, at: new Date().toISOString() });
                 return { id: d.id, title: d.title, sha256: d.sha256, text: d.text, facts: d.facts, signature: signatureOf(d.id, d.dir, s.sigDir) };
             },

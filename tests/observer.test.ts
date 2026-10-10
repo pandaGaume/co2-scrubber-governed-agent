@@ -147,6 +147,19 @@ describe("the Observer's guard and its telemetry", () => {
         assert.ok(!STAGE_SUPPORT.includes("web.search") && !STAGE_SUPPORT.includes("task.plan") && STAGE_SUPPORT.includes("library.justify"));
     });
 
+    it("separation: the refusal says where the node ids are and what to write instead (2026-10-10, run 23)", () => {
+        const withKind = { ...REQUEST, entities: [{ name: "lab air volume", kind: "Physics.LifeSupport:cabin-air" }, { name: "scrubber" }] } as unknown as TwinFactoryRequest;
+        assert.match(checkTwinRequest(withKind, {}).problems.join(), /separation: the request names node types of the catalogue \(Physics\.LifeSupport:cabin-air\) at entities\.0\.kind; write there what it is, in words/);
+    });
+
+    it("the library the Observer is not shown: the factories' cards, refused when read by id, with why", async () => {
+        const context = { progress: newProgress(), task: { objective: { required_outputs: [], constraints: {} }, observations: {}, data: [] }, broker: {} as never, taskId: "t" } as never;
+        const refused = await OBSERVER_TOPIC.guard!("library.read", { id: "method-twin-graph" }, context);
+        assert.match(String(refused), /"method-twin-graph" is not shown to the Observer: the graph factory's method card/);
+        assert.deepEqual(OBSERVER_TOPIC.bindings!.map((b) => b.constants), [{ exclude: ["method-twin-graph", "capability-contract"] }]);
+        assert.ok(OBSERVER_TOPIC.bindings![0].match.test("library.search") && OBSERVER_TOPIC.bindings![0].match.test("library.list") && !OBSERVER_TOPIC.bindings![0].match.test("library.read"));
+    });
+
     it("the telemetry is summarised by code: counts, ends, range, mean, and whether a column moves", () => {
         const s = summarizeTelemetry(ROWS);
         assert.equal(s.rows, 25);

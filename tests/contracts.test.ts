@@ -170,6 +170,18 @@ describe("the library's typed facts, through the broker", () => {
         assert.equal((await near("ventilation hatch closed"))[0].source, "station-topology");
     });
 
+    it("library.read given a fact's id reads the fact; list and search leave out what a reader is not shown (2026-10-10, run 23)", async () => {
+        const fact = (await broker.call("library", "read", { id: "habitat.crew.count" })).output as { fact: { id: string; source: string }; readAs: string };
+        assert.equal(fact.fact.id, "habitat.crew.count");
+        assert.match(fact.readAs, /is a fact of "[a-z0-9-]+", not a document/);
+        const tool = await broker.call("library", "read", { id: "factory.inventory" });
+        assert.match(String(tool.error), /looks like a tool, not a document: call the tool factory\.inventory/);
+        const listed = ((await broker.call("library", "list", { exclude: ["method-twin-graph"] })).output as { documents: Array<{ id: string }> }).documents.map((d) => d.id);
+        assert.ok(!listed.includes("method-twin-graph") && listed.includes("station-topology"));
+        const found = ((await broker.call("library", "search", { query: "cabin-air", exclude: ["method-twin-graph"] })).output as { results: Array<{ id: string }> }).results.map((r) => r.id);
+        assert.ok(!found.includes("method-twin-graph"), JSON.stringify(found));
+    });
+
     it("a task whose sources conflict ends before any step: SOURCE_CONFLICT, REQUIRE_RESOLUTION, the producer to revise named", async () => {
         const r = await broker.call("factory", "request", {
             objective: { required_outputs: [{ name: "predicted_co2", quantity: "Concentration", unit: "ppm" }], constraints: { rmsePpmMax: 10 } },
