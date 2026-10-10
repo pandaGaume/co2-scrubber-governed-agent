@@ -23,7 +23,7 @@ import type { PublishedSlot } from "../slots/lib/slot-server.js";
 import { startAllOrFail } from "./lib/start.js";
 import { Broker } from "../harness/lib/broker.js";
 import type { Provider, ProviderExchange } from "../harness/lib/provider.js";
-import { checkTwinRequest, factoryContractOf, type TwinFactoryRequest, hedgedNumbers, withFactIds } from "../harness/observer/request.js";
+import { checkTwinRequest, factoryContractOf, type TwinFactoryRequest, hedgedNumbers, withFactIds, withVocabularyForm } from "../harness/observer/request.js";
 import { summarizeTelemetry } from "../harness/observer/telemetry.js";
 import { observe } from "../harness/observer/observer.js";
 import { OBSERVER_TOPIC } from "../harness/topics/observer/index.js";
@@ -160,6 +160,16 @@ describe("the Observer's guard and its telemetry", () => {
         assert.ok(OBSERVER_TOPIC.bindings![0].match.test("library.search") && OBSERVER_TOPIC.bindings![0].match.test("library.list") && !OBSERVER_TOPIC.bindings![0].match.test("library.read"));
     });
 
+    it("a quantity written with its unit after it, as the vocabulary shows units, is read as the quantity in that unit (2026-10-10, run 25)", () => {
+        const vocabulary = [{ quantity: "Concentration", units: ["ppm"] }, { quantity: "Ratio", units: ["percent"] }];
+        const sent = { ...REQUEST, outputs: [{ name: "C_lab", quantity: "Concentration (ppm)", unit: "" }] } as unknown as TwinFactoryRequest;
+        const { input, read } = withVocabularyForm(sent, vocabulary) as { input: TwinFactoryRequest; read: string[] };
+        assert.deepEqual(input.outputs.map((o) => [o.quantity, o.unit]), [["Concentration", "ppm"]]);
+        assert.match(read[0], /quantity "Concentration \(ppm\)" read as Concentration in ppm/);
+        // A name the vocabulary does not hold is left to the guard.
+        assert.equal(withVocabularyForm({ ...REQUEST, outputs: [{ name: "x", quantity: "CO2_concentration_ppm", unit: "ppm" }] }, vocabulary).read.length, 0);
+    });
+
     it("the telemetry is summarised by code: counts, ends, range, mean, and whether a column moves", () => {
         const s = summarizeTelemetry(ROWS);
         assert.equal(s.rows, 25);
@@ -182,7 +192,7 @@ interface Seen {
     brief: string;
     lastCapability: string;
     state: {
-        hypothesis: { description: string; telemetry: { rows?: number } | string; quantities: string; documents: string; needs: Array<{ need: string; candidates: Array<{ id: string; value: number }>; chosen?: unknown }> };
+        hypothesis: { description: string; telemetry: { rows?: number } | string; quantities: unknown; documents: string; needs: Array<{ need: string; candidates: Array<{ id: string; value: number }>; chosen?: unknown }> };
         requirements: Record<string, boolean>;
         marchingOrder: { stages: Array<{ step: number; status: string }>; allowedNow: string[]; closedNow: Array<{ tools: string[]; why: string }> };
         lastRefusal: { capability: string; reason: string } | null;
@@ -283,7 +293,7 @@ describe("the Observer, a task of the factories' harness, through the broker", (
         assert.equal((model.seen[0].state.hypothesis.telemetry as { rows: number }).rows, 25);
         // The shared vocabulary at the stage that writes the request (the projection: each stage shows what it uses).
         assert.equal(model.seen[0].state.hypothesis.quantities, undefined);
-        assert.match(model.seen.find((x) => x.state.hypothesis.quantities)!.state.hypothesis.quantities, /Concentration \(/);
+        assert.ok((model.seen.find((x) => x.state.hypothesis.quantities)!.state.hypothesis.quantities as unknown as Array<{ quantity: string; units: string[] }>).some((q) => q.quantity === "Concentration" && q.units.includes("ppm")));
         assert.match(model.seen[0].state.hypothesis.documents, /scrubber-1-datasheet/);
         assert.doesNotMatch(JSON.stringify(model.seen), /registry_list|Physics\.Transform/);
         // After the refusal: the brief opens on it, the state holds it.

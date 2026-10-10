@@ -29,7 +29,7 @@ import type { TaskFile } from "../../core/task.js";
 import type { TopicContext, TopicDefinition, Validation } from "../../core/topic.js";
 import type { DoneClaim, Progress, WorkshopFile } from "../../core/workspace-observer.js";
 import { loadWords, say } from "../../core/words.js";
-import { checkTwinRequest, TWIN_REQUEST_SCHEMA, withFactIds, type TwinFactoryRequest, type VocabularyEntry } from "../../observer/request.js";
+import { checkTwinRequest, TWIN_REQUEST_SCHEMA, withFactIds, withVocabularyForm, type TwinFactoryRequest, type VocabularyEntry } from "../../observer/request.js";
 import type { TelemetrySummary } from "../../observer/telemetry.js";
 
 /** What the Observer's harness says to its model: the spec's words (`specs/observer/words.json`). */
@@ -259,7 +259,7 @@ async function requestProblems(sent: JsonValue, context: TopicContext): Promise<
     const { types, vocabulary } = await catalogueOf(broker, o.runtimeSlot ?? context.runtimeSlot ?? "twin");
     const facts = await libraryFacts(broker);
     // The fact ids the harness reads itself, the same way here and at execution: what is judged is what will be written.
-    const input = withFactIds(sent, facts).input as JsonValue;
+    const input = withVocabularyForm(withFactIds(sent, facts).input, vocabulary.length ? vocabulary : o.quantities).input as JsonValue;
     const ids = new Set(o.documents.map((d) => d.id));
     // What was read: the documents read whole, and those whose facts a read listed (their ids are among the task's sources).
     const documentsRead = [...new Set([...documentsReadOf(context.progress), ...context.progress.sources.library.filter((id) => ids.has(id))])];
@@ -406,7 +406,12 @@ function requestCapability(context: TopicContext): LocalCapability {
         inputSchema: TWIN_REQUEST_SCHEMA as unknown as JsonValue,
         async execute(sent: JsonValue): Promise<CapabilityResult> {
             // The request as the guard judged it: the fact ids one fact alone holds, read by the harness and said in the answer.
-            const { input, read } = withFactIds(sent, await libraryFacts(context.broker)) as { input: JsonValue; read: string[] };
+            const ids = withFactIds(sent, await libraryFacts(context.broker));
+            const o = observationOf(context.task);
+            const { vocabulary } = await catalogueOf(context.broker, o.runtimeSlot ?? context.runtimeSlot ?? "twin");
+            const forms = withVocabularyForm(ids.input, vocabulary.length ? vocabulary : o.quantities);
+            const input = forms.input as JsonValue;
+            const read = [...ids.read, ...forms.read];
             const text = JSON.stringify(input, null, 2) + "\n";
             const r = await context.broker.call("workspace", "write", { taskId: context.taskId, path: OBSERVER_REQUEST_FILE, text });
             if (!r.ok) return { ok: false, error: r.error ?? `could not write ${OBSERVER_REQUEST_FILE}`, output: { outcome: r.outcome } };
@@ -439,7 +444,8 @@ export function stateOfTopic(progress: Progress, task: TaskFile["task"]): TopicS
             description: o.description,
             // The telemetry as facts computed by code (counts, ends, range, mean, whether a column moves), never its rows.
             telemetry: (o.telemetry ?? "none supplied") as unknown as JsonValue,
-            quantities: o.quantities.map((v) => `${v.quantity} (${v.units.join(", ") || "no unit"})`).join("; "),
+            // The shared vocabulary as it is: each quantity and its units, never a label to copy (run 25: "Concentration (ppm)" written as a quantity).
+            quantities: o.quantities.map((v) => ({ quantity: v.quantity, units: v.units })) as unknown as JsonValue,
             documents: o.documents.map((d) => `${d.id} (${d.title}${d.summary ? `: ${d.summary}` : ""})`).join("; "),
             // The selection: each need with the facts the library found nearest, and the one chosen; the chosen facts with their values are what the request cites.
             needs: state.needs.map((n) => ({ need: n.name, candidates: n.candidates, ...(n.chosen ? { chosen: n.chosen.fact ?? "none answers it" } : {}) })) as unknown as JsonValue,

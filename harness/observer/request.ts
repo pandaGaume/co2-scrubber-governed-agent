@@ -217,6 +217,29 @@ export function withFactIds(input: unknown, facts: Record<string, LibraryFact[]>
     return read.length ? { input: { ...r, known }, read } : { input, read: [] };
 }
 
+/**
+ * The quantities of a request read in the shared vocabulary's form (2026-10-10, run 25): a quantity written with its unit after it,
+ * "Concentration (ppm)", as the vocabulary was shown, is that quantity in that unit when the vocabulary names it; each reading said.
+ */
+export function withVocabularyForm(input: unknown, vocabulary: VocabularyEntry[]): { input: unknown; read: string[] } {
+    const r = input && typeof input === "object" ? (input as Record<string, unknown>) : null;
+    if (!r || !vocabulary.length) return { input, read: [] };
+    const read: string[] = [];
+    const out: Record<string, unknown> = { ...r };
+    for (const section of ["observables", "controls", "inputs", "outputs", "external_influences"]) {
+        if (!Array.isArray(r[section])) continue;
+        out[section] = (r[section] as Array<Record<string, unknown>>).map((q) => {
+            const m = typeof q?.quantity === "string" ? /^\s*([A-Za-z][A-Za-z0-9]*)\s*\(([^)]*)\)\s*$/.exec(q.quantity) : null;
+            const entry = m ? vocabulary.find((v) => v.quantity.toLowerCase() === m[1].toLowerCase()) : undefined;
+            if (!m || !entry) return q;
+            const unit = typeof q.unit === "string" && q.unit ? q.unit : m[2].split(",")[0].trim();
+            read.push(`${section} "${String(q.name)}": quantity "${String(q.quantity)}" read as ${entry.quantity} in ${unit}`);
+            return { ...q, quantity: entry.quantity, unit };
+        });
+    }
+    return read.length ? { input: out, read } : { input, read: [] };
+}
+
 export function checkTwinRequest(input: unknown, context: CheckContext = {}): RequestCheck {
     const problems: string[] = [];
     const r = (input && typeof input === "object" ? input : {}) as Partial<TwinFactoryRequest>;
