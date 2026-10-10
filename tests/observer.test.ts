@@ -26,6 +26,10 @@ import type { Provider, ProviderExchange } from "../harness/lib/provider.js";
 import { checkTwinRequest, factoryContractOf, type TwinFactoryRequest, hedgedNumbers, withFactIds } from "../harness/observer/request.js";
 import { summarizeTelemetry } from "../harness/observer/telemetry.js";
 import { observe } from "../harness/observer/observer.js";
+import { OBSERVER_TOPIC } from "../harness/topics/observer/index.js";
+import { STAGE_SUPPORT } from "../harness/core/base.js";
+import { newProgress } from "../harness/core/workspace-observer.js";
+import type { TaskFile } from "../harness/core/task.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
 
 const PORT = 3122;
@@ -130,6 +134,17 @@ describe("the Observer's guard and its telemetry", () => {
         const problems = checkTwinRequest(input, { documentsRead: ["scrubber-1-datasheet"], facts }).problems.join("; ");
         assert.doesNotMatch(problems, /Qe_full|tau|band/);
         assert.match(problems, /known constant "eta_sp"/);
+    });
+
+    it("a step offers its stage's tools, the reads of the stages passed and the support, never the whole list; a way out its own alone (2026-10-10)", () => {
+        const task = { objective: { required_outputs: [{ name: "twin-request", quantity: "TwinFactoryRequest" }], constraints: {} }, observations: { observer: { description: "d", attempts: 2 } }, data: [] } as unknown as TaskFile["task"];
+        const progress = newProgress();
+        assert.deepEqual(OBSERVER_TOPIC.stageTools!(progress, task), { tools: ["library.read", "library.facts", "library.search"], passed: [], exit: false });
+        // The attempts spent: the way out, task.fail alone.
+        (progress.topic as Record<string, unknown>).observer = { attempts: [{ n: 1, ok: false, problems: [], proposed: "" }, { n: 2, ok: false, problems: [], proposed: "" }], accepted: null, needs: [] };
+        assert.deepEqual(OBSERVER_TOPIC.stageTools!(progress, task), { tools: ["task.fail"], passed: [], exit: true });
+        // The support every stage has: no web search, no plan, no unit tool but the conversion.
+        assert.ok(!STAGE_SUPPORT.includes("web.search") && !STAGE_SUPPORT.includes("task.plan") && STAGE_SUPPORT.includes("library.justify"));
     });
 
     it("the telemetry is summarised by code: counts, ends, range, mean, and whether a column moves", () => {

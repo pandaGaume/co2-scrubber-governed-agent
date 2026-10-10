@@ -61,7 +61,7 @@ import { problemOf } from "../../core/problems.js";
 import { coerce, FILE_ID_PATTERN, schemaError } from "../../core/interpreter.js";
 import { physics } from "../../core/physics.js";
 import { signatureOf } from "../../lib/signatures.js";
-import { conductView, loadPlaybook, sayingText, type Evidence } from "../../core/conduct.js";
+import { conductView, loadPlaybook, sayingText, type Evidence, stageToolsOf } from "../../core/conduct.js";
 export { constantsOf } from "./check.js";
 
 /** A proposal as the topic handles it: whatever the format's schema describes; the topic reads it only by the format's paths. */
@@ -888,6 +888,8 @@ export function marchingOrderOf(progress: Progress, task: TaskFile["task"]): Jso
 export const PROCEDURE_TOPIC: TopicDefinition = {
     marchingOrder: marchingOrderOf,
     // The stage's tools only: what the conduct's gates refuse now is not shown (the guard refuses it still).
+    // The stage's tools: what a step offers, with the support every stage has (base.ts, STAGE_SUPPORT).
+    stageTools: (progress, task) => stageToolsOf(PLAYBOOK, evidenceOf(progress, task)),
     closed: (progress, task) => PLAYBOOK.evaluate(evidenceOf(progress, task)).refusing.flatMap((g) => g.capabilities),
     name: "procedure",
     tools: PROCEDURE_TOOLS,

@@ -18,7 +18,7 @@ import type { CapabilityResult, Intention, JsonValue } from "@spiky-panda/harnes
 import type { Broker } from "../../lib/broker.js";
 import { BASE_CAPABILITIES, withBase } from "../../core/base.js";
 import type { LocalCapability } from "../../core/capabilities.js";
-import { conductView, loadPlaybook, sayingText, type Evidence } from "../../core/conduct.js";
+import { conductView, loadPlaybook, sayingText, type Evidence, stageToolsOf } from "../../core/conduct.js";
 import type { LibraryFact } from "../../core/contracts.js";
 import { physics } from "../../core/physics.js";
 import type { TopicState } from "../../core/reasoning-state.js";
@@ -446,6 +446,8 @@ export const OBSERVER_TOPIC: TopicDefinition = {
         } as unknown as JsonValue;
     },
     // The stage's tools only: what the conduct's gates refuse now is not shown (the guard refuses it still).
+    // The stage's tools: what a step offers, with the support every stage has (base.ts, STAGE_SUPPORT).
+    stageTools: (progress, task) => stageToolsOf(OBSERVER_CONDUCT, evidenceOf(progress, task)),
     closed: (progress, task) => {
         const { stage, refusing } = OBSERVER_CONDUCT.evaluate(evidenceOf(progress, task));
         // A way out entered closes every tool the Observer has but its own.

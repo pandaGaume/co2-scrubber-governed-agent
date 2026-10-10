@@ -33,6 +33,7 @@ import { reasoningStateOf } from "./reasoning-state.js";
 import { intentionFor, loadRecipes, saveRecipes, taskSignature } from "./recipes.js";
 import { NEVER_REPLAYED, proposalKey, restrictReplays } from "./replay.js";
 import { helpForRefusal, noteSources } from "./justify.js";
+import { STAGE_SUPPORT } from "./base.js";
 import { noteRefusal, STUCK_AFTER } from "./problems.js";
 import { readMeaning, unmoved } from "./interpreter.js";
 import { dependentsOf } from "./rules.js";
@@ -268,7 +269,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
     const recipes = loadRecipes(recipesDir, topicId);
     // What a replay may be, the same for every factory (replay.ts): not a call already made in this task, not a question or a failure, not what is made of this task's readings.
     const made = new Set<string>();
-    restrictReplays(recipes.policy, [...NEVER_REPLAYED, ...(topic.neverReplayed ?? [])], made);
+    restrictReplays(recipes.policy, [...NEVER_REPLAYED, ...(topic.neverReplayed ?? [])], made, (id) => offered(id));
     const progress = newProgress();
     const calls: CapabilityCall[] = [];
     const provider = typeof providerOrBuild === "function" ? providerOrBuild({ taskId, task, topic: topicId, lastCall: () => progress.lastCall, read: (id) => progress.reads[id]?.value ?? null }) : providerOrBuild;
@@ -309,8 +310,28 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         }
         return closedNow;
     };
+    // The stage's tools (TopicDefinition.stageTools): its own, the support every stage has, minus what a gate closes; a way out its own alone.
+    let stageAt = "";
+    let stageNow: Set<string> | null = null;
+    const stage = (): Set<string> | null => {
+        if (!topic.stageTools) return null;
+        const key = `${progress.iteration}|${progress.phase}`;
+        if (key !== stageAt) {
+            stageAt = key;
+            const s = topic.stageTools(progress, task);
+            const shut = closed();
+            // Of the stages passed, their reads only: who is on board read again at the procedure stage (run 8, the scripted builder), never an action of before.
+            const reads = (s.passed ?? []).filter((id) => READ_CAPABILITIES.some((r) => r.test(id)));
+            stageNow = new Set([...s.tools, ...(s.exit ? [] : [...reads, ...STAGE_SUPPORT])].filter((id) => !shut.has(id)));
+        }
+        return stageNow;
+    };
+    const offered = (id: string): boolean => {
+        const s = stage();
+        return s ? s.has(id) : !closed().has(id);
+    };
     const capabilities = await buildCapabilities(broker, {
-        available: (id) => !closed().has(id),
+        available: (id) => offered(id),
         profile: {
             included: topic.tools,
             // A document's name is filed under the task once: a builder that gives back the name a build answered (already under the task) is not prefixed again (the sixth passage lost ten steps on t/t/t/name).
@@ -410,7 +431,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             taskId,
             progress,
             () => topic.brief?.(progress, task) ?? "",
-            () => reasoningStateOf({ task, progress, budget, nextActions: capabilities.catalogue.map((c) => c.id).filter((id) => !closed().has(id)), shelf: topic.shelf === false ? [] : progress.context.shelf, telemetry: progress.context.telemetry, contracts: progress.context.contracts, runsSpent: topic.runsSpent?.(progress), shown: topic.observation ? [topic.observation] : [], topic: topic.state?.(progress, task), memory: memoryNow(), marchingOrder: topic.marchingOrder?.(progress, task) }),
+            () => reasoningStateOf({ task, progress, budget, nextActions: capabilities.catalogue.map((c) => c.id).filter((id) => offered(id)), shelf: topic.shelf === false ? [] : progress.context.shelf, telemetry: progress.context.telemetry, contracts: progress.context.contracts, runsSpent: topic.runsSpent?.(progress), shown: topic.observation ? [topic.observation] : [], topic: topic.state?.(progress, task), memory: memoryNow(), marchingOrder: topic.marchingOrder?.(progress, task) }),
             () => topic.key?.(progress) ?? "",
             contextMode,
         ),
@@ -626,10 +647,13 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             if (truncated) failed = truncatedRefusal(exchange.proposedCapabilityId, exchange.tokens?.completion ?? null);
             // A tool the conduct closes at this stage is not in the step's list: the model reads why it is closed, the gate's words, not
             // "outside the allowlist" (2026-10-10: the Observer's request before any read went nowhere and said nothing of why).
-            else if (/outside the allowlist/.test(failed ?? "") && closed().has(exchange.proposedCapabilityId)) {
+            else if (/outside the allowlist/.test(failed ?? "") && !offered(exchange.proposedCapabilityId)) {
                 const order = topic.marchingOrder?.(progress, task) as { closedNow?: Array<{ tools: string[]; why: string }> } | undefined;
                 const why = (order?.closedNow ?? []).filter((c) => c.tools.includes(exchange.proposedCapabilityId) || c.tools.includes("*")).map((c) => c.why);
+                const now = stage();
+                // Closed by a gate: its words; not a tool of this stage: the stage's tools now (2026-10-10, the tools by stage).
                 if (why.length) failed = `${exchange.proposedCapabilityId} is closed at this stage: ${why.join("; ")}`;
+                else if (now) failed = `${exchange.proposedCapabilityId} is not a tool of this stage: its tools now are ${[...now].join(", ")}`;
             }
             // The harness stopped the step (the guard, the schema, a capability outside the list, a timeout): the model reads the reason at the next step.
             progress.lastRefusal = { capability: exchange.proposedCapabilityId, reason: failed ?? "refused", input: (exchange.proposedInput ?? null) as JsonValue };

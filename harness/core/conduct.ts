@@ -352,6 +352,16 @@ export function conductView(playbook: Playbook, evidence: Evidence, say: (key: s
     };
 }
 
+/**
+ * The current stage's tools, the tools of the stages passed, and whether it is a way out: what a step offers the model (the runner
+ * keeps of the stages passed their reads alone, and adds the support of base.ts).
+ */
+export function stageToolsOf(playbook: Playbook, evidence: Evidence): { tools: string[]; passed: string[]; exit: boolean } {
+    const stage = playbook.evaluate(evidence).stage;
+    const passed = playbook.marchingOrder(evidence).filter((s) => s.status === "passed").flatMap((s) => s.tools);
+    return { tools: stage.tools ?? [], passed: stage.exit ? [] : passed, exit: Boolean(stage.exit) };
+}
+
 export function loadPlaybook(file: string): Playbook {
     return new Playbook(file, JSON.parse(readFileSync(fromRoot(...file.split("/")), "utf8")) as PlaybookFile);
 }

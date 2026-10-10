@@ -47,11 +47,12 @@ export const READ_CAPABILITIES: ReadonlyArray<RegExp> = [
 export const proposalKey = (capabilityId: string | null | undefined, input: unknown): string => `${capabilityId ?? ""}:${JSON.stringify(input ?? null)}`;
 
 /** The policy's candidates for a replay, less those the rules above exclude; `made` is filled by the runner as the task goes. */
-export function restrictReplays(policy: PolicyGraph, never: ReadonlyArray<RegExp>, made: ReadonlySet<string>): void {
+export function restrictReplays(policy: PolicyGraph, never: ReadonlyArray<RegExp>, made: ReadonlySet<string>, offered: (id: string) => boolean = () => true): void {
     const candidates = policy.findCandidateActions.bind(policy);
     policy.findCandidateActions = (state, intention, modeId) =>
         candidates(state, intention, modeId).map((c) => {
             const id = c.invocation.capabilityId;
-            return never.some((r) => r.test(id)) || made.has(proposalKey(id, c.invocation.input)) ? { ...c, eligible: false } : c;
+            // A replay obeys what the step offers, as the model does (2026-10-10, the tools by stage: a task.plan learned before replayed at a stage that no longer offers it, three times, STUCK).
+            return never.some((r) => r.test(id)) || made.has(proposalKey(id, c.invocation.input)) || !offered(id) ? { ...c, eligible: false } : c;
         });
 }

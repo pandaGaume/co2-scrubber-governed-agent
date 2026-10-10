@@ -67,6 +67,13 @@ export const BASE_CAPABILITIES: ReadonlyArray<string> = [
     "task.ask",
 ];
 
+/**
+ * What every stage of a conduct offers beside its own tools (2026-10-10): reading the library, justifying a number, converting a
+ * unit, failing, asking. A step sends its stage's tools and these, never the whole catalogue: run 11 sent 18 to 31 tools at every
+ * call, 4 000 to 9 000 tokens, more than half of what the model read, for a stage that used 2 to 4. A way out offers its own alone.
+ */
+export const STAGE_SUPPORT: ReadonlyArray<string> = ["library.read", "library.facts", "library.search", "library.justify", "physics.units_convert", "task.fail", "task.ask"];
+
 /** The socle as tool patterns, one per capability. */
 export const BASE_TOOLS: ReadonlyArray<RegExp> = BASE_CAPABILITIES.map((id) => new RegExp(`^${id.replace(/\./g, "\\.")}$`));
 

@@ -142,7 +142,14 @@ export class ScriptedProcedureBuilder extends ScriptedBuilderBase<ScriptedProced
         const presence = this.read("biomed.presence");
         if (presence) this.presence = (presence.modules ?? []) as unknown as Presence;
         const refusal = String(state.features.lastRefusal ?? "");
-        const after = `${String(state.features.phase)}:${String(state.features.lastCapability)}`;
+        const seen = `${String(state.features.phase)}:${String(state.features.lastCapability)}`;
+        // The plan stage passed by a signed norm (the marching order says it): no plan to declare, the script writes the procedure, as a
+        // model reading its marching order does (2026-10-10, the tools by stage: task.plan is not offered once its stage has passed).
+        const stages = ((state.features.state as { marchingOrder?: { stages?: Array<{ stage: string; status: string }> } } | null)?.marchingOrder?.stages ?? []);
+        const planPassed = stages.some((s) => s.stage === "plan" && s.status === "passed");
+        const last0 = String(state.features.lastCapability);
+        const readings = ["", "factory.inventory", "library.methods", ...(readPresence ? ["library.read"] : [])];
+        const after = planPassed && seen.startsWith("plan:") && !readings.includes(last0) ? (last0 === "library.read" || last0 === "biomed.presence" ? "build:task.plan" : `build:${last0}`) : seen;
         // A safety limit that cites an unsigned document: no procedure passes until a person signs it, so the script ends, naming it, as the refusal asks.
         const unsigned = /(?:the fact \S+ is|the guard's rules are) in "([^"]+)", which no person has signed/.exec(refusal);
         if (unsigned) return decide("task.fail", { reason: `the safety card "${unsigned[1]}" is not signed: no procedure's safety limits can be justified until a person signs it` }, "the refusal names an unsigned document");

@@ -19,7 +19,7 @@ import { readFileSync } from "node:fs";
 import { fromRoot } from "../../../lib/paths.js";
 import { withBase } from "../../core/base.js";
 import type { LocalCapability } from "../../core/capabilities.js";
-import { conductView, loadPlaybook, Playbook, playbookProblems, sayingText, type Evidence, type PlaybookExpectations, type PlaybookFile } from "../../core/conduct.js";
+import { conductView, loadPlaybook, Playbook, playbookProblems, sayingText, type Evidence, type PlaybookExpectations, type PlaybookFile, stageToolsOf } from "../../core/conduct.js";
 import { JUSTIFICATIONS_SCHEMA, type Justified } from "../../core/justify.js";
 import type { TopicState } from "../../core/reasoning-state.js";
 import type { TaskFile } from "../../core/task.js";
@@ -263,6 +263,8 @@ export const PLAYBOOK_TOPIC: TopicDefinition = {
         } as unknown as JsonValue;
     },
     // The stage's tools only: what the conduct's gates refuse now is not shown (the guard refuses it still).
+    // The stage's tools: what a step offers, with the support every stage has (base.ts, STAGE_SUPPORT).
+    stageTools: (progress, _task) => stageToolsOf(PLAYBOOK_CONDUCT, evidenceOf(progress)),
     closed: (progress, _task) => PLAYBOOK_CONDUCT.evaluate(evidenceOf(progress)).refusing.flatMap((g) => g.capabilities),
     name: "playbook",
     tools: PLAYBOOK_TOOLS,

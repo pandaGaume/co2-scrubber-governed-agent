@@ -17,7 +17,7 @@ import { episodeView, memoryProblems, type MemoryEntry, type Remembered } from "
 import type { Episode } from "../../core/episodes.js";
 import { withBase } from "../../core/base.js";
 import type { LocalCapability } from "../../core/capabilities.js";
-import { conductView, loadPlaybook, sayingText, type Evidence } from "../../core/conduct.js";
+import { conductView, loadPlaybook, sayingText, type Evidence, stageToolsOf } from "../../core/conduct.js";
 import { JUSTIFICATIONS_SCHEMA, type Justified } from "../../core/justify.js";
 import type { TopicState } from "../../core/reasoning-state.js";
 import type { TaskFile } from "../../core/task.js";
@@ -273,6 +273,8 @@ export const REFLECTION_TOPIC: TopicDefinition = {
         } as unknown as JsonValue;
     },
     // The stage's tools only: what the conduct's gates refuse now is not shown (the guard refuses it still).
+    // The stage's tools: what a step offers, with the support every stage has (base.ts, STAGE_SUPPORT).
+    stageTools: (progress, _task) => stageToolsOf(REFLECTION_CONDUCT, evidenceOf(progress)),
     closed: (progress, _task) => REFLECTION_CONDUCT.evaluate(evidenceOf(progress)).refusing.flatMap((g) => g.capabilities),
     name: "reflection",
     tools: REFLECTION_TOOLS,
