@@ -66,5 +66,11 @@
     },
     "plausibility": "units: over the first {minutes} minutes the twin moves {predicted} {unit}/min where {column} moves {measured} {unit}/min, {how}. A gap from the first minute is not a missing term (an exchange shows late, as the volumes drift apart): check the units and scale of the rates.{terms} The catalogue's rates are per volume: a flow Qe in m3/min enters as Qe / V (1/min), a source of g L/min as g * 1e3 / V (ppm/min), an emission input takes ppm/min, and a concentration (ppm) entering one is scaled first (q / V for an exchange).",
     "plausibilityTerms": " What enters the node at the first minute: {terms}.",
-    "outside": "graph \"{graph}\" has no variable {names}: its interface is {interface}; pass only fit (the bounds of what the installation alone knows) and persons, the graph carries the rest"
+    "outside": "graph \"{graph}\" has no variable {names}: its interface is {interface}; pass only fit (the bounds of what the installation alone knows) and persons, the graph carries the rest",
+    "doneWhen": {
+        "context": "what the plan needs, gathered: the telemetry, the documented constants, the reference graphs, sources that agree",
+        "plan": "a plan declared with task.plan and accepted",
+        "candidate": "a candidate that holds within the threshold, with nothing left to add to it",
+        "handedOver": "handed over with task.done, the candidate's file as the artifact (kind \"graph\")"
+    }
 }

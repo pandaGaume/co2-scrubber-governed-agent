@@ -46,6 +46,14 @@ import { wiringLines } from "./reference.js";
 import { loadGraphLibrary } from "../../../lib/graph-library.js";
 import type { Row } from "./params.js";
 import type { TopicState } from "../../core/reasoning-state.js";
+import { conductView, loadPlaybook, stageToolsOf, type Evidence } from "../../core/conduct.js";
+
+/**
+ * The graph factory's conduct (2026-10-10): its stages, their tools and where the task stands, for the marching order and the tools a
+ * step offers (run 13: every call carried the factory's 31 tools, 30 700 characters, half of what was left of the run's input). Its brief
+ * stays its own (briefOf), written from the candidates' residuals and diagnoses.
+ */
+export const GRAPH_CONDUCT = loadPlaybook("specs/graph/playbook.json");
 
 export const GRAPH_TOOLS: ReadonlyArray<RegExp> = withBase([/^workspace\.(list|read)$/, /^library\.(graphs|graph)$/, /^(twin|forge)\.registry_(search|describe_node|list_nodes)$/, /^(twin|forge)\.document_validate$/, /^graph\.evaluate$/]);
 
@@ -192,6 +200,18 @@ export function requirementsOf(progress: Progress, task: TaskFile["task"]): Reco
         planAccepted: progress.plan !== null,
         candidateEvaluated: candidates.length > 0,
         candidateHeld: last?.pass === true,
+    };
+}
+
+/** What the conduct reads: the context gathered, the plan accepted, a candidate that holds with nothing left to add (briefOf's hand-over). */
+function evidenceOf(progress: Progress, task: TaskFile["task"]): Evidence {
+    const requirements = requirementsOf(progress, task);
+    const last = stateOf(progress).candidates.at(-1);
+    const needLast = last?.pass && last.graph ? addNeededFor(progress, last.graph, last.types) : null;
+    return {
+        contextMet: HOW_KEYS.every((k) => requirements[k]),
+        planAccepted: requirements.planAccepted,
+        handOverReady: Boolean(last?.pass) && !needLast,
     };
 }
 
@@ -396,6 +416,21 @@ function guardGraph(capabilityId: string, input: JsonValue, context: TopicContex
 }
 
 export const GRAPH_TOPIC: TopicDefinition = {
+    // The marching order the state shows first (conduct.ts, conductView), and what must hold before handing over.
+    marchingOrder: (progress, task) => {
+        const e = evidenceOf(progress, task);
+        return {
+            ...conductView(GRAPH_CONDUCT, e, gw, {}, Object.keys(progress.reads)),
+            doneWhen: [
+                { item: gw("doneWhen.context"), met: Boolean(e.contextMet) },
+                { item: gw("doneWhen.plan"), met: Boolean(e.planAccepted) },
+                { item: gw("doneWhen.candidate"), met: Boolean(e.handOverReady) },
+                { item: gw("doneWhen.handedOver"), met: progress.done !== null },
+            ],
+        } as unknown as JsonValue;
+    },
+    // The stage's tools: what a step offers, with the support every stage has (base.ts, STAGE_SUPPORT).
+    stageTools: (progress, task) => stageToolsOf(GRAPH_CONDUCT, evidenceOf(progress, task)),
     name: "graph",
     tools: GRAPH_TOOLS,
     // A candidate is evaluated again against this task's data, a plan checked again by the guard, a claim by the validator: a recipe here is a first try, judged.

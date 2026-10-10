@@ -1,0 +1,132 @@
+{
+    "title": "The graph factory's conduct, step by step (harness/core/conduct.ts): the context, the plan, the candidates, the hand-over. Its brief stays the topic's own (harness/topics/graph/index.ts, briefOf): the playbook says the stages, their tools and where the task stands",
+    "nodes": [
+        {
+            "id": "start",
+            "type": "conduct.start"
+        },
+        {
+            "id": "context-met",
+            "type": "conduct.evidence",
+            "bag": {
+                "evidence": "contextMet"
+            }
+        },
+        {
+            "id": "planned",
+            "type": "conduct.evidence",
+            "bag": {
+                "evidence": "planAccepted"
+            }
+        },
+        {
+            "id": "ready",
+            "type": "conduct.evidence",
+            "bag": {
+                "evidence": "handOverReady"
+            }
+        },
+        {
+            "id": "not-ready",
+            "type": "conduct.not"
+        },
+        {
+            "id": "hand-over",
+            "type": "conduct.stage",
+            "bag": {
+                "says": "brief.handOver",
+                "order": 4,
+                "goal": "A candidate holds within the threshold: hand it over with task.done, its file as the artifact (kind \"graph\").",
+                "tools": [
+                    "task.done"
+                ]
+            }
+        },
+        {
+            "id": "context",
+            "type": "conduct.stage",
+            "bag": {
+                "says": "brief.planNotYet",
+                "order": 1,
+                "goal": "Gather what the plan needs and the state does not hold yet: the telemetry, the documented constants, the reference graphs, sources that agree.",
+                "tools": [
+                    "library.graphs",
+                    "library.graph",
+                    "workspace.list",
+                    "workspace.read"
+                ]
+            }
+        },
+        {
+            "id": "plan",
+            "type": "conduct.stage",
+            "bag": {
+                "says": "brief.plan",
+                "order": 2,
+                "goal": "Declare the plan with task.plan: the node types from the reference graph or the catalogue, each required output mapped or declared missing.",
+                "tools": [
+                    "task.plan",
+                    "library.graphs",
+                    "library.graph",
+                    "twin.registry_search",
+                    "twin.registry_describe_node",
+                    "twin.registry_list_nodes",
+                    "forge.registry_search",
+                    "forge.registry_describe_node",
+                    "forge.registry_list_nodes"
+                ]
+            }
+        },
+        {
+            "id": "candidates",
+            "type": "conduct.stage",
+            "bag": {
+                "says": "brief.first",
+                "order": 3,
+                "goal": "Evaluate candidates with graph.evaluate, each changed by what the last one's residuals and diagnosis say, until one holds within the threshold.",
+                "tools": [
+                    "graph.evaluate",
+                    "library.graph",
+                    "twin.document_validate",
+                    "forge.document_validate",
+                    "twin.registry_describe_node",
+                    "forge.registry_describe_node"
+                ]
+            }
+        }
+    ],
+    "links": [
+        {
+            "from": "ready.value",
+            "to": "not-ready.in"
+        },
+        {
+            "from": "start.next",
+            "to": "hand-over.entered"
+        },
+        {
+            "from": "not-ready.value",
+            "to": "hand-over.passes"
+        },
+        {
+            "from": "hand-over.next",
+            "to": "context.entered"
+        },
+        {
+            "from": "context-met.value",
+            "to": "context.passes"
+        },
+        {
+            "from": "context.next",
+            "to": "plan.entered"
+        },
+        {
+            "from": "planned.value",
+            "to": "plan.passes"
+        },
+        {
+            "from": "plan.next",
+            "to": "candidates.entered"
+        }
+    ]
+}
