@@ -102,6 +102,12 @@ export interface SupervisionInput {
     report: ContractReport;
     assumptions?: string[];
     hypotheses?: string[];
+    /**
+     * Who wrote the assumptions (2026-10-10, run 10): a request's are the Observer's. A finding on an assumption is that producer's to
+     * revise, whatever producer the verdict names: Nemotron Super named the library for two assumptions the documents contradicted, the
+     * Observer was not sent back, and the graph factory stopped on them with "library to revise".
+     */
+    assumedBy?: string;
     /** The symbols a request uses for its known constants, each with the fact id it cites, or the value and the source it gives when it cites none by id (2026-09-27: an empty string here was read as a fault by the supervisor, three verdicts in a row). */
     symbols?: Record<string, string>;
     /** The variables a downstream producer fitted, by fact id when they map to one: a known fact fitted downstream is a conflict. */
@@ -223,9 +229,17 @@ export function supervisionOfRequest(request: RequestLike, devices: unknown[], l
         report: reviewContracts(facts, required),
         assumptions: list(request.assumptions).map(String),
         hypotheses: list(request.hypotheses).map((h) => (typeof h === "string" ? h : String(h?.statement ?? ""))).filter(Boolean),
+        assumedBy: "observer",
         symbols,
         required,
     };
+}
+
+/** A verdict with each finding on an assumption given to who wrote the assumptions, when the input says who did. */
+export function withAssumptionsOwned(verdict: Verdict, input: Pick<SupervisionInput, "assumedBy">): Verdict {
+    const owner = input.assumedBy;
+    if (!owner) return verdict;
+    return { ...verdict, findings: verdict.findings.map((f) => (/^assumption:\d+$/.test(String(f.fact)) && f.producer !== owner ? { ...f, producer: owner } : f)) };
 }
 
 /** The facts as the supervisor reads them: one line each, the producer first. */
@@ -274,7 +288,7 @@ export async function supervise({ provider, input, attempts = 2 }: SuperviseOpti
             factIds: [...new Set(input.facts.map((f) => f.id))],
             facts: factLines(input.facts),
             report: { status: input.report.status, conflicts: input.report.conflicts.map((c) => ({ id: c.id, revise: c.revise, reason: c.reason })), missing: input.report.missing },
-            assumptions: list(input.assumptions).map((a, i) => `assumption:${i + 1} ${a}`),
+            assumptions: list(input.assumptions).map((a, i) => `assumption:${i + 1}${input.assumedBy ? ` (${input.assumedBy}'s)` : ""} ${a}`),
             hypotheses: list(input.hypotheses),
             symbols: input.symbols ?? {},
             ...(input.fitted?.length ? { fittedDownstream: input.fitted } : {}),
@@ -298,7 +312,7 @@ export async function supervise({ provider, input, attempts = 2 }: SuperviseOpti
         }
         const check = checkVerdict(decision.invocation.input, input);
         done.push({ n, ok: check.ok, problems: check.problems, proposed: JSON.stringify(decision.invocation.input).slice(0, 2000) });
-        if (check.ok) return { ok: true, verdict: { ...(decision.invocation.input as unknown as Verdict), scope: `judged on ${scopeOf(input).text}` }, attempts: done, provider: { name: provider.name, model: provider.model, family: provider.family } };
+        if (check.ok) return { ok: true, verdict: { ...withAssumptionsOwned(decision.invocation.input as unknown as Verdict, input), scope: `judged on ${scopeOf(input).text}` }, attempts: done, provider: { name: provider.name, model: provider.model, family: provider.family } };
     }
     return { ok: false, verdict: null, attempts: done, provider: { name: provider.name, model: provider.model, family: provider.family } };
 }

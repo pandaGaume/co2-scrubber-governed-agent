@@ -16,7 +16,7 @@ import type { PublishedSlot } from "../slots/lib/slot-server.js";
 import { startAllOrFail } from "./lib/start.js";
 import { Broker } from "../harness/lib/broker.js";
 import type { Provider, ProviderExchange } from "../harness/lib/provider.js";
-import { applyVerdict, checkVerdict, findingsFor, reviewDigest, supervise, supervisionOfRequest, supervisorBrief, type Verdict } from "../harness/supervisor/supervisor.js";
+import { applyVerdict, checkVerdict, findingsFor, reviewDigest, supervise, supervisionOfRequest, supervisorBrief, withAssumptionsOwned, type Verdict } from "../harness/supervisor/supervisor.js";
 import { reviewContracts, type LibraryFact } from "../harness/core/contracts.js";
 import { loadFacts, LIBRARY_DIR } from "../slots/tools/library/provider.js";
 import { observe } from "../harness/observer/observer.js";
@@ -130,13 +130,32 @@ describe("the Contract Supervisor: a typed verdict over the facts, checked befor
         assert.ok(state.facts.some((f) => /^observer \(documented, scrubber-1-datasheet\): scrubber.singlePassEfficiency = 40 percent/.test(f)), state.facts.join("\n"));
         assert.ok(state.facts.some((f) => /^register \(device, \/habitat\/lab\/eclss\/scrubber-1\): scrubber.singlePassEfficiency = 0.30303 ratio/.test(f)));
         assert.equal(state.report.status, "CONFLICT");
-        assert.equal(state.assumptions[1], "assumption:2 the Lab and Hab-B do not mix at all while the hatch is closed");
+        assert.equal(state.assumptions[1], "assumption:2 (observer's) the Lab and Hab-B do not mix at all while the hatch is closed");
         assert.equal(state.lastAttempt.n, 1);
         assert.match(String(model.seen[1].brief), /^Step 2\. Your verdict was refused: carried/);
         assert.equal(JSON.stringify(model.seen[1]).length < 6000, true, "the supervisor reads a few thousand characters, never a transcript");
         const gaveUp = await supervise({ provider: new TwoVerdicts([{ status: "CONSISTENT", findings: [] }]), input, attempts: 2 });
         assert.equal(gaveUp.ok, false);
         assert.equal(gaveUp.verdict, null);
+    });
+
+    it("a finding on an assumption is who wrote it to revise, the Observer for a request's, whatever producer the verdict names (2026-10-10, run 10)", () => {
+        const verdict: Verdict = {
+            status: "CONFLICT",
+            findings: [
+                { kind: "conflict", fact: "assumption:1", producer: "library", reason: "the topology states a design flow of 3 m3/min", required_action: "REVISE" },
+                { kind: "conflict", fact: "habitat.interModuleVentilation.designFlow.hatchClosed", producer: "library", reason: "kept as named", required_action: "INSPECT" },
+            ],
+        } as Verdict;
+        const input = supervisionOfRequest({ assumptions: ["the ventilation delivers 1.0 m3/min"] }, [], []);
+        assert.equal(input.assumedBy, "observer");
+        const owned = withAssumptionsOwned(verdict, input);
+        assert.deepEqual(owned.findings.map((f) => [f.fact, f.producer]), [["assumption:1", "observer"], ["habitat.interModuleVentilation.designFlow.hatchClosed", "library"]]);
+        // So the Observer is sent back with it, and nobody else.
+        assert.equal(findingsFor(owned, "observer").length, 1);
+        assert.equal(findingsFor(owned, "library").length, 0);
+        // Without an author said, a verdict is left as named.
+        assert.deepEqual(withAssumptionsOwned(verdict, {}), verdict);
     });
 
     it("the graph factory reads the verdict applied to the report: sourcesConsistent false on the supervisor's CONFLICT even when the rules found none", () => {
