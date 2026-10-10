@@ -97,6 +97,12 @@ export interface TopicState {
 }
 
 export interface StateInputs {
+    /** The sections of the topic's state the current stage shows (its playbook's `shows`); all when absent. */
+    shows?: string[] | null;
+    /** Which tools' answers the evidence keeps: the current stage's and the support; all when absent. */
+    evidenceOf?: (capabilityId: string) => boolean;
+    /** The task's claims as they stand (claims.ts, current), one line each. */
+    claims?: string[];
     task: TaskFile["task"];
     progress: Progress;
     budget: { iterations: number; minutes: number; twinPoints?: number };
@@ -180,6 +186,12 @@ export function invariantsOf(task: TaskFile["task"], shelf: StateInvariants["she
 
 export function reasoningStateOf(inputs: StateInputs): ReasoningState {
     const { task, progress, budget, nextActions, shelf, telemetry, topic = {} } = inputs;
+    // The projection (2026-10-10, docs/registre-des-affirmations.fr.md): the sections of the topic's state the stage shows, the answers of
+    // the tools it offers, the task's claims as they stand; a topic without a conduct shows all, as before.
+    const hypothesis = inputs.shows && topic.hypothesis && typeof topic.hypothesis === "object" && !Array.isArray(topic.hypothesis)
+        ? (Object.fromEntries(Object.entries(topic.hypothesis as Record<string, JsonValue>).filter(([k]) => inputs.shows!.includes(k))) as JsonValue)
+        : (topic.hypothesis ?? null);
+    const evidence = Object.entries(progress.evidence).filter(([k]) => !inputs.evidenceOf || inputs.evidenceOf(k.split(" ")[0]));
     const last = progress.lastCall;
     return {
         // The order of the work and where the task stands in it, first: what a small model needs before anything else.
@@ -191,8 +203,9 @@ export function reasoningStateOf(inputs: StateInputs): ReasoningState {
             runsLeft: typeof budget.twinPoints === "number" ? Math.max(0, budget.twinPoints - (inputs.runsSpent ?? 0)) : null,
         },
         invariants: invariantsOf(task, shelf, telemetry, inputs.contracts, inputs.shown) as StateInvariants & Record<string, JsonValue>,
-        evidence: Object.fromEntries(Object.entries(progress.evidence).map(([k, e]) => [k, e.summary])),
-        hypothesis: topic.hypothesis ?? null,
+        evidence: Object.fromEntries(evidence.map(([k, e]) => [k, e.summary])),
+        hypothesis,
+        ...(inputs.claims?.length ? { claims: inputs.claims } : {}),
         lastAction: last ? { capability: last.id, outcome: last.result.outcome, summary: (progress.lastSummary ?? null) as JsonValue, artifact: progress.lastArtifact ?? null } : null,
         lastRefusal: progress.lastRefusal
             ? {

@@ -55,7 +55,7 @@ export interface TopicDefinition {
      * The current stage's tools, for a topic with a conduct (2026-10-10): a step offers these and the support every stage has
      * (`STAGE_SUPPORT`), minus what a gate closes; a way out offers its own alone. A topic without it offers its whole list.
      */
-    stageTools?: (progress: Progress, task: TaskFile["task"]) => { tools: string[]; passed?: string[]; exit: boolean };
+    stageTools?: (progress: Progress, task: TaskFile["task"]) => { tools: string[]; passed?: string[]; exit: boolean; shows?: string[] };
     /**
      * The capabilities the builder decides every time, never replayed from the recipes (2026-09-28): those whose
      * input is made of this task's readings (the procedure submitted, the plugin written for this contract). The

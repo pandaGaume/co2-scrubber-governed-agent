@@ -72,18 +72,27 @@ export interface Saying {
      * "hand over the request" beside a closed observer.submit, and Nemotron Nano went on searching the library.
      */
     exit?: boolean;
+    /**
+     * The sections of the topic's state the stage shows (2026-10-10, the projection of the state): the others are left out of the step's
+     * prompt. A stage that says none shows them all.
+     */
+    shows?: string[];
 }
 
 /** One stage of the marching order: what it is for, with what, and where the task stands on it. */
 export interface MarchingStep {
     step: number;
     stage: string;
-    goal: string;
-    tools: string[];
+    /** The current stage's only, in the state (conductView); every stage's in the playbook's order. */
+    goal?: string;
+    tools?: string[];
     status: "passed" | "current" | "next";
     /** On the current stage: its tools that have already answered in this task, their answers in the state (2026-10-10). */
     answered?: string[];
 }
+/** A stage of the marching order as the playbook holds it: its goal and its tools always. */
+export type FullStep = MarchingStep & { goal: string; tools: string[] };
+
 export interface Gate extends Saying {
     capabilities: string[];
 }
@@ -205,6 +214,7 @@ const sayingOf = (id: string, bag: Record<string, unknown>, file: string): Sayin
         ...(Array.isArray(bag.tools) ? { tools: bag.tools.map(String) } : {}),
         ...(typeof bag.order === "number" ? { order: bag.order } : {}),
         ...(bag.exit === true ? { exit: true } : {}),
+        ...(Array.isArray(bag.shows) ? { shows: bag.shows.map(String) } : {}),
     };
 };
 
@@ -308,7 +318,7 @@ export class Playbook {
      * on it (passed, current, next), read off the same graph that judges. A small model given only the current stage's brief fails
      * on the order of the work (a plan or a procedure first?); given the whole order and its place in it, it follows it.
      */
-    marchingOrder(evidence: Evidence): MarchingStep[] {
+    marchingOrder(evidence: Evidence): FullStep[] {
         const stage = this.evaluate(evidence).stage;
         const current = stage.id;
         // A way out entered is the whole order; never shown otherwise.
@@ -338,15 +348,19 @@ export class Playbook {
  */
 export function conductView(playbook: Playbook, evidence: Evidence, say: (key: string, vars?: Record<string, string | number>) => string, views: Record<string, () => Record<string, string | number>>, answered: Iterable<string> = []): { stages: MarchingStep[]; allowedNow: string[]; closedNow: Array<{ tools: string[]; why: string }> } {
     const done = new Set(answered);
-    const stages = playbook.marchingOrder(evidence).map((s) => {
-        const own = s.status === "current" ? s.tools.filter((t) => done.has(t)) : [];
+    // The current stage whole (its goal, its tools, those that answered); the others by their name and where the task stands on them
+    // (2026-10-10, the projection of the state: every stage's goal and tools at every step was 2 000 characters the step did not use).
+    const order = playbook.marchingOrder(evidence);
+    const stages = order.map((s) => {
+        if (s.status !== "current") return { step: s.step, stage: s.stage, status: s.status } as MarchingStep;
+        const own = s.tools.filter((t) => done.has(t));
         return own.length ? { ...s, answered: own } : s;
     });
     const { stage, refusing } = playbook.evaluate(evidence);
     const closed = new Set(refusing.flatMap((g) => g.capabilities));
     return {
         stages,
-        allowedNow: (stages.find((s) => s.status === "current")?.tools ?? []).filter((t) => !closed.has(t)),
+        allowedNow: (order.find((s) => s.status === "current")?.tools ?? []).filter((t) => !closed.has(t)),
         // A way out closes every tool but its own ("*"), with its own words.
         closedNow: [...refusing.map((g) => ({ tools: g.capabilities, why: sayingText(g, say, views) })), ...(stage.exit ? [{ tools: ["*"], why: sayingText(stage, say, views) }] : [])],
     };
@@ -356,10 +370,10 @@ export function conductView(playbook: Playbook, evidence: Evidence, say: (key: s
  * The current stage's tools, the tools of the stages passed, and whether it is a way out: what a step offers the model (the runner
  * keeps of the stages passed their reads alone, and adds the support of base.ts).
  */
-export function stageToolsOf(playbook: Playbook, evidence: Evidence): { tools: string[]; passed: string[]; exit: boolean } {
+export function stageToolsOf(playbook: Playbook, evidence: Evidence): { tools: string[]; passed: string[]; exit: boolean; shows?: string[] } {
     const stage = playbook.evaluate(evidence).stage;
     const passed = playbook.marchingOrder(evidence).filter((s) => s.status === "passed").flatMap((s) => s.tools);
-    return { tools: stage.tools ?? [], passed: stage.exit ? [] : passed, exit: Boolean(stage.exit) };
+    return { tools: stage.tools ?? [], passed: stage.exit ? [] : passed, exit: Boolean(stage.exit), ...(stage.shows ? { shows: stage.shows } : {}) };
 }
 
 export function loadPlaybook(file: string): Playbook {

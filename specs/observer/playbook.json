@@ -48,6 +48,9 @@
                 "goal": "The request is accepted: hand it over with task.done, the accepted file as the artifact (kind \"request\").",
                 "tools": [
                     "task.done"
+                ],
+                "shows": [
+                    "accepted"
                 ]
             }
         },
@@ -76,6 +79,11 @@
                     "library.read",
                     "library.facts",
                     "library.search"
+                ],
+                "shows": [
+                    "description",
+                    "telemetry",
+                    "documents"
                 ]
             }
         },
@@ -111,6 +119,11 @@
                 "goal": "Say what the twin needs as numbers, each in words (observer.needs): the library gives back the facts nearest each.",
                 "tools": [
                     "observer.needs"
+                ],
+                "shows": [
+                    "description",
+                    "telemetry",
+                    "documents"
                 ]
             }
         },
@@ -127,6 +140,9 @@
                     "observer.needs",
                     "library.facts",
                     "library.read"
+                ],
+                "shows": [
+                    "needs"
                 ]
             }
         },
@@ -143,6 +159,11 @@
                     "library.read",
                     "library.facts",
                     "physics.units_convert"
+                ],
+                "shows": [
+                    "description",
+                    "telemetry",
+                    "quantities"
                 ]
             }
         },

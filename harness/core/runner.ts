@@ -33,7 +33,7 @@ import { reasoningStateOf } from "./reasoning-state.js";
 import { intentionFor, loadRecipes, saveRecipes, taskSignature } from "./recipes.js";
 import { NEVER_REPLAYED, proposalKey, restrictReplays } from "./replay.js";
 import { helpForRefusal, noteSources } from "./justify.js";
-import { claimsJson } from "./claims.js";
+import { claimLine, claimsJson, current } from "./claims.js";
 import { STAGE_SUPPORT } from "./base.js";
 import { noteRefusal, STUCK_AFTER } from "./problems.js";
 import { readMeaning, unmoved } from "./interpreter.js";
@@ -314,18 +314,28 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
     // The stage's tools (TopicDefinition.stageTools): its own, the support every stage has, minus what a gate closes; a way out its own alone.
     let stageAt = "";
     let stageNow: Set<string> | null = null;
+    let stageInfo: { tools: string[]; shows?: string[]; exit: boolean } | null = null;
     const stage = (): Set<string> | null => {
         if (!topic.stageTools) return null;
         const key = `${progress.iteration}|${progress.phase}`;
         if (key !== stageAt) {
             stageAt = key;
             const s = topic.stageTools(progress, task);
+            stageInfo = s;
             const shut = closed();
             // Of the stages passed, their reads only: who is on board read again at the procedure stage (run 8, the scripted builder), never an action of before.
             const reads = (s.passed ?? []).filter((id) => READ_CAPABILITIES.some((r) => r.test(id)));
             stageNow = new Set([...s.tools, ...(s.exit ? [] : [...reads, ...STAGE_SUPPORT])].filter((id) => !shut.has(id)));
         }
         return stageNow;
+    };
+    // What the state of a step shows (reasoning-state.ts): the stage's sections, the answers of its own tools and the support, the claims as they stand.
+    const projectionOf = (): { shows?: string[] | null; evidenceOf?: (id: string) => boolean; claims?: string[] } => {
+        const claims = current(progress.claims).map(claimLine);
+        if (!stage() || !stageInfo) return { claims };
+        const info = stageInfo;
+        const own = new Set([...info.tools, ...STAGE_SUPPORT]);
+        return { shows: info.shows ?? null, evidenceOf: (id) => own.has(id), claims };
     };
     const offered = (id: string): boolean => {
         const s = stage();
@@ -432,7 +442,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             taskId,
             progress,
             () => topic.brief?.(progress, task) ?? "",
-            () => reasoningStateOf({ task, progress, budget, nextActions: capabilities.catalogue.map((c) => c.id).filter((id) => offered(id)), shelf: topic.shelf === false ? [] : progress.context.shelf, telemetry: progress.context.telemetry, contracts: progress.context.contracts, runsSpent: topic.runsSpent?.(progress), shown: topic.observation ? [topic.observation] : [], topic: topic.state?.(progress, task), memory: memoryNow(), marchingOrder: topic.marchingOrder?.(progress, task) }),
+            () => reasoningStateOf({ task, progress, budget, nextActions: capabilities.catalogue.map((c) => c.id).filter((id) => offered(id)), ...projectionOf(), shelf: topic.shelf === false ? [] : progress.context.shelf, telemetry: progress.context.telemetry, contracts: progress.context.contracts, runsSpent: topic.runsSpent?.(progress), shown: topic.observation ? [topic.observation] : [], topic: topic.state?.(progress, task), memory: memoryNow(), marchingOrder: topic.marchingOrder?.(progress, task) }),
             () => topic.key?.(progress) ?? "",
             contextMode,
         ),

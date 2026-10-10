@@ -139,7 +139,7 @@ describe("the Observer's guard and its telemetry", () => {
     it("a step offers its stage's tools, the reads of the stages passed and the support, never the whole list; a way out its own alone (2026-10-10)", () => {
         const task = { objective: { required_outputs: [{ name: "twin-request", quantity: "TwinFactoryRequest" }], constraints: {} }, observations: { observer: { description: "d", attempts: 2 } }, data: [] } as unknown as TaskFile["task"];
         const progress = newProgress();
-        assert.deepEqual(OBSERVER_TOPIC.stageTools!(progress, task), { tools: ["library.read", "library.facts", "library.search"], passed: [], exit: false });
+        assert.deepEqual(OBSERVER_TOPIC.stageTools!(progress, task), { tools: ["library.read", "library.facts", "library.search"], passed: [], exit: false, shows: ["description", "telemetry", "documents"] });
         // The attempts spent: the way out, task.fail alone.
         (progress.topic as Record<string, unknown>).observer = { attempts: [{ n: 1, ok: false, problems: [], proposed: "" }, { n: 2, ok: false, problems: [], proposed: "" }], accepted: null, needs: [] };
         assert.deepEqual(OBSERVER_TOPIC.stageTools!(progress, task), { tools: ["task.fail"], passed: [], exit: true });
@@ -173,6 +173,7 @@ interface Seen {
         requirements: Record<string, boolean>;
         marchingOrder: { stages: Array<{ step: number; status: string }>; allowedNow: string[]; closedNow: Array<{ tools: string[]; why: string }> };
         lastRefusal: { capability: string; reason: string } | null;
+        claims?: string[];
     };
 }
 
@@ -250,12 +251,15 @@ describe("the Observer, a task of the factories' harness, through the broker", (
         assert.deepEqual(result.attempts.map((a) => a.ok), [false, true]);
         assert.match(result.attempts[0].problems[0], /^separation/);
         assert.deepEqual(result.reads, ["library.read scrubber-1-datasheet"]);
-        // The selection (2026-10-10): the needs said, the library's nearest facts given back, the flow's fact chosen, the volume's none.
-        const chosen = model.seen.at(-1)!.state.hypothesis.needs;
-        assert.deepEqual(chosen.map((n) => n.need), ["effective removal flow of the scrubber at full speed", "volume of the Lab"]);
-        assert.equal(chosen[0].candidates[0].id, "scrubber.effectiveFlowAtFull");
-        assert.deepEqual((chosen[0].chosen as { id: string; value: number }).id, "scrubber.effectiveFlowAtFull");
-        assert.equal(chosen[1].chosen, "none answers it");
+        // The selection (2026-10-10): the needs said, the library's nearest facts given back at the choice; once chosen, the state shows
+        // the claims (the projection: the needs are the choice stage's), the flow's fact with its source, the volume unknown.
+        const atChoice = model.seen.find((x) => (x.state.hypothesis.needs ?? []).length)!.state.hypothesis.needs;
+        assert.deepEqual(atChoice.map((n) => n.need), ["effective removal flow of the scrubber at full speed", "volume of the Lab"]);
+        assert.equal(atChoice[0].candidates[0].id, "scrubber.effectiveFlowAtFull");
+        const atRequest = model.seen.find((x) => x.state.requirements.needsChosen && !x.state.requirements.requestAccepted)!;
+        assert.equal(atRequest.state.hypothesis.needs, undefined, "the needs are not shown past their stage");
+        assert.ok(atRequest.state.claims!.some((c) => /scrubber\.effectiveFlowAtFull/.test(c)), JSON.stringify(atRequest.state.claims));
+        assert.ok(atRequest.state.claims!.some((c) => /^volume of the Lab: .*\[UNKNOWN/.test(c)));
         // The registry the task leaves (claims.ts): the fact chosen with its source, the volume unknown, the request's assumption inferred.
         const claims = (JSON.parse(readFileSync(path.join(taskDir(result.observerTask), "claims.json"), "utf8")) as { claims: Array<{ subject: string; status: string; source: { kind: string; ref: string } }> }).claims;
         assert.ok(claims.some((c) => c.source.ref === "scrubber.effectiveFlowAtFull" && (c.status === "VERIFIED" || c.status === "OBSERVED")), JSON.stringify(claims));
@@ -264,7 +268,9 @@ describe("the Observer, a task of the factories' harness, through the broker", (
         // What the model was shown: the description and the computed summary, never the rows and never the catalogue.
         assert.equal(model.seen[0].state.hypothesis.description, DESCRIPTION);
         assert.equal((model.seen[0].state.hypothesis.telemetry as { rows: number }).rows, 25);
-        assert.match(model.seen[0].state.hypothesis.quantities, /Concentration \(/);
+        // The shared vocabulary at the stage that writes the request (the projection: each stage shows what it uses).
+        assert.equal(model.seen[0].state.hypothesis.quantities, undefined);
+        assert.match(model.seen.find((x) => x.state.hypothesis.quantities)!.state.hypothesis.quantities, /Concentration \(/);
         assert.match(model.seen[0].state.hypothesis.documents, /scrubber-1-datasheet/);
         assert.doesNotMatch(JSON.stringify(model.seen), /registry_list|Physics\.Transform/);
         // After the refusal: the brief opens on it, the state holds it.
