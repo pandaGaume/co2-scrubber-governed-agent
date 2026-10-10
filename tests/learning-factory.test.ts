@@ -103,7 +103,8 @@ describe("the procedure factory learns from its episodes, in a fork: a memory, n
             assert.equal(memory.entries.length, 1);
             const [entry] = memory.entries;
             assert.equal(entry.status, "trial");
-            assert.match(entry.rule, /^For \S+, send from the first attempt what the guard then accepted, as the accepted attempts did \(test\.speedFloorPercent\)/);
+            // The field and what was accepted there; no reference since 2026-10-10: a safety constant's justification is the harness's, not in what the model sent.
+            assert.match(entry.rule, /^For \S+, send from the first attempt what the guard then accepted, as the accepted attempts did, not what it refused/);
             assert.ok(entry.appliesTo.includes("procedure.submit"));
             assert.deepEqual([entry.evidence.failures.length, entry.evidence.successes.length], [2, 2]);
             assert.equal(readFileSync(path.join(dir, ...WORDS.split("/")), "utf8"), repositoryWords, "learning does not write the factory's words");

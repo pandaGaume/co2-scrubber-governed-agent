@@ -85,13 +85,16 @@ describe("the evaluator on its corpus: the tasks of 29 and 30 September, classed
         if (known("08a954e557281e4701ceb4ebb0f72da5a1fdee2c") && known("287f5bcc1d3be2439ee45d5107360f13349813d7")) assert.ok((fixed.evidence.changed as Array<{ slot: string }>).some((c) => c.slot === "file:specs/procedure/words.json"), JSON.stringify(fixed.evidence.changed));
     });
 
-    it("the composite reference, by the register: REFERENCE_NOT_A_FACT refused at the first try of 16 tasks none of whose texts said a reference is one id alone (D1), stated since by the words and the justification's schema", () => {
+    it("the composite reference, by the register: REFERENCE_NOT_A_FACT refused at the first try of 16 tasks none of whose texts said a reference is one id alone (D1), the rule retired since 2026-10-10 (the harness justifies the safety constants)", () => {
         const [d1] = e.findings.filter((f) => f.detector === "D1" && f.evidence.code === "REFERENCE_NOT_A_FACT");
         assert.equal(d1.class, "contract-gap");
         // 16, not the 22 D2 counts: a task whose first submission the output limit cut had no first try on the contract.
         assert.equal(d1.evidence.untold, 16);
         assert.deepEqual(d1.evidence.missing, ["rule:procedure:REFERENCE_NOT_A_FACT"]);
-        assert.deepEqual(d1.evidence.statedNow, ['specs/procedure/words.json /brief/safetyBounds: "which is the single fact to cite, by its id alone as the reference"', 'harness/core/justify.ts: "Exactly one: for library, one id as library.facts lists it"']);
+        // What still holds of what stated it; the brief no longer asks for a fact to cite: the rule is retired.
+        assert.deepEqual(d1.evidence.statedNow, ['harness/core/justify.ts: "Exactly one: for library, one id as library.facts lists it"']);
+        assert.equal(d1.evidence.status, "retired");
+        assert.match(d1.title, /; the rule is retired 2026-10-10: a safety constant is justified by the harness/);
         // D3's text read two ways was said to neither model.
         const [divergence] = of("D3", /is not a fact of the library/);
         assert.equal(divergence.settledBy, null);
@@ -154,13 +157,13 @@ describe("the evaluator on its corpus: the tasks of 29 and 30 September, classed
         assert.deepEqual([repeats.evidence.refusals, repeats.tasks.length], [22, 16]);
     });
 
-    it("the memory's entry, what it really is: it compensates REFERENCE_NOT_A_FACT, which no text its failures were given stated, and the contract states it now (D6)", () => {
+    it("the memory's entry, what it really is: it compensates REFERENCE_NOT_A_FACT, which no text its failures were given stated, and the rule is retired since (D6)", () => {
         const [d6] = e.findings.filter((f) => f.detector === "D6");
         assert.equal(d6.class, "contract-gap");
         assert.deepEqual(d6.evidence.rules, ["REFERENCE_NOT_A_FACT"]);
         assert.equal(d6.evidence.entry, "m-e26243b3d5");
-        assert.equal((d6.evidence.statedNow as string[]).length, 2);
-        assert.match(d6.title, /learned instead of written; stated since.*the entry is now redundant/);
+        assert.equal((d6.evidence.statedNow as string[]).length, 1);
+        assert.match(d6.title, /learned instead of written; the rule is retired 2026-10-10.*: the entry is now redundant/);
         assert.deepEqual(d6.tasks.sort(), ["task:exp4-sonnet-a/t-2026-09-29-0001", "task:exp4-sonnet-a/t-2026-09-29-0002"]);
     });
 

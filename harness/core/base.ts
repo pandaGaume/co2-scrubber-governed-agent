@@ -15,8 +15,8 @@
  *
  *   the mission        the topic's own (`specs/<topic>/prompt.md`): what this factory makes, for whom, in this domain
  *   the kernel         how the harness runs any work (`kernel.md`): the marching order, the turn, the calls, the refusals, the end
- *   the policy         the engineering rules every factory keeps (`policy.md`): every number justified, which source for what,
- *                      units never converted by hand
+ *   the policy         the engineering rules every factory keeps (`policy.md`): the safety numbers within their signed bounds,
+ *                      the others justified by their source, units never converted by hand
  *
  * No tool is described in a prompt: a tool is described once, in its own definition (its slot's grammar, or the capability's
  * description), which is what the model is given with it. `tests/conformance.test.ts` checks every topic against this.

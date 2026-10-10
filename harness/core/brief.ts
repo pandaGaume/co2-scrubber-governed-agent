@@ -13,4 +13,4 @@ export function refusedNote(progress: Progress, capabilityId: string): string {
 }
 
 /** The rules the socle's prompt says once, by a phrase each: a topic's own prompt does not say them again (`tests/conformance.test.ts`). */
-export const SOCLE_RULES: ReadonlyArray<string> = ["Each call is judged and run on its own", "Answer with tool calls, not with text.", "end with `task.fail` and the reason", "Every constant you set is justified"];
+export const SOCLE_RULES: ReadonlyArray<string> = ["Each call is judged and run on its own", "Answer with tool calls, not with text.", "end with `task.fail` and the reason", "Every number you set is accounted for"];

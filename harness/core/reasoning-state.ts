@@ -209,11 +209,8 @@ export function reasoningStateOf(inputs: StateInputs): ReasoningState {
                   refused: progress.justify.capability,
                   times: progress.justify.times,
                   namesThatAreNoConstant: progress.justify.unmatched,
-                  skeleton: [
-                      ...progress.justify.missing.filter((c) => !(progress.justify?.misjustified ?? []).some((m) => m.constant === c.constant)).map((c) => ({ constant: c.constant, value: c.value, source: "", reference: "", reason: "" })),
-                      // A safety constant to justify by the fact the signed rules bound it by: its unit said, the reference filled.
-                      ...(progress.justify.misjustified ?? []).map((m) => ({ constant: m.constant, value: m.value, unit: m.unit, source: "library", reference: m.expected[0]?.id ?? "", reason: "" })),
-                  ],
+                  // The numbers the model chose and left unjustified, the path filled; the value is read at the path, never written in a justification (2026-10-10).
+                  skeleton: progress.justify.missing.map((c) => ({ constant: c.constant, source: "", reference: "", reason: "" })),
               } as unknown as JsonValue)
             : null,
         evaluation: topic.evaluation ?? null,

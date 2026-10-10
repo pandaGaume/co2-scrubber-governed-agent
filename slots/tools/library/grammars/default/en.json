@@ -10,8 +10,8 @@
         },
         "justify": {
             "title": "What justifies a number",
-            "description": "What justifies a number you set, from the library rather than composed: give the constant's path (steps.2.speedPercent, limits.co2MaxPpm) and its value. It answers whether it is a safety constant (only a fact of a signed document justifies it, on its safe side), the facts the signed rules bound it by, each with its side, its signature and whether your value respects it, and the justification to write when one holds (copy it as it is); for any other constant, the sources that may justify it. Ask it for every number before you submit, several in one answer.",
-            "properties": { "constant": "the path of the constant in what you submit, as the guard names it", "value": "its value", "range": "for bounds, [min, max] instead of value" }
+            "description": "What the library says of a number you set: give its path (steps.2.minutes, limits.co2MaxPpm) and its value. For a safety constant (one the signed rules bound): the signed facts that bound it, each with its side, its signature and whether your value respects it; the harness checks and justifies a safety constant itself, so you write no justification for it, and one no signed fact bounds is left out. For any other number: the sources that may justify it, or the justification to write when a fact of the guard's envelope bounds it (without the value, which is read at its path).",
+            "properties": { "constant": "the path of the constant in what you submit, as the guard names it", "value": "its value", "range": "for bounds, [min, max] instead of value, never both" }
         },
         "methods": {
             "title": "Methods that measure a quantity",

@@ -38,10 +38,6 @@ describe("a refusal, whatever refused, as the next prompt says it", () => {
         assert.equal(second.times, 2);
         assert.match(refusalNote(second), /^Refused 2 times in a row on the same point\(s\), steps\.1\.speedPercent, whatever else changed.*steps\.1\.speedPercent needs floor: .*One more refusal on these points ends the task/);
         assert.equal(STUCK_AFTER, 3);
-        // A safety constant the guard found justified by the wrong fact: the unit and the fact to cite are what is expected there.
-        const wrong = { refusal: null, justify: { misjustified: [{ constant: "steps.2.speedPercent", unit: "percent", expected: [{ id: "test.speedFloorPercent", value: 30, unit: "percent", side: "at or above it" }] }] } };
-        const streak = noteRefusal(wrong, "procedure.revise", "procedure refused: justification: steps.2.speedPercent = 100 cites scrubber.effectiveFlowAtFull (1 m3/min), which the signed rules do not bound it by");
-        assert.equal(streak.problems[0].expected, "a value in percent, justified by test.speedFloorPercent (30 percent, at or above it)");
         assert.equal(refusalNote(null), "");
     });
 });

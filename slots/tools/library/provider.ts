@@ -260,6 +260,8 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
             handle: (args, s) => {
                 const constant = String(args.constant ?? "").trim();
                 if (!constant) throw new Error("justify takes the constant's path (constant) and its value (value), or its bounds (range)");
+                // One or the other (2026-10-10, run trv7: 15 sent with [1, 60], and the range was judged, not the value).
+                if (args.value !== undefined && Array.isArray(args.range) && args.range.length) throw new Error("justify takes the value (value) or the bounds (range) of a constant, not both");
                 const given = Array.isArray(args.range) && args.range.length ? args.range : args.value !== undefined ? [args.value] : [];
                 const values = given.map(Number);
                 if (!values.length || values.some((v) => !Number.isFinite(v))) throw new Error(`justify takes a number as value, or [min, max] as range, not ${JSON.stringify(args.value ?? args.range)}`);
@@ -273,18 +275,24 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
                     .map((id) => facts.find((f) => f.id === id))
                     .filter((f): f is (typeof facts)[number] => f !== undefined)
                     .map((f) => ({ fact: f.id, document: f.document, value: f.value, unit: f.unit, side: side(f.bound), signed: f.signed ? { by: f.signed.by, valid: f.signed.valid } : null, respected: respects(f) }));
-                const holding = bounding.find((b) => b.signed?.valid && b.respected);
-                const justification = holding ? { constant, value, source: safety ? "library" : "envelope", reference: holding.fact, reason: `${holding.side.replace(" it", "")} ${holding.value} ${holding.unit} (${holding.document}, signed by ${holding.signed!.by})` } : null;
-                const why = holding
-                    ? null
-                    : !bounding.length
-                      ? safety
-                          ? `no fact of a signed document bounds ${constant}: a safety number nothing signed justifies is not set, leave it out`
-                          : `no fact bounds ${constant}: cite what you read in this task (source library, by its id), what the task observed (measured), a calculation with its formula (derived: the physics tools give it in their answer, cite), or an assumption said as such (assumed)`
-                      : bounding.some((b) => b.signed?.valid)
-                        ? `${values.join(" to ")} does not respect ${bounding.filter((b) => b.signed?.valid).map((b) => `${b.fact} = ${b.value} ${b.unit} (${b.side})`).join(" and ")}: change the value, not the reference`
-                        : `the facts that bound ${constant} are in documents no person has signed as they are (${[...new Set(bounding.map((b) => b.document))].join(", ")}): a person signs them on the library page, or the task ends with task.fail naming them`;
-                return { constant, value, safety, facts: bounding, justification, ...(why ? { why } : {}) };
+                // A safety constant is justified by the harness, never by the model (2026-10-10): what is said is whether its value is within
+                // its signed bounds. Another constant an envelope fact bounds: the justification to write, without its value (read at its path).
+                const signedValid = bounding.filter((b) => b.signed?.valid);
+                const within = bounding.length > 0 && bounding.every((b) => b.signed?.valid && b.respected);
+                const holding = !safety ? bounding.find((b) => b.signed?.valid && b.respected) : undefined;
+                const justification = holding ? { constant, source: "envelope", reference: holding.fact, reason: `${holding.side.replace(" it", "")} ${holding.value} ${holding.unit} (${holding.document}, signed by ${holding.signed!.by})` } : null;
+                const why = !bounding.length
+                    ? safety
+                        ? `no fact of a signed document bounds ${constant}: a safety number nothing signed justifies is not set, leave it out`
+                        : `no fact bounds ${constant}: cite what you read in this task (source library, by its id), what the task observed (measured), a calculation with its formula (derived: the physics tools give it in their answer, cite), or an assumption said as such (assumed)`
+                    : signedValid.length < bounding.length
+                      ? `the facts that bound ${constant} are in documents no person has signed as they are (${[...new Set(bounding.filter((b) => !b.signed?.valid).map((b) => b.document))].join(", ")}): a person signs them on the library page, or the task ends with task.fail naming them`
+                      : !signedValid.every((b) => b.respected)
+                        ? `${values.join(" to ")} does not respect ${signedValid.filter((b) => !b.respected).map((b) => `${b.fact} = ${b.value} ${b.unit} (${b.side})`).join(" and ")}: change the value`
+                        : safety
+                          ? `${values.join(" to ")} is within its signed bounds: a safety constant, checked and justified by the harness; write no justification for it`
+                          : null;
+                return { constant, value, safety, facts: bounding, ...(safety ? { within } : { justification }), ...(why ? { why } : {}) };
             },
         },
         {

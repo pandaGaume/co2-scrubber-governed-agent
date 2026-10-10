@@ -111,10 +111,10 @@ export function envelopeOf(rules: RulesDocument | null, facts: SignedFact[]): Re
     return Object.fromEntries(facts.filter((f) => ids.has(f.id)).map((f) => [f.id, f.value]));
 }
 
-/** The safety constants' problems, by the rule every factory shares (`justify.ts`): a fact of a signed library document, respected. */
-export function safetyProblems(p: { justifications?: unknown }, facts: SignedFact[], rules: RulesDocument | null, format: ProcedureFormat = FORMAT): string[] {
+/** The safety constants' problems, by the rule every factory shares (`justify.ts`): each value respects the facts of signed documents the rules bound it by, whatever the justifications say (2026-10-10). */
+export function safetyProblems(p: object, facts: SignedFact[], rules: RulesDocument | null, format: ProcedureFormat = FORMAT): string[] {
     const isSafety = safetyOf(rules);
-    return commonSafetyProblems(constantsOf(p, format).filter((x) => isSafety(x.constant)), Array.isArray(p.justifications) ? p.justifications : [], facts, (constant) => factsBounding(rules, constant));
+    return commonSafetyProblems(constantsOf(p, format).filter((x) => isSafety(x.constant)), facts, (constant) => factsBounding(rules, constant));
 }
 
 /** The rules and the facts, through the library: what the factory's guard and the station both judge by. */

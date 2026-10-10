@@ -54,7 +54,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import * as path from "node:path";
 import { fromRoot } from "../../../lib/paths.js";
 import { checkProcedure, constantsOf, envelopeOf, FORMAT, problemLines, rulesAndFacts, safetyOf, type MeasuredStart, type PresenceRead, type ProcedureCheck } from "./check.js";
-import { checkJustifications, JUSTIFICATIONS_SCHEMA, justificationProblems as commonJustificationProblems, type Justified, type ReadSources } from "../../core/justify.js";
+import { checkJustifications, JUSTIFICATIONS_SCHEMA, justificationProblems as commonJustificationProblems, recordedJustifications, type Justified, type ReadSources } from "../../core/justify.js";
 import { dependentsOf, factsBounding, leavesOf, matches, valueAt, type RulesDocument } from "../../core/rules.js";
 import { loadWords, say, viewOf } from "../../core/words.js";
 import { problemOf } from "../../core/problems.js";
@@ -358,9 +358,10 @@ export const PROCEDURE_JUSTIFIED: Justified = {
 
 /** The declaration with what the signed rules say: their safety constants, and the facts they cite as the envelope. */
 /**
- * What an episode keeps of a submission or a revision (2026-09-29, the memory audit, `episodes.ts`): each constant's
- * justification by its path (the value, the source, the reference), and a revision's update by path (`changes` before 2026-10-10); the rest of a
- * procedure is its draft's, not what an attempt is refused or accepted on.
+ * What an episode keeps of a submission or a revision (2026-09-29, the memory audit, `episodes.ts`): each constant by its path,
+ * its value (read in the procedure sent, or in a revision's update, `changes` before 2026-10-10) and the source and reference of
+ * its justification when it has one; the rest of a procedure is its draft's, not what an attempt is refused or accepted on. A
+ * justification written before 2026-10-10 carried its value, read when the procedure does not give it.
  */
 export function procedureDigest(input: JsonValue): Record<string, JsonValue> {
     const out: Record<string, JsonValue> = {};
@@ -369,10 +370,17 @@ export function procedureDigest(input: JsonValue): Record<string, JsonValue> {
         else if (at) out[at] = { value: v as JsonValue };
     };
     const i = isObject(input) ? input : {};
+    const given = (Array.isArray(i.justifications) ? (i.justifications as unknown[]) : []).filter((j): j is Record<string, JsonValue> => isObject(j));
+    // Written before 2026-10-10, a justification carried its value: the digest is what it was (the episodes of before keep their contrasts).
+    const before = given.some((j) => "value" in j);
     const update = isObject(i.update) ? i.update : i.changes;
     if (isObject(update)) flat(update, "");
-    for (const j of Array.isArray(i.justifications) ? i.justifications : [])
-        if (isObject(j) && typeof j.constant === "string") out[j.constant] = { value: (j.value ?? null) as JsonValue, source: (j.source ?? null) as JsonValue, reference: (j.reference ?? null) as JsonValue };
+    else if (!before) for (const c of constantsOf(i)) out[c.constant] = { value: c.value };
+    for (const j of given)
+        if (typeof j.constant === "string") {
+            const held = isObject(out[j.constant]) ? (out[j.constant] as Record<string, JsonValue>) : {};
+            out[j.constant] = { value: (j.value ?? held.value ?? null) as JsonValue, source: (j.source ?? null) as JsonValue, reference: (j.reference ?? null) as JsonValue };
+        }
     return out;
 }
 
@@ -422,8 +430,12 @@ async function notify(context: TopicContext, procedure: ProcedureLike, check: Pr
 }
 
 /** An accepted proposal, written: the file, the listener told, the submission recorded, the draft erased. */
-async function writeAccepted(context: TopicContext, procedure: ProcedureLike): Promise<CapabilityResult> {
+async function writeAccepted(context: TopicContext, sent: ProcedureLike): Promise<CapabilityResult> {
     const { broker, taskId, progress } = context;
+    const { rules, facts } = await rulesAndFacts((slot, tool, args) => broker.call(slot, tool, args));
+    // The justifications the procedure is written with (2026-10-10): the model's for the numbers it chose, each with the value read at
+    // its path, and the harness's for the safety constants, from the facts of signed documents the rules bound them by.
+    const procedure = { ...sent, justifications: recordedJustifications(justifiedBy(rules, envelopeOf(rules, facts)), sent as unknown as JsonValue, facts) } as unknown as ProcedureLike;
     const path = fileOf(procedure);
     const w = await broker.call("workspace", "write", { taskId, path, text: JSON.stringify(procedure, null, 2) + "\n" });
     if (!w.ok) return { ok: false, error: w.error ?? `could not write ${path}`, output: { outcome: w.outcome } };
@@ -431,7 +443,6 @@ async function writeAccepted(context: TopicContext, procedure: ProcedureLike): P
     const state = stateOf(progress);
     // The guard checked and accepted; recorded here, once the runtime has executed the decision, so the state the model read did not move under it.
     const presence = presenceOf(progress);
-    const { rules, facts } = await rulesAndFacts((slot, tool, args) => broker.call(slot, tool, args));
     const check = checkProcedure(procedure, presence, rules, facts, measuredOf(context.task));
     state.submissions.push(submissionOf(state, procedure, check, progress));
     await notify(context, procedure, check, state.submissions.length);
@@ -642,10 +653,8 @@ const quantitiesOf = (task: TaskFile["task"]): string => [...new Set(task.object
 type BoundFact = { fact: string; value: number | null; unit: string | null; side: string | null };
 export interface SafetyBound {
     constant: string;
-    /** The facts the signed rules bound it by: the one to cite. */
-    cite: BoundFact[];
-    /** No signed rule binds it to one fact: the guard accepts a fact of a signed document whose safe side the value respects, one of these. */
-    respects?: BoundFact[];
+    /** The facts of signed documents the rules bound it by: its value respects each, on its side. None: the field is left out. */
+    within: BoundFact[];
     note?: string;
 }
 
@@ -693,19 +702,13 @@ export function safetyBoundsOf(): SafetyBound[] {
     };
     const isSafety = (c: string) => doc.safety.some((p) => matches(c, p));
     const subjects = [...new Set(doc.rules.flatMap((r) => ("compare" in r && r.compare.subject ? [r.compare.subject] : [])))].filter(isSafety);
-    const bound: SafetyBound[] = subjects.map((constant) => ({ constant, cite: factsBounding(doc, constant).map(shown) }));
-    // The safety constants of the schema no rule is written for: any fact of a signed document with a safe side, as the guard accepts.
-    const signed = [...facts.entries()].filter(([, f]) => (f.bound === "upper" || f.bound === "lower") && signatureOf(f.document, dir)?.valid).map(([id]) => shown(id));
+    const bound: SafetyBound[] = subjects.map((constant) => ({ constant, within: factsBounding(doc, constant).map(shown) }));
+    // The safety constants of the schema no rule binds to a signed fact: left out, since the harness sets no safety number that nothing signed justifies (2026-10-10).
     const unbound = schemaNumbers()
         .filter((c) => isSafety(c) && !subjects.includes(c))
         .map((constant) => {
             const ruled = subjects.filter((s) => matches(s, constant));
-            return {
-                constant,
-                cite: [],
-                respects: signed,
-                note: `no signed rule binds it to one fact: the guard accepts a fact of a signed document whose safe side the value respects${ruled.length ? ` (${ruled.join(", ")} has its own rule, above)` : ""}`,
-            };
+            return { constant, within: [], note: `no signed fact bounds it: leave it out${ruled.length ? ` (${ruled.join(", ")} has its own bound, above)` : ""}` };
         });
     return [...bound, ...unbound];
 }

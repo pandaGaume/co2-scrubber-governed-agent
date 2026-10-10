@@ -72,8 +72,8 @@ export class ScriptedProcedureBuilder extends ScriptedBuilderBase<ScriptedProced
             if (!(k in after)) update[k] = null;
             else if (JSON.stringify(before[k]) !== JSON.stringify(after[k])) update[k] = after[k];
         }
-        const had = new Set((this.lastSent?.justifications ?? []).map((j) => `${j.constant}=${JSON.stringify(j.value)}`));
-        const justifications = (next.justifications ?? []).filter((j) => !had.has(`${j.constant}=${JSON.stringify(j.value)}`));
+        const had = new Set((this.lastSent?.justifications ?? []).map((j) => JSON.stringify(j)));
+        const justifications = (next.justifications ?? []).filter((j) => !had.has(JSON.stringify(j)));
         return { update, justifications } as unknown as JsonValue;
     }
 
@@ -117,28 +117,12 @@ export class ScriptedProcedureBuilder extends ScriptedBuilderBase<ScriptedProced
                 { id: "battery", source: "station.registry_list", when: "battery below the threshold", threshold: 35 },
                 ...(monitoring && occupied ? [{ id: "vitals", source: "biomed.verdict", when: "an occupant out of band, the monitoring lost, or one more person in the volume" }] : []),
             ],
+            // The numbers the script chose: the steps' durations. The safety constants (limits, speeds, the battery abort, the band) are
+            // checked and justified by the harness from the signed rules, never here (2026-10-10); a justification carries no value.
             justifications: [
-                { constant: "limits.co2MaxPpm", value: 2800, source: "library", reference: "test.co2AbortCeilingPpm", reason: "a margin of 400 ppm under the test's CO2 ceiling" },
-                { constant: "limits.co2AbortPpm", value: 3200, source: "library", reference: "test.co2AbortCeilingPpm", reason: "the test's CO2 ceiling, under the cabin's ELEVATED level" },
-                { constant: "limits.minSpeedPercent", value: speed === 0 ? 0 : 30, source: "library", reference: "test.speedFloorPercent", reason: "the floor of a test" },
-                { constant: "limits.maxMinutes", value: minutes, source: "library", reference: "test.maxMinutesCeiling", reason: back === null ? "the two steps, under the test's ceiling" : "the three steps, under the test's ceiling" },
-                { constant: "steps.1.speedPercent", value: speed, source: "library", reference: "test.speedFloorPercent", reason: "the rise, at the lowest speed a test may command" },
-                { constant: "steps.1.minutes", value: 12, source: "assumed", reference: "", reason: "long enough for the CO2 to rise well above the sensor's noise" },
-                { constant: "steps.2.speedPercent", value: 100, source: "library", reference: "test.speedFloorPercent", reason: "the decay at full speed, above the floor" },
-                { constant: "steps.2.minutes", value: 12, source: "assumed", reference: "", reason: "long enough to see the decay's time constant" },
-                ...(back === null
-                    ? []
-                    : [
-                          { constant: "steps.3.speedPercent", value: back, source: "library" as const, reference: "test.speedFloorPercent", reason: "the speed measured when the task opened, which the card says a test hands back (end.restore)" },
-                          { constant: "steps.3.minutes", value: 1, source: "assumed" as const, reference: "", reason: "one minute back at the speed found, the test then ends" },
-                      ]),
-                { constant: "abort.battery.threshold", value: 35, source: "library", reference: "test.batteryAbortMinPercent", reason: "the night's reserve for the scrubber" },
-                ...(monitoring && occupied
-                    ? [
-                          { constant: "monitoring.band.minBpm", value: 45, source: "library" as const, reference: "test.heartRateMinBpm", reason: "the monitored band's lower edge" },
-                          { constant: "monitoring.band.maxBpm", value: maxBpm, source: "library" as const, reference: "test.heartRateMaxBpm", reason: "the monitored band's upper edge" },
-                      ]
-                    : []),
+                { constant: "steps.1.minutes", source: "assumed", reference: "", reason: "long enough for the CO2 to rise well above the sensor's noise" },
+                { constant: "steps.2.minutes", source: "assumed", reference: "", reason: "long enough to see the decay's time constant" },
+                ...(back === null ? [] : [{ constant: "steps.3.minutes", source: "assumed" as const, reference: "", reason: "one minute back at the speed found, the test then ends" }]),
             ],
             expected: {
                 step1: "the CO2 of the volume rises and stays below co2MaxPpm",

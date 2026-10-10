@@ -99,19 +99,14 @@ export function nextStreak(previous: RefusalStreak | null, capability: string, p
 interface RefusalProgress {
     pendingProblems?: Problem[] | null;
     refusal?: RefusalStreak | null;
-    justify?: { misjustified?: Array<{ constant: string; unit: string; expected: Array<{ id: string; value: number; unit: string; side: string }> }> } | null;
 }
 
 /**
- * A refusal noted, whatever refused: the guard's own problems when it left them, its words read otherwise; a safety constant
- * the guard found justified by no fact the rules name says there its unit and the facts to cite; the streak counted on its
- * points. What the runner does at every refusal, and what the conformance test does for every factory.
+ * A refusal noted, whatever refused: the guard's own problems when it left them, its words read otherwise; the streak counted on
+ * its points. What the runner does at every refusal, and what the conformance test does for every factory.
  */
 export function noteRefusal(progress: RefusalProgress, capability: string, reason: string): RefusalStreak {
-    const problems = (progress.pendingProblems?.length ? progress.pendingProblems : problemsOfReason(reason)).map((p) => {
-        const m = (progress.justify?.misjustified ?? []).find((x) => x.constant === p.path);
-        return m && !p.expected ? { ...p, expected: `a value in ${m.unit}, justified by ${m.expected.map((e) => `${e.id} (${e.value} ${e.unit}, ${e.side})`).join(" or ")}` } : p;
-    });
+    const problems = progress.pendingProblems?.length ? progress.pendingProblems : problemsOfReason(reason);
     progress.pendingProblems = null;
     progress.refusal = nextStreak(progress.refusal ?? null, capability, problems);
     return progress.refusal;

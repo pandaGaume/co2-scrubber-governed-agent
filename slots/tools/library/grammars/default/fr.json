@@ -10,8 +10,8 @@
         },
         "justify": {
             "title": "Ce qui justifie un nombre",
-            "description": "Ce qui justifie un nombre qu'une proposition fixe, d'après la bibliothèque : si c'est une constante de sécurité, les faits signés qui la bornent avec leur côté sûr et si la valeur les respecte, et la justification à écrire quand l'un tient ; sinon, les sources admises.",
-            "properties": { "constant": "le chemin de la constante dans la proposition", "value": "sa valeur", "range": "pour des bornes, [min, max] au lieu de value" }
+            "description": "Ce que dit la bibliothèque d'un nombre qu'une proposition fixe : pour une constante de sécurité, les faits signés qui la bornent avec leur côté sûr et si la valeur les respecte (le harnais la vérifie et la justifie lui-même, rien à écrire pour elle) ; pour un autre nombre, les sources admises, ou la justification à écrire quand un fait de l'enveloppe le borne.",
+            "properties": { "constant": "le chemin de la constante dans la proposition", "value": "sa valeur", "range": "pour des bornes, [min, max] au lieu de value, jamais les deux" }
         },
         "methods": {
             "title": "Les méthodes qui mesurent une grandeur",

@@ -1,16 +1,15 @@
 /**
- * Every constant a factory sets is justified, the same way in every factory
- * (`harness/core/justify.ts`, 2026-09-28): what a call read is noted, the
- * constants of a graph candidate and of a fit spec are found by path, and
- * the rules judge them (a source this task can cite; a safety constant, a
- * signed fact respected).
+ * Every number a factory sets is accounted for, the same way in every factory (`harness/core/justify.ts`, 2026-09-28; since
+ * 2026-10-10 by whoever holds what justifies it): what a call read is noted, the constants of a graph candidate and of a fit spec
+ * are found by path, the numbers the model chose are justified by it (a source this task can cite, never the value, read at the
+ * path), and the safety constants are judged and justified by the harness against the facts of signed documents.
  *
  *     node --test dist/tests/justify.test.js
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import type { JsonValue } from "@spiky-panda/harness";
-import { checkJustifications, factOf, justificationHelp, justificationNote, justificationOf, justificationProblems, justificationsFor, noteSources, numbersOf, safetyProblems, safetyReview, type ReadSources, type SignedFact } from "../harness/core/justify.js";
+import { checkJustifications, justificationHelp, justificationNote, justificationOf, justificationProblems, justificationsFor, noteSources, numbersOf, recordedJustifications, safetyJustifications, safetyProblems, type ReadSources, type SignedFact } from "../harness/core/justify.js";
 import { compactOutput, fitted } from "../harness/core/compact.js";
 import { CANDIDATE_JUSTIFIED, candidateConstants } from "../harness/topics/graph/index.js";
 import { reasoningStateOf } from "../harness/core/reasoning-state.js";
@@ -21,6 +20,10 @@ import { createBuilderGuard } from "../harness/core/builder-guard.js";
 import { GRAPH_TOPIC } from "../harness/topics/graph/index.js";
 
 const ok = (id: string, input: JsonValue, output: JsonValue) => ({ id, input, result: { ok: true, outcome: "completed" as const, output } }) as never;
+const signed = { by: "reviewer", at: "2026-09-28", valid: true };
+const FLOOR = { id: "test.speedFloorPercent", semantic: "S", quantity: "Ratio", unit: "percent", value: 30, bound: "lower", source: "commissioning-test-safety", signed } as unknown as SignedFact;
+const FLOW = { id: "scrubber.effectiveFlowAtFull", semantic: "Q", quantity: "VolumetricFlow", unit: "m3/min", value: 1, source: "scrubber-1-datasheet", signed } as unknown as SignedFact;
+const boundBy = (c: string) => (c.endsWith(".speedPercent") ? ["test.speedFloorPercent"] : []);
 
 describe("the justification of constants, common to every factory", () => {
     it("notes what a call read: the library's documents and facts (a graph of the shelf too), the pages a web search returned", () => {
@@ -63,21 +66,40 @@ describe("the justification of constants, common to every factory", () => {
         assert.deepEqual(numbersOf({ a: { b: 1, c: "x" } }, "p"), [{ constant: "p.a.b", value: 1 }]);
     });
 
-    it("the rules: unjustified, a value that is not the one sent, a source not read, a range; a safety constant only by a signed fact respected", () => {
+    it("a number the model chose: unjustified, a source not read, no measurement; never its value, which a justification no longer repeats (2026-10-10)", () => {
         const read: ReadSources = { library: ["habitat"], web: [] };
         const constants = [{ constant: "variables.g", value: 0.42 }, { constant: "fit.V", value: [10, 100] as [number, number] }];
         assert.match(justificationProblems(constants, [], read, { measured: false }).join("; "), /variables\.g = 0\.42 has no justification.*fit\.V = \[10, 100\] has no justification/);
         const given = [
-            { constant: "variables.g", value: 0.42, source: "library", reference: "habitat", reason: "the reference graph" },
-            { constant: "fit.V", value: [10, 100], source: "assumed", reference: "no volume in the register", reason: "wide bounds" },
+            { constant: "variables.g", source: "library", reference: "habitat", reason: "the reference graph" },
+            { constant: "fit.V", source: "assumed", reference: "no volume in the register", reason: "wide bounds" },
         ];
         assert.deepEqual(justificationProblems(constants, given, read, { measured: false }), []);
-        assert.match(justificationProblems(constants, [{ ...given[0], reference: "unread" }, { ...given[1], value: [10, 90] }], read, { measured: false }).join("; "), /"unread" is not a library document or fact read in this task.*fit\.V: the justification says \[10, 90\], what you sent sets \[10, 100\]/);
-        assert.match(justificationProblems([{ constant: "settings.n", value: 2 }], [{ constant: "settings.n", value: 2, source: "measured", reference: "x", reason: "y" }], read, { measured: false }).join(), /the task gives no measurement to cite/);
-        const floor = { id: "test.speedFloorPercent", value: 30, unit: "percent", bound: "lower", source: "card", signed: { by: "a person", at: "", valid: true } } as unknown as SignedFact;
-        const speed = [{ constant: "steps.1.speedPercent", value: 20 }];
-        assert.match(safetyProblems(speed, [{ constant: "steps.1.speedPercent", value: 20, source: "library", reference: "test.speedFloorPercent", reason: "r" }], [floor]).join(), /does not respect test\.speedFloorPercent = 30 percent \(at or above it\)/);
-        assert.match(safetyProblems(speed, [{ constant: "steps.1.speedPercent", value: 20, source: "assumed", reference: "x", reason: "r" }], [floor]).join(), /is a safety constant: it is justified by a fact of a signed library document, not by an assumption/);
+        assert.match(justificationProblems(constants, [{ ...given[0], reference: "unread" }, given[1]], read, { measured: false }).join("; "), /"unread" is not a library document or fact read in this task/);
+        // A value written in a justification, as before 2026-10-10, is not read: the value is the one at the path.
+        assert.deepEqual(justificationProblems(constants, [given[0], { ...given[1], value: [10, 90] }], read, { measured: false }), []);
+        assert.match(justificationProblems([{ constant: "settings.n", value: 2 }], [{ constant: "settings.n", source: "measured", reference: "x", reason: "y" }], read, { measured: false }).join(), /the task gives no measurement to cite/);
+    });
+
+    it("a safety constant: judged by the harness against the facts the signed rules bound it by, whatever a justification says; one nothing signed bounds is left out (2026-10-10)", () => {
+        assert.deepEqual(safetyProblems([{ constant: "steps.2.speedPercent", value: 100 }], [FLOOR, FLOW], boundBy), [], "above the signed floor");
+        assert.match(safetyProblems([{ constant: "steps.1.speedPercent", value: 20 }], [FLOOR], boundBy).join(), /^steps\.1\.speedPercent = 20 does not respect test\.speedFloorPercent = 30 percent, a fact of a signed document: set it at or above it$/);
+        assert.match(safetyProblems([{ constant: "abort.co2.threshold", value: 3200 }], [FLOOR], boundBy).join(), /^abort\.co2\.threshold = 3200 is a safety constant no signed fact bounds: leave it out/);
+        // The fact that bounds it in a document nobody signed: task.fail naming it, only a person signs.
+        const unsigned = { ...FLOOR, source: "scrubber-1-datasheet", signed: null } as unknown as SignedFact;
+        assert.match(safetyProblems([{ constant: "steps.1.speedPercent", value: 40 }], [unsigned], boundBy).join(), /the fact test\.speedFloorPercent is in "scrubber-1-datasheet", which no person has signed as valid: a safety constant is bounded by a signed document only; if none bounds it, end with task\.fail/);
+    });
+
+    it("the justifications an accepted artifact records: the model's for the numbers it chose with their values, the harness's for the safety constants; a model's for a safety constant is not read", () => {
+        assert.deepEqual(safetyJustifications([{ constant: "steps.2.speedPercent", value: 100 }], [FLOOR], boundBy), [{ constant: "steps.2.speedPercent", value: 100, source: "library", reference: "test.speedFloorPercent", reason: "at or above it: test.speedFloorPercent = 30 percent, signed by reviewer", by: "harness" }]);
+        const justified = { capability: /^procedure\.submit$/, constants: () => [{ constant: "steps.2.minutes", value: 12 }, { constant: "steps.2.speedPercent", value: 100 }], safety: /speedPercent$/, boundBy };
+        const input = { justifications: [{ constant: "steps.2.minutes", source: "assumed", reference: "one time constant", reason: "the decay" }, { constant: "steps.2.speedPercent", source: "library", reference: "scrubber.effectiveFlowAtFull", reason: "full flow" }] } as unknown as JsonValue;
+        assert.deepEqual(recordedJustifications(justified, input, [FLOOR, FLOW]), [
+            { constant: "steps.2.minutes", value: 12, source: "assumed", reference: "one time constant", reason: "the decay", by: "model" },
+            { constant: "steps.2.speedPercent", value: 100, source: "library", reference: "test.speedFloorPercent", reason: "at or above it: test.speedFloorPercent = 30 percent, signed by reviewer", by: "harness" },
+        ]);
+        // What is left to justify after a refusal: the numbers the model chose, never a safety one.
+        assert.deepEqual(justificationHelp(justified, { justifications: [] } as unknown as JsonValue), { missing: [{ constant: "steps.2.minutes", value: 12 }], unmatched: [] });
     });
 
     it("the check of a call reads the library's facts only when it sets a safety constant, and the scripts justify as a model must", async () => {
@@ -90,9 +112,9 @@ describe("the justification of constants, common to every factory", () => {
         assert.equal(asked, 0, "no safety constant: the library is not asked");
         const problems = await checkJustifications({ capability: /^x$/, constants: () => [{ constant: "limit", value: 1 }], safety: /^limit$/ }, { justifications: [] } as unknown as JsonValue, { broker, task: { observations: {}, data: [] } as never, progress });
         assert.equal(asked, 1);
-        assert.match(problems.join(), /limit = 1 is a safety constant with no justification/);
-        // A constant no rule of the script names is said assumed, and said to have no stated source.
-        assert.deepEqual(justificationsFor([{ constant: "z", value: 1 }], []), [{ constant: "z", value: 1, source: "assumed", reference: "no rule of the script", reason: "set by the script without a stated source" }]);
+        assert.match(problems.join(), /limit = 1 is a safety constant no signed fact bounds: leave it out/);
+        // A constant no rule of the script names is said assumed, and said to have no stated source; no value.
+        assert.deepEqual(justificationsFor([{ constant: "z", value: 1 }], []), [{ constant: "z", source: "assumed", reference: "no rule of the script", reason: "set by the script without a stated source" }]);
     });
 
     it("the constructor's guard refuses a candidate whose numbers are not justified, before it runs", async () => {
@@ -103,80 +125,41 @@ describe("the justification of constants, common to every factory", () => {
         const refused = await guard.validate(decision({ label: "c", graph: "habitat", variables: { g: 0.42 } }), {} as never);
         assert.equal(refused.allowed, false);
         assert.match(String(refused.reason), /^justification: variables\.g = 0\.42 has no justification/);
-        const allowed = await guard.validate(decision({ label: "c", graph: "habitat", variables: { g: 0.42 }, justifications: [{ constant: "variables.g", value: 0.42, source: "assumed", reference: "a rate", reason: "the operators' rate" }] }), {} as never);
+        const allowed = await guard.validate(decision({ label: "c", graph: "habitat", variables: { g: 0.42 }, justifications: [{ constant: "variables.g", source: "assumed", reference: "a rate", reason: "the operators' rate" }] }), {} as never);
         assert.equal(allowed.allowed, true, String(allowed.reason));
     });
 
-    it("the facts as a model reads them: keyed by id, the safe side, signed or not; a reference that names one fact is that fact (2026-09-28, the first run on the socle)", () => {
+    it("the facts as a model reads them: keyed by id, the safe side, signed or not (2026-09-28, the first run on the socle)", () => {
         const served = { facts: [
             { id: "test.speedFloorPercent", value: 30, unit: "percent", bound: "lower", semantic: "TestScrubberSpeedFloor", source: "commissioning-test-safety", signed: { by: "a person", at: "", scope: "safety", valid: true } },
             { id: "scrubber.minimumSpeedElevated", value: 40, unit: "percent", semantic: "X", source: "scrubber-1-datasheet", signed: null },
         ] };
         const summary = compactOutput("library.facts", {}, served as never).summary as { facts: Record<string, string> };
         assert.deepEqual(summary.facts, { "test.speedFloorPercent": "at least 30 percent; in commissioning-test-safety, signed", "scrubber.minimumSpeedElevated": "40 percent; in scrubber-1-datasheet, not signed" });
-        const facts = served.facts as unknown as SignedFact[];
-        assert.equal(factOf(facts, "test.speedFloorPercent")?.id, "test.speedFloorPercent");
-        assert.equal(factOf(facts, "test.speedFloorPercent = 30 percent [TestScrubberSpeedFloor, commissioning-test-safety]")?.id, "test.speedFloorPercent", "the line as it was once shown");
-        assert.equal(factOf(facts, "testXspeedFloorPercent"), undefined, "a dot is a dot");
-        assert.equal(factOf(facts, "test.speedFloorPercent or scrubber.minimumSpeedElevated"), undefined, "two facts named: none chosen");
-        // An unsigned fact leads to a signed one first, task.fail only when there is none.
-        const unsigned = safetyProblems([{ constant: "steps.1.speedPercent", value: 40 }], [{ constant: "steps.1.speedPercent", value: 40, source: "library", reference: "scrubber.minimumSpeedElevated", reason: "r" }], facts).join();
-        assert.match(unsigned, /cite instead a fact of a signed document that bounds this constant.*only if no signed document has one, end with task\.fail/);
     });
 
     it("a justification may name a constant by the end of its path when that is unambiguous; otherwise the refusal says the path to write (2026-09-28: \"V\" for fit.V, refused nine times)", () => {
         const read: ReadSources = { library: ["habitat"], web: [] };
-        const why = (constant: string, value: number | [number, number]) => ({ constant, value, source: "library", reference: "habitat", reason: "the reference graph" });
+        const why = (constant: string) => ({ constant, source: "library", reference: "habitat", reason: "the reference graph" });
         const constants = [{ constant: "fit.V", value: [10, 200] as [number, number] }, { constant: "variables.g", value: 0.4 }];
-        assert.deepEqual(justificationProblems(constants, [why("V", [10, 200]), why("g", 0.4)], read, { measured: false }), [], "the end of the path, alone");
+        assert.deepEqual(justificationProblems(constants, [why("V"), why("g")], read, { measured: false }), [], "the end of the path, alone");
         const two = [{ constant: "fit.V", value: 10 }, { constant: "variables.V", value: 10 }];
-        assert.match(justificationProblems(two, [why("V", 10)], read, { measured: false }).join(), /fit\.V = 10 has no justification \(a justification names it by its path, constant "fit\.V"\)/);
+        assert.match(justificationProblems(two, [why("V")], read, { measured: false }).join(), /fit\.V = 10 has no justification \(a justification names it by its path, constant "fit\.V"\)/);
         assert.equal(justificationOf([{ constant: "it.V" }], "fit.V"), undefined, "a dot boundary, not any suffix");
     });
 
-    it("a refusal for justifications is put in the context: the constants without one by path and value, the names that are no constant, a skeleton in the state, and a brief that changes at each repetition (2026-09-28)", () => {
-        const input = { label: "c", fit: { V: { min: 10, max: 200 } }, variables: { g: 0.4 }, justifications: [{ constant: "volume", value: [10, 200], source: "assumed", reference: "x", reason: "y" }, { constant: "g", value: 0.4, source: "assumed", reference: "x", reason: "y" }] } as unknown as JsonValue;
+    it("a refusal for justifications is put in the context: the numbers without one by path and value, the names that are no constant, a skeleton in the state without values, and a brief that changes at each repetition (2026-09-28)", () => {
+        const input = { label: "c", fit: { V: { min: 10, max: 200 } }, variables: { g: 0.4 }, justifications: [{ constant: "volume", source: "assumed", reference: "x", reason: "y" }, { constant: "g", source: "assumed", reference: "x", reason: "y" }] } as unknown as JsonValue;
         const help = justificationHelp(CANDIDATE_JUSTIFIED, input);
         assert.deepEqual(help, { missing: [{ constant: "fit.V", value: [10, 200] }], unmatched: ["volume"] });
         const first = justificationNote({ capability: "graph.evaluate", times: 1, ...help });
-        assert.match(first, /^Your last graph\.evaluate was refused for its justifications\. 1 constant\(s\) you set have none under their path: fit\.V = \[10, 200\]\. Your justifications named volume, which is no constant you set/);
+        assert.match(first, /^Your last graph\.evaluate was refused for its justifications\. 1 number\(s\) you chose have none under their path: fit\.V = \[10, 200\]\. Your justifications named volume, which is no number you chose/);
         assert.doesNotMatch(first, /refusal number/);
         assert.match(justificationNote({ capability: "graph.evaluate", times: 3, ...help }), /This is refusal number 3 for the same reason/);
         assert.equal(justificationNote(null), "");
         const progress = newProgress();
         progress.justify = { capability: "graph.evaluate", times: 2, ...help };
         const state = reasoningStateOf({ task: { objective: { required_outputs: [], constraints: {} }, observations: {}, data: [] } as never, progress, budget: { iterations: 10, minutes: 5 }, nextActions: [], shelf: [], telemetry: null });
-        assert.deepEqual(state.justify, { refused: "graph.evaluate", times: 2, namesThatAreNoConstant: ["volume"], skeleton: [{ constant: "fit.V", value: [10, 200], source: "", reference: "", reason: "" }] });
-    });
-
-    it("a safety constant justified by a fact of another unit: refused, and the next prompt says its unit and the fact the signed rules bound it by, the skeleton filled (2026-09-28: a speed in percent justified nineteen times by a flow in m3/min)", () => {
-        const signed = { by: "reviewer", at: "2026-09-28", valid: true };
-        const facts: SignedFact[] = [
-            { id: "test.speedFloorPercent", semantic: "S", quantity: "Ratio", unit: "percent", value: 30, bound: "lower", source: "commissioning-test-safety", signed },
-            { id: "scrubber.effectiveFlowAtFull", semantic: "Q", quantity: "VolumetricFlow", unit: "m3/min", value: 1, source: "scrubber-1-datasheet", signed },
-        ];
-        const constants = [{ constant: "steps.2.speedPercent", value: 100 }];
-        const boundBy = (c: string) => (c.endsWith(".speedPercent") ? ["test.speedFloorPercent"] : []);
-        const review = safetyReview(constants, [{ constant: "steps.2.speedPercent", value: 100, source: "library", reference: "scrubber.effectiveFlowAtFull", reason: "full flow" }], facts, boundBy);
-        assert.equal(review.problems.length, 1);
-        assert.deepEqual(review.misjustified, [{ constant: "steps.2.speedPercent", value: 100, unit: "percent", expected: [{ id: "test.speedFloorPercent", value: 30, unit: "percent", side: "at or above it" }], cited: { id: "scrubber.effectiveFlowAtFull", value: 1, unit: "m3/min" } }]);
-        // The fact the rules name, cited: accepted.
-        assert.deepEqual(safetyReview(constants, [{ constant: "steps.2.speedPercent", value: 100, source: "library", reference: "test.speedFloorPercent", reason: "above the floor" }], facts, boundBy), { problems: [], misjustified: [] });
-        // One fact named among other words: accepted, as before (the contract said, not tightened).
-        assert.deepEqual(safetyReview(constants, [{ constant: "steps.2.speedPercent", value: 100, source: "library", reference: "test.speedFloorPercent (commissioning-test-safety, signed)", reason: "above the floor" }], facts, boundBy).problems, []);
-        // Two facts in one reference: refused as before, and said by what it is (2026-09-29, the baseline).
-        const two = safetyReview(constants, [{ constant: "steps.2.speedPercent", value: 100, source: "library", reference: "test.speedFloorPercent; scrubber.effectiveFlowAtFull 1 m3/min", reason: "full flow" }], facts, boundBy);
-        assert.equal(two.problems.length, 1);
-        assert.match(two.problems[0], /names 2 facts of the library \(test\.speedFloorPercent, scrubber\.effectiveFlowAtFull\), not one \(INVALID_REFERENCE_CARDINALITY\): a reference is exactly one signed library fact, by its id; the facts that support it and the engineering rationale go in reason/);
-        assert.doesNotMatch(two.problems[0], /is not a fact of the library/);
-        // The next prompt: the unit, the fact to cite, the wrong one named as another quantity.
-        const help = { capability: "procedure.revise", times: 2, missing: [], unmatched: [], misjustified: review.misjustified };
-        assert.match(justificationNote(help), /steps\.2\.speedPercent = 100 is in percent: cite test\.speedFloorPercent \(30 percent, at or above it\), not scrubber\.effectiveFlowAtFull \(1 m3\/min: another unit, another quantity\)/);
-        assert.match(justificationNote(help), /This is refusal number 2/);
-        const progress = newProgress();
-        progress.justify = help;
-        const state = reasoningStateOf({ task: { objective: { required_outputs: [], constraints: {} }, observations: {}, data: [] } as never, progress, budget: { iterations: 10, minutes: 5 }, nextActions: [], shelf: [], telemetry: null });
-        assert.deepEqual((state.justify as { skeleton: unknown[] }).skeleton, [{ constant: "steps.2.speedPercent", value: 100, unit: "percent", source: "library", reference: "test.speedFloorPercent", reason: "" }]);
+        assert.deepEqual(state.justify, { refused: "graph.evaluate", times: 2, namesThatAreNoConstant: ["volume"], skeleton: [{ constant: "fit.V", source: "", reference: "", reason: "" }] });
     });
 });
-

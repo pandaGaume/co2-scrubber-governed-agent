@@ -132,7 +132,7 @@ describe("the adaptations of a fork: entered, judged, kept or undone, remembered
         assert.ok(repeated(`Stage 4. ${said}`, " Each safety constant must cite a fact of a signed library document by its id, never a value or a calculation."));
         assert.equal(repeated(`Stage 4. ${said}`, " A step's speed is bounded by test.speedFloorPercent in the signed rules, whatever other fact of the card has the same number."), null);
         const patterns = [{ id: "p1", kind: "first-try-category" as const, says: "", count: 2, source: "", target: "specs/procedure/words.json", detail: {} }];
-        const problems = adaptationProblems({ target: "specs/procedure/words.json", ops: [{ op: "append", pointer: "/brief/procedure", value: " Every constant you set is justified in justifications, and the safety constants cite a fact of a library document a person signed." }], reason: "x", evidence: ["p1"] }, patterns, wordsAdaptable()).problems;
+        const problems = adaptationProblems({ target: "specs/procedure/words.json", ops: [{ op: "append", pointer: "/brief/procedure", value: " The harness checks the safety constants and justifies them itself, so they take no justification from you." }], reason: "x", evidence: ["p1"] }, patterns, wordsAdaptable()).problems;
         assert.match(problems.join(), /says again what it already says/);
     });
 });

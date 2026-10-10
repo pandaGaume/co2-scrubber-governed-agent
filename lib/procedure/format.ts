@@ -51,11 +51,19 @@ export interface ProcedureLimits {
     maxMinutes: number;
 }
 
-/** Why a constant of the procedure has its value, and where it comes from, so it can be challenged against a written procedure or the literature. */
+/**
+ * Why a constant of the procedure has its value, and where it comes from, so it can be challenged against a written procedure or the
+ * literature. As the model sends it, a number it chose (a step's duration), without its value, read at its path; as the accepted
+ * procedure records it, every constant, with its value and who wrote it: the harness for a safety constant, from the signed rules
+ * (`harness/core/justify.ts`, 2026-10-10).
+ */
 export interface Justification {
     /** The constant, by its path in the procedure: limits.co2MaxPpm, steps.1.speedPercent, steps.2.minutes, abort.battery.threshold, monitoring.band.maxBpm. */
     constant: string;
-    value: number;
+    /** Recorded with the accepted procedure; a model does not send it. */
+    value?: number;
+    /** Recorded with the accepted procedure: the model, or the harness for a safety constant. */
+    by?: "model" | "harness";
     /** library: a document or a fact of the library read in this task; web: a page a web search returned in this task; measured: the measurement the task was given; envelope: the guard's own bound; derived: computed from other constants; assumed: chosen without a source, said as such. */
     source: "library" | "web" | "measured" | "envelope" | "derived" | "assumed";
     /** The document id or fact id, the URL, the measurement, the envelope's key, or the formula; for assumed, may be empty. */

@@ -8,7 +8,7 @@ The state holds the lead (what the detector says, its class, its path in the har
 
 ## How a diagnosis is made
 
-- Start from the sources, not from the lead's words. Compare what was sent before and after a refusal field by field, constant by constant: a justification is keyed by its path, so check that the path names the constant its value and reason describe, and whether paths changed between two submissions.
+- Start from the sources, not from the lead's words. Compare what was sent before and after a refusal field by field, constant by constant: a justification is keyed by its path (before 2026-10-10 it also repeated the value), so check that the path names the constant its reason describes, and whether paths changed between two submissions.
 - Read a refusal's words as the model received them, and say whether they were true. A refusal can give a false reason, and a false reason is a cause.
 - Form more than one hypothesis. Keep the one the sources support, and rule out at least one other with a prediction.
 - Separate what you saw from what you infer. Never write a value or a cause the sources do not show; when they do not tell, the class is unknown and the predictions will say so.

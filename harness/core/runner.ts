@@ -577,7 +577,6 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             if (!(progress.lastRefusal && !isRead(progress.lastRefusal.capability) && isRead(trace.decision.invocation.capabilityId))) progress.lastRefusal = null;
             if (trace.result.ok) delete progress.refusals[trace.decision.invocation.capabilityId];
             if (justifySettled(progress.justify, trace.decision.invocation.capabilityId, trace.result.ok, topic.justified)) progress.justify = null;
-            progress.misjustified = null;
             progress.pendingProblems = null;
             // A call that acts, executed, ends a streak of refusals; a read between two refusals does not (reading is how a builder looks for what is expected).
             if (!READ_CAPABILITIES.some((r) => r.test(trace.decision.invocation.capabilityId))) progress.refusal = null;
@@ -632,10 +631,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
                 const whole = topic.justified.whole ? topic.justified.whole(exchange.proposedCapabilityId, (exchange.proposedInput ?? null) as JsonValue, progress) : ((exchange.proposedInput ?? null) as JsonValue);
                 const help = whole ? justificationHelp(topic.justified, whole) : null;
                 const times = progress.justify?.capability === exchange.proposedCapabilityId || (progress.justify && topic.justified.capability.test(progress.justify.capability)) ? (progress.justify?.times ?? 0) + 1 : 1;
-                // The guard's own finding (a safety constant justified by a fact of another unit, or none the rules name) goes with it.
-                const misjustified = progress.misjustified ?? [];
-                progress.justify = help && (help.missing.length || misjustified.length) ? { capability: exchange.proposedCapabilityId, times, ...help, misjustified } : null;
-                progress.misjustified = null;
+                progress.justify = help && help.missing.length ? { capability: exchange.proposedCapabilityId, times, ...help } : null;
             }
             // Every refusal, whatever refused, as problems with their points (problems.ts): the guard's own when it left them, its words read otherwise;
             // a safety constant the guard found justified by no fact the rules name says its unit and the facts to cite there.

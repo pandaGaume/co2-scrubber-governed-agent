@@ -82,7 +82,8 @@ describe("the diagnosis factory's guard, on the corpus", () => {
         assert.deepEqual(asked.lead.tasks, [`task:${T10}`, "task:exp4-sonnet-a/t-2026-09-29-0008"]);
         assert.equal(asked.lead.form?.id, lead.form?.id);
         const rule = asked.rules.find((r) => r.code === "REFERENCE_NOT_A_FACT");
-        assert.ok(rule && rule.statedToday.length && rule.statedToday.every((s) => s.holds), "stated today, where the register says");
+        // Retired since 2026-10-10 (the harness justifies the safety constants): of what stated it, the schema's sentence still holds, the brief's no longer does.
+        assert.ok(rule && rule.statedToday.some((s) => s.holds) && rule.statedToday.some((s) => !s.holds), JSON.stringify(rule?.statedToday));
         const ids = new Set(asked.neighbourhood.nodes.map((n) => n.split(" ")[0]));
         for (const id of [lead.form!.id, `task:${T10}`, "rule:procedure:REFERENCE_NOT_A_FACT"]) assert.ok(ids.has(id), id);
         assert.ok(asked.neighbourhood.links.every((l) => ids.has(l.split(" ")[0]) && ids.has(l.split(" ").at(-1)!)));
@@ -229,8 +230,8 @@ describe("the diagnosis factory through the station, on its script", () => {
         assert.match(String((one.value as { text: string }).text), /"value":100.*test\.speedFloorPercent; scrubber\.effectiveFlowAtFull/);
         const received = await read("diagnosis.step", { task: `task:${T10}`, step: 8, part: "received", pointer: "/hypothesis" });
         assert.ok(((received.received as { shown: string[] }).shown).includes("/hypothesis/safetyBounds"));
-        const text = await read("diagnosis.text", { file: "specs/procedure/words.json", pointer: "/brief/safetyBounds", at: "today", find: "by its id alone" });
-        assert.match(String((text.text as { text: string }).text), /by its id alone/);
+        const text = await read("diagnosis.text", { file: "specs/procedure/words.json", pointer: "/brief/safetyBounds", at: "today", find: "and on which side" });
+        assert.match(String((text.text as { text: string }).text), /and on which side/);
         const node = await read("diagnosis.graph", { id: asked.lead.form!.id });
         assert.ok((node.links as number) > (node.shown as string[]).length && node.next === 10, "a form's many links, a page at a time");
     });

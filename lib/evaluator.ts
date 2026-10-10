@@ -528,7 +528,7 @@ export function evaluate(g: HarnessGraph, cfg: EvaluatorConfig = evaluatorConfig
                 detector: "D1",
                 class: "contract-gap",
                 settledBy: null,
-                title: `${code}: refused at the first try of ${untold.length} task(s) whose texts did not state ${missing.map(named).join(", ")}${rule.bag?.status === "gap" ? `: a gap of the register (${String(rule.bag?.note ?? "")})` : now.length ? `; stated since, by ${now.join("; ")}` : ""}`,
+                title: `${code}: refused at the first try of ${untold.length} task(s) whose texts did not state ${missing.map(named).join(", ")}${rule.bag?.status === "gap" ? `: a gap of the register (${String(rule.bag?.note ?? "")})` : rule.bag?.status === "retired" ? `; the rule is ${String(rule.bag?.note ?? "retired")}` : now.length ? `; stated since, by ${now.join("; ")}` : ""}`,
                 form: ruleForms.length === 1 ? formRef(ruleForms[0]) : null,
                 tasks: ids(untold),
                 models: r.models(untold),
@@ -588,6 +588,8 @@ export function evaluate(g: HarnessGraph, cfg: EvaluatorConfig = evaluatorConfig
         const v = verdict(ts, rules);
         const codes = rules.map((x) => String(x.bag?.code));
         const statedNow = rules.flatMap((x) => g.in(x, H.states).map((l) => l.oini as HarnessNode)).filter(holdsNow).map(describe);
+        // Rules the guard no longer enforces (2026-10-10): an entry compensating them has nothing left to compensate.
+        const retired = rules.length > 0 && rules.every((x) => x.bag?.status === "retired");
         const cls: FindingClass = !rules.length ? "domain-knowledge" : v.untold > 0 && v.told === 0 ? "contract-gap" : v.told > 0 && v.untold === 0 ? "learned-policy" : "contract-gap-or-policy";
         const text = String(entry.bag?.rule ?? "");
         findings.push({
@@ -597,7 +599,7 @@ export function evaluate(g: HarnessGraph, cfg: EvaluatorConfig = evaluatorConfig
             settledBy: cls === "contract-gap-or-policy" ? `D1: ${v.told} of its failures told the rule, ${v.untold} not, ${v.unknown} of a version not known` : null,
             title:
                 cls === "contract-gap"
-                    ? `the memory entry "${text.slice(0, 120)}…" compensates ${codes.join(", ")}, which no text its failures were given stated: a gap of the contract, learned instead of written${statedNow.length ? `; stated since, by ${statedNow.join("; ")}: the entry is now redundant` : ""}`
+                    ? `the memory entry "${text.slice(0, 120)}…" compensates ${codes.join(", ")}, which no text its failures were given stated: a gap of the contract, learned instead of written${retired ? `; the rule is ${String(rules[0].bag?.note ?? "retired")}: the entry is now redundant` : statedNow.length ? `; stated since, by ${statedNow.join("; ")}: the entry is now redundant` : ""}`
                     : cls === "learned-policy"
                       ? `the memory entry "${text.slice(0, 120)}…" rests on refusals of ${codes.join(", ")}, stated in what its failures read: a policy learned`
                       : cls === "domain-knowledge"

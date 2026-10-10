@@ -50,13 +50,17 @@
             "match": ["^justification: \\S+ = .+ is a safety constant with no justification"],
             "example": "justification: steps.2.speedPercent = 100 is a safety constant with no justification (a justification names it by its path, constant \"steps.2.speedPercent\"): cite the fact of a signed library document it respects (source \"library\", the fact's id as reference)",
             "states": [{ "file": "specs/procedure/words.json", "pointer": "/brief/procedure", "phrase": "cite a fact of a library document a person signed" }],
-            "applies": ["path-keys"]
+            "applies": ["path-keys"],
+            "status": "retired",
+            "note": "retired 2026-10-10: a safety constant is justified by the harness from the signed rules, never by the model; kept, with what stated it then, to read the refusals of the manifests of before"
         },
         {
             "code": "SAFETY_SOURCE_NOT_LIBRARY",
             "match": ["^justification: \\S+ = .+ is a safety constant: it is justified by a fact of a signed library document, not by"],
             "example": "justification: limits.maxMinutes = 45 is a safety constant: it is justified by a fact of a signed library document, not by a calculation (steps total)",
-            "states": [{ "file": "specs/procedure/words.json", "pointer": "/brief/procedure", "phrase": "cite a fact of a library document a person signed" }]
+            "states": [{ "file": "specs/procedure/words.json", "pointer": "/brief/procedure", "phrase": "cite a fact of a library document a person signed" }],
+            "status": "retired",
+            "note": "retired 2026-10-10: a safety constant is justified by the harness from the signed rules, never by the model; kept, with what stated it then, to read the refusals of the manifests of before"
         },
         {
             "code": "INVALID_REFERENCE_CARDINALITY",
@@ -65,7 +69,9 @@
             "states": [
                 { "file": "specs/procedure/words.json", "pointer": "/brief/safetyBounds", "phrase": "which is the single fact to cite, by its id alone as the reference" },
                 { "file": "harness/core/justify.ts", "phrase": "Exactly one: for library, one id as library.facts lists it" }
-            ]
+            ],
+            "status": "retired",
+            "note": "retired 2026-10-10: a safety constant is justified by the harness from the signed rules, never by the model; kept, with what stated it then, to read the refusals of the manifests of before"
         },
         {
             "code": "REFERENCE_NOT_A_FACT",
@@ -75,20 +81,24 @@
                 { "file": "specs/procedure/words.json", "pointer": "/brief/safetyBounds", "phrase": "which is the single fact to cite, by its id alone as the reference" },
                 { "file": "harness/core/justify.ts", "phrase": "Exactly one: for library, one id as library.facts lists it" }
             ],
-            "note": "the safety card says to cite \"the fact's id as its reference\", which a model read as allowing two ids joined; what the guard accepts, one id and nothing else, is stated by these two since 287f5bc"
+            "status": "retired",
+            "note": "retired 2026-10-10: a safety constant is justified by the harness from the signed rules, never by the model; kept, with what stated it then, to read the refusals of the manifests of before (before: the safety card says to cite \"the fact's id as its reference\", which a model read as allowing two ids joined; what the guard accepts, one id and nothing else, is stated by these two since 287f5bc)"
         },
         {
             "code": "FACT_NOT_BOUNDING",
             "concerns": "library",
             "match": ["^justification: \\S+ = .+ cites \\S+ .*which the signed rules do not bound it by"],
             "example": "justification: limits.co2MaxPpm = 2500 cites habitat.co2.elevatedPpm (3500 ppm), which the signed rules do not bound it by",
-            "states": [{ "file": "specs/procedure/words.json", "pointer": "/brief/safetyBounds", "phrase": "the fact its signed rules bound it by" }]
+            "states": [{ "file": "specs/procedure/words.json", "pointer": "/brief/safetyBounds", "phrase": "the fact its signed rules bound it by" }],
+            "status": "retired",
+            "note": "retired 2026-10-10: a safety constant is justified by the harness from the signed rules, never by the model; kept, with what stated it then, to read the refusals of the manifests of before"
         },
         {
             "code": "FACT_UNSIGNED",
             "concerns": "library",
             "match": ["^justification: \\S+: the fact \\S+ is in \".*\", which no person has signed as valid"],
-            "example": "justification: steps.1.speedPercent: the fact scrubber.minimumSpeedElevated is in \"scrubber-1-datasheet\", which no person has signed as valid: cite instead a fact of a signed document that bounds this constant",
+            "example": "justification: steps.1.speedPercent: the fact test.speedFloorPercent is in \"commissioning-test-safety\", which no person has signed as valid: a safety constant is bounded by a signed document only; if none bounds it, end with task.fail naming the document a person must sign",
+            "examples": ["justification: steps.1.speedPercent: the fact scrubber.minimumSpeedElevated is in \"scrubber-1-datasheet\", which no person has signed as valid: cite instead a fact of a signed document that bounds this constant"],
             "states": [{ "file": "specs/procedure/words.json", "pointer": "/brief/procedure", "phrase": "library.facts says which are signed" }]
         },
         {
@@ -102,24 +112,34 @@
         {
             "code": "FACT_NOT_RESPECTED",
             "match": ["^justification: \\S+ = .+ does not respect \\S+ = "],
-            "example": "justification: limits.co2AbortPpm = 3500 does not respect test.co2AbortCeilingPpm = 3200 ppm (at or below)",
+            "example": "justification: limits.co2AbortPpm = 3500 does not respect test.co2AbortCeilingPpm = 3200 ppm, a fact of a signed document: set it at or below it",
+            "examples": ["justification: limits.co2AbortPpm = 3500 does not respect test.co2AbortCeilingPpm = 3200 ppm (at or below)"],
             "states": [
-                { "file": "specs/procedure/words.json", "pointer": "/brief/procedure", "phrase": "and respect it" },
+                { "file": "specs/procedure/words.json", "pointer": "/brief/procedure", "phrase": "set each within its signed bounds" },
                 { "file": "specs/procedure/words.json", "pointer": "/brief/safetyBounds", "phrase": "and on which side" }
             ]
+        },
+        {
+            "code": "SAFETY_UNBOUNDED",
+            "match": ["^justification: \\S+ = .+ is a safety constant no signed fact bounds: leave it out"],
+            "example": "justification: abort.co2.threshold = 3200 is a safety constant no signed fact bounds: leave it out (the harness sets no safety number that nothing signed justifies)",
+            "states": [{ "file": "specs/procedure/words.json", "pointer": "/brief/procedure", "phrase": "a safety field that no signed fact bounds is left out" }],
+            "applies": ["path-keys"]
         },
         {
             "code": "CONSTANT_UNJUSTIFIED",
             "match": ["^justification: \\S+ = .+ has no justification"],
             "example": "justification: steps.2.minutes = 30 has no justification (a justification names it by its path, constant \"steps.2.minutes\"): say its source and why",
-            "states": [{ "file": "specs/procedure/words.json", "pointer": "/brief/procedure", "phrase": "Every constant you set is justified in justifications" }],
+            "states": [{ "file": "specs/procedure/words.json", "pointer": "/brief/procedure", "phrase": "is justified in justifications" }],
             "applies": ["path-keys"]
         },
         {
             "code": "JUSTIFIED_VALUE_MISMATCH",
             "match": ["^justification: \\S+: the justification says .+, what you sent sets "],
             "example": "justification: steps.1.minutes: the justification says 30, what you sent sets 25",
-            "states": [{ "file": "harness/core/justify.ts", "phrase": "its value (a number, or [min, max] for bounds)" }]
+            "states": [{ "file": "harness/core/justify.ts", "phrase": "its value (a number, or [min, max] for bounds)" }],
+            "status": "retired",
+            "note": "retired 2026-10-10: a justification no longer repeats its value, which the harness reads at the path; kept, with what stated it then, to read the refusals of the manifests of before"
         },
         {
             "code": "JUSTIFICATION_NO_REASON",

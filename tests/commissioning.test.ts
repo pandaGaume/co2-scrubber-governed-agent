@@ -116,11 +116,12 @@ describe("the procedure's guard, alone", () => {
         assert.deepEqual(justificationProblems(justified, read, null, RULES), []);
         const unread = justificationProblems(justified, { library: [], web: [] }, null, RULES).join("; ");
         assert.match(unread, /steps\.1\.minutes: "method-concentration-decay" is not a library document or fact read in this task/);
+        // A value written in a justification, as before 2026-10-10, is not read: the value is the one at the path.
         const wrong = { ...justified, justifications: justified.justifications.map((j) => (j.constant === "steps.2.minutes" ? { ...j, value: 15 } : j)) };
-        assert.match(justificationProblems(wrong, read, null, RULES).join("; "), /steps\.2\.minutes: the justification says 15, what you sent sets 12/);
+        assert.deepEqual(justificationProblems(wrong, read, null, RULES), []);
     });
 
-    it("a safety constant cites a fact of a signed library document and respects it; the card's rules cite only its own facts", () => {
+    it("a safety constant is judged by its value against the facts of signed documents the rules bound it by, whatever a justification says; the card's rules cite only its own facts (2026-10-10)", () => {
         const card = CARD;
         // Every fact a rule cites is a fact of the card: the envelope is the card's, nothing in the code.
         const cited = RULES.rules.flatMap((r) => ("compare" in r ? [r.compare.fact, r.compare.plusFact] : [])).filter((x): x is string => typeof x === "string");
@@ -128,38 +129,25 @@ describe("the procedure's guard, alone", () => {
         assert.deepEqual(Object.keys(envelopeOf(RULES, FACTS)).sort(), [...new Set(cited)].sort(), "every fact the rules cite is on the card");
         assert.ok(card.every((f) => f.kind === "context" && f.reference && f.bound), "each limit is a context fact with its origin and its safe side");
         const signed = (valid: boolean): SignedFact[] => card.map((f) => ({ ...f, source: "commissioning-test-safety", signed: { by: "reviewer", at: "2026-09-28", valid } }));
-        const cite = (constant: string, value: number, reference: string) => ({ constant, value, source: "library" as const, reference, reason: "the card" });
-        const safe = {
-            ...PROCEDURE,
-            justifications: [
-                cite("limits.co2MaxPpm", 2800, "test.co2AbortCeilingPpm"),
-                cite("limits.co2AbortPpm", 3200, "test.co2AbortCeilingPpm"),
-                cite("limits.minSpeedPercent", 30, "test.speedFloorPercent"),
-                cite("limits.maxMinutes", 24, "test.maxMinutesCeiling"),
-                cite("steps.1.speedPercent", 30, "test.speedFloorPercent"),
-                cite("steps.2.speedPercent", 100, "test.speedFloorPercent"),
-            ],
-        };
-        assert.deepEqual(safetyProblems(safe, signed(true), RULES), []);
+        // Within its signed bounds, with no justification at all: nothing to say.
+        assert.deepEqual(safetyProblems(PROCEDURE, signed(true), RULES), []);
         // The facts the signed rules bound each constant by, through another constant too (a maximum under an abort under a ceiling).
         assert.deepEqual(factsBounding(RULES, "steps.2.speedPercent"), ["test.speedFloorPercent"]);
         assert.deepEqual(factsBounding(RULES, "limits.co2MaxPpm"), ["test.co2AbortCeilingPpm"]);
         assert.deepEqual(factsBounding(RULES, "limits.maxMinutes"), ["test.maxMinutesCeiling"]);
-        // A speed justified by the scrubber's flow (2026-09-28, nineteen refusals in a row): refused as a fact the rules do not bound it by, naming the one they do.
-        const datasheet: SignedFact = { id: "scrubber.effectiveFlowAtFull", semantic: "ScrubberEffectiveFlowAtFull", quantity: "VolumetricFlow", unit: "m3/min", value: 1, source: "scrubber-1-datasheet", signed: { by: "reviewer", at: "2026-09-28", valid: true } };
-        const byFlow = { ...safe, justifications: safe.justifications.map((j) => (j.constant === "steps.2.speedPercent" ? { ...j, reference: "scrubber.effectiveFlowAtFull" } : j)) };
-        const flowProblems = safetyProblems(byFlow, [...signed(true), datasheet], RULES);
-        assert.equal(flowProblems.length, 1, flowProblems.join("; "));
-        assert.match(flowProblems[0], /^steps\.2\.speedPercent = 100 cites scrubber\.effectiveFlowAtFull \(1 m3\/min\), which the signed rules do not bound it by; the signed rules bound it by test\.speedFloorPercent = 30 percent \(at or above it\): cite it \(source "library", reference "test\.speedFloorPercent"\)$/);
+        // What a model writes for a safety constant is not read: a speed "justified" by the scrubber's flow is still judged by the floor alone.
+        const byFlow = { ...PROCEDURE, justifications: [{ constant: "steps.2.speedPercent", source: "library" as const, reference: "scrubber.effectiveFlowAtFull", reason: "full flow" }] };
+        assert.deepEqual(safetyProblems(byFlow, signed(true), RULES), []);
         // Unsigned, or changed since it was signed: refused, with how to sign.
         const unsigned = card.map((f) => ({ ...f, source: "commissioning-test-safety", signed: null }));
-        assert.match(safetyProblems(safe, unsigned, RULES).join("; "), /which no person has signed as valid: cite instead a fact of a signed document.*npm run library:sign/);
-        assert.match(safetyProblems(safe, signed(false), RULES).join("; "), /was signed by reviewer and has changed since/);
-        // A safety constant found on the web, computed or assumed is not a safety limit; one that does not respect its fact is refused.
-        const web = { ...safe, justifications: safe.justifications.map((j) => (j.constant === "limits.co2AbortPpm" ? { ...j, source: "web" as const, reference: "https://example.org" } : j)) };
-        assert.match(safetyProblems(web, signed(true), RULES).join("; "), /limits\.co2AbortPpm = 3200 is a safety constant: it is justified by a fact of a signed library document, not by a web page/);
-        const over = { ...safe, limits: { ...safe.limits, co2AbortPpm: 3400 }, justifications: safe.justifications.map((j) => (j.constant === "limits.co2AbortPpm" ? { ...j, value: 3400 } : j)) };
-        assert.match(safetyProblems(over, signed(true), RULES).join("; "), /limits\.co2AbortPpm = 3400 does not respect test\.co2AbortCeilingPpm = 3200 ppm \(at or below it\)/);
+        assert.match(safetyProblems(PROCEDURE, unsigned, RULES).join("; "), /which no person has signed as valid: a safety constant is bounded by a signed document only; if none bounds it, end with task\.fail.*npm run library:sign/);
+        assert.match(safetyProblems(PROCEDURE, signed(false), RULES).join("; "), /was signed by reviewer and has changed since/);
+        // A value beyond its fact: refused with the side to keep.
+        const over = { ...PROCEDURE, limits: { ...PROCEDURE.limits, co2AbortPpm: 3400 } };
+        assert.match(safetyProblems(over, signed(true), RULES).join("; "), /limits\.co2AbortPpm = 3400 does not respect test\.co2AbortCeilingPpm = 3200 ppm, a fact of a signed document: set it at or below it/);
+        // A safety field no signed fact bounds (a threshold on the CO2 abort, run trv7): left out.
+        const threshold = { ...PROCEDURE, abort: (PROCEDURE.abort ?? []).map((x) => (x.id === "co2" ? { ...x, threshold: 3200 } : x)) };
+        assert.match(safetyProblems(threshold, signed(true), RULES).join("; "), /abort\.co2\.threshold = 3200 is a safety constant no signed fact bounds: leave it out/);
     });
 
     it("a refused procedure stays kept whole for a few minutes: a revision sends only what changes, is applied to it and checked whole; the draft is erased once a procedure is accepted, and expires (2026-09-28)", async () => {

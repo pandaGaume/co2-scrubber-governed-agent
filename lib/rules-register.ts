@@ -19,7 +19,8 @@ export interface Statement {
     phrase: string;
 }
 
-export type RuleStatus = "stated" | "tacit" | "gap";
+/** stated: a text says it now; tacit: enforced, said nowhere, with why; gap: a hole of the register, with why; retired: no longer enforced, kept to read the refusals of before (2026-10-10). */
+export type RuleStatus = "stated" | "tacit" | "gap" | "retired";
 
 export interface RegisteredRule {
     code: string;
@@ -54,7 +55,7 @@ interface RegisterFile {
     topic: string;
     conventions?: Record<string, { note?: string; states: Statement[] }>;
     signed?: Record<string, { states?: Statement[]; status?: RuleStatus; note?: string; applies?: string[]; older?: string[]; examples?: string[] }>;
-    rules: Array<{ code: string; match: string[]; example?: string; states?: Statement[]; status?: RuleStatus; note?: string; applies?: string[]; concerns?: "library" }>;
+    rules: Array<{ code: string; match: string[]; example?: string; examples?: string[]; states?: Statement[]; status?: RuleStatus; note?: string; applies?: string[]; concerns?: "library" }>;
 }
 
 interface SignedRuleFile {
@@ -87,6 +88,7 @@ export function loadRegister(topic: string): Register | null {
         code: r.code,
         match: r.match.map((m) => new RegExp(m)),
         ...(r.example ? { example: r.example } : {}),
+        ...(r.examples ? { examples: r.examples } : {}),
         states: r.states ?? [],
         applies: r.applies ?? [],
         status: r.status ?? "stated",
