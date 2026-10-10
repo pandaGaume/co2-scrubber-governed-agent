@@ -73,7 +73,7 @@ const w = (key: string, vars?: Record<string, string | number>): string => say(W
 
 /** The words the topic asks for: the conformance test checks the file holds them all. */
 export const PROCEDURE_WORD_KEYS = [
-    "intention", "intentionDevice", "requirements.missing", ...FORMAT.requirements.map((r) => `requirements.${r}Read`), "requirements.methodRead",
+    "intention", "intentionDevice", "requirements.missing", ...FORMAT.requirements.map((r) => `requirements.${r}Read`), "requirements.methodRead", "requirements.methodListedRead",
     ...FORMAT.requirements.map((r) => `openQuestions.${r}`), "openQuestions.method",
     "brief.handOver", "brief.situation", "brief.method", "brief.methodListed", "brief.methodFind", "brief.methodNotACard", "brief.plan", "brief.planOutput", "brief.planUnit",
     "brief.procedure", "brief.safetyBounds", "brief.presenceRead", "brief.presenceUnread", "brief.measured", "brief.measuredSource", "brief.refused", "brief.refusedKept", "brief.refusedWhole",
@@ -814,7 +814,10 @@ function viewsOf(progress: Progress, task: TaskFile["task"]): Record<string, () 
             const lastRead = readOf(progress, "card")?.value as { id?: string } | undefined;
             const chosen = listed.length ? w("brief.methodListed", { listed: listed.map((id) => `"${id}"`).join(" and ") }) : w("brief.methodFind");
             const notACard = typeof lastRead?.id === "string" && !listed.includes(lastRead.id) ? w("brief.methodNotACard", { id: lastRead.id }) : "";
-            return { quantities: quantitiesOf(task), chosen, notACard };
+            // What the plan still needs, said from where the task stands: the methods listed, their card to read; never "find the
+            // methods" again once the library answered (2026-10-10, runs 5, 7 and 8: Nano called library.methods a second time each run).
+            const how = listed.length ? w("requirements.methodListedRead", { listed: listed.map((id) => `"${id}"`).join(", ") }) : w("requirements.methodRead");
+            return { quantities: quantitiesOf(task), chosen, notACard, how };
         },
         plan: () => ({ method: state.method ?? "", names: task.objective.required_outputs.map((o) => w("brief.planOutput", { name: o.name, quantity: o.quantity, unit: o.unit ? w("brief.planUnit", { unit: o.unit }) : "" })).join("; ") }),
         // What stopped the last test, said with its condition and its step.
@@ -873,7 +876,7 @@ export function marchingOrderOf(progress: Progress, task: TaskFile["task"]): Jso
     const r = requirementsOf(progress, task);
     const doneWhen = [
         ...FORMAT.requirements.map((req) => ({ item: w(`requirements.${req}Read`), met: Boolean(r[`${req}Read`]) })),
-        { item: w("requirements.methodRead"), met: Boolean(r.methodRead) },
+        { item: String(viewsOf(progress, task).method().how), met: Boolean(r.methodRead) },
         ...(previousOf(task) ? [{ item: w("requirements.analysisAccepted"), met: Boolean(r.analysisAccepted) }] : []),
         { item: w("doneWhen.plan"), met: Boolean(r.planDeclared || r.signedNorm) },
         { item: w("doneWhen.accepted"), met: Boolean(r.procedureAccepted) },

@@ -29,7 +29,7 @@
         { "id": "procedure", "type": "conduct.stage", "bag": { "says": "brief.procedure", "view": "procedure", "order": 5, "goal": "Write the procedure by the method's rules for this installation, every constant justified (the safety ones by facts of signed documents), and submit it; correct a refusal with procedure.revise.", "tools": ["library.facts", "procedure.submit", "procedure.revise"] } },
 
         { "id": "plan-needs-installation", "type": "conduct.gate", "bag": { "capabilities": ["task.plan"], "says": "requirements.missing", "vars": { "requirement": "installationRead", "how": { "word": "requirements.installationRead" } } } },
-        { "id": "plan-needs-method", "type": "conduct.gate", "bag": { "capabilities": ["task.plan"], "says": "requirements.missing", "vars": { "requirement": "methodRead", "how": { "word": "requirements.methodRead" } } } },
+        { "id": "plan-needs-method", "type": "conduct.gate", "bag": { "capabilities": ["task.plan"], "says": "requirements.missing", "view": "method", "vars": { "requirement": "methodRead" } } },
         { "id": "analysis-first", "type": "conduct.gate", "bag": { "capabilities": ["procedure.submit", "procedure.revise"], "says": "analysis.first", "view": "stopped" } },
         { "id": "already-accepted", "type": "conduct.gate", "bag": { "capabilities": ["procedure.submit", "procedure.revise"], "says": "draft.accepted", "view": "accepted" } }
     ],

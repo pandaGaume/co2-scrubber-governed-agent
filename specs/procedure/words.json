@@ -6,6 +6,7 @@
         "installationRead": "read factory.inventory (what is installed, where, what is unknown)",
         "presenceRead": "read biomed.presence (who is in which module now)",
         "methodRead": "find the method that measures the missing quantity (library.methods) and read its card (library.read)",
+        "methodListedRead": "read the card of one of the methods the library listed, {listed} (library.read, its id exactly)",
         "missing": "the plan needs {requirement}: {how}",
         "analysisAccepted": "analyse why the last test was aborted (procedure.analyse): its cause, the evidence, why the last procedure did not prevent it, what the new one changes"
     },
