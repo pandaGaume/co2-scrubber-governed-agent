@@ -16,7 +16,7 @@
  */
 import type { CapabilityResult, Intention, JsonValue } from "@spiky-panda/harness";
 import type { Broker } from "../../lib/broker.js";
-import { withBase } from "../../core/base.js";
+import { BASE_CAPABILITIES, withBase } from "../../core/base.js";
 import type { LocalCapability } from "../../core/capabilities.js";
 import { conductView, loadPlaybook, sayingText, type Evidence } from "../../core/conduct.js";
 import type { LibraryFact } from "../../core/contracts.js";
@@ -44,7 +44,7 @@ export const OBSERVER_OBSERVATION = "observer";
 export const OBSERVER_CONDUCT = loadPlaybook("specs/observer/playbook.json");
 
 export const OBSERVER_WORD_KEYS = [
-    "intention", "capability", "read", "readNothing", "brief.read", "brief.request", "brief.handOver",
+    "intention", "capability", "read", "readNothing", "brief.read", "brief.request", "brief.handOver", "brief.giveUp",
     "guard.refused", "guard.readFirst", "guard.accepted", "guard.noAttemptLeft",
     "doneWhen.read", "doneWhen.accepted", "doneWhen.handedOver", "openQuestions.read", "openQuestions.request", "openQuestions.handOver",
     "validate.none", "validate.notAccepted", "validate.notTheFile", "schema.factIdExample", "schema.known",
@@ -224,9 +224,10 @@ export function briefOf(progress: Progress, task: TaskFile["task"]): string {
 
 async function guardObserver(capabilityId: string, input: JsonValue, context: TopicContext): Promise<string[]> {
     const views = viewsOf(context.progress, context.task);
-    const refused = OBSERVER_CONDUCT.evaluate(evidenceOf(context.progress, context.task))
-        .refusing.filter((g) => g.capabilities.includes(capabilityId))
-        .map((g) => sayingText(g, w, views));
+    const { stage, refusing } = OBSERVER_CONDUCT.evaluate(evidenceOf(context.progress, context.task));
+    const refused = refusing.filter((g) => g.capabilities.includes(capabilityId)).map((g) => sayingText(g, w, views));
+    // A way out entered: its tools only.
+    if (stage.exit && !(stage.tools ?? []).includes(capabilityId)) refused.push(sayingText(stage, w, views));
     if (refused.length || capabilityId !== OBSERVER_CAPABILITY) return refused;
     const problems = await requestProblems(input, context);
     if (!problems.length) return [];
@@ -306,7 +307,12 @@ export const OBSERVER_TOPIC: TopicDefinition = {
         } as unknown as JsonValue;
     },
     // The stage's tools only: what the conduct's gates refuse now is not shown (the guard refuses it still).
-    closed: (progress, task) => OBSERVER_CONDUCT.evaluate(evidenceOf(progress, task)).refusing.flatMap((g) => g.capabilities),
+    closed: (progress, task) => {
+        const { stage, refusing } = OBSERVER_CONDUCT.evaluate(evidenceOf(progress, task));
+        // A way out entered closes every tool the Observer has but its own.
+        const all = [...BASE_CAPABILITIES, OBSERVER_CAPABILITY];
+        return stage.exit ? all.filter((id) => !(stage.tools ?? []).includes(id)) : refusing.flatMap((g) => g.capabilities);
+    },
     name: "observer",
     tools: OBSERVER_TOOLS,
     // A request is made of this task's description and readings, never replayed from another's.

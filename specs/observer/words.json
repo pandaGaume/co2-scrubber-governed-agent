@@ -7,6 +7,7 @@
     "brief": {
         "read": "Stage 1 of 3, read. The system is in the state (hypothesis: the description, the telemetry's summary, the quantities the factories share, the library's documents). Read in the library what the description leaves open: the devices' datasheets, the station's topology and metrics (library.read gives a document whole, library.facts the facts a document states by id). {read}",
         "request": "Stage 2 of 3, the request. Hand over the whole TWIN_FACTORY_REQUEST with observer.submit; {attempts} attempt(s) left. {read}",
+        "giveUp": "No attempt left: {used} request(s) refused. End with task.fail, naming the reasons that still stand (lastRefusal); the work stops here, nothing else is offered.",
         "handOver": "Stage 3 of 3, hand over. The request is accepted ({path}): end with task.done, it as the artifact of kind \"request\"."
     },
     "guard": {

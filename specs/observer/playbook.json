@@ -1,31 +1,185 @@
 {
-    "title": "The Observer's own conduct, step by step (harness/core/conduct.ts): read, the request, the hand-over",
+    "title": "The Observer's own conduct, step by step (harness/core/conduct.ts): read, the request, the hand-over; and the way out once the attempts are spent",
     "nodes": [
-        {"id": "start", "type": "conduct.start"},
-        {"id": "accepted", "type": "conduct.evidence", "bag": {"evidence": "requestAccepted"}},
-        {"id": "read", "type": "conduct.evidence", "bag": {"evidence": "documentRead"}},
-        {"id": "attempts-left", "type": "conduct.evidence", "bag": {"evidence": "attemptsLeft"}},
-        {"id": "not-accepted", "type": "conduct.not"},
-        {"id": "not-read", "type": "conduct.not"},
-        {"id": "no-attempt", "type": "conduct.not"},
-        {"id": "hand-over", "type": "conduct.stage", "bag": {"says": "brief.handOver", "view": "accepted", "order": 3, "goal": "The request is accepted: hand it over with task.done, the accepted file as the artifact (kind \"request\").", "tools": ["task.done"]}},
-        {"id": "reading", "type": "conduct.stage", "bag": {"says": "brief.read", "view": "read", "order": 1, "goal": "Read in the library what the description leaves open: the devices' datasheets, the station's topology and metrics.", "tools": ["library.read", "library.facts", "library.search"]}},
-        {"id": "request", "type": "conduct.stage", "bag": {"says": "brief.request", "view": "request", "order": 2, "goal": "Hand over the whole TWIN_FACTORY_REQUEST with observer.submit; after a refusal, send it again, corrected.", "tools": ["observer.submit", "library.read", "library.facts", "physics.units_convert"]}},
-        {"id": "read-first", "type": "conduct.gate", "bag": {"capabilities": ["observer.submit"], "says": "guard.readFirst"}},
-        {"id": "already-accepted", "type": "conduct.gate", "bag": {"capabilities": ["observer.submit"], "says": "guard.accepted", "view": "accepted"}},
-        {"id": "no-attempt-left", "type": "conduct.gate", "bag": {"capabilities": ["observer.submit"], "says": "guard.noAttemptLeft", "view": "request"}}
+        {
+            "id": "start",
+            "type": "conduct.start"
+        },
+        {
+            "id": "accepted",
+            "type": "conduct.evidence",
+            "bag": {
+                "evidence": "requestAccepted"
+            }
+        },
+        {
+            "id": "read",
+            "type": "conduct.evidence",
+            "bag": {
+                "evidence": "documentRead"
+            }
+        },
+        {
+            "id": "attempts-left",
+            "type": "conduct.evidence",
+            "bag": {
+                "evidence": "attemptsLeft"
+            }
+        },
+        {
+            "id": "not-accepted",
+            "type": "conduct.not"
+        },
+        {
+            "id": "not-read",
+            "type": "conduct.not"
+        },
+        {
+            "id": "no-attempt",
+            "type": "conduct.not"
+        },
+        {
+            "id": "hand-over",
+            "type": "conduct.stage",
+            "bag": {
+                "says": "brief.handOver",
+                "view": "accepted",
+                "order": 3,
+                "goal": "The request is accepted: hand it over with task.done, the accepted file as the artifact (kind \"request\").",
+                "tools": [
+                    "task.done"
+                ]
+            }
+        },
+        {
+            "id": "give-up",
+            "type": "conduct.stage",
+            "bag": {
+                "says": "brief.giveUp",
+                "view": "request",
+                "exit": true,
+                "goal": "No attempt left: end with task.fail, naming the reasons that still stand.",
+                "tools": [
+                    "task.fail"
+                ]
+            }
+        },
+        {
+            "id": "reading",
+            "type": "conduct.stage",
+            "bag": {
+                "says": "brief.read",
+                "view": "read",
+                "order": 1,
+                "goal": "Read in the library what the description leaves open: the devices' datasheets, the station's topology and metrics.",
+                "tools": [
+                    "library.read",
+                    "library.facts",
+                    "library.search"
+                ]
+            }
+        },
+        {
+            "id": "request",
+            "type": "conduct.stage",
+            "bag": {
+                "says": "brief.request",
+                "view": "request",
+                "order": 2,
+                "goal": "Hand over the whole TWIN_FACTORY_REQUEST with observer.submit; after a refusal, send it again, corrected.",
+                "tools": [
+                    "observer.submit",
+                    "library.read",
+                    "library.facts",
+                    "physics.units_convert"
+                ]
+            }
+        },
+        {
+            "id": "read-first",
+            "type": "conduct.gate",
+            "bag": {
+                "capabilities": [
+                    "observer.submit"
+                ],
+                "says": "guard.readFirst"
+            }
+        },
+        {
+            "id": "already-accepted",
+            "type": "conduct.gate",
+            "bag": {
+                "capabilities": [
+                    "observer.submit"
+                ],
+                "says": "guard.accepted",
+                "view": "accepted"
+            }
+        },
+        {
+            "id": "no-attempt-left",
+            "type": "conduct.gate",
+            "bag": {
+                "capabilities": [
+                    "observer.submit"
+                ],
+                "says": "guard.noAttemptLeft",
+                "view": "request"
+            }
+        }
     ],
     "links": [
-        {"from": "accepted.value", "to": "not-accepted.in"},
-        {"from": "read.value", "to": "not-read.in"},
-        {"from": "attempts-left.value", "to": "no-attempt.in"},
-        {"from": "start.next", "to": "hand-over.entered"},
-        {"from": "not-accepted.value", "to": "hand-over.passes"},
-        {"from": "hand-over.next", "to": "reading.entered"},
-        {"from": "read.value", "to": "reading.passes"},
-        {"from": "reading.next", "to": "request.entered"},
-        {"from": "not-read.value", "to": "read-first.refuses"},
-        {"from": "accepted.value", "to": "already-accepted.refuses"},
-        {"from": "no-attempt.value", "to": "no-attempt-left.refuses"}
+        {
+            "from": "accepted.value",
+            "to": "not-accepted.in"
+        },
+        {
+            "from": "read.value",
+            "to": "not-read.in"
+        },
+        {
+            "from": "attempts-left.value",
+            "to": "no-attempt.in"
+        },
+        {
+            "from": "start.next",
+            "to": "hand-over.entered"
+        },
+        {
+            "from": "not-accepted.value",
+            "to": "hand-over.passes"
+        },
+        {
+            "from": "hand-over.next",
+            "to": "give-up.entered"
+        },
+        {
+            "from": "attempts-left.value",
+            "to": "give-up.passes"
+        },
+        {
+            "from": "give-up.next",
+            "to": "reading.entered"
+        },
+        {
+            "from": "read.value",
+            "to": "reading.passes"
+        },
+        {
+            "from": "reading.next",
+            "to": "request.entered"
+        },
+        {
+            "from": "not-read.value",
+            "to": "read-first.refuses"
+        },
+        {
+            "from": "accepted.value",
+            "to": "already-accepted.refuses"
+        },
+        {
+            "from": "no-attempt.value",
+            "to": "no-attempt-left.refuses"
+        }
     ]
 }

@@ -277,7 +277,13 @@ describe("the Observer, a task of the factories' harness, through the broker", (
         assert.equal(result.ok, false);
         assert.equal(result.state, "failed");
         assert.deepEqual(result.attempts.map((a) => a.ok), [false, false]);
-        assert.match(model.seen.at(-1)!.state.marchingOrder.closedNow.map((c) => c.why).join("; "), /no attempt left \(2 request\(s\) refused\)/);
+        // The way out (2026-10-10, run 7): the whole marching order, task.fail its only tool, every other closed with its words.
+        const last = model.seen.at(-1)!.state.marchingOrder;
+        assert.deepEqual(last.stages.map((s) => `${s.step}:${s.status}`), ["1:current"]);
+        assert.deepEqual(last.allowedNow, ["task.fail"]);
+        assert.match(last.closedNow.map((c) => c.why).join("; "), /no attempt left \(2 request\(s\) refused\)/);
+        assert.ok(last.closedNow.some((c) => c.tools.includes("*") && /^No attempt left: 2 request\(s\) refused\. End with task\.fail/.test(c.why)));
+        assert.match(model.seen.at(-1)!.brief, /^No attempt left|No attempt left: 2 request/);
     });
 
     it("the observer slot says plainly when no model is ready, rather than answering without one", async () => {

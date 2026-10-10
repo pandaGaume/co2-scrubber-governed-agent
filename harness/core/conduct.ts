@@ -66,6 +66,12 @@ export interface Saying {
     tools?: string[];
     /** Where the stage stands in the marching order (1 first); the file's order when absent. */
     order?: number;
+    /**
+     * A way out of the work, not a stage of it (2026-10-10, run 7): entered, it is the whole marching order, its tools the only ones
+     * offered, every other closed with its words; never shown otherwise. The Observer's attempts spent, the request stage still said
+     * "hand over the request" beside a closed observer.submit, and Nemotron Nano went on searching the library.
+     */
+    exit?: boolean;
 }
 
 /** One stage of the marching order: what it is for, with what, and where the task stands on it. */
@@ -198,6 +204,7 @@ const sayingOf = (id: string, bag: Record<string, unknown>, file: string): Sayin
         ...(typeof bag.goal === "string" ? { goal: bag.goal } : {}),
         ...(Array.isArray(bag.tools) ? { tools: bag.tools.map(String) } : {}),
         ...(typeof bag.order === "number" ? { order: bag.order } : {}),
+        ...(bag.exit === true ? { exit: true } : {}),
     };
 };
 
@@ -302,8 +309,11 @@ export class Playbook {
      * on the order of the work (a plan or a procedure first?); given the whole order and its place in it, it follows it.
      */
     marchingOrder(evidence: Evidence): MarchingStep[] {
-        const current = this.evaluate(evidence).stage.id;
-        const ordered = this.stages.map((s, i) => ({ s, at: s.order ?? i + 1 })).sort((a, b) => a.at - b.at);
+        const stage = this.evaluate(evidence).stage;
+        const current = stage.id;
+        // A way out entered is the whole order; never shown otherwise.
+        if (stage.exit) return [{ step: 1, stage: stage.id, goal: stage.goal ?? "", tools: stage.tools ?? [], status: "current" }];
+        const ordered = this.stages.filter((s) => !s.exit).map((s, i) => ({ s, at: s.order ?? i + 1 })).sort((a, b) => a.at - b.at);
         const here = ordered.findIndex((x) => x.s.id === current);
         return ordered.map((x, i) => ({ step: i + 1, stage: x.s.id, goal: x.s.goal ?? "", tools: x.s.tools ?? [], status: i < here ? "passed" : i === here ? "current" : "next" }));
     }
@@ -332,12 +342,13 @@ export function conductView(playbook: Playbook, evidence: Evidence, say: (key: s
         const own = s.status === "current" ? s.tools.filter((t) => done.has(t)) : [];
         return own.length ? { ...s, answered: own } : s;
     });
-    const refusing = playbook.evaluate(evidence).refusing;
+    const { stage, refusing } = playbook.evaluate(evidence);
     const closed = new Set(refusing.flatMap((g) => g.capabilities));
     return {
         stages,
         allowedNow: (stages.find((s) => s.status === "current")?.tools ?? []).filter((t) => !closed.has(t)),
-        closedNow: refusing.map((g) => ({ tools: g.capabilities, why: sayingText(g, say, views) })),
+        // A way out closes every tool but its own ("*"), with its own words.
+        closedNow: [...refusing.map((g) => ({ tools: g.capabilities, why: sayingText(g, say, views) })), ...(stage.exit ? [{ tools: ["*"], why: sayingText(stage, say, views) }] : [])],
     };
 }
 

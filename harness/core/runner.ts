@@ -628,7 +628,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             // "outside the allowlist" (2026-10-10: the Observer's request before any read went nowhere and said nothing of why).
             else if (/outside the allowlist/.test(failed ?? "") && closed().has(exchange.proposedCapabilityId)) {
                 const order = topic.marchingOrder?.(progress, task) as { closedNow?: Array<{ tools: string[]; why: string }> } | undefined;
-                const why = (order?.closedNow ?? []).filter((c) => c.tools.includes(exchange.proposedCapabilityId)).map((c) => c.why);
+                const why = (order?.closedNow ?? []).filter((c) => c.tools.includes(exchange.proposedCapabilityId) || c.tools.includes("*")).map((c) => c.why);
                 if (why.length) failed = `${exchange.proposedCapabilityId} is closed at this stage: ${why.join("; ")}`;
             }
             // The harness stopped the step (the guard, the schema, a capability outside the list, a timeout): the model reads the reason at the next step.
