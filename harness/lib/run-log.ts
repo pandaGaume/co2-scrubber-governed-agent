@@ -16,6 +16,9 @@
  *
  * Not under `npm test` (node --test sets NODE_TEST_CONTEXT): its scenarios run on scripts, call no model, and a log of each would
  * bury the trials' logs; `RUN_LOG=1` asks for them anyway.
+ *
+ * `DEBUG=false` leaves the step by step out (2026-10-10): no log.md, neither the steps node by node nor the calls whole; the README
+ * keeps the test, its outcome, its tasks and the calls and tokens of each model.
  */
 import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
@@ -121,6 +124,8 @@ export class RunLog {
     private readonly tasks: string[] = [];
     /** Calls answered after their task ended. */
     private late = 0;
+    /** The step by step written (log.md); `DEBUG=false` leaves it out, the README stays. */
+    readonly detailed = process.env.DEBUG !== "false";
 
     constructor(
         private readonly meta: RunLogMeta,
@@ -135,11 +140,11 @@ export class RunLog {
         }
         mkdirSync(this.dir, { recursive: true });
         this.writeReadme(null);
-        writeFileSync(path.join(this.dir, "log.md"), `# Log of ${this.id}\n\nTest \`${this.id}\` (see README.md). Started ${this.started.toISOString()}.\n\nEach harness step is written node by node (observe, context, lookup, gate, reason, interpret, guard, execute, observe-after, evaluate, record): what each node got and what it gave. Each language model call is written whole where it happened: the request, its parts marked \`cacheable\` when they repeat the start of the previous request of the same conversation, the cache the server reports, and the answer.\n`);
+        if (this.detailed) writeFileSync(path.join(this.dir, "log.md"), `# Log of ${this.id}\n\nTest \`${this.id}\` (see README.md). Started ${this.started.toISOString()}.\n\nEach harness step is written node by node (observe, context, lookup, gate, reason, interpret, guard, execute, observe-after, evaluate, record): what each node got and what it gave. Each language model call is written whole where it happened: the request, its parts marked \`cacheable\` when they repeat the start of the previous request of the same conversation, the cache the server reports, and the answer.\n`);
     }
 
     private append(text: string): void {
-        if (this.closed) return;
+        if (this.closed || !this.detailed) return;
         appendFileSync(path.join(this.dir, "log.md"), `\n${text}\n`);
     }
 
@@ -169,7 +174,7 @@ export class RunLog {
             "",
             ...(models.length ? ["| model | calls | prompt tokens | served from cache | completion tokens |", "|---|---|---|---|---|", ...models, ""] : [outcome ? "None: no language model was called in this test." : "None so far.", ""]),
             ...(this.late ? [`**${this.late} call(s) answered after their task had ended** (the harness had stopped waiting): counted above, run by nobody, marked LATE in log.md.`, ""] : []),
-            `The whole account, step by step and call by call, is in [log.md](log.md) (${this.steps} harness steps, ${this.llmCalls} language model calls).`,
+            this.detailed ? `The whole account, step by step and call by call, is in [log.md](log.md) (${this.steps} harness steps, ${this.llmCalls} language model calls).` : `No step by step (DEBUG=false): ${this.llmCalls} language model calls, counted above.`,
             "",
         ];
         writeFileSync(path.join(this.dir, "README.md"), lines.join("\n"));
@@ -209,6 +214,7 @@ export class RunLog {
         stats.cached += Number((usage?.prompt_tokens_details as Record<string, unknown> | undefined)?.cached_tokens ?? usage?.prompt_cache_hit_tokens ?? usage?.cache_read_input_tokens ?? 0);
         stats.completion += Number(usage?.completion_tokens ?? usage?.output_tokens ?? 0);
         this.byModel.set(req.model, stats);
+        if (!this.detailed) return;
 
         const systemKey = `system:${sha(req.system)}`;
         const toolsKey = `tools:${sha(req.tools)}`;
