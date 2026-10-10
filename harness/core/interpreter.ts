@@ -69,6 +69,26 @@ const typesOf = (s: Schema): string[] => ([] as unknown[]).concat(s.type ?? []).
 const NUMBER = /^\s*(-?\d+(?:\.\d+)?)\s*(?:%|[a-zA-Zµ°/³²0-9 .]*)?\s*$/;
 
 /**
+ * The form of an identifier that names a file (a procedure, a playbook): lower case words and dashes. A schema says it by this
+ * pattern, and an identifier written another way ("V_Lab Measure 01") is the same identifier once written in that form: the reading
+ * is a reduction, never a guess (2026-10-10, run 5: Nemotron Nano was refused twice on "v_lab-measure-2026-10-14-01", an underscore).
+ */
+export const FILE_ID_PATTERN = "^[a-z0-9][a-z0-9-]{0,63}$";
+const FILE_ID = new RegExp(FILE_ID_PATTERN);
+
+/** An identifier written in the form of a file's name: accents dropped, lower case, every other run of characters a dash. */
+export function asFileId(value: string): string {
+    return value
+        .normalize("NFKD")
+        .replace(/[̀-ͯ]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 64)
+        .replace(/-+$/, "");
+}
+
+/**
  * The deterministic reading: the value reshaped toward the schema where one reduction alone fits, the changes said. Never invents a
  * value: what it cannot read without guessing it leaves as it is.
  */
@@ -86,6 +106,10 @@ export function coerce(schema: unknown, value: unknown, at = "", changes: string
         return value;
     }
     if (only === "string" && (typeof value === "number" || typeof value === "boolean")) return say(String(value));
+    if (only === "string" && typeof value === "string" && schema.pattern === FILE_ID_PATTERN && !FILE_ID.test(value)) {
+        const id = asFileId(value);
+        return FILE_ID.test(id) ? say(id) : value;
+    }
     if ((only === "number" || only === "integer") && typeof value === "string") {
         const m = NUMBER.exec(value);
         if (m) {

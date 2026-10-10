@@ -7,7 +7,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import type { JsonValue } from "@spiky-panda/harness";
-import { coerce, interpret, readMeaning, readingNote, schemaError, unmoved } from "../harness/core/interpreter.js";
+import { asFileId, coerce, FILE_ID_PATTERN, interpret, readMeaning, readingNote, schemaError, unmoved } from "../harness/core/interpreter.js";
+import { PROCEDURE_SCHEMA } from "../harness/topics/procedure/index.js";
 
 const monitoring = {
     type: "object",
@@ -48,6 +49,19 @@ describe("the interpreter reads a call toward its schema", () => {
         assert.deepEqual(read, { monitoring: { subjects: ["fe-1"] }, speedPercent: 30, hatchClosed: true, tags: ["night"] });
         assert.equal(schemaError(monitoring, read), null);
         assert.equal(changes.length, 4);
+    });
+
+    it("an identifier that names a file, written another way, is read in the file's form (2026-10-10, run 5: an underscore refused twice)", async () => {
+        const schema = { type: "object", properties: { id: { type: "string", pattern: FILE_ID_PATTERN } }, required: ["id"] } as unknown as JsonValue;
+        const r = await interpret({ id: "procedure.submit", inputSchema: schema }, { id: "v_lab-measure-2026-10-14-01" });
+        assert.deepEqual(r.input, { id: "v-lab-measure-2026-10-14-01" });
+        assert.equal(r.reading?.how, "coerced");
+        assert.deepEqual(r.reading?.changes, ['id: "v_lab-measure-2026-10-14-01" -> "v-lab-measure-2026-10-14-01"']);
+        assert.equal(asFileId("Décroissance  CO2 / Lab_01"), "decroissance-co2-lab-01");
+        // Nothing in it to name a file by: left as sent, the schema's words refuse it.
+        assert.equal((await interpret({ id: "procedure.submit", inputSchema: schema }, { id: "___" })).error !== null, true);
+        // A procedure's id is that form, in its schema.
+        assert.equal(((PROCEDURE_SCHEMA as { properties: Record<string, { pattern?: string }> }).properties.id.pattern), FILE_ID_PATTERN);
     });
 
     it("never guesses: an object with two different identifiers stays as sent", () => {

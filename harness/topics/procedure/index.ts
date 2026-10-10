@@ -58,7 +58,7 @@ import { checkJustifications, JUSTIFICATIONS_SCHEMA, justificationProblems as co
 import { dependentsOf, factsBounding, leavesOf, matches, valueAt, type RulesDocument } from "../../core/rules.js";
 import { loadWords, say, viewOf } from "../../core/words.js";
 import { problemOf } from "../../core/problems.js";
-import { coerce, schemaError } from "../../core/interpreter.js";
+import { coerce, FILE_ID_PATTERN, schemaError } from "../../core/interpreter.js";
 import { physics } from "../../core/physics.js";
 import { signatureOf } from "../../lib/signatures.js";
 import { conductView, loadPlaybook, sayingText, type Evidence } from "../../core/conduct.js";
@@ -172,7 +172,8 @@ interface ProcedureTopicState {
     methodSigned?: { by: string; at: string } | null;
 }
 
-const ID = /^[a-z0-9][a-z0-9-]{0,63}$/;
+// The schema's own form of an id (core/interpreter.ts): an id written another way is read into it before the guard; this check stays behind it.
+const ID = new RegExp(FILE_ID_PATTERN);
 
 /** How long the last proposal checked stays cached for a revision: five minutes, or PROCEDURE_DRAFT_TTL_SECONDS. */
 export const draftTtlMs = (): number => Number(process.env.PROCEDURE_DRAFT_TTL_SECONDS ?? 300) * 1000;
