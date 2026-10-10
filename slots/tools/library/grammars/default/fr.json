@@ -11,7 +11,11 @@
         "justify": {
             "title": "Ce qui justifie un nombre",
             "description": "Ce que dit la bibliothèque d'un nombre qu'une proposition fixe : pour une constante de sécurité, les faits signés qui la bornent avec leur côté sûr et si la valeur les respecte (le harnais la vérifie et la justifie lui-même, rien à écrire pour elle) ; pour un autre nombre, les sources admises, ou la justification à écrire quand un fait de l'enveloppe le borne.",
-            "properties": { "constant": "le chemin de la constante dans la proposition", "value": "sa valeur", "range": "pour des bornes, [min, max] au lieu de value, jamais les deux" }
+            "properties": {
+                "constant": "le chemin de la constante dans la proposition",
+                "value": "sa valeur",
+                "range": "pour des bornes, [min, max] au lieu de value, jamais les deux"
+            }
         },
         "methods": {
             "title": "Les méthodes qui mesurent une grandeur",
@@ -30,9 +34,11 @@
         },
         "facts": {
             "title": "Les faits typés",
-            "description": "Les faits que les documents de la bibliothèque énoncent, typés : id (scrubber.singlePassEfficiency), sémantique (SinglePassRemovalEfficiency), grandeur, unité, valeur, une bande quand le document en donne une, et la propriété du registre qui porte le même fait. Une constante connue en cite un par son id (factId) ; deux ratios ne sont pas le même fait.",
+            "description": "Les faits que les documents de la bibliothèque énoncent, typés : id (scrubber.singlePassEfficiency), sémantique (SinglePassRemovalEfficiency), grandeur, unité, valeur, une bande quand le document en donne une, et la propriété du registre qui porte le même fait. Une constante connue en cite un par son id (factId) ; deux ratios ne sont pas le même fait. Avec query, un besoin en mots (le débit entre deux modules écoutille fermée), les faits les plus proches, de tous les documents, les meilleurs d'abord.",
             "properties": {
-                "id": "les faits d'un document ; tous quand absent"
+                "id": "les faits d'un document ; tous quand absent",
+                "query": "un besoin en mots : les faits les plus proches, les meilleurs d'abord",
+                "limit": "combien de faits au plus pour une requête ; 5 quand absent"
             }
         },
         "read": {

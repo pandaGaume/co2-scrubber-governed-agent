@@ -1,5 +1,5 @@
 {
-    "title": "The Observer's own conduct, step by step (harness/core/conduct.ts): read, the request, the hand-over; and the way out once the attempts are spent",
+    "title": "The Observer's own conduct, step by step (harness/core/conduct.ts): read, the needs, the choice of the facts, the request, the hand-over; and the way out once the attempts are spent",
     "nodes": [
         {
             "id": "start",
@@ -44,7 +44,7 @@
             "bag": {
                 "says": "brief.handOver",
                 "view": "accepted",
-                "order": 3,
+                "order": 5,
                 "goal": "The request is accepted: hand it over with task.done, the accepted file as the artifact (kind \"request\").",
                 "tools": [
                     "task.done"
@@ -80,12 +80,63 @@
             }
         },
         {
+            "id": "listed",
+            "type": "conduct.evidence",
+            "bag": {
+                "evidence": "needsListed"
+            }
+        },
+        {
+            "id": "chosen",
+            "type": "conduct.evidence",
+            "bag": {
+                "evidence": "needsChosen"
+            }
+        },
+        {
+            "id": "not-listed",
+            "type": "conduct.not"
+        },
+        {
+            "id": "not-chosen",
+            "type": "conduct.not"
+        },
+        {
+            "id": "needs",
+            "type": "conduct.stage",
+            "bag": {
+                "says": "brief.needs",
+                "view": "read",
+                "order": 2,
+                "goal": "Say what the twin needs as numbers, each in words (observer.needs): the library gives back the facts nearest each.",
+                "tools": [
+                    "observer.needs"
+                ]
+            }
+        },
+        {
+            "id": "choose",
+            "type": "conduct.stage",
+            "bag": {
+                "says": "brief.choose",
+                "view": "choose",
+                "order": 3,
+                "goal": "For each need, choose the fact that answers it, or none (observer.choose).",
+                "tools": [
+                    "observer.choose",
+                    "observer.needs",
+                    "library.facts",
+                    "library.read"
+                ]
+            }
+        },
+        {
             "id": "request",
             "type": "conduct.stage",
             "bag": {
                 "says": "brief.request",
                 "view": "request",
-                "order": 2,
+                "order": 4,
                 "goal": "Hand over the whole TWIN_FACTORY_REQUEST with observer.submit; after a refusal, send it again, corrected.",
                 "tools": [
                     "observer.submit",
@@ -100,9 +151,31 @@
             "type": "conduct.gate",
             "bag": {
                 "capabilities": [
+                    "observer.needs",
                     "observer.submit"
                 ],
                 "says": "guard.readFirst"
+            }
+        },
+        {
+            "id": "needs-first",
+            "type": "conduct.gate",
+            "bag": {
+                "capabilities": [
+                    "observer.choose"
+                ],
+                "says": "guard.needsFirst"
+            }
+        },
+        {
+            "id": "choose-first",
+            "type": "conduct.gate",
+            "bag": {
+                "capabilities": [
+                    "observer.submit"
+                ],
+                "says": "guard.chooseFirst",
+                "view": "choose"
             }
         },
         {
@@ -166,10 +239,6 @@
             "to": "reading.passes"
         },
         {
-            "from": "reading.next",
-            "to": "request.entered"
-        },
-        {
             "from": "not-read.value",
             "to": "read-first.refuses"
         },
@@ -180,6 +249,42 @@
         {
             "from": "no-attempt.value",
             "to": "no-attempt-left.refuses"
+        },
+        {
+            "from": "listed.value",
+            "to": "not-listed.in"
+        },
+        {
+            "from": "chosen.value",
+            "to": "not-chosen.in"
+        },
+        {
+            "from": "reading.next",
+            "to": "needs.entered"
+        },
+        {
+            "from": "listed.value",
+            "to": "needs.passes"
+        },
+        {
+            "from": "needs.next",
+            "to": "choose.entered"
+        },
+        {
+            "from": "chosen.value",
+            "to": "choose.passes"
+        },
+        {
+            "from": "choose.next",
+            "to": "request.entered"
+        },
+        {
+            "from": "not-listed.value",
+            "to": "needs-first.refuses"
+        },
+        {
+            "from": "not-chosen.value",
+            "to": "choose-first.refuses"
         }
     ]
 }

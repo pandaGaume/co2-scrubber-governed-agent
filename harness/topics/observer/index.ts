@@ -35,6 +35,11 @@ const w = (key: string, vars?: Record<string, string | number>): string => say(O
 
 export const OBSERVER_PROMPT = "specs/observer/prompt.md";
 export const OBSERVER_CAPABILITY = "observer.submit";
+/** The selection (2026-10-10, run 10): what the twin needs as numbers, then the library's fact chosen for each. */
+export const OBSERVER_NEEDS = "observer.needs";
+export const OBSERVER_CHOOSE = "observer.choose";
+/** How many facts the library gives back for a need: the nearest, the best first. */
+const CANDIDATES = 5;
 /** Where an accepted request is written in the task's workshop, the artifact handed over. */
 export const OBSERVER_REQUEST_FILE = "requests/twin-request.json";
 /** The field of the task's observations the topic reads and shows itself. */
@@ -44,13 +49,13 @@ export const OBSERVER_OBSERVATION = "observer";
 export const OBSERVER_CONDUCT = loadPlaybook("specs/observer/playbook.json");
 
 export const OBSERVER_WORD_KEYS = [
-    "intention", "capability", "read", "readNothing", "brief.read", "brief.request", "brief.handOver", "brief.giveUp",
-    "guard.refused", "guard.readFirst", "guard.accepted", "guard.noAttemptLeft",
-    "doneWhen.read", "doneWhen.accepted", "doneWhen.handedOver", "openQuestions.read", "openQuestions.request", "openQuestions.handOver",
+    "intention", "capability", "capabilities.needs", "capabilities.choose", "read", "readNothing", "brief.read", "brief.needs", "brief.choose", "brief.request", "brief.handOver", "brief.giveUp",
+    "guard.refused", "guard.readFirst", "guard.needsFirst", "guard.chooseFirst", "guard.choiceMissing", "guard.choiceUnknown", "guard.accepted", "guard.noAttemptLeft",
+    "doneWhen.read", "doneWhen.needs", "doneWhen.chosen", "doneWhen.accepted", "doneWhen.handedOver", "openQuestions.read", "openQuestions.needs", "openQuestions.choose", "openQuestions.request", "openQuestions.handOver",
     "validate.none", "validate.notAccepted", "validate.notTheFile", "schema.factIdExample", "schema.known",
 ];
 
-export const OBSERVER_TOOLS: ReadonlyArray<RegExp> = withBase([/^observer\.submit$/]);
+export const OBSERVER_TOOLS: ReadonlyArray<RegExp> = withBase([/^observer\.(submit|needs|choose)$/]);
 
 /** What the task is given (`observations.observer`): the system, its telemetry made facts, the shared vocabulary, the library's documents, the attempts. */
 export interface ObserverObservation {
@@ -83,15 +88,35 @@ export interface ObserveAttempt {
     proposed: string;
 }
 
+/** A fact of the library as the selection shows it: what it is, its value, where it is stated. */
+export interface CandidateFact {
+    id: string;
+    semantic?: string;
+    value: number;
+    unit: string;
+    min?: number;
+    max?: number;
+    source: string;
+    says?: string;
+}
+
+/** A need the Observer said, the library's facts nearest it, and the one it chose (null: none answers it). */
+export interface Need {
+    name: string;
+    candidates: CandidateFact[];
+    chosen?: { factId: string | null; why: string; fact: CandidateFact | null };
+}
+
 interface ObserverTopicState {
     attempts: ObserveAttempt[];
     accepted: { path: string; sha256: string } | null;
+    needs: Need[];
 }
 
 function stateOf(progress: Progress): ObserverTopicState {
     const current = progress.topic.observer as unknown as ObserverTopicState | undefined;
     if (current) return current;
-    const fresh: ObserverTopicState = { attempts: [], accepted: null };
+    const fresh: ObserverTopicState = { attempts: [], accepted: null, needs: [] };
     progress.topic.observer = fresh as unknown as JsonValue;
     return fresh;
 }
@@ -163,6 +188,56 @@ export async function libraryDocuments(broker: Broker): Promise<ObserverObservat
     return Array.isArray(docs) ? docs.map((d) => ({ id: d.id, title: d.title, ...(d.summary ? { summary: d.summary.slice(0, 160) } : {}) })) : [];
 }
 
+const candidateOf = (f: LibraryFact & { source: string }): CandidateFact => ({
+    id: f.id,
+    ...(f.semantic ? { semantic: f.semantic } : {}),
+    value: f.value,
+    unit: f.unit,
+    ...(typeof f.min === "number" ? { min: f.min } : {}),
+    ...(typeof f.max === "number" ? { max: f.max } : {}),
+    source: f.source,
+    ...(f.says ? { says: f.says.slice(0, 200) } : {}),
+});
+
+/** The library's facts nearest a need said in words (the library's search over its facts, library.facts with a query). */
+async function factsNear(broker: Broker, need: string): Promise<CandidateFact[]> {
+    const r = await broker.call("library", "facts", { query: need, limit: CANDIDATES });
+    const facts = r.ok ? (r.output as { facts?: Array<LibraryFact & { source: string }> }).facts : undefined;
+    return Array.isArray(facts) ? facts.map(candidateOf) : [];
+}
+
+export const NEEDS_SCHEMA = {
+    type: "object",
+    properties: {
+        needs: {
+            type: "array",
+            minItems: 1,
+            items: { type: "object", properties: { name: { type: "string", minLength: 1, description: "a number the twin needs, said in words (the flow between two modules with the hatch closed)" } }, required: ["name"] },
+        },
+    },
+    required: ["needs"],
+} as const;
+
+export const CHOOSE_SCHEMA = {
+    type: "object",
+    properties: {
+        choices: {
+            type: "array",
+            minItems: 1,
+            items: {
+                type: "object",
+                properties: {
+                    need: { type: "string", description: "the need, as you said it" },
+                    factId: { type: "string", description: "the id of the fact that answers it; empty when none does" },
+                    why: { type: "string", description: "in a few words" },
+                },
+                required: ["need", "factId", "why"],
+            },
+        },
+    },
+    required: ["choices"],
+} as const;
+
 /** The documents read in this task, by id, in order (the runner's evidence: `library.read <id>`). */
 const documentsReadOf = (progress: Progress): string[] => [...new Set(Object.keys(progress.evidence).map((k) => /^library\.read (\S+)$/.exec(k)?.[1]).filter((x): x is string => Boolean(x)))];
 
@@ -199,6 +274,8 @@ function evidenceOf(progress: Progress, task: TaskFile["task"]): Evidence {
     const state = stateOf(progress);
     return {
         documentRead: progress.reads["library.read"] !== undefined,
+        needsListed: state.needs.length > 0,
+        needsChosen: state.needs.length > 0 && state.needs.every((n) => n.chosen !== undefined),
         requestAccepted: state.accepted !== null,
         attemptsLeft: state.attempts.filter((a) => !a.ok).length < observationOf(task).attempts,
     };
@@ -215,6 +292,7 @@ function viewsOf(progress: Progress, task: TaskFile["task"]): Record<string, () 
         accepted: () => ({ path: state.accepted?.path ?? "" }),
         read: () => ({ read: read() }),
         request: () => ({ attempts: Math.max(0, observationOf(task).attempts - used), used, read: read() }),
+        choose: () => ({ open: state.needs.filter((n) => n.chosen === undefined).map((n) => `"${n.name}"`).join(", ") || "none" }),
     };
 }
 
@@ -228,13 +306,70 @@ async function guardObserver(capabilityId: string, input: JsonValue, context: To
     const refused = refusing.filter((g) => g.capabilities.includes(capabilityId)).map((g) => sayingText(g, w, views));
     // A way out entered: its tools only.
     if (stage.exit && !(stage.tools ?? []).includes(capabilityId)) refused.push(sayingText(stage, w, views));
-    if (refused.length || capabilityId !== OBSERVER_CAPABILITY) return refused;
+    if (refused.length) return refused;
+    if (capabilityId === OBSERVER_CHOOSE) return chooseProblems(input, context);
+    if (capabilityId !== OBSERVER_CAPABILITY) return [];
     const problems = await requestProblems(input, context);
     if (!problems.length) return [];
     noteAttempt(context, { ok: false, problems, proposed: JSON.stringify(input).slice(0, 2000) });
     // Each problem with its kind, the word before its colon (shape, separation, facts, provenance, vocabulary, scope, units).
     context.progress.pendingProblems = problems.map((says) => ({ says, kind: /^([a-z]+):/.exec(says)?.[1] ?? "request" }));
     return [w("guard.refused", { problems: problems.join("; ") })];
+}
+
+/** A choice names a need said and a fact of the library, or none; every need said is chosen for. */
+async function chooseProblems(input: JsonValue, context: TopicContext): Promise<string[]> {
+    const state = stateOf(context.progress);
+    const choices = Array.isArray((input as { choices?: unknown } | null)?.choices) ? ((input as { choices: Array<{ need?: unknown; factId?: unknown }> }).choices) : [];
+    const facts = Object.values(await libraryFacts(context.broker)).flat();
+    const problems: string[] = [];
+    for (const c of choices) {
+        const id = typeof c.factId === "string" ? c.factId.trim() : "";
+        if (id && !facts.some((f) => f.id === id)) problems.push(w("guard.choiceUnknown", { need: String(c.need), id }));
+    }
+    const said = new Set(choices.map((c) => String(c.need ?? "").trim().toLowerCase()));
+    const open = state.needs.filter((n) => n.chosen === undefined && !said.has(n.name.trim().toLowerCase()));
+    if (open.length) problems.push(w("guard.choiceMissing", { needs: open.map((n) => `"${n.name}"`).join(", ") }));
+    return problems;
+}
+
+/** What the twin needs as numbers, said in words: the library's facts nearest each, given back and kept in the state. */
+function needsCapability(context: TopicContext): LocalCapability {
+    return {
+        id: OBSERVER_NEEDS,
+        description: w("capabilities.needs", { n: CANDIDATES }),
+        inputSchema: NEEDS_SCHEMA as unknown as JsonValue,
+        async execute(input: JsonValue): Promise<CapabilityResult> {
+            const state = stateOf(context.progress);
+            const asked = ((input as { needs?: Array<{ name?: unknown }> }).needs ?? []).map((n) => String(n?.name ?? "").trim()).filter(Boolean);
+            for (const name of asked) {
+                if (state.needs.some((n) => n.name.toLowerCase() === name.toLowerCase())) continue;
+                state.needs.push({ name, candidates: await factsNear(context.broker, name) });
+            }
+            return { ok: true, output: { outcome: "completed", value: { needs: state.needs.map((n) => ({ need: n.name, facts: n.candidates.map((f) => `${f.id} = ${f.value} ${f.unit}${typeof f.min === "number" ? ` (${f.min} to ${f.max})` : ""} (${f.source})`) })) } } };
+        },
+    };
+}
+
+/** For each need, the fact chosen, or none: the chosen facts go into the state with their values. */
+function chooseCapability(context: TopicContext): LocalCapability {
+    return {
+        id: OBSERVER_CHOOSE,
+        description: w("capabilities.choose"),
+        inputSchema: CHOOSE_SCHEMA as unknown as JsonValue,
+        async execute(input: JsonValue): Promise<CapabilityResult> {
+            const state = stateOf(context.progress);
+            const facts = Object.values(await libraryFacts(context.broker)).flat() as Array<LibraryFact & { source: string }>;
+            for (const c of (input as { choices: Array<{ need: string; factId: string; why: string }> }).choices) {
+                const need = state.needs.find((n) => n.name.trim().toLowerCase() === String(c.need).trim().toLowerCase());
+                if (!need) continue;
+                const id = String(c.factId ?? "").trim();
+                const fact = id ? facts.find((f) => f.id === id) : undefined;
+                need.chosen = { factId: fact ? fact.id : null, why: String(c.why ?? ""), fact: fact ? candidateOf(fact) : null };
+            }
+            return { ok: true, output: { outcome: "completed", value: { chosen: state.needs.map((n) => ({ need: n.name, fact: n.chosen?.fact ? `${n.chosen.fact.id} = ${n.chosen.fact.value} ${n.chosen.fact.unit} (${n.chosen.fact.source})` : n.chosen ? "none" : "not chosen yet" })) } } };
+        },
+    };
 }
 
 function requestCapability(context: TopicContext): LocalCapability {
@@ -268,10 +403,12 @@ export function stateOfTopic(progress: Progress, task: TaskFile["task"]): TopicS
             telemetry: (o.telemetry ?? "none supplied") as unknown as JsonValue,
             quantities: o.quantities.map((v) => `${v.quantity} (${v.units.join(", ") || "no unit"})`).join("; "),
             documents: o.documents.map((d) => `${d.id} (${d.title}${d.summary ? `: ${d.summary}` : ""})`).join("; "),
+            // The selection: each need with the facts the library found nearest, and the one chosen; the chosen facts with their values are what the request cites.
+            needs: state.needs.map((n) => ({ need: n.name, candidates: n.candidates, ...(n.chosen ? { chosen: n.chosen.fact ?? "none answers it" } : {}) })) as unknown as JsonValue,
             accepted: state.accepted as unknown as JsonValue,
         },
         evaluation: last ? ({ request: last.n, ok: last.ok, problems: last.problems } as JsonValue) : null,
-        openQuestions: [w(e.requestAccepted ? "openQuestions.handOver" : e.documentRead ? "openQuestions.request" : "openQuestions.read")],
+        openQuestions: [w(e.requestAccepted ? "openQuestions.handOver" : e.needsChosen ? "openQuestions.request" : e.needsListed ? "openQuestions.choose" : e.documentRead ? "openQuestions.needs" : "openQuestions.read")],
         requirements: e as Record<string, boolean>,
     };
 }
@@ -301,6 +438,8 @@ export const OBSERVER_TOPIC: TopicDefinition = {
             ...conductView(OBSERVER_CONDUCT, e, w, viewsOf(progress, task), Object.keys(progress.reads)),
             doneWhen: [
                 { item: w("doneWhen.read"), met: Boolean(e.documentRead) },
+                { item: w("doneWhen.needs"), met: Boolean(e.needsListed) },
+                { item: w("doneWhen.chosen"), met: Boolean(e.needsChosen) },
                 { item: w("doneWhen.accepted"), met: Boolean(e.requestAccepted) },
                 { item: w("doneWhen.handedOver"), met: progress.done !== null },
             ],
@@ -310,17 +449,17 @@ export const OBSERVER_TOPIC: TopicDefinition = {
     closed: (progress, task) => {
         const { stage, refusing } = OBSERVER_CONDUCT.evaluate(evidenceOf(progress, task));
         // A way out entered closes every tool the Observer has but its own.
-        const all = [...BASE_CAPABILITIES, OBSERVER_CAPABILITY];
+        const all = [...BASE_CAPABILITIES, OBSERVER_CAPABILITY, OBSERVER_NEEDS, OBSERVER_CHOOSE];
         return stage.exit ? all.filter((id) => !(stage.tools ?? []).includes(id)) : refusing.flatMap((g) => g.capabilities);
     },
     name: "observer",
     tools: OBSERVER_TOOLS,
     // A request is made of this task's description and readings, never replayed from another's.
-    neverReplayed: [/^observer\.submit$/, /^task\.done$/],
+    neverReplayed: [/^observer\.(submit|needs|choose)$/, /^task\.done$/],
     judges: [/^observer\.submit$/],
     replayedActions: [/^task\.plan$/],
     validate: (claim, files, progress) => validateObserver(claim, files, progress),
-    local: (context) => [requestCapability(context)],
+    local: (context) => [needsCapability(context), chooseCapability(context), requestCapability(context)],
     guard: guardObserver,
     state: stateOfTopic,
     key: (progress) => stateOf(progress).attempts.map((a) => (a.ok ? "ok" : "refused")).join(","),

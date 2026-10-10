@@ -11,7 +11,11 @@
         "justify": {
             "title": "What justifies a number",
             "description": "What the library says of a number you set: give its path (steps.2.minutes, limits.co2MaxPpm) and its value. For a safety constant (one the signed rules bound): the signed facts that bound it, each with its side, its signature and whether your value respects it; the harness checks and justifies a safety constant itself, so you write no justification for it, and one no signed fact bounds is left out. For any other number: the sources that may justify it, or the justification to write when a fact of the guard's envelope bounds it (without the value, which is read at its path).",
-            "properties": { "constant": "the path of the constant in what you submit, as the guard names it", "value": "its value", "range": "for bounds, [min, max] instead of value, never both" }
+            "properties": {
+                "constant": "the path of the constant in what you submit, as the guard names it",
+                "value": "its value",
+                "range": "for bounds, [min, max] instead of value, never both"
+            }
         },
         "methods": {
             "title": "Methods that measure a quantity",
@@ -30,9 +34,11 @@
         },
         "facts": {
             "title": "The typed facts",
-            "description": "The facts the library's documents state, typed: id (scrubber.singlePassEfficiency), semantic (SinglePassRemovalEfficiency), quantity, unit, value, a band when the document gives one, and the register property that carries the same fact. A known constant cites one by id (factId); two ratios are not the same fact.",
+            "description": "The facts the library's documents state, typed: id (scrubber.singlePassEfficiency), semantic (SinglePassRemovalEfficiency), quantity, unit, value, a band when the document gives one, and the register property that carries the same fact. A known constant cites one by id (factId); two ratios are not the same fact. Given query, a need in words (the flow between two modules with the hatch closed), the facts nearest it, every document's, the best first.",
             "properties": {
-                "id": "one document's facts; all when absent"
+                "id": "one document's facts; all when absent",
+                "query": "a need in words: the facts nearest it, the best first",
+                "limit": "how many facts at most for a query; 5 when absent"
             }
         },
         "read": {

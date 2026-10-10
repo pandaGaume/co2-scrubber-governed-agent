@@ -223,6 +223,34 @@ export function searchLibrary(documents: LibraryDocument[], query: string, limit
         .slice(0, limit);
 }
 
+/**
+ * The facts nearest a need said in words (2026-10-10, the Observer's selection): each fact scored by the words of the need found in
+ * its id, its semantic (InterModuleVentilationDesignFlow read as its words), its quantity and what it says; the best first, so many at
+ * most. A search, not a judgement: what answers the need is chosen by whoever asked.
+ */
+export function searchFacts<F extends { id: string; semantic?: string; quantity?: string; says?: string }>(facts: F[], query: string, limit = 5): Array<F & { score: number }> {
+    const wordsOf = (text: string): string[] =>
+        text
+            .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+            .toLowerCase()
+            .split(/[^a-z0-9]+/)
+            .filter((w) => w.length > 2);
+    const stem = (w: string): string => w.slice(0, 5);
+    const asked = [...new Set(wordsOf(query).map(stem))];
+    if (!asked.length) return [];
+    return facts
+        .map((f) => {
+            const own = new Set(wordsOf(`${f.id} ${f.semantic ?? ""} ${f.quantity ?? ""} ${f.says ?? ""}`).map(stem));
+            const named = new Set(wordsOf(`${f.id} ${f.semantic ?? ""}`).map(stem));
+            // A word of the need in the fact's name weighs twice what it weighs in its sentence.
+            const score = asked.reduce((sum, w) => sum + (named.has(w) ? 2 : own.has(w) ? 1 : 0), 0);
+            return { ...f, score };
+        })
+        .filter((f) => f.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, limit);
+}
+
 export function librarySlot(wsBase: string, log: (line: string) => void): PublishedSlot<LibraryState> {
     const state: LibraryState = { dir: LIBRARY_DIR, sigDir: signaturesDir(), sigScope: { scope: "repository" }, documents: loadAll(), graphs: loadGraphLibrary(), reads: [] };
     // Who signs from the control room: the person this machine's git names, as the commander.
@@ -326,8 +354,16 @@ export function librarySlot(wsBase: string, log: (line: string) => void): Publis
         {
             // The typed facts of the library: what a request cites by id (known[].factId), what the register's properties correspond to, what a conflict is judged on.
             name: "facts",
-            inputSchema: objectSchema({ id: { type: "string" } }),
+            inputSchema: objectSchema({ id: { type: "string" }, query: { type: "string" }, limit: { type: "number" } }),
             handle: (args, s) => {
+                // A need said in words: the facts nearest it, every document's (searchFacts).
+                if (typeof args.query === "string" && args.query.trim()) {
+                    const every = s.documents.flatMap((d) => {
+                        const signature = signatureOf(d.id, d.dir, s.sigDir);
+                        return d.facts.map((f) => ({ ...f, source: d.id, signed: signature }));
+                    });
+                    return { query: args.query, facts: searchFacts(every as Array<(typeof every)[number] & { id: string }>, args.query, typeof args.limit === "number" ? args.limit : 5) };
+                }
                 const asked = typeof args.id === "string" ? args.id : "";
                 const docs = asked ? s.documents.filter((d) => d.id === asked) : s.documents;
                 // Each fact carries whether its document is signed and still as signed: a safety limit is justified only by a signed one (2026-09-28).

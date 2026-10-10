@@ -207,9 +207,13 @@ describe("the Observer sent back by the supervisor, and the slot, through the br
                     return decision;
                 };
                 // On the factories' harness (2026-10-10): the datasheet first, so the fact cited is a document read; the requests; the accepted one handed over.
-                const requirements = ((input.state.features as { state?: { requirements?: Record<string, boolean> } }).state?.requirements ?? {}) as Record<string, boolean>;
+                const s = (input.state.features as { state?: { requirements?: Record<string, boolean>; hypothesis?: { needs?: Array<{ need: string; candidates: Array<{ id: string }> }> } } }).state;
+                const requirements = (s?.requirements ?? {}) as Record<string, boolean>;
                 if (requirements.requestAccepted) return call("task.done", { summary: "the request, accepted", artifacts: [{ kind: "request", path: "requests/twin-request.json" }] });
                 if (!requirements.documentRead) return call("library.read", { id: "scrubber-1-datasheet" });
+                // The selection (2026-10-10): the need said, the library's nearest fact chosen.
+                if (!requirements.needsListed) return call("observer.needs", { needs: [{ name: "single pass removal efficiency of the scrubber" }] });
+                if (!requirements.needsChosen) return call("observer.choose", { choices: (s?.hypothesis?.needs ?? []).map((n) => ({ need: n.need, factId: n.candidates[0]?.id ?? "", why: "the nearest fact" })) });
                 return call("observer.submit", this.sent++ === 0 ? accepted : corrected);
             }
         }

@@ -154,7 +154,7 @@ interface Seen {
     brief: string;
     lastCapability: string;
     state: {
-        hypothesis: { description: string; telemetry: { rows?: number } | string; quantities: string; documents: string };
+        hypothesis: { description: string; telemetry: { rows?: number } | string; quantities: string; documents: string; needs: Array<{ need: string; candidates: Array<{ id: string; value: number }>; chosen?: unknown }> };
         requirements: Record<string, boolean>;
         marchingOrder: { stages: Array<{ step: number; status: string }>; allowedNow: string[]; closedNow: Array<{ tools: string[]; why: string }> };
         lastRefusal: { capability: string; reason: string } | null;
@@ -191,8 +191,12 @@ class StandIn implements Provider {
         };
         const s = seen.state;
         if (s.requirements.requestAccepted) return call("task.done", { summary: "the twin factory request, accepted", artifacts: [{ kind: "request", path: "requests/twin-request.json" }] });
+        // The way out: task.fail its only tool.
+        if (s.marchingOrder.allowedNow.length === 1 && s.marchingOrder.allowedNow[0] === "task.fail") return call("task.fail", { reason: s.marchingOrder.closedNow.map((c) => c.why).join("; ") });
         if (!s.requirements.documentRead && !(this.eager && this.sent === 0)) return call("library.read", { id: "scrubber-1-datasheet" });
-        if (s.requirements.documentRead && !s.marchingOrder.allowedNow.includes("observer.submit")) return call("task.fail", { reason: s.marchingOrder.closedNow.map((c) => c.why).join("; ") });
+        if (s.requirements.documentRead && !s.requirements.needsListed) return call("observer.needs", { needs: [{ name: "effective removal flow of the scrubber at full speed" }, { name: "volume of the Lab" }] });
+        // The nearest fact for each need when the library found one, none otherwise.
+        if (s.requirements.documentRead && !s.requirements.needsChosen) return call("observer.choose", { choices: s.hypothesis.needs.map((n) => ({ need: n.need, factId: n.need.includes("flow") ? (n.candidates[0]?.id ?? "") : "", why: n.need.includes("flow") ? "the nearest fact" : "no document gives it" })) });
         return call("observer.submit", this.requests[Math.min(this.sent++, this.requests.length - 1)]);
     }
 }
@@ -231,6 +235,12 @@ describe("the Observer, a task of the factories' harness, through the broker", (
         assert.deepEqual(result.attempts.map((a) => a.ok), [false, true]);
         assert.match(result.attempts[0].problems[0], /^separation/);
         assert.deepEqual(result.reads, ["library.read scrubber-1-datasheet"]);
+        // The selection (2026-10-10): the needs said, the library's nearest facts given back, the flow's fact chosen, the volume's none.
+        const chosen = model.seen.at(-1)!.state.hypothesis.needs;
+        assert.deepEqual(chosen.map((n) => n.need), ["effective removal flow of the scrubber at full speed", "volume of the Lab"]);
+        assert.equal(chosen[0].candidates[0].id, "scrubber.effectiveFlowAtFull");
+        assert.deepEqual((chosen[0].chosen as { id: string; value: number }).id, "scrubber.effectiveFlowAtFull");
+        assert.equal(chosen[1].chosen, "none answers it");
         // What the model was shown: the description and the computed summary, never the rows and never the catalogue.
         assert.equal(model.seen[0].state.hypothesis.description, DESCRIPTION);
         assert.equal((model.seen[0].state.hypothesis.telemetry as { rows: number }).rows, 25);
@@ -238,7 +248,7 @@ describe("the Observer, a task of the factories' harness, through the broker", (
         assert.match(model.seen[0].state.hypothesis.documents, /scrubber-1-datasheet/);
         assert.doesNotMatch(JSON.stringify(model.seen), /registry_list|Physics\.Transform/);
         // After the refusal: the brief opens on it, the state holds it.
-        const after = model.seen[2];
+        const after = model.seen[4];
         assert.match(after.brief, /^Your last observer\.submit was refused, on \d+ point\(s\):.*separation/s);
         assert.equal(after.state.lastRefusal?.capability, "observer.submit");
         // The request handed over is the accepted file, and the station received it.
@@ -265,11 +275,11 @@ describe("the Observer, a task of the factories' harness, through the broker", (
         tasks.push(result.observerTask);
         assert.equal(result.ok, true, JSON.stringify(result.attempts));
         const first = model.seen[0].state.marchingOrder;
-        assert.deepEqual(first.stages.map((s) => `${s.step}:${s.status}`), ["1:current", "2:next", "3:next"]);
+        assert.deepEqual(first.stages.map((s) => `${s.step}:${s.status}`), ["1:current", "2:next", "3:next", "4:next", "5:next"]);
         assert.ok(!first.allowedNow.includes("observer.submit"));
         assert.match(first.closedNow.map((c) => c.why).join("; "), /^read first/);
         // The request sent anyway is refused by the gate, said in the next prompt; it is not one of the attempts.
-        assert.match(model.seen[1].brief, /^Your last observer\.submit was refused, on 1 point\(s\):.*read first/s);
+        assert.match(model.seen[1].brief, /^Your last observer\.submit was refused, on \d+ point\(s\):.*read first/s);
         assert.deepEqual(result.attempts.map((a) => a.ok), [true]);
     });
 

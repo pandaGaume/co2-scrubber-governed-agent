@@ -5,24 +5,34 @@
     "read": "You read {read} (their answers are in the state); read nothing twice.",
     "readNothing": "You read nothing yet.",
     "brief": {
-        "read": "Stage 1 of 3, read. The system is in the state (hypothesis: the description, the telemetry's summary, the quantities the factories share, the library's documents). Read in the library what the description leaves open: the devices' datasheets, the station's topology and metrics (library.read gives a document whole, library.facts the facts a document states by id). {read}",
-        "request": "Stage 2 of 3, the request. Hand over the whole TWIN_FACTORY_REQUEST with observer.submit; {attempts} attempt(s) left. {read}",
+        "read": "Stage 1 of 5, read. The system is in the state (hypothesis: the description, the telemetry's summary, the quantities the factories share, the library's documents). Read in the library what the description leaves open: the devices' datasheets, the station's topology and metrics (library.read gives a document whole, library.facts the facts a document states by id). {read}",
+        "request": "Stage 4 of 5, the request. Hand over the whole TWIN_FACTORY_REQUEST with observer.submit; {attempts} attempt(s) left. {read} The facts you chose are in the state with their values (hypothesis, field \"needs\"): cite each in known, by its factId; a number no fact answers is missing information or an assumption, said as such.",
         "giveUp": "No attempt left: {used} request(s) refused. End with task.fail, naming the reasons that still stand (lastRefusal); the work stops here, nothing else is offered.",
-        "handOver": "Stage 3 of 3, hand over. The request is accepted ({path}): end with task.done, it as the artifact of kind \"request\"."
+        "handOver": "Stage 5 of 5, hand over. The request is accepted ({path}): end with task.done, it as the artifact of kind \"request\".",
+        "needs": "Stage 2 of 5, the needs. Say what the twin needs as numbers, each in words, with observer.needs: every number the request will hold (a volume, a flow between modules, what a person produces, a device's flow or efficiency). The library gives back the facts nearest each. {read}",
+        "choose": "Stage 3 of 5, the choice. For each need, choose with observer.choose the fact that answers it, by its id, or none: the facts the library found are in the state (hypothesis, field \"needs\"). Still to choose: {open}."
     },
     "guard": {
         "refused": "request refused: {problems}",
         "readFirst": "read first: what the description leaves open is in the library (library.read), then hand over the request",
         "accepted": "the request {path} is already accepted: end with task.done",
-        "noAttemptLeft": "no attempt left ({used} request(s) refused): end with task.fail and the reasons that still stand"
+        "noAttemptLeft": "no attempt left ({used} request(s) refused): end with task.fail and the reasons that still stand",
+        "needsFirst": "say the needs first (observer.needs), then choose a fact for each",
+        "chooseFirst": "choose a fact for each need first (observer.choose); still to choose: {open}",
+        "choiceMissing": "no choice for {needs}: choose a fact for each need you said, or none, with why",
+        "choiceUnknown": "need \"{need}\": \"{id}\" is no fact of the library; choose one of the facts the library gave back for it (the state, field \"needs\"), or none"
     },
     "doneWhen": {
         "read": "at least one document of the library read",
+        "needs": "the needs said (observer.needs)",
+        "chosen": "a fact chosen for each need, or none (observer.choose)",
         "accepted": "the request accepted by the guard (observer.submit)",
         "handedOver": "handed over with task.done, the accepted file as the artifact (kind \"request\")"
     },
     "openQuestions": {
         "read": "what the description leaves open, read in the library (library.read)",
+        "needs": "what the twin needs as numbers (observer.needs)",
+        "choose": "the fact that answers each need (observer.choose)",
         "request": "the request, whole and checked (observer.submit)",
         "handOver": "hand the request over (task.done)"
     },
@@ -34,5 +44,9 @@
     "schema": {
         "factIdExample": "the fact's id in the library's typed facts (library.facts, or the facts a read document lists), when the document states them: scrubber.singlePassEfficiency, never a symbol of your own",
         "known": "The constants the documentation gives (a device's datasheet, the station's metrics), each with its source: the factory holds them and never fits them."
+    },
+    "capabilities": {
+        "needs": "Say what the twin needs as numbers, each in words (the flow between two modules with the hatch closed, the CO2 a person produces, the volume of a module). For each, the library gives back the {n} facts nearest it, with their value, unit and document; they stay in the state (hypothesis, field \"needs\"). Call it again to add needs.",
+        "choose": "For each need you said, the fact that answers it, by its id (empty when none does), and why in a few words. The facts chosen, with their values, go into the state: the request cites them in known, by factId. A need no fact answers is missing information, or an assumption said as such."
     }
 }

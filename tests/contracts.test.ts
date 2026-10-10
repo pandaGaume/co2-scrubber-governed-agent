@@ -161,6 +161,15 @@ describe("the library's typed facts, through the broker", () => {
         if (recipesDir) rmSync(recipesDir, { recursive: true, force: true });
     });
 
+    it("a need said in words, the facts nearest it, every document's, the best first (2026-10-10, the Observer's selection)", async () => {
+        const near = async (query: string) => ((await broker.call("library", "facts", { query, limit: 4 })).output as { facts: Array<{ id: string; source: string; value: number }> }).facts;
+        assert.equal((await near("ventilation flow between the Lab and Hab-B with the hatch closed"))[0].id, "habitat.interModuleVentilation.designFlow.hatchClosed");
+        assert.ok((await near("CO2 produced per person")).every((f) => f.id.startsWith("crew.co2Rate")), "the crew's rates, awake and asleep");
+        assert.equal((await near("effective removal flow of the scrubber at full speed"))[0].id, "scrubber.effectiveFlowAtFull");
+        // A fact found carries its document and its value.
+        assert.equal((await near("ventilation hatch closed"))[0].source, "station-topology");
+    });
+
     it("a task whose sources conflict ends before any step: SOURCE_CONFLICT, REQUIRE_RESOLUTION, the producer to revise named", async () => {
         const r = await broker.call("factory", "request", {
             objective: { required_outputs: [{ name: "predicted_co2", quantity: "Concentration", unit: "ppm" }], constraints: { rmsePpmMax: 10 } },
