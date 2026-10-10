@@ -55,6 +55,7 @@ import * as path from "node:path";
 import { fromRoot } from "../../../lib/paths.js";
 import { checkProcedure, constantsOf, envelopeOf, FORMAT, problemLines, rulesAndFacts, safetyOf, type MeasuredStart, type PresenceRead, type ProcedureCheck } from "./check.js";
 import { checkJustifications, JUSTIFICATIONS_SCHEMA, justificationProblems as commonJustificationProblems, leaveOut, recordedJustifications, type Justified, type ReadSources } from "../../core/justify.js";
+import { addClaim, claimJustified, type JustifiedNumber } from "../../core/claims.js";
 import { dependentsOf, factsBounding, leavesOf, matches, valueAt, type RulesDocument } from "../../core/rules.js";
 import { loadWords, say, viewOf } from "../../core/words.js";
 import { problemOf } from "../../core/problems.js";
@@ -446,6 +447,9 @@ async function writeAccepted(context: TopicContext, sent: ProcedureLike): Promis
     const presence = presenceOf(progress);
     const check = checkProcedure(procedure, presence, rules, facts, measuredOf(context.task));
     state.submissions.push(submissionOf(state, procedure, check, progress));
+    // Into the registry: who was read in the module under test, and every number of the procedure by its justification.
+    if (presence) addClaim(progress.claims, { subject: `who is in ${check.module}`, text: check.occupants.map((o) => o.callsign ?? o.id).join(", ") || "nobody", status: "OBSERVED", source: { kind: "measurement", ref: "biomed.presence", step: progress.iteration }, by: "harness" });
+    claimJustified(progress.claims, (procedure as unknown as { justifications: JustifiedNumber[] }).justifications, "procedure", progress.iteration);
     await notify(context, procedure, check, state.submissions.length);
     state.accepted = { path, sha256, procedureId: text(procedure, FORMAT.id) };
     // Accepted: the draft has served.

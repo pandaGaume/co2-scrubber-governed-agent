@@ -19,6 +19,7 @@ import type { Broker } from "../../lib/broker.js";
 import { BASE_CAPABILITIES, withBase } from "../../core/base.js";
 import type { LocalCapability } from "../../core/capabilities.js";
 import { conductView, loadPlaybook, sayingText, type Evidence, stageToolsOf } from "../../core/conduct.js";
+import { addClaim, transition, type ClaimStatus } from "../../core/claims.js";
 import type { LibraryFact } from "../../core/contracts.js";
 import { physics } from "../../core/physics.js";
 import type { TopicState } from "../../core/reasoning-state.js";
@@ -267,7 +268,16 @@ async function requestProblems(sent: JsonValue, context: TopicContext): Promise<
     const check = checkTwinRequest(input, { catalogueTypes: types, telemetryColumns: columns, vocabulary: vocabulary.length ? vocabulary : o.quantities, description: o.description, documentsRead, documents, facts });
     if (!check.ok) return check.problems;
     const review = SESSIONS.get(context.taskId)?.review;
-    return review ? await review(input as unknown as TwinFactoryRequest) : [];
+    const found = review ? await review(input as unknown as TwinFactoryRequest) : [];
+    // An assumption the review finds contradicted enters the registry as what it is: inferred by the Observer, then contradicted, with why.
+    const assumptions = ((input as { assumptions?: unknown[] } | null)?.assumptions ?? []).map(String);
+    for (const finding of found) {
+        const n = Number(/\bon assumption:(\d+)/.exec(finding)?.[1] ?? 0);
+        if (!n || !assumptions[n - 1]) continue;
+        const claim = addClaim(context.progress.claims, { subject: `assumption ${n}`, text: assumptions[n - 1], status: "INFERRED", source: { kind: "model", ref: "observer", step: context.progress.iteration }, by: "observer" });
+        transition(claim, "CONTRADICTED", finding);
+    }
+    return found;
 }
 
 function evidenceOf(progress: Progress, task: TaskFile["task"]): Evidence {
@@ -366,6 +376,11 @@ function chooseCapability(context: TopicContext): LocalCapability {
                 const id = String(c.factId ?? "").trim();
                 const fact = id ? facts.find((f) => f.id === id) : undefined;
                 need.chosen = { factId: fact ? fact.id : null, why: String(c.why ?? ""), fact: fact ? candidateOf(fact) : null };
+                // Into the registry: the fact chosen, verified when its document is signed; a need no fact answers, unknown.
+                const signed = Boolean((fact as { signed?: { valid?: boolean } | null } | undefined)?.signed?.valid);
+                const status: ClaimStatus = signed ? "VERIFIED" : "OBSERVED";
+                if (fact) addClaim(context.progress.claims, { subject: need.name, value: fact.value, unit: fact.unit, status, source: { kind: "fact", ref: fact.id, document: fact.source, signed, step: context.progress.iteration }, by: "observer", cause: String(c.why ?? "") });
+                else addClaim(context.progress.claims, { subject: need.name, status: "UNKNOWN", source: { kind: "model", ref: "observer", step: context.progress.iteration }, by: "observer", cause: String(c.why ?? "no fact answers it") });
             }
             return { ok: true, output: { outcome: "completed", value: { chosen: state.needs.map((n) => ({ need: n.name, fact: n.chosen?.fact ? `${n.chosen.fact.id} = ${n.chosen.fact.value} ${n.chosen.fact.unit} (${n.chosen.fact.source})` : n.chosen ? "none" : "not chosen yet" })) } } };
         },
@@ -386,6 +401,17 @@ function requestCapability(context: TopicContext): LocalCapability {
             noteAttempt(context, { ok: true, problems: [], proposed: JSON.stringify(input).slice(0, 2000) });
             const state = stateOf(context.progress);
             state.accepted = { path: OBSERVER_REQUEST_FILE, sha256: (r.output as { sha256: string }).sha256 };
+            // Into the registry: each known constant by the fact it cites (a constant citing none is the Observer's inference), each assumption as inferred.
+            const request = input as unknown as TwinFactoryRequest;
+            const facts = Object.values(await libraryFacts(context.broker)).flat();
+            const step = context.progress.iteration;
+            for (const k of request.known ?? []) {
+                const fact = k.factId ? facts.find((f) => f.id === k.factId) : undefined;
+                const signed = Boolean((fact as { signed?: { valid?: boolean } | null } | undefined)?.signed?.valid);
+                if (fact) addClaim(context.progress.claims, { subject: k.name ?? k.symbol, value: k.value, unit: k.unit, status: signed ? "VERIFIED" : "OBSERVED", source: { kind: "fact", ref: fact.id, document: k.source, signed, step }, by: "observer" });
+                else addClaim(context.progress.claims, { subject: k.name ?? k.symbol, value: k.value, unit: k.unit, status: "INFERRED", source: { kind: "model", ref: "observer", step }, by: "observer", cause: `cites ${k.source} without a fact id` });
+            }
+            (request.assumptions ?? []).forEach((a, i) => addClaim(context.progress.claims, { subject: `assumption ${i + 1}`, text: String(a), status: "INFERRED", source: { kind: "model", ref: "observer", step }, by: "observer", cause: "an assumption, said as such" }));
             return { ok: true, output: { outcome: "completed", value: { accepted: true, path: OBSERVER_REQUEST_FILE, sha256: state.accepted.sha256, ...(read.length ? { read } : {}) } } };
         },
     };

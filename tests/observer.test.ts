@@ -256,6 +256,11 @@ describe("the Observer, a task of the factories' harness, through the broker", (
         assert.equal(chosen[0].candidates[0].id, "scrubber.effectiveFlowAtFull");
         assert.deepEqual((chosen[0].chosen as { id: string; value: number }).id, "scrubber.effectiveFlowAtFull");
         assert.equal(chosen[1].chosen, "none answers it");
+        // The registry the task leaves (claims.ts): the fact chosen with its source, the volume unknown, the request's assumption inferred.
+        const claims = (JSON.parse(readFileSync(path.join(taskDir(result.observerTask), "claims.json"), "utf8")) as { claims: Array<{ subject: string; status: string; source: { kind: string; ref: string } }> }).claims;
+        assert.ok(claims.some((c) => c.source.ref === "scrubber.effectiveFlowAtFull" && (c.status === "VERIFIED" || c.status === "OBSERVED")), JSON.stringify(claims));
+        assert.ok(claims.some((c) => c.subject === "volume of the Lab" && c.status === "UNKNOWN"));
+        assert.ok(claims.some((c) => c.subject === "assumption 1" && c.status === "INFERRED"));
         // What the model was shown: the description and the computed summary, never the rows and never the catalogue.
         assert.equal(model.seen[0].state.hypothesis.description, DESCRIPTION);
         assert.equal((model.seen[0].state.hypothesis.telemetry as { rows: number }).rows, 25);

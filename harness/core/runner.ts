@@ -33,6 +33,7 @@ import { reasoningStateOf } from "./reasoning-state.js";
 import { intentionFor, loadRecipes, saveRecipes, taskSignature } from "./recipes.js";
 import { NEVER_REPLAYED, proposalKey, restrictReplays } from "./replay.js";
 import { helpForRefusal, noteSources } from "./justify.js";
+import { claimsJson } from "./claims.js";
 import { STAGE_SUPPORT } from "./base.js";
 import { noteRefusal, STUCK_AFTER } from "./problems.js";
 import { readMeaning, unmoved } from "./interpreter.js";
@@ -743,6 +744,8 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
     manifest.ended = ended ?? (finalPhase === "done" ? `contract held after ${progress.iteration} step(s)` : finalPhase === "waiting" ? (progress.failure ?? "waiting for the commander") : progress.failure !== null ? `the builder gave up: ${progress.failure}` : "not done");
     manifest.endedAt = new Date().toISOString();
     await writeText(broker, taskId, "trace.jsonl", lines.map((l) => JSON.stringify(l)).join("\n") + "\n");
+    // The task's claims, with their sources and the history of their status (claims.ts): what a reviewer reads of where each number came from.
+    if (progress.claims.claims.length) await writeText(broker, taskId, "claims.json", JSON.stringify(claimsJson(progress.claims), null, 2) + "\n");
 
     let proposalId: string | null = null;
     let proposedManifestSha256: string | null = null;

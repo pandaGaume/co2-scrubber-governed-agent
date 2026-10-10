@@ -18,6 +18,7 @@
  * capabilities (`task.plan`, `task.done`) and the evaluator write it.
  */
 import { justificationNote, type JustificationHelp } from "./justify.js";
+import { newClaims, type ClaimsState } from "./claims.js";
 import { refusalNote, type Problem, type RefusalStreak } from "./problems.js";
 import { createHash } from "node:crypto";
 import type { JsonValue, State, StateObserver } from "@spiky-panda/harness";
@@ -94,6 +95,8 @@ export interface Progress {
     refusal?: RefusalStreak | null;
     /** What a topic keeps across the steps of one task (the procedure topic: its submissions). */
     topic: Record<string, JsonValue>;
+    /** The task's claims, each with its source and status (claims.ts, docs/registre-des-affirmations.fr.md); written to claims.json at the end. */
+    claims: ClaimsState;
     /** What the task read so far, each answer compact, by capability and argument (`evidence:` in the state); the oldest dropped past the cap. */
     evidence: Record<string, { at: string; summary: JsonValue }>;
     /** What the runner read once at the start, for the state and the topics' requirements: the library's shelf, the telemetry's shape. */
@@ -106,7 +109,7 @@ export interface Progress {
 }
 
 export function newProgress(): Progress {
-    return { phase: "plan", iteration: 0, plan: null, done: null, lastCall: null, repeats: 0, lastSummary: null, lastArtifact: null, lastRefusal: null, refusals: {}, checkedModels: [], sandbox: null, failure: null, reads: {}, sources: { library: [], web: [] }, justify: null, topic: {}, evidence: {}, context: { shelf: [], telemetry: null } };
+    return { phase: "plan", iteration: 0, plan: null, done: null, lastCall: null, repeats: 0, lastSummary: null, lastArtifact: null, lastRefusal: null, refusals: {}, checkedModels: [], sandbox: null, failure: null, reads: {}, sources: { library: [], web: [] }, justify: null, topic: {}, claims: newClaims(), evidence: {}, context: { shelf: [], telemetry: null } };
 }
 
 export interface WorkshopFeatures extends Record<string, JsonValue> {
