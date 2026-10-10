@@ -654,7 +654,10 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
         }
         if (exchange) {
             // A call the output limit cut was never judged: it became a report the step's allowlist refuses; the model reads why it went nowhere, not that refusal.
-            const truncated = cutAtOutputLimit(exchange.response);
+            // Only when the provider judged the call cut (it made it a report): a call returned whole, then the answer cut after it, was run and
+            // judged, and its refusal is the guard's (2026-10-10, run 15: three complete procedure.submit read as cut, the guard's reasons hidden, STUCK).
+            const judgedCut = exchange.decision ? exchange.decision.invocation.capabilityId !== exchange.proposedCapabilityId : true;
+            const truncated = cutAtOutputLimit(exchange.response) && judgedCut;
             if (truncated) failed = truncatedRefusal(exchange.proposedCapabilityId, exchange.tokens?.completion ?? null);
             // A tool the conduct closes at this stage is not in the step's list: the model reads why it is closed, the gate's words, not
             // "outside the allowlist" (2026-10-10: the Observer's request before any read went nowhere and said nothing of why).
