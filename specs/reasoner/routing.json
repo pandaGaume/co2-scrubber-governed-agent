@@ -2,19 +2,20 @@
     "note": "Which model answers which use (2026-10-08): not one model for everything. A use is the agent (the night's decisions, no prompt file), a role whose prompt the caller names (specs/<role>/prompt.md: procedure, observer, graph, code, supervisor, diagnosis, playbook, reflection, recommendation, onnx), or compose (Mother's welcome, the narrations), or interpret (a call whose form does not fit its schema, read toward it before the guard judges it: harness/core/interpreter.ts; the least expensive model), or meaning (a call whose form passed but that moved nothing the guard refused, read for what it meant: harness/core/interpreter.ts, the second trigger; a capable model). A use set to null, or not named, takes the server's profile (REASONER_PROFILE). The reasoner slot reads this file at start; REASONER_ROUTING names another one. Every call says, in its result and in the factories' manifests, the model that answered.",
     "uses": {
         "agent": "profiles/nvidia-nebius-super.json",
-        "procedure": "profiles/nvidia-nebius-super.json",
+        "procedure": "profiles/nvidia-nebius-ultra.json",
         "observer": "profiles/nvidia-nebius-super.json",
-        "graph": "profiles/nvidia-nebius-super.json",
-        "code": "profiles/nvidia-nebius-super.json",
-        "supervisor": "profiles/nvidia-nebius-super.json",
-        "diagnosis": null,
-        "playbook": null,
-        "reflection": null,
-        "recommendation": null,
-        "onnx": null,
+        "graph": "profiles/nvidia-nebius-ultra.json",
+        "code": "profiles/nvidia-nebius-ultra.json",
+        "supervisor": "profiles/nvidia-nebius-ultra.json",
+        "diagnosis": "profiles/nvidia-nebius-ultra.json",
+        "playbook": "profiles/nvidia-nebius-ultra.json",
+        "reflection": "profiles/nvidia-nebius-ultra.json",
+        "recommendation": "profiles/nvidia-nebius-ultra.json",
+        "onnx": "profiles/nvidia-nebius-ultra.json",
         "compose": "profiles/nvidia-nebius-super.json",
         "interpret": null,
         "meaning": "profiles/nvidia-nebius-super.json"
     },
-    "_film": "2026-10-08, for the video: the uses the film shows on Nemotron 3 Super. Ultra was tried first on the factories and dropped the same day: its reasoning ran past the output limit on one step in four, and it plans every read at once where the harness runs one call per step, so it read in circles (25 steps, no procedure) where Super wrote the procedure in 9 steps for a seventh of the tokens. The uses the film does not show take the server's profile (REASONER_PROFILE, the Nano)."
+    "_film": "2026-10-08, for the video: the uses the film shows on Nemotron 3 Super. Ultra was tried first on the factories and dropped the same day: its reasoning ran past the output limit on one step in four, and it plans every read at once where the harness runs one call per step, so it read in circles (25 steps, no procedure) where Super wrote the procedure in 9 steps for a seventh of the tokens. The uses the film does not show take the server's profile (REASONER_PROFILE, the Nano).",
+    "_default": "2026-10-10, Guillaume's choice after the runs of that day: the factories and the supervisor on Nemotron 3 Ultra (it completed every procedure it was given, 6 of 6, and the graph factory in run 27), the Observer and the reading of what a call meant on Nemotron 3 Super (Ultra failed the Observer 4 times in 5, Super passed it every time); the agent and the composed texts stay on Super, the reading of a call's form on the server's profile. Run 27 went through on this routing: 26 calls, 252 000 input tokens (65 000 from the cache), 36 000 output."
 }

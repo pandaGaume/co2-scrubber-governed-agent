@@ -17,7 +17,7 @@
         "temperature": 0.4,
         "topP": 0.95,
         "timeoutMs": 240000,
-        "_note": "2026-10-08: Nemotron 3 Ultra 550B A55B on Nebius Token Factory: the most capable and by far the most expensive; for complex or critical tasks only (Guillaume), never the default; id as Token Factory lists it. 2026-10-10: maxTokens 16384, timeoutMs 240000, temperature 0.4 and topP 0.95, as the Super (at 4096 a reasoning model is cut before its call).",
+        "_note": "2026-10-08: Nemotron 3 Ultra 550B A55B on Nebius Token Factory: the most capable and by far the most expensive; for complex or critical tasks only (Guillaume); since 2026-10-10 the factories' and the supervisor's model by default (specs/reasoner/routing.json, his choice); id as Token Factory lists it. 2026-10-10: maxTokens 16384, timeoutMs 240000, temperature 0.4 and topP 0.95, as the Super (at 4096 a reasoning model is cut before its call).",
         "toolChoice": "required",
         "whenCut": {
             "chat_template_kwargs": {
