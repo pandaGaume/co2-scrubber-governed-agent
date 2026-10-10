@@ -91,11 +91,12 @@ function readRequest(body: Record<string, unknown>): WireRequest | null {
 /** The tokens the server says it served from its cache, read from whichever usage fields the wire has. */
 function cacheOf(usage: Record<string, unknown> | undefined): string {
     if (!usage) return "the server gave no usage";
-    const details = usage.prompt_tokens_details as Record<string, unknown> | undefined;
+    // The Responses API names it input_tokens_details (2026-10-10, the matrix: GPT shown with nothing served from cache).
+    const details = (usage.prompt_tokens_details ?? usage.input_tokens_details) as Record<string, unknown> | undefined;
     const prompt = usage.prompt_tokens ?? usage.input_tokens;
     const parts: string[] = [];
     if (typeof prompt === "number") parts.push(`prompt ${prompt} tokens`);
-    if (typeof details?.cached_tokens === "number") parts.push(`${details.cached_tokens} served from cache (prompt_tokens_details.cached_tokens)`);
+    if (typeof details?.cached_tokens === "number") parts.push(`${details.cached_tokens} served from cache (${usage.prompt_tokens_details ? "prompt" : "input"}_tokens_details.cached_tokens)`);
     if (typeof usage.prompt_cache_hit_tokens === "number") parts.push(`${usage.prompt_cache_hit_tokens} cache hit, ${usage.prompt_cache_miss_tokens ?? "?"} miss (prompt_cache_hit/miss_tokens)`);
     if (typeof usage.cache_read_input_tokens === "number") parts.push(`${usage.cache_read_input_tokens} read from cache, ${usage.cache_creation_input_tokens ?? 0} written to it (cache_read/creation_input_tokens)`);
     const completion = usage.completion_tokens ?? usage.output_tokens;
@@ -211,7 +212,7 @@ export class RunLog {
         const stats = this.byModel.get(req.model) ?? { calls: 0, prompt: 0, cached: 0, completion: 0 };
         stats.calls++;
         stats.prompt += Number(usage?.prompt_tokens ?? usage?.input_tokens ?? 0);
-        stats.cached += Number((usage?.prompt_tokens_details as Record<string, unknown> | undefined)?.cached_tokens ?? usage?.prompt_cache_hit_tokens ?? usage?.cache_read_input_tokens ?? 0);
+        stats.cached += Number(((usage?.prompt_tokens_details ?? usage?.input_tokens_details) as Record<string, unknown> | undefined)?.cached_tokens ?? usage?.prompt_cache_hit_tokens ?? usage?.cache_read_input_tokens ?? 0);
         stats.completion += Number(usage?.completion_tokens ?? usage?.output_tokens ?? 0);
         this.byModel.set(req.model, stats);
         if (!this.detailed) return;
