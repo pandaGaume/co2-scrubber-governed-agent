@@ -23,7 +23,7 @@ import type { PublishedSlot } from "../slots/lib/slot-server.js";
 import { startAllOrFail } from "./lib/start.js";
 import { Broker } from "../harness/lib/broker.js";
 import type { Provider, ProviderExchange } from "../harness/lib/provider.js";
-import { checkTwinRequest, factoryContractOf, type TwinFactoryRequest, hedgedNumbers } from "../harness/observer/request.js";
+import { checkTwinRequest, factoryContractOf, type TwinFactoryRequest, hedgedNumbers, withFactIds } from "../harness/observer/request.js";
 import { summarizeTelemetry } from "../harness/observer/telemetry.js";
 import { observe } from "../harness/observer/observer.js";
 import { taskDir } from "../slots/tools/lib/workshop.js";
@@ -101,6 +101,32 @@ describe("the Observer's guard and its telemetry", () => {
         assert.equal(problems.length, 1);
         assert.match(problems[0], /^provenance: constraints "Lab volume: 35 m3 \(measured from decay test\)" cites 35, which the description gives only under an assumption/);
         assert.match(checkTwinRequest({ ...REQUEST, known: [{ symbol: "V", name: "Lab volume", value: 35, unit: "m3", source: "x" }] }, { description }).problems.join(), /known constant "V" = 35 is a value the description gives only under an assumption/);
+    });
+
+    it("what the harness reads itself in a request (2026-10-10, run 7): the fact one fact alone of the cited document holds, a band whose end is the value; never a guess", () => {
+        const fact = (id: string, value: number, unit: string, quantity: string) => ({ id, semantic: id, quantity, unit, value });
+        const facts = { "scrubber-1-datasheet": [fact("scrubber.effectiveFlowAtFull", 1, "m3/min", "VolumeFlow"), fact("scrubber.flowAtFull", 3.3, "m3/min", "VolumeFlow"), fact("scrubber.lagTimeConstant", 3.33, "min", "Time"), fact("scrubber.singlePassEfficiency", 0.3, "1", "Ratio"), fact("scrubber.runFloor", 30, "%", "Ratio")] };
+        const known = [
+            { symbol: "Qe_full", name: "effective flow", value: 1, unit: "m3/min", source: "scrubber-1-datasheet", max: 1 },
+            { symbol: "tau", name: "lag", value: 3.33, unit: "min", source: "scrubber-1-datasheet", min: 3.33, max: 3.33 },
+            { symbol: "eta_sp", name: "efficiency", value: 0.3, unit: "dimensionless", source: "scrubber-1-datasheet" },
+            { symbol: "G", name: "a band", value: 0.3, unit: "L/min", source: "nasa-crew-metabolic-loads", min: 0.2, max: 0.4 },
+        ];
+        const { input, read } = withFactIds({ ...REQUEST, known }, facts) as { input: TwinFactoryRequest; read: string[] };
+        assert.deepEqual(input.known!.map((k) => [k.symbol, k.factId ?? null, k.min ?? null, k.max ?? null]), [
+            ["Qe_full", "scrubber.effectiveFlowAtFull", null, null],
+            ["tau", "scrubber.lagTimeConstant", null, null],
+            // A unit the unit system does not know: no fact holds it for sure, left to the guard and its list.
+            ["eta_sp", null, null, null],
+            // A real band, and a document without typed facts here: untouched.
+            ["G", null, 0.2, 0.4],
+        ]);
+        assert.equal(read.length, 5);
+        assert.match(read.join("; "), /known "Qe_full" = 1 m3\/min is the fact "scrubber.effectiveFlowAtFull" of "scrubber-1-datasheet" \(1 m3\/min\): factId written/);
+        // Read, the request no longer carries the two points the guard refused on.
+        const problems = checkTwinRequest(input, { documentsRead: ["scrubber-1-datasheet"], facts }).problems.join("; ");
+        assert.doesNotMatch(problems, /Qe_full|tau|band/);
+        assert.match(problems, /known constant "eta_sp"/);
     });
 
     it("the telemetry is summarised by code: counts, ends, range, mean, and whether a column moves", () => {

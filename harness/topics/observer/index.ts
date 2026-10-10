@@ -26,7 +26,7 @@ import type { TaskFile } from "../../core/task.js";
 import type { TopicContext, TopicDefinition, Validation } from "../../core/topic.js";
 import type { DoneClaim, Progress, WorkshopFile } from "../../core/workspace-observer.js";
 import { loadWords, say } from "../../core/words.js";
-import { checkTwinRequest, TWIN_REQUEST_SCHEMA, type TwinFactoryRequest, type VocabularyEntry } from "../../observer/request.js";
+import { checkTwinRequest, TWIN_REQUEST_SCHEMA, withFactIds, type TwinFactoryRequest, type VocabularyEntry } from "../../observer/request.js";
 import type { TelemetrySummary } from "../../observer/telemetry.js";
 
 /** What the Observer's harness says to its model: the spec's words (`specs/observer/words.json`). */
@@ -171,11 +171,13 @@ const documentsReadOf = (progress: Progress): string[] => [...new Set(Object.key
  * the library's facts and the texts of the documents read; then the Contract Supervisor's review, only on a request the
  * rules accepted (what the rules on numbers cannot see).
  */
-async function requestProblems(input: JsonValue, context: TopicContext): Promise<string[]> {
+async function requestProblems(sent: JsonValue, context: TopicContext): Promise<string[]> {
     const o = observationOf(context.task);
     const broker = context.broker;
     const { types, vocabulary } = await catalogueOf(broker, o.runtimeSlot ?? context.runtimeSlot ?? "twin");
     const facts = await libraryFacts(broker);
+    // The fact ids the harness reads itself, the same way here and at execution: what is judged is what will be written.
+    const input = withFactIds(sent, facts).input as JsonValue;
     const ids = new Set(o.documents.map((d) => d.id));
     // What was read: the documents read whole, and those whose facts a read listed (their ids are among the task's sources).
     const documentsRead = [...new Set([...documentsReadOf(context.progress), ...context.progress.sources.library.filter((id) => ids.has(id))])];
@@ -239,14 +241,16 @@ function requestCapability(context: TopicContext): LocalCapability {
         id: OBSERVER_CAPABILITY,
         description: w("capability", { file: OBSERVER_REQUEST_FILE }),
         inputSchema: TWIN_REQUEST_SCHEMA as unknown as JsonValue,
-        async execute(input: JsonValue): Promise<CapabilityResult> {
+        async execute(sent: JsonValue): Promise<CapabilityResult> {
+            // The request as the guard judged it: the fact ids one fact alone holds, read by the harness and said in the answer.
+            const { input, read } = withFactIds(sent, await libraryFacts(context.broker)) as { input: JsonValue; read: string[] };
             const text = JSON.stringify(input, null, 2) + "\n";
             const r = await context.broker.call("workspace", "write", { taskId: context.taskId, path: OBSERVER_REQUEST_FILE, text });
             if (!r.ok) return { ok: false, error: r.error ?? `could not write ${OBSERVER_REQUEST_FILE}`, output: { outcome: r.outcome } };
             noteAttempt(context, { ok: true, problems: [], proposed: JSON.stringify(input).slice(0, 2000) });
             const state = stateOf(context.progress);
             state.accepted = { path: OBSERVER_REQUEST_FILE, sha256: (r.output as { sha256: string }).sha256 };
-            return { ok: true, output: { outcome: "completed", value: { accepted: true, path: OBSERVER_REQUEST_FILE, sha256: state.accepted.sha256 } } };
+            return { ok: true, output: { outcome: "completed", value: { accepted: true, path: OBSERVER_REQUEST_FILE, sha256: state.accepted.sha256, ...(read.length ? { read } : {}) } } };
         },
     };
 }

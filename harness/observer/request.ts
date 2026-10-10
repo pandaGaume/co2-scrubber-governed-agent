@@ -170,6 +170,47 @@ export function hedgedNumbers(description: string): number[] {
 
 const numbersIn = (text: string): number[] => [...text.matchAll(/(?<![\w.])(\d+(?:[.,]\d+)?)/g)].map((m) => Number(m[1].replace(",", "."))).filter(Number.isFinite);
 
+/**
+ * The fact of a document a known constant's value is, when one alone holds it: its value and unit against each of the document's
+ * facts by the unit system; several holding once converted (0.3 ratio and a floor of 30 percent), the one stated in the very unit
+ * written, when one alone is. Null when none, or more than one, does.
+ */
+export function factHolding(k: { value: number; unit: string; quantity?: string }, facts: LibraryFact[]): LibraryFact | null {
+    const matching = facts.filter((f) => checkKnownAgainstFact({ value: k.value, unit: k.unit, ...(k.quantity ? { quantity: k.quantity } : {}) }, f).verdict === "OK");
+    const sameUnit = matching.filter((f) => f.unit === k.unit);
+    return matching.length === 1 ? matching[0] : sameUnit.length === 1 ? sameUnit[0] : null;
+}
+
+/**
+ * The request with the fact ids the harness reads itself (2026-10-10, run 7): a known constant that cites a document stating its facts
+ * by id, without the id, whose value and unit are one of those facts alone, is that fact. The guard named the id to write, and Nemotron
+ * Nano sent the request again without it, twice (four times in run 2): a reading the harness can make without guessing is not the
+ * model's to repeat. Each id read is said, for the model to read in the answer. A constant that matches no fact, or several, is left
+ * as sent, and the guard says why. The same for a band whose end is the value itself: no band, the end left out.
+ */
+export function withFactIds(input: unknown, facts: Record<string, LibraryFact[]>): { input: unknown; read: string[] } {
+    const r = input && typeof input === "object" ? (input as Partial<TwinFactoryRequest>) : null;
+    if (!r || !Array.isArray(r.known)) return { input, read: [] };
+    const read: string[] = [];
+    const known = r.known.map((sent) => {
+        if (!sent || typeof sent.value !== "number") return sent;
+        let k = sent;
+        // An end of a band equal to the value says no band (run 7: "max": 1 alone around a value of 1, refused as "undefined to 1"): dropped.
+        for (const end of ["min", "max"] as const)
+            if (k[end] === k.value) {
+                const { [end]: _dropped, ...rest } = k;
+                k = rest as typeof k;
+                read.push(`known "${k.symbol}": ${end} ${sent[end]} is its value, no band: left out`);
+            }
+        if (k.factId || !k.unit || !k.source || !facts[k.source]?.length) return k;
+        const fact = factHolding(k, facts[k.source]);
+        if (!fact) return k;
+        read.push(`known "${k.symbol}" = ${k.value} ${k.unit} is the fact "${fact.id}" of "${k.source}" (${fact.value} ${fact.unit}): factId written`);
+        return { ...k, factId: fact.id };
+    });
+    return read.length ? { input: { ...r, known }, read } : { input, read: [] };
+}
+
 export function checkTwinRequest(input: unknown, context: CheckContext = {}): RequestCheck {
     const problems: string[] = [];
     const r = (input && typeof input === "object" ? input : {}) as Partial<TwinFactoryRequest>;
@@ -248,9 +289,7 @@ export function checkTwinRequest(input: unknown, context: CheckContext = {}): Re
             // refusal names it, the id to write (2026-10-10, run xykl: four requests refused on the same missing factIds, the guard
             // listing six facts each time, when 0.3 ratio, 3.33 min, 1 m3/min and 0.44 g/min each matched one fact exactly).
             // Several hold once converted (0.3 ratio and a floor of 30 percent): the one stated in the very unit written, when one alone is.
-            const matching = !k.factId ? facts.filter((f) => checkKnownAgainstFact({ value: k.value, unit: k.unit, ...(k.quantity ? { quantity: k.quantity } : {}) }, f).verdict === "OK") : [];
-            const sameUnit = matching.filter((f) => f.unit === k.unit);
-            const one = matching.length === 1 ? matching[0] : sameUnit.length === 1 ? sameUnit[0] : null;
+            const one = !k.factId ? factHolding(k, facts) : null;
             if (!k.factId && one) problems.push(`facts: known constant "${k.symbol}" = ${k.value} ${k.unit} cites "${k.source}", which states its facts by id: its value is the fact "${one.id}" (${one.semantic}, ${one.value} ${one.unit}): write factId "${one.id}" in that constant`);
             else if (!k.factId) problems.push(`facts: known constant "${k.symbol}" cites "${k.source}", which states its facts by id: give factId, one of ${facts.map((f) => `${f.id} (${f.semantic}, ${f.value} ${f.unit})`).join(", ")}`);
             else if (!fact) problems.push(`facts: known constant "${k.symbol}" cites fact "${k.factId}", which "${k.source}" does not state; its facts are ${facts.map((f) => f.id).join(", ")}`);
