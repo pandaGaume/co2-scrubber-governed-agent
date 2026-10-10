@@ -99,6 +99,15 @@ export interface RunTaskOptions {
     log?: (line: string) => void;
 }
 
+/**
+ * Is what a refusal left unjustified settled by this step: a call that carries the constants passed, whichever of them (2026-10-10,
+ * run pzeq: a procedure.submit refused for its justifications, corrected by an accepted procedure.revise; the brief still opened on
+ * "your last procedure.submit was refused for its justifications", and Nano went on justifying instead of handing over).
+ */
+export function justifySettled(pending: { capability: string } | null | undefined, capabilityId: string, ok: boolean, justified?: { capability: RegExp }): boolean {
+    return Boolean(ok && pending && (pending.capability === capabilityId || justified?.capability.test(capabilityId)));
+}
+
 export interface RunTaskResult {
     taskId: string;
     state: TaskState;
@@ -567,7 +576,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             const isRead = (id: string): boolean => READ_CAPABILITIES.some((r) => r.test(id));
             if (!(progress.lastRefusal && !isRead(progress.lastRefusal.capability) && isRead(trace.decision.invocation.capabilityId))) progress.lastRefusal = null;
             if (trace.result.ok) delete progress.refusals[trace.decision.invocation.capabilityId];
-            if (trace.result.ok && progress.justify?.capability === trace.decision.invocation.capabilityId) progress.justify = null;
+            if (justifySettled(progress.justify, trace.decision.invocation.capabilityId, trace.result.ok, topic.justified)) progress.justify = null;
             progress.misjustified = null;
             progress.pendingProblems = null;
             // A call that acts, executed, ends a streak of refusals; a read between two refusals does not (reading is how a builder looks for what is expected).

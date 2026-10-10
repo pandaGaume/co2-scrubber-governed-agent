@@ -9,7 +9,8 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { dependentsOf, type RulesDocument } from "../harness/core/rules.js";
 import { loadRules, LIBRARY_DIR } from "../slots/tools/library/provider.js";
-import { marchingOrderOf } from "../harness/topics/procedure/index.js";
+import { marchingOrderOf, PROCEDURE_JUSTIFIED } from "../harness/topics/procedure/index.js";
+import { justifySettled } from "../harness/core/runner.js";
 import { newProgress } from "../harness/core/workspace-observer.js";
 import type { TaskFile } from "../harness/core/task.js";
 
@@ -55,5 +56,15 @@ describe("the procedure factory's marching order in the state", () => {
         assert.equal(current?.stage, "method");
         assert.deepEqual(current?.answered, ["library.methods"], "its answer is in the state: not to be asked again");
         assert.ok(order.stages.filter((s) => s.status !== "current").every((s) => s.answered === undefined), "said on the current stage only");
+    });
+});
+
+describe("what the state keeps after a correction", () => {
+    it("the justifications a refused submit lacked are settled by an accepted revise (run pzeq, 2026-10-10)", () => {
+        assert.equal(justifySettled({ capability: "procedure.submit" }, "procedure.revise", true, PROCEDURE_JUSTIFIED), true, "the revise carries the constants: it settles them");
+        assert.equal(justifySettled({ capability: "procedure.submit" }, "procedure.submit", true, PROCEDURE_JUSTIFIED), true);
+        assert.equal(justifySettled({ capability: "procedure.submit" }, "procedure.revise", false, PROCEDURE_JUSTIFIED), false, "refused, it settles nothing");
+        assert.equal(justifySettled({ capability: "procedure.submit" }, "library.justify", true, PROCEDURE_JUSTIFIED), false, "a read settles nothing");
+        assert.equal(justifySettled(null, "procedure.revise", true, PROCEDURE_JUSTIFIED), false);
     });
 });

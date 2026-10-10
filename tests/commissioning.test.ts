@@ -495,6 +495,8 @@ describe("the commissioning, through the broker", () => {
         return JSON.parse(r.contents[0].text) as MotherLine[];
     };
     const commissioning = async (id: string) => (await ok<{ commissioning: Commissioning }>("station", "commissioning_state", { commissioningId: id })).commissioning;
+    /** The last scripted builder made, to read what it was shown. */
+    let lastBuilder: ScriptedProcedureBuilder | null = null;
     const buildProcedure = async (options: Partial<ScriptedProcedureOptions> = {}) => {
         const req = await ok<{ taskId: string; started: boolean }>("factory", "request", {
             objective: { required_outputs: [{ name: "V", quantity: "Volume", unit: "m3" }] },
@@ -506,7 +508,7 @@ describe("the commissioning, through the broker", () => {
         });
         assert.equal(req.started, false);
         tasks.push(req.taskId);
-        return runTask({ broker: operator, taskId: req.taskId, recipesDir, provider: (ctx: BuilderContext) => new ScriptedProcedureBuilder({ ...ctx, ...options }) });
+        return runTask({ broker: operator, taskId: req.taskId, recipesDir, provider: (ctx: BuilderContext) => (lastBuilder = new ScriptedProcedureBuilder({ ...ctx, ...options })) });
     };
 
     before(async () => {
@@ -559,6 +561,10 @@ describe("the commissioning, through the broker", () => {
         assert.deepEqual(result.manifest.steps.filter((s) => s.source !== "refused").map((s) => s.capability), ["factory.inventory", "library.methods", "library.read", "biomed.presence", "task.plan", "procedure.revise", "task.done"], "the correction is a revision of the procedure kept, not the whole again");
         assert.ok(result.manifest.artifacts.some((a) => a.kind === "procedure" && a.path === "procedures/decay-draft-02.json"));
         assert.equal(result.manifest.provider.name, "scripted:procedure", "the manifest names the script");
+        // Accepted by its revision, the procedure is handed over: the brief asks for task.done, and no note of a refused submission's justifications is left in it.
+        const lastBrief = String((lastBuilder!.exchanges.at(-1)?.request as { state?: { features?: { brief?: unknown } } } | undefined)?.state?.features?.brief ?? "");
+        assert.match(lastBrief, /task\.done/);
+        assert.doesNotMatch(lastBrief, /refused for its justifications/);
         // The scorecard of question A: the presence was read before the first submission, the monitoring asked unprompted.
         const scorecard = JSON.parse(readFileSync(path.join(taskDir(result.taskId), "scorecard.json"), "utf8")) as { presenceReadBeforeFirstSubmission: boolean; monitoring: string; refusedFor: string[] };
         // The stop breaks the guard's floor and the signed safety card's (test.speedFloorPercent): refused for both.
