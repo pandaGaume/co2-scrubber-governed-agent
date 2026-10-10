@@ -1,0 +1,20 @@
+{
+    "note": "The configuration matrix the commissioning example is run on (scripts/model-matrix.ts): one run per entry, with the full logs, then a table of the results. An entry names the profile every role runs on (REASONER_PROFILE), and the uses routed elsewhere (routing; specs/reasoner/routing.json's uses, null for all the others). A provider added later (Gemini, Le Chat) is a profile under profiles/ and an entry here.",
+    "configs": [
+        { "id": "claude-haiku", "provider": "Claude", "label": "Haiku 4.5", "profile": "profiles/anthropic.json" },
+        { "id": "claude-sonnet", "provider": "Claude", "label": "Sonnet 5.5", "profile": "profiles/anthropic-sonnet.json" },
+        { "id": "claude-opus", "provider": "Claude", "label": "Opus 5.5", "profile": "profiles/anthropic-opus.json" },
+        { "id": "claude-fable", "provider": "Claude", "label": "Fable 5.1", "profile": "profiles/anthropic-fable.json" },
+        { "id": "openai-gpt", "provider": "OpenAI", "label": "GPT 5.6 Sol", "profile": "profiles/openai-gpt.json" },
+        { "id": "nemotron-nano", "provider": "Nemotron", "label": "Nano", "profile": "profiles/nvidia-nebius.json" },
+        { "id": "nemotron-super", "provider": "Nemotron", "label": "Super", "profile": "profiles/nvidia-nebius-super.json" },
+        { "id": "nemotron-ultra", "provider": "Nemotron", "label": "Ultra", "profile": "profiles/nvidia-nebius-ultra.json" },
+        {
+            "id": "nemotron-default",
+            "provider": "Nemotron",
+            "label": "Ultra, Super for the Observer (the default routing)",
+            "profile": "profiles/nvidia-nebius-ultra.json",
+            "routing": { "observer": "profiles/nvidia-nebius-super.json", "meaning": "profiles/nvidia-nebius-super.json" }
+        }
+    ]
+}
