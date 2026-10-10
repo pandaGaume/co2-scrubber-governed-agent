@@ -283,6 +283,9 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
 
     // What the state carries so the model need not read it: the shelf and the telemetry's shape.
     progress.context = { shelf: await shelfOf(broker), telemetry: await telemetryShapeOf(broker, taskId, task), contracts: await contractsOf(broker, task, supervisor, log) };
+    // What the state shows is citable as what the task read (2026-10-10, Opus run: the reference graph "habitat" shown on the shelf with its
+    // variables and bounds, the brief saying nothing needs reading first, and its citation refused "not read in this task" ten times).
+    for (const g of progress.context.shelf) if (g.id && !progress.sources.library.includes(g.id)) progress.sources.library.push(g.id);
     const contextMode: "conversation" | "state" = (provider as { contextMode?: unknown }).contextMode === "state" ? "state" : "conversation";
     // The proposals in a row: the same capability with the same input twice is counted (`progress.repeats`), whether it ran or was refused.
     let previousProposal = "";
