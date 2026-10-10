@@ -240,6 +240,27 @@ export function withVocabularyForm(input: unknown, vocabulary: VocabularyEntry[]
     return read.length ? { input: out, read } : { input, read: [] };
 }
 
+/**
+ * A column written as nothing ("null", "none", empty) is no column (2026-10-10, runs 20, 25, 26: "column": "null" refused as a column the
+ * telemetry does not have): left out, each reading said.
+ */
+export function withColumnsRead(input: unknown): { input: unknown; read: string[] } {
+    const r = input && typeof input === "object" ? (input as Record<string, unknown>) : null;
+    if (!r) return { input, read: [] };
+    const read: string[] = [];
+    const out: Record<string, unknown> = { ...r };
+    for (const section of ["observables", "controls", "inputs", "outputs", "external_influences"]) {
+        if (!Array.isArray(r[section])) continue;
+        out[section] = (r[section] as Array<Record<string, unknown>>).map((q) => {
+            if (!q || !("column" in q) || !(q.column === null || (typeof q.column === "string" && /^\s*(null|none|n\/a|-)?\s*$/i.test(q.column)))) return q;
+            const { column: _none, ...rest } = q;
+            read.push(`${section} "${String(q.name)}": column ${JSON.stringify(q.column)} read as no column`);
+            return rest;
+        });
+    }
+    return read.length ? { input: out, read } : { input, read: [] };
+}
+
 export function checkTwinRequest(input: unknown, context: CheckContext = {}): RequestCheck {
     const problems: string[] = [];
     const r = (input && typeof input === "object" ? input : {}) as Partial<TwinFactoryRequest>;

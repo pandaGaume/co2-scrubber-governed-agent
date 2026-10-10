@@ -223,7 +223,9 @@ const asJustifications = (given: unknown[]): Array<Partial<Justification>> => gi
  * cited "habitat.variables.V", the variable V of the graph habitat it had read, and was refused for it, then tried to read "habitat"
  * as a document, twice). The longest id read that the reference starts with, before a separator; null when none.
  */
-export function librarySourceOf(reference: string, read: ReadonlyArray<string>): string | null {
+export function librarySourceOf(written: string, read: ReadonlyArray<string>): string | null {
+    // The tool's name before the reference is not part of it (2026-10-10, run 26: "library.graph.habitat.variables.V", refused, then a question to the commander).
+    const reference = written.replace(/^library\.(graphs?|read|facts|search|list|methods)[.:/ ]+/, "");
     if (read.includes(reference)) return reference;
     const named = read.filter((id) => id && reference.length > id.length && reference.startsWith(id) && /^[.#/: (\[]/.test(reference.slice(id.length)));
     return named.sort((a, b) => b.length - a.length)[0] ?? null;

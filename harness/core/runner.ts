@@ -771,6 +771,13 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
     runLog()?.taskEnded(taskId, topicId, provider.model, finalPhase, ended ?? progress.failure ?? finalPhase, progress.iteration);
     manifest.ended = ended ?? (finalPhase === "done" ? `contract held after ${progress.iteration} step(s)` : finalPhase === "waiting" ? (progress.failure ?? "waiting for the commander") : progress.failure !== null ? `the builder gave up: ${progress.failure}` : "not done");
     manifest.endedAt = new Date().toISOString();
+    // The model that answered, as the exchanges name it (2026-10-10, run 26: the Observer routed to Super, its manifest naming the reasoner's default, Ultra).
+    const answered = provider.exchanges.map((e) => e.model).filter((m): m is string => typeof m === "string" && m.length > 0 && !m.startsWith("scripted"));
+    if (answered.length) {
+        const counts = new Map<string, number>();
+        for (const m of answered) counts.set(m, (counts.get(m) ?? 0) + 1);
+        manifest.provider = { ...manifest.provider, model: [...counts].sort((a, b) => b[1] - a[1])[0][0] };
+    }
     await writeText(broker, taskId, "trace.jsonl", lines.map((l) => JSON.stringify(l)).join("\n") + "\n");
     // The task's claims, with their sources and the history of their status (claims.ts): what a reviewer reads of where each number came from.
     if (progress.claims.claims.length) await writeText(broker, taskId, "claims.json", JSON.stringify(claimsJson(progress.claims), null, 2) + "\n");

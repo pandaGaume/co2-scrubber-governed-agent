@@ -23,7 +23,7 @@ import type { PublishedSlot } from "../slots/lib/slot-server.js";
 import { startAllOrFail } from "./lib/start.js";
 import { Broker } from "../harness/lib/broker.js";
 import type { Provider, ProviderExchange } from "../harness/lib/provider.js";
-import { checkTwinRequest, factoryContractOf, type TwinFactoryRequest, hedgedNumbers, withFactIds, withVocabularyForm } from "../harness/observer/request.js";
+import { checkTwinRequest, factoryContractOf, type TwinFactoryRequest, hedgedNumbers, withColumnsRead, withFactIds, withVocabularyForm } from "../harness/observer/request.js";
 import { summarizeTelemetry } from "../harness/observer/telemetry.js";
 import { observe } from "../harness/observer/observer.js";
 import { OBSERVER_TOPIC } from "../harness/topics/observer/index.js";
@@ -168,6 +168,13 @@ describe("the Observer's guard and its telemetry", () => {
         assert.match(read[0], /quantity "Concentration \(ppm\)" read as Concentration in ppm/);
         // A name the vocabulary does not hold is left to the guard.
         assert.equal(withVocabularyForm({ ...REQUEST, outputs: [{ name: "x", quantity: "CO2_concentration_ppm", unit: "ppm" }] }, vocabulary).read.length, 0);
+    });
+
+    it("a column written as nothing is no column (runs 20, 25, 26: \"column\": \"null\")", () => {
+        const sent = { ...REQUEST, inputs: [{ name: "Hatch state", quantity: "Ratio", unit: "percent", column: "null" }, { name: "speed", quantity: "Ratio", unit: "percent", column: "speed_percent" }] };
+        const { input, read } = withColumnsRead(sent) as { input: TwinFactoryRequest; read: string[] };
+        assert.deepEqual(input.inputs.map((q) => q.column ?? null), [null, "speed_percent"]);
+        assert.match(read[0], /column "null" read as no column/);
     });
 
     it("the telemetry is summarised by code: counts, ends, range, mean, and whether a column moves", () => {

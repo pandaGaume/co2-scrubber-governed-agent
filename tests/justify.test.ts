@@ -108,6 +108,9 @@ describe("the justification of constants, common to every factory", () => {
         assert.equal(librarySourceOf("habitat.variables.V", read), "habitat");
         assert.equal(librarySourceOf("station-topology#volumes", read), "station-topology");
         assert.equal(librarySourceOf("scrubber.flowAtFull", read), "scrubber.flowAtFull");
+        // The tool's name before it is not part of the reference (run 26).
+        assert.equal(librarySourceOf("library.graph.habitat.variables.V", read), "habitat");
+        assert.equal(librarySourceOf("library.graphs.habitat.variables.V.bounds", read), "habitat");
         // A name that only begins like one read is not it, nor a source never read.
         assert.equal(librarySourceOf("habitat-b", read), null);
         assert.equal(librarySourceOf("co2-scrubbers.flow", read), null);
