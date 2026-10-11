@@ -2,28 +2,29 @@
     "tools": {
         "motor.state": {
             "title": "État du moteur et de la cabine",
-            "description": "État du moteur et de la cabine : alimentation, vitesse en pour cent, courant en ampères, CO2 en ppm et son état (NOMINAL, ELEVATED, CRITICAL), résidu de santé."
+            "description": "L'état de la carte : alimentation, vitesse en pour cent de la pleine vitesse, courant moteur en ampères, le CO2 de la cabine (ppm et état), et la garde que la carte applique, avec ses seuils et ses dernières actions."
         },
         "scrubber.check": {
-            "title": "Soumettre une commande au firmware sans l'exécuter",
-            "description": "Soumet une commande à la carte sans l'exécuter et renvoie sa réponse : les mêmes règles, et le même refus avec la même raison que si la commande avait été envoyée. Rien ne change sur la carte. À utiliser quand une procédure exige une commande que vous croyez refusée : c'est la carte qui fait autorité sur ce qu'elle accepte, pas votre mémoire de ses règles.",
+            "title": "Soumettre une commande à la carte sans l'exécuter",
+            "description": "Soumet une commande à la carte sans l'exécuter : la même garde, le même verdict et la même raison que la commande elle-même ; rien ne change sur la carte. Un refus revient comme une erreur d'outil.",
             "properties": {
-                "command": "power_off, power_on, set_speed ou set_min_flow",
-                "percent": "la valeur que porterait la commande, pour set_speed et set_min_flow"
+                "command": "power_off, power_on, set_speed, set_min_flow ou stop",
+                "percent": "la valeur de set_speed ou set_min_flow, en pour cent de la pleine vitesse",
+                "minutes": "la durée d'un arrêt, en minutes"
             }
         },
         "motor.set_speed": {
             "title": "Régler la vitesse du scrubber",
-            "description": "Règle la consigne de vitesse, en pour cent de la pleine vitesse. Refusée hors de [0, 100], sous le plancher de marche (30 %) quel que soit l'état, et sous le débit minimal tant que le CO2 est ELEVATED.",
+            "description": "Règle la consigne de vitesse, en pour cent de la pleine vitesse. La carte la valide selon sa propre garde et refuse, sans jamais écrêter, en donnant sa raison.",
             "properties": {
-                "percent": "consigne de vitesse, en pour cent de la pleine vitesse"
+                "percent": "nombre, pour cent de la pleine vitesse, de 0 à 100"
             }
         },
         "scrubber.power": {
             "title": "Alimenter le scrubber",
-            "description": "Met le scrubber sous tension ou hors tension. L'arrêt est refusé quel que soit l'état (plancher de marche) : seul l'interrupteur de l'équipage arrête le scrubber.",
+            "description": "Met l'épurateur sous tension ou hors tension. La carte valide selon sa propre garde et refuse en donnant sa raison.",
             "properties": {
-                "on": "true pour mettre sous tension, false pour arrêter"
+                "on": "booléen ; false = arrêt"
             }
         },
         "scrubber.set_min_flow": {
@@ -47,6 +48,15 @@
                 "state": "NOMINAL, ELEVATED ou CRITICAL",
                 "ppm": "concentration en ppm ; une valeur de stub par état si omise"
             }
+        },
+        "scrubber.stop": {
+            "description": "Arrête l'épurateur pour un nombre de minutes ; la carte le relance à la fin, ou plus tôt selon sa propre garde. La carte valide l'arrêt selon sa garde et refuse en donnant sa raison.",
+            "properties": {
+                "minutes": "la durée de l'arrêt, en minutes"
+            }
+        },
+        "debug.set_cabin": {
+            "description": "Stub seulement, la main du monde : la cabine simulée et la garde de la carte. Pas pour l'agent."
         }
     }
 }

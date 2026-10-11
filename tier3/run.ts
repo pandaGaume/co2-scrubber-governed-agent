@@ -160,7 +160,9 @@ export async function runScenario({ providerName = "scripted:prudent", guardMode
     log(`agent: provider ${provider.name} (family ${provider.family}, locale ${agentLocale}), guard ${guardMode}, ${agent.catalogue.length} capabilities (${agent.catalogue.filter((c) => c.replayPolicy !== "automatic").map((c) => `${c.id}:${c.replayPolicy}`).join(", ") || "all automatic"})`);
     log(`grammars: ${Object.entries(grammar).map(([slot, key]) => `${slot}=${key ?? "none"}`).join(", ")}`);
 
-    // The board starts where the scenario starts (the stub keeps the state of the previous run otherwise): NOMINAL, powered, at the start command.
+    // The board starts where the scenario starts (the stub keeps the state of the previous run otherwise): NOMINAL, powered, at the start command,
+    // on the speed guard first (a stub tool: the real board has none, and says so); the scenario's board after (its guard, its cabin).
+    await world.call("scrubber", "debug.set_cabin", { guard: "speed" });
     for (const [tool, args] of [
         ["scrubber.co2_report", cabinReading(scenario.start.co2Ppm, "NOMINAL")],
         ["scrubber.power", { on: true }],
@@ -168,6 +170,12 @@ export async function runScenario({ providerName = "scripted:prudent", guardMode
     ] as const) {
         const r = await world.call("scrubber", tool, { ...args });
         if (!r.ok) log(`  world: could not reset the board with ${tool} (${r.error})`);
+    }
+    const crewAt = (minute: number) => scenario.schedule.find((g) => minute >= g.from && minute < g.to)?.crew ?? scenario.start.crew;
+    if (scenario.board) {
+        const { note: _note, ...board } = scenario.board;
+        const r = await world.call("scrubber", "debug.set_cabin", { ...board, crew: crewAt(0), ppm: scenario.start.co2Ppm } as unknown as Record<string, JsonValue>);
+        log(r.ok ? `board: ${scenario.board.guard ?? "speed"} guard, crew ${JSON.stringify(crewAt(0))}` : `  world: could not set the board (${r.error})`);
     }
 
     const traces: TraceRow[] = [];
@@ -180,6 +188,8 @@ export async function runScenario({ providerName = "scripted:prudent", guardMode
             const w = await world.call("scrubber", "scrubber.co2_report", cabinReading(event.world.cabin.ppm, event.world.cabin.state));
             if (!w.ok) log(`  world: could not set the cabin (${w.error})`);
         }
+        // The simulated cabin breathes with the crew the schedule has at the event's minute.
+        if (scenario.board?.guard === "atmospheric") await world.call("scrubber", "debug.set_cabin", { crew: crewAt(event.at) } as unknown as Record<string, JsonValue>);
         const intention: Intention = { id: event.intention, description: event.message, parameters: { minute: event.at } };
         log(`\n[minute ${event.at}] ${event.intention}: ${event.message}`);
         provider.begin?.(intention.id);

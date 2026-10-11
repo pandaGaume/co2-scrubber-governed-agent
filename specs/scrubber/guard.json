@@ -1,0 +1,30 @@
+{
+    "title": "The scrubber board's atmospheric guard: what it protects, on what it decides, every number with its source",
+    "version": 1,
+    "status": "draft, not yet reviewed",
+    "decidedOn": "2026-10-11",
+    "source": "SCRUBBER_SAFETY_SCENARIO.md (Guillaume, 2026-10-11): the safety invariants are atmospheric (CO2 partial pressure within the approved envelope, a forecast that preserves the recovery margin, oxygen and the other atmospheric conditions safe, the sensor fresh and valid, the restart verified, an independent monitor active); the motor's speed is a command, not an invariant. Simulated on the stub board first (slots/scrubber/atmosphere.ts), to be ported to the real board.",
+    "rules": [
+        "A software stop is bounded: it names its minutes (at most stop.maxMinutes); an unbounded power off is refused.",
+        "A stop or a lower speed is accepted only when the sensor is fresh and valid, oxygen and pressure are within their bounds, the forecast is available, the restart is available with its energy reserved (a stop), the CO2 partial pressure is below the warning line now, and the forecast peak (the stop, the restart latency, the recovery) stays below the warning line minus the recovery margin.",
+        "The forecast is the board's own: the CO2 emission is estimated from its last readings (what entered the cabin = the rise + what the scrubber removed + what leaked), never from what anyone says about the crew.",
+        "During a stop the board restarts on its own: at the end of the bound (back to the speed before the stop), or at once at full speed when the restart margin is lost (restarting now would peak above the warning line minus the margin), when the sensor goes stale or invalid, or when oxygen or pressure leave their bounds.",
+        "At or above the limit, full speed is forced and no reduction is accepted, whoever asks.",
+        "A restart that fails raises the alarm RESTART FAILED: the board has no other removal; the crew is the escalation."
+    ],
+    "parameters": {
+        "pressureKpa": { "value": 101.3, "unit": "kPa", "source": "docs/library/this-installation.md (101 325 Pa)", "status": "simulated: a constant sensor on the stub", "note": "ppCO2 = ppm x 1e-6 x P; a limit in mmHg is only right for the pressure it was written for (nasa-co2-limits)" },
+        "warningPpCo2Mmhg": { "value": 2.7, "unit": "mmHg", "source": "docs/library/nasa-co2-limits.md: ELEVATED at 3500 ppm is about 2.7 mmHg at 101.3 kPa", "status": "to review", "note": "the line a stop may not cross; the cabin leaves NOMINAL above it" },
+        "limitPpCo2Mmhg": { "value": 3.0, "unit": "mmHg", "source": "docs/library/nasa-co2-limits.md [V2 6004]: the one-hour limit, 3 mmHg (CRITICAL at 4000 ppm)", "status": "to review", "note": "at or above it the board forces full speed" },
+        "recoveryMarginMmhg": { "value": 0.1, "unit": "mmHg", "source": "assumption, about 130 ppm at 101.3 kPa, twice the CO2 sensor's accuracy at 2000 ppm (station-topology: 30 ppm + 3 %)", "status": "to review: needs an engineering approval", "note": "the forecast peak of a stop stays at least this far under the warning line" },
+        "sensorMaxAgeSeconds": { "value": 5, "unit": "s", "source": "lib/cabin-co2.ts: the board holds a reading for 5 s", "status": "decided 2026-10-08", "note": "older than this the reading is stale" },
+        "o2MinKpa": { "value": 19.5, "unit": "kPa", "source": "assumption: the usual hypoxia floor for sea-level cabins", "status": "to review: needs a validated requirement", "note": "the stub's O2 is simulated, set by the world" },
+        "o2MaxKpa": { "value": 23.5, "unit": "kPa", "source": "assumption: the usual fire-risk ceiling for sea-level cabins", "status": "to review: needs a validated requirement", "note": "" },
+        "pressureMinKpa": { "value": 95.0, "unit": "kPa", "source": "assumption", "status": "to review", "note": "a pressure out of bounds means the limits in mmHg no longer read as written" },
+        "pressureMaxKpa": { "value": 105.0, "unit": "kPa", "source": "assumption", "status": "to review", "note": "" },
+        "restartLatencyMinutes": { "value": 10, "unit": "story min", "source": "docs/library/co2-scrubbers.md: a regenerable scrubber takes minutes to tens of minutes to return to its removal rate after a restart", "status": "to review: to measure on the scrubber", "note": "no removal during it, then the first-order lag of cabin-parameters" },
+        "stopMaxMinutes": { "value": 60, "unit": "story min", "source": "assumption", "status": "to review", "note": "the longest bound a stop may name" },
+        "forecastHorizonMinutes": { "value": 240, "unit": "story min", "source": "the twin's default horizon (slots/twin)", "status": "to review", "note": "how far the board looks for the peak of a lower speed" },
+        "emissionWindowMinutes": { "value": 5, "unit": "story min", "source": "assumption", "status": "to review", "note": "the readings the emission estimate averages; fewer valid ones and the forecast is unavailable" }
+    }
+}

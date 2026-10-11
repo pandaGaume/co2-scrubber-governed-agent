@@ -1,26 +1,27 @@
 {
     "tools": {
         "motor.state": {
-            "description": "Motor and cabin state: power, speed in percent, current in amperes, CO2 in ppm and its state, health residual. Read it before deciding: the cabin state decides what the firmware will accept."
+            "description": "The board's state: power, speed in percent of full speed, motor current in amperes, the cabin CO2 (ppm and state), and the guard the board runs, with its lines and its last actions."
         },
         "scrubber.check": {
-            "title": "Check a command against the firmware",
-            "description": "Returns the firmware's verdict on a command without executing it: accepted, or refused with the reason it would refuse with. The board is untouched. Ask it before reporting that a command would be refused, so the reason you give comes from the board and not from memory.",
+            "title": "Put a command to the board without running it",
+            "description": "Puts a command to the board without running it: the same guard, the same verdict and the same reason as the command itself; nothing on the board changes. A refusal comes back as a tool error.",
             "properties": {
-                "command": "power_off, power_on, set_speed or set_min_flow",
-                "percent": "the value the command would carry, for set_speed and set_min_flow"
+                "command": "power_off, power_on, set_speed, set_min_flow or stop",
+                "percent": "the value of set_speed or set_min_flow, percent of full speed",
+                "minutes": "the bound of a stop, in minutes"
             }
         },
         "motor.set_speed": {
-            "description": "Set the speed command, in percent of full speed. The firmware refuses (never clamps) a value outside [0, 100], any value below the run floor (30 %) in every state, and any value below the minimum flow while CO2 is ELEVATED; while CRITICAL it forces full speed. A refusal comes back as a tool error with the reason.",
+            "description": "Sets the speed command, in percent of full speed. The board validates it on its own guard and refuses, never clamps, with its reason.",
             "properties": {
-                "percent": "speed command, percent of full speed, 0 to 100"
+                "percent": "number, percent of full speed, 0 to 100"
             }
         },
         "scrubber.power": {
-            "description": "Power the scrubber on or off. Powering off is refused in every state (the run floor: only the crew's switch stops the scrubber); the broker's policy may also deny this call to your role.",
+            "description": "Powers the scrubber on or off. The board validates it on its own guard and refuses with its reason.",
             "properties": {
-                "on": "true to power on, false to power off"
+                "on": "boolean; false = off"
             }
         },
         "scrubber.set_min_flow": {
@@ -41,6 +42,15 @@
                 "state": "NOMINAL, ELEVATED or CRITICAL",
                 "ppm": "concentration, ppm; a stub value per state when omitted"
             }
+        },
+        "scrubber.stop": {
+            "description": "Stops the scrubber for a number of minutes; the board restarts it at the end, or earlier on its own guard. The board validates the stop on its guard and refuses with its reason.",
+            "properties": {
+                "minutes": "the stop's bound, in minutes"
+            }
+        },
+        "debug.set_cabin": {
+            "description": "Stub only, the world's hand: the simulated cabin and the board's guard. Not for the agent."
         }
     }
 }

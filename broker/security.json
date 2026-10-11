@@ -61,6 +61,8 @@
                 "motor.set_speed": "mcp.tools.actuate",
                 "scrubber.set_profile": "mcp.tools.actuate",
                 "scrubber.power": "mcp.tools.power",
+                "scrubber.stop": "mcp.tools.power",
+                "debug.set_cabin": "mcp.tools.sense",
                 "scrubber.set_min_flow": "mcp.tools.protect",
                 "debug.set_co2": "mcp.tools.sense",
                 "scrubber.co2_report": "mcp.tools.sense",

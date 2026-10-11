@@ -33,6 +33,12 @@ export interface CabinState extends State {
 }
 
 const num = (v: unknown, fallback = -1): number => (typeof v === "number" && Number.isFinite(v) ? v : fallback);
+/**
+ * The CO2 at the resolution a decision rests on (2026-10-11): a cabin that lives moves its ppm between a decision and its execution,
+ * and the harness executes only on the state it decided on. 50 ppm is under the sensor's accuracy (30 ppm + 3 %, station-topology);
+ * the exact reading stays in motor.state.
+ */
+const CO2_RESOLUTION_PPM = 50;
 
 export function createObserver(broker: Broker, lastResult: { current: CapabilityCall | null }): StateObserver {
     return {
@@ -42,7 +48,7 @@ export function createObserver(broker: Broker, lastResult: { current: Capability
             const co2State = String(st.co2State ?? "UNKNOWN");
             const last = lastResult.current;
             const features: CabinFeatures = {
-                co2Ppm: num(st.co2Ppm),
+                co2Ppm: typeof st.co2Ppm === "number" ? Math.round(st.co2Ppm / CO2_RESOLUTION_PPM) * CO2_RESOLUTION_PPM : -1,
                 co2State,
                 power: st.power === true,
                 speedPercent: num(st.speedPercent),
