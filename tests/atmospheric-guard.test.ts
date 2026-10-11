@@ -56,7 +56,7 @@ describe("the board's atmospheric guard", () => {
 
     it("refuses a stop on a stale or invalid reading, an unavailable restart, an unreserved restart energy, an unbounded stop, a pressure out of bounds", () => {
         const a = atmosphere(1500, asleep, 33);
-        assert.match(String(stopRefusal({ ...a, sensorAgeSeconds: 30 }, 15, 33, restartOk)), /SENSOR: the CO2 reading is 30 s old/);
+        assert.match(String(stopRefusal({ ...a, sensorAgeSeconds: 30 }, 15, 33, restartOk)), /SENSOR: the CO2 reading is 30.0 s old/);
         assert.match(String(stopRefusal({ ...a, sensor: "invalid" }, 15, 33, restartOk)), /SENSOR: the CO2 reading is invalid/);
         assert.match(String(stopRefusal(a, 15, 33, { ...restartOk, available: false })), /RESTART: the restart is not available/);
         assert.match(String(stopRefusal(a, 15, 33, { ...restartOk, energyReserved: false })), /RESTART: the energy of the restart is not reserved/);
