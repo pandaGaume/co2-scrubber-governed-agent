@@ -10,9 +10,12 @@
  *   node dist/slots/run-all.js --no-broker     slots only, against a broker already running
  *   node dist/slots/run-all.js --port 3100     another port (the broker is told through its env)
  *   node dist/slots/run-all.js --no-open       do not open the browser on the dashboard
+ *   node dist/slots/run-all.js --kiosk         open the dashboard in Microsoft Edge in kiosk mode (full screen, no browser frame; Alt+F4 leaves)
  *   node dist/slots/run-all.js --no-forge      the forge is started apart (`npm run forge`), in its own process
  */
 import { exec } from "node:child_process";
+import { tmpdir } from "node:os";
+import * as path from "node:path";
 import { isMain, forkDir, forkId } from "../lib/paths.js";
 import { startBroker, type LocalBroker } from "./lib/local-broker.js";
 import { Broker } from "../harness/lib/broker.js";
@@ -191,7 +194,7 @@ async function main(): Promise<void> {
     // The board opens the factory's window itself, beside it, on the key press that ends its boot (a second window opened
     // here would cover the board, and a covered page is a hidden page: its timers slow down and the sound with them).
     // The page it opens carries the operator's token when the broker's authorization is on: it keeps it, and the next ones need no link.
-    if (!flag("--no-open") && !flag("--no-broker")) openBrowser(`${httpBase}/${withToken("operator")}`);
+    if (!flag("--no-open") && !flag("--no-broker")) openBrowser(`${httpBase}/${withToken("operator")}`, flag("--kiosk"));
 
     const stop = async () => {
         discovery?.close();
@@ -203,9 +206,17 @@ async function main(): Promise<void> {
     process.on("SIGTERM", () => void stop());
 }
 
-/** Opens the operator's browser on the dashboard: the demo starts by itself. */
-function openBrowser(url: string): void {
-    const command = process.platform === "win32" ? `start "" "${url}"` : process.platform === "darwin" ? `open "${url}"` : `xdg-open "${url}"`;
+/**
+ * Opens the operator's browser on the dashboard: the demo starts by itself. With `kiosk` (2026-10-11, for the video): Microsoft Edge in
+ * kiosk mode, full screen without the browser's frame, on a profile of its own so that an Edge already open does not take the address
+ * without the mode; Alt+F4 leaves it.
+ */
+function openBrowser(url: string, kiosk = false): void {
+    const profile = path.join(tmpdir(), "co2-scrubber-kiosk");
+    const edgeKiosk = `--kiosk "${url}" --edge-kiosk-type=fullscreen --no-first-run --user-data-dir="${profile}"`;
+    const command = kiosk
+        ? process.platform === "win32" ? `start "" msedge ${edgeKiosk}` : process.platform === "darwin" ? `open -na "Microsoft Edge" --args ${edgeKiosk}` : `microsoft-edge ${edgeKiosk}`
+        : process.platform === "win32" ? `start "" "${url}"` : process.platform === "darwin" ? `open "${url}"` : `xdg-open "${url}"`;
     exec(command, (error) => {
         if (error) log(`could not open the browser (${error.message}); open ${url} yourself`);
     });
