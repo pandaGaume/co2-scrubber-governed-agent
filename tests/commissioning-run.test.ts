@@ -175,7 +175,7 @@ describe("the commissioning chain played by the slot, the commander deciding", (
         assert.match(asking.loops[4].waitingFor ?? "", /the commander's decision after the abort/);
         const q = await openQuestion("recover");
         // Dealt with first: the alarm cleared; then the commander asks for a new test.
-        await ok("biomed", "alarm_clear", { subjectId: "fe-1", by: "the medical panel" });
+        await ok("biomed", "alarm_ack", { subjectId: "fe-1", by: "the medical panel" }); await ok("biomed", "alarm_treat", { subjectId: "fe-1", action: "oxygen, seated", by: "the medical panel" }); await ok("biomed", "alarm_clear", { subjectId: "fe-1", resolution: "safe, back to rest", by: "the commander" });
         await ok("station", "answer", { questionId: q.id, choice: "rewrite", by: "commander-test", how: "script" });
         const again = await until("the second authorisation", (r) => r.loops[3].status === "waiting" && r.tasks.length === 2);
         assert.equal(again.status, "running", again.ended ?? "");

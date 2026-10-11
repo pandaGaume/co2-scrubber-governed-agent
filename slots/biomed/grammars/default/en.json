@@ -62,6 +62,16 @@
         "alarm.clear": "Clear alarm",
         "alarm.prompt": "What is wrong with {name}? (a few words)",
         "alarm.default": "critical health alarm",
-        "alarm.by": "the medical panel"
+        "alarm.by": "the medical panel",
+        "alarm.acknowledge": "Acknowledge",
+        "alarm.treat": "Treatment",
+        "alarm.close": "Close alarm",
+        "alarm.treatPrompt": "What is being done for {name}? (a few words)",
+        "alarm.closePrompt": "{name} is safe: how was it resolved? (a few words)",
+        "alarm.status.raised": "raised, not acknowledged",
+        "alarm.status.acknowledged": "acknowledged",
+        "alarm.status.in-treatment": "in treatment",
+        "alarm.escalation.1": "the commander called",
+        "alarm.escalation.2": "all crew called, Ground informed"
     }
 }

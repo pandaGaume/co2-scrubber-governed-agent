@@ -44,12 +44,32 @@ export interface Subject {
 
 export type SubjectStatus = "nominal" | "out-of-band" | "signal-lost" | "no-signal-yet" | "alarm";
 
-/** A critical health alarm raised for someone: by a person who saw it (the crew, the medical panel), whatever the heart rate says (2026-09-29). */
+/**
+ * A critical health alarm raised for someone: by a person who saw it (the crew, the medical panel), whatever the heart rate says
+ * (2026-09-29). Its lifecycle (2026-10-11, specs/biomed/alarm-policy.json): raised, acknowledged, in treatment, closed, in that order;
+ * it is active (it stops a test that exposes the person, and no procedure may expose them) until it is closed. Not acknowledged in
+ * time, it escalates.
+ */
+export type AlarmStatus = "raised" | "acknowledged" | "in-treatment" | "closed";
 export interface Alarm {
     what: string;
     by: string;
     at: string;
+    status: AlarmStatus;
+    acknowledged?: { by: string; at: string };
+    treatment?: { by: string; at: string; action: string };
+    closed?: { by: string; at: string; resolution: string };
+    /** 0 raised, 1 not acknowledged in time (the commander called), 2 still not (all the crew, Ground); reminders once acknowledged and untreated. */
+    escalation: { level: 0 | 1 | 2; at?: string; reminders: number };
 }
+
+/** The escalation's timings, from specs/biomed/alarm-policy.json. */
+export interface AlarmPolicy {
+    acknowledgeWithinSeconds: number;
+    escalateAfterSeconds: number;
+    treatWithinSeconds: number;
+}
+export const DEFAULT_ALARM_POLICY: AlarmPolicy = { acknowledgeWithinSeconds: 60, escalateAfterSeconds: 180, treatWithinSeconds: 300 };
 
 export interface SubjectState {
     subjectId: string;
@@ -300,21 +320,91 @@ export class CrewService {
         return { abort: false, reason: "all monitored subjects nominal" };
     }
 
-    /** A critical health alarm for someone, raised by a person; recorded in the open session, read by the verdict until it is cleared. */
+    /** A critical health alarm for someone, raised by a person; recorded in the open session, read by the verdict until it is closed. */
     raiseAlarm(subjectId: string, what: string, by: string): Alarm {
         const subject = this.require(subjectId);
-        const alarm: Alarm = { what: what.trim() || "critical health alarm", by: by.trim() || "the crew", at: new Date().toISOString() };
+        const open = this.alarms.get(subject.id);
+        if (open) throw new Error(`${subject.callsign} has an alarm open already (${open.what}, ${open.status}): it is followed until it is closed`);
+        const alarm: Alarm = { what: what.trim() || "critical health alarm", by: by.trim() || "the crew", at: new Date().toISOString(), status: "raised", escalation: { level: 0, reminders: 0 } };
         this.alarms.set(subject.id, alarm);
         this.record(subject.id, "alarm", null, `critical health alarm: ${alarm.what} (raised by ${alarm.by})`);
         return alarm;
     }
 
-    /** The alarm cleared: the person is safe, by someone who says so. */
-    clearAlarm(subjectId: string): Alarm | null {
+    /** The open alarm of a subject, in the state an action needs. */
+    private alarmIn(subjectId: string, wanted: AlarmStatus[], action: string): Alarm {
         const subject = this.require(subjectId);
-        const was = this.alarms.get(subject.id) ?? null;
+        const alarm = this.alarms.get(subject.id);
+        if (!alarm) throw new Error(`${subject.callsign} has no open alarm to ${action}`);
+        if (!wanted.includes(alarm.status)) {
+            const next = alarm.status === "raised" ? "acknowledge it first" : alarm.status === "acknowledged" ? "record its treatment first" : "it is in treatment";
+            throw new Error(`${subject.callsign}'s alarm is ${alarm.status}: ${action} comes after (${next}); an alarm is acknowledged, then treated, then closed`);
+        }
+        return alarm;
+    }
+
+    /** Someone has the alarm in hand. */
+    acknowledgeAlarm(subjectId: string, by: string): Alarm {
+        const alarm = this.alarmIn(subjectId, ["raised"], "acknowledge");
+        alarm.acknowledged = { by: by.trim() || "the crew", at: new Date().toISOString() };
+        alarm.status = "acknowledged";
+        this.record(this.require(subjectId).id, "alarm", null, `alarm acknowledged by ${alarm.acknowledged.by}`);
+        return alarm;
+    }
+
+    /** What is being done for the person, by whom. */
+    treatAlarm(subjectId: string, by: string, action: string): Alarm {
+        const alarm = this.alarmIn(subjectId, ["acknowledged", "in-treatment"], "record a treatment");
+        if (!action.trim()) throw new Error("a treatment says what is done for the person");
+        alarm.treatment = { by: by.trim() || "the crew", at: new Date().toISOString(), action: action.trim() };
+        alarm.status = "in-treatment";
+        this.record(this.require(subjectId).id, "alarm", null, `in treatment by ${alarm.treatment.by}: ${alarm.treatment.action}`);
+        return alarm;
+    }
+
+    /** The alarm closed: the person is safe, said by someone who may, with the resolution. It no longer stops anything. */
+    closeAlarm(subjectId: string, by: string, resolution: string): Alarm {
+        const alarm = this.alarmIn(subjectId, ["in-treatment"], "close");
+        if (!resolution.trim()) throw new Error("closing an alarm says how it was resolved");
+        alarm.closed = { by: by.trim() || "the crew", at: new Date().toISOString(), resolution: resolution.trim() };
+        alarm.status = "closed";
+        const subject = this.require(subjectId);
         this.alarms.delete(subject.id);
-        return was;
+        this.closedAlarms.push({ subjectId: subject.id, callsign: subject.callsign, module: subject.module, ...alarm });
+        if (this.closedAlarms.length > 20) this.closedAlarms.splice(0, this.closedAlarms.length - 20);
+        this.record(subject.id, "alarm", null, `alarm closed by ${alarm.closed.by}: ${alarm.closed.resolution}`);
+        return alarm;
+    }
+
+    /** The alarms closed lately, the last twenty. */
+    readonly closedAlarms: Array<{ subjectId: string; callsign: string; module: string } & Alarm> = [];
+
+    /**
+     * The escalation (specs/biomed/alarm-policy.json): an alarm not acknowledged in time rises a level, then another; one acknowledged
+     * and not treated is reminded. Returns the alarms whose escalation changed, for who says it.
+     */
+    escalate(policy: AlarmPolicy = DEFAULT_ALARM_POLICY, now: number = Date.now()): Array<{ subjectId: string; callsign: string; module: string } & Alarm> {
+        const changed: Array<{ subjectId: string; callsign: string; module: string } & Alarm> = [];
+        for (const [id, a] of this.alarms) {
+            const subject = this.require(id);
+            const age = (now - new Date(a.at).getTime()) / 1000;
+            if (a.status === "raised") {
+                const level: 0 | 1 | 2 = age >= policy.escalateAfterSeconds ? 2 : age >= policy.acknowledgeWithinSeconds ? 1 : 0;
+                if (level > a.escalation.level) {
+                    a.escalation = { level, at: new Date(now).toISOString(), reminders: a.escalation.reminders };
+                    this.record(id, "alarm", null, `alarm not acknowledged after ${Math.round(age)} s: escalation level ${level}`);
+                    changed.push({ subjectId: id, callsign: subject.callsign, module: subject.module, ...a });
+                }
+            } else if (a.status === "acknowledged" && a.acknowledged) {
+                const since = (now - new Date(a.acknowledged.at).getTime()) / 1000;
+                const due = Math.floor(since / policy.treatWithinSeconds);
+                if (due > a.escalation.reminders) {
+                    a.escalation = { ...a.escalation, reminders: due, at: new Date(now).toISOString() };
+                    changed.push({ subjectId: id, callsign: subject.callsign, module: subject.module, ...a });
+                }
+            }
+        }
+        return changed;
     }
 
     /** The alarms raised and not cleared, by subject. */

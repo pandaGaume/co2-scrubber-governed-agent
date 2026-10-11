@@ -208,7 +208,7 @@ describe("a factory writes a playbook, and an authorised signatory is asked to s
         await ok("station", "commissioning_authorise", { commissioningId: first.commissioningId, decision: "authorise", by: "commander-test" });
         const asking = await until("the recover question", (r) => r.conduct?.stage === "ask");
         assert.deepEqual([asking.conduct?.playbook, asking.conduct?.signedBy], [`library:${id}`, "signatory-test"]);
-        await ok("biomed", "alarm_clear", { subjectId: "fe-1", by: "the medical panel" });
+        await ok("biomed", "alarm_ack", { subjectId: "fe-1", by: "the medical panel" }); await ok("biomed", "alarm_treat", { subjectId: "fe-1", action: "oxygen, seated", by: "the medical panel" }); await ok("biomed", "alarm_clear", { subjectId: "fe-1", resolution: "safe, back to rest", by: "the commander" });
         await ok("station", "answer", { questionId: (await open("recover")).id, choice: "rewrite", by: "commander-test", how: "script" });
         const second = await until("the second authorisation", (r) => r.loops[3].status === "waiting" && r.tasks.length === 2);
         assert.equal(second.status, "running", second.ended ?? "");
@@ -216,7 +216,7 @@ describe("a factory writes a playbook, and an authorised signatory is asked to s
         await ok("biomed", "alarm", { subjectId: "fe-1", what: "chest pain again", by: "the medical panel" });
         await ok("station", "commissioning_authorise", { commissioningId: second.commissioningId, decision: "authorise", by: "commander-test" });
         const done = await until("the end", () => false);
-        await ok("biomed", "alarm_clear", { subjectId: "fe-1", by: "the medical panel" });
+        await ok("biomed", "alarm_ack", { subjectId: "fe-1", by: "the medical panel" }); await ok("biomed", "alarm_treat", { subjectId: "fe-1", action: "oxygen, seated", by: "the medical panel" }); await ok("biomed", "alarm_clear", { subjectId: "fe-1", resolution: "safe, back to rest", by: "the commander" });
         assert.equal(done.status, "failed");
         assert.deepEqual(done.conduct?.stages.map((s) => s.stage), ["ask", "rewrite-test", "give-up"]);
         assert.match(done.ended ?? "", /the test was aborted 2 times; the last time: FE-1: critical health alarm: chest pain again/);

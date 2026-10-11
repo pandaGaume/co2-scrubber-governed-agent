@@ -30,11 +30,11 @@
  * procedure decides. Whoever watches is not whoever acts, here as
  * everywhere else in this repository.
  */
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { fromRoot, relativeToRoot } from "../../lib/paths.js";
 import { errorMessage, readJson, sha256File } from "../../lib/files.js";
 import { objectSchema, publishSlot, type PublishedSlot, type SlotTool } from "../lib/slot-server.js";
-import { CrewService, type Band, type Subject, type CrewActivity } from "./service.js";
+import { CrewService, DEFAULT_ALARM_POLICY, type AlarmPolicy, type Band, type Subject, type CrewActivity } from "./service.js";
 import type { HeartRateProvider } from "./heart-rate-provider.js";
 import { SimulatedProvider } from "./providers/simulated.js";
 import { BridgeProvider } from "./providers/bridge.js";
@@ -230,11 +230,44 @@ export function biomedSlot(wsBase: string, log: (line: string) => void): Publish
             },
         },
         {
-            name: "alarm_clear",
-            title: "Clear a health alarm",
-            description: "The person is safe: the alarm raised for them is cleared, by someone who says so.",
+            name: "alarm_ack",
+            title: "Acknowledge a health alarm",
+            description: "Someone has the alarm in hand: who acknowledges it. An alarm is acknowledged, then treated, then closed.",
             inputSchema: objectSchema({ subjectId: { type: "string" }, by: { type: "string" } }, ["subjectId"]),
-            handle: (args, s) => ({ subjectId: String(args.subjectId), cleared: s.service.clearAlarm(String(args.subjectId)) }),
+            handle: (args, s) => {
+                const alarm = s.service.acknowledgeAlarm(String(args.subjectId), str(args.by) ?? "");
+                log(`[biomed] alarm of ${String(args.subjectId)} acknowledged by ${alarm.acknowledged?.by}`);
+                return { subjectId: String(args.subjectId), alarm };
+            },
+        },
+        {
+            name: "alarm_treat",
+            title: "Record the treatment of a health alarm",
+            description: "What is being done for the person, by whom; after the alarm is acknowledged, and again as the treatment goes on.",
+            inputSchema: objectSchema({ subjectId: { type: "string" }, action: { type: "string", description: "What is done for the person, in a few words" }, by: { type: "string" } }, ["subjectId", "action"]),
+            handle: (args, s) => {
+                const alarm = s.service.treatAlarm(String(args.subjectId), str(args.by) ?? "", str(args.action) ?? "");
+                log(`[biomed] alarm of ${String(args.subjectId)} in treatment by ${alarm.treatment?.by}: ${alarm.treatment?.action}`);
+                return { subjectId: String(args.subjectId), alarm };
+            },
+        },
+        {
+            name: "alarm_clear",
+            title: "Close a health alarm",
+            description: "The person is safe: the alarm is closed, with how it was resolved, by someone who may (policy), once it was acknowledged and treated. Only then may a test expose them again.",
+            inputSchema: objectSchema({ subjectId: { type: "string" }, resolution: { type: "string", description: "How it was resolved, in a few words" }, by: { type: "string" } }, ["subjectId", "resolution"]),
+            handle: (args, s) => {
+                const alarm = s.service.closeAlarm(String(args.subjectId), str(args.by) ?? "", str(args.resolution) ?? "");
+                log(`[biomed] alarm of ${String(args.subjectId)} closed by ${alarm.closed?.by}: ${alarm.closed?.resolution}`);
+                return { subjectId: String(args.subjectId), closed: alarm };
+            },
+        },
+        {
+            name: "alarms",
+            title: "The health alarms, open and closed",
+            description: "Every open alarm with its lifecycle (raised, acknowledged, in treatment) and escalation level, and the last ones closed with their resolution.",
+            inputSchema: objectSchema({}),
+            handle: (_args, s) => ({ open: s.service.raised, closed: s.service.closedAlarms }),
         },
         {
             name: "move",
@@ -252,6 +285,14 @@ export function biomedSlot(wsBase: string, log: (line: string) => void): Publish
         },
     ];
 
+    // The alarms' escalation (2026-10-11, specs/biomed/alarm-policy.json): checked every two seconds; what rises is in the log and in the
+    // alarms the station reads (Mother says it).
+    const policy = loadAlarmPolicy();
+    const escalation = setInterval(() => {
+        for (const a of state.service.escalate(policy)) log(`[biomed] alarm of ${a.callsign} (${a.what}): ${a.status === "raised" ? `not acknowledged, escalation level ${a.escalation.level}` : `acknowledged, no treatment recorded (reminder ${a.escalation.reminders})`}`);
+    }, 2000);
+    escalation.unref?.();
+
     return publishSlot<BiomedState>({
         slot: "biomed",
         description: "The biomed monitor: who is in which module, and their heart rate while a procedure degrades the air they breathe.",
@@ -268,4 +309,19 @@ export function biomedSlot(wsBase: string, log: (line: string) => void): Publish
         stub: !(state.provider?.live ?? false),
         version: "0.1.0",
     });
+}
+
+/** The escalation's timings (specs/biomed/alarm-policy.json); the defaults when the file is absent. */
+function loadAlarmPolicy(): AlarmPolicy {
+    try {
+        const doc = JSON.parse(readFileSync(fromRoot("specs", "biomed", "alarm-policy.json"), "utf8")) as { escalation?: Record<string, { value?: number }> };
+        const e = doc.escalation ?? {};
+        return {
+            acknowledgeWithinSeconds: e.acknowledgeWithinSeconds?.value ?? DEFAULT_ALARM_POLICY.acknowledgeWithinSeconds,
+            escalateAfterSeconds: e.escalateAfterSeconds?.value ?? DEFAULT_ALARM_POLICY.escalateAfterSeconds,
+            treatWithinSeconds: e.treatWithinSeconds?.value ?? DEFAULT_ALARM_POLICY.treatWithinSeconds,
+        };
+    } catch {
+        return DEFAULT_ALARM_POLICY;
+    }
 }

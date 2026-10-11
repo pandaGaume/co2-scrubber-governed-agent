@@ -342,15 +342,15 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
                     const alarmed = presence.modules.flatMap((m) => m.subjects.filter((x) => x.alarm).map((x) => `${x.callsign} (${m.module}: ${x.alarm?.what || "critical health alarm"})`));
                     if (!alarmed.length) break;
                     if (!said) {
-                        narrate(`A critical health alarm is still open: ${alarmed.join(", ")}. No test can expose them. Clear it on the medical panel once they are safe; the procedure factory writes the test after that.`);
-                        wait(2, `the health alarm cleared (${alarmed.join(", ")})`);
-                        log(`[scenario] ${run.id}: waiting for the health alarm to be cleared (${alarmed.join(", ")})`);
+                        narrate(`A critical health alarm is still open: ${alarmed.join(", ")}. No test can expose them. It is acknowledged, treated, then closed on the medical panel once they are safe; the procedure factory writes the test after that.`);
+                        wait(2, `the health alarm closed (${alarmed.join(", ")}): acknowledged, treated, closed`);
+                        log(`[scenario] ${run.id}: waiting for the health alarm to be closed (${alarmed.join(", ")})`);
                         said = true;
                     }
-                    if (Date.now() - t0 > waitMs) throw new Error(`the health alarm of ${alarmed.join(", ")} was not cleared in ${Math.round(waitMs / 60000)} minutes: no test can expose them`);
+                    if (Date.now() - t0 > waitMs) throw new Error(`the health alarm of ${alarmed.join(", ")} was not closed in ${Math.round(waitMs / 60000)} minutes: no test can expose them`);
                     await sleep(2000);
                 }
-                if (said) narrate("The health alarm is cleared. The procedure factory writes the test.");
+                if (said) narrate("The health alarm is closed. The procedure factory writes the test.");
             }
             // 2. the procedure factory.
             begin(2, builder === "scripted" ? "the script stands in for the model" : undefined);

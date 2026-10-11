@@ -123,6 +123,16 @@
         "alarm.clear": "Lever l'alarme",
         "alarm.prompt": "Qu'arrive-t-il à {name} ? (quelques mots)",
         "alarm.default": "alarme de santé critique",
-        "alarm.by": "le panneau médical"
+        "alarm.by": "le panneau médical",
+        "alarm.acknowledge": "Acquitter",
+        "alarm.treat": "Traitement",
+        "alarm.close": "Fermer l'alarme",
+        "alarm.treatPrompt": "Que fait-on pour {name} ? (quelques mots)",
+        "alarm.closePrompt": "{name} est en sécurité : comment cela a-t-il été résolu ? (quelques mots)",
+        "alarm.status.raised": "levée, non acquittée",
+        "alarm.status.acknowledged": "acquittée",
+        "alarm.status.in-treatment": "en traitement",
+        "alarm.escalation.1": "commandant appelé",
+        "alarm.escalation.2": "tout l'équipage appelé, sol prévenu"
     }
 }

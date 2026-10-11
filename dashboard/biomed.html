@@ -759,27 +759,41 @@ async function poll() {
 
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
+/* An alarm's lifecycle (2026-10-11): raised, acknowledged, in treatment, closed; the one button is the next step, and the line says where it stands and its escalation. */
 function alarmControls(id, name, alarm) {
-  return alarm
-    ? `<div class="alarm-line">${esc(alarm.what)}</div><button class="alarm-btn clear" type="button" data-alarm-clear="${esc(id)}">${phrase("alarm.clear")}</button>`
-    : `<button class="alarm-btn" type="button" data-alarm="${esc(id)}" data-name="${esc(name)}">${phrase("alarm.raise")}</button>`;
+  if (!alarm) return `<button class="alarm-btn" type="button" data-alarm="${esc(id)}" data-name="${esc(name)}">${phrase("alarm.raise")}</button>`;
+  const status = alarm.status ?? "raised";
+  const level = alarm.escalation?.level ?? 0;
+  const where = phrase(`alarm.status.${status}`) + (status === "raised" && level ? ` · ${phrase(`alarm.escalation.${level}`)}` : "");
+  const who = status === "in-treatment" && alarm.treatment ? ` · ${esc(alarm.treatment.action)}` : status === "acknowledged" && alarm.acknowledged ? ` · ${esc(alarm.acknowledged.by)}` : "";
+  const next = status === "raised" ? ["ack", "alarm.acknowledge"] : status === "acknowledged" ? ["treat", "alarm.treat"] : ["close", "alarm.close"];
+  return `<div class="alarm-line">${esc(alarm.what)}</div><div class="alarm-line">${esc(where)}${who}</div><button class="alarm-btn clear" type="button" data-alarm-step="${next[0]}" data-subject="${esc(id)}" data-name="${esc(name)}">${phrase(next[1])}</button>`;
 }
 
 document.addEventListener("click", async (e) => {
   const raise = e.target.closest?.("[data-alarm]");
-  const clear = e.target.closest?.("[data-alarm-clear]");
-  if (!raise && !clear) return;
+  const step = e.target.closest?.("[data-alarm-step]");
+  if (!raise && !step) return;
   try {
     if (!session) await open();
     if (raise) {
       const what = window.prompt(phrase("alarm.prompt", { name: raise.dataset.name }), phrase("alarm.default"));
       if (what === null) return;
       await session.callTool("alarm", { subjectId: raise.dataset.alarm, what: what || phrase("alarm.default"), by: phrase("alarm.by") });
+    } else if (step.dataset.alarmStep === "ack") {
+      await session.callTool("alarm_ack", { subjectId: step.dataset.subject, by: phrase("alarm.by") });
+    } else if (step.dataset.alarmStep === "treat") {
+      const action = window.prompt(phrase("alarm.treatPrompt", { name: step.dataset.name }), "");
+      if (!action) return;
+      await session.callTool("alarm_treat", { subjectId: step.dataset.subject, action, by: phrase("alarm.by") });
     } else {
-      await session.callTool("alarm_clear", { subjectId: clear.dataset.alarmClear, by: phrase("alarm.by") });
+      const resolution = window.prompt(phrase("alarm.closePrompt", { name: step.dataset.name }), "");
+      if (!resolution) return;
+      await session.callTool("alarm_clear", { subjectId: step.dataset.subject, resolution, by: phrase("alarm.by") });
     }
   } catch (err) {
     console.warn("alarm", err);
+    window.alert(String(err?.message ?? err));
   }
 });
 

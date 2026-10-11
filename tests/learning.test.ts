@@ -69,7 +69,7 @@ describe("a fork that learns: an abort is the event, the fork adapts itself at i
             await ok("station", "commissioning_authorise", { commissioningId: first.commissioningId, decision: "authorise", by: "commander-test" });
             const asking = await until("the recover question", (r) => r.conduct?.stage === "ask");
             assert.deepEqual(asking.conduct?.adaptations?.map((a) => [a.patterns.length, a.taskId]), [[0, null]], "at the first abort, Mother read the traces and found nothing repeated");
-            await ok("biomed", "alarm_clear", { subjectId: "fe-1", by: "the medical panel" });
+            await ok("biomed", "alarm_ack", { subjectId: "fe-1", by: "the medical panel" }); await ok("biomed", "alarm_treat", { subjectId: "fe-1", action: "oxygen, seated", by: "the medical panel" }); await ok("biomed", "alarm_clear", { subjectId: "fe-1", resolution: "safe, back to rest", by: "the commander" });
             // The stage is said before the station has asked: the question is waited for.
             let q: { id: string } | undefined;
             for (let t0 = Date.now(); !q && Date.now() - t0 < 30_000; await new Promise((x) => setTimeout(x, 200))) q = (await read<Array<{ id: string; kind: string; status: string }>>("station", "station://questions")).find((x) => x.kind === "recover" && x.status === "open");
@@ -80,7 +80,7 @@ describe("a fork that learns: an abort is the event, the fork adapts itself at i
             await ok("biomed", "alarm", { subjectId: "fe-1", what: "chest pain again", by: "the medical panel" });
             await ok("station", "commissioning_authorise", { commissioningId: second.commissioningId, decision: "authorise", by: "commander-test" });
             const done = await until("the end", () => false);
-            await ok("biomed", "alarm_clear", { subjectId: "fe-1", by: "the medical panel" });
+            await ok("biomed", "alarm_ack", { subjectId: "fe-1", by: "the medical panel" }); await ok("biomed", "alarm_treat", { subjectId: "fe-1", action: "oxygen, seated", by: "the medical panel" }); await ok("biomed", "alarm_clear", { subjectId: "fe-1", resolution: "safe, back to rest", by: "the commander" });
             assert.equal(done.status, "failed");
             assert.match(done.ended ?? "", /the test was aborted 2 times; the last time: FE-1: critical health alarm: chest pain again/);
             assert.deepEqual(done.conduct?.stages.map((s) => s.stage), ["ask", "rewrite-test", "give-up"], "no third question: the adapted playbook ended it at the second abort");

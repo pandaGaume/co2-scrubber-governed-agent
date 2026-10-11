@@ -110,13 +110,37 @@ describe("the biomed monitor", () => {
         assert.match(verdict.reason, /^FE-1: critical health alarm: chest pain$/);
         assert.equal(s.state(t0.getTime()).find((x) => x.subjectId === "fe-1")?.status, "alarm");
         // Someone outside the module under test: not this test's reason to stop.
-        s.clearAlarm("fe-1");
+        s.acknowledgeAlarm("fe-1", "the medical panel");
+        s.treatAlarm("fe-1", "the medical panel", "oxygen, seated");
+        s.closeAlarm("fe-1", "the commander", "safe, back to rest");
         s.raiseAlarm("cdr", "dizzy", "the crew");
         assert.equal(s.verdict(t0.getTime()).abort, false, "the CDR is in Hab-B, which this test does not expose");
-        s.clearAlarm("cdr");
+        s.acknowledgeAlarm("cdr", "the crew");
+        s.treatAlarm("cdr", "the crew", "lying down");
+        s.closeAlarm("cdr", "the commander", "recovered");
         assert.deepEqual(s.raised, []);
         const record = await s.stop("test over");
         assert.ok(record.events.some((e) => e.status === "alarm" && /dizzy/.test(e.detail)), "the session keeps the alarm raised during it");
+    });
+
+    it("an alarm is acknowledged, then treated, then closed, and escalates when nobody acknowledges it (2026-10-11)", () => {
+        const s = service();
+        const raised = s.raiseAlarm("fe-2", "chest pain", "the medical panel");
+        assert.equal(raised.status, "raised");
+        assert.throws(() => s.closeAlarm("fe-2", "the commander", "fine"), /alarm is raised: close comes after \(acknowledge it first\)/);
+        assert.throws(() => s.raiseAlarm("fe-2", "again", "x"), /has an alarm open already/);
+        const t0 = new Date(raised.at).getTime();
+        const policy = { acknowledgeWithinSeconds: 60, escalateAfterSeconds: 180, treatWithinSeconds: 300 };
+        assert.equal(s.escalate(policy, t0 + 30_000).length, 0);
+        assert.equal(s.escalate(policy, t0 + 61_000)[0]?.escalation.level, 1);
+        assert.equal(s.escalate(policy, t0 + 181_000)[0]?.escalation.level, 2);
+        s.acknowledgeAlarm("fe-2", "FE-1");
+        assert.throws(() => s.closeAlarm("fe-2", "the commander", "fine"), /record its treatment first/);
+        s.treatAlarm("fe-2", "FE-1", "oxygen, seated");
+        assert.equal(s.raised[0]?.status, "in-treatment");
+        s.closeAlarm("fe-2", "the commander", "safe, back to rest");
+        assert.deepEqual(s.raised, []);
+        assert.equal(s.closedAlarms.at(-1)?.closed?.resolution, "safe, back to rest");
     });
 
     it("refuses a reading for someone nobody asked to watch, and a rate no heart has", async () => {

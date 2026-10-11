@@ -212,6 +212,54 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
 
     const announce = (c: Commissioning) => notify(COMMISSIONINGS_URI, { [META_COMMISSIONING]: c });
 
+    /**
+     * Mother follows the health alarms (2026-10-11, specs/biomed/alarm-policy.json): she says each step of an alarm's lifecycle (raised,
+     * acknowledged, in treatment, closed) and its escalation (the commander called when nobody acknowledged it in time, then all the crew
+     * and Ground), from what the biomed slot holds, read every three seconds.
+     */
+    type Seen = { status: string; level: number; reminders: number };
+    const seenAlarms = new Map<string, Seen>();
+    const alarmLine = (en: string, fr: string) => emit({ n: state.mother.length + 1, key: "mother.alarm", params: {}, text: { en, fr }, commissioningId: null, at: new Date().toISOString() });
+    let followingAlarms = false;
+    const followAlarms = setInterval(() => {
+        if (followingAlarms) return;
+        followingAlarms = true;
+        void client()
+            .call("biomed", "alarms", {})
+            .then((r) => {
+                if (!r.ok) return;
+                type A = { subjectId: string; callsign: string; module: string; what: string; by: string; status: string; acknowledged?: { by: string }; treatment?: { by: string; action: string }; closed?: { by: string; resolution: string }; escalation: { level: number; reminders: number } };
+                const out = r.output as { open: A[]; closed: A[] };
+                const open = new Set<string>();
+                for (const a of out.open) {
+                    const key = `${a.subjectId}@${a.what}`;
+                    open.add(key);
+                    const was = seenAlarms.get(key);
+                    if (!was) alarmLine(`Critical health alarm for ${a.callsign} in the ${a.module}: ${a.what}, raised by ${a.by}. Acknowledge it on the medical panel.`, `Alarme sanitaire critique pour ${a.callsign} dans le module ${a.module} : ${a.what}, levée par ${a.by}. Accusez-en réception sur le panneau médical.`);
+                    else {
+                        if (a.escalation.level > was.level && a.status === "raised")
+                            alarmLine(
+                                a.escalation.level === 1 ? `${a.callsign}'s alarm is not acknowledged. Commander, acknowledge it.` : `${a.callsign}'s alarm is still not acknowledged. All crew to the ${a.module}; Ground is informed.`,
+                                a.escalation.level === 1 ? `L'alarme de ${a.callsign} n'est pas acquittée. Commandant, acquittez-la.` : `L'alarme de ${a.callsign} n'est toujours pas acquittée. Tout l'équipage au module ${a.module} ; le sol est prévenu.`,
+                            );
+                        if (a.status === "acknowledged" && was.status === "raised") alarmLine(`${a.callsign}'s alarm is acknowledged by ${a.acknowledged?.by ?? "someone"}. Record the treatment when it starts.`, `L'alarme de ${a.callsign} est acquittée par ${a.acknowledged?.by ?? "quelqu'un"}. Consignez le traitement dès qu'il commence.`);
+                        if (a.status === "in-treatment" && was.status !== "in-treatment") alarmLine(`${a.callsign} is in treatment, by ${a.treatment?.by ?? "someone"}: ${a.treatment?.action ?? ""}. Close the alarm once they are safe.`, `${a.callsign} est pris en charge par ${a.treatment?.by ?? "quelqu'un"} : ${a.treatment?.action ?? ""}. Fermez l'alarme une fois en sécurité.`);
+                        if (a.status === "acknowledged" && a.escalation.reminders > was.reminders) alarmLine(`${a.callsign}'s alarm is acknowledged, and no treatment is recorded yet.`, `L'alarme de ${a.callsign} est acquittée, et aucun traitement n'est encore consigné.`);
+                    }
+                    seenAlarms.set(key, { status: a.status, level: a.escalation.level, reminders: a.escalation.reminders });
+                }
+                for (const key of [...seenAlarms.keys()]) {
+                    if (open.has(key)) continue;
+                    seenAlarms.delete(key);
+                    const c = [...out.closed].reverse().find((x) => `${x.subjectId}@${x.what}` === key);
+                    if (c) alarmLine(`${c.callsign}'s alarm is closed by ${c.closed?.by ?? "someone"}: ${c.closed?.resolution ?? ""}.`, `L'alarme de ${c.callsign} est fermée par ${c.closed?.by ?? "quelqu'un"} : ${c.closed?.resolution ?? ""}.`);
+                }
+            })
+            .catch(() => undefined)
+            .finally(() => (followingAlarms = false));
+    }, 3000);
+    followAlarms.unref?.();
+
     /** The asker called back with the answer, through the broker; what it answered, or why it could not, kept on the question. */
     const resumeAsker = async (q: Question): Promise<void> => {
         if (!q.resume) return;

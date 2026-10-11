@@ -221,7 +221,7 @@ describe("the reflection in a fork: the agents at work, Mother reading their tra
             await ok("biomed", "alarm", { subjectId: "fe-1", what: "chest pain", by: "the medical panel" });
             await ok("station", "commissioning_authorise", { commissioningId: first.commissioningId, decision: "authorise", by: "commander-test" });
             await until("the first recover question", (r) => r.conduct?.stage === "ask");
-            await ok("biomed", "alarm_clear", { subjectId: "fe-1", by: "the medical panel" });
+            await ok("biomed", "alarm_ack", { subjectId: "fe-1", by: "the medical panel" }); await ok("biomed", "alarm_treat", { subjectId: "fe-1", action: "oxygen, seated", by: "the medical panel" }); await ok("biomed", "alarm_clear", { subjectId: "fe-1", resolution: "safe, back to rest", by: "the commander" });
             await ok("station", "answer", { questionId: (await open("recover")).id, choice: "rewrite", by: "commander-test", how: "script" });
             const second = await until("the second authorisation", (r) => r.loops[3].status === "waiting" && r.tasks.length === 2);
             await ok("biomed", "alarm", { subjectId: "fe-1", what: "chest pain again", by: "the medical panel" });
@@ -229,7 +229,7 @@ describe("the reflection in a fork: the agents at work, Mother reading their tra
             await until("the second recover question", (r) => r.conduct?.stage === "ask" && r.tasks.length === 2);
             await ok("station", "answer", { questionId: (await open("recover")).id, choice: "stop", by: "commander-test", how: "script" });
             const stopped = await until("the end", () => false);
-            await ok("biomed", "alarm_clear", { subjectId: "fe-1", by: "the medical panel" });
+            await ok("biomed", "alarm_ack", { subjectId: "fe-1", by: "the medical panel" }); await ok("biomed", "alarm_treat", { subjectId: "fe-1", action: "oxygen, seated", by: "the medical panel" }); await ok("biomed", "alarm_clear", { subjectId: "fe-1", resolution: "safe, back to rest", by: "the commander" });
             assert.match(stopped.ended ?? "", /the commander stopped the commissioning after the abort/);
 
             // Mother reads the traces: the same cause twice; the reflection (its script) proposes the bound at two; the station adopts it in the fork.

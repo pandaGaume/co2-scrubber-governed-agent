@@ -1,0 +1,17 @@
+{
+    "title": "A critical health alarm's lifecycle and its escalation",
+    "decidedOn": "2026-10-11",
+    "source": "Guillaume: an alarm is acknowledged, then treated, and finally closed, at the least; the procedures handle its escalation",
+    "status": "draft, not yet reviewed",
+    "lifecycle": [
+        "raised: someone saw it (the crew, the medical panel); the test that exposes the person stops at its next verdict, and no procedure may expose them",
+        "acknowledged: someone says they have it in hand (who, when)",
+        "in treatment: what is being done for the person, by whom",
+        "closed: the person is safe, said by someone who has that authority (mcp.tools.authorise), with the resolution; only then may a test expose them again"
+    ],
+    "escalation": {
+        "acknowledgeWithinSeconds": { "value": 60, "unit": "s", "status": "to review", "note": "not acknowledged by then: level 1, Mother calls the commander" },
+        "escalateAfterSeconds": { "value": 180, "unit": "s", "status": "to review", "note": "still not acknowledged by then: level 2, Mother calls all the crew and informs Ground" },
+        "treatWithinSeconds": { "value": 300, "unit": "s", "status": "to review", "note": "acknowledged and no treatment recorded by then: Mother reminds who acknowledged it, every this long" }
+    }
+}
