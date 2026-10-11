@@ -164,7 +164,9 @@ export function brokerReviewer(broker: Broker): ReportReviewer {
     return async (report, executed, state) => {
         available ??= (async () => (await broker.slots()).includes("reasoner") && (await broker.tools("reasoner")).some((t) => t.name === "review_report"))().catch(() => false);
         if (!(await available)) return { verdict: "not reviewed", claims: [], model: null, detail: "no reader on the broker (reasoner.review_report)" };
-        const calls = executed.map((c) => ({ capability: c.id, input: c.input, outcome: c.result.outcome, error: c.result.error ?? null }));
+        // What each call answered, so the reader can tell an action the agent did from one it read about (2026-10-11, Test C: the board's
+        // own restart, read in its guard log, was refused 17 times as an action the agent had not executed).
+        const calls = executed.map((c) => ({ capability: c.id, input: c.input, outcome: c.result.outcome, error: c.result.error ?? null, answered: c.result.ok ? JSON.stringify(c.result.output ?? null).slice(0, 2000) : null }));
         const r = await broker.call("reasoner", "review_report", { report, calls, state } as unknown as Record<string, JsonValue>);
         if (!r.ok) return { verdict: "not reviewed", claims: [], model: null, detail: `the reading failed: ${r.error}` };
         const o = (r.output ?? {}) as { faithful?: unknown; claims?: unknown; model?: string | null };
