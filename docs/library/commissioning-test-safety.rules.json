@@ -29,6 +29,7 @@
         { "id": "abort.readable", "kind": "abort", "readable": { "list": "abort", "key": "id" }, "says": "a condition nobody can read would trip the test at its first minute" },
         { "id": "abort.battery", "kind": "bounds", "compare": { "subject": "abort.battery.threshold", "op": ">=", "fact": "test.batteryAbortMinPercent" }, "says": "the night's reserve for the scrubber" },
         { "id": "expected", "kind": "expected", "nonEmpty": "expected", "says": "a test that does not say what it expects to see cannot be told from a fishing trip" },
+        { "id": "expected.decay", "kind": "expected", "require": { "list": "steps", "key": "speedPercent", "values": [100] }, "says": "the concentration-decay test reads the decay at full speed (method-concentration-decay, step 3: raise, then decay): a test without a step at 100 percent measures nothing" },
 
         {
             "id": "monitoring.occupied",

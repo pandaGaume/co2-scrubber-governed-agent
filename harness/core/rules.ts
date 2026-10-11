@@ -55,7 +55,7 @@ export type Rule =
     | (Base & { fields: { list: string; fields: string[] } })
     | (Base & { nonEmpty: string })
     | (Base & { match: { path: string; pattern: string } })
-    | (Base & { require: { list: string; key: string; values: string[] } })
+    | (Base & { require: { list: string; key: string; values: Array<string | number> } })
     | (Base & { readable: { list: string; key: string } })
     | (Base & { watch: { place: string; subjects: string; declared?: string; stop: { list: string; key: string; value: string; source?: string }; unread: { kind: string; says?: string }; blocked?: { flag: string; kind?: string; says: string } } });
 
@@ -241,7 +241,8 @@ export function evaluateRules(input: unknown, doc: RulesDocument, ctx: RuleConte
         } else if ("require" in rule) {
             const list = valueAt(input, rule.require.list, keys);
             const items = Array.isArray(list) ? list : [];
-            for (const value of rule.require.values) if (!items.some((x) => isObject(x) && x[rule.require.key] === value)) add(rule, `no element of ${rule.require.list} with ${rule.require.key} "${value}"${ctx.format.readers?.[value] ? ` (${ctx.format.readers[value]})` : ""}${says(rule)}`, `${rule.require.list}.${value}`, rule.kind, { expected: `an element with ${rule.require.key} "${value}"` });
+            // A value a number or a word (2026-10-11: a step at 100 percent, as the decay test needs, beside the abort conditions by their id).
+            for (const value of rule.require.values) if (!items.some((x) => isObject(x) && x[rule.require.key] === value)) add(rule, `no element of ${rule.require.list} with ${rule.require.key} ${typeof value === "number" ? value : `"${value}"`}${typeof value === "string" && ctx.format.readers?.[value] ? ` (${ctx.format.readers[value]})` : ""}${says(rule)}`, `${rule.require.list}.${value}`, rule.kind, { expected: `an element with ${rule.require.key} ${typeof value === "number" ? value : `"${value}"`}` });
         } else if ("readable" in rule) {
             const readers = ctx.format.readers ?? {};
             const list = valueAt(input, rule.readable.list, keys);
