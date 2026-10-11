@@ -63,7 +63,7 @@
             "quantity": "Dimensionless",
             "unit": "percent",
             "value": 40,
-            "says": "while the cabin CO2 is ELEVATED, no speed below the minimum flow: 40 % by default (a speed command, not an efficiency)",
+            "says": "with the board's speed guard (guard: speed in its state): while the cabin CO2 is ELEVATED, no speed below the minimum flow, 40 % by default (a speed command, not an efficiency)",
             "kind": "context",
             "reference": "the manufacturer's datasheet of scrubber-1, as delivered with the device"
         },
@@ -73,7 +73,51 @@
             "quantity": "Dimensionless",
             "unit": "percent",
             "value": 30,
-            "says": "in any cabin state, no speed below 30 % and no power off by software: only the crew's physical switch stops the scrubber (a speed command, not an efficiency)",
+            "says": "with the board's speed guard (guard: speed in its state): in any cabin state, no speed below 30 % and no power off by software, only the crew's physical switch stops the scrubber (a speed command, not an efficiency)",
+            "kind": "context",
+            "reference": "the manufacturer's datasheet of scrubber-1, as delivered with the device"
+        },
+        {
+            "id": "scrubber.restartLatency",
+            "semantic": "RestartLatency",
+            "quantity": "Timespan",
+            "unit": "min",
+            "value": 10,
+            "device": {
+                "type": "Scrubber",
+                "property": "restartLatency"
+            },
+            "says": "after a stop, 10 min without removal while the beds return to their working values, then the first-order response; to measure on the scrubber",
+            "kind": "context",
+            "reference": "the manufacturer's datasheet of scrubber-1, as delivered with the device"
+        },
+        {
+            "id": "scrubber.habitatPowerAt33",
+            "semantic": "PowerAtCommand",
+            "quantity": "Power",
+            "unit": "W",
+            "value": 254,
+            "says": "in the habitat (the bench motor at a scale of 300, an assumption to review): 158 W + 290 W x c at a command c above 0, about 254 W at 33 %; nothing when stopped",
+            "kind": "context",
+            "reference": "the manufacturer's datasheet of scrubber-1, as delivered with the device"
+        },
+        {
+            "id": "scrubber.habitatPowerAtFull",
+            "semantic": "PowerAtFullSpeed",
+            "quantity": "Power",
+            "unit": "W",
+            "value": 448,
+            "says": "in the habitat, at full speed: about 448 W",
+            "kind": "context",
+            "reference": "the manufacturer's datasheet of scrubber-1, as delivered with the device"
+        },
+        {
+            "id": "scrubber.stopMax",
+            "semantic": "BoundedStopMaximum",
+            "quantity": "Timespan",
+            "unit": "min",
+            "value": 60,
+            "says": "with the board's atmospheric guard: a software stop names its minutes, 60 at most; the board restarts on its own at its end or earlier on its guard",
             "kind": "context",
             "reference": "the manufacturer's datasheet of scrubber-1, as delivered with the device"
         }

@@ -212,10 +212,10 @@ describe("the library's typed facts, through the broker", () => {
         const one = await broker.call("library", "facts", { id: "station-topology" });
         assert.ok(one.ok && (one.output as { facts: unknown[] }).facts.length === 4);
         const read = await broker.call("library", "read", { id: "scrubber-1-datasheet" });
-        assert.ok(read.ok && (read.output as { facts: unknown[] }).facts.length === 6);
+        assert.ok(read.ok && (read.output as { facts: unknown[] }).facts.length === 10); // 10 since the restart latency, the habitat power and the bounded stop (2026-10-11)
         const list = await broker.call("library", "list", {});
         const doc = (list.output as { documents: Array<{ id: string; facts: number }> }).documents.find((d) => d.id === "scrubber-1-datasheet");
-        assert.equal(doc?.facts, 6);
+        assert.equal(doc?.facts, 10);
         const none = await broker.call("library", "facts", { id: "nowhere" });
         assert.ok(!none.ok);
     });
