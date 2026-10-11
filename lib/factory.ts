@@ -125,7 +125,7 @@ export interface Scenario {
     setup?: { operation?: { operation: string; input: Record<string, unknown>; reason: string; conditions?: string[]; decision: "authorise" | "refuse"; by?: string } };
     /** Who stands for the commander in a take: the decision on any operation the agent asks for (station.operation_request). */
     commander?: { decision: "authorise" | "refuse"; by?: string; note?: string };
-    board?: { guard?: "speed" | "atmospheric"; timeScale?: number; pressureKpa?: number; sensor?: "ok" | "stale" | "invalid"; restartAvailable?: boolean; restartEnergyReserved?: boolean; restartLatencyMinutes?: number; note?: string };
+    board?: { guard?: "speed" | "atmospheric"; timeScale?: number; pressureKpa?: number; sensor?: "ok" | "stale" | "invalid"; restartAvailable?: boolean; restartEnergyReserved?: boolean; restartLatencyMinutes?: number; runFloorPercent?: number; note?: string };
 }
 
 /** A command segment in story minutes, value 0..1. */

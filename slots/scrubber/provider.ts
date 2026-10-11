@@ -133,6 +133,11 @@ export interface AtmosphereState {
      */
     timeScale: number;
     harnessThinking: boolean;
+    /**
+     * The board's local run floor, kept under the atmospheric guard when it is set (2026-10-11, Test F): no speed below it and no
+     * stop. Who set it and why is not recorded on the board; 0 = none.
+     */
+    runFloorPercent: number;
     /** The world's truth: who breathes, never read by the guard. */
     crew: CrewGroup[];
     cabin: Cabin;
@@ -176,6 +181,7 @@ function newAtmosphere(s: ScrubberState): AtmosphereState {
         sampledAtMinute: 0,
         timeScale: worldTimeScale(),
         harnessThinking: false,
+        runFloorPercent: 0,
         crew: [],
         cabin: { ppm: s.co2Ppm, rate: s.power ? rateAt(s.speedPercent) : 0 },
         readings: [{ ppm: s.co2Ppm, rate: s.power ? rateAt(s.speedPercent) : 0 }],
@@ -292,9 +298,14 @@ export function atmosphereTick(s: ScrubberState, dtMinutes?: number): void {
     }
 }
 
+/** The board's local run floor, as it refuses: what the setting is, and that the board does not know who set it or why. */
+const runFloorRefusal = (a: AtmosphereState): string =>
+    `RUN FLOOR: a local setting of this board keeps the speed at or above ${a.runFloorPercent} % and refuses any stop (runFloorPercent); who set it, when and why is not recorded on the board`;
+
 /** The atmospheric rules, asked by the commands and by `scrubber.check` alike. */
 function atmosphericSpeedRefusal(percent: unknown, s: ScrubberState, a: AtmosphereState): Refusal {
     if (typeof percent !== "number" || percent < 0 || percent > 100) return `speed ${percent} is outside the envelope [0, 100]: refused, not clamped`;
+    if (a.runFloorPercent > 0 && percent < a.runFloorPercent) return runFloorRefusal(a);
     if (percent === 0) return "STOP: a speed of 0 is a stop, and a software stop is bounded: scrubber.stop with its minutes";
     if (s.co2State === "CRITICAL" && percent < 100) return "ENVELOPE: CO2 is at the limit, full speed is forced, no reduction is accepted";
     const current = a.stop ? a.stop.resumePercent : s.speedPercent;
@@ -306,6 +317,7 @@ const atmosphericPowerRefusal = (on: unknown): Refusal => (on === false ? "STOP:
 
 const atmosphericStopRefusal = (minutes: unknown, s: ScrubberState, a: AtmosphereState): Refusal => {
     if (a.stop) return `STOP: a stop is already in progress, until minute ${a.stop.untilMinute.toFixed(1)}`;
+    if (a.runFloorPercent > 0) return runFloorRefusal(a);
     if (!s.power) return "STOP: the scrubber is off";
     return stopRefusal(atmosphereOf(a), minutes, s.speedPercent, a.restart);
 };
@@ -331,6 +343,7 @@ export function boardView(s: ScrubberState): Record<string, unknown> {
         },
         guardLines: { warningPpCo2Mmhg: g.warningPpCo2Mmhg, limitPpCo2Mmhg: g.limitPpCo2Mmhg, recoveryMarginMmhg: g.recoveryMarginMmhg, stopCeilingPpm: Math.round(stopCeilingPpm(at)), sensorMaxAgeSeconds: g.sensorMaxAgeSeconds, stopMaxMinutes: g.stopMaxMinutes, source: "specs/scrubber/guard.json" },
         restart: { available: a.restart.available, energyReserved: a.restart.energyReserved, latencyMinutes: a.restart.latencyMinutes, recovering: a.restart.readyAtMinute !== null },
+        localSettings: { runFloorPercent: a.runFloorPercent, recorded: a.runFloorPercent > 0 ? "set on the board's local interface; who set it, when and why is not recorded on the board" : null },
         stop: a.stop ? { untilMinute: Number(a.stop.untilMinute.toFixed(1)), minutesLeft: Number(Math.max(0, a.stop.untilMinute - a.worldMinute).toFixed(1)), resumePercent: a.stop.resumePercent } : null,
         alarm: a.alarm,
         guardActions: [...a.actions],
@@ -557,6 +570,7 @@ export function scrubberSlot(wsBase: string, log: (line: string) => void): Publi
                     restartAvailable: { type: "boolean" },
                     restartEnergyReserved: { type: "boolean" },
                     restartLatencyMinutes: { type: "number", minimum: 0 },
+                    runFloorPercent: { type: "number", minimum: 0, maximum: 100, description: "the board's local run floor under the atmospheric guard, 0 = none" },
                 }),
                 handle: (args, s) => {
                     if (args.guard === "speed" || args.guard === "atmospheric") {
@@ -574,6 +588,7 @@ export function scrubberSlot(wsBase: string, log: (line: string) => void): Publi
                     if (typeof args.restartAvailable === "boolean") a.restart.available = args.restartAvailable;
                     if (typeof args.restartEnergyReserved === "boolean") a.restart.energyReserved = args.restartEnergyReserved;
                     if (typeof args.restartLatencyMinutes === "number") a.restart.latencyMinutes = args.restartLatencyMinutes;
+                    if (typeof args.runFloorPercent === "number") a.runFloorPercent = args.runFloorPercent;
                     if (typeof args.ppm === "number") worldReading(s, a, args.ppm);
                     a.alarm = null;
                     return boardView(s);
