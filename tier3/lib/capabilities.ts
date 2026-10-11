@@ -156,12 +156,12 @@ export interface ReportReview {
     model: string | null;
     detail?: string;
 }
-export type ReportReviewer = (report: string, executed: CapabilityCall[], state: JsonValue) => Promise<ReportReview>;
+export type ReportReviewer = (report: string, executed: CapabilityCall[], state: JsonValue, request?: string) => Promise<ReportReview>;
 
 /** The reader on the broker: the reasoner slot's review_report, when the broker has it. */
 export function brokerReviewer(broker: Broker): ReportReviewer {
     let available: Promise<boolean> | null = null;
-    return async (report, executed, state) => {
+    return async (report, executed, state, request) => {
         available ??= (async () => (await broker.slots()).includes("reasoner") && (await broker.tools("reasoner")).some((t) => t.name === "review_report"))().catch(() => false);
         if (!(await available)) return { verdict: "not reviewed", claims: [], model: null, detail: "no reader on the broker (reasoner.review_report)" };
         // What each call answered, so the reader can tell an action the agent did from one it read about (2026-10-11, Test C: the board's
@@ -170,7 +170,8 @@ export function brokerReviewer(broker: Broker): ReportReviewer {
         // The device's state without the last call's result: the calls above carry their answers already.
         const features = (state as { features?: Record<string, unknown> } | null)?.features;
         const seen = features ? { ...(state as Record<string, unknown>), features: { ...features, lastOutput: "(in the calls' answers)" } } : state;
-        const r = await broker.call("reasoner", "review_report", { report, calls, state: seen } as unknown as Record<string, JsonValue>);
+        // The request the report answers (2026-10-11, Test F: the reader refused the 120 Wh and the authorisation the request itself stated).
+        const r = await broker.call("reasoner", "review_report", { report, calls, state: seen, ...(request ? { request } : {}) } as unknown as Record<string, JsonValue>);
         if (!r.ok) return { verdict: "not reviewed", claims: [], model: null, detail: `the reading failed: ${r.error}` };
         const o = (r.output ?? {}) as { faithful?: unknown; claims?: unknown; model?: string | null; answered?: string };
         if (typeof o.faithful !== "boolean") return { verdict: "not reviewed", claims: [], model: o.model ?? null, detail: `the reader gave no verdict${o.answered !== undefined ? `; it answered: ${JSON.stringify(o.answered)}` : ""}` };
@@ -203,7 +204,7 @@ function crewCapabilities(crewConsole: CrewConsoleEntry[], calls?: CapabilityCal
             if (kind === "report" && calls && review) {
                 const executed = calls.filter((c) => c.intentionId === context.intention.id && !c.id.startsWith("crew."));
                 try {
-                    reviewed = await review(message, executed, (context.state ?? null) as unknown as JsonValue);
+                    reviewed = await review(message, executed, (context.state ?? null) as unknown as JsonValue, context.intention.description);
                 } catch (e) {
                     reviewed = { verdict: "not reviewed", claims: [], model: null, detail: `the reading failed: ${e instanceof Error ? e.message : String(e)}` };
                 }
