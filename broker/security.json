@@ -63,6 +63,7 @@
                 "scrubber.power": "mcp.tools.power",
                 "scrubber.stop": "mcp.tools.power",
                 "debug.set_cabin": "mcp.tools.sense",
+                "debug.world_time": "mcp.tools.sense",
                 "scrubber.set_min_flow": "mcp.tools.protect",
                 "debug.set_co2": "mcp.tools.sense",
                 "scrubber.co2_report": "mcp.tools.sense",

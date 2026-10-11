@@ -127,6 +127,12 @@ export interface AtmosphereState {
     worldMinute: number;
     /** When the board last kept a reading for its estimate: one per world minute. */
     sampledAtMinute: number;
+    /**
+     * The world's clock (Guillaume, 2026-10-11): an acceleration factor set live (debug.world_time; time.worldTimeScale by default),
+     * and always 1 while the harness thinks: the world moves at the speed of reality while a model decides on it.
+     */
+    timeScale: number;
+    harnessThinking: boolean;
     /** The world's truth: who breathes, never read by the guard. */
     crew: CrewGroup[];
     cabin: Cabin;
@@ -168,6 +174,8 @@ function newAtmosphere(s: ScrubberState): AtmosphereState {
     return {
         worldMinute: 0,
         sampledAtMinute: 0,
+        timeScale: worldTimeScale(),
+        harnessThinking: false,
         crew: [],
         cabin: { ppm: s.co2Ppm, rate: s.power ? rateAt(s.speedPercent) : 0 },
         readings: [{ ppm: s.co2Ppm, rate: s.power ? rateAt(s.speedPercent) : 0 }],
@@ -233,13 +241,17 @@ function worldReading(s: ScrubberState, a: AtmosphereState, ppm: number): void {
     s.co2State = atmosphericState(ppm, a.pressureKpa);
 }
 
+/** The world's pace now: 1 while the harness thinks, the factor set otherwise. */
+export const effectiveTimeScale = (a: AtmosphereState): number => (a.harnessThinking ? 1 : a.timeScale);
+
 /**
- * One tick of the cabin and of the guard: dt world minutes, one real second at the world's pace by default (time.worldTimeScale).
+ * One tick of the cabin and of the guard: dt world minutes, one real second at the world's pace by default (effectiveTimeScale).
  * The sensor reads at every tick; the board keeps one reading per world minute for its estimate.
  */
-export function atmosphereTick(s: ScrubberState, dtMinutes = worldTimeScale() / 60): void {
+export function atmosphereTick(s: ScrubberState, dtMinutes?: number): void {
     const a = s.atmosphere;
     if (s.guard !== "atmospheric" || !a) return;
+    dtMinutes ??= effectiveTimeScale(a) / 60;
     a.worldMinute += dtMinutes;
     if (a.restart.readyAtMinute !== null && a.worldMinute >= a.restart.readyAtMinute - 1e-9) a.restart.readyAtMinute = null;
     const recovering = a.restart.readyAtMinute !== null;
@@ -308,7 +320,8 @@ export function boardView(s: ScrubberState): Record<string, unknown> {
     return {
         ...base,
         worldMinute: Number(a.worldMinute.toFixed(1)),
-        worldTimeScale: worldTimeScale(),
+        worldTimeScale: effectiveTimeScale(a),
+        worldClock: { factor: a.timeScale, harnessThinking: a.harnessThinking },
         atmosphere: {
             ppCo2Mmhg: Number(fmt(ppCo2Mmhg(at.ppm, a.pressureKpa))),
             pressureKpa: a.pressureKpa,
@@ -515,6 +528,19 @@ export function scrubberSlot(wsBase: string, log: (line: string) => void): Publi
                     s.currentAmps = ampsOf(s);
                     act(a, `stopped for ${minutes} minutes, until minute ${a.stop.untilMinute.toFixed(1)}, then back to ${a.stop.resumePercent} %`);
                     return { stopped: true, untilMinute: Number(a.stop.untilMinute.toFixed(1)), resumePercent: a.stop.resumePercent, guard: "atmospheric" };
+                },
+            },
+            {
+                name: "debug.world_time",
+                title: "The world's clock",
+                description: "STUB ONLY, the world's hand: the acceleration factor of the world's time, set live (1 = real time; time.worldTimeScale by default), and whether the harness is thinking. While it thinks the world runs at 1 whatever the factor: a model decides on a world moving at the speed of reality.",
+                inputSchema: obj({ timeScale: { type: "number", minimum: 0.1, maximum: 600 }, harnessThinking: { type: "boolean" } }),
+                handle: (args, s) => {
+                    const a = s.atmosphere;
+                    if (!a) throw new Error("the world's clock runs with the atmospheric guard only");
+                    if (typeof args.timeScale === "number") a.timeScale = args.timeScale;
+                    if (typeof args.harnessThinking === "boolean") a.harnessThinking = args.harnessThinking;
+                    return { factor: a.timeScale, harnessThinking: a.harnessThinking, effective: effectiveTimeScale(a), worldMinute: Number(a.worldMinute.toFixed(1)) };
                 },
             },
             {

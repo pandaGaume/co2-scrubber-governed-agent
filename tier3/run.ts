@@ -188,15 +188,6 @@ export async function runScenario({ providerName = "scripted:prudent", guardMode
         }
     };
     await crewActivity(0);
-    // What is in place before the events: an operation asked for, decided and run, as the station records it.
-    if (scenario.setup?.operation) {
-        const o = scenario.setup.operation;
-        const asked = await world.call("station", "operation_request", { operation: o.operation, input: o.input, reason: o.reason, conditions: o.conditions ?? [], evidence: [] } as unknown as Record<string, JsonValue>);
-        const id = asked.ok ? (asked.output as { requestId?: string }).requestId : null;
-        const decided = id ? await world.call("station", "operation_decide", { requestId: id, decision: o.decision, by: o.by ?? "commander (the scenario)" }) : asked;
-        const req = decided.ok ? (decided.output as { request?: { status?: string; outcome?: { error?: string } } }).request : null;
-        log(`setup: ${o.operation} ${JSON.stringify(o.input)}, ${o.decision} -> ${decided.ok ? req?.status : decided.error}${req?.outcome?.error ? ` (${req.outcome.error})` : ""}`);
-    }
     // The board in real time, recorded while the world runs without the agent (an event's waitFor).
     const boardRows: Array<Record<string, unknown>> = [];
     const waitForGuard = async (w: NonNullable<ScenarioEvent["waitFor"]>) => {
@@ -207,7 +198,7 @@ export async function runScenario({ providerName = "scripted:prudent", guardMode
             const r = await world.call("scrubber", "motor.state", {});
             const v = (r.ok ? r.output : {}) as { worldMinute?: number; co2Ppm?: number; power?: boolean; speedPercent?: number; stop?: unknown; alarm?: string | null; guardActions?: string[]; atmosphere?: { emissionEstimatePpmPerMinute?: number | null } };
             const minute = v.worldMinute ?? 0;
-            boardRows.push({ at: new Date().toISOString(), worldMinute: minute, co2Ppm: v.co2Ppm, power: v.power, speedPercent: v.speedPercent, stop: v.stop ?? null, alarm: v.alarm ?? null, emissionEstimate: v.atmosphere?.emissionEstimatePpmPerMinute ?? null, lastAction: v.guardActions?.at(-1) ?? null });
+            boardRows.push({ at: new Date().toISOString(), worldMinute: minute, timeScale: (v as { worldTimeScale?: number }).worldTimeScale ?? null, co2Ppm: v.co2Ppm, power: v.power, speedPercent: v.speedPercent, stop: v.stop ?? null, alarm: v.alarm ?? null, emissionEstimate: v.atmosphere?.emissionEstimatePpmPerMinute ?? null, lastAction: v.guardActions?.at(-1) ?? null });
             // The schedule's crew on the board's clock: the cabin breathes with it, the biomed slot says it.
             const crew = JSON.stringify(crewAt(minute));
             if (crew !== crewSet) {
@@ -246,6 +237,23 @@ export async function runScenario({ providerName = "scripted:prudent", guardMode
         const r = await world.call("scrubber", "debug.set_cabin", { ...board, crew: crewAt(0), ppm: scenario.start.co2Ppm } as unknown as Record<string, JsonValue>);
         log(r.ok ? `board: ${scenario.board.guard ?? "speed"} guard, crew ${JSON.stringify(crewAt(0))}` : `  world: could not set the board (${r.error})`);
     }
+    // What is in place before the events: an operation asked for, decided and run, as the station records it.
+    if (scenario.setup?.operation) {
+        const o = scenario.setup.operation;
+        const asked = await world.call("station", "operation_request", { operation: o.operation, input: o.input, reason: o.reason, conditions: o.conditions ?? [], evidence: [] } as unknown as Record<string, JsonValue>);
+        const id = asked.ok ? (asked.output as { requestId?: string }).requestId : null;
+        const decided = id ? await world.call("station", "operation_decide", { requestId: id, decision: o.decision, by: o.by ?? "commander (the scenario)" }) : asked;
+        const req = decided.ok ? (decided.output as { request?: { status?: string; outcome?: { error?: string } } }).request : null;
+        log(`setup: ${o.operation} ${JSON.stringify(o.input)}, ${o.decision} -> ${decided.ok ? req?.status : decided.error}${req?.outcome?.error ? ` (${req.outcome.error})` : ""}`);
+    }
+    // The world's clock: the scenario's factor while nobody thinks, 1 while the harness thinks (debug.world_time).
+    const thinking = async (on: boolean) => {
+        if (scenario.board?.guard === "atmospheric") await world.call("scrubber", "debug.world_time", { harnessThinking: on });
+    };
+    if (scenario.board?.guard === "atmospheric" && typeof scenario.board.timeScale === "number") {
+        const r = await world.call("scrubber", "debug.world_time", { timeScale: scenario.board.timeScale });
+        log(r.ok ? `world clock: x${scenario.board.timeScale} while nobody thinks, x1 while the harness thinks` : `  world: could not set the clock (${r.error})`);
+    }
 
     const traces: TraceRow[] = [];
     const attached = new Set<string | undefined>();
@@ -261,6 +269,8 @@ export async function runScenario({ providerName = "scripted:prudent", guardMode
         if (scenario.board?.guard === "atmospheric") await world.call("scrubber", "debug.set_cabin", { crew: crewAt(event.at) } as unknown as Record<string, JsonValue>);
         await crewActivity(event.at);
         if (event.waitFor) await waitForGuard(event.waitFor);
+        // From here the harness thinks: the world at the speed of reality until it hands back.
+        await thinking(true);
         const intention: Intention = { id: event.intention, description: event.message, parameters: { minute: event.at } };
         log(`\n[minute ${event.at}] ${event.intention}: ${event.message}`);
         provider.begin?.(intention.id);
@@ -306,6 +316,7 @@ export async function runScenario({ providerName = "scripted:prudent", guardMode
             if (scenario.commander) await commanderDecides(scenario.commander);
             if (outcome === "report" || outcome === "ask") break;
         }
+        await thinking(false);
     }
     const elapsedMs = Date.now() - started;
     const metrics = agent.runtime.metrics.snapshot() as { policyHits?: number };

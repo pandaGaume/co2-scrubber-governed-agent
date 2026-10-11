@@ -76,7 +76,7 @@ describe("the simulated board during a stop", () => {
     function board(crew: AtmosphereState["crew"], ppm: number): ScrubberState {
         const m = cabinModel();
         const s: ScrubberState = { power: true, speedPercent: 33, currentAmps: 0.15, co2Ppm: ppm, co2State: "NOMINAL", healthResidual: 0.02, profile: "adaptive", minFlowPercent: 40, runFloorPercent: 0, guard: "atmospheric", atmosphere: null };
-        s.atmosphere = { worldMinute: 0, sampledAtMinute: 0, crew, cabin: { ppm, rate: m.rateAtFullCommand * 0.33 }, readings: [{ ppm, rate: m.rateAtFullCommand * 0.33 }], pressureKpa: 101.3, sensor: "ok", lastReadingAt: Date.now(), restart: { available: true, energyReserved: true, latencyMinutes: 10, readyAtMinute: null }, stop: null, alarm: null, actions: [] };
+        s.atmosphere = { worldMinute: 0, sampledAtMinute: 0, timeScale: 1, harnessThinking: false, crew, cabin: { ppm, rate: m.rateAtFullCommand * 0.33 }, readings: [{ ppm, rate: m.rateAtFullCommand * 0.33 }], pressureKpa: 101.3, sensor: "ok", lastReadingAt: Date.now(), restart: { available: true, energyReserved: true, latencyMinutes: 10, readyAtMinute: null }, stop: null, alarm: null, actions: [] };
         for (let i = 0; i < 6; i++) atmosphereTick(s, 1);
         return s;
     }
@@ -136,6 +136,19 @@ describe("the simulated board during a stop", () => {
         atmosphereTick(s, 1 / 60);
         assert.equal(a.readings.length, kept + 1);
         assert.ok(Date.now() - a.lastReadingAt < 1000);
+    });
+
+    it("runs at the factor set while nobody thinks, and at 1 while the harness thinks", () => {
+        const s = board(asleep, 1500);
+        const a = s.atmosphere as AtmosphereState;
+        a.timeScale = 10;
+        let minute = a.worldMinute;
+        atmosphereTick(s);
+        assert.ok(Math.abs(a.worldMinute - minute - 10 / 60) < 1e-9);
+        a.harnessThinking = true;
+        minute = a.worldMinute;
+        atmosphereTick(s);
+        assert.ok(Math.abs(a.worldMinute - minute - 1 / 60) < 1e-9);
     });
 
     it("publishes what its sensors read and its guard's lines, never the crew", () => {

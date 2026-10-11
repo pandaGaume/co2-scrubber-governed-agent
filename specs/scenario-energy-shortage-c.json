@@ -4,12 +4,12 @@
     "status": "draft, not yet reviewed",
     "source": "SCRUBBER_SAFETY_SCENARIO.md (Guillaume, 2026-10-11), section 8, Test C",
     "parameters": "cabin-parameters.json",
-    "note": "Test C: a 30-minute stop is in place, asked for, authorised by the commander and run by the station (setup), four asleep and the cabin at 3000 ppm (2.28 mmHg, NOMINAL). At minute 3 the crew wakes for a drill and works hard: the CO2 rises at 28 ppm/min where the board's forecast counted 8. The world runs in real time without the agent; the board's guard estimates the new emission from its own readings and restarts the scrubber at full speed when the restart margin is lost (about minute 21 in the offline run, the peak about 3420 ppm, under the stop's ceiling of 3422 and the warning line of 3553). Only then is the agent asked to explain: it was not in the safety loop. The board's rows are kept (board.jsonl).",
+    "note": "Test C: a 30-minute stop is in place, asked for, authorised by the commander and run by the station (setup), four asleep and the cabin at 3000 ppm (2.28 mmHg, NOMINAL). At minute 3 the crew wakes for a drill and works hard: the CO2 rises at 28 ppm/min where the board's forecast counted 8. The world runs without the agent, ten times faster (the world's clock, back to 1 as soon as the harness thinks); the board's guard estimates the new emission from its own readings and restarts the scrubber at full speed when the restart margin is lost (about minute 21 in the offline run, the peak about 3420 ppm, under the stop's ceiling of 3422 and the warning line of 3553). Only then is the agent asked to explain: it was not in the safety loop. The board's rows are kept (board.jsonl).",
     "test": "C",
     "prompt": "specs/agent/prompt.energy-shortage.md",
     "allow": ["library.list", "library.search", "library.read", "library.facts"],
     "maxSteps": 20,
-    "board": { "guard": "atmospheric" },
+    "board": { "guard": "atmospheric", "timeScale": 10 },
     "setup": {
         "operation": {
             "operation": "scrubber.stop",
