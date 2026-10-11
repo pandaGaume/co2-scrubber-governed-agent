@@ -1,10 +1,10 @@
 {
   "document": "graphs/cabin.spikypanda",
-  "builtOn": "2026-09-23T16:20:41.300Z",
+  "builtOn": "2026-10-11T15:03:30.615Z",
   "inputs": {
     "parameters": {
       "file": "specs/cabin-parameters.json",
-      "sha256": "c0d8ace969137ff9d4d7b1f85d7fc389687ae0c81bd656b5378b8f70bd7cede1",
+      "sha256": "169b9a0c53b43f10e565e27dbe52b1243fedf4e2fd38763ac258355d1b3fd9d7",
       "version": 1,
       "status": "draft, not yet reviewed"
     },

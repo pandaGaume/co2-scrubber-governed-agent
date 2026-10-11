@@ -72,7 +72,7 @@ Bornes : pression entre **95 et 105 kPa**, capteur frais sous **5 s**, arrêt de
 
 Si la relance est indisponible au moment de relancer, la carte publie l'alarme `RESTART FAILED (<raison>): the restart is not available and the board has no other removal; the crew must act`, et le moteur reste coupé.
 
-**Relance** : pas de retrait de CO2 pendant la latence (10 min), puis le retard du premier ordre habituel (3,33 min).
+**Relance** : pas de retrait de CO2 pendant la latence (10 min, `scrubber.restartLatencyMinutes` dans `specs/cabin-parameters.json`, la même que celle du jumeau), puis le retard du premier ordre habituel (3,33 min). Pendant la latence, le moteur tourne à la vitesse de reprise.
 
 **CRITICAL**, hors arrêt : pleine vitesse forcée, comme aujourd'hui.
 
@@ -159,7 +159,7 @@ node --env-file-if-exists=.env dist/tier3/run.js --provider reasoner --scenario 
 
 ## 9. Ce qui reste à valider (ne bloque pas la démo)
 
-Les valeurs marquées « to review » dans `specs/scrubber/guard.json` ne sont pas des exigences validées :
+Les valeurs marquées « to review » dans `specs/scrubber/guard.json` et `specs/cabin-parameters.json` ne sont pas des exigences validées :
 - la marge de reprise ;
 - les bornes de pression ;
 - la latence de relance, à mesurer sur l'épurateur ;

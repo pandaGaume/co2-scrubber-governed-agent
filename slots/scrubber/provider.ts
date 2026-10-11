@@ -36,6 +36,7 @@
 import { objectSchema as obj, publishSlot, type PublishedSlot } from "../lib/slot-server.js";
 import type { Co2State, CrewGroup } from "../../lib/factory.js";
 import {
+    cabinModel,
     emissionOf,
     estimateEmission,
     fmt,
@@ -173,7 +174,7 @@ function newAtmosphere(s: ScrubberState): AtmosphereState {
         pressureKpa: g.pressureKpa,
         sensor: "ok",
         lastReadingAt: Date.now(),
-        restart: { available: true, energyReserved: true, latencyMinutes: g.restartLatencyMinutes, readyAtMinute: null },
+        restart: { available: true, energyReserved: true, latencyMinutes: cabinModel().restartLatencyMinutes, readyAtMinute: null },
         stop: null,
         alarm: null,
         actions: [],

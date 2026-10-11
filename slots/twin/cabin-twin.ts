@@ -103,6 +103,8 @@ export interface CabinRun {
     crew: CrewGroup[];
     /** the scrubber command over time, story minutes, value 0..1 */
     command: CommandSegment[];
+    /** the speed the motor runs at, for what it draws (0 = off, nothing drawn): the command when absent; differs during a restart, when the motor runs and the beds do not remove yet */
+    motor?: CommandSegment[];
     /** story minutes to simulate */
     minutes: number;
     stateOfChargePercent?: number;
@@ -111,7 +113,7 @@ export interface CabinRun {
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
 /** Runs the twin; one row per story minute. */
-export function runCabin({ co2Ppm, crew, command, minutes, stateOfChargePercent }: CabinRun): CabinRow[] {
+export function runCabin({ co2Ppm, crew, command, motor, minutes, stateOfChargePercent }: CabinRun): CabinRow[] {
     const { factory, registry, doc, parameters } = twin();
     const activities = param<string[]>(parameters, "crew.activities");
     checkCrew(crew, activities);
@@ -134,19 +136,37 @@ export function runCabin({ co2Ppm, crew, command, minutes, stateOfChargePercent 
     // them, and its solvers re-read the leaves.
     session.reset();
     const rows: CabinRow[] = [];
+    // What the scrubber draws and the reserve left, computed here (2026-10-11): the vendored scrubber node draws its idle current at
+    // a command of 0 (an extrapolation of the bench's line below its measured points), so a stop saved nothing in the twin. A motor
+    // at 0, stopped, draws nothing, as the reference sample counts it (0 Wh at level 0); during a restart it runs at its resume speed
+    // while the beds remove nothing yet. The graph keeps the CO2; the draw and the battery follow the motor here. To move into the
+    // node (a power input) in spikypanda.
+    const power = (cmd: number): number => (cmd > 0 ? param(parameters, "scrubber.power.supplyVolts") * (param(parameters, "scrubber.power.interceptAmps") + param(parameters, "scrubber.power.slopeAmps") * cmd) * param(parameters, "scrubber.power.habitatScale") : 0);
+    const running = motor ?? command;
+    const capacityWh = param(parameters, "battery.capacityWh");
+    const otherLoadsW = param(parameters, "battery.otherLoadsW");
+    const startPercent: number = typeof stateOfChargePercent === "number" ? stateOfChargePercent : param<number>(parameters, "battery.initialStateOfChargePercent");
+    let energyLeftWh = (capacityWh * startPercent) / 100;
     session.run(0);
     for (let minute = 1; minute <= minutes; minute++) {
         session.run(minute * MINUTE);
+        const powerW = power(clamp01(valueAt(running, minute - 0.5)));
+        energyLeftWh -= (powerW + otherLoadsW) / 60;
         rows.push({
             minute,
             co2Ppm: factory.readNumber(loaded, "cabin", "co2Ppm"),
             state: factory.readNumber(loaded, "cabin", "state"),
             rate: factory.readNumber(loaded, "scrubber", "effectiveRatePerMinute"),
-            powerW: factory.readNumber(loaded, "scrubber", "power"),
-            stateOfCharge: factory.readNumber(loaded, "battery", "stateOfChargePercent"),
+            powerW,
+            stateOfCharge: (100 * energyLeftWh) / capacityWh,
         });
     }
     return rows;
+}
+
+/** The value of segments at a minute; the last segment's beyond them. */
+function valueAt(segments: ReadonlyArray<CommandSegment>, minute: number): number {
+    return segments.find((s) => minute >= s.from && minute < s.to)?.value ?? segments[segments.length - 1]?.value ?? 0;
 }
 
 /** Steady state of the model for a constant crew and command, in closed form. */

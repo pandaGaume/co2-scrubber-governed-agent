@@ -27,7 +27,6 @@ export interface GuardParameters {
     sensorMaxAgeSeconds: number;
     pressureMinKpa: number;
     pressureMaxKpa: number;
-    restartLatencyMinutes: number;
     stopMaxMinutes: number;
     forecastHorizonMinutes: number;
     emissionWindowMinutes: number;
@@ -36,6 +35,8 @@ export interface GuardParameters {
 export interface CabinModel {
     rateAtFullCommand: number;
     lagMinutes: number;
+    /** After a stop, no removal for this long (scrubber.restartLatencyMinutes), then the lag. */
+    restartLatencyMinutes: number;
     removalFloorPpm: number;
     leakPerMinute: number;
     floorPpm: number;
@@ -63,6 +64,7 @@ export function cabinModel(): CabinModel {
         cabinCache = {
             rateAtFullCommand: param(p, "scrubber.rateAtFullCommand"),
             lagMinutes: param(p, "scrubber.lagTimeConstantMinutes"),
+            restartLatencyMinutes: param(p, "scrubber.restartLatencyMinutes"),
             removalFloorPpm: param(p, "scrubber.removalFloorPpm"),
             leakPerMinute: param(p, "cabin.leakPerMinute"),
             floorPpm: param(p, "cabin.floorPpm"),
@@ -239,7 +241,7 @@ export function stopRefusal(a: Atmosphere, minutes: unknown, resumePercent: numb
 }
 
 /** Why a stop in progress must end now, at full speed; null while it may go on. */
-export function restartTrigger(a: Atmosphere, g: GuardParameters = guardParameters(), latencyMinutes = g.restartLatencyMinutes): string | null {
+export function restartTrigger(a: Atmosphere, g: GuardParameters = guardParameters(), latencyMinutes = cabinModel().restartLatencyMinutes): string | null {
     const common = commonRefusal(a, g);
     if (common) return `monitoring: ${common}`;
     const f = forecastPeak(a.cabin, a.emission as number, restartNowPlan(latencyMinutes), g.forecastHorizonMinutes);

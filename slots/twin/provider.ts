@@ -82,6 +82,25 @@ function compactRows(rows: ReadonlyArray<CabinRow>): number[][] {
         .map((r) => [r.minute, round(r.co2Ppm), r.state, round(r.rate, 4), round(r.powerW), round(r.stateOfCharge, 2)]);
 }
 
+/**
+ * A stop as the twin plays it (2026-10-11): the scrubber off for its minutes (it draws nothing), then restarted at the resume speed,
+ * removing nothing during its restart latency (specs/cabin-parameters.json, scrubber.restartLatencyMinutes), then the usual lag.
+ * Without a stop, the flow throughout, powered.
+ */
+export function stopPlanOf(stop: number, flow: number, resume: number, horizon: number): { command: CommandSegment[]; motor: CommandSegment[]; restartLatencyMinutes: number } {
+    const restartLatencyMinutes = param(twin().parameters, "scrubber.restartLatencyMinutes");
+    if (!(stop > 0)) return { command: [{ from: 0, to: horizon, value: flow }], motor: [{ from: 0, to: horizon, value: flow }], restartLatencyMinutes };
+    const back = Math.min(horizon, stop + restartLatencyMinutes);
+    const off = Math.min(stop, horizon);
+    return {
+        // What the beds remove: nothing during the stop and the restart.
+        command: [{ from: 0, to: back, value: 0 }, { from: back, to: horizon, value: resume }],
+        // What the motor runs at, for its draw: off during the stop, at the resume speed from the restart on.
+        motor: [{ from: 0, to: off, value: 0 }, { from: off, to: horizon, value: resume }],
+        restartLatencyMinutes,
+    };
+}
+
 export function twinSlot(wsBase: string, log: (line: string) => void): PublishedSlot<TwinState> {
     const budget: TwinBudget = { maxMinutesPerRun: 1440, maxRunsPerCall: 20 };
     let ready: Twin | null = null;
@@ -152,7 +171,7 @@ export function twinSlot(wsBase: string, log: (line: string) => void): Published
                 name: "time_to_critical",
                 title: "Time to critical",
                 description:
-                    "How the cabin CO2 evolves from a starting state at a scrubber flow, with an optional stop: the minutes until ELEVATED and until CRITICAL, the peak, the final state. Defaults come from the scenario's start (four asleep, 1500 ppm, 33 %). Use stopMinutes to ask 'what if the scrubber stops now for that long' (it resumes at resumePercent).",
+                    "How the cabin CO2 evolves from a starting state at a scrubber flow, with an optional stop: the minutes until ELEVATED and until CRITICAL, the peak, the final state, the energy the scrubber draws. Defaults come from the scenario's start (four asleep, 1500 ppm, 33 %). Use stopMinutes to ask 'what if the scrubber stops now for that long': it is powered off and draws nothing for those minutes, then restarts at resumePercent, and removes nothing during its restart latency (the answer says how long) before the usual lag.",
                 inputSchema: obj({
                     co2Ppm: { type: "number", minimum: 0, description: "starting concentration, ppm" },
                     crew: CREW_SCHEMA,
@@ -170,11 +189,11 @@ export function twinSlot(wsBase: string, log: (line: string) => void): Published
                     const resume = num(args.resumePercent, 100) / 100;
                     const horizon = Math.ceil(num(args.horizonMinutes, 240));
                     checkMinutes(horizon);
-                    const command: CommandSegment[] = stop > 0 ? [{ from: 0, to: stop, value: 0 }, { from: stop, to: horizon, value: resume }] : [{ from: 0, to: horizon, value: flow }];
-                    const rows = runCabin({ co2Ppm, crew, command, minutes: horizon, stateOfChargePercent: d.stateOfChargePercent });
+                    const { command, motor, restartLatencyMinutes } = stopPlanOf(stop, flow, resume, horizon);
+                    const rows = runCabin({ co2Ppm, crew, command, motor, minutes: horizon, stateOfChargePercent: d.stateOfChargePercent });
                     const summary = summarize(rows);
                     const every = Math.max(1, Math.round(horizon / 12));
-                    const question = { co2Ppm, crew, flowPercent: flow * 100, stopMinutes: stop, resumePercent: resume * 100, horizonMinutes: horizon };
+                    const question = { co2Ppm, crew, flowPercent: flow * 100, stopMinutes: stop, resumePercent: resume * 100, horizonMinutes: horizon, ...(stop > 0 ? { restartLatencyMinutes } : {}) };
                     keep("time_to_critical", question, crew, [{ label: stop > 0 ? `stop ${stop} min, then ${Math.round(resume * 100)} %` : `${Math.round(flow * 100)} %`, flowPercent: stop > 0 ? null : flow * 100, command, rows: compactRows(rows), summary }]);
                     return {
                         question,
@@ -210,7 +229,7 @@ export function twinSlot(wsBase: string, log: (line: string) => void): Published
                     const resume = num(args.resumePercent, 100) / 100;
                     const horizon = Math.ceil(num(args.horizonMinutes, 120));
                     checkMinutes(horizon);
-                    const command: CommandSegment[] = stop > 0 ? [{ from: 0, to: stop, value: 0 }, { from: stop, to: horizon, value: resume }] : [{ from: 0, to: horizon, value: flow }];
+                    const { command } = stopPlanOf(stop, flow, resume, horizon);
                     const answer = runHabitatTwin({ persons, devices, variables, command, minutes: horizon, labPpm: typeof args.co2LabPpm === "number" ? args.co2LabPpm : undefined, habbPpm: typeof args.co2HabbPpm === "number" ? args.co2HabbPpm : undefined });
                     const { thresholds } = loadOnce();
                     const moduleSummary = (key: "co2_lab_ppm" | "co2_habb_ppm") => {

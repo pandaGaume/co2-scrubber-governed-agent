@@ -62,13 +62,6 @@
             "status": "to review",
             "note": ""
         },
-        "restartLatencyMinutes": {
-            "value": 10,
-            "unit": "story min",
-            "source": "docs/library/co2-scrubbers.md: a regenerable scrubber takes minutes to tens of minutes to return to its removal rate after a restart",
-            "status": "to review: to measure on the scrubber",
-            "note": "no removal during it, then the first-order lag of cabin-parameters"
-        },
         "stopMaxMinutes": {
             "value": 60,
             "unit": "story min",
@@ -90,5 +83,6 @@
             "status": "to review",
             "note": "the readings the emission estimate averages; fewer valid ones and the forecast is unavailable"
         }
-    }
+    },
+    "restartLatency": "specs/cabin-parameters.json, scrubber.restartLatencyMinutes: a property of the scrubber, which the twin reads too"
 }
