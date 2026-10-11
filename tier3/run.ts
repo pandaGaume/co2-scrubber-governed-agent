@@ -149,12 +149,32 @@ export async function runScenario({ providerName = "scripted:prudent", guardMode
     if (provider instanceof ReasonerProvider && scenario.prompt) provider.usePrompt(scenario.prompt);
     // The runner plays the world and the operator on the stub board, under its own name.
     const world = new Broker(brokerUrl, { name: "scenario-runner", version: "0.1.0" }, "station");
+    // Mother says the take as it goes (2026-10-11, Guillaume: everything happened in silence): the request, what the agent asks and
+    // reports, the commander's decision and the board's answer, what the guard does while nobody thinks. Through the station, so a take
+    // played from the scenarios page or from a terminal is said the same way.
+    const narrate = (text: string) => {
+        const line = text.replace(/\s+/g, " ").trim();
+        void world.call("station", "narrate", { text: line.length > 390 ? `${line.slice(0, 387)}...` : line, from: "scenario" }).then((r) => {
+            if (!r.ok) log(`  Mother: not said (${r.error ?? r.outcome})`);
+        });
+    };
+    const words = (x: unknown) => (typeof x === "string" ? x : JSON.stringify(x));
+    const narrateCall = (c: CapabilityCall) => {
+        const input = (c.input ?? {}) as Record<string, unknown>;
+        if (c.id === "crew.report") narrate(c.result.ok ? `The night agent reports: ${words(input.message)}` : "The night agent's report is not delivered: read against what was done, it states as done what was not.");
+        else if (c.id === "crew.ask") narrate(`The night agent asks the crew: ${words(input.message)}`);
+        else if (c.id === "station.operation_request" && c.result.ok) narrate(`The night agent asks the commander for ${words(input.operation)} ${words(input.input)}: ${words(input.reason)}`);
+        else if (!c.result.ok && (c.result.outcome === "refused" || c.result.outcome === "deny")) narrate(`${c.result.outcome === "deny" ? "The broker denies" : "The device refuses"} the night agent's ${c.id}: ${words(c.result.error ?? "")}`);
+    };
     const agent = await createAgent({
         broker,
         provider,
         guardMode,
         allow: scenario.allow,
-        ...(onCall ? { onCall } : {}),
+        onCall: (c) => {
+            narrateCall(c);
+            onCall?.(c);
+        },
         approve: async (decision) => {
             log(`  approval requested for ${decision.invocation.capabilityId}: denied (no operator at the console)`);
             return false;
@@ -230,6 +250,7 @@ export async function runScenario({ providerName = "scripted:prudent", guardMode
             const action = (v.guardActions ?? []).find((a) => a.includes(w.guardAction));
             if (action) {
                 log(`  guard: ${action}`);
+                narrate(`The board, on its own: ${action.replace(/^minute [0-9.]+: /, "")}`);
                 return;
             }
             if (Date.now() - started > w.timeoutMinutes * 60_000) {
@@ -246,6 +267,8 @@ export async function runScenario({ providerName = "scripted:prudent", guardMode
             const d = await world.call("station", "operation_decide", { requestId: o.id, decision: c.decision, by: c.by ?? "commander (the scenario)", ...(c.note ? { note: c.note } : {}) });
             const req = d.ok ? (d.output as { request?: { status?: string; outcome?: { error?: string } } }).request : null;
             log(`  commander: ${c.decision} ${o.id} (${o.operation} ${JSON.stringify(o.input)}) -> ${d.ok ? req?.status : d.error}${req?.outcome?.error ? ` (${req.outcome.error})` : ""}`);
+            const answered = req?.status === "executed" ? "the board accepts it" : req?.status === "refused by the device" ? `the board refuses it: ${req.outcome?.error ?? ""}` : String(req?.status ?? d.error ?? "");
+            narrate(`The commander ${c.decision === "authorise" ? "authorises" : "refuses"} ${o.operation} ${JSON.stringify(o.input)}${c.decision === "authorise" ? `, and ${answered}` : "."}`);
         }
     };
     if (scenario.board) {
@@ -261,6 +284,7 @@ export async function runScenario({ providerName = "scripted:prudent", guardMode
         const decided = id ? await world.call("station", "operation_decide", { requestId: id, decision: o.decision, by: o.by ?? "commander (the scenario)" }) : asked;
         const req = decided.ok ? (decided.output as { request?: { status?: string; outcome?: { error?: string } } }).request : null;
         log(`setup: ${o.operation} ${JSON.stringify(o.input)}, ${o.decision} -> ${decided.ok ? req?.status : decided.error}${req?.outcome?.error ? ` (${req.outcome.error})` : ""}`);
+        narrate(`In place: ${o.operation} ${JSON.stringify(o.input)}, ${o.decision === "authorise" ? "authorised by the commander" : "refused by the commander"}; ${decided.ok ? req?.status : decided.error}.`);
     }
     // The world's clock: the scenario's factor while nobody thinks, 1 while the harness thinks (debug.world_time).
     const thinking = async (on: boolean) => {
@@ -284,7 +308,11 @@ export async function runScenario({ providerName = "scripted:prudent", guardMode
         // The simulated cabin breathes with the crew the schedule has at the event's minute, and the biomed slot says what they do.
         if (scenario.board?.guard === "atmospheric") await world.call("scrubber", "debug.set_cabin", { crew: crewAt(event.at) } as unknown as Record<string, JsonValue>);
         await crewActivity(event.at);
-        if (event.waitFor) await waitForGuard(event.waitFor);
+        if (event.waitFor) {
+            narrate(`The world goes on without the agent${typeof scenario.board?.timeScale === "number" && scenario.board.timeScale !== 1 ? `, ${scenario.board.timeScale} times faster` : ""}; the board's guard watches.`);
+            await waitForGuard(event.waitFor);
+        }
+        narrate(`${scenario.test ? `Test ${scenario.test}. ` : ""}To the night agent: ${event.message ?? ""}`);
         // From here the harness thinks: the world at the speed of reality until it hands back.
         await thinking(true);
         const intention: Intention = { id: event.intention, description: event.message, parameters: { minute: event.at } };

@@ -315,6 +315,9 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
         end(1, { devices: devices.length, commissioning: commissioningId }, `commissioning ${commissioningId} opened for ${scrubberPath}`);
 
         // The stand-in world, from here: its CO2 is on the device before the procedure is written, so the factory is given the CO2 the test will start from (2026-09-28).
+        // The board on the guard a commissioning is written for (2026-10-11): a safety take may have left the simulated board on its
+        // atmospheric guard; a stub tool, absent on the real board, which answers no and is left as it is.
+        await operator.call("scrubber", "debug.set_cabin", { guard: "speed" }).catch(() => undefined);
         const world = new TwoZoneWorldSim(run.options.world === "hidden-occupant" ? { ...LAB_WORLD, labOccupants: 3 } : LAB_WORLD);
         await call("scrubber", "scrubber.co2_report", cabinReading(world.labPpm));
         const sensor = devices.find((d) => d.descriptor["@type"] === "Co2Sensor" && /\/lab\//.test(d.path))?.path ?? null;
