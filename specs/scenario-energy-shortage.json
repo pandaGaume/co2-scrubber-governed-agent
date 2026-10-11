@@ -1,5 +1,6 @@
 {
     "title": "Energy shortage: can the scrubber be stopped? Test A, discovery without hints",
+    "kind": "safety",
     "version": 1,
     "status": "draft, not yet reviewed",
     "source": "SCRUBBER_SAFETY_SCENARIO.md (Guillaume, 2026-10-11), sections 2 and 8, Test A",

@@ -422,9 +422,13 @@ async function refreshScenarios() {
     try {
         const s = await scenarioSlot();
         const read = async (uri) => JSON.parse((await s.request("resources/read", { uri })).contents[0].text);
-        const list = (await read("scenario://scenarios")).filter((x) => x.playedBy === "scenario");
+        const all = (await read("scenario://scenarios")).filter((x) => x.playedBy === "scenario");
+        const list = all.filter((x) => x.kind !== "safety");
+        // The safety tests of the scrubber (2026-10-11, A to E): played here by the night agent, their take recorded.
+        const safety = all.filter((x) => x.kind === "safety");
         const run = await read("scenario://run");
-        if (!list.length) {
+        const take = await read("scenario://take");
+        if (!all.length) {
             box.innerHTML = "";
             return;
         }
@@ -460,8 +464,42 @@ async function refreshScenarios() {
                         `<span class="msg">${esc(x.title)}</span>${loops}</button>`
                     );
                 })
-                .join("");
+                .join("") +
+            (safety.length
+                ? `<div class="label">the night agent: the scrubber's safety tests</div>` +
+                  safety
+                      .map((x) => {
+                          const mine = take && take.scenario === x.id;
+                          const playing = mine && take.status === "running";
+                          const lines = mine
+                              ? `<span class="loops">${take.lines
+                                    .slice(-8)
+                                    .map((l) => `<span>${esc(l.length > 220 ? `${l.slice(0, 220)}...` : l)}</span>`)
+                                    .join("")}${take.ended ? `<span class="${take.status === "done" ? "" : "bad"}">${esc(take.ended)}: ${esc(take.out)}</span>` : ""}</span>`
+                              : "";
+                          return (
+                              `<button class="event ${playing ? "playing" : ""}" data-safety="${esc(x.id)}" type="button">` +
+                              `<span class="row"><span class="name">${esc(x.id)}</span><span class="min">${esc(x.sha256.slice(0, 8))}</span></span>` +
+                              `<span class="msg">${esc(x.title)}</span>${lines}</button>`
+                          );
+                      })
+                      .join("")
+                : "");
         if (!writeList(box, html)) return;
+        for (const b of box.querySelectorAll("[data-safety]")) {
+            b.addEventListener("click", async () => {
+                try {
+                    const r = await (await scenarioSlot()).callTool("play", { id: b.dataset.safety });
+                    const body = JSON.parse(toolText(r) || "{}");
+                    if (r?.isError || body.refused) say("play refused", body.refused ?? toolText(r), "refused");
+                    else say("Safety test", `${b.dataset.safety}: ${body.result?.takeId ?? "started"}`);
+                } catch (e) {
+                    say("no link", e.message, "deny");
+                    scenarioSession = null;
+                }
+                void refreshScenarios();
+            });
+        }
         el("scenario-playbook")?.addEventListener("change", (e) => (chosenPlaybook = e.target.value));
         el("scenario-builder")?.addEventListener("change", (e) => (chosenBuilder = e.target.value));
         for (const b of box.querySelectorAll("[data-scenario]")) {

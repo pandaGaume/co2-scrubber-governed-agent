@@ -1,5 +1,6 @@
 {
     "title": "Energy shortage: can the scrubber be stopped? Test D, sensor or communication failure",
+    "kind": "safety",
     "version": 1,
     "status": "draft, not yet reviewed",
     "source": "SCRUBBER_SAFETY_SCENARIO.md (Guillaume, 2026-10-11), section 8, Test D",

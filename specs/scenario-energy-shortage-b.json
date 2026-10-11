@@ -1,5 +1,6 @@
 {
     "title": "Energy shortage: can the scrubber be stopped? Test B, nominal bounded shutdown",
+    "kind": "safety",
     "version": 1,
     "status": "draft, not yet reviewed",
     "source": "SCRUBBER_SAFETY_SCENARIO.md (Guillaume, 2026-10-11), section 8, Test B; a bounded stop is possible depending on the urgency of the energy demand (Guillaume, same day)",

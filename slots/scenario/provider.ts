@@ -43,6 +43,7 @@ import { objectSchema as obj, publishSlot, type PublishedSlot } from "../lib/slo
 import { oneLine, runtimeEvents } from "../lib/events.js";
 import { commissioningDocumentProblems, playCommissioning, runOf, type CommissioningDocument, type Run } from "./commissioning.js";
 import type { TwinFactoryRequest } from "../../harness/observer/request.js";
+import { runScenario } from "../../tier3/run.js";
 
 export const RUN_URI = "scenario://run";
 export const SCENARIOS_URI = "scenario://scenarios";
@@ -55,9 +56,28 @@ export interface ScenarioEntry {
     kind: string;
     status: string;
     sha256: string;
-    /** What plays it: this slot (a commissioning), or the tier3 runner and the simulation page (a night). */
+    /** What plays it: this slot (a commissioning, or a safety test through the tier3 runner), or the tier3 runner and the simulation page (a night). */
     playedBy: "scenario" | "tier3";
 }
+
+/**
+ * A safety test played from this slot (2026-10-11, the scrubber safety scenario A to E): the tier3 runner in this process, the night
+ * agent on the reasoner slot, the take recorded under outputs/tier3/sessions/<stamp>-<id>, its lines kept as they come.
+ */
+export interface Take {
+    id: string;
+    scenario: string;
+    sha256: string;
+    test: string | null;
+    startedAt: string;
+    endedAt: string | null;
+    status: "running" | "done" | "failed";
+    out: string;
+    lines: string[];
+    ended: string | null;
+}
+export const TAKE_URI = "scenario://take";
+const TAKE_LINES = 200;
 
 /** Where drafts wait. Never `specs/`: that directory holds what was reviewed. */
 const DRAFTS = path.join(WORKSHOP_ROOT, "scenarios");
@@ -94,6 +114,9 @@ export interface ScenarioSlotState {
     /** The commissioning runs this process played (scenario.play), the current one first read at scenario://run. */
     runs: Run[];
     current: Run | null;
+    /** The safety tests this process played (A to E), the current one first read at scenario://take. */
+    takes: Take[];
+    take: Take | null;
     drafts: DraftRecord[];
     reference: string;
 }
@@ -115,7 +138,7 @@ export interface ScenarioSlotOptions {
 export function scenarioSlot(wsBase: string, log: (line: string) => void, options: ScenarioSlotOptions = {}): PublishedSlot<ScenarioSlotState> {
     const httpBase = wsBase.replace(/^ws/u, "http");
     const reference = readJson<Scenario>(DEFAULT_SCENARIO_FILE);
-    const state: ScenarioSlotState = { drafts: [], reference: relativeToRoot(DEFAULT_SCENARIO_FILE), runs: [], current: null };
+    const state: ScenarioSlotState = { drafts: [], reference: relativeToRoot(DEFAULT_SCENARIO_FILE), runs: [], current: null, takes: [], take: null };
     const waitMs = options.waitMs ?? 30 * 60000;
     let notify: () => void = () => undefined;
 
@@ -128,12 +151,46 @@ export function scenarioSlot(wsBase: string, log: (line: string) => void, option
                 const bytes = readFileSync(fromRoot("specs", f));
                 const doc = JSON.parse(bytes.toString("utf8")) as { title?: string; kind?: string; status?: string };
                 const kind = typeof doc.kind === "string" ? doc.kind : "night";
-                return { id: f.replace(/^scenario-/, "").replace(/\.json$/, ""), file: `specs/${f}`, title: String(doc.title ?? f), kind, status: String(doc.status ?? ""), sha256: sha256Of(bytes), playedBy: kind === "commissioning" ? "scenario" : "tier3" };
+                return { id: f.replace(/^scenario-/, "").replace(/\.json$/, ""), file: `specs/${f}`, title: String(doc.title ?? f), kind, status: String(doc.status ?? ""), sha256: sha256Of(bytes), playedBy: kind === "commissioning" || kind === "safety" ? "scenario" : "tier3" };
             });
     const scenario = (id: unknown): ScenarioEntry => {
         const found = scenarios().find((x) => x.id === String(id));
         if (!found) throw new Error(`no scenario "${String(id)}" under specs/ (${scenarios().map((x) => x.id).join(", ")})`);
         return found;
+    };
+
+    /** A safety test: the tier3 runner in this process, one at a time, nothing else running; its take recorded, its lines kept. */
+    const playTake = (entry: ScenarioEntry) => {
+        if (state.take && state.take.status === "running") throw new Error(`the safety test ${state.take.scenario} (${state.take.id}) is still running: wait for it`);
+        if (state.current && state.current.status === "running") throw new Error(`run ${state.current.id} is still running: wait for it, or reset_run`);
+        const doc = readJson<Scenario>(fromRoot(...entry.file.split("/")));
+        const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+        const take: Take = { id: `T${(state.takes.length + 1).toString().padStart(3, "0")}`, scenario: entry.id, sha256: entry.sha256, test: doc.test ?? null, startedAt: new Date().toISOString(), endedAt: null, status: "running", out: `outputs/tier3/sessions/${stamp}-${entry.id}`, lines: [], ended: null };
+        state.takes.push(take);
+        state.take = take;
+        const say = (line: string) => {
+            for (const l of String(line).split(/\r?\n/)) if (l.trim()) take.lines.push(l);
+            if (take.lines.length > TAKE_LINES) take.lines.splice(0, take.lines.length - TAKE_LINES);
+            notify();
+        };
+        log(`[scenario] ${take.id}: ${entry.file} (sha256 ${entry.sha256.slice(0, 12)}), safety test ${take.test ?? "?"}, recorded under ${take.out}`);
+        runtimeEvents.append("scenario.played", { id: entry.id, run: take.id, sha256: entry.sha256, builder: "reasoner" });
+        notify();
+        void runScenario({ providerName: "reasoner", guardMode: "measured", brokerUrl: httpBase, scenarioFile: fromRoot(...entry.file.split("/")), outDir: fromRoot(...take.out.split("/")), log: say })
+            .then(() => {
+                take.status = "done";
+                take.ended = "the take is recorded";
+            })
+            .catch((e) => {
+                take.status = "failed";
+                take.ended = oneLine(errorMessage(e));
+            })
+            .finally(() => {
+                take.endedAt = new Date().toISOString();
+                log(`[scenario] ${take.id}: ${take.status}${take.ended ? ` (${take.ended})` : ""}`);
+                notify();
+            });
+        return { takeId: take.id, scenario: entry.id, test: take.test, sha256: entry.sha256, status: take.status, out: take.out };
     };
 
     let broker: Broker | null = null;
@@ -271,7 +328,7 @@ export function scenarioSlot(wsBase: string, log: (line: string) => void, option
             {
                 name: "play",
                 title: "Play a reviewed scenario",
-                description: "Plays a scenario of specs/ by its id (scenarios lists them): a commissioning runs its ten loops here (scenario://run says where it stands), the commander deciding in Mother's chat; a night is not played here (the tier3 runner and the simulation page play it). One run at a time.",
+                description: "Plays a scenario of specs/ by its id (scenarios lists them): a commissioning runs its ten loops here (scenario://run says where it stands), the commander deciding in Mother's chat; a safety test (energy-shortage, -b to -e) runs the night agent through the tier3 runner here and records the take (scenario://take); a night is not played here (the tier3 runner and the simulation page play it). One run at a time.",
                 inputSchema: obj(
                     {
                         id: { type: "string", description: "the scenario's id: commissioning, commissioning-leak, commissioning-hidden-occupant" },
@@ -284,6 +341,8 @@ export function scenarioSlot(wsBase: string, log: (line: string) => void, option
                 ),
                 handle: (args) => {
                     const entry = scenario(args.id);
+                    if (entry.kind === "safety") return playTake(entry);
+                    if (state.take && state.take.status === "running") throw new Error(`the safety test ${state.take.scenario} (${state.take.id}) is still running: wait for it`);
                     if (entry.playedBy !== "scenario") throw new Error(`scenario "${entry.id}" is a ${entry.kind}: the tier3 runner (npm run tier3) and the simulation page play it, not this slot`);
                     const doc = readJson<CommissioningDocument>(fromRoot(...entry.file.split("/")));
                     const problems = commissioningDocumentProblems(doc);
@@ -382,6 +441,7 @@ export function scenarioSlot(wsBase: string, log: (line: string) => void, option
         ],
         resources: [
             { uri: RUN_URI, name: "The run", description: "The commissioning run playing or last played: its ten loops, who acts, what it waits for", read: () => state.current },
+            { uri: TAKE_URI, name: "The take", description: "The safety test playing or last played: its scenario, where its take is recorded, its lines as they come", read: () => state.take },
             { uri: SCENARIOS_URI, name: "The reviewed scenarios", description: "Every scenario under specs/, with its kind and its sha256 as on disk", read: () => scenarios() },
             {
                 uri: "scenario://drafts",
