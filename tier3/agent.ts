@@ -45,6 +45,8 @@ export interface AgentOptions {
     onCall?: (call: CapabilityCall) => void;
     /** The graph to execute; by default the V1 loop built in code. The studio passes the graph it drew, so the run lights its own nodes. */
     driver?: HarnessDriver;
+    /** Tools the profile leaves out that this run gives back (a scenario's `allow`). */
+    allow?: string[];
 }
 
 export interface Agent extends LoopAgent {
@@ -53,7 +55,7 @@ export interface Agent extends LoopAgent {
     guardMode: GuardMode;
 }
 
-export async function createAgent({ broker, provider, guardMode = "measured", approve, timeoutMs = 60000, onStage, onCall, driver }: AgentOptions): Promise<Agent> {
+export async function createAgent({ broker, provider, guardMode = "measured", approve, timeoutMs = 60000, onStage, onCall, driver, allow }: AgentOptions): Promise<Agent> {
     const crewConsole: CrewConsoleEntry[] = [];
     const calls: CapabilityCall[] = [];
     const lastResult: { current: CapabilityCall | null } = { current: null };
@@ -64,6 +66,7 @@ export async function createAgent({ broker, provider, guardMode = "measured", ap
         // A report is read against the calls of its event before it reaches the crew (the reasoner slot's review_report).
         calls,
         review: brokerReviewer(broker),
+        allow,
         onCall: (call) => {
             lastResult.current = call;
             calls.push(call);

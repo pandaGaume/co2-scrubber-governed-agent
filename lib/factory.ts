@@ -104,6 +104,14 @@ export interface Scenario {
     schedule: ScheduleSegment[];
     events: ScenarioEvent[];
     constraints?: ScenarioConstraint[];
+    /** The test of a scenario family it plays (SCRUBBER_SAFETY_SCENARIO.md: A to F). */
+    test?: string;
+    /** The night agent's prompt for this scenario, a variant of its role's (specs/agent/prompt.<variant>.md); the agent's own when absent. */
+    prompt?: string;
+    /** Tools the agent's profile leaves out that this scenario gives it (the library, read-only, for a discovery). */
+    allow?: string[];
+    /** Decisions per event before the runner hands back; the runner's default when absent. */
+    maxSteps?: number;
 }
 
 /** A command segment in story minutes, value 0..1. */

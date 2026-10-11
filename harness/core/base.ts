@@ -33,11 +33,12 @@ export const SOCLE_PROMPTS: ReadonlyArray<string> = ["harness/core/kernel.md", "
  * in the request's own schema, never justified in `justifications`; the Contract Supervisor nothing, since it reviews a
  * report and calls none of the socle's tools.
  */
-const SOCLE_OF_ROLE: Readonly<Record<string, ReadonlyArray<string>>> = { observer: ["harness/core/kernel.md"], supervisor: [] };
+// The night agent reads its scenario's prompt alone (2026-10-11): the factories' kernel and policy are not its conduct.
+const SOCLE_OF_ROLE: Readonly<Record<string, ReadonlyArray<string>>> = { observer: ["harness/core/kernel.md"], supervisor: [], agent: [] };
 
 /** The socle's files a role reads after its mission, by the role its prompt file names (`specs/<role>/prompt.md`). */
 export function socleOf(promptFile: string): ReadonlyArray<string> {
-    const role = /^specs\/([a-z0-9-]+)\/prompt\.md$/.exec(promptFile)?.[1] ?? "";
+    const role = /^specs\/([a-z0-9-]+)\/prompt(?:\.[a-z0-9-]+)?\.md$/.exec(promptFile)?.[1] ?? "";
     return SOCLE_OF_ROLE[role] ?? SOCLE_PROMPTS;
 }
 

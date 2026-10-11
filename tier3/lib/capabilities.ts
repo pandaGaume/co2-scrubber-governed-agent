@@ -180,6 +180,8 @@ export interface BuildCapabilitiesOptions {
     /** The calls made so far (the agent's), and the reader of a report against them; a report goes unread without both. */
     calls?: CapabilityCall[];
     review?: ReportReviewer;
+    /** Tools the profile leaves out that this run gives back, by id (a scenario's `allow`). */
+    allow?: string[];
 }
 
 /** The crew's console as two capabilities in process; a report is read against the calls of its event first, when a reader is given. */
@@ -215,6 +217,7 @@ function crewCapabilities(crewConsole: CrewConsoleEntry[], calls?: CapabilityCal
 }
 
 /** Registers the broker's tools under the cabin's profile, and the crew capabilities. */
-export function buildCapabilities(broker: Broker, { guardMode = "measured", approve, onCall, console: crewConsole = [], calls, review }: BuildCapabilitiesOptions = {}) {
-    return buildFromProfile(broker, { profile: { excluded: EXCLUDED, replayPolicy: (id) => replayPolicyFor(id, guardMode), local: crewCapabilities(crewConsole, calls, review) }, approve, onCall });
+export function buildCapabilities(broker: Broker, { guardMode = "measured", approve, onCall, console: crewConsole = [], calls, review, allow = [] }: BuildCapabilitiesOptions = {}) {
+    const excluded = allow.length ? EXCLUDED.map((r) => ({ test: (id: string) => r.test(id) && !allow.includes(id) }) as unknown as RegExp) : EXCLUDED;
+    return buildFromProfile(broker, { profile: { excluded, replayPolicy: (id) => replayPolicyFor(id, guardMode), local: crewCapabilities(crewConsole, calls, review) }, approve, onCall });
 }

@@ -92,7 +92,8 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
         return { file, profile: p, wire: p.tier3?.wire ?? "openai-compatible" };
     };
     /** The use a call is for: the role of the prompt file it names, the agent without one. */
-    const useOf = (promptFile: string | undefined): string => /^specs\/([a-z0-9-]+)\/prompt\.md$/.exec(promptFile ?? "")?.[1] ?? "agent";
+    // A role's prompt, or one of its variants (specs/<role>/prompt.<variant>.md: 2026-10-11, the night agent's prompt of a scenario): the role's model either way.
+    const useOf = (promptFile: string | undefined): string => /^specs\/([a-z0-9-]+)\/prompt(?:\.[a-z0-9-]+)?\.md$/.exec(promptFile ?? "")?.[1] ?? "agent";
     const routes = () => Object.fromEntries(Object.keys({ agent: 1, ...routingNow(), compose: 1 }).map((use) => [use, routed(use).profile.tier3?.model ?? "?"]));
     const systemPrompt = existsSync(SYSTEM_PROMPT_FILE) ? readFileSync(SYSTEM_PROMPT_FILE, "utf8") : "";
     const conversations = new Map<string, Provider>();
@@ -108,8 +109,8 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
      */
     function promptOf(file: string | undefined): string {
         if (!file) return systemPrompt;
-        const role = /^specs\/([a-z0-9-]+)\/prompt\.md$/.exec(file)?.[1];
-        if (!role) throw new Error(`prompt "${file}" is not a role's prompt file (specs/<role>/prompt.md)`);
+        const role = /^specs\/([a-z0-9-]+)\/prompt(?:\.[a-z0-9-]+)?\.md$/.exec(file)?.[1];
+        if (!role) throw new Error(`prompt "${file}" is not a role's prompt file (specs/<role>/prompt.md, or a variant specs/<role>/prompt.<variant>.md)`);
         const full = fromRoot(file);
         if (!existsSync(full)) throw new Error(`prompt "${file}" does not exist`);
         // A role's prompt is its mission, then its socle, said once (base.ts): every factory the kernel and the policy, the Observer the kernel, the Supervisor nothing.

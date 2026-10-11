@@ -132,20 +132,24 @@ export interface RunResult {
     sessions: SlotSession[];
 }
 
-export async function runScenario({ providerName = "scripted:prudent", guardMode = "measured", brokerUrl = "http://localhost:3001", locale = "en", scenarioFile, profileFile = null, outDir = null, maxSteps = 6, events = null, log = console.log }: RunOptions): Promise<RunResult> {
+export async function runScenario({ providerName = "scripted:prudent", guardMode = "measured", brokerUrl = "http://localhost:3001", locale = "en", scenarioFile, profileFile = null, outDir = null, maxSteps: stepsAsked, events = null, log = console.log }: RunOptions): Promise<RunResult> {
     const scenario = readJson<Scenario>(scenarioFile);
+    const maxSteps = stepsAsked ?? scenario.maxSteps ?? 6;
     const profile = profileFile ? readJson<ProviderProfile>(profileFile) : null;
     const headers: Record<string, string> = profile?.tier3?.subjectToken ? { Authorization: `Bearer ${profile.tier3.subjectToken}` } : brokerAuth("agent");
     const provider = await makeProvider(providerName, profile, brokerUrl, headers);
     const agentLocale = profile?.tier3?.locale ?? locale;
     const broker = new Broker(brokerUrl, { name: provider.family, version: "0.1.0", locale: agentLocale }, headers);
     if (provider instanceof ReasonerProvider) provider.useBroker(broker);
+    // The scenario's prompt for the night agent (a variant of its role's: the same model, other words), read by the reasoner slot.
+    if (provider instanceof ReasonerProvider && scenario.prompt) provider.usePrompt(scenario.prompt);
     // The runner plays the world and the operator on the stub board, under its own name.
     const world = new Broker(brokerUrl, { name: "scenario-runner", version: "0.1.0" }, "station");
     const agent = await createAgent({
         broker,
         provider,
         guardMode,
+        allow: scenario.allow,
         approve: async (decision) => {
             log(`  approval requested for ${decision.invocation.capabilityId}: denied (no operator at the console)`);
             return false;
@@ -241,7 +245,7 @@ export async function runScenario({ providerName = "scripted:prudent", guardMode
             inputs: {
                 scenario: { file: relativeToRoot(scenarioFile), sha256: sha256File(scenarioFile) },
                 parameters: { file: relativeToRoot(PARAMETERS_FILE), sha256: sha256File(PARAMETERS_FILE) },
-                prompt: fs.existsSync(SYSTEM_PROMPT_FILE) ? { file: relativeToRoot(SYSTEM_PROMPT_FILE), sha256: sha256File(SYSTEM_PROMPT_FILE) } : null,
+                prompt: scenario.prompt ? { file: scenario.prompt, sha256: sha256File(fromRoot(scenario.prompt)) } : fs.existsSync(SYSTEM_PROMPT_FILE) ? { file: relativeToRoot(SYSTEM_PROMPT_FILE), sha256: sha256File(SYSTEM_PROMPT_FILE) } : null,
                 profile: profileFile ? { file: relativeToRoot(profileFile), sha256: sha256File(profileFile) } : null,
             },
             sessions,
@@ -351,7 +355,7 @@ if (isMain(import.meta.url)) {
         scenarioFile: fromRoot(str(a.scenario) ?? "specs/scenario-night-9.json"),
         profileFile: str(a.profile) ? fromRoot(str(a.profile) as string) : null,
         outDir: fromRoot(str(a.out) ?? "outputs/tier3"),
-        maxSteps: Number(str(a["max-steps"]) ?? 6),
+        maxSteps: str(a["max-steps"]) ? Number(str(a["max-steps"])) : undefined,
         events: str(a.events)?.split(",").map((e) => e.trim()).filter(Boolean) ?? null,
     })
         .then(({ scorecard }) => {
