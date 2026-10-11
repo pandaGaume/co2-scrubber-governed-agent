@@ -41,6 +41,12 @@ const num = (v: unknown, fallback = -1): number => (typeof v === "number" && Num
  * the exact reading stays in motor.state.
  */
 const CO2_RESOLUTION_PPM = 50;
+/**
+ * The last call's result, whole up to this many characters (2026-10-11, Test F): it was cut at 2000 without a word, in the middle of
+ * the JSON, and a library search of five documents reached the model as its first quarter. Beyond the bound the cut is said.
+ */
+const LAST_OUTPUT_MAX = 24000;
+const wholeOrSaid = (text: string): string => (text.length <= LAST_OUTPUT_MAX ? text : `${text.slice(0, LAST_OUTPUT_MAX)} ... [cut by the harness at ${LAST_OUTPUT_MAX} of ${text.length} characters: ask for a narrower read]`);
 
 export function createObserver(broker: Broker, lastResult: { current: CapabilityCall | null }): StateObserver {
     return {
@@ -60,7 +66,7 @@ export function createObserver(broker: Broker, lastResult: { current: Capability
                 boardReachable: r.ok,
                 lastCapability: last?.id ?? "",
                 lastOutcome: last?.result.outcome ?? "",
-                lastOutput: last ? JSON.stringify(last.result.output ?? last.result.error ?? null).slice(0, 2000) : "",
+                lastOutput: last ? wholeOrSaid(JSON.stringify(last.result.output ?? last.result.error ?? null)) : "",
             };
             return { id: `cabin:${co2State}`, features };
         },

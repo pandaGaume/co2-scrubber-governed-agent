@@ -107,16 +107,20 @@ export class OpenAiResponsesProvider implements Provider {
         }
         const state = this.contextMode === "state";
         const items: InputItem[] = [];
+        // Whether the last call's result goes in a function_call_output now: then the observation does not repeat it.
+        let resultSent = false;
         if (state || !this.previous) {
             items.push({ role: "user", content: intentionText(input) });
         } else {
             // The tool calls of the previous answer, each with its result: only the first was executed.
             const f = input.state.features;
+            if (this.batchResults.length) resultSent = true;
             for (const r of this.batchResults) items.push({ type: "function_call_output", call_id: r.id, output: r.content });
+            if (this.pendingCalls.some((c) => c.executed && !c.truncated)) resultSent = true;
             for (const call of this.pendingCalls) items.push({ type: "function_call_output", call_id: call.id, output: call.truncated ? TRUNCATED_RESULT : call.executed ? `${String(f.lastOutcome || "unknown")}: ${String(f.lastOutput || "no output")}` : "not executed: the harness runs one action per step; call it again at the next step if it is still needed" });
         }
         this.batchResults = [];
-        items.push({ role: "user", content: observationText(input) });
+        items.push({ role: "user", content: observationText(input, { resultSent: !state && resultSent }) });
         if (this.batchSummary) {
             items.push({ role: "user", content: this.batchSummary });
             this.batchSummary = null;

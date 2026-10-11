@@ -146,7 +146,7 @@ export interface CrewConsoleEntry {
  * A report read against what was done (2026-10-11). On night 9 Nemotron Super checked a 30 % speed with the board
  * (scrubber.check, which changes nothing), never set it, and reported "Scrubber speed reduced from 33% to 30% to save power":
  * the board stayed at 33 % until minute 200. Whether a sentence claims an action is a question of meaning, so a model reads the
- * report beside the calls of its event (the reasoner slot's review_report, the use meaning); a report that claims an action not
+ * report beside the calls of its event (the reasoner slot's review_report, the use review); a report that claims an action not
  * executed is not delivered, and goes back to the agent with what the reader found.
  */
 export interface ReportReview {

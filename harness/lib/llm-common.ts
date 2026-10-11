@@ -105,10 +105,15 @@ export function apiKeyFor(profile: ProviderProfile | null, fallbackEnvs: string[
 }
 
 /** The text the model reads at each step: the intention (once), then the observation. */
-export function observationText(input: PolicyFallbackInput): string {
+/**
+ * What the model is told at a step. `resultSent`: the last call's result went in a tool message just before (the conversation mode),
+ * so the observation does not carry it a second time (2026-10-11, Test F: a library search's result was sent twice, each time cut).
+ */
+export function observationText(input: PolicyFallbackInput, { resultSent = false }: { resultSent?: boolean } = {}): string {
     const f = input.state.features;
+    const shown = resultSent && typeof f.lastOutput === "string" && f.lastOutput ? { ...f, lastOutput: "(in the tool result above)" } : f;
     // A loop that carries a reasoning state hands it whole and nothing else of the features: the state is what to read.
-    const lines = f.state && typeof f.state === "object" ? [`Observation at this step (state ${input.state.id}). The harness's brief: ${String(f.brief ?? "")}`, "Reasoning state (the harness's, rebuilt every step; the conversation is not replayed):", JSON.stringify(f.state, null, 0)] : [`Observation at this step (state ${input.state.id}):`, JSON.stringify(f, null, 0)];
+    const lines = f.state && typeof f.state === "object" ? [`Observation at this step (state ${input.state.id}). The harness's brief: ${String(f.brief ?? "")}`, "Reasoning state (the harness's, rebuilt every step; the conversation is not replayed):", JSON.stringify(f.state, null, 0)] : [`Observation at this step (state ${input.state.id}):`, JSON.stringify(shown, null, 0)];
     if (input.candidates.length) lines.push(`Learned decisions the harness considered but did not trust enough: ${input.candidates.map((c) => c.action.id).join(", ")}.`);
     if (input.recentFailures.length) lines.push(`Recent failures: ${input.recentFailures.map((e) => `${e.decision.invocation.capabilityId} -> ${e.result.error ?? "failed"}`).join("; ")}.`);
     // The crew's tools are named only to a loop that has them (2026-10-09: every factory and the supervisor were told to call

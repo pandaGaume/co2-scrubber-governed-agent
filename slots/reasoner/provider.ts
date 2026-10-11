@@ -301,10 +301,11 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
             {
                 name: "review_report",
                 title: "Read a report against what was done",
-                description: "A report an agent wrote to the crew, read by a model beside the calls the agent executed for that event (tier3/lib/capabilities.ts): every action the report states as done, and whether a call executed it. No authority over the device: the caller decides what to do with the verdict. The model of the use meaning (specs/reasoner/routing.json).",
+                description: "A report an agent wrote to the crew, read by a model beside the calls the agent executed for that event (tier3/lib/capabilities.ts): every action the report states as done, and whether a call executed it. No authority over the device: the caller decides what to do with the verdict. The model of the use review (specs/reasoner/routing.json).",
                 inputSchema: obj({ report: { type: "string", description: "the report as the agent wrote it" }, calls: { type: "array", description: "the calls executed for the event, each {capability, input, outcome, error}" }, state: { description: "the device's state as the agent observed it when it wrote the report" } }, ["report", "calls"]),
                 handle: async (args, s) => {
-                    const use = "meaning";
+                    // Its own use (2026-10-11): the reading of a report, on the model routing.json gives it (Ultra, after Super misread four reports).
+                    const use = "review";
                     const asked = `review of a report: ${oneLine(args.report)}`;
                     runtimeEvents.append("model.asked", { ...identity(use), kindOfCall: "review", asked });
                     const started = Date.now();

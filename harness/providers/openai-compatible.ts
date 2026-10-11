@@ -177,12 +177,15 @@ export class OpenAiCompatibleProvider implements Provider {
         }
         // Every tool call of the previous answer needs a tool message now, or the API refuses the conversation; only the first was executed.
         const f = input.state.features;
+        // Whether the last call's result goes in a tool message now: then the observation does not repeat it.
+        let resultSent = this.messages.length > 0 && this.messages[this.messages.length - 1]?.role === "tool";
         for (const call of this.pendingCalls) {
+            if (call.executed && !call.truncated) resultSent = true;
             this.messages.push({ role: "tool", tool_call_id: call.id, content: call.truncated ? TRUNCATED_RESULT : call.executed ? `${String(f.lastOutcome || "unknown")}: ${String(f.lastOutput || "no output")}` : "not executed: the harness runs one action per step; call it again at the next step if it is still needed" });
         }
         this.pendingCalls = [];
         if (!this.messages.some((m) => m.role === "user")) this.messages.push({ role: "user", content: intentionText(input) });
-        this.messages.push({ role: "user", content: observationText(input) });
+        this.messages.push({ role: "user", content: observationText(input, { resultSent: this.contextMode !== "state" && resultSent }) });
         if (this.batchSummary) {
             this.messages.push({ role: "user", content: this.batchSummary });
             this.batchSummary = null;

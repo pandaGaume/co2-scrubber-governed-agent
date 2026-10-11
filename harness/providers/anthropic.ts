@@ -112,16 +112,19 @@ export class AnthropicProvider implements Provider {
             this.pendingToolUses = [];
             this.batchResults = [];
         }
+        // Whether the last call's result goes in a tool_result now: then the observation does not repeat it.
+        let resultSent = this.batchResults.length > 0;
         for (const r of this.batchResults) blocks.push({ type: "tool_result", tool_use_id: r.id, content: r.content });
         this.batchResults = [];
         // Every tool_use of the previous answer needs a tool_result in this message, or the API refuses the conversation.
         const f = input.state.features;
         for (const use of this.pendingToolUses) {
+            if (use.executed && !use.truncated) resultSent = true;
             blocks.push({ type: "tool_result", tool_use_id: use.id, content: use.truncated ? TRUNCATED_RESULT : use.executed ? `${String(f.lastOutcome || "unknown")}: ${String(f.lastOutput || "no output")}` : "not executed: the harness runs one action per step; call it again at the next step if it is still needed" });
         }
         this.pendingToolUses = [];
         if (this.messages.length === 0) blocks.push({ type: "text", text: intentionText(input) });
-        blocks.push({ type: "text", text: observationText(input) });
+        blocks.push({ type: "text", text: observationText(input, { resultSent: this.contextMode !== "state" && resultSent }) });
         if (this.batchSummary) {
             blocks.push({ type: "text", text: this.batchSummary });
             this.batchSummary = null;
