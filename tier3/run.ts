@@ -188,6 +188,15 @@ export async function runScenario({ providerName = "scripted:prudent", guardMode
         }
     };
     await crewActivity(0);
+    const commanderDecides = async (c: NonNullable<Scenario["commander"]>) => {
+        const r = await world.call("station", "operations", {});
+        const pending = r.ok ? ((r.output as { operations?: Array<{ id: string; status: string; operation: string; input: unknown }> }).operations ?? []).filter((o) => o.status === "pending") : [];
+        for (const o of pending) {
+            const d = await world.call("station", "operation_decide", { requestId: o.id, decision: c.decision, by: c.by ?? "commander (the scenario)", ...(c.note ? { note: c.note } : {}) });
+            const req = d.ok ? (d.output as { request?: { status?: string; outcome?: { error?: string } } }).request : null;
+            log(`  commander: ${c.decision} ${o.id} (${o.operation} ${JSON.stringify(o.input)}) -> ${d.ok ? req?.status : d.error}${req?.outcome?.error ? ` (${req.outcome.error})` : ""}`);
+        }
+    };
     if (scenario.board) {
         const { note: _note, ...board } = scenario.board;
         const r = await world.call("scrubber", "debug.set_cabin", { ...board, crew: crewAt(0), ppm: scenario.start.co2Ppm } as unknown as Record<string, JsonValue>);
@@ -248,6 +257,8 @@ export async function runScenario({ providerName = "scripted:prudent", guardMode
                 exchange,
                 latencyMs: trace.completedAt - trace.startedAt,
             });
+            // The commander, as the scenario stands for them: a decision on every operation the agent asked for, run by the station.
+            if (scenario.commander) await commanderDecides(scenario.commander);
             if (outcome === "report" || outcome === "ask") break;
         }
     }

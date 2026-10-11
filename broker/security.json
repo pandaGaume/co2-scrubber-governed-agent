@@ -73,6 +73,7 @@
             },
             "/station": {
                 "answer": "mcp.tools.authorise",
+                "operation_decide": "mcp.tools.authorise",
                 "commissioning_authorise": "mcp.tools.authorise",
                 "commissioning_reopen": "mcp.tools.authorise",
                 "questions_policy": "mcp.tools.authorise",

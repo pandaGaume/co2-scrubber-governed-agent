@@ -113,6 +113,8 @@ export interface Scenario {
     /** Decisions per event before the runner hands back; the runner's default when absent. */
     maxSteps?: number;
     /** The board the scenario plays on (the stub's debug.set_cabin): its guard and its simulated cabin; the speed guard when absent. */
+    /** Who stands for the commander in a take: the decision on any operation the agent asks for (station.operation_request). */
+    commander?: { decision: "authorise" | "refuse"; by?: string; note?: string };
     board?: { guard?: "speed" | "atmospheric"; pressureKpa?: number; sensor?: "ok" | "stale" | "invalid"; restartAvailable?: boolean; restartEnergyReserved?: boolean; restartLatencyMinutes?: number; note?: string };
 }
 

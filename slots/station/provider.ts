@@ -152,7 +152,32 @@ export interface StationState {
     /** The questions to the commander (Tier 4), open or answered, and the standing orders that answer some of them (`questions.ts`). */
     questions: Question[];
     questionsPolicy: QuestionsPolicy;
+    /** Operations an agent asked for on a life-support device, the commander's decision, and what the device did (2026-10-11, Test B). */
+    operations: OperationRequest[];
 }
+
+/**
+ * An operation on a life-support device, as the agent proposes it (SCRUBBER_SAFETY_SCENARIO.md, section 6: proposal, then a human's
+ * authorisation, then deterministic execution under the device's own guard). The agent never runs it: the commander decides, the
+ * station runs it under its own identity, and the device's guard has the last word.
+ */
+export interface OperationRequest {
+    id: string;
+    operation: OperationName;
+    input: Record<string, unknown>;
+    reason: string;
+    conditions: string[];
+    evidence: string[];
+    requestedBy: string;
+    at: string;
+    status: "pending" | "refused by the commander" | "executed" | "refused by the device" | "failed";
+    decision?: { by: string; decision: "authorise" | "refuse"; note: string | null; at: string };
+    outcome?: { ok: boolean; output?: unknown; error?: string; at: string };
+}
+
+/** The operations an agent may ask for, and the device tool each one runs. */
+export const OPERATIONS = { "scrubber.stop": { slot: "scrubber", tool: "scrubber.stop" }, "scrubber.set_speed": { slot: "scrubber", tool: "motor.set_speed" } } as const;
+export type OperationName = keyof typeof OPERATIONS;
 
 export const QUESTIONS_URI = "station://questions";
 export const QUESTIONS_POLICY_URI = "station://questions-policy";
@@ -181,7 +206,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
     let broker: Broker | null = null;
     /** Mother's own client of the broker: she reads the monitor and opens its sessions as the station, in the broker's trace. */
     const client = (): Broker => (broker ??= new Broker(httpBase, { name: "station", version: VERSION, locale: "en" }, "station"));
-    const state: StationState = { artifacts: {}, pushed: [], journal: [], proposals: [], devices: {}, commissionings: [], mother: [], questions: [], questionsPolicy: { ...DEFAULT_POLICY, byKind: {} } };
+    const state: StationState = { artifacts: {}, pushed: [], journal: [], proposals: [], devices: {}, commissionings: [], mother: [], questions: [], questionsPolicy: { ...DEFAULT_POLICY, byKind: {} }, operations: [] };
     let notify: (uri: string, meta: Record<string, unknown>) => void = () => undefined;
 
     const announce = (c: Commissioning) => notify(COMMISSIONINGS_URI, { [META_COMMISSIONING]: c });
@@ -995,6 +1020,68 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                 name: "registry_list",
                 inputSchema: obj({}),
                 handle: (_args, s) => ({ devices: Object.values(s.devices).sort((a, b) => a.path.localeCompare(b.path)) }),
+            },
+            {
+                name: "operation_request",
+                title: "Ask the commander for an operation on life support",
+                description:
+                    "Proposes an operation on a life-support device to the commander: what to run and with what input, why, the conditions it rests on (safeguards, recovery, what to watch), and the evidence read for it (tool answers, documents). Nothing runs now: the commander authorises or refuses; if authorised, the station runs it, and the device's own guard accepts or refuses it. Read the decision and the device's answer with station.operations. Operations: scrubber.stop { minutes }, scrubber.set_speed { percent }.",
+                inputSchema: obj(
+                    {
+                        operation: { type: "string", enum: Object.keys(OPERATIONS) },
+                        input: { type: "object", description: "the operation's input: { minutes } for scrubber.stop, { percent } for scrubber.set_speed" },
+                        reason: { type: "string", description: "why this operation, in a sentence or two" },
+                        conditions: { type: "array", items: { type: "string" }, description: "what it rests on: the safeguards, the recovery, what is watched and when it ends" },
+                        evidence: { type: "array", items: { type: "string" }, description: "what was read for it: the tool answers and documents, with their numbers" },
+                    },
+                    ["operation", "input", "reason"],
+                ),
+                handle: (args, s) => {
+                    const operation = String(args.operation) as OperationName;
+                    if (!(operation in OPERATIONS)) throw new Error(`"${operation}" is not an operation the station runs (${Object.keys(OPERATIONS).join(", ")})`);
+                    const input = args.input && typeof args.input === "object" && !Array.isArray(args.input) ? (args.input as Record<string, unknown>) : {};
+                    const list = (v: unknown) => (Array.isArray(v) ? v.map(String) : typeof v === "string" && v ? [v] : []);
+                    const request: OperationRequest = { id: `op-${s.operations.length + 1}`, operation, input, reason: String(args.reason ?? ""), conditions: list(args.conditions), evidence: list(args.evidence), requestedBy: "agent", at: new Date().toISOString(), status: "pending" };
+                    s.operations.push(request);
+                    log(`[station] operation ${request.id} requested: ${operation} ${JSON.stringify(input)}, for the commander`);
+                    return { requestId: request.id, status: request.status, authority: "commander", next: "the commander authorises or refuses; if authorised, the station runs it and the device's guard has the last word; read station.operations" };
+                },
+            },
+            {
+                name: "operation_decide",
+                title: "The commander's decision on an operation",
+                description: "The commander authorises or refuses an operation an agent asked for. Authorised, the station runs it on the device under its own identity, and records what the device answered (its guard may still refuse). Commander only (policy).",
+                inputSchema: obj({ requestId: { type: "string" }, decision: { type: "string", enum: ["authorise", "refuse"] }, by: { type: "string" }, note: { type: "string" } }, ["requestId", "decision"]),
+                handle: async (args, s) => {
+                    const request = s.operations.find((o) => o.id === String(args.requestId));
+                    if (!request) throw new Error(`no operation ${String(args.requestId)}`);
+                    if (request.status !== "pending") throw new Error(`operation ${request.id} is already ${request.status}`);
+                    const decision = args.decision === "authorise" ? "authorise" : "refuse";
+                    request.decision = { by: typeof args.by === "string" && args.by ? args.by : "commander", decision, note: typeof args.note === "string" ? args.note : null, at: new Date().toISOString() };
+                    if (decision === "refuse") {
+                        request.status = "refused by the commander";
+                        log(`[station] operation ${request.id} refused by ${request.decision.by}`);
+                        return { request };
+                    }
+                    const target = OPERATIONS[request.operation];
+                    try {
+                        const r = await client().call(target.slot, target.tool, request.input as never);
+                        request.outcome = { ok: r.ok, ...(r.ok ? { output: r.output } : { error: r.error ?? r.outcome }), at: new Date().toISOString() };
+                        request.status = r.ok ? "executed" : "refused by the device";
+                    } catch (e) {
+                        request.outcome = { ok: false, error: e instanceof Error ? e.message : String(e), at: new Date().toISOString() };
+                        request.status = "failed";
+                    }
+                    log(`[station] operation ${request.id} authorised by ${request.decision.by}: ${request.status}${request.outcome?.error ? ` (${request.outcome.error})` : ""}`);
+                    return { request };
+                },
+            },
+            {
+                name: "operations",
+                title: "The operations asked for, decided and run",
+                description: "The operations agents asked for on life-support devices: each with its status (pending, refused by the commander, executed, refused by the device), the commander's decision and what the device answered. One by its requestId, or all.",
+                inputSchema: obj({ requestId: { type: "string" } }),
+                handle: (args, s) => (typeof args.requestId === "string" && args.requestId ? { operation: s.operations.find((o) => o.id === args.requestId) ?? null } : { operations: s.operations }),
             },
             {
                 name: "registry_report",

@@ -64,6 +64,8 @@ const EXCLUDED = [
     /^cad\./,
     // The questions to the commander are asked by the harness and the factories, answered by the commander: the night's agent neither asks nor answers, and resumes nothing.
     /^station\.(ask|answer|questions_policy|narrate)$/,
+    // The commander decides an operation the agent asked for (station.operation_request, 2026-10-11): the agent asks, never decides.
+    /^station\.operation_decide$/,
     /^factory\.resume$/,
     // Live web content belongs to the governed factory harness. It is not an instruction source for the habitat agent.
     /^web\./,
