@@ -76,13 +76,13 @@ describe("the simulated board during a stop", () => {
     function board(crew: AtmosphereState["crew"], ppm: number): ScrubberState {
         const m = cabinModel();
         const s: ScrubberState = { power: true, speedPercent: 33, currentAmps: 0.15, co2Ppm: ppm, co2State: "NOMINAL", healthResidual: 0.02, profile: "adaptive", minFlowPercent: 40, runFloorPercent: 0, guard: "atmospheric", atmosphere: null };
-        s.atmosphere = { storyMinute: 0, storyMinutesPerSecond: 1, crew, cabin: { ppm, rate: m.rateAtFullCommand * 0.33 }, readings: [{ ppm, rate: m.rateAtFullCommand * 0.33 }], pressureKpa: 101.3, o2Kpa: 21.2, sensor: "ok", lastReadingAt: Date.now(), restart: { available: true, energyReserved: true, latencyMinutes: 10, readyAtMinute: null }, stop: null, alarm: null, actions: [] };
-        for (let i = 0; i < 6; i++) atmosphereTick(s);
+        s.atmosphere = { worldMinute: 0, sampledAtMinute: 0, crew, cabin: { ppm, rate: m.rateAtFullCommand * 0.33 }, readings: [{ ppm, rate: m.rateAtFullCommand * 0.33 }], pressureKpa: 101.3, o2Kpa: 21.2, sensor: "ok", lastReadingAt: Date.now(), restart: { available: true, energyReserved: true, latencyMinutes: 10, readyAtMinute: null }, stop: null, alarm: null, actions: [] };
+        for (let i = 0; i < 6; i++) atmosphereTick(s, 1);
         return s;
     }
     const stop = (s: ScrubberState, minutes: number) => {
         const a = s.atmosphere as AtmosphereState;
-        a.stop = { startedAtMinute: a.storyMinute, untilMinute: a.storyMinute + minutes, resumePercent: s.speedPercent };
+        a.stop = { startedAtMinute: a.worldMinute, untilMinute: a.worldMinute + minutes, resumePercent: s.speedPercent };
         s.power = false;
         s.speedPercent = 0;
     };
@@ -90,7 +90,7 @@ describe("the simulated board during a stop", () => {
     it("restarts at the end of the bound, back to the speed before", () => {
         const s = board(asleep, 1500);
         stop(s, 5);
-        for (let i = 0; i < 5; i++) atmosphereTick(s);
+        for (let i = 0; i < 5; i++) atmosphereTick(s, 1);
         assert.equal(s.power, true);
         assert.equal(s.speedPercent, 33);
         assert.match(String((s.atmosphere as AtmosphereState).actions.at(-1)), /the stop's bound is reached/);
@@ -102,7 +102,7 @@ describe("the simulated board during a stop", () => {
         const a = s.atmosphere as AtmosphereState;
         a.sensor = "stale";
         a.lastReadingAt = Date.now() - 60_000;
-        atmosphereTick(s);
+        atmosphereTick(s, 1);
         assert.equal(s.speedPercent, 100);
         assert.match(String(a.actions.at(-1)), /monitoring: SENSOR/);
     });
@@ -111,7 +111,7 @@ describe("the simulated board during a stop", () => {
         const s = board(asleep, 2600);
         stop(s, 60);
         (s.atmosphere as AtmosphereState).crew = exercising;
-        for (let i = 0; i < 60 && !s.power; i++) atmosphereTick(s);
+        for (let i = 0; i < 60 && !s.power; i++) atmosphereTick(s, 1);
         assert.equal(s.speedPercent, 100);
         assert.match(String((s.atmosphere as AtmosphereState).actions.join("\n")), /restart margin lost/);
     });
@@ -120,9 +120,22 @@ describe("the simulated board during a stop", () => {
         const s = board(asleep, 1500);
         stop(s, 2);
         (s.atmosphere as AtmosphereState).restart.available = false;
-        for (let i = 0; i < 2; i++) atmosphereTick(s);
+        for (let i = 0; i < 2; i++) atmosphereTick(s, 1);
         assert.equal(s.power, false);
         assert.match(String((s.atmosphere as AtmosphereState).alarm), /RESTART FAILED/);
+    });
+
+    it("lives in real time at the world's one pace: a tick is a real second, the sensor fresh at each, a reading kept per world minute", () => {
+        const s = board(asleep, 1500);
+        const a = s.atmosphere as AtmosphereState;
+        const kept = a.readings.length;
+        const minute = a.worldMinute;
+        for (let i = 0; i < 59; i++) atmosphereTick(s, 1 / 60);
+        assert.ok(Math.abs(a.worldMinute - minute - 59 / 60) < 1e-9);
+        assert.equal(a.readings.length, kept);
+        atmosphereTick(s, 1 / 60);
+        assert.equal(a.readings.length, kept + 1);
+        assert.ok(Date.now() - a.lastReadingAt < 1000);
     });
 
     it("publishes what its sensors read and its guard's lines, never the crew", () => {

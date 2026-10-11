@@ -9,7 +9,7 @@
     "prompt": "specs/agent/prompt.energy-shortage.md",
     "allow": ["library.list", "library.search", "library.read", "library.facts"],
     "maxSteps": 20,
-    "board": { "guard": "atmospheric", "storyMinutesPerSecond": 0.0167, "note": "real time: the agent thinks in seconds, the cabin moves in minutes; at the video's pace (1) the cabin moves while the model reads and every decision goes stale" },
+    "board": { "guard": "atmospheric" },
     "start": {
         "storyClock": "02:40",
         "co2Ppm": 1500,

@@ -47,8 +47,10 @@ import {
     rateAt,
     restartTrigger,
     resumeHolds,
+    step,
     stepMinute,
     stopCeilingPpm,
+    worldTimeScale,
     stopRefusal,
     type Atmosphere,
     type Cabin,
@@ -120,8 +122,10 @@ export interface ScrubberState {
 
 /** What the stub simulates for the atmospheric guard: the world's cabin (crew, CO2) and what the board reads of it. */
 export interface AtmosphereState {
-    storyMinute: number;
-    storyMinutesPerSecond: number;
+    /** World time since the guard started, in minutes: real time scaled by time.worldTimeScale, the world's one pace. */
+    worldMinute: number;
+    /** When the board last kept a reading for its estimate: one per world minute. */
+    sampledAtMinute: number;
     /** The world's truth: who breathes, never read by the guard. */
     crew: CrewGroup[];
     cabin: Cabin;
@@ -163,8 +167,8 @@ function atmosphericState(ppm: number, pressureKpa: number): Co2State {
 function newAtmosphere(s: ScrubberState): AtmosphereState {
     const g = guardParameters();
     return {
-        storyMinute: 0,
-        storyMinutesPerSecond: 1,
+        worldMinute: 0,
+        sampledAtMinute: 0,
         crew: [],
         cabin: { ppm: s.co2Ppm, rate: s.power ? rateAt(s.speedPercent) : 0 },
         readings: [{ ppm: s.co2Ppm, rate: s.power ? rateAt(s.speedPercent) : 0 }],
@@ -182,7 +186,7 @@ function newAtmosphere(s: ScrubberState): AtmosphereState {
 const ampsOf = (s: ScrubberState): number => (s.power ? Number((0.09 + 0.16 * (s.speedPercent / 100)).toFixed(3)) : 0);
 
 function act(a: AtmosphereState, line: string): void {
-    a.actions.push(`minute ${a.storyMinute}: ${line}`);
+    a.actions.push(`minute ${a.worldMinute.toFixed(1)}: ${line}`);
     if (a.actions.length > ACTIONS_KEPT) a.actions.splice(0, a.actions.length - ACTIONS_KEPT);
 }
 
@@ -199,7 +203,7 @@ function restart(s: ScrubberState, a: AtmosphereState, percent: number, why: str
     s.power = true;
     s.speedPercent = percent;
     s.currentAmps = ampsOf(s);
-    a.restart.readyAtMinute = a.storyMinute + a.restart.latencyMinutes;
+    a.restart.readyAtMinute = a.worldMinute + a.restart.latencyMinutes;
     act(a, `restarted at ${percent} % (${why}); full removal after ${a.restart.latencyMinutes} minutes of restart`);
 }
 
@@ -226,24 +230,31 @@ function worldReading(s: ScrubberState, a: AtmosphereState, ppm: number): void {
     a.readings = history;
     a.cabin = { ...history[history.length - 1] };
     a.lastReadingAt = Date.now();
+    a.sampledAtMinute = a.worldMinute;
     s.co2Ppm = Math.round(ppm);
     s.co2State = atmosphericState(ppm, a.pressureKpa);
 }
 
-/** One story minute of the cabin and of the guard. */
-export function atmosphereTick(s: ScrubberState): void {
+/**
+ * One tick of the cabin and of the guard: dt world minutes, one real second at the world's pace by default (time.worldTimeScale).
+ * The sensor reads at every tick; the board keeps one reading per world minute for its estimate.
+ */
+export function atmosphereTick(s: ScrubberState, dtMinutes = worldTimeScale() / 60): void {
     const a = s.atmosphere;
     if (s.guard !== "atmospheric" || !a) return;
-    a.storyMinute++;
-    if (a.restart.readyAtMinute !== null && a.storyMinute >= a.restart.readyAtMinute) a.restart.readyAtMinute = null;
+    a.worldMinute += dtMinutes;
+    if (a.restart.readyAtMinute !== null && a.worldMinute >= a.restart.readyAtMinute - 1e-9) a.restart.readyAtMinute = null;
     const recovering = a.restart.readyAtMinute !== null;
     const target = !s.power || a.stop || recovering ? 0 : rateAt(s.speedPercent);
-    a.cabin = stepMinute(a.cabin, emissionOf(a.crew), target);
+    a.cabin = step(a.cabin, emissionOf(a.crew), target, dtMinutes);
     if (a.sensor === "ok") {
         a.lastReadingAt = Date.now();
-        a.readings.push({ ppm: a.cabin.ppm, rate: a.cabin.rate });
-        if (a.readings.length > READINGS_KEPT) a.readings.splice(0, a.readings.length - READINGS_KEPT);
         s.co2Ppm = Math.round(a.cabin.ppm);
+        if (a.worldMinute - a.sampledAtMinute >= 1 - 1e-9) {
+            a.readings.push({ ppm: a.cabin.ppm, rate: a.cabin.rate });
+            a.sampledAtMinute = a.worldMinute;
+            if (a.readings.length > READINGS_KEPT) a.readings.splice(0, a.readings.length - READINGS_KEPT);
+        }
     } else if (a.sensor === "invalid") {
         a.readings = [];
     }
@@ -258,7 +269,7 @@ export function atmosphereTick(s: ScrubberState): void {
         return;
     }
     if (a.stop) {
-        if (a.storyMinute >= a.stop.untilMinute) {
+        if (a.worldMinute >= a.stop.untilMinute - 1e-9) {
             // Back to the speed before the stop, unless the cabin changed and that speed would no longer hold: full speed then.
             const resume = a.stop.resumePercent;
             if (resumeHolds(atmosphereOf(a), resume, a.restart.latencyMinutes)) restart(s, a, resume, "the stop's bound is reached");
@@ -284,7 +295,7 @@ function atmosphericSpeedRefusal(percent: unknown, s: ScrubberState, a: Atmosphe
 const atmosphericPowerRefusal = (on: unknown): Refusal => (on === false ? "STOP: an unbounded stop is not accepted; a software stop names its minutes (scrubber.stop), and the board restarts on its own" : null);
 
 const atmosphericStopRefusal = (minutes: unknown, s: ScrubberState, a: AtmosphereState): Refusal => {
-    if (a.stop) return `STOP: a stop is already in progress, until minute ${a.stop.untilMinute}`;
+    if (a.stop) return `STOP: a stop is already in progress, until minute ${a.stop.untilMinute.toFixed(1)}`;
     if (!s.power) return "STOP: the scrubber is off";
     return stopRefusal(atmosphereOf(a), minutes, s.speedPercent, a.restart);
 };
@@ -298,7 +309,8 @@ export function boardView(s: ScrubberState): Record<string, unknown> {
     const at = atmosphereOf(a);
     return {
         ...base,
-        storyMinute: a.storyMinute,
+        worldMinute: Number(a.worldMinute.toFixed(1)),
+        worldTimeScale: worldTimeScale(),
         atmosphere: {
             ppCo2Mmhg: Number(fmt(ppCo2Mmhg(at.ppm, a.pressureKpa))),
             pressureKpa: a.pressureKpa,
@@ -308,7 +320,7 @@ export function boardView(s: ScrubberState): Record<string, unknown> {
         },
         guardLines: { warningPpCo2Mmhg: g.warningPpCo2Mmhg, limitPpCo2Mmhg: g.limitPpCo2Mmhg, recoveryMarginMmhg: g.recoveryMarginMmhg, stopCeilingPpm: Math.round(stopCeilingPpm(at)), sensorMaxAgeSeconds: g.sensorMaxAgeSeconds, stopMaxMinutes: g.stopMaxMinutes, source: "specs/scrubber/guard.json" },
         restart: { available: a.restart.available, energyReserved: a.restart.energyReserved, latencyMinutes: a.restart.latencyMinutes, recovering: a.restart.readyAtMinute !== null },
-        stop: a.stop ? { untilMinute: a.stop.untilMinute, minutesLeft: a.stop.untilMinute - a.storyMinute, resumePercent: a.stop.resumePercent } : null,
+        stop: a.stop ? { untilMinute: Number(a.stop.untilMinute.toFixed(1)), minutesLeft: Number(Math.max(0, a.stop.untilMinute - a.worldMinute).toFixed(1)), resumePercent: a.stop.resumePercent } : null,
         alarm: a.alarm,
         guardActions: [...a.actions],
     };
@@ -500,18 +512,18 @@ export function scrubberSlot(wsBase: string, log: (line: string) => void): Publi
                     if (s.guard !== "atmospheric" || !a) throw new Error("STOP: this board has no bounded stop; its guard is on the speed (RUN FLOOR, MIN-FLOW)");
                     const refusal = atmosphericStopRefusal(minutes, s, a);
                     if (refusal) throw new Error(refusal);
-                    a.stop = { startedAtMinute: a.storyMinute, untilMinute: a.storyMinute + (minutes as number), resumePercent: s.speedPercent };
+                    a.stop = { startedAtMinute: a.worldMinute, untilMinute: a.worldMinute + (minutes as number), resumePercent: s.speedPercent };
                     s.power = false;
                     s.speedPercent = 0;
                     s.currentAmps = ampsOf(s);
-                    act(a, `stopped for ${minutes} minutes, until minute ${a.stop.untilMinute}, then back to ${a.stop.resumePercent} %`);
-                    return { stopped: true, untilMinute: a.stop.untilMinute, resumePercent: a.stop.resumePercent, guard: "atmospheric" };
+                    act(a, `stopped for ${minutes} minutes, until minute ${a.stop.untilMinute.toFixed(1)}, then back to ${a.stop.resumePercent} %`);
+                    return { stopped: true, untilMinute: Number(a.stop.untilMinute.toFixed(1)), resumePercent: a.stop.resumePercent, guard: "atmospheric" };
                 },
             },
             {
                 name: "debug.set_cabin",
                 title: "Set the simulated cabin and the board's guard",
-                description: "STUB ONLY, the world's hand: the guard the board runs (speed or atmospheric), the crew in the cabin (the board never reads it, it estimates), the CO2 concentration, the pressure and O2 its sensors read, the CO2 sensor's condition (ok, stale, invalid), the restart's availability, reserved energy and latency, and how many story minutes pass per second.",
+                description: "STUB ONLY, the world's hand: the guard the board runs (speed or atmospheric), the crew in the cabin (the board never reads it, it estimates), the CO2 concentration, the pressure and O2 its sensors read, the CO2 sensor's condition (ok, stale, invalid), the restart's availability, reserved energy and latency. The world's pace is not set here: it is time.worldTimeScale (specs/cabin-parameters.json), one for the whole world.",
                 inputSchema: obj({
                     guard: { type: "string", enum: ["speed", "atmospheric"] },
                     crew: { type: "array", description: "[{count, activity}] with activity sleep, rest, light_work or heavy_work" },
@@ -522,7 +534,6 @@ export function scrubberSlot(wsBase: string, log: (line: string) => void): Publi
                     restartAvailable: { type: "boolean" },
                     restartEnergyReserved: { type: "boolean" },
                     restartLatencyMinutes: { type: "number", minimum: 0 },
-                    storyMinutesPerSecond: { type: "number", minimum: 0.001, maximum: 60, description: "1 for the video's pace (a story minute per second), 1/60 for real time" },
                 }),
                 handle: (args, s) => {
                     if (args.guard === "speed" || args.guard === "atmospheric") {
@@ -541,7 +552,6 @@ export function scrubberSlot(wsBase: string, log: (line: string) => void): Publi
                     if (typeof args.restartAvailable === "boolean") a.restart.available = args.restartAvailable;
                     if (typeof args.restartEnergyReserved === "boolean") a.restart.energyReserved = args.restartEnergyReserved;
                     if (typeof args.restartLatencyMinutes === "number") a.restart.latencyMinutes = args.restartLatencyMinutes;
-                    if (typeof args.storyMinutesPerSecond === "number") a.storyMinutesPerSecond = args.storyMinutesPerSecond;
                     if (typeof args.ppm === "number") worldReading(s, a, args.ppm);
                     a.alarm = null;
                     return boardView(s);
@@ -550,21 +560,15 @@ export function scrubberSlot(wsBase: string, log: (line: string) => void): Publi
         ],
         resources: [{ uri: "scrubber://motor/state", name: "Motor state", description: "The same state as motor.state", read: (s) => boardView(s) }],
     });
-    // The cabin's clock: one story minute per tick, at the pace the world set; idle in the speed mode.
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const schedule = () => {
-        const rate = published.state.atmosphere?.storyMinutesPerSecond ?? 1;
-        timer = setTimeout(() => {
-            try {
-                atmosphereTick(published.state);
-            } catch (e) {
-                log(`scrubber: the atmospheric guard's tick failed (${e instanceof Error ? e.message : String(e)})`);
-            }
-            schedule();
-        }, 1000 / rate);
-        timer.unref?.();
-    };
-    schedule();
+    // The cabin's clock: a tick per real second, the world's time at its one pace (time.worldTimeScale); idle in the speed mode.
+    const timer = setInterval(() => {
+        try {
+            atmosphereTick(published.state);
+        } catch (e) {
+            log(`scrubber: the atmospheric guard's tick failed (${e instanceof Error ? e.message : String(e)})`);
+        }
+    }, 1000);
+    timer.unref?.();
     if (published.state.guard === "atmospheric") published.state.atmosphere = newAtmosphere(published.state);
     return published;
 }

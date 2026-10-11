@@ -103,14 +103,14 @@ Il faut garder `rate` (le taux effectif de la carte) avec chaque mesure.
 
 Cela tient en flottants simples : 240 pas, quelques opérations par pas, à chaque minute et à chaque commande.
 
-**Rythme** : une « minute d'histoire » = 60 s en temps réel. Le réglage local `storyMinutesPerSecond` vaut par défaut 1/60 ; à 1, une minute d'histoire passe par seconde, le rythme de la vidéo. Le scénario tourne en temps réel : en accéléré, la cabine bouge pendant que le modèle réfléchit, et le harnais refuse d'exécuter une décision prise sur un état devenu ancien.
+**Temps** : la carte vit en temps réel. Le seul réglage de rythme du système est `time.worldTimeScale` dans `specs/cabin-parameters.json` : 1 = temps réel ; 60 = une minute du monde par seconde réelle, pour accélérer une prise. Il n'en existe pas d'autre, ni par scénario ni par outil. La carte l'embarque comme réglage local. Le temps simulé n'existe que dans un calcul du jumeau, qui produit ses heures d'un coup. La carte fait un pas de calcul par seconde réelle : son capteur est frais à chaque seconde, et elle retient une mesure par minute du monde pour son estimation. Le scénario a besoin du temps réel : si la cabine est accélérée, elle bouge pendant que le modèle réfléchit, et le harnais refuse d'exécuter une décision prise sur un état devenu ancien.
 
 ## 5. Ce que `motor.state` publie (mode `atmospheric`)
 
 ```json
 {
   "power": true, "speedPercent": 33, "currentAmps": 0.143, "co2Ppm": 1488, "co2State": "NOMINAL",
-  "healthResidual": 0.02, "profile": "adaptive", "guard": "atmospheric", "storyMinute": 1,
+  "healthResidual": 0.02, "profile": "adaptive", "guard": "atmospheric", "worldMinute": 1.2, "worldTimeScale": 1,
   "atmosphere": { "ppCo2Mmhg": 1.13, "pressureKpa": 101.3, "o2Kpa": 21.2,
                   "co2Sensor": { "status": "ok", "ageSeconds": 0.4 }, "emissionEstimatePpmPerMinute": 8 },
   "guardLines": { "warningPpCo2Mmhg": 2.7, "limitPpCo2Mmhg": 3, "recoveryMarginMmhg": 0.1, "stopCeilingPpm": 3422,

@@ -91,13 +91,30 @@ export interface Cabin {
     rate: number;
 }
 
-/** One story minute of the cabin: the twin's equations with an explicit one-minute step. */
-export function stepMinute(c: Cabin, emission: number, targetRate: number, m: CabinModel = cabinModel()): Cabin {
-    const rate = c.rate + (targetRate - c.rate) / m.lagMinutes;
+/** The cabin over dt minutes: the twin's equations, explicit step. */
+export function step(c: Cabin, emission: number, targetRate: number, dtMinutes: number, m: CabinModel = cabinModel()): Cabin {
+    const rate = c.rate + ((targetRate - c.rate) * dtMinutes) / m.lagMinutes;
     const removal = c.rate * Math.max(c.ppm - m.removalFloorPpm, 0);
     const leak = m.leakPerMinute * c.ppm;
-    const ppm = Math.min(m.ceilingPpm, Math.max(m.floorPpm, c.ppm + emission - removal - leak));
+    const ppm = Math.min(m.ceilingPpm, Math.max(m.floorPpm, c.ppm + (emission - removal - leak) * dtMinutes));
     return { ppm, rate };
+}
+
+/** One minute of the cabin, the step of the board's forecast and of the twin. */
+export const stepMinute = (c: Cabin, emission: number, targetRate: number, m: CabinModel = cabinModel()): Cabin => step(c, emission, targetRate, 1, m);
+
+let scaleCache: number | null = null;
+/**
+ * The world's one pace (specs/cabin-parameters.json, time.worldTimeScale; Guillaume, 2026-10-11): world seconds per real second, 1
+ * for real time. The board, its cabin and its sensors live at that pace; only a twin run has a time of its own.
+ */
+export function worldTimeScale(): number {
+    if (scaleCache === null) {
+        const p = JSON.parse(readFileSync(PARAMETERS_FILE, "utf8")) as CabinParameters;
+        const v = param(p, "time.worldTimeScale");
+        scaleCache = Number.isFinite(v) && v > 0 ? v : 1;
+    }
+    return scaleCache;
 }
 
 export const rateAt = (percent: number, m: CabinModel = cabinModel()): number => m.rateAtFullCommand * Math.min(Math.max(percent, 0), 100) / 100;
