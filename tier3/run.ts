@@ -192,7 +192,9 @@ export async function runScenario({ providerName = "scripted:prudent", guardMode
     const boardRows: Array<Record<string, unknown>> = [];
     const waitForGuard = async (w: NonNullable<ScenarioEvent["waitFor"]>) => {
         const started = Date.now();
+        const segmentAt = (minute: number) => scenario.schedule.find((g) => minute >= g.from && minute < g.to) ?? null;
         let crewSet = JSON.stringify(crewAt(0));
+        let segmentSet = segmentAt(0);
         let lastLog = 0;
         for (;;) {
             const r = await world.call("scrubber", "motor.state", {});
@@ -206,6 +208,15 @@ export async function runScenario({ providerName = "scripted:prudent", guardMode
                 await world.call("scrubber", "debug.set_cabin", { crew: crewAt(minute) } as unknown as Record<string, JsonValue>);
                 await crewActivity(minute);
                 log(`  world: minute ${minute.toFixed(1)}, the crew is now ${crew}`);
+            }
+            // What the schedule does to the board from this minute: its sensors, its restart.
+            const segment = segmentAt(minute);
+            if (segment !== segmentSet) {
+                segmentSet = segment;
+                if (segment?.board) {
+                    await world.call("scrubber", "debug.set_cabin", segment.board as unknown as Record<string, JsonValue>);
+                    log(`  world: minute ${minute.toFixed(1)}, the board ${JSON.stringify(segment.board)}${segment.note ? ` (${segment.note})` : ""}`);
+                }
             }
             if (Date.now() - lastLog > 60_000) {
                 lastLog = Date.now();

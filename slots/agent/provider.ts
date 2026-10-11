@@ -241,6 +241,8 @@ export function agentSlot(wsBase: string, log: (line: string) => void): Publishe
         state otherwise, and an agent that wakes in someone else's cabin is not
         replaying anything. */
     async function resetWorld(world: Broker): Promise<void> {
+        // The board may have changed guard since: ask its clock again.
+        clock = null;
         for (const [tool, args] of [
             ["scrubber.co2_report", cabinReading(scenario.start?.co2Ppm, "NOMINAL")],
             ["scrubber.power", { on: true }],
@@ -279,6 +281,18 @@ export function agentSlot(wsBase: string, log: (line: string) => void): Publishe
      * or `failed` (the reasoner itself could not answer, and repeating the
      * call would repeat the failure).
      */
+    /**
+     * The world's clock while the harness thinks (Guillaume, 2026-10-11): the world runs at its factor (debug.world_time on the
+     * simulated board) except while a decision is being taken, when it runs at 1. A board without that clock (the real board, the
+     * speed guard) answers no, and the slot stops asking.
+     */
+    let clock: boolean | null = null;
+    async function thinking(world: Broker, on: boolean): Promise<void> {
+        if (clock === false) return;
+        const r = await world.call("scrubber", "debug.world_time", { harnessThinking: on });
+        if (clock === null) clock = r.ok;
+    }
+
     async function step(): Promise<"decided" | "handback" | "ended" | "failed"> {
         if (deciding) throw new Error("a decision is already being taken: this call would re-enter the loop");
         const r = await runtime();
@@ -293,6 +307,7 @@ export function agentSlot(wsBase: string, log: (line: string) => void): Publishe
 
         state.step += 1;
         deciding = true;
+        await thinking(r.world, true);
         try {
             const trace = await r.agent.decide(intention);
             // What it proposed, before what it did: the reasoning is the point,
@@ -333,6 +348,7 @@ export function agentSlot(wsBase: string, log: (line: string) => void): Publishe
             }
         } finally {
             deciding = false;
+            await thinking(r.world, false);
         }
 
         if (state.step >= MAX_STEPS) {

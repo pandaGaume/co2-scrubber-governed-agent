@@ -80,6 +80,8 @@ export interface ScheduleSegment {
     to: number;
     crew: CrewGroup[];
     note?: string;
+    /** What the world does to the board from this minute (2026-10-11, Test D): its sensors and its restart, as debug.set_cabin takes them. */
+    board?: { sensor?: "ok" | "stale" | "invalid"; pressureKpa?: number; restartAvailable?: boolean; restartEnergyReserved?: boolean };
 }
 export interface ScenarioEvent {
     at: number;
