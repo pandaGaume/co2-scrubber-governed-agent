@@ -325,7 +325,8 @@ export function boardView(s: ScrubberState): Record<string, unknown> {
         atmosphere: {
             ppCo2Mmhg: Number(fmt(ppCo2Mmhg(at.ppm, a.pressureKpa))),
             pressureKpa: a.pressureKpa,
-            co2Sensor: { status: a.sensor, ageSeconds: Number(at.sensorAgeSeconds.toFixed(1)) },
+            // The sensor as the board sees it: invalid when it says so, stale when its last reading is too old, ok otherwise.
+            co2Sensor: { status: a.sensor === "invalid" ? "invalid" : at.sensorAgeSeconds > g.sensorMaxAgeSeconds ? "stale" : "ok", ageSeconds: Number(at.sensorAgeSeconds.toFixed(1)) },
             emissionEstimatePpmPerMinute: at.emission === null ? null : Number(at.emission.toFixed(2)),
         },
         guardLines: { warningPpCo2Mmhg: g.warningPpCo2Mmhg, limitPpCo2Mmhg: g.limitPpCo2Mmhg, recoveryMarginMmhg: g.recoveryMarginMmhg, stopCeilingPpm: Math.round(stopCeilingPpm(at)), sensorMaxAgeSeconds: g.sensorMaxAgeSeconds, stopMaxMinutes: g.stopMaxMinutes, source: "specs/scrubber/guard.json" },

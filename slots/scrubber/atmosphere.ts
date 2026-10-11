@@ -204,7 +204,8 @@ export const fmt = (x: number, d = 2): string => x.toFixed(d);
  */
 export function commonRefusal(a: Atmosphere, g: GuardParameters = guardParameters()): string | null {
     if (a.sensor === "invalid") return "SENSOR: the CO2 reading is invalid; nothing is reduced on a reading the board cannot trust";
-    if (a.sensor === "stale" || a.sensorAgeSeconds > g.sensorMaxAgeSeconds) return `SENSOR: the CO2 reading is ${Math.round(a.sensorAgeSeconds)} s old (fresh under ${g.sensorMaxAgeSeconds} s); missing data is never read as safe`;
+    // The board knows a reading's age, not why it stopped coming (2026-10-11, Test D): stale is an age, as on the real board.
+    if (a.sensorAgeSeconds > g.sensorMaxAgeSeconds) return `SENSOR: the CO2 reading is ${Math.round(a.sensorAgeSeconds)} s old (fresh under ${g.sensorMaxAgeSeconds} s); missing data is never read as safe`;
     if (a.pressureKpa < g.pressureMinKpa || a.pressureKpa > g.pressureMaxKpa) return `ATMOSPHERE: cabin pressure ${fmt(a.pressureKpa, 1)} kPa is outside [${g.pressureMinKpa}, ${g.pressureMaxKpa}] kPa`;
     if (a.emission === null) return `FORECAST: not enough readings yet to estimate the CO2 emission (${g.emissionWindowMinutes} minutes of valid readings needed)`;
     return null;

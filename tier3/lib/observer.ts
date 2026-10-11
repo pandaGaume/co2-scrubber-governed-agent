@@ -22,6 +22,8 @@ export interface CabinFeatures extends Record<string, JsonValue> {
     speedPercent: number;
     currentAmps: number;
     minFlowPercent: number;
+    /** Whether the CO2 above is a current reading (2026-10-11, Test D): ok, stale (too old: the last value only), invalid, or n/a on a board that does not say. */
+    co2Sensor: string;
     boardReachable: boolean;
     lastCapability: string;
     lastOutcome: string;
@@ -54,6 +56,7 @@ export function createObserver(broker: Broker, lastResult: { current: Capability
                 speedPercent: num(st.speedPercent),
                 currentAmps: num(st.currentAmps),
                 minFlowPercent: num(st.minFlowPercent),
+                co2Sensor: String((st.atmosphere as { co2Sensor?: { status?: string } } | undefined)?.co2Sensor?.status ?? "n/a"),
                 boardReachable: r.ok,
                 lastCapability: last?.id ?? "",
                 lastOutcome: last?.result.outcome ?? "",
