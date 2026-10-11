@@ -34,7 +34,7 @@ import { existsSync } from "node:fs";
 import { fromRoot, relativeToRoot } from "../../lib/paths.js";
 import { errorMessage, readJson, sha256File } from "../../lib/files.js";
 import { objectSchema, publishSlot, type PublishedSlot, type SlotTool } from "../lib/slot-server.js";
-import { CrewService, type Band, type Subject } from "./service.js";
+import { CrewService, type Band, type Subject, type CrewActivity } from "./service.js";
 import type { HeartRateProvider } from "./heart-rate-provider.js";
 import { SimulatedProvider } from "./providers/simulated.js";
 import { BridgeProvider } from "./providers/bridge.js";
@@ -146,8 +146,8 @@ export function biomedSlot(wsBase: string, log: (line: string) => void): Publish
         },
         {
             name: "presence",
-            title: "Who is in which module",
-            description: "The occupants of every module, read before anything is opened. This is what tells you that a test on a volume exposes people, and therefore that a human has to authorise it.",
+            title: "Who is aboard, where, doing what",
+            description: "Who is aboard: the occupants of every module and what each one is doing now (sleep, rest, light_work, heavy_work, or unknown). The crew's activity is where the cabin's CO2 load comes from; the occupants are who a change of the air, or a test on a volume, exposes, and therefore why a human has to authorise it.",
             inputSchema: objectSchema({}),
             handle: (_args, s) => ({ modules: s.service.presence() }),
         },
@@ -242,6 +242,13 @@ export function biomedSlot(wsBase: string, log: (line: string) => void): Publish
             description: "The demo's presence sensor until there is one: puts a subject in a module. The scenario uses it to walk a third person into a volume under test.",
             inputSchema: objectSchema({ subjectId: { type: "string" }, module: { type: "string" } }, ["subjectId", "module"]),
             handle: (args, s) => ({ subject: s.service.move(String(args.subjectId), String(args.module)) }),
+        },
+        {
+            name: "set_activity",
+            title: "Say what people are doing",
+            description: "The demo's activity sensor until there is one, the world's hand: what these subjects are doing now (sleep, rest, light_work, heavy_work); every subject when none is named. The scenario sets it from its schedule. Not for the agent.",
+            inputSchema: objectSchema({ subjectIds: { type: "array", items: { type: "string" } }, activity: { type: "string", enum: ["sleep", "rest", "light_work", "heavy_work"] } }, ["activity"]),
+            handle: (args, s) => ({ subjects: s.service.setActivity(strings(args.subjectIds) ?? [], String(args.activity) as CrewActivity) }),
         },
     ];
 

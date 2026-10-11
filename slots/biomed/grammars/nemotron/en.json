@@ -4,7 +4,7 @@
             "description": "Read the monitor: source, roster, nominal band, open session. Says if readings are simulated."
         },
         "presence": {
-            "description": "Occupants per module. Call before proposing a test on a volume."
+            "description": "Who is aboard: the occupants of every module and what each one is doing now (sleep, rest, light_work, heavy_work, or unknown). The crew's activity is where the cabin's CO2 load comes from; the occupants are who a change of the air, or a test on a volume, exposes."
         },
         "monitor_start": {
             "description": "Open monitoring over the people in these modules for a procedure. Refused if a session is open or the modules are empty."

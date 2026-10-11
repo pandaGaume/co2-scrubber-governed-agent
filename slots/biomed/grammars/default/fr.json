@@ -5,8 +5,8 @@
             "description": "Le moniteur médical : la source des mesures, l’équipage inscrit, la bande nominale, et s’il y a une session ouverte. Dit clairement quand les mesures sont simulées."
         },
         "presence": {
-            "title": "Qui est dans quel module",
-            "description": "Les occupants de chaque module, lus avant d’ouvrir quoi que ce soit. C’est ce qui vous apprend qu’un essai sur un volume expose des personnes, et donc qu’un humain doit l’autoriser."
+            "title": "Qui est à bord, où, à faire quoi",
+            "description": "Qui est à bord : les occupants de chaque module et ce que chacun fait en ce moment (sleep, rest, light_work, heavy_work, ou unknown). L'activité de l'équipage fait la charge de CO2 de la cabine ; les occupants sont ceux qu'un changement de l'air, ou un essai sur un volume, expose."
         },
         "monitor_start": {
             "title": "Mettre les occupants sous surveillance",

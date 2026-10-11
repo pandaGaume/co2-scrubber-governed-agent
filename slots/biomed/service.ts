@@ -111,6 +111,10 @@ export interface CrewOptions {
  */
 const DEFAULT_BAND: Band = { minBpm: 45, maxBpm: 120 };
 
+/** What a person is doing, in the cabin twin's words (specs/cabin-parameters.json, crew.activities). */
+export const CREW_ACTIVITIES = ["sleep", "rest", "light_work", "heavy_work"] as const;
+export type CrewActivity = (typeof CREW_ACTIVITIES)[number];
+
 export class CrewService {
     private readonly subjects = new Map<string, Subject>();
     private readonly states = new Map<string, SubjectState>();
@@ -119,6 +123,22 @@ export class CrewService {
     private session: Session | null = null;
     private provider: HeartRateProvider | null = null;
     private readonly alarms = new Map<string, Alarm>();
+    /**
+     * What each person is doing (2026-10-11): the CO2 a crew breathes out depends on it, and an agent asked about the scrubber has to
+     * read it rather than assume it. Set by the world (the scenario's schedule) until there is an activity sensor; unknown otherwise.
+     */
+    private readonly activities = new Map<string, CrewActivity>();
+
+    /** What these people are doing now, the world's hand (set_activity). */
+    setActivity(subjectIds: string[], activity: CrewActivity): Array<{ id: string; activity: CrewActivity }> {
+        if (!CREW_ACTIVITIES.includes(activity)) throw new Error(`activity "${activity}" is not one of ${CREW_ACTIVITIES.join(", ")}`);
+        const ids = subjectIds.length ? subjectIds : [...this.subjects.keys()];
+        for (const id of ids) {
+            if (!this.subjects.has(id)) throw new Error(`no subject "${id}" on the roster`);
+            this.activities.set(id, activity);
+        }
+        return ids.map((id) => ({ id, activity }));
+    }
 
     constructor(
         roster: Subject[],
@@ -148,7 +168,7 @@ export class CrewService {
     }
 
     /** Who is where, without opening anything: what Mother reads before she asks the commander. */
-    presence(): Array<{ module: string; occupants: number; subjects: Array<{ id: string; callsign: string; name: string | null; alarm: Alarm | null }> }> {
+    presence(): Array<{ module: string; occupants: number; subjects: Array<{ id: string; callsign: string; name: string | null; activity: CrewActivity | "unknown"; alarm: Alarm | null }> }> {
         const byModule = new Map<string, Subject[]>();
         for (const s of this.subjects.values()) {
             const list = byModule.get(s.module) ?? [];
@@ -156,7 +176,7 @@ export class CrewService {
             byModule.set(s.module, list);
         }
         return [...byModule.entries()]
-            .map(([module, list]) => ({ module, occupants: list.length, subjects: list.map((s) => ({ id: s.id, callsign: s.callsign, name: s.name ?? null, alarm: this.alarms.get(s.id) ?? null })) }))
+            .map(([module, list]) => ({ module, occupants: list.length, subjects: list.map((s) => ({ id: s.id, callsign: s.callsign, name: s.name ?? null, activity: this.activities.get(s.id) ?? ("unknown" as const), alarm: this.alarms.get(s.id) ?? null })) }))
             .sort((a, b) => a.module.localeCompare(b.module));
     }
 

@@ -4,7 +4,7 @@
             "description": "Describe the biomedical monitor: its source, the roster, the nominal band, and whether readings are simulated."
         },
         "presence": {
-            "description": "Return the occupants of every module, so you can tell whether a test exposes people."
+            "description": "Who is aboard: the occupants of every module and what each one is doing now (sleep, rest, light_work, heavy_work, or unknown). The crew's activity is where the cabin's CO2 load comes from; the occupants are who a change of the air, or a test on a volume, exposes."
         },
         "monitor_start": {
             "description": "Start monitoring the occupants of the given modules for the duration of a procedure."

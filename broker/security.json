@@ -85,7 +85,9 @@
                 "sign": "mcp.tools.authorise"
             },
             "/biomed": {
-                "alarm_clear": "mcp.tools.authorise"
+                "alarm_clear": "mcp.tools.authorise",
+                "set_activity": "mcp.tools.sense",
+                "move": "mcp.tools.sense"
             },
             "/agent": {
                 "reset": "mcp.tools.control",

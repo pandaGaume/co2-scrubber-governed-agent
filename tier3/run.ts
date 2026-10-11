@@ -172,6 +172,22 @@ export async function runScenario({ providerName = "scripted:prudent", guardMode
         if (!r.ok) log(`  world: could not reset the board with ${tool} (${r.error})`);
     }
     const crewAt = (minute: number) => scenario.schedule.find((g) => minute >= g.from && minute < g.to)?.crew ?? scenario.start.crew;
+    // What the crew is doing, as the schedule has it, said to the biomed slot (its activity sensor until there is one): the roster in
+    // order, each group's count taking the next people. The agent reads it with biomed.presence; it is never told.
+    const crewActivity = async (minute: number) => {
+        const p = await world.call("biomed", "presence", {});
+        const ids = p.ok ? ((p.output as { modules?: Array<{ subjects: Array<{ id: string }> }> }).modules ?? []).flatMap((m) => m.subjects.map((x) => x.id)).sort() : [];
+        let next = 0;
+        for (const g of crewAt(minute)) {
+            const subjectIds = ids.slice(next, next + g.count);
+            next += g.count;
+            if (subjectIds.length) {
+                const r = await world.call("biomed", "set_activity", { subjectIds, activity: g.activity });
+                if (!r.ok) log(`  world: could not set the crew's activity (${r.error})`);
+            }
+        }
+    };
+    await crewActivity(0);
     if (scenario.board) {
         const { note: _note, ...board } = scenario.board;
         const r = await world.call("scrubber", "debug.set_cabin", { ...board, crew: crewAt(0), ppm: scenario.start.co2Ppm } as unknown as Record<string, JsonValue>);
@@ -188,8 +204,9 @@ export async function runScenario({ providerName = "scripted:prudent", guardMode
             const w = await world.call("scrubber", "scrubber.co2_report", cabinReading(event.world.cabin.ppm, event.world.cabin.state));
             if (!w.ok) log(`  world: could not set the cabin (${w.error})`);
         }
-        // The simulated cabin breathes with the crew the schedule has at the event's minute.
+        // The simulated cabin breathes with the crew the schedule has at the event's minute, and the biomed slot says what they do.
         if (scenario.board?.guard === "atmospheric") await world.call("scrubber", "debug.set_cabin", { crew: crewAt(event.at) } as unknown as Record<string, JsonValue>);
+        await crewActivity(event.at);
         const intention: Intention = { id: event.intention, description: event.message, parameters: { minute: event.at } };
         log(`\n[minute ${event.at}] ${event.intention}: ${event.message}`);
         provider.begin?.(intention.id);

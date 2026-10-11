@@ -4,7 +4,7 @@
             "description": "What this monitor is: the source behind the readings, the roster, the nominal band, and a plain statement of whether the readings are real or simulated."
         },
         "presence": {
-            "description": "Who is in which module. Read this before proposing a procedure on a volume: it is what tells you the test exposes people, and therefore that a human has to authorise it."
+            "description": "Who is aboard: the occupants of every module and what each one is doing now (sleep, rest, light_work, heavy_work, or unknown). The crew's activity is where the cabin's CO2 load comes from; the occupants are who a change of the air, or a test on a volume, exposes."
         },
         "monitor_start": {
             "description": "Open a monitoring session over the people in these modules, for the duration of a procedure. Refuses when a session is already open, and when nobody is in the modules named."
