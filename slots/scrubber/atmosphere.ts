@@ -1,12 +1,13 @@
 /**
  * The scrubber board's atmospheric guard, simulated (2026-10-11, SCRUBBER_SAFETY_SCENARIO.md). The safety invariants are the
- * cabin's, not the motor's: the CO2 partial pressure within the approved envelope, a forecast that preserves the recovery margin,
- * oxygen and pressure within their bounds, a sensor fresh and valid, a restart available with its energy reserved. The speed is a
+ * cabin's CO2, not the motor's speed: the CO2 partial pressure within the approved envelope, a forecast that preserves the recovery
+ * margin, the pressure within its bounds (the partial pressure is read with it), a sensor fresh and valid, a restart available with
+ * its energy reserved; the CO2 only, oxygen is not the scrubber's business (Guillaume, 2026-10-11). The speed is a
  * command. Every number is in specs/scrubber/guard.json with its source; the cabin's equations are those of
  * specs/cabin-parameters.json, the twin's.
  *
  * What the stub simulates because the scrubber has none of it yet (to be ported to the board): a cabin that lives (its CO2 moves
- * every story minute with the crew the world sets, the scrubber's removal and the leak), a pressure and an oxygen sensor, the CO2
+ * every minute with the crew the world sets, the scrubber's removal and the leak), a pressure sensor, the CO2
  * sensor's freshness and validity, the restart's latency, a restart fault and the restart's reserved energy.
  *
  * The board forecasts on its own: the emission is estimated from its last readings (the rise, plus what the scrubber removed, plus
@@ -24,8 +25,6 @@ export interface GuardParameters {
     limitPpCo2Mmhg: number;
     recoveryMarginMmhg: number;
     sensorMaxAgeSeconds: number;
-    o2MinKpa: number;
-    o2MaxKpa: number;
     pressureMinKpa: number;
     pressureMaxKpa: number;
     restartLatencyMinutes: number;
@@ -189,7 +188,6 @@ export function resumeHolds(a: Atmosphere, percent: number, latencyMinutes: numb
 export interface Atmosphere {
     ppm: number;
     pressureKpa: number;
-    o2Kpa: number;
     sensor: "ok" | "stale" | "invalid";
     sensorAgeSeconds: number;
     emission: number | null;
@@ -199,14 +197,13 @@ export interface Atmosphere {
 export const fmt = (x: number, d = 2): string => x.toFixed(d);
 
 /**
- * What every reduction needs, whatever it is: a sensor fresh and valid, oxygen and pressure within bounds, a forecast available.
+ * What every reduction needs, whatever it is: a sensor fresh and valid, the pressure within bounds, a forecast available.
  * The refusal names the invariant that failed, with its numbers.
  */
 export function commonRefusal(a: Atmosphere, g: GuardParameters = guardParameters()): string | null {
     if (a.sensor === "invalid") return "SENSOR: the CO2 reading is invalid; nothing is reduced on a reading the board cannot trust";
     if (a.sensor === "stale" || a.sensorAgeSeconds > g.sensorMaxAgeSeconds) return `SENSOR: the CO2 reading is ${Math.round(a.sensorAgeSeconds)} s old (fresh under ${g.sensorMaxAgeSeconds} s); missing data is never read as safe`;
     if (a.pressureKpa < g.pressureMinKpa || a.pressureKpa > g.pressureMaxKpa) return `ATMOSPHERE: cabin pressure ${fmt(a.pressureKpa, 1)} kPa is outside [${g.pressureMinKpa}, ${g.pressureMaxKpa}] kPa`;
-    if (a.o2Kpa < g.o2MinKpa || a.o2Kpa > g.o2MaxKpa) return `ATMOSPHERE: O2 partial pressure ${fmt(a.o2Kpa, 1)} kPa is outside [${g.o2MinKpa}, ${g.o2MaxKpa}] kPa`;
     if (a.emission === null) return `FORECAST: not enough readings yet to estimate the CO2 emission (${g.emissionWindowMinutes} minutes of valid readings needed)`;
     return null;
 }

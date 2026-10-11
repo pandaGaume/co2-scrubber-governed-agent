@@ -27,8 +27,8 @@
  *
  * The atmospheric guard (2026-10-11, SCRUBBER_SAFETY_SCENARIO.md, specs/scrubber/guard.json): a second mode, chosen by the
  * world (`debug.set_cabin` { guard: "atmospheric" }, the scenario's `board`), where the board guards the cabin and not the motor's
- * speed. The cabin lives (one story minute per tick, the twin's equations, the crew the world sets), the board reads its CO2,
- * pressure and O2 sensors, estimates the emission from its own readings, and accepts a lower speed or a bounded stop
+ * speed. The cabin lives (the twin's equations, the crew the world sets, in real time at the world's one pace), the board reads its CO2
+ * and pressure sensors, estimates the emission from its own readings, and accepts a lower speed or a bounded stop
  * (`scrubber.stop`) only when the forecast keeps the CO2 under the warning line with the recovery margin, the sensor is fresh and
  * valid and the restart is available with its energy reserved. During a stop it restarts on its own (atmosphere.ts). No run floor,
  * no minimum flow in that mode: the speed is a command. The speed mode stays the default, as the board is today.
@@ -131,7 +131,6 @@ export interface AtmosphereState {
     cabin: Cabin;
     readings: Reading[];
     pressureKpa: number;
-    o2Kpa: number;
     sensor: "ok" | "stale" | "invalid";
     lastReadingAt: number;
     restart: { available: boolean; energyReserved: boolean; latencyMinutes: number; readyAtMinute: number | null };
@@ -149,7 +148,6 @@ function atmosphereOf(a: AtmosphereState): Atmosphere {
     return {
         ppm: a.readings.at(-1)?.ppm ?? a.cabin.ppm,
         pressureKpa: a.pressureKpa,
-        o2Kpa: a.o2Kpa,
         sensor: a.sensor,
         sensorAgeSeconds: (Date.now() - a.lastReadingAt) / 1000,
         emission: estimateEmission(a.readings, g.emissionWindowMinutes),
@@ -173,7 +171,6 @@ function newAtmosphere(s: ScrubberState): AtmosphereState {
         cabin: { ppm: s.co2Ppm, rate: s.power ? rateAt(s.speedPercent) : 0 },
         readings: [{ ppm: s.co2Ppm, rate: s.power ? rateAt(s.speedPercent) : 0 }],
         pressureKpa: g.pressureKpa,
-        o2Kpa: 21.2,
         sensor: "ok",
         lastReadingAt: Date.now(),
         restart: { available: true, energyReserved: true, latencyMinutes: g.restartLatencyMinutes, readyAtMinute: null },
@@ -314,7 +311,6 @@ export function boardView(s: ScrubberState): Record<string, unknown> {
         atmosphere: {
             ppCo2Mmhg: Number(fmt(ppCo2Mmhg(at.ppm, a.pressureKpa))),
             pressureKpa: a.pressureKpa,
-            o2Kpa: a.o2Kpa,
             co2Sensor: { status: a.sensor, ageSeconds: Number(at.sensorAgeSeconds.toFixed(1)) },
             emissionEstimatePpmPerMinute: at.emission === null ? null : Number(at.emission.toFixed(2)),
         },
@@ -523,13 +519,12 @@ export function scrubberSlot(wsBase: string, log: (line: string) => void): Publi
             {
                 name: "debug.set_cabin",
                 title: "Set the simulated cabin and the board's guard",
-                description: "STUB ONLY, the world's hand: the guard the board runs (speed or atmospheric), the crew in the cabin (the board never reads it, it estimates), the CO2 concentration, the pressure and O2 its sensors read, the CO2 sensor's condition (ok, stale, invalid), the restart's availability, reserved energy and latency. The world's pace is not set here: it is time.worldTimeScale (specs/cabin-parameters.json), one for the whole world.",
+                description: "STUB ONLY, the world's hand: the guard the board runs (speed or atmospheric), the crew in the cabin (the board never reads it, it estimates), the CO2 concentration and the pressure its sensors read, the CO2 sensor's condition (ok, stale, invalid), the restart's availability, reserved energy and latency. The world's pace is not set here: it is time.worldTimeScale (specs/cabin-parameters.json), one for the whole world.",
                 inputSchema: obj({
                     guard: { type: "string", enum: ["speed", "atmospheric"] },
                     crew: { type: "array", description: "[{count, activity}] with activity sleep, rest, light_work or heavy_work" },
                     ppm: { type: "number", minimum: 0 },
                     pressureKpa: { type: "number" },
-                    o2Kpa: { type: "number" },
                     sensor: { type: "string", enum: ["ok", "stale", "invalid"] },
                     restartAvailable: { type: "boolean" },
                     restartEnergyReserved: { type: "boolean" },
@@ -544,7 +539,6 @@ export function scrubberSlot(wsBase: string, log: (line: string) => void): Publi
                     if (!a) return boardView(s);
                     if (Array.isArray(args.crew)) a.crew = (args.crew as CrewGroup[]).map((g) => ({ count: Number(g.count) || 0, activity: g.activity }));
                     if (typeof args.pressureKpa === "number") a.pressureKpa = args.pressureKpa;
-                    if (typeof args.o2Kpa === "number") a.o2Kpa = args.o2Kpa;
                     if (args.sensor === "ok" || args.sensor === "stale" || args.sensor === "invalid") {
                         if (args.sensor === "ok" && a.sensor !== "ok") a.readings = [];
                         a.sensor = args.sensor;

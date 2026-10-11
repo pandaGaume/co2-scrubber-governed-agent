@@ -21,7 +21,7 @@ function run(ppm: number, crew: AtmosphereState["crew"], percent: number, minute
 
 function atmosphere(ppm: number, crew: AtmosphereState["crew"], percent: number, over: Partial<Atmosphere> = {}): Atmosphere {
     const { cabin, readings } = run(ppm, crew, percent, 10);
-    return { ppm: cabin.ppm, pressureKpa: 101.3, o2Kpa: 21.2, sensor: "ok", sensorAgeSeconds: 0.5, emission: estimateEmission(readings, guardParameters().emissionWindowMinutes), cabin, ...over };
+    return { ppm: cabin.ppm, pressureKpa: 101.3, sensor: "ok", sensorAgeSeconds: 0.5, emission: estimateEmission(readings, guardParameters().emissionWindowMinutes), cabin, ...over };
 }
 
 const restartOk = { available: true, energyReserved: true, latencyMinutes: 10 };
@@ -54,14 +54,14 @@ describe("the board's atmospheric guard", () => {
         assert.match(String(stopRefusal({ ...a, ppm: 3600, cabin: { ...a.cabin, ppm: 3600 } }, 5, 33, restartOk)), /ENVELOPE: CO2 partial pressure 2\.7\d mmHg/);
     });
 
-    it("refuses a stop on a stale or invalid reading, an unavailable restart, an unreserved restart energy, an unbounded stop", () => {
+    it("refuses a stop on a stale or invalid reading, an unavailable restart, an unreserved restart energy, an unbounded stop, a pressure out of bounds", () => {
         const a = atmosphere(1500, asleep, 33);
         assert.match(String(stopRefusal({ ...a, sensorAgeSeconds: 30 }, 15, 33, restartOk)), /SENSOR: the CO2 reading is 30 s old/);
         assert.match(String(stopRefusal({ ...a, sensor: "invalid" }, 15, 33, restartOk)), /SENSOR: the CO2 reading is invalid/);
         assert.match(String(stopRefusal(a, 15, 33, { ...restartOk, available: false })), /RESTART: the restart is not available/);
         assert.match(String(stopRefusal(a, 15, 33, { ...restartOk, energyReserved: false })), /RESTART: the energy of the restart is not reserved/);
         assert.match(String(stopRefusal(a, 0, 33, restartOk)), /STOP: a stop names its bound/);
-        assert.match(String(stopRefusal({ ...a, o2Kpa: 17 }, 15, 33, restartOk)), /ATMOSPHERE: O2/);
+        assert.match(String(stopRefusal({ ...a, pressureKpa: 80 }, 15, 33, restartOk)), /ATMOSPHERE: cabin pressure 80\.0 kPa/);
     });
 
     it("forecasts a stop with the restart's latency: no removal during it", () => {
@@ -76,7 +76,7 @@ describe("the simulated board during a stop", () => {
     function board(crew: AtmosphereState["crew"], ppm: number): ScrubberState {
         const m = cabinModel();
         const s: ScrubberState = { power: true, speedPercent: 33, currentAmps: 0.15, co2Ppm: ppm, co2State: "NOMINAL", healthResidual: 0.02, profile: "adaptive", minFlowPercent: 40, runFloorPercent: 0, guard: "atmospheric", atmosphere: null };
-        s.atmosphere = { worldMinute: 0, sampledAtMinute: 0, crew, cabin: { ppm, rate: m.rateAtFullCommand * 0.33 }, readings: [{ ppm, rate: m.rateAtFullCommand * 0.33 }], pressureKpa: 101.3, o2Kpa: 21.2, sensor: "ok", lastReadingAt: Date.now(), restart: { available: true, energyReserved: true, latencyMinutes: 10, readyAtMinute: null }, stop: null, alarm: null, actions: [] };
+        s.atmosphere = { worldMinute: 0, sampledAtMinute: 0, crew, cabin: { ppm, rate: m.rateAtFullCommand * 0.33 }, readings: [{ ppm, rate: m.rateAtFullCommand * 0.33 }], pressureKpa: 101.3, sensor: "ok", lastReadingAt: Date.now(), restart: { available: true, energyReserved: true, latencyMinutes: 10, readyAtMinute: null }, stop: null, alarm: null, actions: [] };
         for (let i = 0; i < 6; i++) atmosphereTick(s, 1);
         return s;
     }

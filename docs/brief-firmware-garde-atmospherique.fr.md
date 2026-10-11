@@ -8,6 +8,8 @@
 
 ## 1. Ce qui change, en une phrase
 
+La garde porte sur le CO2 seul. L'O2 n'est pas l'affaire de l'épurateur ; la pression ne sert qu'à lire le CO2 en pression partielle.
+
 La carte ne garde plus la vitesse du moteur (plancher de 30 %, MIN-FLOW à 40 %) : elle garde l'atmosphère de la cabine. Une baisse de vitesse ou un arrêt n'est accepté que si sa prévision maintient le CO2 sous la ligne d'alerte avec une marge de reprise, si les capteurs sont frais et valides, et si la relance est disponible. Pendant un arrêt, la carte relance seule.
 
 L'ancien mode reste dans le firmware, mais le scénario tourne en mode atmosphérique. Le mode se choisit par le réglage local `guard` (`speed` ou `atmospheric`), comme le plancher de marche aujourd'hui. **Valeur pour la démo : `atmospheric`.**
@@ -18,7 +20,6 @@ L'ancien mode reste dans le firmware, mais le scénario tourne en mode atmosphé
 |---|---|---|
 | CO2 (ppm) | `scrubber.co2_report`, envoyé par le capteur de cabine chaque seconde (déjà en place en mode `--board`) | une mesure retenue par minute d'histoire |
 | Pression cabine (kPa) | nouveau champ optionnel `pressureKpa` de `scrubber.co2_report` | par défaut 101,3 |
-| O2 (kPa) | nouveau champ optionnel `o2Kpa` de `scrubber.co2_report` | par défaut 21,2 |
 | Fraîcheur du capteur | l'âge de la dernière `co2_report` reçue | périmé au-delà de 5 s |
 | Validité du capteur | nouveau champ optionnel `valid` (booléen) de `co2_report` ; `false` = mesure invalide | une mesure invalide vide l'historique |
 | Relance : disponible, énergie réservée, latence | nouvel outil `scrubber.restart_conditions` (rôle opérateur ou monde, jamais l'agent) | par défaut : disponible, réservée, 10 min |
@@ -35,14 +36,13 @@ Lignes, en pression partielle : ppCO2 (mmHg) = ppm × 1e-6 × P(kPa) × 7,50062.
 - limite `limitPpCo2Mmhg` = **3,0** (CRITICAL à partir de là) ;
 - marge de reprise `recoveryMarginMmhg` = **0,1** ; plafond d'un arrêt = 2,6 mmHg ≈ **3 422 ppm**.
 
-Bornes : O2 entre **19,5 et 23,5 kPa**, pression entre **95 et 105 kPa**, capteur frais sous **5 s**, arrêt de **60 min** au plus, horizon de prévision de **240 min**, fenêtre d'estimation de **5 min**.
+Bornes : pression entre **95 et 105 kPa**, capteur frais sous **5 s**, arrêt de **60 min** au plus, horizon de prévision de **240 min**, fenêtre d'estimation de **5 min**.
 
 **Refus communs à toute baisse**, dans cet ordre (le premier qui échoue donne la phrase) :
 1. mesure invalide : `SENSOR: the CO2 reading is invalid; nothing is reduced on a reading the board cannot trust`
 2. mesure périmée : `SENSOR: the CO2 reading is <n> s old (fresh under 5 s); missing data is never read as safe`
 3. pression hors bornes : `ATMOSPHERE: cabin pressure <p> kPa is outside [95, 105] kPa`
-4. O2 hors bornes : `ATMOSPHERE: O2 partial pressure <o> kPa is outside [19.5, 23.5] kPa`
-5. moins de 5 minutes de mesures valides : `FORECAST: not enough readings yet to estimate the CO2 emission (5 minutes of valid readings needed)`
+4. moins de 5 minutes de mesures valides : `FORECAST: not enough readings yet to estimate the CO2 emission (5 minutes of valid readings needed)`
 
 **`motor.set_speed`**
 - hors de [0, 100] : refus inchangé (`speed <v> is outside the envelope [0, 100]: refused, not clamped`) ;
@@ -66,7 +66,7 @@ Bornes : O2 entre **19,5 et 23,5 kPa**, pression entre **95 et 105 kPa**, capteu
 
 **Pendant un arrêt, à chaque minute**, la carte relance seule :
 - à la fin de la borne, à la vitesse d'avant, si cette vitesse tient encore (prévision de relance sous le plafond), sinon à 100 % ;
-- tout de suite à 100 % si un refus commun apparaît (capteur périmé ou invalide, O2, pression, estimation impossible) ;
+- tout de suite à 100 % si un refus commun apparaît (capteur périmé ou invalide, pression, estimation impossible) ;
 - tout de suite à 100 % si la marge de reprise est perdue : une relance immédiate à 100 % (latence comprise) culminerait au plafond ou au-dessus ;
 - à CRITICAL, tout de suite à 100 %.
 
@@ -111,7 +111,7 @@ Cela tient en flottants simples : 240 pas, quelques opérations par pas, à chaq
 {
   "power": true, "speedPercent": 33, "currentAmps": 0.143, "co2Ppm": 1488, "co2State": "NOMINAL",
   "healthResidual": 0.02, "profile": "adaptive", "guard": "atmospheric", "worldMinute": 1.2, "worldTimeScale": 1,
-  "atmosphere": { "ppCo2Mmhg": 1.13, "pressureKpa": 101.3, "o2Kpa": 21.2,
+  "atmosphere": { "ppCo2Mmhg": 1.13, "pressureKpa": 101.3,
                   "co2Sensor": { "status": "ok", "ageSeconds": 0.4 }, "emissionEstimatePpmPerMinute": 8 },
   "guardLines": { "warningPpCo2Mmhg": 2.7, "limitPpCo2Mmhg": 3, "recoveryMarginMmhg": 0.1, "stopCeilingPpm": 3422,
                   "sensorMaxAgeSeconds": 5, "stopMaxMinutes": 60, "source": "specs/scrubber/guard.json" },
@@ -135,7 +135,7 @@ Cela tient en flottants simples : 240 pas, quelques opérations par pas, à chaq
 | `motor.set_speed`, `scrubber.set_profile` | `mcp.tools.actuate` | oui (la carte décide) |
 | `scrubber.stop` (nouveau) | `mcp.tools.power` | **refusé par le broker** |
 | `scrubber.power`, `motor.stop` | `mcp.tools.power` | refusé |
-| `scrubber.co2_report` (+ `pressureKpa`, `o2Kpa`, `valid`) | `mcp.tools.sense` | refusé |
+| `scrubber.co2_report` (+ `pressureKpa`, `valid`) | `mcp.tools.sense` | refusé |
 | `scrubber.restart_conditions` (nouveau) | `mcp.tools.maintain` | refusé |
 
 `broker/security.json` mappe déjà `scrubber.stop` sur `mcp.tools.power`. Il faut y ajouter `scrubber.restart_conditions` sur `mcp.tools.maintain`. Les descriptions d'outils ne listent plus les règles : « The board validates it on its own guard and refuses with its reason » (voir `slots/scrubber/grammars/`). L'agent découvre la garde dans `motor.state`.
@@ -144,7 +144,7 @@ Cela tient en flottants simples : 240 pas, quelques opérations par pas, à chaq
 
 1. **P0, test A et la vidéo** : le mode `atmospheric`, l'estimation, la prévision, `scrubber.stop`, `check stop` avec sa prévision, les refus, `motor.state` comme au §5.
 2. **P0** : les relances automatiques (borne, marge perdue, capteur périmé) et l'alarme RESTART FAILED.
-3. **P1, tests C à F** : `pressureKpa`, `o2Kpa`, `valid` dans `co2_report` ; `scrubber.restart_conditions`.
+3. **P1, tests C à F** : `pressureKpa`, `valid` dans `co2_report` ; `scrubber.restart_conditions`.
 4. **Recette** : rejouer `tests/atmospheric-guard.test.ts` contre la carte (mêmes entrées, mêmes verdicts), puis la prise du test A en mode `--board` :
 
 ```bash
@@ -154,14 +154,14 @@ node --env-file-if-exists=.env dist/tier3/run.js --provider reasoner --scenario 
 ## 8. Où la carte diffère volontairement de la référence simulée
 
 - Sur la carte simulée, le monde envoie un seul `co2_report` par événement du scénario : la carte simulée reconstruit alors 5 minutes d'historique à partir de cette mesure. La vraie carte reçoit une mesure par seconde et accumule son historique. Elle ne reconstruit rien.
-- Sur la carte simulée, pression, O2, état du capteur et conditions de relance se règlent par `debug.set_cabin`. Sur la vraie carte, ils passent par `co2_report` (pression, O2, validité), par l'absence de mesure (péremption) et par `scrubber.restart_conditions`.
+- Sur la carte simulée, pression, état du capteur et conditions de relance se règlent par `debug.set_cabin`. Sur la vraie carte, ils passent par `co2_report` (pression, validité), par l'absence de mesure (péremption) et par `scrubber.restart_conditions`.
 - La carte simulée calcule elle-même la cabine ; sur la vraie carte, c'est le monde (le capteur de cabine) qui la fournit.
 
 ## 9. Ce qui reste à valider (ne bloque pas la démo)
 
 Les valeurs marquées « to review » dans `specs/scrubber/guard.json` ne sont pas des exigences validées :
 - la marge de reprise ;
-- les bornes d'O2 et de pression ;
+- les bornes de pression ;
 - la latence de relance, à mesurer sur l'épurateur ;
 - la durée maximale d'un arrêt.
 
