@@ -1093,7 +1093,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     },
                     ["operation", "input", "reason"],
                 ),
-                handle: (args, s) => {
+                handle: async (args, s) => {
                     const operation = String(args.operation) as OperationName;
                     if (!(operation in OPERATIONS)) throw new Error(`"${operation}" is not an operation the station runs (${Object.keys(OPERATIONS).join(", ")})`);
                     const input = args.input && typeof args.input === "object" && !Array.isArray(args.input) ? (args.input as Record<string, unknown>) : {};
@@ -1101,20 +1101,46 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     const request: OperationRequest = { id: `op-${s.operations.length + 1}`, operation, input, reason: String(args.reason ?? ""), conditions: list(args.conditions), evidence: list(args.evidence), requestedBy: "agent", at: new Date().toISOString(), status: "pending" };
                     s.operations.push(request);
                     log(`[station] operation ${request.id} requested: ${operation} ${JSON.stringify(input)}, for the commander`);
-                    return { requestId: request.id, status: request.status, authority: "commander", next: "the commander authorises or refuses; if authorised, the station runs it and the device's guard has the last word; read station.operations" };
+                    // Asked of the commander for real, in Mother's chat (2026-10-12, Guillaume: the agent said it awaited an authorisation, and
+                    // no question was posed): the answer calls operation_decide back. No role on it: the commander's names nobody yet
+                    // (specs/station/roles.json), and a question for it could not be answered.
+                    const asked = await askQuestion({
+                        from: "night agent",
+                        kind: "operation",
+                        question: `The night agent asks to run ${operation} ${JSON.stringify(input)}: ${request.reason}`,
+                        options: [{ id: "authorise", label: "authorise" }, { id: "refuse", label: "refuse" }],
+                        context: { requestId: request.id, operation, input, reason: request.reason, conditions: request.conditions, evidence: request.evidence } as never,
+                        resume: { slot: "station", tool: "operation_decide", args: { requestId: request.id } },
+                    });
+                    return { requestId: request.id, status: request.status, authority: "commander", questionId: asked.questionId, next: "the commander is asked in Mother's chat and authorises or refuses; if authorised, the station runs it and the device's guard has the last word; read station.operations" };
                 },
             },
             {
                 name: "operation_decide",
                 title: "The commander's decision on an operation",
                 description: "The commander authorises or refuses an operation an agent asked for. Authorised, the station runs it on the device under its own identity, and records what the device answered (its guard may still refuse). Commander only (policy).",
-                inputSchema: obj({ requestId: { type: "string" }, decision: { type: "string", enum: ["authorise", "refuse"] }, by: { type: "string" }, note: { type: "string" } }, ["requestId", "decision"]),
+                inputSchema: obj({ requestId: { type: "string" }, decision: { type: "string", enum: ["authorise", "refuse"] }, by: { type: "string" }, note: { type: "string" }, questionId: { type: "string" }, answer: { type: "object" } }, ["requestId"]),
                 handle: async (args, s) => {
                     const request = s.operations.find((o) => o.id === String(args.requestId));
                     if (!request) throw new Error(`no operation ${String(args.requestId)}`);
                     if (request.status !== "pending") throw new Error(`operation ${request.id} is already ${request.status}`);
-                    const decision = args.decision === "authorise" ? "authorise" : "refuse";
-                    request.decision = { by: typeof args.by === "string" && args.by ? args.by : "commander", decision, note: typeof args.note === "string" ? args.note : null, at: new Date().toISOString() };
+                    // Called directly (a scenario's commander, a script), or back from the question in Mother's chat with the commander's answer.
+                    const answered = args.answer && typeof args.answer === "object" ? (args.answer as { choice?: string; by?: string; note?: string | null }) : null;
+                    const asked = str(args.decision) || answered?.choice || "";
+                    if (asked !== "authorise" && asked !== "refuse") throw new Error(`decision is "authorise" or "refuse", not "${asked}"`);
+                    const decision = asked;
+                    const by = str(args.by) || answered?.by || "commander";
+                    const note = str(args.note) || answered?.note || null;
+                    request.decision = { by, decision, note, at: new Date().toISOString() };
+                    // A direct call settles the question in Mother's chat, so nobody answers it twice.
+                    if (!args.questionId) {
+                        for (const q of state.questions) {
+                            if (q.status !== "open" || q.kind !== "operation" || (q.context as { requestId?: string } | null)?.requestId !== request.id) continue;
+                            q.answer = { choice: decision, by, at: request.decision.at, note, how: "script" };
+                            q.status = "answered";
+                            notify(QUESTIONS_URI, { [META_QUESTION]: q });
+                        }
+                    }
                     if (decision === "refuse") {
                         request.status = "refused by the commander";
                         log(`[station] operation ${request.id} refused by ${request.decision.by}`);

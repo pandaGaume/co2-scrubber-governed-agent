@@ -25,9 +25,10 @@
  *      `&broker=<origin>` (default: the page's)
  *      `&seconds=6` how long one trajectory takes to replay
  *      `&slow=15000` ms between two looks at the runs while the push stream is down
+ *      `&view=fit|follow` the whole graph framed (default), or the viewer on the cabin
  */
 import { Broker } from "../harness/lib/broker.js";
-import { createBar, disableStudioPlayer, installLoopStyle, type Studio, type StudioNode } from "./studio-loop.js";
+import { createBar, disableStudioPlayer, installLoopStyle, viewControls, type Studio, type StudioNode, type ViewMode } from "./studio-loop.js";
 import { ROOM_COLORS } from "./room-skin.js";
 import { watchSlot } from "./pushes.js";
 import { NOTES_LABEL, PLOTS } from "./twin-plots.js";
@@ -100,7 +101,8 @@ export default async function activate(studio: Studio): Promise<void> {
 
     installLoopStyle(STYLE);
     const viewer = studio.getViewer();
-    studio.setLayout({ palette: false, properties: false, console: false, dashboardHeight: 300 });
+    // The tiles take a third of the window at most (2026-10-12, Guillaume: in its half-screen window the graph was left a strip).
+    studio.setLayout({ palette: false, properties: false, console: false, dashboardHeight: Math.max(150, Math.min(300, Math.round(window.innerHeight / 3))) });
     disableStudioPlayer("This graph is the cabin twin: the twin slot runs it to answer its questions; this page replays the answers.");
 
     // The document's ids (`cabin`, `scrubber`...) are stable; the viewer's are not. The labels join the two.
@@ -258,6 +260,10 @@ export default async function activate(studio: Studio): Promise<void> {
     // ── Toolbar: the runs, replay, the board ───────────────────────────────
     const toolbar = createBar("TWIN");
     const { bar, badge, select, button } = toolbar;
+    // The view, as on the agent's and the factory's pages (2026-10-12, Guillaume: no fit all nor follow here, and a graph lost after a
+    // click could not be brought back): the whole graph framed, again when the window changes; or the viewer on the cabin.
+    const { frame } = viewControls(toolbar, { mode: (params.get("view") === "follow" ? "follow" : "fit") as ViewMode, threshold: 120, zoom: 1 }, studio, () => byId.get("cabin") ?? null, () => byId.get("cabin"));
+    button("fit", "the whole graph framed again, now", () => frame());
     const runSel = select("The questions asked to the twin, newest first; the page replays each new one unless one is chosen here", [["latest", "latest question"]], "latest");
     button("replay", "replay the question shown, minute by minute", () => {
         const run = chosen();
@@ -313,8 +319,8 @@ export default async function activate(studio: Studio): Promise<void> {
         }
     };
 
-    studio.fitToContent(28);
-    setTimeout(() => studio.fitToContent(28), 300);
+    frame();
+    setTimeout(frame, 300);
     await catchUp(true);
     setStatus(runs.size ? `${runs.size} question(s) kept by the twin` : "no question asked to the twin yet");
     const stream = watchSlot(

@@ -41,6 +41,7 @@ import { AudioOutput } from "./audio-output.js";
 import { StationVoice, eventSentence, outcomeSentence, proposalSentence, shortSentence, speechHeard } from "./station-voice.js";
 import type { GuardMode } from "../lib/capabilities.js";
 import { outcomeOf } from "../lib/evaluator.js";
+import { resetBoard } from "../lib/board-start.js";
 import { ReasonerProvider } from "../../harness/providers/reasoner.js";
 import { ScriptedProvider } from "../../stand-ins/night/scripted.js";
 import type { Provider } from "../../harness/lib/provider.js";
@@ -408,11 +409,8 @@ export default async function activate(studio: Studio): Promise<void> {
     }
 
     async function reset(): Promise<void> {
-        for (const [tool, args] of [
-            ["scrubber.co2_report", storyReading("NOMINAL", scenario.start.co2Ppm)],
-            ["scrubber.power", { on: true }],
-            ["motor.set_speed", { percent: scenario.start.scrubberCommandPercent }],
-        ] as const) await world.call("scrubber", tool, { ...args });
+        const reading = storyReading("NOMINAL", scenario.start.co2Ppm);
+        await resetBoard(world, { speedPercent: scenario.start.scrubberCommandPercent, ppm: reading.ppm, reading });
         lights.clear();
         monitor?.push({ kind: "reset" });
         agent = null;

@@ -39,6 +39,7 @@ import { inventoryOf } from "../factory/inventory.js";
 import type { Device } from "../station/registry.js";
 import { errorMessage } from "../../lib/files.js";
 import { cabinReading } from "../../lib/cabin-co2.js";
+import { resetBoard } from "../../tier3/lib/board-start.js";
 import { loadPlaybook, playbookProblems, sayingText, signedPlaybook, type Playbook, type PlaybookFile, type Saying } from "../../harness/core/conduct.js";
 import { loadWords, say } from "../../harness/core/words.js";
 import { SIGNATORY } from "../../lib/roles.js";
@@ -317,9 +318,8 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
         // The stand-in world, from here: its CO2 is on the device before the procedure is written, so the factory is given the CO2 the test will start from (2026-09-28).
         // The board on the guard a commissioning is written for (2026-10-11): a safety take may have left the simulated board on its
         // atmospheric guard; a stub tool, absent on the real board, which answers no and is left as it is.
-        await operator.call("scrubber", "debug.set_cabin", { guard: "speed" }).catch(() => undefined);
         const world = new TwoZoneWorldSim(run.options.world === "hidden-occupant" ? { ...LAB_WORLD, labOccupants: 3 } : LAB_WORLD);
-        await call("scrubber", "scrubber.co2_report", cabinReading(world.labPpm));
+        for (const line of await resetBoard(operator, { speedPercent: 33, ppm: Math.round(world.labPpm), reading: cabinReading(world.labPpm) })) log(`[scenario] ${run.id}: world: ${line}`);
         const sensor = devices.find((d) => d.descriptor["@type"] === "Co2Sensor" && /\/lab\//.test(d.path))?.path ?? null;
         // What the factory is told was measured when its task opened: the CO2 the test starts from, and the scrubber's speed, which the
         // signed card says a test hands the scrubber back at (rule end.restore): the plan restores it, not this player.

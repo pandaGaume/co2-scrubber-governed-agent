@@ -36,6 +36,7 @@ import { PARAMETERS_FILE, SYSTEM_PROMPT_FILE, fromRoot, isMain, relativeToRoot }
 import { Broker, type SlotSession } from "../harness/lib/broker.js";
 import { brokerAuth } from "../harness/lib/broker-auth.js";
 import { cabinReading } from "../lib/cabin-co2.js";
+import { resetBoard } from "./lib/board-start.js";
 import { createAgent, type Agent } from "./agent.js";
 import { outcomeOf, type TraceOutcome } from "./lib/evaluator.js";
 import { writeTakeLog } from "./lib/take-log.js";
@@ -162,8 +163,6 @@ export async function runScenario({ providerName = "scripted:prudent", guardMode
     const narrateCall = (c: CapabilityCall) => {
         const input = (c.input ?? {}) as Record<string, unknown>;
         if (c.id === "crew.report") narrate(c.result.ok ? `The night agent reports: ${words(input.message)}` : "The night agent's report is not delivered: read against what was done, it states as done what was not.");
-        else if (c.id === "crew.ask") narrate(`The night agent asks the crew: ${words(input.message)}`);
-        else if (c.id === "station.operation_request" && c.result.ok) narrate(`The night agent asks the commander for ${words(input.operation)} ${words(input.input)}: ${words(input.reason)}`);
         else if (!c.result.ok && (c.result.outcome === "refused" || c.result.outcome === "deny")) narrate(`${c.result.outcome === "deny" ? "The broker denies" : "The device refuses"} the night agent's ${c.id}: ${words(c.result.error ?? "")}`);
     };
     const agent = await createAgent({
@@ -185,17 +184,8 @@ export async function runScenario({ providerName = "scripted:prudent", guardMode
     log(`agent: provider ${provider.name} (family ${provider.family}, locale ${agentLocale}), guard ${guardMode}, ${agent.catalogue.length} capabilities (${agent.catalogue.filter((c) => c.replayPolicy !== "automatic").map((c) => `${c.id}:${c.replayPolicy}`).join(", ") || "all automatic"})`);
     log(`grammars: ${Object.entries(grammar).map(([slot, key]) => `${slot}=${key ?? "none"}`).join(", ")}`);
 
-    // The board starts where the scenario starts (the stub keeps the state of the previous run otherwise): NOMINAL, powered, at the start command,
-    // on the speed guard first (a stub tool: the real board has none, and says so); the scenario's board after (its guard, its cabin).
-    await world.call("scrubber", "debug.set_cabin", { guard: "speed" });
-    for (const [tool, args] of [
-        ["scrubber.co2_report", cabinReading(scenario.start.co2Ppm, "NOMINAL")],
-        ["scrubber.power", { on: true }],
-        ["motor.set_speed", { percent: scenario.start.scrubberCommandPercent }],
-    ] as const) {
-        const r = await world.call("scrubber", tool, { ...args });
-        if (!r.ok) log(`  world: could not reset the board with ${tool} (${r.error})`);
-    }
+    // The board starts where the scenario starts, whatever the last one left (lib/board-start.ts); the scenario's board after (its guard, its cabin).
+    for (const line of await resetBoard(world, { speedPercent: scenario.start.scrubberCommandPercent, ppm: scenario.start.co2Ppm, reading: cabinReading(scenario.start.co2Ppm, "NOMINAL") })) log(`  world: ${line}`);
     const crewAt = (minute: number) => scenario.schedule.find((g) => minute >= g.from && minute < g.to)?.crew ?? scenario.start.crew;
     // What the crew is doing, as the schedule has it, said to the biomed slot (its activity sensor until there is one): the roster in
     // order, each group's count taking the next people. The agent reads it with biomed.presence; it is never told.

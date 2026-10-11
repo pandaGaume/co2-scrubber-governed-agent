@@ -13,6 +13,7 @@
         "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.json && node dist/scripts/build-agent-page.js",
         "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
         "server": "node --env-file-if-exists=.env dist/slots/run-all.js",
+        "server:kiosk": "node --env-file-if-exists=.env dist/slots/run-all.js  -- --kiosk",
         "biomed:start": "node dist/scripts/biomed-session.js start",
         "biomed:stop": "node dist/scripts/biomed-session.js stop",
         "biomed:state": "node dist/scripts/biomed-session.js state",

@@ -300,6 +300,27 @@ function createBar(title) {
   };
   return { bar, badge, select, button, numberInput };
 }
+function viewControls(bar, initial, studio, lit, first) {
+  const settings = { ...initial };
+  const frame = () => studio.fitToContent(28);
+  const viewSel = bar.select("View: the whole loop framed, or the viewer following the lit node", [["fit", "fit all"], ["follow", "follow"]], settings.mode);
+  const thresholdInput = bar.numberInput("follow threshold, px: the view moves only when the lit node is farther than this from the centre", settings.threshold, 20);
+  viewSel.addEventListener("change", () => {
+    settings.mode = viewSel.value;
+    if (settings.mode === "fit") frame();
+    else {
+      const target = lit() ?? first();
+      if (target) studio.centerOnNode(target, { threshold: 0, scale: settings.zoom, animateMs: 250 });
+    }
+  });
+  thresholdInput.addEventListener("change", () => {
+    settings.threshold = Math.max(0, Number(thresholdInput.value) || 0);
+  });
+  window.addEventListener("resize", () => {
+    if (settings.mode === "fit") frame();
+  });
+  return { view: () => settings, frame };
+}
 
 // ui/room-skin.ts
 var ROOM_SKIN_NAME = "control_room";
@@ -450,7 +471,7 @@ async function activate(studio) {
   const log = (level, message) => studio.log(level, SOURCE, message);
   installLoopStyle(STYLE);
   const viewer = studio.getViewer();
-  studio.setLayout({ palette: false, properties: false, console: false, dashboardHeight: 300 });
+  studio.setLayout({ palette: false, properties: false, console: false, dashboardHeight: Math.max(150, Math.min(300, Math.round(window.innerHeight / 3))) });
   disableStudioPlayer("This graph is the cabin twin: the twin slot runs it to answer its questions; this page replays the answers.");
   const graphUrl = params.get("graph") ?? "/graphs/cabin.spikypanda";
   const doc = await (await fetch(graphUrl)).json();
@@ -593,6 +614,8 @@ async function activate(studio) {
   }
   const toolbar = createBar("TWIN");
   const { bar, badge, select, button } = toolbar;
+  const { frame } = viewControls(toolbar, { mode: params.get("view") === "follow" ? "follow" : "fit", threshold: 120, zoom: 1 }, studio, () => byId.get("cabin") ?? null, () => byId.get("cabin"));
+  button("fit", "the whole graph framed again, now", () => frame());
   const runSel = select("The questions asked to the twin, newest first; the page replays each new one unless one is chosen here", [["latest", "latest question"]], "latest");
   button("replay", "replay the question shown, minute by minute", () => {
     const run = chosen();
@@ -644,8 +667,8 @@ async function activate(studio) {
       setStatus(`twin not reachable: ${e instanceof Error ? e.message : String(e)}`, true);
     }
   };
-  studio.fitToContent(28);
-  setTimeout(() => studio.fitToContent(28), 300);
+  frame();
+  setTimeout(frame, 300);
   await catchUp(true);
   setStatus(runs.size ? `${runs.size} question(s) kept by the twin` : "no question asked to the twin yet");
   const stream = watchSlot(

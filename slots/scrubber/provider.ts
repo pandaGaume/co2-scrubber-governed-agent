@@ -545,6 +545,32 @@ export function scrubberSlot(wsBase: string, log: (line: string) => void): Publi
                 },
             },
             {
+                name: "debug.reset",
+                title: "Put the simulated board back to a start",
+                description: "STUB ONLY, the world's hand: the board as a scenario starts it, whatever the last one left (a stop in progress, a speed forced, the atmospheric guard, a clock running faster): powered, at the speed given, the CO2 given and NOMINAL, the guard given (speed by default), its settings back to their defaults, the world's clock at its default factor and nobody thinking.",
+                inputSchema: obj({
+                    guard: { type: "string", enum: ["speed", "atmospheric"] },
+                    speedPercent: { type: "number", minimum: 0, maximum: 100 },
+                    ppm: { type: "number", minimum: 0 },
+                }),
+                handle: (args, s) => {
+                    // 2026-10-11: the board kept its state from a scenario to the next, and stayed off (a stop left running under the speed
+                    // guard, which never ends it) or at full speed (a speed forced and never lowered) for the scenarios after.
+                    s.power = true;
+                    s.speedPercent = typeof args.speedPercent === "number" ? args.speedPercent : 33;
+                    s.currentAmps = ampsOf(s);
+                    s.co2Ppm = typeof args.ppm === "number" ? Math.round(args.ppm) : 1200;
+                    s.co2State = "NOMINAL";
+                    s.minFlowPercent = MIN_FLOW_FLOOR;
+                    s.runFloorPercent = RUN_FLOOR;
+                    s.profile = "adaptive";
+                    s.guard = args.guard === "atmospheric" ? "atmospheric" : "speed";
+                    s.atmosphere = s.guard === "atmospheric" ? newAtmosphere(s) : null;
+                    if (s.atmosphere) worldReading(s, s.atmosphere, s.co2Ppm);
+                    return boardView(s);
+                },
+            },
+            {
                 name: "debug.world_time",
                 title: "The world's clock",
                 description: "STUB ONLY, the world's hand: the acceleration factor of the world's time, set live (1 = real time; time.worldTimeScale by default), and whether the harness is thinking. While it thinks the world runs at 1 whatever the factor: a model decides on a world moving at the speed of reality.",

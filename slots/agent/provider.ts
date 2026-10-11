@@ -40,6 +40,7 @@ import type { Scenario, ScenarioEvent } from "../../lib/factory.js";
 import { Broker } from "../../harness/lib/broker.js";
 import { brokerAuth } from "../../harness/lib/broker-auth.js";
 import { cabinReading } from "../../lib/cabin-co2.js";
+import { resetBoard } from "../../tier3/lib/board-start.js";
 import { ReasonerProvider } from "../../harness/providers/reasoner.js";
 import { ScriptedProvider } from "../../stand-ins/night/scripted.js";
 import type { Provider, ProviderProfile } from "../../harness/lib/provider.js";
@@ -245,16 +246,10 @@ export function agentSlot(wsBase: string, log: (line: string) => void): Publishe
         state otherwise, and an agent that wakes in someone else's cabin is not
         replaying anything. */
     async function resetWorld(world: Broker): Promise<void> {
-        // The board may have changed guard since: ask its clock again.
+        // The board may have changed guard since: ask its clock again; and put the simulated board back to the scenario's start.
         clock = null;
-        for (const [tool, args] of [
-            ["scrubber.co2_report", cabinReading(scenario.start?.co2Ppm, "NOMINAL")],
-            ["scrubber.power", { on: true }],
-            ["motor.set_speed", { percent: scenario.start?.scrubberCommandPercent }],
-        ] as const) {
-            const r = await world.call("scrubber", tool, { ...args });
-            if (!r.ok) log(`[agent] world: ${tool} refused (${r.error})`);
-        }
+        const reading = cabinReading(scenario.start?.co2Ppm, "NOMINAL");
+        for (const line of await resetBoard(world, { speedPercent: scenario.start?.scrubberCommandPercent ?? 33, ppm: reading.ppm, reading: { ...reading } })) log(`[agent] world: ${line}`);
     }
 
     /** Enters the event at `eventIndex`: sets the cabin it describes, opens the

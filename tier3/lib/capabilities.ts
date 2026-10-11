@@ -192,8 +192,8 @@ export interface BuildCapabilitiesOptions {
     allow?: string[];
 }
 
-/** The crew's console as two capabilities in process; a report is read against the calls of its event first, when a reader is given. */
-function crewCapabilities(crewConsole: CrewConsoleEntry[], calls?: CapabilityCall[], review?: ReportReviewer): LocalCapability[] {
+/** The crew's console as two capabilities in process; a report is read against the calls of its event first, when a reader is given; a question is asked in Mother's chat when a broker is given. */
+function crewCapabilities(crewConsole: CrewConsoleEntry[], calls?: CapabilityCall[], review?: ReportReviewer, broker?: Broker): LocalCapability[] {
     const say = (kind: "report" | "ask"): LocalCapability => ({
         id: `crew.${kind}`,
         description: kind === "report" ? "Write a message to the crew's console: what you observed, what you decided and why, or why you will not do something." : "Ask the crew a question before acting; the run pauses until they answer.",
@@ -218,7 +218,14 @@ function crewCapabilities(crewConsole: CrewConsoleEntry[], calls?: CapabilityCal
                 }
             }
             crewConsole.push({ kind, message, decisionId: context.decisionId, at: new Date().toISOString(), ...(reviewed ? { review: reviewed } : {}) });
-            return { ok: true, output: { outcome: "completed", value: { delivered: true, ...(reviewed ? { review: reviewed.verdict } : {}) } } };
+            // A question is asked for real (2026-10-11, Guillaume: the agent said it asked, and no question was posed): in Mother's chat, to
+            // the commander, who answers there; the station says it.
+            let questionId: string | null = null;
+            if (kind === "ask" && broker) {
+                const asked = await broker.call("station", "ask", { from: "night agent", kind: "ask", question: message.slice(0, 600), options: [{ id: "yes", label: "yes" }, { id: "no", label: "no" }] } as unknown as Record<string, JsonValue>);
+                questionId = asked.ok ? String((asked.output as { questionId?: unknown }).questionId ?? "") || null : null;
+            }
+            return { ok: true, output: { outcome: "completed", value: { delivered: true, ...(reviewed ? { review: reviewed.verdict } : {}), ...(questionId ? { questionId, asked: "the commander, in Mother's chat" } : {}) } } };
         },
     });
     return [say("report"), say("ask")];
@@ -227,5 +234,5 @@ function crewCapabilities(crewConsole: CrewConsoleEntry[], calls?: CapabilityCal
 /** Registers the broker's tools under the cabin's profile, and the crew capabilities. */
 export function buildCapabilities(broker: Broker, { guardMode = "measured", approve, onCall, console: crewConsole = [], calls, review, allow = [] }: BuildCapabilitiesOptions = {}) {
     const excluded = allow.length ? EXCLUDED.map((r) => ({ test: (id: string) => r.test(id) && !allow.includes(id) }) as unknown as RegExp) : EXCLUDED;
-    return buildFromProfile(broker, { profile: { excluded, replayPolicy: (id) => replayPolicyFor(id, guardMode), local: crewCapabilities(crewConsole, calls, review) }, approve, onCall });
+    return buildFromProfile(broker, { profile: { excluded, replayPolicy: (id) => replayPolicyFor(id, guardMode), local: crewCapabilities(crewConsole, calls, review, broker) }, approve, onCall });
 }

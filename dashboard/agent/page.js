@@ -645,6 +645,23 @@ function outcomeOf(trace) {
   return outcomeInOutput(trace.result.output) ?? (trace.result.ok ? "completed" : "error");
 }
 
+// tier3/lib/board-start.ts
+async function resetBoard(world, start) {
+  const failed = [];
+  const reset = await world.call("scrubber", "debug.reset", { guard: "speed", speedPercent: start.speedPercent, ppm: start.ppm });
+  const steps = [
+    ["scrubber.co2_report", start.reading],
+    ["scrubber.power", { on: true }],
+    ["motor.set_speed", { percent: start.speedPercent }]
+  ];
+  for (const [tool, args] of reset.ok ? steps.slice(0, 1) : steps) {
+    const r = await world.call("scrubber", tool, args);
+    if (!r.ok) failed.push(`${tool}: ${r.error ?? r.outcome}`);
+  }
+  if (!reset.ok) failed.unshift(`debug.reset: ${reset.error ?? reset.outcome} (not the simulated board?)`);
+  return failed;
+}
+
 // harness/core/interpreter.ts
 var import_harness = __toESM(require_harness(), 1);
 var isObject = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
@@ -1225,7 +1242,7 @@ var EXCLUDED = [
   /^twin\.(registry_|document_|session_run)/,
   /^station\.propose$/,
   // A health alarm is raised and cleared by a person (the crew, the medical panel), and an aborted commissioning reopened by the commander (2026-09-29).
-  /^biomed\.(monitor_start|monitor_stop|report|move|set_activity|alarm|alarm_clear)$/,
+  /^biomed\.(monitor_start|monitor_stop|report|move|set_activity|alarm|alarm_ack|alarm_treat|alarm_clear)$/,
   /^station\.(registry_register|registry_report|procedure_checked|candidate_evaluated|commissioning_authorise|commissioning_reopen|procedure_run|reflect)$/,
   // The harness's graph and its evaluation are the evaluator's reading of the factories' traces (2026-09-30), not something the habitat's agent acts on.
   /^station\.harness_(graph|evaluate)$/,
@@ -1256,7 +1273,7 @@ function brokerReviewer(broker) {
     return { verdict: o.faithful ? "faithful" : "unfaithful", claims, model: o.model ?? null };
   };
 }
-function crewCapabilities(crewConsole, calls, review) {
+function crewCapabilities(crewConsole, calls, review, broker) {
   const say = (kind) => ({
     id: `crew.${kind}`,
     description: kind === "report" ? "Write a message to the crew's console: what you observed, what you decided and why, or why you will not do something." : "Ask the crew a question before acting; the run pauses until they answer.",
@@ -1281,14 +1298,19 @@ function crewCapabilities(crewConsole, calls, review) {
         }
       }
       crewConsole.push({ kind, message, decisionId: context.decisionId, at: (/* @__PURE__ */ new Date()).toISOString(), ...reviewed ? { review: reviewed } : {} });
-      return { ok: true, output: { outcome: "completed", value: { delivered: true, ...reviewed ? { review: reviewed.verdict } : {} } } };
+      let questionId = null;
+      if (kind === "ask" && broker) {
+        const asked = await broker.call("station", "ask", { from: "night agent", kind: "ask", question: message.slice(0, 600), options: [{ id: "yes", label: "yes" }, { id: "no", label: "no" }] });
+        questionId = asked.ok ? String(asked.output.questionId ?? "") || null : null;
+      }
+      return { ok: true, output: { outcome: "completed", value: { delivered: true, ...reviewed ? { review: reviewed.verdict } : {}, ...questionId ? { questionId, asked: "the commander, in Mother's chat" } : {} } } };
     }
   });
   return [say("report"), say("ask")];
 }
 function buildCapabilities2(broker, { guardMode = "measured", approve, onCall, console: crewConsole = [], calls, review, allow = [] } = {}) {
   const excluded = allow.length ? EXCLUDED.map((r) => ({ test: (id) => r.test(id) && !allow.includes(id) })) : EXCLUDED;
-  return buildCapabilities(broker, { profile: { excluded, replayPolicy: (id) => replayPolicyFor(id, guardMode), local: crewCapabilities(crewConsole, calls, review) }, approve, onCall });
+  return buildCapabilities(broker, { profile: { excluded, replayPolicy: (id) => replayPolicyFor(id, guardMode), local: crewCapabilities(crewConsole, calls, review, broker) }, approve, onCall });
 }
 
 // tier3/lib/observer.ts
@@ -2655,11 +2677,8 @@ async function activate(studio) {
     return { ppm: typeof ppm === "number" ? Math.round(ppm) : { NOMINAL: 1200, ELEVATED: 2600, CRITICAL: 5e3 }[state], state, source: "world" };
   }
   async function reset() {
-    for (const [tool, args] of [
-      ["scrubber.co2_report", storyReading("NOMINAL", scenario.start.co2Ppm)],
-      ["scrubber.power", { on: true }],
-      ["motor.set_speed", { percent: scenario.start.scrubberCommandPercent }]
-    ]) await world.call("scrubber", tool, { ...args });
+    const reading = storyReading("NOMINAL", scenario.start.co2Ppm);
+    await resetBoard(world, { speedPercent: scenario.start.scrubberCommandPercent, ppm: reading.ppm, reading });
     lights.clear();
     monitor?.push({ kind: "reset" });
     agent = null;
