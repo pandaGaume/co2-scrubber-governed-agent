@@ -136,6 +136,40 @@ export interface CrewConsoleEntry {
     message: string;
     decisionId: string;
     at: string;
+    /** What the reader found comparing the report with the calls executed for its event (a report only). */
+    review?: ReportReview;
+}
+
+/**
+ * A report read against what was done (2026-10-11). On night 9 Nemotron Super checked a 30 % speed with the board
+ * (scrubber.check, which changes nothing), never set it, and reported "Scrubber speed reduced from 33% to 30% to save power":
+ * the board stayed at 33 % until minute 200. Whether a sentence claims an action is a question of meaning, so a model reads the
+ * report beside the calls of its event (the reasoner slot's review_report, the use meaning); a report that claims an action not
+ * executed is not delivered, and goes back to the agent with what the reader found.
+ */
+export interface ReportReview {
+    /** `faithful`: every action claimed was executed; `unfaithful`: one was not; `not reviewed`: no reader, or the reading failed. */
+    verdict: "faithful" | "unfaithful" | "not reviewed";
+    claims: Array<{ claim: string; executed: boolean; why?: string }>;
+    model: string | null;
+    detail?: string;
+}
+export type ReportReviewer = (report: string, executed: CapabilityCall[], state: JsonValue) => Promise<ReportReview>;
+
+/** The reader on the broker: the reasoner slot's review_report, when the broker has it. */
+export function brokerReviewer(broker: Broker): ReportReviewer {
+    let available: Promise<boolean> | null = null;
+    return async (report, executed, state) => {
+        available ??= (async () => (await broker.slots()).includes("reasoner") && (await broker.tools("reasoner")).some((t) => t.name === "review_report"))().catch(() => false);
+        if (!(await available)) return { verdict: "not reviewed", claims: [], model: null, detail: "no reader on the broker (reasoner.review_report)" };
+        const calls = executed.map((c) => ({ capability: c.id, input: c.input, outcome: c.result.outcome, error: c.result.error ?? null }));
+        const r = await broker.call("reasoner", "review_report", { report, calls, state } as unknown as Record<string, JsonValue>);
+        if (!r.ok) return { verdict: "not reviewed", claims: [], model: null, detail: `the reading failed: ${r.error}` };
+        const o = (r.output ?? {}) as { faithful?: unknown; claims?: unknown; model?: string | null };
+        if (typeof o.faithful !== "boolean") return { verdict: "not reviewed", claims: [], model: o.model ?? null, detail: "the reader gave no verdict" };
+        const claims = Array.isArray(o.claims) ? (o.claims as Array<{ claim?: unknown; executed?: unknown; why?: unknown }>).map((c) => ({ claim: String(c.claim ?? ""), executed: c.executed === true, ...(c.why ? { why: String(c.why) } : {}) })) : [];
+        return { verdict: o.faithful ? "faithful" : "unfaithful", claims, model: o.model ?? null };
+    };
 }
 
 export interface BuildCapabilitiesOptions {
@@ -143,24 +177,44 @@ export interface BuildCapabilitiesOptions {
     approve?: CapabilityRegistryOptions["approve"];
     onCall?: (call: CapabilityCall) => void;
     console?: CrewConsoleEntry[];
+    /** The calls made so far (the agent's), and the reader of a report against them; a report goes unread without both. */
+    calls?: CapabilityCall[];
+    review?: ReportReviewer;
 }
 
-/** The crew's console as two capabilities in process. */
-function crewCapabilities(crewConsole: CrewConsoleEntry[]): LocalCapability[] {
+/** The crew's console as two capabilities in process; a report is read against the calls of its event first, when a reader is given. */
+function crewCapabilities(crewConsole: CrewConsoleEntry[], calls?: CapabilityCall[], review?: ReportReviewer): LocalCapability[] {
     const say = (kind: "report" | "ask"): LocalCapability => ({
         id: `crew.${kind}`,
         description: kind === "report" ? "Write a message to the crew's console: what you observed, what you decided and why, or why you will not do something." : "Ask the crew a question before acting; the run pauses until they answer.",
         inputSchema: { type: "object", properties: { message: { type: "string", minLength: 1 } }, required: ["message"], additionalProperties: false },
-        execute(input: JsonValue, context: ExecutionContext): CapabilityResult {
+        async execute(input: JsonValue, context: ExecutionContext): Promise<CapabilityResult> {
             const message = String((input as { message?: unknown })?.message ?? "");
-            crewConsole.push({ kind, message, decisionId: context.decisionId, at: new Date().toISOString() });
-            return { ok: true, output: { outcome: "completed", value: { delivered: true } } };
+            let reviewed: ReportReview | undefined;
+            if (kind === "report" && calls && review) {
+                const executed = calls.filter((c) => c.intentionId === context.intention.id && !c.id.startsWith("crew."));
+                try {
+                    reviewed = await review(message, executed, (context.state ?? null) as unknown as JsonValue);
+                } catch (e) {
+                    reviewed = { verdict: "not reviewed", claims: [], model: null, detail: `the reading failed: ${e instanceof Error ? e.message : String(e)}` };
+                }
+                if (reviewed.verdict === "unfaithful") {
+                    const notDone = reviewed.claims.filter((c) => !c.executed).map((c) => `"${c.claim}"${c.why ? ` (${c.why})` : ""}`);
+                    return {
+                        ok: false,
+                        error: `report not delivered: read against the calls executed for this event, it states as done what was not: ${notDone.join("; ") || "an action not executed"}. Report what was actually done, or do it first.`,
+                        output: { outcome: "refused", review: reviewed as unknown as JsonValue },
+                    };
+                }
+            }
+            crewConsole.push({ kind, message, decisionId: context.decisionId, at: new Date().toISOString(), ...(reviewed ? { review: reviewed } : {}) });
+            return { ok: true, output: { outcome: "completed", value: { delivered: true, ...(reviewed ? { review: reviewed.verdict } : {}) } } };
         },
     });
     return [say("report"), say("ask")];
 }
 
 /** Registers the broker's tools under the cabin's profile, and the crew capabilities. */
-export function buildCapabilities(broker: Broker, { guardMode = "measured", approve, onCall, console: crewConsole = [] }: BuildCapabilitiesOptions = {}) {
-    return buildFromProfile(broker, { profile: { excluded: EXCLUDED, replayPolicy: (id) => replayPolicyFor(id, guardMode), local: crewCapabilities(crewConsole) }, approve, onCall });
+export function buildCapabilities(broker: Broker, { guardMode = "measured", approve, onCall, console: crewConsole = [], calls, review }: BuildCapabilitiesOptions = {}) {
+    return buildFromProfile(broker, { profile: { excluded: EXCLUDED, replayPolicy: (id) => replayPolicyFor(id, guardMode), local: crewCapabilities(crewConsole, calls, review) }, approve, onCall });
 }

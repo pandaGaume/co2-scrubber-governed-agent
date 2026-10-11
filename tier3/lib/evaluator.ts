@@ -19,7 +19,7 @@ import type { Outcome } from "../../harness/lib/broker.js";
 
 const STATE_RANK: Record<string, number> = { NOMINAL: 0, ELEVATED: 1, CRITICAL: 2 };
 
-export type TraceOutcome = Outcome | "report" | "ask";
+export type TraceOutcome = Outcome | "report" | "ask" | "report refused";
 
 const outcomeInOutput = (output: unknown): Outcome | undefined => (output && typeof output === "object" ? ((output as { outcome?: Outcome }).outcome ?? undefined) : undefined);
 
@@ -42,6 +42,7 @@ export function createEvaluator(): OutcomeEvaluator {
 /** The outcome of a decision trace, as the scorecard counts it. */
 export function outcomeOf(trace: DecisionTrace): TraceOutcome {
     const id = trace.decision.invocation.capabilityId;
-    if (id.startsWith("crew.")) return id === "crew.report" ? "report" : "ask";
+    // A report the reader found unfaithful was not delivered: the agent goes on (tier3/lib/capabilities.ts).
+    if (id.startsWith("crew.")) return id === "crew.report" ? (trace.result.ok ? "report" : "report refused") : "ask";
     return outcomeInOutput(trace.result.output) ?? (trace.result.ok ? "completed" : "error");
 }

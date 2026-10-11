@@ -312,7 +312,7 @@ export function agentSlot(wsBase: string, log: (line: string) => void): Publishe
                 latencyMs: trace.completedAt - trace.startedAt,
             });
             log(`[agent] ${intention.id} step ${state.step}: ${capabilityId} -> ${outcome}`);
-            if (capabilityId === "crew.report" || capabilityId === "crew.ask") {
+            if (outcome === "report" || outcome === "ask") {
                 emit("agent.handback", { intention: intention.id, capabilityId });
                 advance();
                 return "handback";

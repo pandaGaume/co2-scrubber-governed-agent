@@ -35,6 +35,8 @@ export interface CapabilityCall {
     result: CallResult;
     latencyMs: number;
     decisionId: string;
+    /** The intention the call was made for (the night's event): what a report written for that event is read against. */
+    intentionId?: string;
 }
 
 export interface CatalogueEntry {
@@ -121,7 +123,7 @@ export async function buildCapabilities(broker: Broker, { profile = {}, approve,
                     let args = { ...((input ?? {}) as Record<string, JsonValue>), ...constants };
                     for (const b of bindings) if (b.rewrite) args = b.rewrite(args);
                     const result = await broker.call(slot, tool.name, args);
-                    onCall?.({ id, slot, tool: tool.name, input: args, result, latencyMs: Date.now() - started, decisionId: context.decisionId });
+                    onCall?.({ id, slot, tool: tool.name, input: args, result, latencyMs: Date.now() - started, decisionId: context.decisionId, intentionId: context.intention?.id });
                     // The harness keeps `ok`, `output` and `error`; the outcome rides in the output for the trace.
                     return result.ok ? { ok: true, output: { outcome: result.outcome, value: (result.output ?? null) as JsonValue } } : { ok: false, error: result.error, output: { outcome: result.outcome } };
                 },
@@ -141,7 +143,7 @@ export async function buildCapabilities(broker: Broker, { profile = {}, approve,
                 const started = Date.now();
                 const r = await local.execute(input, context);
                 const outcome: Outcome = outcomeInOutput(r.output) ?? (r.ok ? "completed" : "error");
-                onCall?.({ id: local.id, slot, tool, input, result: { ok: r.ok, outcome, output: r.output, error: r.error }, latencyMs: Date.now() - started, decisionId: context.decisionId });
+                onCall?.({ id: local.id, slot, tool, input, result: { ok: r.ok, outcome, output: r.output, error: r.error }, latencyMs: Date.now() - started, decisionId: context.decisionId, intentionId: context.intention?.id });
                 return r;
             },
         });

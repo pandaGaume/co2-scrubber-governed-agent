@@ -11,7 +11,7 @@
 import type { CapabilityRegistryOptions, DecisionContext, HarnessDriver, PolicyDecision, SafetyDecision, SafetyGuard, StageEvent } from "@spiky-panda/harness";
 import type { Broker } from "../harness/lib/broker.js";
 import { createAgent as createLoop, type Agent as LoopAgent } from "../harness/core/agent.js";
-import { buildCapabilities, type CapabilityCall, type CrewConsoleEntry, type GuardMode } from "./lib/capabilities.js";
+import { brokerReviewer, buildCapabilities, type CapabilityCall, type CrewConsoleEntry, type GuardMode } from "./lib/capabilities.js";
 import { createObserver } from "./lib/observer.js";
 import { createEvaluator } from "./lib/evaluator.js";
 import type { Provider } from "../harness/lib/provider.js";
@@ -61,6 +61,9 @@ export async function createAgent({ broker, provider, guardMode = "measured", ap
         guardMode,
         approve,
         console: crewConsole,
+        // A report is read against the calls of its event before it reaches the crew (the reasoner slot's review_report).
+        calls,
+        review: brokerReviewer(broker),
         onCall: (call) => {
             lastResult.current = call;
             calls.push(call);

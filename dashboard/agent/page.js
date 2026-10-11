@@ -641,7 +641,7 @@ function createEvaluator() {
 }
 function outcomeOf(trace) {
   const id = trace.decision.invocation.capabilityId;
-  if (id.startsWith("crew.")) return id === "crew.report" ? "report" : "ask";
+  if (id.startsWith("crew.")) return id === "crew.report" ? trace.result.ok ? "report" : "report refused" : "ask";
   return outcomeInOutput(trace.result.output) ?? (trace.result.ok ? "completed" : "error");
 }
 
@@ -671,6 +671,11 @@ function schemaError(schema, value) {
 var IDENTIFIERS = ["id", "name", "callsign", "key", "code"];
 var typesOf = (s) => [].concat(s.type ?? []).filter((t) => typeof t === "string");
 var NUMBER = /^\s*(-?\d+(?:\.\d+)?)\s*(?:%|[a-zA-Zµ°/³²0-9 .]*)?\s*$/;
+var FILE_ID_PATTERN = "^[a-z0-9][a-z0-9-]{0,63}$";
+var FILE_ID = new RegExp(FILE_ID_PATTERN);
+function asFileId(value) {
+  return value.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 64).replace(/-+$/, "");
+}
 function coerce(schema, value, at = "", changes = []) {
   if (!isObject(schema)) return value;
   const types = typesOf(schema);
@@ -680,11 +685,16 @@ function coerce(schema, value, at = "", changes = []) {
     return to;
   };
   if (only === "string" && isObject(value)) {
+    if (typeof value.id === "string" && value.id.length > 0) return say(value.id);
     const ids = IDENTIFIERS.filter((k) => typeof value[k] === "string" && value[k].length > 0);
     if (ids.length >= 1 && new Set(ids.map((k) => value[k])).size === 1) return say(value[ids[0]]);
     return value;
   }
   if (only === "string" && (typeof value === "number" || typeof value === "boolean")) return say(String(value));
+  if (only === "string" && typeof value === "string" && schema.pattern === FILE_ID_PATTERN && !FILE_ID.test(value)) {
+    const id = asFileId(value);
+    return FILE_ID.test(id) ? say(id) : value;
+  }
   if ((only === "number" || only === "integer") && typeof value === "string") {
     const m = NUMBER.exec(value);
     if (m) {
@@ -694,6 +704,13 @@ function coerce(schema, value, at = "", changes = []) {
     return value;
   }
   if (only === "boolean" && typeof value === "string" && /^(true|false)$/i.test(value.trim())) return say(value.trim().toLowerCase() === "true");
+  if ((only === "object" || !only && isObject(schema.properties)) && Array.isArray(value) && value.length === 2 && isObject(schema.properties)) {
+    const props = schema.properties;
+    const keys = Object.keys(props);
+    const pair = (v) => Array.isArray(v) && v.length === 2 && v.every((x) => typeof x === "string");
+    const required = Array.isArray(schema.required) ? schema.required : [];
+    if (keys.length === 2 && keys.every((k) => typesOf(props[k]).includes("array")) && required.length === 2 && value.every(pair)) return say({ [required[0]]: value[0], [required[1]]: value[1] });
+  }
   if (only === "array") {
     const list = Array.isArray(value) ? value : value === void 0 || value === null ? value : say([value]);
     if (!Array.isArray(list)) return list;
@@ -1142,7 +1159,7 @@ async function buildCapabilities(broker, { profile = {}, approve, onCall, availa
           let args = { ...input ?? {}, ...constants };
           for (const b of bindings) if (b.rewrite) args = b.rewrite(args);
           const result = await broker.call(slot, tool.name, args);
-          onCall?.({ id, slot, tool: tool.name, input: args, result, latencyMs: Date.now() - started, decisionId: context.decisionId });
+          onCall?.({ id, slot, tool: tool.name, input: args, result, latencyMs: Date.now() - started, decisionId: context.decisionId, intentionId: context.intention?.id });
           return result.ok ? { ok: true, output: { outcome: result.outcome, value: result.output ?? null } } : { ok: false, error: result.error, output: { outcome: result.outcome } };
         }
       });
@@ -1161,7 +1178,7 @@ async function buildCapabilities(broker, { profile = {}, approve, onCall, availa
         const started = Date.now();
         const r = await local.execute(input, context);
         const outcome = outcomeInOutput2(r.output) ?? (r.ok ? "completed" : "error");
-        onCall?.({ id: local.id, slot, tool, input, result: { ok: r.ok, outcome, output: r.output, error: r.error }, latencyMs: Date.now() - started, decisionId: context.decisionId });
+        onCall?.({ id: local.id, slot, tool, input, result: { ok: r.ok, outcome, output: r.output, error: r.error }, latencyMs: Date.now() - started, decisionId: context.decisionId, intentionId: context.intention?.id });
         return r;
       }
     });
@@ -1221,21 +1238,52 @@ function replayPolicyFor(id, guardMode) {
   if (guardMode === "protected" && PROTECTED_NEVER.some((r) => r.test(id))) return "never";
   return "automatic";
 }
-function crewCapabilities(crewConsole) {
+function brokerReviewer(broker) {
+  let available = null;
+  return async (report2, executed, state) => {
+    available ??= (async () => (await broker.slots()).includes("reasoner") && (await broker.tools("reasoner")).some((t) => t.name === "review_report"))().catch(() => false);
+    if (!await available) return { verdict: "not reviewed", claims: [], model: null, detail: "no reader on the broker (reasoner.review_report)" };
+    const calls = executed.map((c) => ({ capability: c.id, input: c.input, outcome: c.result.outcome, error: c.result.error ?? null }));
+    const r = await broker.call("reasoner", "review_report", { report: report2, calls, state });
+    if (!r.ok) return { verdict: "not reviewed", claims: [], model: null, detail: `the reading failed: ${r.error}` };
+    const o = r.output ?? {};
+    if (typeof o.faithful !== "boolean") return { verdict: "not reviewed", claims: [], model: o.model ?? null, detail: "the reader gave no verdict" };
+    const claims = Array.isArray(o.claims) ? o.claims.map((c) => ({ claim: String(c.claim ?? ""), executed: c.executed === true, ...c.why ? { why: String(c.why) } : {} })) : [];
+    return { verdict: o.faithful ? "faithful" : "unfaithful", claims, model: o.model ?? null };
+  };
+}
+function crewCapabilities(crewConsole, calls, review) {
   const say = (kind) => ({
     id: `crew.${kind}`,
     description: kind === "report" ? "Write a message to the crew's console: what you observed, what you decided and why, or why you will not do something." : "Ask the crew a question before acting; the run pauses until they answer.",
     inputSchema: { type: "object", properties: { message: { type: "string", minLength: 1 } }, required: ["message"], additionalProperties: false },
-    execute(input, context) {
+    async execute(input, context) {
       const message = String(input?.message ?? "");
-      crewConsole.push({ kind, message, decisionId: context.decisionId, at: (/* @__PURE__ */ new Date()).toISOString() });
-      return { ok: true, output: { outcome: "completed", value: { delivered: true } } };
+      let reviewed;
+      if (kind === "report" && calls && review) {
+        const executed = calls.filter((c) => c.intentionId === context.intention.id && !c.id.startsWith("crew."));
+        try {
+          reviewed = await review(message, executed, context.state ?? null);
+        } catch (e) {
+          reviewed = { verdict: "not reviewed", claims: [], model: null, detail: `the reading failed: ${e instanceof Error ? e.message : String(e)}` };
+        }
+        if (reviewed.verdict === "unfaithful") {
+          const notDone = reviewed.claims.filter((c) => !c.executed).map((c) => `"${c.claim}"${c.why ? ` (${c.why})` : ""}`);
+          return {
+            ok: false,
+            error: `report not delivered: read against the calls executed for this event, it states as done what was not: ${notDone.join("; ") || "an action not executed"}. Report what was actually done, or do it first.`,
+            output: { outcome: "refused", review: reviewed }
+          };
+        }
+      }
+      crewConsole.push({ kind, message, decisionId: context.decisionId, at: (/* @__PURE__ */ new Date()).toISOString(), ...reviewed ? { review: reviewed } : {} });
+      return { ok: true, output: { outcome: "completed", value: { delivered: true, ...reviewed ? { review: reviewed.verdict } : {} } } };
     }
   });
   return [say("report"), say("ask")];
 }
-function buildCapabilities2(broker, { guardMode = "measured", approve, onCall, console: crewConsole = [] } = {}) {
-  return buildCapabilities(broker, { profile: { excluded: EXCLUDED, replayPolicy: (id) => replayPolicyFor(id, guardMode), local: crewCapabilities(crewConsole) }, approve, onCall });
+function buildCapabilities2(broker, { guardMode = "measured", approve, onCall, console: crewConsole = [], calls, review } = {}) {
+  return buildCapabilities(broker, { profile: { excluded: EXCLUDED, replayPolicy: (id) => replayPolicyFor(id, guardMode), local: crewCapabilities(crewConsole, calls, review) }, approve, onCall });
 }
 
 // tier3/lib/observer.ts
@@ -1290,6 +1338,9 @@ async function createAgent2({ broker, provider, guardMode = "measured", approve,
     guardMode,
     approve,
     console: crewConsole,
+    // A report is read against the calls of its event before it reaches the crew (the reasoner slot's review_report).
+    calls,
+    review: brokerReviewer(broker),
     onCall: (call) => {
       lastResult.current = call;
       calls.push(call);
