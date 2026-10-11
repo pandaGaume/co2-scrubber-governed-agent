@@ -332,6 +332,26 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
         // What the procedure factory is told: the device, the CO2 measured, what stopped the last test; the scripts' hooks with the scripts.
         const procedureObservations = () => ({ device: scrubberPath, measured, ...(previous ? { previous } : {}), ...(builder === "scripted" && doc.procedure.script ? { script: doc.procedure.script } : {}) });
         for (;;) {
+            // A critical health alarm still open (2026-10-11): no test can expose the person, and the factory's procedures were refused
+            // three times over until it ended STUCK. Mother says who, asks for it to be cleared once they are safe, and waits.
+            {
+                const t0 = Date.now();
+                let said = false;
+                for (;;) {
+                    const presence = await call<{ modules: Array<{ module: string; subjects: Array<{ id: string; callsign: string; alarm: { what?: string } | null }> }> }>("biomed", "presence");
+                    const alarmed = presence.modules.flatMap((m) => m.subjects.filter((x) => x.alarm).map((x) => `${x.callsign} (${m.module}: ${x.alarm?.what || "critical health alarm"})`));
+                    if (!alarmed.length) break;
+                    if (!said) {
+                        narrate(`A critical health alarm is still open: ${alarmed.join(", ")}. No test can expose them. Clear it on the medical panel once they are safe; the procedure factory writes the test after that.`);
+                        wait(2, `the health alarm cleared (${alarmed.join(", ")})`);
+                        log(`[scenario] ${run.id}: waiting for the health alarm to be cleared (${alarmed.join(", ")})`);
+                        said = true;
+                    }
+                    if (Date.now() - t0 > waitMs) throw new Error(`the health alarm of ${alarmed.join(", ")} was not cleared in ${Math.round(waitMs / 60000)} minutes: no test can expose them`);
+                    await sleep(2000);
+                }
+                if (said) narrate("The health alarm is cleared. The procedure factory writes the test.");
+            }
             // 2. the procedure factory.
             begin(2, builder === "scripted" ? "the script stands in for the model" : undefined);
             loop(2).nature = builder === "scripted" ? "script" : "model";
@@ -431,7 +451,8 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
             begin(3);
             const c1 = await call<{ commissioning: { status: string; procedure: { procedureId: string; minutes: number; occupants: unknown[]; content?: JsonValue } | null } }>("station", "commissioning_state", { commissioningId });
             end(3, { status: c1.commissioning.status, procedure: c1.commissioning.procedure?.procedureId ?? null, minutes: c1.commissioning.procedure?.minutes ?? null, occupants: c1.commissioning.procedure?.occupants.length ?? 0 } as JsonValue);
-            if (c1.commissioning.status !== "awaiting-authorisation") throw new Error(`commissioning ${commissioningId} is ${c1.commissioning.status}: Mother did not relay the procedure`);
+            // A commander who answered at once (2026-10-11): the commissioning is already authorised or refused when the relay is read; that is a decision, not a relay missed.
+            if (!["awaiting-authorisation", "authorised", "refused"].includes(c1.commissioning.status)) throw new Error(`commissioning ${commissioningId} is ${c1.commissioning.status}: Mother did not relay the procedure`);
 
             // 4. the commander authorises, in Mother's chat; the player waits.
             begin(4);
@@ -447,6 +468,11 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
                 status = c.commissioning.status;
                 monitoring = c.commissioning.monitoring ?? null;
                 if (status !== "awaiting-authorisation") end(4, { status, by: c.commissioning.authorisation?.by ?? null, monitoring } as JsonValue, `${c.commissioning.authorisation?.decision ?? status} by ${c.commissioning.authorisation?.by ?? "?"}`);
+            }
+            if (c1.commissioning.status !== "awaiting-authorisation") {
+                const c = await call<{ commissioning: { status: string; authorisation?: { decision: string; by: string } | null; monitoring?: JsonValue } }>("station", "commissioning_state", { commissioningId });
+                monitoring = c.commissioning.monitoring ?? null;
+                end(4, { status, by: c.commissioning.authorisation?.by ?? null, monitoring } as JsonValue, `${c.commissioning.authorisation?.decision ?? status} by ${c.commissioning.authorisation?.by ?? "?"}`);
             }
             if (status !== "authorised") throw new Error(`the commander refused: the commissioning is ${status}`);
 

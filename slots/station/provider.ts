@@ -1229,6 +1229,15 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     const ids = (now?.subjects ?? []).map((x) => x.id).sort();
                     if (ids.join(",") !== p.occupants.map((x) => x.id).sort().join(",")) throw new Error(`the occupants of ${p.module} changed since the procedure was checked (${p.occupants.map((x) => x.callsign ?? x.id).join(", ") || "nobody"} then, ${(now?.subjects ?? []).map((x) => x.callsign ?? x.id).join(", ") || "nobody"} now): it has to be checked again`);
                     if (ids.length) {
+                        // A session a commissioning left open without running (2026-10-11: a run failed after its authorisation, and every later
+                        // authorisation was refused, "a monitoring session is already open"): closed first, said in the log.
+                        const open = await client().call("biomed", "state", {});
+                        const sessionId = open.ok ? (open.output as { session?: string | null }).session ?? null : null;
+                        if (sessionId && !state.commissionings.some((x) => x.status === "running" && x.monitoring?.sessionId === sessionId)) {
+                            const stopped = await client().call("biomed", "monitor_stop", { reason: `left open by a commissioning that is not running; ${c.id} is authorised` });
+                            log(`[station] ${c.id}: the monitoring session ${sessionId} left open by a commissioning that is not running ${stopped.ok ? "is closed" : `could not be closed (${stopped.error ?? stopped.outcome})`}`);
+                            for (const x of state.commissionings) if (x.monitoring?.sessionId === sessionId) x.monitoring = null;
+                        }
                         const r = await client().call("biomed", "monitor_start", { reason: p.content.monitoring?.reason ?? `procedure ${p.procedureId} degrades the air of ${p.module}`, procedureId: p.procedureId, modules: [p.module], subjectIds: ids });
                         if (!r.ok) throw new Error(`the medical monitoring could not be opened, so the authorisation is not recorded: ${r.error ?? r.outcome}`);
                         c.monitoring = { sessionId: (r.output as { session: { sessionId: string } }).session.sessionId, subjects: ids };

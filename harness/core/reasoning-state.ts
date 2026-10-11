@@ -207,7 +207,9 @@ export function numericLines(text: string, limit = EARLIER_DOCUMENT_CHARS): stri
 
 /** The documents read, as the state shows them: the last whole (bounded), the earlier by their lines with a number. */
 export function readDocumentsOf(documents: ReadonlyArray<{ id: string; title: string; text: string; step: number }>): Record<string, JsonValue> {
-    return Object.fromEntries(documents.map((d, i) => [d.id, { title: d.title, step: d.step, ...(i === documents.length - 1 ? { text: d.text.length > LAST_DOCUMENT_CHARS ? `${d.text.slice(0, LAST_DOCUMENT_CHARS)}...` : d.text } : { lines: numericLines(d.text) }) }]));
+    // Every document read, whole up to its bound (2026-10-11: the earlier ones shown by their numbered lines only, the procedure factory read
+    // its method card again and again and was stuck on it).
+    return Object.fromEntries(documents.map((d) => [d.id, { title: d.title, step: d.step, text: d.text.length > LAST_DOCUMENT_CHARS ? `${d.text.slice(0, LAST_DOCUMENT_CHARS)}...` : d.text }]));
 }
 
 export function reasoningStateOf(inputs: StateInputs): ReasoningState {

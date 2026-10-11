@@ -13,30 +13,29 @@ import { newProgress } from "../harness/core/workspace-observer.js";
 import { OBSERVER_TOPIC } from "../harness/topics/observer/index.js";
 
 describe("the documents a task read", () => {
-    it("shown whole for the last, by their lines with a number for the earlier", () => {
+    it("every document read shown whole (2026-10-11: the earlier ones by their numbered lines left the procedure factory stuck)", () => {
         const docs = [
             { id: "scrubber-1-datasheet", title: "Datasheet", text: "# Datasheet\nA variable-speed scrubber.\nAir flow at full speed: 3.3 m3/min\nEfficiency 0.3", step: 2 },
             { id: "station-topology", title: "Topology", text: "# Topology\nThe ventilation keeps running, hatch closed: 3 m3/min.", step: 3 },
         ];
         const shown = readDocumentsOf(docs) as Record<string, { title: string; step: number; text?: string; lines?: string }>;
-        assert.equal(shown["scrubber-1-datasheet"].lines, "Air flow at full speed: 3.3 m3/min\nEfficiency 0.3");
-        assert.equal(shown["scrubber-1-datasheet"].text, undefined);
+        assert.match(String(shown["scrubber-1-datasheet"].text), /^# Datasheet\nA variable-speed scrubber/);
+        assert.equal(shown["scrubber-1-datasheet"].lines, undefined);
         assert.match(String(shown["station-topology"].text), /^# Topology\nThe ventilation keeps running/);
         assert.equal(numericLines("a 1\nb 2\nc 3", 4), "a 1\n...");
     });
 
-    it("the last document read is not read again; an earlier one may be, once more (2026-10-11: the procedure factory stuck on its method card)", async () => {
+    it("a document read is not read again: every one is in the state whole", async () => {
         const progress = newProgress();
         progress.documents.push({ id: "method-concentration-decay", title: "Method", text: "...", step: 3 });
         progress.documents.push({ id: "station-topology", title: "Topology", text: "...", step: 4 });
         const guard = createBuilderGuard({ broker: {} as never, task: { objective: { required_outputs: [], constraints: {} }, observations: {}, data: [] } as never, topic: OBSERVER_TOPIC, taskId: "t", progress } as never);
         const decide = (id: string): PolicyDecision => ({ action: { id: "library.read", description: "" }, invocation: { actionId: "library.read", capabilityId: "library.read", input: { id } }, rationale: "" });
-        const last = await guard.validate(decide("station-topology"), {} as never);
-        assert.equal(last.allowed, false);
-        assert.match(String(last.reason), /"station-topology" is the last document read: it is in the state whole \(readDocuments\)/);
-        assert.equal((await guard.validate(decide("method-concentration-decay"), {} as never)).allowed, true);
-        progress.documents[0].reads = 2;
-        assert.match(String((await guard.validate(decide("method-concentration-decay"), {} as never)).reason), /was read twice already/);
+        for (const id of ["station-topology", "method-concentration-decay"]) {
+            const again = await guard.validate(decide(id), {} as never);
+            assert.equal(again.allowed, false);
+            assert.match(String(again.reason), new RegExp(`"${id}" was read in this task: it is in the state whole`));
+        }
         assert.equal((await guard.validate(decide("scrubber-1-datasheet"), {} as never)).allowed, true);
     });
 });

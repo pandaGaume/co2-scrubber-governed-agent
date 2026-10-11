@@ -309,7 +309,58 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
         input.value = "";
         await byText(text, "typed");
     });
-    mic?.addEventListener("click", () => listen());
+    /**
+     * The prompt's microphone (2026-10-11): one click opens it, and it stays open until clicked again. Each phrase heard is taken
+     * as a typed answer; the browser ends a recognition after a silence, and it is started again while the microphone is open.
+     */
+    let open_mic = null;
+    const micOff = () => {
+        const rec = open_mic;
+        open_mic = null;
+        mic?.classList.remove("on");
+        mic?.setAttribute("aria-pressed", "false");
+        try {
+            rec?.stop();
+        } catch {
+            /* already stopped */
+        }
+        note("microphone closed");
+    };
+    const micOn = () => {
+        const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!Recognition) return note("this browser has no speech recognition: type the answer");
+        const rec = new Recognition();
+        rec.lang = lang?.value ?? "fr-FR";
+        rec.continuous = true;
+        rec.interimResults = false;
+        rec.maxAlternatives = 3;
+        rec.onresult = async (e) => {
+            for (let i = e.resultIndex; i < e.results.length; i++) {
+                if (!e.results[i].isFinal) continue;
+                const said = String(e.results[i][0]?.transcript ?? "").trim();
+                if (said) await byText(said, "voice");
+            }
+        };
+        rec.onerror = (e) => {
+            if (e.error === "no-speech" || e.error === "aborted") return;
+            note(`recognition error: ${e.error}`);
+            if (e.error === "not-allowed" || e.error === "service-not-allowed") micOff();
+        };
+        rec.onend = () => {
+            if (open_mic !== rec) return;
+            try {
+                rec.start();
+            } catch {
+                micOff();
+            }
+        };
+        open_mic = rec;
+        mic?.classList.add("on");
+        mic?.setAttribute("aria-pressed", "true");
+        note("listening: the microphone stays open until you click it again");
+        rec.start();
+    };
+    mic?.addEventListener("click", () => (open_mic ? micOff() : micOn()));
     policy?.addEventListener("change", async (ev) => {
         try {
             await call("questions_policy", { mode: ev.target.value });

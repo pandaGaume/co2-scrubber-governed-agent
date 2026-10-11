@@ -195,8 +195,8 @@ export function createBuilderGuard(options: BuilderGuardOptions): SafetyGuard {
                 const asked = String((decision.invocation.input as { id?: unknown } | null)?.id ?? "");
                 const documents = options.progress?.documents ?? [];
                 const read = documents.find((d) => d.id === asked);
-                if (read && documents[documents.length - 1]?.id === asked) return { allowed: false, reason: `library.read: "${asked}" is the last document read: it is in the state whole (readDocuments); decide from it, or library.search for a passage of another` };
-                if (read && (read.reads ?? 1) >= 2) return { allowed: false, reason: `library.read: "${asked}" was read twice already in this task; its numbered lines are in the state (readDocuments); for a passage of it, library.search with its words` };
+                // Every document read is in the state whole now (reasoning-state.ts): reading it again gives nothing more.
+                if (read) return { allowed: false, reason: `library.read: "${asked}" was read in this task: it is in the state whole (readDocuments, "${asked}"); decide from it` };
             }
             if (id === "task.plan") {
                 const problems = await planProblems(decision.invocation.input as unknown as Plan, options);
