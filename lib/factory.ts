@@ -88,6 +88,12 @@ export interface ScenarioEvent {
     what?: string;
     world?: { cabin?: { state: Co2State; ppm?: number } };
     expected?: string;
+    /**
+     * Before the event reaches the agent, the world runs in real time until the board's guard has done something (2026-10-11, Test C):
+     * the runner follows the schedule's crew on the board's clock, records the board every few seconds, and waits until one of the
+     * guard's actions contains these words, or the timeout. The agent is not in that loop.
+     */
+    waitFor?: { guardAction: string; timeoutMinutes: number };
 }
 export interface ScenarioConstraint {
     name: string;
@@ -113,6 +119,8 @@ export interface Scenario {
     /** Decisions per event before the runner hands back; the runner's default when absent. */
     maxSteps?: number;
     /** The board the scenario plays on (the stub's debug.set_cabin): its guard and its simulated cabin; the speed guard when absent. */
+    /** What is in place before the events (2026-10-11, Test C): an operation asked for, decided by the commander and run by the station. */
+    setup?: { operation?: { operation: string; input: Record<string, unknown>; reason: string; conditions?: string[]; decision: "authorise" | "refuse"; by?: string } };
     /** Who stands for the commander in a take: the decision on any operation the agent asks for (station.operation_request). */
     commander?: { decision: "authorise" | "refuse"; by?: string; note?: string };
     board?: { guard?: "speed" | "atmospheric"; pressureKpa?: number; sensor?: "ok" | "stale" | "invalid"; restartAvailable?: boolean; restartEnergyReserved?: boolean; restartLatencyMinutes?: number; note?: string };
