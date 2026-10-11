@@ -1217,13 +1217,15 @@ var EXCLUDED = [
   /^cad\./,
   // The questions to the commander are asked by the harness and the factories, answered by the commander: the night's agent neither asks nor answers, and resumes nothing.
   /^station\.(ask|answer|questions_policy|narrate)$/,
+  // The commander decides an operation the agent asked for (station.operation_request, 2026-10-11): the agent asks, never decides.
+  /^station\.operation_decide$/,
   /^factory\.resume$/,
   // Live web content belongs to the governed factory harness. It is not an instruction source for the habitat agent.
   /^web\./,
   /^twin\.(registry_|document_|session_run)/,
   /^station\.propose$/,
   // A health alarm is raised and cleared by a person (the crew, the medical panel), and an aborted commissioning reopened by the commander (2026-09-29).
-  /^biomed\.(monitor_start|monitor_stop|report|move|alarm|alarm_clear)$/,
+  /^biomed\.(monitor_start|monitor_stop|report|move|set_activity|alarm|alarm_clear)$/,
   /^station\.(registry_register|registry_report|procedure_checked|candidate_evaluated|commissioning_authorise|commissioning_reopen|procedure_run|reflect)$/,
   // The harness's graph and its evaluation are the evaluator's reading of the factories' traces (2026-09-30), not something the habitat's agent acts on.
   /^station\.harness_(graph|evaluate)$/,
@@ -1240,14 +1242,16 @@ function replayPolicyFor(id, guardMode) {
 }
 function brokerReviewer(broker) {
   let available = null;
-  return async (report2, executed, state) => {
+  return async (report2, executed, state, request) => {
     available ??= (async () => (await broker.slots()).includes("reasoner") && (await broker.tools("reasoner")).some((t) => t.name === "review_report"))().catch(() => false);
     if (!await available) return { verdict: "not reviewed", claims: [], model: null, detail: "no reader on the broker (reasoner.review_report)" };
-    const calls = executed.map((c) => ({ capability: c.id, input: c.input, outcome: c.result.outcome, error: c.result.error ?? null }));
-    const r = await broker.call("reasoner", "review_report", { report: report2, calls, state });
+    const calls = executed.map((c) => ({ capability: c.id, input: c.input, outcome: c.result.outcome, error: c.result.error ?? null, answered: c.result.ok ? JSON.stringify(c.result.output ?? null).slice(0, 2e3) : null }));
+    const features = state?.features;
+    const seen = features ? { ...state, features: { ...features, lastOutput: "(in the calls' answers)" } } : state;
+    const r = await broker.call("reasoner", "review_report", { report: report2, calls, state: seen, ...request ? { request } : {} });
     if (!r.ok) return { verdict: "not reviewed", claims: [], model: null, detail: `the reading failed: ${r.error}` };
     const o = r.output ?? {};
-    if (typeof o.faithful !== "boolean") return { verdict: "not reviewed", claims: [], model: o.model ?? null, detail: "the reader gave no verdict" };
+    if (typeof o.faithful !== "boolean") return { verdict: "not reviewed", claims: [], model: o.model ?? null, detail: `the reader gave no verdict${o.answered !== void 0 ? `; it answered: ${JSON.stringify(o.answered)}` : ""}` };
     const claims = Array.isArray(o.claims) ? o.claims.map((c) => ({ claim: String(c.claim ?? ""), executed: c.executed === true, ...c.why ? { why: String(c.why) } : {} })) : [];
     return { verdict: o.faithful ? "faithful" : "unfaithful", claims, model: o.model ?? null };
   };
@@ -1263,7 +1267,7 @@ function crewCapabilities(crewConsole, calls, review) {
       if (kind === "report" && calls && review) {
         const executed = calls.filter((c) => c.intentionId === context.intention.id && !c.id.startsWith("crew."));
         try {
-          reviewed = await review(message, executed, context.state ?? null);
+          reviewed = await review(message, executed, context.state ?? null, context.intention.description);
         } catch (e) {
           reviewed = { verdict: "not reviewed", claims: [], model: null, detail: `the reading failed: ${e instanceof Error ? e.message : String(e)}` };
         }
@@ -1282,12 +1286,16 @@ function crewCapabilities(crewConsole, calls, review) {
   });
   return [say("report"), say("ask")];
 }
-function buildCapabilities2(broker, { guardMode = "measured", approve, onCall, console: crewConsole = [], calls, review } = {}) {
-  return buildCapabilities(broker, { profile: { excluded: EXCLUDED, replayPolicy: (id) => replayPolicyFor(id, guardMode), local: crewCapabilities(crewConsole, calls, review) }, approve, onCall });
+function buildCapabilities2(broker, { guardMode = "measured", approve, onCall, console: crewConsole = [], calls, review, allow = [] } = {}) {
+  const excluded = allow.length ? EXCLUDED.map((r) => ({ test: (id) => r.test(id) && !allow.includes(id) })) : EXCLUDED;
+  return buildCapabilities(broker, { profile: { excluded, replayPolicy: (id) => replayPolicyFor(id, guardMode), local: crewCapabilities(crewConsole, calls, review) }, approve, onCall });
 }
 
 // tier3/lib/observer.ts
 var num2 = (v, fallback = -1) => typeof v === "number" && Number.isFinite(v) ? v : fallback;
+var CO2_RESOLUTION_PPM = 50;
+var LAST_OUTPUT_MAX = 24e3;
+var wholeOrSaid = (text) => text.length <= LAST_OUTPUT_MAX ? text : `${text.slice(0, LAST_OUTPUT_MAX)} ... [cut by the harness at ${LAST_OUTPUT_MAX} of ${text.length} characters: ask for a narrower read]`;
 function createObserver(broker, lastResult) {
   return {
     async observe() {
@@ -1296,16 +1304,17 @@ function createObserver(broker, lastResult) {
       const co2State = String(st.co2State ?? "UNKNOWN");
       const last = lastResult.current;
       const features = {
-        co2Ppm: num2(st.co2Ppm),
+        co2Ppm: typeof st.co2Ppm === "number" ? Math.round(st.co2Ppm / CO2_RESOLUTION_PPM) * CO2_RESOLUTION_PPM : -1,
         co2State,
         power: st.power === true,
         speedPercent: num2(st.speedPercent),
         currentAmps: num2(st.currentAmps),
         minFlowPercent: num2(st.minFlowPercent),
+        co2Sensor: String(st.atmosphere?.co2Sensor?.status ?? "n/a"),
         boardReachable: r.ok,
         lastCapability: last?.id ?? "",
         lastOutcome: last?.result.outcome ?? "",
-        lastOutput: last ? JSON.stringify(last.result.output ?? last.result.error ?? null).slice(0, 2e3) : ""
+        lastOutput: last ? wholeOrSaid(JSON.stringify(last.result.output ?? last.result.error ?? null)) : ""
       };
       return { id: `cabin:${co2State}`, features };
     }
@@ -1330,7 +1339,7 @@ function protectedGuard() {
     }
   };
 }
-async function createAgent2({ broker, provider, guardMode = "measured", approve, timeoutMs = 6e4, onStage, onCall, driver }) {
+async function createAgent2({ broker, provider, guardMode = "measured", approve, timeoutMs = 6e4, onStage, onCall, driver, allow }) {
   const crewConsole = [];
   const calls = [];
   const lastResult = { current: null };
@@ -1341,6 +1350,7 @@ async function createAgent2({ broker, provider, guardMode = "measured", approve,
     // A report is read against the calls of its event before it reaches the crew (the reasoner slot's review_report).
     calls,
     review: brokerReviewer(broker),
+    allow,
     onCall: (call) => {
       lastResult.current = call;
       calls.push(call);

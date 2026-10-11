@@ -34,6 +34,7 @@ import { supervise, SUPERVISOR_PROMPT } from "../../harness/supervisor/superviso
 import { Broker } from "../../harness/lib/broker.js";
 import type { Device } from "../station/registry.js";
 import { inventoryOf } from "./inventory.js";
+import { oneLine, runtimeEvents } from "../lib/events.js";
 
 /**
  * Who builds a task: the language model behind the `reasoner` slot, which
@@ -339,6 +340,8 @@ function launch(httpBase: string, taskId: string, topic: Topic, builder: Builder
                 if (e.status === "complete") run.lastStage = e.stage;
             },
             onProgress: (manifest) => announce(taskId, manifest as unknown as Record<string, unknown>),
+            // Each call of the factory, in the control room's trace.
+            onCall: (c) => runtimeEvents.append("call", { caller: `${String(topic)} factory`, taskId, capabilityId: c.id, input: oneLine(c.input), outcome: c.result.outcome, ...(c.result.error ? { failed: oneLine(c.result.error) } : {}) }),
         });
     })()
         .then((r) => {

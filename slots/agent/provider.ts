@@ -205,7 +205,11 @@ export function agentSlot(wsBase: string, log: (line: string) => void): Publishe
             approve: async () => false,   // no operator at this console
             // Said as it happens: what the twin answered with its numbers,
             // what the board did or refused, what was reported to the crew.
-            onCall: (c: CapabilityCall) => voice?.say(outcomeSentence(voice.words, c)),
+            onCall: (c: CapabilityCall) => {
+                // Each call of the night agent, in the control room's trace (2026-10-11).
+                runtimeEvents.append("call", { caller: "night agent", capabilityId: c.id, input: oneLine(c.input), outcome: c.result.outcome, ...(c.result.error ? { failed: oneLine(c.result.error) } : {}) });
+                voice?.say(outcomeSentence(voice.words, c));
+            },
         });
         // The station's words, and a chain that says them in order: the queue
         // must keep the order of the loop, so one sentence waits for the one

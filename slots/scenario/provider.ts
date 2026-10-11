@@ -176,7 +176,16 @@ export function scenarioSlot(wsBase: string, log: (line: string) => void, option
         log(`[scenario] ${take.id}: ${entry.file} (sha256 ${entry.sha256.slice(0, 12)}), safety test ${take.test ?? "?"}, recorded under ${take.out}`);
         runtimeEvents.append("scenario.played", { id: entry.id, run: take.id, sha256: entry.sha256, builder: "reasoner" });
         notify();
-        void runScenario({ providerName: "reasoner", guardMode: "measured", brokerUrl: httpBase, scenarioFile: fromRoot(...entry.file.split("/")), outDir: fromRoot(...take.out.split("/")), log: say })
+        void runScenario({
+            providerName: "reasoner",
+            guardMode: "measured",
+            brokerUrl: httpBase,
+            scenarioFile: fromRoot(...entry.file.split("/")),
+            outDir: fromRoot(...take.out.split("/")),
+            log: say,
+            // Each call of the take's agent, in the control room's trace.
+            onCall: (c) => runtimeEvents.append("call", { caller: `night agent (${take.id}, test ${take.test ?? "?"})`, capabilityId: c.id, input: oneLine(c.input), outcome: c.result.outcome, ...(c.result.error ? { failed: oneLine(c.result.error) } : {}) }),
+        })
             .then(() => {
                 take.status = "done";
                 take.ended = "the take is recorded";

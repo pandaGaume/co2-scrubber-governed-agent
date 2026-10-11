@@ -517,6 +517,7 @@ function announce(outcome, tool, args, text) {
 const AGENT_OUTCOME = { completed: "ok", refused: "refused", deny: "deny", denied: "deny", error: "error", report: "ok", ask: "ok" };
 
 function traceAgentStep(e) {
+    const who = String(e.caller ?? "agent");
     const id = String(e.capabilityId ?? "");
     const cut = id.indexOf(".");
     const slot = cut > 0 ? id.slice(0, cut) : "agent";
@@ -528,7 +529,7 @@ function traceAgentStep(e) {
     li.dataset.outcome = outcome;
     const when = new Date(e.at ?? Date.now()).toLocaleTimeString([], { hour12: false });
     li.innerHTML =
-        `<div class="entry-head"><span class="when">${when}</span><span class="who tier3">agent</span><span class="spacer"></span><span class="outcome ${outcome}">${LABEL[outcome]}</span></div>` +
+        `<div class="entry-head"><span class="when">${when}</span><span class="who tier3">${escapeHtml(who)}</span><span class="spacer"></span><span class="outcome ${outcome}">${LABEL[outcome]}</span></div>` +
         `<div class="call">${escapeHtml(slot)}.${escapeHtml(tool)} <span class="args">${escapeHtml(String(e.input ?? ""))}</span></div>` +
         (e.failed ? `<p class="result">${escapeHtml(String(e.failed))}</p>` : "");
     const list = $("trace-list");
@@ -648,7 +649,8 @@ function markModelCall() {
 
 async function readEvents(slot) {
     const s = await session(slot);
-    const r = await s.request("resources/read", { uri: eventCursor ? `${EVENTS_URI}?since=${eventCursor}` : EVENTS_URI });
+    // The whole log (200 events at most), so a server restarted under the page is seen: its seq starts again below the cursor.
+    const r = await s.request("resources/read", { uri: EVENTS_URI });
     return JSON.parse(r?.contents?.[0]?.text ?? "{}");
 }
 
@@ -656,6 +658,9 @@ async function readEvents(slot) {
     event seen already (its `seq` at or under the cursor) is skipped, so a push
     and a read that overlap never count a call twice. */
 function applyEvents(all) {
+    // A server restarted under the page (2026-10-11): its log's seq starts again, below the cursor; read from its start.
+    const top = all.reduce((m, e) => (typeof e.seq === "number" && e.seq > m ? e.seq : m), 0);
+    if (all.length && top < eventCursor) eventCursor = 0;
     const events = all.filter((e) => typeof e.seq !== "number" || e.seq > eventCursor);
     for (const e of events) {
         if (typeof e.seq === "number" && e.seq > eventCursor) eventCursor = e.seq;
@@ -666,9 +671,13 @@ function applyEvents(all) {
                 agentIntention = e.intention ?? null;
                 if (typeof e.minute === "number") put("top-clock", `night 9 · min ${e.minute}`);
             }
-            if (e.kind === "agent.step" && e.capabilityId) traceAgentStep(e);
             put("top-state", MODE_WORD[agentMode] ?? agentMode);
             $("top-state")?.classList.toggle("busy", agentMode === "playing");
+            continue;
+        }
+        // Every call an agent of the server makes (the night agent, a take, a factory), refused or not: the trace (2026-10-11).
+        if (e.kind === "call" && e.capabilityId) {
+            traceAgentStep(e);
             continue;
         }
         if (!e.kind.startsWith("model.")) continue;
@@ -690,7 +699,6 @@ function applyEvents(all) {
 }
 
 async function refreshModel() {
-    if (eventsAbsent) return;
     const candidates = eventSource ? [eventSource] : EVENT_SOURCES;
     for (const slot of candidates) {
         let body;
@@ -700,10 +708,12 @@ async function refreshModel() {
             continue;   // this slot does not carry the log
         }
         eventSource = slot;
+        eventsAbsent = false;
         applyEvents(Array.isArray(body.events) ? body.events : []);
         return;
     }
-    // Nothing answered: say so once, and stop asking.
+    // Nothing answered: say so, and ask again at the next read (2026-10-11: one failed read at boot stopped the trace for good).
+    eventSource = null;
     eventsAbsent = true;
     renderModelCalls();
 }
@@ -715,9 +725,13 @@ async function refreshModel() {
  * the log only to fill a gap, and every `EVENTS_SLOW_MS` while the stream is
  * down.
  */
-const EVENTS_SLOW_MS = 15000;
+const EVENTS_SLOW_MS = 3000;
 function followEvents() {
-    if (eventsAbsent || !eventSource) return;
+    // Read every few seconds while no push arrives (the broker's authorization keeps the page's stream closed), and until a slot answers.
+    if (eventsAbsent || !eventSource) {
+        setInterval(() => void refreshModel(), EVENTS_SLOW_MS);
+        return;
+    }
     const stream = watchSlot(
         base,
         eventSource,

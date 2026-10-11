@@ -564,7 +564,11 @@ function openSlotPage(slot, serves) {
     if (slot === "agent") return openLoopWindow();
     if (slot === "factory") return openFactoryWindow();
     if (slot === "twin") return openTwinWindow();
-    const w = window.open(`./${serves.page}`, slot);
+    // A window of its own beside the board, never a tab over it (2026-10-11): a hidden board plays no audio, and Mother went silent
+    // for the scenarios played from a tab that covered it.
+    const width = Math.floor(screen.availWidth / 2);
+    const features = `popup=yes,width=${width},height=${Math.floor(screen.availHeight / 2)},left=${screen.availLeft},top=${screen.availTop + Math.floor(screen.availHeight / 2)}`;
+    const w = window.open(`./${serves.page}`, slot, features);
     voiceLine(w ? `${slot}: its page opened in its own window` : `${slot}: the browser did not open its window; open ./${serves.page} yourself`, "info");
     return w;
 }

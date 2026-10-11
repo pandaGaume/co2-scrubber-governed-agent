@@ -76,6 +76,7 @@ import { moduleOf, totalMinutes, type Procedure } from "../../lib/procedure/form
 import { buildReport, reportLines, type ProcedureReport, type StepRecord } from "../../lib/procedure/report.js";
 import { DEFAULT_POLICY, questionProblems, standingOrder, type Question, type QuestionAnswer, type QuestionsPolicy, type Resume } from "./questions.js";
 import { descriptorProblems, levelsOf, needsCommissioning, type Device, type DeviceDescriptor } from "./registry.js";
+import { runtimeEvents } from "../lib/events.js";
 
 const SHA = { type: "string", pattern: "^[0-9a-f]{64}$" };
 const VERSION = "0.2.0";
@@ -236,7 +237,12 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
         notify(MOTHER_URI, { [META_MOTHER]: line });
         // Mother embodies the station: what she says is spoken, in the station's voice, by the speech slot the control room plays (2026-09-27: a silent station read as software).
         // Said and not awaited: a voice that is down or not configured never holds the register, a relay or a question back.
-        if (process.env.STATION_VOICE !== "off") void client().call("speech", "say", { text: line.text.en, voice: "station" }).catch(() => undefined);
+        // A voice that refuses is said in the log (2026-10-11: Mother silent on a second pass, and nothing said why).
+        if (process.env.STATION_VOICE !== "off")
+            void client()
+                .call("speech", "say", { text: line.text.en, voice: "station" })
+                .then((r) => (r.ok ? undefined : log(`[station] voice: Mother's line was not spoken (${r.error ?? r.outcome})`)))
+                .catch((e: unknown) => log(`[station] voice: Mother's line was not spoken (${e instanceof Error ? e.message : String(e)})`));
         return line;
     };
 
@@ -1068,6 +1074,8 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                         const r = await client().call(target.slot, target.tool, request.input as never);
                         request.outcome = { ok: r.ok, ...(r.ok ? { output: r.output } : { error: r.error ?? r.outcome }), at: new Date().toISOString() };
                         request.status = r.ok ? "executed" : "refused by the device";
+                        // The station's call on the commander's authorisation, in the control room's trace: the device's answer shows there too.
+                        runtimeEvents.append("call", { caller: `station, authorised by ${request.decision.by}`, capabilityId: `${target.slot}.${target.tool}`, input: JSON.stringify(request.input), outcome: r.outcome, ...(r.ok ? {} : { failed: String(r.error ?? r.outcome) }) });
                     } catch (e) {
                         request.outcome = { ok: false, error: e instanceof Error ? e.message : String(e), at: new Date().toISOString() };
                         request.status = "failed";

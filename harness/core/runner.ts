@@ -78,6 +78,8 @@ export interface BuilderContext {
 
 export interface RunTaskOptions {
     broker: Broker;
+    /** Every call the task makes, as it is made (the control room's trace, 2026-10-11). */
+    onCall?: (call: CapabilityCall) => void;
     /** The reasoner: a provider, or a function that builds one for this task (the scripted builders read the task). */
     provider: Provider | ((context: BuilderContext) => Provider);
     taskId: string;
@@ -256,7 +258,7 @@ function keepStatements(catalogue: import("./capabilities.js").CatalogueEntry[],
     return { words, context: contextCommits(forkId() ? forkDir() : null) };
 }
 
-export async function runTask({ broker, provider: providerOrBuild, taskId, topic: topicName, supervisor, recipesDir = path.join(WORKSHOP_ROOT, "_recipes"), runtimeSlot = "twin", promptFile = null, timeoutMs = 60000, onStage, onProgress, log = () => undefined }: RunTaskOptions): Promise<RunTaskResult> {
+export async function runTask({ broker, provider: providerOrBuild, taskId, topic: topicName, supervisor, recipesDir = path.join(WORKSHOP_ROOT, "_recipes"), runtimeSlot = "twin", promptFile = null, timeoutMs = 60000, onStage, onProgress, onCall, log = () => undefined }: RunTaskOptions): Promise<RunTaskResult> {
     const startedAt = new Date();
     const { task: file, sha256: taskSha256 } = await readTask(broker, taskId);
     const task = file.task;
@@ -361,6 +363,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             local: [...taskCapabilities(broker, taskId, progress, topicId, task), ...(topic.local?.({ broker, taskId, task, progress, runtimeSlot }) ?? [])],
         },
         onCall: (call) => {
+            onCall?.(call);
             progress.lastCall = call;
             calls.push(call);
             if (call.result.ok) progress.reads[call.id] = { at: new Date().toISOString(), value: (call.result.output ?? null) as JsonValue };

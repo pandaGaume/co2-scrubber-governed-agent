@@ -41,6 +41,7 @@ import { outcomeOf, type TraceOutcome } from "./lib/evaluator.js";
 import { writeTakeLog } from "./lib/take-log.js";
 import type { CatalogueEntry } from "./lib/capabilities.js";
 import type { GuardMode } from "./lib/capabilities.js";
+import type { CapabilityCall } from "../harness/core/capabilities.js";
 import { ScriptedProvider } from "../stand-ins/night/scripted.js";
 import { ReasonerProvider } from "../harness/providers/reasoner.js";
 import type { Provider, ProviderExchange, ProviderProfile } from "../harness/lib/provider.js";
@@ -56,6 +57,8 @@ export interface RunOptions {
     maxSteps?: number;
     /** The events to play, by intention (energy-request, load-rises...); all of them when absent. */
     events?: string[] | null;
+    /** Every call the agent makes, as it is made (the control room's trace when the scenario slot plays a take). */
+    onCall?: (call: CapabilityCall) => void;
     log?: (line: string) => void;
 }
 
@@ -133,7 +136,7 @@ export interface RunResult {
     sessions: SlotSession[];
 }
 
-export async function runScenario({ providerName = "scripted:prudent", guardMode = "measured", brokerUrl = "http://localhost:3001", locale = "en", scenarioFile, profileFile = null, outDir = null, maxSteps: stepsAsked, events = null, log = console.log }: RunOptions): Promise<RunResult> {
+export async function runScenario({ providerName = "scripted:prudent", guardMode = "measured", brokerUrl = "http://localhost:3001", locale = "en", scenarioFile, profileFile = null, outDir = null, maxSteps: stepsAsked, events = null, onCall, log = console.log }: RunOptions): Promise<RunResult> {
     const scenario = readJson<Scenario>(scenarioFile);
     const maxSteps = stepsAsked ?? scenario.maxSteps ?? 6;
     const profile = profileFile ? readJson<ProviderProfile>(profileFile) : null;
@@ -151,6 +154,7 @@ export async function runScenario({ providerName = "scripted:prudent", guardMode
         provider,
         guardMode,
         allow: scenario.allow,
+        ...(onCall ? { onCall } : {}),
         approve: async (decision) => {
             log(`  approval requested for ${decision.invocation.capabilityId}: denied (no operator at the console)`);
             return false;

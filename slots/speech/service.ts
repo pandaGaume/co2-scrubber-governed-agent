@@ -203,7 +203,9 @@ export class SpeechService {
         for (const u of this.utterances) {
             if (!u.takenBy || u.takenBy === output) continue;
             if (u.playedBy?.length) continue;
-            if (u.takenAt && now - u.takenAt > FLOOR_MS) continue;   // the holder went away
+            // Released (its holder asked for another line) or gone away: not a floor (2026-10-11: a line cut or never reported played,
+            // then released, kept takenBy without takenAt and held the room silent for ever on a scenario's second pass).
+            if (!u.takenAt || now - u.takenAt > FLOOR_MS) continue;
             return { output: u.takenBy, utteranceId: u.utteranceId };
         }
         return null;
