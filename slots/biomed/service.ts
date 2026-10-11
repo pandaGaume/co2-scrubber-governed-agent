@@ -46,7 +46,7 @@ export type SubjectStatus = "nominal" | "out-of-band" | "signal-lost" | "no-sign
 
 /**
  * A critical health alarm raised for someone: by a person who saw it (the crew, the medical panel), whatever the heart rate says
- * (2026-09-29). Its lifecycle (2026-10-11, specs/biomed/alarm-policy.json): raised, acknowledged, in treatment, closed, in that order;
+ * (2026-09-29). Its lifecycle (2026-10-11, the library's card health-alarm-procedure, signed): raised, acknowledged, in treatment, closed, in that order;
  * it is active (it stops a test that exposes the person, and no procedure may expose them) until it is closed. Not acknowledged in
  * time, it escalates.
  */
@@ -63,7 +63,7 @@ export interface Alarm {
     escalation: { level: 0 | 1 | 2; at?: string; reminders: number };
 }
 
-/** The escalation's timings, from specs/biomed/alarm-policy.json. */
+/** The escalation's timings, from the library's card health-alarm-procedure, signed. */
 export interface AlarmPolicy {
     acknowledgeWithinSeconds: number;
     escalateAfterSeconds: number;
@@ -380,7 +380,7 @@ export class CrewService {
     readonly closedAlarms: Array<{ subjectId: string; callsign: string; module: string } & Alarm> = [];
 
     /**
-     * The escalation (specs/biomed/alarm-policy.json): an alarm not acknowledged in time rises a level, then another; one acknowledged
+     * The escalation (the library's card health-alarm-procedure, signed): an alarm not acknowledged in time rises a level, then another; one acknowledged
      * and not treated is reminded. Returns the alarms whose escalation changed, for who says it.
      */
     escalate(policy: AlarmPolicy = DEFAULT_ALARM_POLICY, now: number = Date.now()): Array<{ subjectId: string; callsign: string; module: string } & Alarm> {

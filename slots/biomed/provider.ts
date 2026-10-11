@@ -31,6 +31,8 @@
  * everywhere else in this repository.
  */
 import { existsSync, readFileSync } from "node:fs";
+import * as path from "node:path";
+import { LIBRARY_DOCS_DIR, signatureOf } from "../../harness/lib/signatures.js";
 import { fromRoot, relativeToRoot } from "../../lib/paths.js";
 import { errorMessage, readJson, sha256File } from "../../lib/files.js";
 import { objectSchema, publishSlot, type PublishedSlot, type SlotTool } from "../lib/slot-server.js";
@@ -267,7 +269,7 @@ export function biomedSlot(wsBase: string, log: (line: string) => void): Publish
             title: "The health alarms, open and closed",
             description: "Every open alarm with its lifecycle (raised, acknowledged, in treatment) and escalation level, and the last ones closed with their resolution.",
             inputSchema: objectSchema({}),
-            handle: (_args, s) => ({ open: s.service.raised, closed: s.service.closedAlarms }),
+            handle: (_args, s) => ({ open: s.service.raised, closed: s.service.closedAlarms, policy: loadAlarmPolicy() }),
         },
         {
             name: "move",
@@ -285,11 +287,11 @@ export function biomedSlot(wsBase: string, log: (line: string) => void): Publish
         },
     ];
 
-    // The alarms' escalation (2026-10-11, specs/biomed/alarm-policy.json): checked every two seconds; what rises is in the log and in the
-    // alarms the station reads (Mother says it).
-    const policy = loadAlarmPolicy();
+    // The alarms' escalation (2026-10-11, the library's card health-alarm-procedure): checked every two seconds, its timings and its
+    // signature read again each time (a card signed or changed meanwhile counts at once); what rises is in the log and in the alarms the
+    // station reads (Mother says it).
     const escalation = setInterval(() => {
-        for (const a of state.service.escalate(policy)) log(`[biomed] alarm of ${a.callsign} (${a.what}): ${a.status === "raised" ? `not acknowledged, escalation level ${a.escalation.level}` : `acknowledged, no treatment recorded (reminder ${a.escalation.reminders})`}`);
+        for (const a of state.service.escalate(loadAlarmPolicy())) log(`[biomed] alarm of ${a.callsign} (${a.what}): ${a.status === "raised" ? `not acknowledged, escalation level ${a.escalation.level}` : `acknowledged, no treatment recorded (reminder ${a.escalation.reminders})`}`);
     }, 2000);
     escalation.unref?.();
 
@@ -311,17 +313,28 @@ export function biomedSlot(wsBase: string, log: (line: string) => void): Publish
     });
 }
 
-/** The escalation's timings (specs/biomed/alarm-policy.json); the defaults when the file is absent. */
-function loadAlarmPolicy(): AlarmPolicy {
+/**
+ * The escalation's timings: facts of the library's card health-alarm-procedure (2026-10-11, Guillaume: a safety timing is a signed fact
+ * of the library, not a file of the repository). Its signature is read with it; an unsigned or changed card still sets the timings (an
+ * alarm is never left silent), and says so. The defaults when the card is absent.
+ */
+export const ALARM_PROCEDURE = "health-alarm-procedure";
+export function loadAlarmPolicy(): AlarmPolicy & { procedure: { document: string; signed: { by: string; at: string; valid: boolean } | null } } {
+    const value = (facts: Array<{ id: string; value?: unknown }>, id: string, fallback: number): number => {
+        const v = facts.find((f) => f.id === id)?.value;
+        return typeof v === "number" && v > 0 ? v : fallback;
+    };
     try {
-        const doc = JSON.parse(readFileSync(fromRoot("specs", "biomed", "alarm-policy.json"), "utf8")) as { escalation?: Record<string, { value?: number }> };
-        const e = doc.escalation ?? {};
+        const doc = JSON.parse(readFileSync(path.join(LIBRARY_DOCS_DIR, `${ALARM_PROCEDURE}.facts.json`), "utf8")) as { facts?: Array<{ id: string; value?: unknown }> };
+        const facts = doc.facts ?? [];
+        const signature = signatureOf(ALARM_PROCEDURE);
         return {
-            acknowledgeWithinSeconds: e.acknowledgeWithinSeconds?.value ?? DEFAULT_ALARM_POLICY.acknowledgeWithinSeconds,
-            escalateAfterSeconds: e.escalateAfterSeconds?.value ?? DEFAULT_ALARM_POLICY.escalateAfterSeconds,
-            treatWithinSeconds: e.treatWithinSeconds?.value ?? DEFAULT_ALARM_POLICY.treatWithinSeconds,
+            acknowledgeWithinSeconds: value(facts, "alarm.acknowledgeWithinSeconds", DEFAULT_ALARM_POLICY.acknowledgeWithinSeconds),
+            escalateAfterSeconds: value(facts, "alarm.escalateAfterSeconds", DEFAULT_ALARM_POLICY.escalateAfterSeconds),
+            treatWithinSeconds: value(facts, "alarm.treatWithinSeconds", DEFAULT_ALARM_POLICY.treatWithinSeconds),
+            procedure: { document: ALARM_PROCEDURE, signed: signature ? { by: signature.by, at: signature.at, valid: signature.valid } : null },
         };
     } catch {
-        return DEFAULT_ALARM_POLICY;
+        return { ...DEFAULT_ALARM_POLICY, procedure: { document: ALARM_PROCEDURE, signed: null } };
     }
 }

@@ -1,0 +1,38 @@
+{
+    "document": "health-alarm-procedure",
+    "facts": [
+        {
+            "id": "alarm.acknowledgeWithinSeconds",
+            "semantic": "HealthAlarmAcknowledgeWithin",
+            "quantity": "Time",
+            "unit": "s",
+            "value": 60,
+            "bound": "upper",
+            "says": "a critical health alarm not acknowledged within 60 s escalates to level 1: the commander is called",
+            "kind": "context",
+            "reference": "first proposal of 2026-10-11, to be set by the crew's medical officer"
+        },
+        {
+            "id": "alarm.escalateAfterSeconds",
+            "semantic": "HealthAlarmEscalateAfter",
+            "quantity": "Time",
+            "unit": "s",
+            "value": 180,
+            "bound": "upper",
+            "says": "still not acknowledged after 180 s, level 2: all the crew is called to the module and Ground is informed",
+            "kind": "context",
+            "reference": "first proposal of 2026-10-11, to be set by the crew's medical officer"
+        },
+        {
+            "id": "alarm.treatWithinSeconds",
+            "semantic": "HealthAlarmTreatWithin",
+            "quantity": "Time",
+            "unit": "s",
+            "value": 300,
+            "bound": "upper",
+            "says": "an alarm acknowledged with no treatment recorded is reminded every 300 s",
+            "kind": "context",
+            "reference": "first proposal of 2026-10-11, to be set by the crew's medical officer"
+        }
+    ]
+}

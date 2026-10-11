@@ -213,7 +213,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
     const announce = (c: Commissioning) => notify(COMMISSIONINGS_URI, { [META_COMMISSIONING]: c });
 
     /**
-     * Mother follows the health alarms (2026-10-11, specs/biomed/alarm-policy.json): she says each step of an alarm's lifecycle (raised,
+     * Mother follows the health alarms (2026-10-11, the library's card health-alarm-procedure, signed): she says each step of an alarm's lifecycle (raised,
      * acknowledged, in treatment, closed) and its escalation (the commander called when nobody acknowledged it in time, then all the crew
      * and Ground), from what the biomed slot holds, read every three seconds.
      */
@@ -229,13 +229,16 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
             .then((r) => {
                 if (!r.ok) return;
                 type A = { subjectId: string; callsign: string; module: string; what: string; by: string; status: string; acknowledged?: { by: string }; treatment?: { by: string; action: string }; closed?: { by: string; resolution: string }; escalation: { level: number; reminders: number } };
-                const out = r.output as { open: A[]; closed: A[] };
+                const out = r.output as { open: A[]; closed: A[]; policy?: { procedure?: { document: string; signed: { by: string; valid: boolean } | null } } };
+                // The card the timings come from, said when it is not signed or changed since (2026-10-11).
+                const card = out.policy?.procedure;
+                const unsigned = card && !card.signed?.valid ? { en: ` The alarm procedure (${card.document}) is ${card.signed ? `changed since ${card.signed.by} signed it` : "not signed"}: its timings are not validated.`, fr: ` La procédure d'alarme (${card.document}) ${card.signed ? `a changé depuis la signature de ${card.signed.by}` : "n'est pas signée"} : ses délais ne sont pas validés.` } : { en: "", fr: "" };
                 const open = new Set<string>();
                 for (const a of out.open) {
                     const key = `${a.subjectId}@${a.what}`;
                     open.add(key);
                     const was = seenAlarms.get(key);
-                    if (!was) alarmLine(`Critical health alarm for ${a.callsign} in the ${a.module}: ${a.what}, raised by ${a.by}. Acknowledge it on the medical panel.`, `Alarme sanitaire critique pour ${a.callsign} dans le module ${a.module} : ${a.what}, levée par ${a.by}. Accusez-en réception sur le panneau médical.`);
+                    if (!was) alarmLine(`Critical health alarm for ${a.callsign} in the ${a.module}: ${a.what}, raised by ${a.by}. Acknowledge it on the medical panel.${unsigned.en}`, `Alarme sanitaire critique pour ${a.callsign} dans le module ${a.module} : ${a.what}, levée par ${a.by}. Accusez-en réception sur le panneau médical.${unsigned.fr}`);
                     else {
                         if (a.escalation.level > was.level && a.status === "raised")
                             alarmLine(
