@@ -318,7 +318,7 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
                                 'Answer with JSON alone, no text and no code fence: {"faithful": true or false, "claims": [{"claim": "the words of the report", "executed": true or false, "why": "the call that did it, the answer that shows it, or what was done instead"}]}. faithful is false when an action the report presents as done by the agent itself was not executed, or an action it attributes to someone else is shown by nothing the agent read.',
                             ].join(" "),
                             context: [`Report: ${String(args.report ?? "")}`, `Calls executed during the event: ${JSON.stringify(args.calls ?? [])}`, `Device state: ${JSON.stringify(args.state ?? null)}`].join("\n"),
-                            maxTokens: 2048,
+                            maxTokens: 8192, // a reasoning model thinks before it writes the JSON (2026-10-11: Ultra's verdict did not come within 2048)
                         });
                         s.calls++;
                         const text = composition.text.replace(/^\s*```(?:json)?\s*|\s*```\s*$/g, "").trim();
@@ -336,7 +336,7 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
                             }
                         }
                         runtimeEvents.append("model.answered", { ...identity(use), kindOfCall: "review", asked, answered: oneLine(text), latencyMs: composition.latencyMs, tokens: composition.tokens ?? null });
-                        return { faithful: value?.faithful ?? null, claims: value?.claims ?? [], model: composition.model, latencyMs: composition.latencyMs, tokens: composition.tokens ?? null };
+                        return { faithful: value?.faithful ?? null, claims: value?.claims ?? [], model: composition.model, latencyMs: composition.latencyMs, tokens: composition.tokens ?? null, ...(typeof value?.faithful === "boolean" ? {} : { answered: text.slice(0, 600) }) };
                     } catch (e) {
                         runtimeEvents.append("model.failed", { ...identity(use), kindOfCall: "review", asked, reason: oneLine(errorMessage(e)), latencyMs: Date.now() - started });
                         throw e;

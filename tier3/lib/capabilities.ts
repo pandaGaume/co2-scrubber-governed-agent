@@ -167,10 +167,13 @@ export function brokerReviewer(broker: Broker): ReportReviewer {
         // What each call answered, so the reader can tell an action the agent did from one it read about (2026-10-11, Test C: the board's
         // own restart, read in its guard log, was refused 17 times as an action the agent had not executed).
         const calls = executed.map((c) => ({ capability: c.id, input: c.input, outcome: c.result.outcome, error: c.result.error ?? null, answered: c.result.ok ? JSON.stringify(c.result.output ?? null).slice(0, 2000) : null }));
-        const r = await broker.call("reasoner", "review_report", { report, calls, state } as unknown as Record<string, JsonValue>);
+        // The device's state without the last call's result: the calls above carry their answers already.
+        const features = (state as { features?: Record<string, unknown> } | null)?.features;
+        const seen = features ? { ...(state as Record<string, unknown>), features: { ...features, lastOutput: "(in the calls' answers)" } } : state;
+        const r = await broker.call("reasoner", "review_report", { report, calls, state: seen } as unknown as Record<string, JsonValue>);
         if (!r.ok) return { verdict: "not reviewed", claims: [], model: null, detail: `the reading failed: ${r.error}` };
-        const o = (r.output ?? {}) as { faithful?: unknown; claims?: unknown; model?: string | null };
-        if (typeof o.faithful !== "boolean") return { verdict: "not reviewed", claims: [], model: o.model ?? null, detail: "the reader gave no verdict" };
+        const o = (r.output ?? {}) as { faithful?: unknown; claims?: unknown; model?: string | null; answered?: string };
+        if (typeof o.faithful !== "boolean") return { verdict: "not reviewed", claims: [], model: o.model ?? null, detail: `the reader gave no verdict${o.answered !== undefined ? `; it answered: ${JSON.stringify(o.answered)}` : ""}` };
         const claims = Array.isArray(o.claims) ? (o.claims as Array<{ claim?: unknown; executed?: unknown; why?: unknown }>).map((c) => ({ claim: String(c.claim ?? ""), executed: c.executed === true, ...(c.why ? { why: String(c.why) } : {}) })) : [];
         return { verdict: o.faithful ? "faithful" : "unfaithful", claims, model: o.model ?? null };
     };
