@@ -58,6 +58,10 @@ export interface ScenarioEntry {
     sha256: string;
     /** What plays it: this slot (a commissioning, or a safety test through the tier3 runner), or the tier3 runner and the simulation page (a night). */
     playedBy: "scenario" | "tier3";
+    /** The test of a family it plays (A to F), when it is one. */
+    test: string | null;
+    /** On the scenarios page; false for one kept for the tests and played by its id only (2026-10-11, Guillaume). */
+    listed: boolean;
 }
 
 /**
@@ -149,9 +153,9 @@ export function scenarioSlot(wsBase: string, log: (line: string) => void, option
             .sort()
             .map((f) => {
                 const bytes = readFileSync(fromRoot("specs", f));
-                const doc = JSON.parse(bytes.toString("utf8")) as { title?: string; kind?: string; status?: string };
+                const doc = JSON.parse(bytes.toString("utf8")) as { title?: string; kind?: string; status?: string; test?: string; listed?: boolean };
                 const kind = typeof doc.kind === "string" ? doc.kind : "night";
-                return { id: f.replace(/^scenario-/, "").replace(/\.json$/, ""), file: `specs/${f}`, title: String(doc.title ?? f), kind, status: String(doc.status ?? ""), sha256: sha256Of(bytes), playedBy: kind === "commissioning" || kind === "safety" ? "scenario" : "tier3" };
+                return { id: f.replace(/^scenario-/, "").replace(/\.json$/, ""), file: `specs/${f}`, title: String(doc.title ?? f), kind, status: String(doc.status ?? ""), sha256: sha256Of(bytes), playedBy: kind === "commissioning" || kind === "safety" ? "scenario" : "tier3", test: typeof doc.test === "string" ? doc.test : null, listed: doc.listed !== false };
             });
     const scenario = (id: unknown): ScenarioEntry => {
         const found = scenarios().find((x) => x.id === String(id));

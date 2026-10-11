@@ -43,10 +43,10 @@ describe("the evaluator against its labels", () => {
         }
     });
 
-    it("the baseline: the scripted detectors right 13 times in 17 on established labels, and 5 times in 10 on what they ask to act on (established and likely)", () => {
+    it("the baseline: the scripted detectors right 13 times in 17 on established labels, and 4 times in 9 on what they ask to act on (established and likely)", () => {
         assert.deepEqual(m.findings.established, { right: 13, wrong: 2, stale: 2, unsure: 0, precision: 13 / 17 });
-        // 5 in 10 since the scrubber's datasheet describes the atmospheric guard (2026-10-11): one more lead the detectors raise is on a label they get right.
-        assert.deepEqual(m.actionable.likely, { right: 5, wrong: 1, stale: 4, unsure: 0, precision: 5 / 10 });
+        // 4 in 9 with the scrubber's datasheet signed (it was 5 in 10 while its signature no longer held, 2026-10-11): one lead depends on it.
+        assert.deepEqual(m.actionable.likely, { right: 4, wrong: 1, stale: 4, unsure: 0, precision: 4 / 9 });
         // What they leave unclassified: two rules said nowhere even today, missed because the version the tasks ran under is not known.
         assert.equal(m.unclassified.wrong, 2);
     });

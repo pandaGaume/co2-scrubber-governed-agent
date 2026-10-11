@@ -1,7 +1,7 @@
 # Brief firmware : la garde atmosphérique de la carte de l'épurateur
 
 **Pour** : le firmware ESP32-S3 de l'épurateur (dépôt CyanMycelium, slot `scrubber` publié par libmcpb).
-**But** : que la vraie carte se comporte exactement comme la carte simulée du scénario « pénurie d'énergie » (`specs/scenario-energy-shortage.json`), sans rien de plus. On n'est plus dans le générique : ce brief cale la carte sur le scénario du 2026-10-11.
+**But** : que la vraie carte se comporte exactement comme la carte simulée du scénario « pénurie d'énergie » (`specs/scenario-energy-shortage-a.json`), sans rien de plus. On n'est plus dans le générique : ce brief cale la carte sur le scénario du 2026-10-11.
 **Référence exécutable** : la carte simulée, `slots/scrubber/provider.ts` (mode `atmospheric`) et `slots/scrubber/atmosphere.ts`. En cas de doute, la référence fait foi.
 **Chiffres** : tous dans `specs/scrubber/guard.json`, chacun avec sa source. Le firmware les embarque tels quels, sans en inventer.
 **Tests de recette** : `tests/atmospheric-guard.test.ts`. Les mêmes cas doivent passer sur la carte.
@@ -148,7 +148,7 @@ Cela tient en flottants simples : 240 pas, quelques opérations par pas, à chaq
 4. **Recette** : rejouer `tests/atmospheric-guard.test.ts` contre la carte (mêmes entrées, mêmes verdicts), puis la prise du test A en mode `--board` :
 
 ```bash
-node --env-file-if-exists=.env dist/tier3/run.js --provider reasoner --scenario specs/scenario-energy-shortage.json --out outputs/tier3/sessions/test-a-board
+node --env-file-if-exists=.env dist/tier3/run.js --provider reasoner --scenario specs/scenario-energy-shortage-a.json --out outputs/tier3/sessions/test-a-board
 ```
 
 ## 8. Où la carte diffère volontairement de la référence simulée

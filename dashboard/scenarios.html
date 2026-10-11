@@ -422,10 +422,11 @@ async function refreshScenarios() {
     try {
         const s = await scenarioSlot();
         const read = async (uri) => JSON.parse((await s.request("resources/read", { uri })).contents[0].text);
-        const all = (await read("scenario://scenarios")).filter((x) => x.playedBy === "scenario");
+        // The scenarios played here, but those kept for the tests only (listed: false, 2026-10-11).
+        const all = (await read("scenario://scenarios")).filter((x) => x.playedBy === "scenario" && x.listed !== false);
         const list = all.filter((x) => x.kind !== "safety");
         // The safety tests of the scrubber (2026-10-11, A to E): played here by the night agent, their take recorded.
-        const safety = all.filter((x) => x.kind === "safety");
+        const safety = all.filter((x) => x.kind === "safety").sort((a, b) => String(a.test ?? a.id).localeCompare(String(b.test ?? b.id)));
         const run = await read("scenario://run");
         const take = await read("scenario://take");
         if (!all.length) {
@@ -479,7 +480,7 @@ async function refreshScenarios() {
                               : "";
                           return (
                               `<button class="event ${playing ? "playing" : ""}" data-safety="${esc(x.id)}" type="button">` +
-                              `<span class="row"><span class="name">${esc(x.id)}</span><span class="min">${esc(x.sha256.slice(0, 8))}</span></span>` +
+                              `<span class="row"><span class="name">${x.test ? `Test ${esc(x.test)}` : esc(x.id)}</span><span class="min">${esc(x.id)} · ${esc(x.sha256.slice(0, 8))}</span></span>` +
                               `<span class="msg">${esc(x.title)}</span>${lines}</button>`
                           );
                       })

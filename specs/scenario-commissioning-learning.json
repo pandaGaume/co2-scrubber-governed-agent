@@ -1,4 +1,5 @@
 {
+    "listed": false,
     "title": "Commissioning, the learning mechanics under test: a scripted factory that corrects itself after a refusal, a scripted reflection (play it three times in a fork started with --learn scripted)",
     "version": 1,
     "status": "draft, not yet reviewed",
