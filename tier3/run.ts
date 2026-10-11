@@ -38,6 +38,7 @@ import { brokerAuth } from "../harness/lib/broker-auth.js";
 import { cabinReading } from "../lib/cabin-co2.js";
 import { createAgent, type Agent } from "./agent.js";
 import { outcomeOf, type TraceOutcome } from "./lib/evaluator.js";
+import { writeTakeLog } from "./lib/take-log.js";
 import type { CatalogueEntry } from "./lib/capabilities.js";
 import type { GuardMode } from "./lib/capabilities.js";
 import { ScriptedProvider } from "../stand-ins/night/scripted.js";
@@ -359,7 +360,9 @@ export async function runScenario({ providerName = "scripted:prudent", guardMode
             capabilities: agent.catalogue,
         };
         fs.writeFileSync(path.join(dir, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
-        log(`\nwritten to ${relativeToRoot(dir)}`);
+        // The take, readable call by call (tier3/lib/take-log.ts), written last: it reads the files above.
+        writeTakeLog(dir);
+        log(`\nwritten to ${relativeToRoot(dir)} (log.md: the take, call by call)`);
     }
     await broker.close();
     await world.close();
