@@ -367,7 +367,12 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             // A document read whole: kept in the task's memory of documents, shown in the state beyond the evidence's last ten answers.
             if (call.result.ok && call.id === "library.read") {
                 const o = (call.result.output ?? {}) as { id?: unknown; title?: unknown; text?: unknown };
-                if (typeof o.id === "string" && typeof o.text === "string" && !progress.documents.some((d) => d.id === o.id)) progress.documents.push({ id: o.id, title: typeof o.title === "string" ? o.title : o.id, text: o.text, step: progress.iteration });
+                if (typeof o.id === "string" && typeof o.text === "string") {
+                    // Read again (2026-10-11): it becomes the last one, shown whole, and its reads are counted.
+                    const before = progress.documents.find((d) => d.id === o.id);
+                    progress.documents = progress.documents.filter((d) => d.id !== o.id);
+                    progress.documents.push({ id: o.id, title: typeof o.title === "string" ? o.title : o.id, text: o.text, step: progress.iteration, reads: (before?.reads ?? 1) + (before ? 1 : 0) });
+                }
             }
             // What a justification may cite, noted on every call, replays included.
             noteSources(progress.sources, call);

@@ -187,12 +187,16 @@ export function createBuilderGuard(options: BuilderGuardOptions): SafetyGuard {
                 // A failed call repeated as it was fails as it did (2026-09-26, the first passage of the code topic: the same plugin_build refused seventeen times): its error is in the state; what it names is what changes.
                 return { allowed: false, reason: `${id} with the same input was the previous step, and failed: ${String(last.result.error ?? last.result.outcome).slice(0, 300)}. The same call fails the same way: change what the error names, or call something else.` };
             }
-            // A document read in this task is not read again (2026-10-10, run 24: 76 reads, the same documents three times over, the budget spent):
-            // its lines are in the state, the last one whole.
+            // A document read in this task is not read over and over (2026-10-10, run 24: 76 reads, the same documents three times over, the
+            // budget spent). The last one read is in the state whole: not read again. An earlier one is shown by its numbered lines only, so it
+            // may be read once more, and comes back whole (2026-10-11: the procedure factory, refused the method card it had read before the
+            // NASA protocols, was stuck on it three times); twice is the most.
             if (id === "library.read") {
                 const asked = String((decision.invocation.input as { id?: unknown } | null)?.id ?? "");
-                const read = options.progress?.documents.find((d) => d.id === asked);
-                if (read) return { allowed: false, reason: `library.read: "${asked}" was read at step ${read.step}: it is in the state (readDocuments: the last document whole, the earlier ones by their lines with a number); for a passage of it, library.search with its words` };
+                const documents = options.progress?.documents ?? [];
+                const read = documents.find((d) => d.id === asked);
+                if (read && documents[documents.length - 1]?.id === asked) return { allowed: false, reason: `library.read: "${asked}" is the last document read: it is in the state whole (readDocuments); decide from it, or library.search for a passage of another` };
+                if (read && (read.reads ?? 1) >= 2) return { allowed: false, reason: `library.read: "${asked}" was read twice already in this task; its numbered lines are in the state (readDocuments); for a passage of it, library.search with its words` };
             }
             if (id === "task.plan") {
                 const problems = await planProblems(decision.invocation.input as unknown as Plan, options);

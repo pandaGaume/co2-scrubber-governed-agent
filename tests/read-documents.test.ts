@@ -25,14 +25,18 @@ describe("the documents a task read", () => {
         assert.equal(numericLines("a 1\nb 2\nc 3", 4), "a 1\n...");
     });
 
-    it("a document read is not read again: the guard says where it is", async () => {
+    it("the last document read is not read again; an earlier one may be, once more (2026-10-11: the procedure factory stuck on its method card)", async () => {
         const progress = newProgress();
-        progress.documents.push({ id: "station-topology", title: "Topology", text: "...", step: 3 });
+        progress.documents.push({ id: "method-concentration-decay", title: "Method", text: "...", step: 3 });
+        progress.documents.push({ id: "station-topology", title: "Topology", text: "...", step: 4 });
         const guard = createBuilderGuard({ broker: {} as never, task: { objective: { required_outputs: [], constraints: {} }, observations: {}, data: [] } as never, topic: OBSERVER_TOPIC, taskId: "t", progress } as never);
         const decide = (id: string): PolicyDecision => ({ action: { id: "library.read", description: "" }, invocation: { actionId: "library.read", capabilityId: "library.read", input: { id } }, rationale: "" });
-        const again = await guard.validate(decide("station-topology"), {} as never);
-        assert.equal(again.allowed, false);
-        assert.match(String(again.reason), /"station-topology" was read at step 3: it is in the state \(readDocuments/);
+        const last = await guard.validate(decide("station-topology"), {} as never);
+        assert.equal(last.allowed, false);
+        assert.match(String(last.reason), /"station-topology" is the last document read: it is in the state whole \(readDocuments\)/);
+        assert.equal((await guard.validate(decide("method-concentration-decay"), {} as never)).allowed, true);
+        progress.documents[0].reads = 2;
+        assert.match(String((await guard.validate(decide("method-concentration-decay"), {} as never)).reason), /was read twice already/);
         assert.equal((await guard.validate(decide("scrubber-1-datasheet"), {} as never)).allowed, true);
     });
 });

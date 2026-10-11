@@ -101,7 +101,7 @@ export interface Progress {
      * Every document the task read, in order, whole (2026-10-10, run 24): the state shows them all, the last whole and the earlier by the
      * lines that carry a number, beyond the evidence's last ten answers; a document read is not read again.
      */
-    documents: Array<{ id: string; title: string; text: string; step: number }>;
+    documents: Array<{ id: string; title: string; text: string; step: number; reads?: number }>;
     /** What the task read so far, each answer compact, by capability and argument (`evidence:` in the state); the oldest dropped past the cap. */
     evidence: Record<string, { at: string; summary: JsonValue }>;
     /** What the runner read once at the start, for the state and the topics' requirements: the library's shelf, the telemetry's shape. */
