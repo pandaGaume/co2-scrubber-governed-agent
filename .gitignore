@@ -15,3 +15,10 @@ dashboard/agent/SpkPluginHarness.js.map
 
 # the test logs (harness/lib/run-log.ts): .logs/<test id>/README.md and log.md
 .logs/
+
+# 3D scene (video/3d): the Blender file, its downloaded and generated textures
+# and the rendered frames stay local; the scripts in video/3d/scripts rebuild them
+video/3d/*.blend
+video/3d/*.blend1
+video/3d/render/
+video/3d/textures/

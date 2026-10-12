@@ -75,8 +75,31 @@ l'habitat est pointée sur elle.
 
 Moteur **Cycles**, matériaux physiques (Principled BSDF), exposition de
 photographie spatiale : noirs profonds, hautes lumières dures, aucune
-atmosphère, ombres nettes, étoiles faibles (l'exposition sur un sol éclairé
-les écrase).
+atmosphère, ombres nettes.
+
+### Le ciel
+
+Le vrai ciel, à sa vraie place. À l'œil, depuis l'ombre, il est
+spectaculaire ; un appareil réglé pour l'habitat éclairé et la Terre pleine
+n'en capterait presque rien (comme sur les photos Apollo). Le montrer est un
+choix assumé de pose longue, tenu **discret** : la Voie lactée reste sous
+la Terre et sous la coque éclairée en luminosité.
+
+- Source : NASA SVS, *Deep Star Maps 2020* (Gaia, Hipparcos, Tycho ;
+  domaine public), coordonnées équatoriales J2000 : `milkyway_2020_4k.exr`
+  pour la Voie lactée diffuse, `hiptyc_2020_16k.exr` réduite en 8k
+  (`hiptyc_2020_8k_sum.exr`, somme 2 × 2 qui conserve le flux de chaque étoile,
+  demi-précision) pour les étoiles brillantes.
+- Orientation : le pôle Sud lunaire regarde vers le pôle Sud de
+  l'écliptique, l'horizon suit l'écliptique. Les longitudes sont calées
+  sur la scène (soleil à l'azimut 150°, Terre à −6°). Conséquences, vérifiées
+  au rendu : le Grand Nuage de Magellan est presque au zénith (85°), la Croix du
+  Sud à 50°, et le centre galactique se lève à 5,5° à l'azimut −60°,
+  juste derrière le bord de Shackleton. Dans le plan 1, la Voie lactée
+  monte de la crête vers la gauche.
+- La matrice monde → écliptique → équatorial est appliquée dans le shader
+  du monde par trois produits scalaires ; le ciel n'éclaire pas la scène
+  (rayons caméra seulement).
 
 ### Matériaux
 
@@ -191,6 +214,17 @@ on voit le refus réel, de la bonne couleur, au bon niveau. Aucune variante
    caméra, antenne parapluie en treillis pointée vers la Terre. Un second
    projecteur de zone de sortie, sous le sas côté façade, l'éclaire de face.
    Caméra de détail `Cam_Rover` (`video/3d/rover-preview.png`).
+2 quinquies. **Fait.** Vidéo de survol `video/3d/nuit9-shackleton-flyby.mp4`
+   (1920 × 1080, 24 i/s, 696 images, 29 s, H.264), caméra `Cam_Flyby`
+   visant le centre de la station (`Station_Target`) :
+   approche de 10 s à 1,7 m du sol le long des ornières de la grande
+   traversée, montée verticale de 5 s jusqu'à 32 m, tour complet de 14 s
+   à 16,6 m de rayon ; vitesses nulles aux deux transitions, flou de bougé
+   (obturation 0,35). Projecteur en tête du mât d'antenne pour le toit.
+   Rendu sans interface : `scripts/render_setup.py` (reprend là où il
+   s'est arrêté), encodage : `scripts/encode_mp4.py` (séquenceur de
+   Blender, pas de ffmpeg). Images dans `video/3d/render/flyby/`
+   (environ 1,7 Go, à ne pas versionner).
 3. Machine intérieure (plans 2 et 4) : géométrie de `room-model.js` en PBR,
    turbine animée par le débit.
 4. Coupe d'autorité (plan 3) et lecture de la trace d'une prise.
