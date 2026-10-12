@@ -225,9 +225,83 @@ on voit le refus réel, de la bonne couleur, au bon niveau. Aucune variante
    s'est arrêté), encodage : `scripts/encode_mp4.py` (séquenceur de
    Blender, pas de ffmpeg). Images dans `video/3d/render/flyby/`
    (environ 1,7 Go, à ne pas versionner).
-3. Machine intérieure (plans 2 et 4) : géométrie de `room-model.js` en PBR,
-   turbine animée par le débit.
-4. Coupe d'autorité (plan 3) et lecture de la trace d'une prise.
+3. **Fait, première version.** Machine intérieure (plans 2 et 4), scène
+   Blender « Machine » du même fichier, construite par
+   `scripts/build_machine.py` :
+   - géométrie de `dashboard/room-model.js` à l'identique (une unité =
+     0,5 m) : cabine et ses deux fonds, conduits aller et retour aux mêmes
+     tracés (coudes arrondis, brides), colonne, turbine à six pales
+     vrillées (mêmes rayons, même vrillage de 0,42 rad), moteur, arbre,
+     lit d'absorbant, quatre dormeurs aux positions de la page ;
+   - en écorché technique : la moitié tournée vers la caméra est ouverte,
+     la tranche a son matériau ; coques blanc cassé, aluminium brossé et
+     usiné, acier, moteur noir anodisé, absorbant granuleux, panier perforé ;
+   - couche de données en teal (seule couleur saturée) : particules de CO2,
+     tirets de flux, anneaux du lit ;
+   - caméra du plan 2 (`Cam_Plan2`) : la projection du canvas de Mother
+     (lacet −0,58, tangage 0,30, distance 15, cadrage à 63 % de la largeur
+     centré à 33,5 %). La projection de la page est l'image miroir d'une
+     caméra physique : le modèle est monté en miroir pour que le rendu
+     tombe exactement sur le fil de fer de l'écran. Elle regarde la machine
+     légèrement par en dessous, comme la page ;
+   - caméra du plan 4 (`Cam_Plan4`) : la turbine de près, profondeur de
+     champ à f/2,8.
+
+   **La machine bouge par les lectures, rien d'autre.**
+   `scripts/bake_reading.py` lit un fichier de lectures du tableau de bord
+   et reprend les encodages de la page :
+   - la turbine tourne à 3,4 rad/s × débit/100 (un tour toutes les
+     5,6 s à 33 %) et s'arrête net sans alimentation ;
+   - les tirets de flux avancent à 0,9 cycle/s × débit/100 ;
+   - le nombre de particules allumées vaut (ppm − 400)/4 600 × 260 ;
+   - les anneaux du lit montent jusqu'au résidu/0,1, en ambre si le lit
+     est chaud ;
+   - la couleur suit le mot d'état que la carte a envoyé.
+
+   Chaque lecture est tenue jusqu'à la suivante. Lectures actuelles :
+   `readings/control-room-capture.json`, la lecture de la capture du
+   control room (1 200 ppm NOMINAL, 33 %, 0,150 A, résidu 0,020), tenue
+   12 s. **À remplacer par les lectures de la prise enregistrée.**
+   Rendu : `scripts/render_machine.py`, vidéos `nuit9-machine-plan2.mp4`
+   et `nuit9-machine-plan4.mp4`.
+3 bis. **Fait, première version.** L'intérieur de la station
+   (`scripts/build_interior.py` pour la coque, `scripts/build_interior_zones.py`
+   pour les zones), dans une collection partagée par la scène extérieure et
+   une scène « Interior » sans terrain. Le réalisme porte sur le matériel ;
+   les humains sont seulement devinés.
+   - Coque intérieure : panneaux muraux, sol carrelé, plafond, mains
+     courantes bleu-gris anodisé, chemin de câbles, écoutille vers le sas,
+     les trois hublots. Éclairage de nuit bas et neutre : ce sont les écrans
+     qui éclairent.
+   - Quartier d'équipage (paroi +y, côté fond) : quatre couchettes en deux
+     superpositions, rideaux à demi tirés, quatre dormeurs dans leurs sacs,
+     sans visage.
+   - Poste de veille (paroi −y, sous le hublot allumé vu de dehors) :
+     l'écran du control center et, à sa gauche, celui du monitoring médical,
+     qui jouent **la prise enregistrée** (`the station preview.mp4`,
+     3836 × 912, 30 i/s ; recadrage 0–954 px pour le médical, 958–2874 px
+     pour le control center ; segment de 1 min 36 à 1 min 50, autorisation du
+     commandant et monitoring actif, rééchantillonné à 24 i/s en temps réel
+     par `scripts/extract_screens.py`). Clavier, micro, tabouret, et une
+     ceinture cardio posée sur le bureau, seule trace d'une personne.
+   - Baie de support vie (paroi +y, côté sas) : la colonne SCR-1 dans sa
+     baie avec un hublot d'inspection sur la turbine (qui tourne au débit
+     lu, `scripts/bake_interior.py`), conduits vers le plafond et le sol ; la
+     plaque du broker, en aluminium anodisé gravé
+     `/habitat/cabin-1/eclss/scrubber-1`, avec un anneau teal armé ; la
+     carte dans son boîtier transparent (module ESP32-S3, pont en H, capteur
+     de courant, broches, bornier, LED), étiquetée MIN-FLOW GUARD ; près de
+     l'écoutille, l'interrupteur de coupure de l'équipage sous capot
+     transparent, éclairé par sa veilleuse.
+   - Plans intérieurs (fixes, rien ne bouge que les écrans et la turbine) :
+     I1 les dormeurs (6 s), I2 la console (8 s, les écrans continuent),
+     I3 la baie (6 s), I4 la descente (plaque du broker, carte, interrupteur,
+     turbine par le hublot ; 10,5 s). Rendu : `scripts/render_interior.py`.
+   - Archive : chaque rendu de test est gardé dans `video/3d/archive/<date>/`,
+     préfixé par l'heure.
+4. Coupe d'autorité (plan 3) pilotée par la trace d'une prise : l'anneau
+   de la plaque du broker et la LED de la carte prendront la couleur du
+   refus réel (rouge pour la politique, ambre pour le firmware).
 
 Fichiers : `video/3d/nuit9-shackleton.blend` (86 Mo, à ne pas versionner
 dans git tel quel), `video/3d/plan1-preview.png`, scripts du terrain dans

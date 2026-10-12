@@ -1,0 +1,7 @@
+{
+  "source": "Control room capture (CABIN AND SCRUBBER panel, Night 9, minute 0, IDLE): 1,200 ppm NOMINAL, flow 33 %, motor current 0.150 A, health residual 0.0200, power on. A single reading held; replace this file with the readings of a recorded take.",
+  "duration": 12,
+  "readings": [
+    { "t": 0, "speed": 33, "power": true, "ppm": 1200, "residual": 0.02, "state": "NOMINAL", "hotBed": false }
+  ]
+}
