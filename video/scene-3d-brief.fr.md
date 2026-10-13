@@ -293,10 +293,21 @@ on voit le refus réel, de la bonne couleur, au bon niveau. Aucune variante
      de courant, broches, bornier, LED), étiquetée MIN-FLOW GUARD ; près de
      l'écoutille, l'interrupteur de coupure de l'équipage sous capot
      transparent, éclairé par sa veilleuse.
-   - Plans intérieurs (fixes, rien ne bouge que les écrans et la turbine) :
-     I1 les dormeurs (6 s), I2 la console (8 s, les écrans continuent),
-     I3 la baie (6 s), I4 la descente (plaque du broker, carte, interrupteur,
-     turbine par le hublot ; 10,5 s). Rendu : `scripts/render_interior.py`.
+   - Plans intérieurs, en mouvement (des plans fixes n'apportaient rien
+     qu'une image) :
+     - I1 → I2, travelling de 14 s (`Cam_I12_Dolly`) : il part sur les
+       couchettes, où une veilleuse blanche dessine un dormeur dans son sac,
+       avance dans l'allée et finit face aux deux écrans qui jouent la prise ;
+     - I3, la baie (6 s, `Cam_I3_Dolly`) : de l'allée jusqu'à la colonne
+       SCR-1 ;
+     - I4, la descente (10 s, `Cam_I4_Crane`) : un mouvement de grue le long
+       de la chaîne d'autorité, plaque du broker, étiquette SCR-1, carte
+       MIN-FLOW GUARD, puis la turbine qui tourne derrière le hublot ;
+     - I4c, la coupure de l'équipage (4 s, `Cam_I4c_Push`) : lente poussée
+       vers l'interrupteur.
+
+     Vidéos : `nuit9-interior-i12_dolly.mp4`, `-i3_bay_dolly`, `-i4_crane`,
+     `-i4c_cutoff_push`. Rendu : `scripts/render_interior.py`.
    - Archive : chaque rendu de test est gardé dans `video/3d/archive/<date>/`,
      préfixé par l'heure.
 4. Coupe d'autorité (plan 3) pilotée par la trace d'une prise : l'anneau

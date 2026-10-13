@@ -2,8 +2,12 @@
 #   blender -b --factory-startup --python scripts/encode_mp4.py -- <frames dir> <output.mp4>
 import bpy, os, sys
 
-src, out = sys.argv[sys.argv.index("--") + 1:][:2]
+args = sys.argv[sys.argv.index("--") + 1:]
+src, out = args[:2]
 files = sorted(f for f in os.listdir(src) if f.endswith(".png") and os.path.getsize(os.path.join(src, f)) > 0)
+if len(args) >= 4:                                  # optional first and last frame number (frame_NNNN.png)
+    lo, hi = int(args[2]), int(args[3])
+    files = [f for f in files if lo <= int(f.split("_")[-1].split(".")[0]) <= hi]
 sc = bpy.context.scene
 sc.render.resolution_x, sc.render.resolution_y, sc.render.resolution_percentage = 1920, 1080, 100
 sc.render.fps, sc.render.fps_base = 24, 1
