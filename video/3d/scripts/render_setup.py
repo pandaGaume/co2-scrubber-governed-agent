@@ -16,6 +16,7 @@ for kind in ("OPTIX", "CUDA"):
 sc = bpy.context.scene
 sc.cycles.device = "GPU"
 sc.camera = bpy.data.objects["Cam_Flyby"]
+sc.render.use_persistent_data = True # keep the scene (BVH, textures) in memory between frames
 sc.render.use_overwrite = False      # resume: frames already on disk are skipped
 sc.render.use_placeholder = True
 print("render devices:", [d.name for d in prefs.devices if d.use], "frames", sc.frame_start, sc.frame_end)
