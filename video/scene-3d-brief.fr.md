@@ -205,7 +205,25 @@ on voit le refus réel, de la bonne couleur, au bon niveau. Aucune variante
    les traces qui partent vers l'horizon. Tracés : la grande traversée qui
    croise le premier plan vers le sud-est, la boucle le long de la façade
    jusqu'au mât solaire, une ancienne route vers le nord-est, un demi-tour
-   près du sas. Plusieurs passages par tracé, d'âges différents.
+   près du sas. Plusieurs passages par tracé.
+   **Pas de vent sur la Lune : rien ne s'efface.** Les anciennes traces sont
+   aussi nettes que les récentes, seulement recouvertes par endroits.
+   **Le module est une zone de chantier** (même script) : les stries de
+   nivellement de la lame en bandes sur l'aire, les ornières larges (voie
+   2,6 m) de l'engin qui l'a mis en place, en boucles autour du module et
+   arrivant de l'est.
+   **Les empreintes de l'équipage** : semelle de surbotte type Apollo
+   (environ 33 × 13 cm, barrettes transversales, 1,5 à 2,5 cm de profondeur, talon
+   plus marqué, petit bourrelet, régolithe tassé plus sombre) ; pas alternés
+   de 0,75 m environ, parfois le saut à pieds joints. L'aire entière
+   piétinée, autour du module, sous la coque et aux six pieds (les vérins
+   calés à la main), des tours complets du module ; un piétinement serré au
+   pied de l'escalier ; des allers-retours vers le mât du projecteur et
+   autour de sa base ; des tours du rover et des allers-retours entre
+   l'escalier et ses sièges ; quatre sorties à pied aller-retour (est, nord
+   vers la Terre, sud par le mât, ouest vers Shackleton) jusqu'à 50 à 70 m.
+   Le projecteur du sas éclaire de nouveau le pied de l'escalier. Caméra de
+   détail `Cam_Footprints` (`video/3d/footprints-preview.png`).
 2 quater. **Fait.** Rover non pressurisé garé au pied du sas, là où
    finissent les traces, orienté vers le départ de la traversée : châssis en
    aluminium, quatre roues en treillis d'acier à chevrons en titane
