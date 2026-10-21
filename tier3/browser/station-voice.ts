@@ -113,8 +113,8 @@ export function twinSentence(words: Words, tool: string, input: unknown, output:
 export function outcomeSentence(words: Words, call: CapabilityCall): string | null {
     const input = (call.input ?? {}) as Record<string, unknown>;
     if (call.slot === "twin") return call.result.ok ? twinSentence(words, call.id, call.input, call.result.output) : null;
-    // The report is said whole (within reason): what was done is often its second sentence.
-    if (call.slot === "crew") return spoken(words, str(input.message));
+    // Model speech comes from its dedicated summary; reports remain available in the console.
+    if (call.slot === "crew") return null;
     if (!call.result.ok) {
         const reason = (call.result.error ?? call.result.outcome).replace(/^(device refused|policy deny|error):\s*/i, "");
         return spoken(words, words.phrase(call.result.outcome === "deny" ? "outcome.denied" : "outcome.refused", { reason }), ONE_SENTENCE);

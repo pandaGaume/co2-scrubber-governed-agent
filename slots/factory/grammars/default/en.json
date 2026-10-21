@@ -6,24 +6,33 @@
     "tools": {
         "request": {
             "title": "Ask the factory for what is missing",
-            "description": "The functional contract of what you lack: the outputs a plan must produce (name, quantity, unit, horizon), the constraints (a residual threshold and its window), what you observed (volumes, door, occupancy, scrubbers), the data available (telemetry files with their columns), the topics and a budget. The factory opens a workspace, writes the task file and the data you hand it (rows or text, with their sha256), returns the task id and starts its loop on the task at once (run: false only opens the task); the loop ends by proposing to the station, which asks the twin's judgment. Ask for the need, never for a solution; follow the task with `task`.",
+            "description": "Use topics [\"procedure\"] to request a test procedure: provide the quantities to identify, target device in observations.device, observed operating limits and available evidence in the functional contract. The procedure builder proposes an artifact; the station checks it and opens its own commander authorisation question. No calibration telemetry is required to write a procedure. Use [\"graph\"] to construct a twin from recorded telemetry, [\"onnx\"] for a learned model, or another declared topic for that work. The caller chooses the topic; this tool does not infer a recovery workflow or execute hardware. The functional contract of what you lack: the outputs a plan must produce (name, quantity, unit, horizon), the constraints (a residual threshold and its window), what you observed (volumes, door, occupancy, scrubbers), the data available (telemetry files with their columns), the topics and a budget. The factory opens a workspace, writes the task file and the data you hand it (rows or text, with their sha256), returns the task id and starts its loop on the task at once (run: false only opens the task); the loop ends by proposing to the station, which asks the twin's judgment. Ask for the need, never for a solution; follow the task with `task`.",
             "properties": {
                 "objective": "what must be produced and under which constraints: required_outputs and constraints",
                 "observations": "what you saw: volumes, door, occupancy, scrubbers with their speed and current",
                 "data": "files of telemetry the factory may use: file and columns, and either rows (objects, written as JSON) or text, or a sha256 when the file is already in the workshop",
-                "topics": "[\"graph\", \"onnx\"] or \"auto\"",
+                "topics": "An explicit factory topic array: procedure, graph, onnx, code, playbook, reflection, recommendation, diagnosis, observer; or auto. Procedure produces a checked test proposal, graph produces a twin.",
                 "budget": "iterations, minutes, twinPoints",
                 "requestedBy": "who asks: tier3, operator",
                 "profile": "the profile the loop runs with",
-                "run": "false to open the task without starting the loop (default true)",
+                "run": "false to create without starting (default true); factory.start can later execute that same task. Graph work is blocked until inputStatus.ready: telemetry and numeric residual threshold are required",
+                "telemetryRunId": "an authorised agent.procedure_execute run whose completed telemetry is copied with its device context; omit data when using it",
                 "objective.required_outputs": "the outputs a plan must produce: name, quantity, unit, horizonMinutes",
                 "objective.constraints": "e.g. { rmsePpmMax: 10, absoluteResidualPpmMax: 20, windowMinutes: 20 }: rmsePpmMax bounds the RMSE of each compared column, absoluteResidualPpmMax (optional) the worst minute; residualPpmMax is the older name of rmsePpmMax",
                 "builder": "who builds: reasoner (the model behind the reasoner slot, with the topic's prompt) or scripted (the topic's script, for the tests); by default the reasoner when the topic has a prompt"
             }
         },
+        "start": {
+            "title": "Start a created task",
+            "description": "Execute an existing unstarted task, including one forwarded by the Observer. Creation alone does not run a task. Refuses tasks already launched or ended. This starts factory work, never physical hardware or artifact installation.",
+            "properties": {
+                "taskId": "the existing created task id",
+                "builder": "reasoner by default for topics with a prompt; scripted is reserved for tests"
+            }
+        },
         "task": {
             "title": "Where a task stands",
-            "description": "The state of a factory task (created, running, done, proposed, accepted, rejected, failed), its workspace, the sha256 of its task file, how many files it holds, its manifest when the loop has written one (every step with its source, outcome, reward and reason; the artifacts with their sha256; the proposal), and, while the loop runs here, the builder and the last stage reached.",
+            "description": "The state of a factory task (created, running, done, proposed, accepted, rejected, failed), its workspace, the sha256 of its task file, how many files it holds, its manifest when the loop has written one (every step with its source, outcome, reward and reason; the artifacts with their sha256; the proposal), and, while the loop runs here, the builder and the last stage reached. Includes the selected topic and inputStatus: a ready procedure task is distinct from a graph task blocked on telemetry.",
             "properties": {
                 "taskId": "the task id returned by request"
             }

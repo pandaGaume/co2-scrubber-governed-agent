@@ -1,3 +1,4 @@
+import { requestedProcedureProblems } from "../../../lib/procedure/request.js";
 /**
  * The `procedure` topic: write a proposal that a guard checks and that
  * others run later, and hand it over unrun (docs/mise-en-service.fr.md,
@@ -588,6 +589,7 @@ async function guardProcedure(capabilityId: string, input: JsonValue, context: T
     // The rules and the envelope are the signed card's, read now: a rule changed or unsigned since the last check judges accordingly.
     const { rules, facts } = await rulesAndFacts((slot, tool, args) => context.broker.call(slot, tool, args));
     const check = checkProcedure(procedure, presence, rules, facts, measured);
+    for (const message of requestedProcedureProblems(context.task.observations, procedure)) check.problems.push({ kind: "operator-request", message });
     // Every constant justified so it can be challenged (2026-09-28): the safety ones by a fact of a signed library document they respect, the others by a source this task read.
     for (const message of await checkJustifications(justifiedBy(rules, envelopeOf(rules, facts)), procedure as unknown as JsonValue, context)) check.problems.push({ kind: "justification", message });
     if (check.problems.length) check.ok = false;
@@ -890,6 +892,7 @@ export function marchingOrderOf(progress: Progress, task: TaskFile["task"]): Jso
 }
 
 export const PROCEDURE_TOPIC: TopicDefinition = {
+    questionRole: "scientific-officer",
     marchingOrder: marchingOrderOf,
     // The stage's tools only: what the conduct's gates refuse now is not shown (the guard refuses it still).
     // The stage's tools: what a step offers, with the support every stage has (base.ts, STAGE_SUPPORT).

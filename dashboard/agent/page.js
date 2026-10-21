@@ -42,7 +42,7 @@ var require_harness = __commonJS({
 
 // tier3/browser/agent-page.ts
 var import_core2 = __toESM(require_core(), 1);
-var import_harness5 = __toESM(require_harness(), 1);
+var import_harness6 = __toESM(require_harness(), 1);
 
 // harness/lib/mcp-http.ts
 var PROTOCOL_VERSION = "2025-06-18";
@@ -204,7 +204,18 @@ var Broker = class {
   session(slot) {
     let s = this.sessions.get(slot);
     if (!s) {
-      const opening = connectMcp(this.base, slot, this.identity, this.headers);
+      const opening = connectMcp(this.base, slot, this.identity, this.headers).then((session) => {
+        const request = session.request.bind(session);
+        session.request = async (method, params) => {
+          try {
+            return await request(method, params);
+          } catch (error) {
+            if (this.sessions.get(slot) === opening) this.sessions.delete(slot);
+            throw error;
+          }
+        };
+        return session;
+      });
       opening.catch(() => {
         if (this.sessions.get(slot) === opening) this.sessions.delete(slot);
       });
@@ -257,6 +268,7 @@ var Broker = class {
       }
       return { ok: true, outcome: "completed", output: payload && "result" in payload ? payload.result : payload };
     } catch (error) {
+      this.sessions.delete(slot);
       const cause = error instanceof Error && error.cause instanceof Error ? `${error.cause.message}${error.cause.code ? ` (${error.cause.code})` : ""}` : null;
       const message = `${error instanceof Error ? error.message : String(error)}${cause ? `: ${cause}` : ""}`;
       const code = error instanceof McpRpcError ? error.rpc.code : void 0;
@@ -312,6 +324,7 @@ var AudioOutput = class {
   lastPending = 0;
   /** The last poll failure reported, so the same one is not repeated every tick. */
   pollFailure = null;
+  unplayed = /* @__PURE__ */ new Set();
   get enabled() {
     return this.stopClock !== null;
   }
@@ -399,6 +412,15 @@ var AudioOutput = class {
     this.busy = true;
     this.busySince = performance.now();
     try {
+      for (const id of this.unplayed) {
+        const returned = await this.broker.call("speech", "return_unplayed", { utteranceId: id, output: this.outputId });
+        if (!returned.ok && String(returned.error ?? "").includes(`unknown utterance ${id}`)) {
+          this.unplayed.delete(id);
+          continue;
+        }
+        if (!returned.ok) throw new Error(returned.error ?? "Could not return unplayed audio");
+        this.unplayed.delete(id);
+      }
       const session = await this.broker.session("speech");
       const r = await session.request("resources/read", { uri: "speech://queue" });
       const q = JSON.parse(r.contents[0]?.text ?? "{}");
@@ -410,7 +432,6 @@ var AudioOutput = class {
       if (this.playing && this.playing.seq <= q.stopMark) this.cut();
       if (this.playing) return;
       this.finishCurrent = null;
-      if (document.hidden) return;
       const next = q.pending.find((p) => p.seq > q.stopMark && !this.played.has(p.utteranceId));
       if (next) await this.play(next, session);
     } catch (e) {
@@ -424,16 +445,17 @@ var AudioOutput = class {
     }
   }
   async play(item, session) {
-    this.played.add(item.utteranceId);
     const taken = await this.broker.call("speech", "take", { utteranceId: item.utteranceId, output: this.outputId });
     if (!taken.ok) {
       if (String(taken.error ?? "").includes(FLOOR_BUSY)) {
-        this.played.delete(item.utteranceId);
         return;
       }
+      if (!/already taken by|no longer pending/.test(String(taken.error ?? ""))) throw new Error(taken.error ?? "Could not take audio");
+      this.played.add(item.utteranceId);
       this.events.onTakenElsewhere?.(item);
       return;
     }
+    this.unplayed.add(item.utteranceId);
     const r = await session.request("resources/read", { uri: `speech://utterances/${item.utteranceId}` });
     const c = r.contents[0];
     if (!c?.blob) throw new Error(`no audio for ${item.utteranceId}`);
@@ -443,6 +465,7 @@ var AudioOutput = class {
     this.playing = item;
     this.events.onPlay?.(item);
     const started = performance.now();
+    let completed = false;
     await new Promise((resolve) => {
       let done = false;
       let watchdog = 0;
@@ -461,9 +484,18 @@ var AudioOutput = class {
       watchdog = window.setInterval(() => {
         const elapsed = performance.now() - started;
         const length = Number.isFinite(this.el.duration) && this.el.duration > 0 ? this.el.duration * 1e3 : null;
-        if (this.el.ended || length !== null && elapsed > length + 3e3 || length === null && elapsed > LINE_MAX_MS || this.el.paused && elapsed > 2e3) finish();
+        if (this.el.ended) {
+          completed = true;
+          finish();
+        } else if (length !== null && elapsed > length + 3e3 || length === null && elapsed > LINE_MAX_MS || this.el.paused && elapsed > 2e3) {
+          this.events.onError?.("Audio playback stopped before the end. The line remains pending.");
+          finish();
+        }
       }, 1e3);
-      this.el.onended = finish;
+      this.el.onended = () => {
+        completed = true;
+        finish();
+      };
       this.el.onerror = () => {
         this.events.onError?.(`could not play ${item.utteranceId} (${c.mimeType ?? item.mimeType})`);
         finish();
@@ -472,14 +504,24 @@ var AudioOutput = class {
       this.el.play().catch((e) => {
         this.events.onError?.(e instanceof Error ? e.message : String(e));
         finish();
+        if (e instanceof Error && e.name === "NotAllowedError") {
+          this.disable();
+          this.events.onBlocked?.();
+        }
       });
     });
     const durationMs = Math.round(performance.now() - started);
     const wasCut = this.playing !== item;
     this.playing = null;
-    if (!wasCut) {
+    if (!wasCut && completed) {
+      this.unplayed.delete(item.utteranceId);
+      this.played.add(item.utteranceId);
       this.events.onDone?.(item, durationMs);
       await this.broker.call("speech", "played", { utteranceId: item.utteranceId, output: this.outputId, durationMs });
+    } else {
+      const returned = await this.broker.call("speech", "return_unplayed", { utteranceId: item.utteranceId, output: this.outputId });
+      if (!returned.ok) throw new Error(returned.error ?? "Could not return unplayed audio");
+      this.unplayed.delete(item.utteranceId);
     }
   }
 };
@@ -517,10 +559,6 @@ function eventSentence(words, event) {
   if (!body) return null;
   return fromEarth ? words.phrase("event.fromEarth", { body }) : body;
 }
-function proposalSentence(words, rationale) {
-  if (!rationale || /^(said in text|tell the crew)/i.test(rationale)) return null;
-  return shortSentence(words, rationale);
-}
 var num = (v) => typeof v === "number" && Number.isFinite(v) ? v : null;
 var str = (v) => typeof v === "string" ? v : null;
 function twinSentence(words, tool, input, output) {
@@ -549,7 +587,7 @@ function twinSentence(words, tool, input, output) {
 function outcomeSentence(words, call) {
   const input = call.input ?? {};
   if (call.slot === "twin") return call.result.ok ? twinSentence(words, call.id, call.input, call.result.output) : null;
-  if (call.slot === "crew") return spoken(words, str(input.message));
+  if (call.slot === "crew") return null;
   if (!call.result.ok) {
     const reason = (call.result.error ?? call.result.outcome).replace(/^(device refused|policy deny|error):\s*/i, "");
     return spoken(words, words.phrase(call.result.outcome === "deny" ? "outcome.denied" : "outcome.refused", { reason }), ONE_SENTENCE);
@@ -620,6 +658,103 @@ var StationVoice = class {
     return ids;
   }
 };
+
+// specs/harness/application.json
+var application_default = {
+  note: "What the harness's core knows of the application it serves (2026-09-28, zero domain in the harness): the slots and tools it calls by name, the reads it may replay, the words it says outside any factory, and how the task's observations and thresholds are named. Another application changes this file, not the core.",
+  authority: {
+    note: "Where a factory hands a result over, asks a person, and is resumed.",
+    propose: {
+      slot: "station",
+      tool: "propose"
+    },
+    ask: {
+      slot: "station",
+      tool: "ask"
+    },
+    resume: {
+      slot: "factory",
+      tool: "resume"
+    }
+  },
+  text: {
+    note: "The capabilities a model's plain text becomes: a report to the people, a question handed back.",
+    report: "crew.report",
+    reportDescription: "report to the crew",
+    ask: "crew.ask"
+  },
+  reads: [
+    "factory.inventory",
+    "station.registry_list",
+    "biomed.describe",
+    "biomed.presence"
+  ],
+  thresholds: {
+    note: "The residual bounds a task's objective carries, by the names of its constraints (the first name found is taken), and their unit.",
+    rmse: [
+      "rmsePpmMax",
+      "residualPpmMax"
+    ],
+    absolute: [
+      "absoluteResidualPpmMax"
+    ],
+    unit: "ppm"
+  },
+  observed: {
+    note: "Observations a task may carry that the state says in one line each: the field, and the template of a line.",
+    persons: "{callsign} in {module} at {activity}"
+  },
+  compact: {
+    note: "How the answer of an application's read is reduced for the model's state (harness/core/words.ts, viewOf).",
+    "factory.inventory": {
+      keep: [
+        "lines",
+        "openings"
+      ],
+      lists: {
+        volumes: {
+          from: "volumes",
+          fields: [
+            "path"
+          ]
+        },
+        unknowns: {
+          from: "unknowns",
+          fields: [
+            "what",
+            "how"
+          ]
+        }
+      }
+    }
+  },
+  words: {
+    chooseOne: "Answer with tool calls, among the tools you are given now. Several in one answer are taken when they do not depend on one another's results: they run in order, each judged on its own, and a refused call stops the ones after it. To speak to the crew, call {report}; to hand back, call {ask}.",
+    chooseTools: "Answer with tool calls, among the tools you are given now. Several in one answer are taken when they do not depend on one another's results: they run in order, each judged on its own, and a refused call stops the ones after it.",
+    situation: 'Situation "{id}" (story minute {minute}): {description}',
+    textIgnored: "Your last answer was text, which nobody reads here: answer with tool calls. ",
+    sameQuantity: " (a person's CO2 is a mass flow, and it is not a leak)",
+    producedExample: " A quantity and a unit in common are not enough: a person's CO2 output is a mass flow too, and it is not a leak."
+  }
+};
+
+// harness/core/application.ts
+var strip = (v) => v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).filter(([k]) => k !== "note").map(([k, x]) => [k, strip(x)])) : v;
+var APP = strip(application_default);
+
+// harness/lib/llm-common.ts
+function shortMother(value) {
+  if (typeof value !== "string") return null;
+  const text = value.trim();
+  return text && text.length <= 160 && text.split(/\s+/).length <= 20 && !/[\r\n]/.test(text) ? text : null;
+}
+var motherSummaries = /* @__PURE__ */ new WeakMap();
+function withMother(decision, value) {
+  const mother = shortMother(value);
+  if (mother) motherSummaries.set(decision.invocation, mother);
+  return decision;
+}
+var motherOf = (decision) => motherSummaries.get(decision.invocation) ?? null;
 
 // tier3/lib/evaluator.ts
 var STATE_RANK = { NOMINAL: 0, ELEVATED: 1, CRITICAL: 2 };
@@ -762,6 +897,7 @@ async function interpret(capability, sent, extract) {
   return { input: sent, reading: null, error: first };
 }
 function readingNote(r) {
+  if (r.how === "semantic") return `The LLM interpreter read your call ${r.capability}, with access to Physics: ${r.changes.join("; ")}. The guard still judges this proposed reading. `;
   if (r.how === "meant") return `your call ${r.capability} had the right form but did not change what was refused; the harness read what you meant and ran it: ${r.changes.join("; ")}; write it that way next time. `;
   return `your call ${r.capability} did not have the shape its schema gives; the harness read it (${r.how === "coerced" ? "by the schema" : "by an extraction"}) as ${r.changes.join("; ")}; use that shape next time. `;
 }
@@ -821,7 +957,9 @@ var ReasonerProvider = class _ReasonerProvider {
     return `reasoner:${this.family}`;
   }
   begin(intentionId) {
-    this.conversationId = `${intentionId}#${Date.now().toString(36)}`;
+    this.conversationId = `${intentionId}#${crypto.randomUUID()}`;
+    this.queued = null;
+    this.lastReading = null;
   }
   /** How the last call was read when it did not fit its schema (interpreter.ts): told to the model at the next step, then forgotten. */
   lastReading = null;
@@ -847,6 +985,9 @@ var ReasonerProvider = class _ReasonerProvider {
     this.queued = { decision, reading };
   }
   async resolve(input) {
+    return this.resolveProposal(input, 0);
+  }
+  async resolveProposal(input, semanticRetry) {
     this.calls++;
     input.signal?.throwIfAborted();
     const queued = this.queued;
@@ -884,6 +1025,24 @@ var ReasonerProvider = class _ReasonerProvider {
         this.lastReading = reading;
         this.readings.push(reading);
       }
+      if (this.description.interpretation?.beforeExecution.includes(capability.id)) {
+        const sent = a.decision.invocation.input;
+        const response = await this.broker.call("reasoner", "interpret", { mode: "semantic", capability: capability.id, description: capability.description, schema: capability.inputSchema, sent });
+        const interpreted = response.output;
+        if (!response.ok || interpreted?.value === null || interpreted?.value === void 0 || capability.inputSchema && schemaError(capability.inputSchema, interpreted.value)) {
+          if (semanticRetry >= 1) throw new Error(`The LLM interpreter could not preserve the meaning of ${capability.id}; the proposal was not executed`);
+          return this.resolveProposal({ ...input, state: { ...input.state, features: { ...input.state.features, interpretationRefusal: { capability: capability.id, sent, executed: false, reason: response.error ?? interpreted?.reason ?? "The LLM interpreter could not express this proposal in the target vocabulary without changing its meaning. Reassess the contract from available evidence before delegating." } } } }, semanticRetry + 1);
+        }
+        a.exchange = { ...a.exchange, request: { proposal: a.exchange?.request ?? null, interpretation: { sent, read: interpreted.value, model: interpreted.model ?? null } } };
+        a.latencyMs += interpreted.latencyMs ?? 0;
+        if (interpreted.tokens) a.tokens = { prompt: (a.tokens?.prompt ?? 0) + interpreted.tokens.prompt, completion: (a.tokens?.completion ?? 0) + interpreted.tokens.completion, total: (a.tokens?.total ?? 0) + interpreted.tokens.total };
+        if (JSON.stringify(interpreted.value) !== JSON.stringify(sent)) {
+          reading = { capability: capability.id, how: "semantic", sent: read.reading?.sent ?? sent, read: interpreted.value, changes: ["LLM interpretation of the functional contract, consulting Physics; no host quantity mapping"], model: interpreted.model ?? null };
+          a.decision = { ...a.decision, invocation: { ...a.decision.invocation, input: interpreted.value } };
+          this.lastReading = reading;
+          this.readings.push(reading);
+        }
+      }
     }
     this.exchanges.push({
       decisionId: input.decisionId,
@@ -892,6 +1051,7 @@ var ReasonerProvider = class _ReasonerProvider {
       response: a.exchange?.response ?? null,
       ...a.context ? { context: a.context } : {},
       decision: a.decision,
+      mother: a.mother ?? null,
       proposedCapabilityId: a.proposedCapabilityId,
       proposedInput: a.proposedInput,
       latencyMs: a.latencyMs,
@@ -899,92 +1059,9 @@ var ReasonerProvider = class _ReasonerProvider {
       ...reading ? { reading } : {},
       ...a.batch ? { batch: a.batch } : {}
     });
-    return a.decision;
+    return withMother(a.decision, a.mother);
   }
 };
-
-// specs/harness/application.json
-var application_default = {
-  note: "What the harness's core knows of the application it serves (2026-09-28, zero domain in the harness): the slots and tools it calls by name, the reads it may replay, the words it says outside any factory, and how the task's observations and thresholds are named. Another application changes this file, not the core.",
-  authority: {
-    note: "Where a factory hands a result over, asks a person, and is resumed.",
-    propose: {
-      slot: "station",
-      tool: "propose"
-    },
-    ask: {
-      slot: "station",
-      tool: "ask"
-    },
-    resume: {
-      slot: "factory",
-      tool: "resume"
-    }
-  },
-  text: {
-    note: "The capabilities a model's plain text becomes: a report to the people, a question handed back.",
-    report: "crew.report",
-    reportDescription: "report to the crew",
-    ask: "crew.ask"
-  },
-  reads: [
-    "factory.inventory",
-    "station.registry_list",
-    "biomed.describe",
-    "biomed.presence"
-  ],
-  thresholds: {
-    note: "The residual bounds a task's objective carries, by the names of its constraints (the first name found is taken), and their unit.",
-    rmse: [
-      "rmsePpmMax",
-      "residualPpmMax"
-    ],
-    absolute: [
-      "absoluteResidualPpmMax"
-    ],
-    unit: "ppm"
-  },
-  observed: {
-    note: "Observations a task may carry that the state says in one line each: the field, and the template of a line.",
-    persons: "{callsign} in {module} at {activity}"
-  },
-  compact: {
-    note: "How the answer of an application's read is reduced for the model's state (harness/core/words.ts, viewOf).",
-    "factory.inventory": {
-      keep: [
-        "lines",
-        "openings"
-      ],
-      lists: {
-        volumes: {
-          from: "volumes",
-          fields: [
-            "path"
-          ]
-        },
-        unknowns: {
-          from: "unknowns",
-          fields: [
-            "what",
-            "how"
-          ]
-        }
-      }
-    }
-  },
-  words: {
-    chooseOne: "Answer with tool calls, among the tools you are given now. Several in one answer are taken when they do not depend on one another's results: they run in order, each judged on its own, and a refused call stops the ones after it. To speak to the crew, call {report}; to hand back, call {ask}.",
-    chooseTools: "Answer with tool calls, among the tools you are given now. Several in one answer are taken when they do not depend on one another's results: they run in order, each judged on its own, and a refused call stops the ones after it.",
-    situation: 'Situation "{id}" (story minute {minute}): {description}',
-    textIgnored: "Your last answer was text, which nobody reads here: answer with tool calls. ",
-    sameQuantity: " (a person's CO2 is a mass flow, and it is not a leak)",
-    producedExample: " A quantity and a unit in common are not enough: a person's CO2 output is a mass flow too, and it is not a leak."
-  }
-};
-
-// harness/core/application.ts
-var strip = (v) => v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).filter(([k]) => k !== "note").map(([k, x]) => [k, strip(x)])) : v;
-var APP = strip(application_default);
 
 // stand-ins/night/scripted.ts
 var ppmOf = (s) => {
@@ -1082,6 +1159,9 @@ var ScriptedProvider = class {
   }
 };
 
+// tier3/agent.ts
+var import_harness5 = __toESM(require_harness(), 1);
+
 // harness/core/agent.ts
 var import_harness3 = __toESM(require_harness(), 1);
 
@@ -1125,6 +1205,14 @@ function createHarnessDriver(onNode) {
   return (0, import_harness2.createRuntimeGraphDriver)(buildHarnessGraph(), onNode);
 }
 
+// harness/lib/execution-errors.ts
+var DecisionInvalidatedError = class extends Error {
+  constructor() {
+    super("Stale decision: observed world changed before execution");
+    this.name = "DecisionInvalidatedError";
+  }
+};
+
 // harness/core/agent.ts
 function createAgent({ broker, provider, capabilities, observer, evaluator, guard, policy = new import_harness3.PolicyGraph(), timeoutMs = 6e4, onStage, driver }) {
   const runtime = new import_harness3.AdaptivePolicyRuntime({
@@ -1138,7 +1226,14 @@ function createAgent({ broker, provider, capabilities, observer, evaluator, guar
     timeoutMs,
     onStage
   });
-  return { runtime, policy, catalogue: capabilities.catalogue, provider, broker, decide: (intention, signal) => runtime.step(intention, signal) };
+  return { runtime, policy, catalogue: capabilities.catalogue, provider, broker, decide: async (intention, signal) => {
+    try {
+      return await runtime.step(intention, signal);
+    } catch (error) {
+      if (error instanceof Error && error.message === "Stale decision: observed world changed before execution") throw new DecisionInvalidatedError();
+      throw error;
+    }
+  } };
 }
 
 // harness/core/capabilities.ts
@@ -1208,6 +1303,12 @@ async function buildCapabilities(broker, { profile = {}, approve, onCall, availa
 var APPROVAL_REQUIRED = [/^station\.register_artifact$/, /^station\.diagnostic_load_model$/, /^factory\.run_/, /^agent\.(reset|stop|pause)$/];
 var PROTECTED_NEVER = [/^scrubber\.scrubber\.power$/, /^scrubber\.scrubber\.set_min_flow$/, /^agent\.(reset|stop)$/];
 var EXCLUDED = [
+  /^agent\.procedure_/,
+  /^station\.twin_/,
+  /^twin\.(evaluate|evaluation|install|active|run_installed)$/,
+  /^factory\.start$/,
+  /^agent\.mission_/,
+  /^station\.proposals$/,
   /^scrubber\.debug\./,
   // The sensor's cable to the board (2026-10-08): the agent never feeds the protection a reading; the world and the sensor do.
   /^scrubber\.scrubber\.co2_report$/,
@@ -1215,7 +1316,7 @@ var EXCLUDED = [
   /^reasoner\./,
   /^scenario\./,
   /^spikypanda\./,
-  /^speech\.(synthesize|listVoices|take|played|describe)$/,
+  /^speech\.(synthesize|listVoices|take|return_unplayed|played|describe)$/,
   /^workspace\./,
   /^model\./,
   // The library is the factory's documentation, like its workshop; whether the night's agent reads it too is a later choice, not a side effect.
@@ -1243,7 +1344,7 @@ var EXCLUDED = [
   /^station\.propose$/,
   // A health alarm is raised and cleared by a person (the crew, the medical panel), and an aborted commissioning reopened by the commander (2026-09-29).
   /^biomed\.(monitor_start|monitor_stop|report|move|set_activity|alarm|alarm_ack|alarm_treat|alarm_clear)$/,
-  /^station\.(registry_register|registry_report|procedure_checked|candidate_evaluated|commissioning_authorise|commissioning_reopen|procedure_run|reflect)$/,
+  /^station\.(registry_register|registry_report|procedure_checked|candidate_evaluated|commissioning_review|commissioning_authorise|commissioning_reopen|procedure_run|reflect)$/,
   // The harness's graph and its evaluation are the evaluator's reading of the factories' traces (2026-09-30), not something the habitat's agent acts on.
   /^station\.harness_(graph|evaluate)$/,
   // A recommendation is the evaluator's factory's work, asked by a person or the station, signed by a person (2026-10-01, E3).
@@ -1273,13 +1374,18 @@ function brokerReviewer(broker) {
     return { verdict: o.faithful ? "faithful" : "unfaithful", claims, model: o.model ?? null };
   };
 }
-function crewCapabilities(crewConsole, calls, review, broker) {
+function crewCapabilities(crewConsole, calls, review, broker, questionResume, stationOwnsConfirmations = false) {
   const say = (kind) => ({
     id: `crew.${kind}`,
-    description: kind === "report" ? "Write a message to the crew's console: what you observed, what you decided and why, or why you will not do something." : "Ask the crew a question before acting; the run pauses until they answer.",
-    inputSchema: { type: "object", properties: { message: { type: "string", minLength: 1 } }, required: ["message"], additionalProperties: false },
+    description: kind === "report" ? "Write a message to the crew's console: what you observed, what you decided and why, or why you will not do something." : `Ask one short question only for information unavailable from authoritative tools and the library. Read existing questions and recorded answers before asking. Do not relay a specialist's question a second time. ${stationOwnsConfirmations ? "This mission's confirmations belong exclusively to the station. Never ask whether Spock approves or Kirk authorises, even as an information question: their actual decisions are in stationDecisions. Await an existing station decision or act on its recorded result. This tool cannot open another yes/no ballot." : "Use information for requested values and confirmation for a yes/no decision."} A conversational answer never authorises hardware or a test procedure.`,
+    inputSchema: { type: "object", properties: { message: { type: "string", minLength: 1, ...kind === "ask" && questionResume ? { maxLength: 240, description: "One concise question, at most 240 characters. Put explanation in crew.report, not here." } : {} }, ...kind === "ask" && questionResume ? { role: { type: "string", description: "Responsible installed role: scientific-officer for scientific interpretation, commander for operational matters. Protected approvals remain exclusively station-owned." }, responseType: { type: "string", enum: stationOwnsConfirmations ? ["information"] : ["information", "confirmation"], description: stationOwnsConfirmations ? "Information only. Scientific approval and launch authorisation use the station's own questions and recorded decisions." : "Information (default) offers information/unknown/defer; confirmation offers yes/no. Both accept verbatim written replies." } } : {} }, required: ["message"], additionalProperties: false },
     async execute(input, context) {
       const message = String(input?.message ?? "");
+      const decisions = context.state?.features?.stationDecisions ?? null;
+      if (kind === "ask" && stationOwnsConfirmations && input.responseType === "confirmation") return { ok: false, error: "The station owns this mission's confirmations. Read stationDecisions and the actual scientific and launch decisions; do not ask for a second conversational approval.", output: { stationDecisions: decisions } };
+      const pending = decisions?.questions?.find((q) => q.status === "open" || q.status === "queued");
+      if (kind === "ask" && stationOwnsConfirmations && pending) return { ok: false, error: `Question ${pending.id} is already pending for this mission. Read its question and await the actual answer instead of opening another conversation.`, output: { stationDecisions: decisions } };
+      if (kind === "ask" && questionResume && message.length > 240) return { ok: false, error: "Question too long: ask one concise question of at most 240 characters. Use crew.report for supporting explanation." };
       let reviewed;
       if (kind === "report" && calls && review) {
         const executed = calls.filter((c) => c.intentionId === context.intention.id && !c.id.startsWith("crew."));
@@ -1297,20 +1403,25 @@ function crewCapabilities(crewConsole, calls, review, broker) {
           };
         }
       }
-      crewConsole.push({ kind, message, decisionId: context.decisionId, at: (/* @__PURE__ */ new Date()).toISOString(), ...reviewed ? { review: reviewed } : {} });
       let questionId = null;
       if (kind === "ask" && broker) {
-        const asked = await broker.call("station", "ask", { from: "night agent", kind: "ask", question: message.slice(0, 600), options: [{ id: "yes", label: "yes" }, { id: "no", label: "no" }] });
+        const responseType = questionResume && input.responseType !== "confirmation" ? "information" : "confirmation";
+        const options = responseType === "information" ? [{ id: "provide", label: "Provide information" }, { id: "unknown", label: "Information unavailable" }, { id: "defer", label: "Defer this question" }] : [{ id: "yes", label: "yes" }, { id: "no", label: "no" }];
+        const question = { text: message, responseType, options };
+        const role = input.role;
+        const asked = await broker.call("station", "ask", { from: questionResume ? "mission supervisor" : "night agent", kind: "ask", question: message, options, ...role ? { role } : {}, ...questionResume ? { context: { responseType, missionId: questionResume.args.missionId ?? null }, resume: { ...questionResume, args: { ...questionResume.args, question } } } : {} });
         questionId = asked.ok ? String(asked.output.questionId ?? "") || null : null;
+        if (questionResume && !questionId) return { ok: false, error: `the station did not open the question: ${asked.error ?? asked.outcome}`, output: { outcome: "error" } };
       }
+      crewConsole.push({ kind, message, decisionId: context.decisionId, at: (/* @__PURE__ */ new Date()).toISOString(), ...reviewed ? { review: reviewed } : {} });
       return { ok: true, output: { outcome: "completed", value: { delivered: true, ...reviewed ? { review: reviewed.verdict } : {}, ...questionId ? { questionId, asked: "the commander, in Mother's chat" } : {} } } };
     }
   });
   return [say("report"), say("ask")];
 }
-function buildCapabilities2(broker, { guardMode = "measured", approve, onCall, console: crewConsole = [], calls, review, allow = [] } = {}) {
+function buildCapabilities2(broker, { guardMode = "measured", approve, onCall, console: crewConsole = [], calls, review, allow = [], local = [], questionResume, stationOwnsConfirmations = false, delegationContext } = {}) {
   const excluded = allow.length ? EXCLUDED.map((r) => ({ test: (id) => r.test(id) && !allow.includes(id) })) : EXCLUDED;
-  return buildCapabilities(broker, { profile: { excluded, replayPolicy: (id) => replayPolicyFor(id, guardMode), local: crewCapabilities(crewConsole, calls, review, broker) }, approve, onCall });
+  return buildCapabilities(broker, { profile: { excluded, replayPolicy: (id) => replayPolicyFor(id, guardMode), ...delegationContext ? { bindings: [{ match: /^factory\.request$/, rewrite: (input) => ({ ...input, observations: { ...input.observations ?? {}, missionContext: delegationContext } }) }] } : {}, local: [...crewCapabilities(crewConsole, calls, review, broker, questionResume, stationOwnsConfirmations), ...local] }, approve, onCall });
 }
 
 // tier3/lib/observer.ts
@@ -1343,6 +1454,28 @@ function createObserver(broker, lastResult) {
   };
 }
 
+// harness/core/replay.ts
+var READ_CAPABILITIES = [
+  /^library\.(list|methods|search|read|facts|justify|graphs|graph)$/,
+  /^web\.search$/,
+  /^physics\.units_(normalize|convert|compatible|validate_connection|relations|relate|knowledge)$/,
+  /^workspace\.(list|read)$/,
+  // The application's own reads (specs/harness/application.json).
+  ...APP.reads.map((id) => new RegExp(`^${id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`)),
+  /^(twin|forge)\.registry_(search|describe_node|list_nodes)$/,
+  /^(twin|forge)\.document_validate$/,
+  /^forge\.plugin_template$/,
+  /^model\.inspect$/
+];
+var proposalKey = (capabilityId, input) => `${capabilityId ?? ""}:${JSON.stringify(input ?? null)}`;
+function restrictReplays(policy, never, made, offered = () => true) {
+  const candidates = policy.findCandidateActions.bind(policy);
+  policy.findCandidateActions = (state, intention, modeId) => candidates(state, intention, modeId).map((c) => {
+    const id = c.invocation.capabilityId;
+    return never.some((r) => r.test(id)) || made.has(proposalKey(id, c.invocation.input)) || !offered(id) ? { ...c, eligible: false } : c;
+  });
+}
+
 // tier3/agent.ts
 function protectedGuard() {
   return {
@@ -1361,7 +1494,7 @@ function protectedGuard() {
     }
   };
 }
-async function createAgent2({ broker, provider, guardMode = "measured", approve, timeoutMs = 6e4, onStage, onCall, driver, allow }) {
+async function createAgent2({ broker, provider, guardMode = "measured", approve, timeoutMs = 6e4, onStage, onCall, driver, allow, local, questionResume, stationOwnsConfirmations = false, delegationContext, observation, reasonEveryDecision = false }) {
   const crewConsole = [];
   const calls = [];
   const lastResult = { current: null };
@@ -1373,20 +1506,32 @@ async function createAgent2({ broker, provider, guardMode = "measured", approve,
     calls,
     review: brokerReviewer(broker),
     allow,
+    local,
+    questionResume,
+    stationOwnsConfirmations,
+    delegationContext,
     onCall: (call) => {
       lastResult.current = call;
       calls.push(call);
       onCall?.(call);
     }
   });
+  const observer = createObserver(broker, lastResult);
+  const policy = new import_harness5.PolicyGraph();
+  if (reasonEveryDecision) restrictReplays(policy, [/.*/], /* @__PURE__ */ new Set());
   const loop = createAgent({
     broker,
     provider,
     capabilities,
-    observer: createObserver(broker, lastResult),
+    policy,
+    observer: observation ? { observe: async () => {
+      const state = await observer.observe();
+      return { ...state, features: { ...state.features, ...await observation() } };
+    } } : observer,
     evaluator: createEvaluator(),
     guard: guardMode === "protected" ? protectedGuard() : void 0,
-    timeoutMs,
+    // The outer decision must not expire while the configured model request is still allowed to answer.
+    timeoutMs: Math.max(timeoutMs, Number(provider.settings?.timeoutMs ?? 0) + 3e4),
     onStage,
     driver
   });
@@ -2383,7 +2528,7 @@ function graphFromViewer(viewer) {
   const nodes = [];
   for (const n of viewer.nodes) {
     const data = n.item.data;
-    if (data instanceof import_harness5.HarnessNode) {
+    if (data instanceof import_harness6.HarnessNode) {
       data.id = data.stage;
       nodes.push(data);
       byStage.set(data.stage, n);
@@ -2396,11 +2541,11 @@ function graphFromViewer(viewer) {
     if (c.linkKind === "config") continue;
     const from = ownerOf(c.from, "outputs")?.item.data;
     const to = ownerOf(c.to, "inputs")?.item.data;
-    if (!(from instanceof import_harness5.HarnessNode) || !(to instanceof import_harness5.HarnessNode)) continue;
+    if (!(from instanceof import_harness6.HarnessNode) || !(to instanceof import_harness6.HarnessNode)) continue;
     builder.withChannel(from, to, c.from.name, c.to.name);
   }
   const graph = builder.build();
-  (0, import_harness5.validateHarnessGraph)(graph);
+  (0, import_harness6.validateHarnessGraph)(graph);
   return { graph, byStage };
 }
 async function activate(studio) {
@@ -2545,7 +2690,7 @@ async function activate(studio) {
     const resolve = provider.resolve.bind(provider);
     provider.resolve = async (input) => {
       const decision = await resolve(input);
-      voice.say(proposalSentence(words, decision.rationale));
+      voice.say(motherOf(decision));
       return decision;
     };
     if (!built) built = graphFromViewer(viewer);
@@ -2556,7 +2701,7 @@ async function activate(studio) {
       broker,
       provider,
       guardMode,
-      driver: (0, import_harness5.createRuntimeGraphDriver)(built.graph),
+      driver: (0, import_harness6.createRuntimeGraphDriver)(built.graph),
       onStage,
       approve: async (decision) => {
         log("warn", `approval requested for ${decision.invocation.capabilityId}: denied (no operator at the console)`);

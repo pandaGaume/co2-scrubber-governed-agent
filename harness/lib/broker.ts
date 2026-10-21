@@ -58,7 +58,19 @@ export class Broker {
     session(slot: string): Promise<McpSession> {
         let s = this.sessions.get(slot);
         if (!s) {
-            const opening = connectMcp(this.base, slot, this.identity, this.headers);
+            const opening = connectMcp(this.base, slot, this.identity, this.headers).then((session) => {
+                const request = session.request.bind(session);
+                session.request = async <T = unknown>(method: string, params?: unknown): Promise<T> => {
+                    try { return await request<T>(method, params); }
+                    catch (error) {
+                        // A restarted broker no longer knows this session. Forget
+                        // it for the next poll, never replay this request here.
+                        if (this.sessions.get(slot) === opening) this.sessions.delete(slot);
+                        throw error;
+                    }
+                };
+                return session;
+            });
             // A session that could not be opened is not kept (2026-10-01): a slot not yet published when a client first asks for it
             // (the station at startup, before the library) failed every later call of that client with the same "fetch failed".
             // The next call opens it again; a tool call is never sent twice for it.
@@ -118,6 +130,7 @@ export class Broker {
             }
             return { ok: true, outcome: "completed", output: payload && "result" in payload ? payload.result : payload };
         } catch (error) {
+            this.sessions.delete(slot);
             // "fetch failed" says nothing alone: its cause (a socket closed by the other side, a refused connection) is what to read.
             const cause = error instanceof Error && error.cause instanceof Error ? `${error.cause.message}${(error.cause as { code?: string }).code ? ` (${(error.cause as { code?: string }).code})` : ""}` : null;
             const message = `${error instanceof Error ? error.message : String(error)}${cause ? `: ${cause}` : ""}`;

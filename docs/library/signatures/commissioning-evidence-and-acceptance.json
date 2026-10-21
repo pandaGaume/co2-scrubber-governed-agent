@@ -1,0 +1,8 @@
+{
+    "document": "commissioning-evidence-and-acceptance",
+    "digest": "a58c2b411ab83b6389252974dc38c03b3dd1687a942f607246a64034c5ded5ec",
+    "signedBy": "Guillaume Pelletier",
+    "signedAt": "2026-10-20T21:47:47.770Z",
+    "scope": "safety",
+    "note": "Operator requested commissioning to end after the terminal test report. Success still requires all requested observed plateaus; a nonconforming terminal test may only be concluded explicitly incomplete, without automatically starting another procedure."
+}

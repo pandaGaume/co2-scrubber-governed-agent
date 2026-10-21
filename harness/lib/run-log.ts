@@ -27,6 +27,8 @@ import * as path from "node:path";
 import { fromRoot } from "../../lib/paths.js";
 
 export interface RunLogMeta {
+    /** A diagnostic run can require complete traces even when DEBUG=false. */
+    detailed?: boolean;
     /** A short name of the test: the id starts with it. */
     name: string;
     /** What the test exercises, in a few sentences: the README's body. */
@@ -126,13 +128,14 @@ export class RunLog {
     /** Calls answered after their task ended. */
     private late = 0;
     /** The step by step written (log.md); `DEBUG=false` leaves it out, the README stays. */
-    readonly detailed = process.env.DEBUG !== "false";
+    readonly detailed: boolean;
 
     constructor(
         private readonly meta: RunLogMeta,
         /** False under npm test: nothing is written (see above). */
         readonly enabled = true,
     ) {
+        this.detailed = meta.detailed ?? process.env.DEBUG !== "false";
         this.id = `${meta.name.replace(/[^a-z0-9-]+/gi, "-").toLowerCase()}-${stamp(this.started)}-${Math.random().toString(36).slice(2, 6)}`;
         this.dir = fromRoot(path.join(".logs", this.id));
         if (!enabled) {
@@ -300,7 +303,14 @@ export function openRunLog(meta: RunLogMeta): RunLog {
                 }
             }
             const started = Date.now();
-            const response = await real(input, init);
+            if (log && body) log.section("Model request sent", body);
+            let response: Response;
+            try {
+                response = await real(input, init);
+            } catch (error) {
+                if (log && body) log.section("Model request failed", { model: body.model, elapsedMs: Date.now() - started, error: error instanceof Error ? error.message : String(error) });
+                throw error;
+            }
             if (log && body) {
                 const text = await response.clone().text().catch(() => "");
                 let parsed: unknown = text;

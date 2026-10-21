@@ -19,13 +19,15 @@
  * refuses with the reason, so the page and the runner can say so.
  */
 import { promptWithSocle, socleOf } from "../../harness/core/base.js";
-import type { CapabilityDescriptor, Experience, Intention, PolicyCandidate, PolicyFallbackInput, State } from "@spiky-panda/harness";
+import type { CapabilityDescriptor, Experience, Intention, JsonValue, PolicyCandidate, PolicyFallbackInput, State } from "@spiky-panda/harness";
 import { errorMessage, readJson, sha256File } from "../../lib/files.js";
 import { composeText } from "../../harness/lib/compose.js";
 import { SYSTEM_PROMPT_FILE, fromRoot, relativeToRoot } from "../../lib/paths.js";
 import { objectSchema as obj, publishSlot, type PublishedSlot } from "../lib/slot-server.js";
 import type { Provider, ProviderProfile } from "../../harness/lib/provider.js";
-import { familyOf } from "../../harness/lib/llm-common.js";
+import { familyOf, motherOf } from "../../harness/lib/llm-common.js";
+import { interpretWithPhysics } from "../../harness/lib/semantic-interpretation.js";
+import { Broker } from "../../harness/lib/broker.js";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { oneLine, runtimeEvents } from "../lib/events.js";
 
@@ -38,6 +40,7 @@ export interface ReasonerState {
 /** The answer of `decide`: the decision and everything the trace keeps about how it was made. */
 export interface DecideResult {
     decision: unknown;
+    mother: string | null;
     proposedCapabilityId: string;
     proposedInput: unknown;
     model: string;
@@ -55,6 +58,7 @@ export interface DecideResult {
 const MAX_CONVERSATIONS = 16;
 
 export function reasonerSlot(wsBase: string, log: (line: string) => void): PublishedSlot<ReasonerState> {
+    const interpretation = readJson<{ allowed: string[]; maxCalls: number; beforeExecution: string[] }>(fromRoot("specs/meaning/tools.json"));
     const profileFile = fromRoot(process.env.REASONER_PROFILE ?? "profiles/anthropic.json");
     const profile = readJson<ProviderProfile>(profileFile);
     const wire = profile.tier3?.wire ?? "openai-compatible";
@@ -179,6 +183,7 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
         topP: p.tier3?.topP ?? null,
         reasoningEffort: p.tier3?.reasoningEffort ?? null,
         timeoutMs: p.tier3?.timeoutMs ?? null,
+        contextPolicy: "caller",
     });
 
     return publishSlot<ReasonerState>({
@@ -213,7 +218,7 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
                         }
                     }
                     const r = routed(use);
-                    return { ...identity(use), ready, reason, profile: { file: relativeToRoot(r.file), sha256: sha256File(r.file) }, settings: settingsOf(r.profile), promptSha256: existsSync(SYSTEM_PROMPT_FILE) ? sha256File(SYSTEM_PROMPT_FILE) : null, routes: routes() };
+                    return { ...identity(use), ready, reason, profile: { file: relativeToRoot(r.file), sha256: sha256File(r.file) }, settings: settingsOf(r.profile), promptSha256: existsSync(SYSTEM_PROMPT_FILE) ? sha256File(SYSTEM_PROMPT_FILE) : null, routes: routes(), interpretation: { beforeExecution: interpretation.beforeExecution } };
                 },
             },
             {
@@ -243,15 +248,33 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
                 name: "interpret",
                 title: "Read a call toward its schema",
                 description: "A tool call whose arguments do not fit the tool's input schema, read toward it by a model (harness/core/interpreter.ts): give the capability, its description, its schema and the arguments sent; get the value read (JSON that fits the schema, or null when the model found nothing it could read without inventing). No authority: the guard judges what is read. The model of the use interpret (specs/reasoner/routing.json).",
-                inputSchema: obj({ capability: { type: "string" }, description: { type: "string" }, schema: { type: "object" }, sent: { description: "the arguments as the model sent them" }, mode: { type: "string", enum: ["form", "meaning"], description: "form (default): the arguments do not fit the schema, the least expensive model reads them toward it; meaning: they fit but moved nothing refused, a capable model reads what they meant (the use meaning)" }, refused: { type: "array", description: "meaning: the points refused, each {path, expected, got, says}" }, intent: { type: "string", description: "meaning: what the model said it meant" } }, ["capability", "schema"]),
+                inputSchema: obj({ capability: { type: "string" }, description: { type: "string" }, schema: { type: "object" }, sent: { description: "the arguments as the model sent them" }, mode: { type: "string", enum: ["form", "meaning", "semantic"], description: "form: reshape JSON; meaning: read a refused correction; semantic: interpret a functional contract with model-chosen Physics tools before execution" }, refused: { type: "array", description: "meaning: the points refused, each {path, expected, got, says}" }, intent: { type: "string", description: "meaning: what the model said it meant" } }, ["capability", "schema"]),
                 handle: async (args, s) => {
-                    const meaning = args.mode === "meaning";
+                    const semantic = args.mode === "semantic";
+                    const meaning = args.mode === "meaning" || semantic;
                     const use = meaning ? "meaning" : "interpret";
                     const asked = `${meaning ? "meaning of" : "interpret"} ${String(args.capability)}`;
                     runtimeEvents.append("model.asked", { ...identity(use), kindOfCall: use, asked });
                     const started = Date.now();
                     try {
-                        const composition = await composeText(routed(use).profile, {
+                        const composition = semantic ? await (async () => {
+                            const target = routed(use);
+                            const prompt = readFileSync(fromRoot("specs/meaning/prompt.md"), "utf8");
+                            let interpreter: Provider;
+                            if (target.wire === "anthropic-messages") {
+                                const { AnthropicProvider } = await import("../../harness/providers/anthropic.js");
+                                interpreter = new AnthropicProvider(target.profile, { systemPrompt: prompt, contextMode: "conversation" });
+                            } else if (target.wire === "openai-responses") {
+                                const { OpenAiResponsesProvider } = await import("../../harness/providers/openai-responses.js");
+                                interpreter = new OpenAiResponsesProvider(target.profile, { systemPrompt: prompt, contextMode: "conversation" });
+                            } else {
+                                const { OpenAiCompatibleProvider } = await import("../../harness/providers/openai-compatible.js");
+                                interpreter = new OpenAiCompatibleProvider(target.profile, { systemPrompt: prompt, contextMode: "conversation" });
+                            }
+                            const reader = new Broker(wsBase.replace(/^ws/, "http"), { name: "semantic-interpreter", version: "1" }, "factory");
+                            try { return await interpretWithPhysics(interpreter, reader, { capability: String(args.capability), description: String(args.description ?? ""), schema: args.schema as JsonValue, sent: (args.sent ?? null) as JsonValue }, interpretation); }
+                            finally { await reader.close(); }
+                        })() : await composeText(routed(use).profile, {
                             instructions: (meaning
                                 ? [
                                       `A model called the tool ${String(args.capability)} to correct points a guard had refused. Its arguments fit the tool's schema, but the refused points did not change: the harness did not read the call as the model meant it.`,
@@ -291,7 +314,7 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
                             }
                         }
                         runtimeEvents.append("model.answered", { ...identity(use), kindOfCall: use, asked, answered: oneLine(text), latencyMs: composition.latencyMs, tokens: composition.tokens ?? null });
-                        return { value, model: composition.model, latencyMs: composition.latencyMs, tokens: composition.tokens ?? null };
+                        return { value, model: composition.model, latencyMs: composition.latencyMs, tokens: composition.tokens ?? null, ...("interpretationReason" in composition ? { reason: composition.interpretationReason } : {}) };
                     } catch (e) {
                         runtimeEvents.append("model.failed", { ...identity(use), kindOfCall: use, asked, reason: oneLine(errorMessage(e)), latencyMs: Date.now() - started });
                         throw e;
@@ -387,11 +410,12 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
                         runtimeEvents.append("model.failed", { model: provider.model, family: provider.family, wire, kindOfCall: "decide", conversationId, decisionId: input.decisionId ?? null, asked, reason: oneLine(errorMessage(e)), latencyMs: Date.now() - started });
                         throw e;
                     }
-                    s.calls++;
                     s.conversations = conversations.size;
                     const x = provider.exchanges[before] ?? provider.exchanges[provider.exchanges.length - 1];
+                    s.calls += Number(x?.context?.modelCalls ?? 1);
                     const result: DecideResult = {
                         decision,
+                        mother: motherOf(decision),
                         proposedCapabilityId: x?.proposedCapabilityId ?? decision.invocation.capabilityId,
                         proposedInput: x?.proposedInput ?? decision.invocation.input,
                         model: provider.model,
@@ -417,6 +441,7 @@ export function reasonerSlot(wsBase: string, log: (line: string) => void): Publi
                         answered: oneLine(decision.invocation.capabilityId),
                         proposedCapabilityId: result.proposedCapabilityId,
                         ranCapabilityId: decision.invocation.capabilityId,
+                        mother: result.mother,
                         latencyMs: result.latencyMs,
                         tokens: result.tokens,
                     });

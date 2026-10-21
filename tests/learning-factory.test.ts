@@ -1,3 +1,4 @@
+import { approveScientificTest } from "./lib/scientific-review.js";
 /**
  * The factory learns from its episodes, in a fork (2026-09-29, the memory audit; it replaces the test where a reflection
  * wrote a rule into the factory's words, which learning no longer touches). Both sides are scripts: what is proved is the
@@ -75,7 +76,10 @@ describe("the procedure factory learns from its episodes, in a fork: a memory, n
                 const { taskId } = await ok<{ taskId: string }>("factory", "request", { objective: { required_outputs: [{ name: "V_lab", quantity: "Volume", unit: "m3" }] }, observations: { device: scrubber }, topics: ["procedure"], builder: "scripted", requestedBy: "learning-factory-test" });
                 const task = await ended(taskId);
                 const c = (await ok<{ commissioning: { status: string } }>("station", "commissioning_state", { commissioningId })).commissioning;
-                if (c.status === "awaiting-authorisation") await ok("station", "commissioning_authorise", { commissioningId, decision: "refuse", by: "commander-test" });
+                if (c.status === "awaiting-scientific-approval") {
+                    await approveScientificTest(operator, commissioningId);
+                    await ok("station", "commissioning_authorise", { commissioningId, decision: "refuse", by: "commander-test" });
+                }
                 return { taskId, task };
             };
             const judged = (t: Task) => (t.manifest?.steps ?? []).filter((s) => s.judged).map((s) => `${s.capability}:${s.judged}`);

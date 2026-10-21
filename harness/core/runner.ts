@@ -29,6 +29,7 @@ import { createBuilderGuard } from "./builder-guard.js";
 import { buildCapabilities, type CapabilityCall } from "./capabilities.js";
 import { manifestText, newTelemetry, sha256Text, statementOf, statementSha, summarize, toolsOf, type Manifest, type ManifestArtifact, type ManifestStep } from "./manifest.js";
 import { compactOutput } from "./compact.js";
+import { rememberEvidence } from "./evidence.js";
 import { reasoningStateOf } from "./reasoning-state.js";
 import { intentionFor, loadRecipes, saveRecipes, taskSignature } from "./recipes.js";
 import { NEVER_REPLAYED, proposalKey, restrictReplays } from "./replay.js";
@@ -78,6 +79,8 @@ export interface BuilderContext {
 
 export interface RunTaskOptions {
     broker: Broker;
+    /** Await the dispatcher's publication turn before exposing a terminal result or proposal. */
+    beforeDelivery?: () => Promise<void>;
     /** Every call the task makes, as it is made (the control room's trace, 2026-10-11). */
     onCall?: (call: CapabilityCall) => void;
     /** The reasoner: a provider, or a function that builds one for this task (the scripted builders read the task). */
@@ -258,7 +261,7 @@ function keepStatements(catalogue: import("./capabilities.js").CatalogueEntry[],
     return { words, context: contextCommits(forkId() ? forkDir() : null) };
 }
 
-export async function runTask({ broker, provider: providerOrBuild, taskId, topic: topicName, supervisor, recipesDir = path.join(WORKSHOP_ROOT, "_recipes"), runtimeSlot = "twin", promptFile = null, timeoutMs = 60000, onStage, onProgress, onCall, log = () => undefined }: RunTaskOptions): Promise<RunTaskResult> {
+export async function runTask({ broker, provider: providerOrBuild, taskId, topic: topicName, supervisor, recipesDir = path.join(WORKSHOP_ROOT, "_recipes"), runtimeSlot = "twin", promptFile = null, timeoutMs = 60000, onStage, onProgress, onCall, beforeDelivery, log = () => undefined }: RunTaskOptions): Promise<RunTaskResult> {
     const startedAt = new Date();
     const { task: file, sha256: taskSha256 } = await readTask(broker, taskId);
     const task = file.task;
@@ -306,7 +309,6 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
     /** The points whose meaning was already read once: a misreading is not repeated. */
     const meantKeys = new Set<string>();
     const telemetry = newTelemetry(contextMode);
-    const EVIDENCE_CAP = 10;
     // A long answer goes whole to the workshop and the model reads its summary and its handle; written right after the step.
     let pendingArtifact: { path: string; text: string } | null = null;
     // The stage's tools (TopicDefinition.closed): computed once per step, the conduct read on the progress as it stands.
@@ -360,7 +362,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
                 { match: new RegExp(`^${runtimeSlot}\\.(document_build|document_instantiate|session_run)$`), rewrite: (input) => (typeof input.name === "string" && !input.name.startsWith(`${taskId}/`) ? { ...input, name: `${taskId}/${input.name}` } : input) },
                 ...(topic.bindings ?? []),
             ],
-            local: [...taskCapabilities(broker, taskId, progress, topicId, task), ...(topic.local?.({ broker, taskId, task, progress, runtimeSlot }) ?? [])],
+            local: [...taskCapabilities(broker, taskId, progress, topicId, task, topic.questionRole), ...(topic.local?.({ broker, taskId, task, progress, runtimeSlot }) ?? [])],
         },
         onCall: (call) => {
             onCall?.(call);
@@ -383,18 +385,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             const compact = compactOutput(call.id, call.input, whole);
             progress.lastSummary = compact.summary;
             // What was read stays in the state as evidence (a read is not repeated for what the state holds); the topic's own results (an evaluation) live in its part of the state.
-            if (call.result.ok && !/^(task|graph)\./.test(call.id)) {
-                const arg = call.input && typeof call.input === "object" && !Array.isArray(call.input) ? (call.input as Record<string, unknown>) : {};
-                // Named by its id, path, type, quantity or query; otherwise by its arguments' plain values (2026-10-01, E5.4: two reads of
-                // a diagnosis, a step of one task then of another, filed under one key, each erased the other, and the model read them again).
-                const scalars = Object.values(arg).filter((v) => ["string", "number", "boolean"].includes(typeof v)).map(String).join(" ").slice(0, 200);
-                const named = (["id", "path", "type", "quantity", "query"].map((k) => arg[k]).find((v) => typeof v === "string") as string | undefined) ?? (scalars || undefined);
-                const key = named ? `${call.id} ${named}` : call.id;
-                delete progress.evidence[key];
-                progress.evidence[key] = { at: new Date().toISOString(), summary: compact.summary };
-                const keys = Object.keys(progress.evidence);
-                for (const old of keys.slice(0, Math.max(0, keys.length - EVIDENCE_CAP))) delete progress.evidence[old];
-            }
+            rememberEvidence(progress, call.id, call.input, compact.summary);
             telemetry.toolResultBytes += compact.bytes;
             telemetry.compactedContextBytes += JSON.stringify(compact.summary)?.length ?? 0;
             if (compact.reduced) {
@@ -776,6 +767,7 @@ export async function runTask({ broker, provider: providerOrBuild, taskId, topic
             return { kind, path: f.path, sha256: f.sha256, bytes: f.bytes, ...(contract ? { contractSha256: contract.sha256 } : {}) };
         });
     manifest.sandbox = progress.sandbox;
+    await beforeDelivery?.();
     const finalPhase = progress.phase as string;
     manifest.state = finalPhase === "done" ? "done" : finalPhase === "waiting" ? "waiting" : "failed";
     runLog()?.section(`Task ${taskId} (${topicId}) ends: ${finalPhase}`, { ended: ended ?? null, steps: progress.iteration, telemetry });

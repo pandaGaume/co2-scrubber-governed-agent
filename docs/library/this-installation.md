@@ -1,6 +1,6 @@
 # This installation: a lunar habitat, one scrubber, two modules
 
-The base the documents of this library apply to, as its designers describe it. The numbers that only the installation knows (the volume a scrubber serves, the air exchanged between modules) are not here: they are measured.
+The base the documents of this library apply to, as its designers describe it. The reference layout and declared available air volumes are documented in `lab-layout-and-volumes`: Lab 30 m3 and Hab-B 400 m3. They describe the simulated reference installation, not measurements of a physical site. The installed air exchange remains to be established separately.
 
 ## Layout
 

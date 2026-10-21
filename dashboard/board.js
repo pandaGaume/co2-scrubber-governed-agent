@@ -538,6 +538,10 @@ const audio = new AudioOutput(
         },
         onError: (m) => voiceLine(`audio: ${m} (said once; the next line says when it answers again)`, "info"),
         onRecovered: () => voiceLine("audio: the speech slot answers again", "info"),
+        onBlocked: () => {
+            $("btn-sound").textContent = "ENABLE SOUND";
+            voiceLine("The browser blocked playback. Click ENABLE SOUND to hear Mother; the audio remains queued.", "info");
+        },
         onTakenElsewhere: (u) => voiceLine(`said by another page (a second board is open?): ${u.text.slice(0, 60)}...`, "info"),
     },
 );

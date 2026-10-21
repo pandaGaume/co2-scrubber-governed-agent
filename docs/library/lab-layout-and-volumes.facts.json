@@ -1,0 +1,24 @@
+{
+    "facts": [
+        {
+            "id": "habitat.lab.availableAirVolume",
+            "semantic": "LabAirVolume",
+            "quantity": "Volume",
+            "unit": "m3",
+            "value": 30,
+            "kind": "context",
+            "says": "Lab module /habitat/lab available air volume: 30 m3, documented reference configuration, not a physical site measurement",
+            "reference": "Operator-requested publication, 2026-10-20; specs/habitat-parameters.json parameters.lab.volumeM3.value; stand-ins/worlds/two-zone-world.ts LAB_WORLD.VLab"
+        },
+        {
+            "id": "habitat.habB.availableAirVolume",
+            "semantic": "HabBAirVolume",
+            "quantity": "Volume",
+            "unit": "m3",
+            "value": 400,
+            "kind": "context",
+            "says": "Hab-B module /habitat/hab-b available air volume: 400 m3, documented reference configuration, not a physical site measurement",
+            "reference": "Operator-requested publication, 2026-10-20; specs/habitat-parameters.json parameters.habB.volumeM3.value; stand-ins/worlds/two-zone-world.ts LAB_WORLD.VHab"
+        }
+    ]
+}

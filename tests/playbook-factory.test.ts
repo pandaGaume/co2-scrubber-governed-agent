@@ -1,3 +1,4 @@
+import { approveScientificTest } from "./lib/scientific-review.js";
 /**
  * A factory writes a playbook, and its signature is asked of the role that signs (2026-09-29, levels 2 and 3 of
  * docs/comportement-en-donnees.fr.md), through the broker the factories use:
@@ -205,6 +206,7 @@ describe("a factory writes a playbook, and an authorised signatory is asked to s
         assert.deepEqual([first.options.playbook], [`library:${id}`]);
         tasks.push(first.loops[1].taskId!);
         await ok("biomed", "alarm", { subjectId: "fe-1", what: "chest pain", by: "the medical panel" });
+        await approveScientificTest(operator, first.commissioningId);
         await ok("station", "commissioning_authorise", { commissioningId: first.commissioningId, decision: "authorise", by: "commander-test" });
         const asking = await until("the recover question", (r) => r.conduct?.stage === "ask");
         assert.deepEqual([asking.conduct?.playbook, asking.conduct?.signedBy], [`library:${id}`, "signatory-test"]);
@@ -214,6 +216,7 @@ describe("a factory writes a playbook, and an authorised signatory is asked to s
         assert.equal(second.status, "running", second.ended ?? "");
         tasks.push(second.loops[1].taskId!);
         await ok("biomed", "alarm", { subjectId: "fe-1", what: "chest pain again", by: "the medical panel" });
+        await approveScientificTest(operator, second.commissioningId);
         await ok("station", "commissioning_authorise", { commissioningId: second.commissioningId, decision: "authorise", by: "commander-test" });
         const done = await until("the end", () => false);
         await ok("biomed", "alarm_ack", { subjectId: "fe-1", by: "the medical panel" }); await ok("biomed", "alarm_treat", { subjectId: "fe-1", action: "oxygen, seated", by: "the medical panel" }); await ok("biomed", "alarm_clear", { subjectId: "fe-1", resolution: "safe, back to rest", by: "the commander" });

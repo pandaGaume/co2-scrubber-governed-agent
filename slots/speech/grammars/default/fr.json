@@ -2,11 +2,11 @@
     "tools": {
         "say": {
             "title": "Parler aux personnes présentes",
-            "description": "Dire à voix haute un message court à l'équipage ou à l'opérateur : une ou deux phrases dans leur langue, ce qui s'est passé et ce que vous avez fait, avec les chiffres qu'on vous a donnés. La parole est pour l'instant présent ; les rapports écrits vont à l'outil de l'équipage. Renvoie l'identifiant de l'énoncé, jamais l'audio.",
+            "description": "Dire à voix haute un message court à l'équipage ou à l'opérateur : une ou deux phrases dans leur langue, ce qui s'est passé et ce que vous avez fait, avec les chiffres qu'on vous a donnés. La parole est pour l'instant présent ; les rapports écrits vont à l'outil de l'équipage. Renvoie l'identifiant de l'énoncé, jamais l'audio. Mother (station) termine sa phrase puis lit seulement le dernier message en attente, sans interruption.",
             "properties": {
                 "text": "Ce qu'il faut dire, 1500 caractères au plus",
                 "voice": "Qui parle : un nom de locuteur du profil (agent, twin, factory, station) ou un identifiant de voix du moteur",
-                "priority": "high interrompt et passe en premier, low attend, normal par défaut"
+                "priority": "Pour Mother (station), aucune nouvelle annonce ne coupe la phrase : seule la dernière attend. Pour les autres voix : high interrompt, low attend, normal par défaut."
             }
         },
         "stop": {

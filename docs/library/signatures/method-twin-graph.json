@@ -1,8 +1,8 @@
 {
     "document": "method-twin-graph",
-    "digest": "29b980e74b00c32cd01924a6ac5d06a75aead3bceafffb170cc057bd6e09a840",
+    "digest": "aa44a0ecfbb02333964644b732dbf02e65a6316df36959e483620013b481ea73",
     "signedBy": "Guillaume Pelletier",
-    "signedAt": "2026-09-28T14:04:57.230Z",
+    "signedAt": "2026-10-20T20:04:52.263Z",
     "scope": "safety",
-    "note": "repository"
+    "note": "Explicit user instruction to publish and sign commissioning knowledge and procedures. Project acceptance requirement is distinct from measurements and physical safety limits."
 }

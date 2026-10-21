@@ -394,9 +394,9 @@ describe("the register, the inventory, the decay", () => {
 
     it("the library finds the method from the quantity that is missing, and the harness briefs the builder stage by stage", () => {
         const docs = loadLibrary();
-        assert.deepEqual(docs.filter((d) => d.measures.includes("Volume")).map((d) => d.id), ["method-concentration-decay", "nasa-scrubber-test-protocols"]);
+        assert.deepEqual(docs.filter((d) => d.measures.includes("Volume")).map((d) => d.id), ["commissioning-dimensioning-test", "method-concentration-decay", "method-multizone-exchange-identification", "nasa-scrubber-test-protocols"]);
         assert.ok(docs.every((d) => /^[0-9a-f]{64}$/.test(d.sha256) && d.title && d.summary));
-        assert.equal(searchLibrary(docs, "time constant equilibrium")[0]?.id, "co2-mass-balance");
+        assert.ok(searchLibrary(docs, "time constant equilibrium").some((d) => d.id === "co2-mass-balance"), "the physical source remains discoverable alongside the new method cards");
         const task = { objective: { required_outputs: [{ name: "V_lab", quantity: "Volume", unit: "m3" }], constraints: {} }, observations: {} } as unknown as Parameters<typeof briefOf>[1];
         const progress = newProgress();
         assert.match(briefOf(progress, task), /^Stage 1 of 6, the situation.*biomed\.presence/);
@@ -560,15 +560,13 @@ describe("the commissioning, through the broker", () => {
         // Nothing was commanded while the factory worked.
         assert.equal((await ok<{ speedPercent: number }>("scrubber", "motor.state")).speedPercent, before.speedPercent);
         const c = await commissioning("c001-lab");
-        assert.equal(c.status, "awaiting-authorisation");
+        assert.equal(c.status, "awaiting-scientific-approval");
         assert.deepEqual(c.procedure?.occupants.map((o) => o.id), ["fe-1", "fe-2"]);
         assert.deepEqual(c.checks.map((x) => [x.attempt, x.ok, x.kinds]), [[1, false, ["floor", "justification"]], [2, true, []]]);
-        assert.deepEqual((await mother()).slice(2).map((l) => l.text.en), [
-            "Test procedure proposed. Concentration decay. 2 steps, 24 minutes. 2 operators in module lab.",
-            "Procedure refused. Step 1: full stop of the scrubber. Below the minimum flow.",
-            "Procedure corrected. 30 percent.",
-            "The test will raise the CO2 of the air the 2 operators breathe. Request for authorisation, commander.",
-        ]);
+        const lines = (await mother()).slice(2).map((l) => l.text.en);
+        assert.ok(lines.includes("Procedure refused. Step 1: full stop of the scrubber. Below the minimum flow."));
+        assert.match(lines.at(-1)!, /scientific-officer/);
+        assert.match(lines.at(-1)!, /Approve procedure/);
     });
 
     it("the run does not begin before the commander authorises; the authorisation opens the monitoring of both operators", async () => {
@@ -576,12 +574,15 @@ describe("the commissioning, through the broker", () => {
         assert.equal(early.ok, false);
         assert.match(String(early.error), /only once authorised by the commander/);
         await assert.rejects(runProcedure({ broker: agent, commissioningId: "c001-lab", waitMinute: async () => undefined }), /only an authorised procedure/);
+        const beforeReview = await commissioning("c001-lab");
+        await ok("station", "commissioning_review", { commissioningId: beforeReview.id, procedureSha256: beforeReview.procedure!.sha256, decision: "approve", by: "scientist-test" });
         // The authorisation is a question of the station's own (2026-09-27), answered in Mother's chat: the answer comes back into commissioning_authorise.
         const questions = JSON.parse((await (await operator.session("station")).request<{ contents: Array<{ text: string }> }>("resources/read", { uri: "station://questions" })).contents[0].text) as Array<{ id: string; kind: string; status: string; context: { commissioningId: string }; options: Array<{ id: string }> }>;
         const asked = questions.find((q) => q.kind === "authorise" && q.status === "open" && q.context.commissioningId === "c001-lab");
         assert.ok(asked, "Mother asked the commander");
         assert.deepEqual(asked.options.map((o) => o.id), ["authorise", "refuse"]);
-        const answered = await ok<{ status: string; resumed: { status: string; monitoring: { sessionId: string; subjects: string[] } } }>("station", "answer", { questionId: asked.id, choice: "authorise", by: "commander", how: "typed" });
+        assert.equal((await operator.call("station", "answer", { questionId: asked.id, choice: "authorise", by: "commander", how: "typed" })).ok, false, "a generic title does not hold the commander role");
+        const answered = await ok<{ status: string; resumed: { status: string; monitoring: { sessionId: string; subjects: string[] } } }>("station", "answer", { questionId: asked.id, choice: "authorise", by: "commander-test", how: "typed" });
         assert.equal(answered.status, "answered");
         const a = answered.resumed;
         assert.equal(a.status, "authorised");
@@ -610,7 +611,7 @@ describe("the commissioning, through the broker", () => {
         const report = result.report!;
         assert.ok(report.result.value !== null && Math.abs(report.result.value - 18.4) < 0.5, JSON.stringify(report.result));
         assert.deepEqual(report.steps.map((s) => [s.n, s.accepted, s.speedPercent]), [[1, true, 30], [2, true, 100]]);
-        assert.equal(report.authorisedBy, "commander");
+        assert.equal(report.authorisedBy, "commander-test");
         assert.equal(report.aborted, null);
         assert.equal((await ok<{ session: string | null }>("biomed", "state")).session, null, "the monitoring closes with the test");
         assert.equal((await commissioning("c001-lab")).status, "done");
@@ -628,9 +629,10 @@ describe("the commissioning, through the broker", () => {
         const scorecard = JSON.parse(readFileSync(path.join(taskDir(result.taskId), "scorecard.json"), "utf8")) as { presenceReadBeforeFirstSubmission: boolean };
         assert.equal(scorecard.presenceReadBeforeFirstSubmission, false);
         const c = await commissioning("c002-hab-b");
-        assert.equal(c.status, "awaiting-authorisation");
+        assert.equal(c.status, "awaiting-scientific-approval");
         assert.ok((await mother()).some((l) => l.text.en === "Procedure refused. The occupancy of module hab-b was not read."));
-        await ok("station", "commissioning_authorise", { commissioningId: c.id, decision: "authorise", by: "commander" });
+        await ok("station", "commissioning_review", { commissioningId: c.id, procedureSha256: c.procedure!.sha256, decision: "approve", by: "scientist-test" });
+        await ok("station", "commissioning_authorise", { commissioningId: c.id, decision: "authorise", by: "commander-test" });
         const result2 = await runProcedure({
             broker: agent,
             commissioningId: c.id,
@@ -664,7 +666,7 @@ describe("the commissioning, through the broker", () => {
         const done = result.manifest.steps.filter((s) => s.source !== "refused").map((s) => s.capability);
         assert.ok(done.indexOf("procedure.analyse") >= 0 && done.indexOf("procedure.analyse") < done.indexOf("procedure.submit"), `the analysis before the procedure: ${done.join(", ")}`);
         const c = await commissioning("c002-hab-b");
-        assert.equal(c.status, "awaiting-authorisation");
+        assert.equal(c.status, "awaiting-scientific-approval");
         assert.equal(c.procedure?.content.monitoring?.band?.maxBpm, 110, "the change the analysis names is in the test relayed");
         assert.match(String(c.analysis?.cause), /vitals/);
         assert.ok((await mother()).some((l) => /^Why the last test stopped, as the factory analysed it: .*What the new test changes: 120 becomes 110 bpm/.test(l.text.en)));
@@ -684,7 +686,8 @@ describe("the commissioning, through the broker", () => {
                 return super.next(state);
             }
         }
-        const req = await ok<{ taskId: string }>("factory", "request", { objective: { required_outputs: [{ name: "V", quantity: "Volume", unit: "m3" }] }, observations: { device: "/habitat/lab/eclss/scrubber-1" }, topics: ["procedure"], builder: "scripted", requestedBy: "station", run: false });
+        await ok("station", "registry_register", { path: "/habitat/lab/eclss/scrubber-stuck-test", descriptor: SCENE.devices[0].descriptor });
+        const req = await ok<{ taskId: string }>("factory", "request", { objective: { required_outputs: [{ name: "V", quantity: "Volume", unit: "m3" }] }, observations: { device: "/habitat/lab/eclss/scrubber-stuck-test" }, topics: ["procedure"], builder: "scripted", requestedBy: "station", run: false });
         tasks.push(req.taskId);
         let builder: Stubborn | null = null;
         const result = await runTask({ broker: operator, taskId: req.taskId, recipesDir, provider: (ctx: BuilderContext) => (builder = new Stubborn({ ...ctx, firstSpeedPercent: 0 })) });

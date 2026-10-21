@@ -15,6 +15,7 @@ import type { Provider, ProviderExchange, ProviderProfile } from "../lib/provide
 import { CallBatch, completeArgs, distinctCalls } from "../lib/call-batch.js";
 import { apiKeyFor, callInText, callsInText, compactRequest, contextSizes, decisionFrom, familyOf, fromApiName, intentionText, observationText, parseJsonArgs, stripReasoning, toApiName, TRUNCATED_RESULT, truncatedDecision, type ContextMode } from "../lib/llm-common.js";
 import { APP } from "../core/application.js";
+import { motherOf, withMotherSummary } from "../lib/llm-common.js";
 
 /** The JSON Schema keys each server's grammar refused, by its base URL: learned once for all the conversations with it. */
 const UNIMPLEMENTED = new Map<string, Set<string>>();
@@ -79,6 +80,8 @@ export interface OpenAiCompatibleOptions {
     timeoutMs?: number;
     /** `conversation` (the default) replays the transcript; `state` sends the intention and the reasoning state alone at every step. */
     contextMode?: ContextMode;
+    /** Keep only the latest internal context call and its native tool reply in state mode. */
+    stateToolResults?: boolean;
 }
 
 export class OpenAiCompatibleProvider implements Provider {
@@ -149,6 +152,10 @@ export class OpenAiCompatibleProvider implements Provider {
         return this.options.contextMode ?? "conversation";
     }
 
+    get contextToolResults(): boolean {
+        return this.contextMode === "state" && this.options.stateToolResults === true;
+    }
+
     /** The calls of the last answer still to hand to the loop, and the results of those that ran (harness/lib/call-batch.ts). */
     private batch: CallBatch | null = null;
     /** In the state mode, a finished batch's results, said with the next observation (CallBatch.summary). */
@@ -163,7 +170,7 @@ export class OpenAiCompatibleProvider implements Provider {
             const next = batch.advance(input.state.features as Record<string, unknown>, new Set(input.allowedCapabilities.map((c) => c.id)));
             if (next) {
                 const decision = decisionFrom(next.name, next.args, "", input.allowedCapabilities);
-                this.exchanges.push({ decisionId: input.decisionId, model: this.model, request: null, response: null, decision, proposedCapabilityId: fromApiName(next.name), proposedInput: next.args, latencyMs: 0, tokens: null, batch: batch.position });
+                this.exchanges.push({ decisionId: input.decisionId, model: this.model, request: null, response: null, decision, mother: motherOf(decision), proposedCapabilityId: fromApiName(next.name), proposedInput: next.args, latencyMs: 0, tokens: null, batch: batch.position });
                 return decision;
             }
             this.batch = null;
@@ -172,8 +179,11 @@ export class OpenAiCompatibleProvider implements Provider {
             else this.batchSummary = batch.summary();
         }
         if (this.contextMode === "state") {
-            this.messages = [{ role: "system", content: this.options.systemPrompt }];
-            this.pendingCalls = [];
+            const previous = this.messages.at(-1);
+            const lastCapability = String(input.state.features.lastCapability ?? "");
+            const reply = this.options.stateToolResults && lastCapability && previous?.role === "assistant" && previous.tool_calls?.some((call) => call.function.name === toApiName(lastCapability)) && this.pendingCalls.length > 0;
+            this.messages = [{ role: "system", content: this.options.systemPrompt }, ...(reply ? [{ role: "user" as const, content: intentionText(input) }, previous!] : [])];
+            if (!reply) this.pendingCalls = [];
         }
         // Every tool call of the previous answer needs a tool message now, or the API refuses the conversation; only the first was executed.
         const f = input.state.features;
@@ -191,7 +201,7 @@ export class OpenAiCompatibleProvider implements Provider {
             this.batchSummary = null;
         }
 
-        const toolsNow = () => input.allowedCapabilities.map((c) => ({ type: "function", function: { name: toApiName(c.id), description: c.description, parameters: withoutKeys(c.inputSchema ?? { type: "object" }, this.unimplemented) } }));
+        const toolsNow = () => input.allowedCapabilities.map((c) => ({ type: "function", function: { name: toApiName(c.id), description: c.description, parameters: withoutKeys(withMotherSummary((c.inputSchema ?? { type: "object" }) as import("@spiky-panda/harness").JsonValue), this.unimplemented) } }));
         let tools = toolsNow();
         // Several calls in one answer are taken (call-batch.ts): each runs as its own step, the results go back together.
         // The output limit under the name the server takes, and a temperature only when the profile does not say the model takes none.
@@ -300,6 +310,7 @@ export class OpenAiCompatibleProvider implements Provider {
             context: { mode: this.contextMode, ...contextSizes(this.options.systemPrompt, tools.map((t) => t.function), this.messages.slice(1, -1) as Array<{ role: string; content: unknown }>, this.contextMode) },
             response: completion,
             decision,
+            mother: motherOf(decision),
             proposedCapabilityId: call ? fromApiName(call.function.name) : APP.text.report,
             proposedInput: call ? parseJsonArgs(call.function.arguments) : { message: text },
             latencyMs,

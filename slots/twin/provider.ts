@@ -29,6 +29,8 @@ import { checkCrew, round, runCabin, stateName, steadyStatePpm, summarize, twin,
 import { param, type CommandSegment, type CrewGroup } from "../../lib/factory.js";
 import { checkPersons, runHabitatTwin } from "./habitat-twin.js";
 import type { HabitatRow } from "../../lib/habitat.js";
+import { TwinDeployments } from "./deployments.js";
+import { Broker } from "../../harness/lib/broker.js";
 
 const CREW_SCHEMA = {
     type: "array",
@@ -102,6 +104,9 @@ export function stopPlanOf(stop: number, flow: number, resume: number, horizon: 
 }
 
 export function twinSlot(wsBase: string, log: (line: string) => void): PublishedSlot<TwinState> {
+    const deployments = new TwinDeployments();
+    let deploymentBroker: Broker | null = null;
+    const deploymentClient = () => deploymentBroker ??= new Broker(wsBase.replace(/^ws/u, "http"), { name: "twin-validation", version: "1" }, "station");
     const budget: TwinBudget = { maxMinutesPerRun: 1440, maxRunsPerCall: 20 };
     let ready: Twin | null = null;
     const loadOnce = (): Twin => {
@@ -149,6 +154,15 @@ export function twinSlot(wsBase: string, log: (line: string) => void): Published
         stub: false,
         state: { budget },
         tools: [
+            {
+                name: "evaluate", description: "Independently replay the exact proposed graph against separate held-out telemetry without refitting. Produces a durable report tied to artifact, device and descriptor. A reference simulation or calibration score is not admission.",
+                inputSchema: obj({ taskId: { type: "string" }, artifactPath: { type: "string" }, artifactSha256: { type: "string" }, manifestSha256: { type: "string" }, deviceId: { type: "string" }, descriptor: { type: "object" }, validationTaskId: { type: "string" }, validationFile: { type: "string" } }, ["taskId", "artifactPath", "artifactSha256", "manifestSha256", "deviceId", "descriptor", "validationTaskId", "validationFile"]),
+                handle: (args) => deployments.evaluate(deploymentClient(), args as unknown as Parameters<TwinDeployments["evaluate"]>[1]),
+            },
+            { name: "evaluation", description: "Read an independently computed immutable twin validation report by its content hash.", inputSchema: obj({ reportId: { type: "string" } }, ["reportId"]), handle: (args) => deployments.evaluation(String(args.reportId)) },
+            { name: "install", description: "Station-only deployment primitive. Activate the exact validated graph for its device after the station verifies the commander's installation approval. Does not deploy firmware or command physical hardware.", inputSchema: obj({ reportId: { type: "string" }, deviceId: { type: "string" }, descriptorSha256: { type: "string" }, approvedBy: { type: "string" }, questionId: { type: "string" } }, ["reportId", "deviceId", "descriptorSha256", "approvedBy", "questionId"]), handle: (args) => deployments.install(args as unknown as Parameters<TwinDeployments["install"]>[0]) },
+            { name: "active", description: "Read the durable active twin installations and their exact device, artifact, validation and authorisation identities.", inputSchema: obj({ deviceId: { type: "string" } }), handle: (args) => ({ installations: deployments.active(typeof args.deviceId === "string" ? args.deviceId : undefined) }) },
+            { name: "run_installed", description: "Execute the actual graph installed for this device, not the reference habitat twin. Uses the approved probes and the inputs encoded in the graph; returns the installation identity with its trajectory.", inputSchema: obj({ deviceId: { type: "string" }, minutes: { type: "integer", minimum: 1, maximum: 1440 } }, ["deviceId"]), handle: (args) => deployments.run(deploymentClient(), String(args.deviceId), args.minutes as number | undefined) },
             {
                 name: "describe",
                 title: "What the twin is",
@@ -206,7 +220,7 @@ export function twinSlot(wsBase: string, log: (line: string) => void): Published
             },
             {
                 name: "habitat_run",
-                title: "The habitat twin, with who is on board",
+                title: "The reference habitat twin, with who is on board",
                 description:
                     "The station's reference twin (the library's habitat graph: the Lab and Hab-B in mass, the centralised scrubber, the inter-module ventilation through its filter, the persons by name) run for some minutes at a scrubber command, with an optional stop. Who is on board is given person by person (module and activity: the medical monitor's presence, or a what-if), the scrubber's own numbers from the register's devices, the installation's numbers as a commissioning fitted them (variables); each takes the reference's default when absent, and the answer says what it took by default. Per module: the peak, the final CO2, the minutes to ELEVATED and to CRITICAL, the curve every few minutes; what the ventilation delivered and what the scrubber removed.",
                 inputSchema: obj({
@@ -306,5 +320,7 @@ export function twinSlot(wsBase: string, log: (line: string) => void): Published
     announceRun = (run) => published.notify("notifications/resources/updated", { uri: RUNS_URI, _meta: { [META_RUN]: run } });
     // The log is published here, so its readers are told here when it grows (`pushEvents`).
     pushEvents(published);
+    const close = published.close.bind(published);
+    published.close = async () => { await deploymentBroker?.close(); await close(); };
     return published;
 }

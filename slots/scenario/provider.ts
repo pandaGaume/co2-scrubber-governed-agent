@@ -44,6 +44,7 @@ import { oneLine, runtimeEvents } from "../lib/events.js";
 import { commissioningDocumentProblems, playCommissioning, runOf, type CommissioningDocument, type Run } from "./commissioning.js";
 import type { TwinFactoryRequest } from "../../harness/observer/request.js";
 import { runScenario } from "../../tier3/run.js";
+import { deliverInitialMission, initialRunOf, initialMissionProblems, type InitialMissionDocument } from "./mission.js";
 
 export const RUN_URI = "scenario://run";
 export const SCENARIOS_URI = "scenario://scenarios";
@@ -155,7 +156,7 @@ export function scenarioSlot(wsBase: string, log: (line: string) => void, option
                 const bytes = readFileSync(fromRoot("specs", f));
                 const doc = JSON.parse(bytes.toString("utf8")) as { title?: string; kind?: string; status?: string; test?: string; listed?: boolean };
                 const kind = typeof doc.kind === "string" ? doc.kind : "night";
-                return { id: f.replace(/^scenario-/, "").replace(/\.json$/, ""), file: `specs/${f}`, title: String(doc.title ?? f), kind, status: String(doc.status ?? ""), sha256: sha256Of(bytes), playedBy: kind === "commissioning" || kind === "safety" ? "scenario" : "tier3", test: typeof doc.test === "string" ? doc.test : null, listed: doc.listed !== false };
+                return { id: f.replace(/^scenario-/, "").replace(/\.json$/, ""), file: `specs/${f}`, title: String(doc.title ?? f), kind, status: String(doc.status ?? ""), sha256: sha256Of(bytes), playedBy: kind === "mission" || kind === "commissioning" || kind === "safety" ? "scenario" : "tier3", test: typeof doc.test === "string" ? doc.test : null, listed: doc.listed !== false };
             });
     const scenario = (id: unknown): ScenarioEntry => {
         const found = scenarios().find((x) => x.id === String(id));
@@ -341,10 +342,11 @@ export function scenarioSlot(wsBase: string, log: (line: string) => void, option
             {
                 name: "play",
                 title: "Play a reviewed scenario",
-                description: "Plays a scenario of specs/ by its id (scenarios lists them): a commissioning runs its ten loops here (scenario://run says where it stands), the commander deciding in Mother's chat; a safety test (energy-shortage, -b to -e) runs the night agent through the tier3 runner here and records the take (scenario://take); a night is not played here (the tier3 runner and the simulation page play it). One run at a time.",
+                description: "A commissioning mission supplies initial conditions and one prompt to the supervisor, who chooses its own actions. Its scenario delivery can be done while the mission remains open. mode test explicitly selects the old sequenced commissioning fixture. Safety scenarios remain recorded tests, not autonomous missions.",
                 inputSchema: obj(
                     {
                         id: { type: "string", description: "the scenario's id: commissioning, commissioning-leak, commissioning-hidden-occupant" },
+                        mode: { type: "string", enum: ["mission", "test"], description: "mission: initial conditions and one prompt (default when present); test: the deterministic commissioning fixture" },
                         builder: { type: "string", enum: ["reasoner", "scripted"], description: "the factories' builder: the model behind the reasoner slot (default), or the scripts (no key; then request is required)" },
                         request: { type: "object", description: "with builder scripted: the twin request the Observer would write, since no script stands in for the Observer" },
                         observations: { type: "object", description: "with builder scripted: observations added to the graph task (the scripts' hooks)" },
@@ -352,29 +354,53 @@ export function scenarioSlot(wsBase: string, log: (line: string) => void, option
                     },
                     ["id"],
                 ),
-                handle: (args) => {
+                handle: async (args) => {
+                    const supervisor = new Broker(httpBase, { name: "scenario-admission", version: "0.1.0" }, "station");
+                    try {
+                        const result = await supervisor.call("agent", "state", {});
+                        const mission = (result.output as { mission?: { status: string } } | undefined)?.mission;
+                        if (result.ok && mission && mission.status !== "completed") throw new Error("the supervisor's mission remains open; do not reset its world by starting another scenario");
+                    } finally {
+                        await supervisor.close();
+                    }
                     const entry = scenario(args.id);
                     if (entry.kind === "safety") return playTake(entry);
                     if (state.take && state.take.status === "running") throw new Error(`the safety test ${state.take.scenario} (${state.take.id}) is still running: wait for it`);
                     if (entry.playedBy !== "scenario") throw new Error(`scenario "${entry.id}" is a ${entry.kind}: the tier3 runner (npm run tier3) and the simulation page play it, not this slot`);
-                    const doc = readJson<CommissioningDocument>(fromRoot(...entry.file.split("/")));
-                    const problems = commissioningDocumentProblems(doc);
-                    if (problems.length) throw new Error(`scenario "${entry.id}" cannot be played: ${problems.join("; ")}`);
                     if (state.current && state.current.status === "running") throw new Error(`run ${state.current.id} is still ${state.current.status}: wait for it, or reset_run`);
                     const builder = args.builder === "scripted" ? "scripted" : "reasoner";
+                    const source = readJson<CommissioningDocument | InitialMissionDocument>(fromRoot(entry.file));
+                    const missionMode = args.mode === "mission" || (args.mode !== "test" && builder === "reasoner" && source.kind === "mission");
+                    if (missionMode && (source.kind !== "mission" || builder === "scripted")) throw new Error("an autonomous mission needs an initial objective and the real reasoner, not a scripted builder");
+                    if (missionMode && source.kind === "mission") {
+                        const problems = initialMissionProblems(source);
+                        if (problems.length) throw new Error(problems.join("; "));
+                        const run = initialRunOf(entry.id, entry.sha256, source, state.runs.length + 1);
+                        state.runs.push(run);
+                        state.current = run;
+                        runtimeEvents.append("scenario.played", { id: entry.id, run: run.id, sha256: entry.sha256, mode: "mission" });
+                        void deliverInitialMission(source, run, httpBase, notify);
+                        return { runId: run.id, scenario: entry.id, sha256: entry.sha256, status: run.status, mode: "mission", loops: [] };
+                    }
+                    const fixture = source.kind === "mission" ? source.testFixture : entry.file;
+                    if (!fixture) throw new Error("this mission has no sequenced test fixture");
+                    const bytes = readFileSync(fromRoot(fixture));
+                    const doc = JSON.parse(bytes.toString("utf8")) as CommissioningDocument;
+                    const problems = commissioningDocumentProblems(doc);
+                    if (problems.length) throw new Error(`test "${entry.id}" cannot be played: ${problems.join("; ")}`);
                     if (builder === "scripted" && (!args.request || typeof args.request !== "object")) throw new Error("builder scripted needs request: the twin request the Observer would write (no script stands in for the Observer)");
-                    const run = runOf(entry.id, entry.sha256, doc, state.runs.length + 1, builder, {
+                    const run = runOf(entry.id, sha256Of(bytes), doc, state.runs.length + 1, builder, {
                         ...(args.request && typeof args.request === "object" ? { request: args.request as TwinFactoryRequest } : {}),
                         ...(args.observations && typeof args.observations === "object" ? { observations: args.observations as Record<string, unknown> } : {}),
                         ...(typeof args.playbook === "string" && args.playbook ? { playbook: playbookOption(args.playbook) } : {}),
                     });
                     state.runs.push(run);
                     state.current = run;
-                    log(`[scenario] ${run.id}: ${entry.file} (sha256 ${entry.sha256.slice(0, 12)}) started (world ${run.options.world}, leak ${run.options.leak}, builder ${builder})`);
-                    runtimeEvents.append("scenario.played", { id: entry.id, run: run.id, sha256: entry.sha256, builder });
+                    log(`[scenario] ${run.id}: test fixture ${fixture} (sha256 ${run.sha256.slice(0, 12)}) started (world ${run.options.world}, leak ${run.options.leak}, builder ${builder})`);
+                    runtimeEvents.append("scenario.played", { id: entry.id, run: run.id, sha256: run.sha256, fixture, builder, mode: "test" });
                     notify();
                     void playCommissioning(doc, run, { httpBase, log, waitMs, notify });
-                    return { runId: run.id, scenario: entry.id, sha256: entry.sha256, status: run.status, loops: run.loops.map((l) => `${l.n} ${l.name}`) };
+                    return { runId: run.id, scenario: entry.id, sha256: run.sha256, fixture, status: run.status, loops: run.loops.map((l) => `${l.n} ${l.name}`) };
                 },
             },
             {

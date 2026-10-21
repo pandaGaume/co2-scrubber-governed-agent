@@ -4,8 +4,8 @@
  * Mother's lines are drawn by board.js. Her open questions to the commander
  * (station://questions: the authorisation of a test, the hand-off's
  * questions, a factory's task.ask) hang under them as chips. The commander
- * answers by a click on a chip, by a word typed at the prompt, or by voice
- * (the browser's speech recognition, no server); a standing order answers in
+ * answers by a click on a chip or by sending an editable written reply.
+ * Browser speech recognition fills the draft only; a standing order answers in
  * the commander's stead when set. Every answer is `station.answer`, signed
  * commander, and the station calls back whoever asked. The page decides
  * nothing.
@@ -27,19 +27,19 @@
  * `station.commissioning_authorise` directly.
  */
 import { connectMcp, toolText } from "./vendor/mcp-http-client.js";
+import { createDictation, dictationKey } from "./mother-dictation.js";
+import { pendingModelActivity, missionActivity } from "./runtime-activity.js";
 
 const POLL_MS = 2000;
 
 const esc = (v) => String(v ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
-/** The option a word names: exact first, then a word of one label alone. */
-export function optionOf(text, options) {
-    const t = String(text).trim().toLowerCase();
+/** Agent questions receive verbatim text. Protected operations require an exact option. */
+export function answerOptionOf(text, question) {
+    const t = String(text).trim();
     if (!t) return null;
-    const exact = options.find((o) => o.id.toLowerCase() === t || o.label.toLowerCase() === t);
-    if (exact) return exact;
-    const hits = options.filter((o) => t.includes(o.id.toLowerCase()) || o.label.toLowerCase().split(/\W+/).some((w) => w.length > 2 && t.includes(w)));
-    return hits.length === 1 ? hits[0] : null;
+    if (question.kind === "ask") return { id: "text", label: "Written reply" };
+    return question.options.find((o) => [o.id, o.label].some((s) => s.toLowerCase() === t.toLowerCase())) ?? null;
 }
 
 export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
@@ -75,10 +75,14 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
         if (lines.length) lastLine = Math.max(lastLine, ...lines.map((l) => l.n));
         else if (lastLine < 0) lastLine = 0;
     };
-    const heard = new Map();
+    let recording = null;
+    const micIcon = `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>`;
     /** The holder a question for a role is answered as, by question. */
     const chosenAs = new Map();
+    const drafts = new Map();
     const notes = [];
+    const expandedQuestions = new Set();
+    let visibleQuestions = "";
     /** Reads of the questions that failed in a row (2026-10-08): one lost poll (a server restarting, a request cut) says nothing in
         the commander's panel and keeps the questions shown; only a station that stays silent is said, once, in plain words. */
     let missed = 0;
@@ -89,6 +93,8 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
     let busy = [];
     let scenarioSession = null;
     let factorySession = null;
+    let agentSession = null;
+    let eventSession = null;
 
     const session = async () => (station ??= await connectMcp(location.origin, "station", { headers: {} }));
     const read = async (uri) => {
@@ -120,6 +126,11 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
     function render() {
         // A signature asked: the card's values under the question, each with its safe side, its kind and its origin, so the commander signs what they read.
         const card = (q) => {
+            if ((q.kind === "authorise" || q.kind === "procedure-review") && q.context?.procedure) {
+                const p = q.context.procedure;
+                const points = Array.isArray(p.operatingPoints) ? p.operatingPoints.map((s) => `<div class="line dim">Step ${esc(s.n)}: ${esc(s.speedPercent)}%, ${esc(s.minutes)} min, hatch ${esc(s.hatch)}</div>`).join("") : "";
+                return `<div class="card"><div class="line"><b>${esc(p.procedureId)}</b>: ${esc(p.device ?? p.module)}, ${esc(p.minutes ?? "?")} min</div>${points}${p.sha256 ? `<div class="line dim">Artifact SHA-256: ${esc(p.sha256)}</div>` : ""}</div>`;
+            }
             if (q.kind !== "sign") return "";
             // A playbook proposed by a factory: its bounds, each with why; the whole on the library page.
             if (!Array.isArray(q.context?.facts)) {
@@ -132,25 +143,37 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
             return `<div class="card">${q.context.facts.map((f) => `<div class="line dim"><b>${esc(f.id)}</b> ${esc(side(f.bound))} ${esc(f.value)} ${esc(f.unit)}${f.kind ? ` <span class="t">${esc(f.kind)}</span>` : ""}${f.reference ? `: ${esc(f.reference)}` : ""}</div>`).join("")}${page}</div>`;
         };
         const chips = open.map((q) => {
-            const h = heard.get(q.id);
-            const options = q.options.map((o) => `<button class="badge link" data-q="${esc(q.id)}" data-choice="${esc(o.id)}" type="button">${esc(o.label)}</button>`).join(" ");
-            const text = q.from === "station" ? "" : `<div class="line ask"><span class="dim">${esc(q.from)}${q.taskId ? `, ${esc(q.taskId)}` : ""}: </span>${esc(q.question)}</div>`;
+            const options = q.options.map((o) => `<button class="badge link" data-q="${esc(q.id)}" data-choice="${esc(o.id)}" type="button" title="${esc(o.label)}" aria-label="${esc(o.label)}">${esc(String(o.label).length > 48 ? String(o.label).slice(0, 45) + "..." : o.label)}</button>`).join(" ");
+            const prompt = String(q.question ?? "");
+            const text = `<div class="line ask">${esc(prompt.length > 160 ? prompt.slice(0, 157) + "..." : prompt)}</div>`;
+            const full = prompt.length > 160 ? `<div class="line ask">${esc(prompt)}</div>` : "";
+            const supporting = full + (q.context?.why ? `<div class="line dim">${esc(q.context.why)}</div>` : "") + card(q);
+            const extra = supporting ? `<details class="question-details" data-question-details="${esc(q.id)}"${expandedQuestions.has(q.id) ? " open" : ""}><summary>Full question and supporting details</summary><div class="question-detail-body">${supporting}</div></details>` : "";
             // A question for a role: answered as one of its holders, chosen here; a role nobody holds is said, and its chips wait.
             const as = q.role
                 ? `<div class="line dim">for the role <b>${esc(q.role)}</b>: ${q.holders?.length ? `answer as <select data-as="${esc(q.id)}">${q.holders.map((n) => `<option${chosenAs.get(q.id) === n ? " selected" : ""}>${esc(n)}</option>`).join("")}</select>` : "nobody holds it yet (specs/station/roles.json)"}</div>`
                 : "";
-            const said = h ? `<div class="line dim">heard: "${esc(h.text)}"${h.option ? ` : ${esc(h.option.label)}` : ", no option matches: say one of the words above, or click"}</div>` : "";
-            return `${text}${card(q)}${as}<div class="chips"><span class="t">${esc(q.id)}</span>${options}<button class="badge link" data-voice="${esc(q.id)}" type="button" title="answer by voice">mic</button></div>${said}`;
+            const details = `<div class="answer-composer"><textarea data-answer-note="${esc(q.id)}" rows="2" aria-label="Reply to ${esc(q.id)}" placeholder="${q.kind === "ask" ? "Write a reply, or dictate with Ctrl+M" : "Write a note, then choose an explicit decision above"}">${esc(drafts.get(q.id) ?? "")}</textarea><div class="answer-actions"><span class="dim">${recording === q.id ? "Listening. Enter stops dictation." : "Ctrl+M: dictate"}</span><button class="dictation-button${recording === q.id ? " on" : ""}" data-voice="${esc(q.id)}" type="button" aria-label="Dictate reply" aria-pressed="${recording === q.id}" title="Ctrl+M: microphone. Enter: stop">${micIcon}</button>${q.kind === "ask" ? `<button class="badge link" data-send="${esc(q.id)}" type="button">Send</button>` : ""}</div></div>`;
+            return `<section class="question-card"><div class="question-controls">${as}<div class="chips"><span class="t">${esc(q.id)}</span>${options}</div></div>${text}${details}${extra}</section>`;
         });
         const direct = awaiting.map((c) => `<div class="chips"><span class="t">${esc(c.id)}</span><button class="badge link" data-authorise="${esc(c.id)}" data-decision="authorise" type="button">authorise the test</button><button class="badge link" data-authorise="${esc(c.id)}" data-decision="refuse" type="button">refuse it</button></div>`);
         const said = notes.filter((n) => Date.now() - n.at < 15000).map((n) => `<div class="line dim">${esc(n.text)}</div>`);
-        const turning = busy.map((b) => `<div class="line busy"><i class="spin"></i>${esc(b)}</div>`);
-        box.innerHTML = turning.join("") + chips.join("") + direct.join("") + said.join("");
+        const turning = busy.map((b) => `<div class="line busy">${b.startsWith("Mission paused:") || b.startsWith("Mission closed:") || b === "Mission waiting for your reply" ? "" : '<i class="spin"></i>'}${esc(b)}</div>`);
+        const editing = document.activeElement?.dataset?.answerNote;
+        const selection = editing ? [document.activeElement.selectionStart, document.activeElement.selectionEnd] : null;
+        box.innerHTML = chips.join("") + direct.join("") + said.join("") + turning.join("");
+        const showing = open.map((q) => q.id).join(",");
+        if (showing !== visibleQuestions) { box.scrollTop = 0; visibleQuestions = showing; }
+        if (editing) {
+            const field = [...box.querySelectorAll("textarea[data-answer-note]")].find((e) => e.dataset.answerNote === editing);
+            field?.focus();
+            if (field && selection) field.setSelectionRange(...selection);
+        }
         box.hidden = !box.innerHTML;
         // The prompt blinks while Mother waits for the commander.
         const waiting = open.length > 0 || awaiting.length > 0;
         form?.classList.toggle("awaiting", waiting);
-        if (input) input.placeholder = waiting ? "Mother is waiting for your answer: type it, or press mic" : "answer Mother: type it, or press mic";
+        if (input) input.placeholder = waiting ? "Mother is waiting: write a reply, or Ctrl+M to dictate" : "Write a reply, or Ctrl+M to dictate";
     }
 
     const clockOf = (iso) => {
@@ -159,6 +182,27 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
     };
     async function readBusy() {
         const lines = [];
+        try {
+            agentSession ??= await connectMcp(location.origin, "agent", { headers: {} });
+            const response = await agentSession.callTool("state", {});
+            const body = JSON.parse(toolText(response));
+            const state = body.result ?? body;
+            const status = missionActivity(state.mission);
+            if (status) lines.push(status);
+            for (const run of state.procedureExecutions ?? []) {
+                lines.push(`Procedure collecting simulated cabin telemetry: minute ${run.minute}/${run.plannedMinutes ?? "?"}, ${run.samples} samples${run.observedSpeedPercent !== null ? `, observed motor speed ${run.observedSpeedPercent}%` : ""}`);
+            }
+        } catch {
+            agentSession = null;
+        }
+        try {
+            eventSession ??= await connectMcp(location.origin, "twin", { headers: {} });
+            const response = await eventSession.request("resources/read", { uri: "spk://events" });
+            const body = JSON.parse(response.contents[0].text);
+            lines.push(...pendingModelActivity(Array.isArray(body) ? body : body.events ?? []));
+        } catch {
+            eventSession = null;
+        }
         try {
             scenarioSession ??= await connectMcp(location.origin, "scenario", { headers: {} });
             const run = JSON.parse((await scenarioSession.request("resources/read", { uri: "scenario://run" })).contents[0].text);
@@ -172,7 +216,7 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
             const running = JSON.parse((await factorySession.request("resources/read", { uri: "factory://running" })).contents[0].text);
             // The stage under way, from the last one completed: after "request" the model is writing its next step, the long wait of a step (2026-09-28: the room read "request" and thought it stuck).
             const under = (s) => (s === "request" ? "the model is writing its next step" : s === "reason" || s === "merge" ? "the harness checks the step" : s === "guard" ? "the step runs" : s ? `after ${s}` : "starting");
-            for (const t of running) if (!t.waiting) lines.push(`factory task ${t.taskId}: step ${t.steps + 1}, ${under(t.lastStage)} (${clockOf(t.startedAt)})`);
+            for (const t of running) if (!t.waiting) lines.push(t.delivery === "waiting" ? `factory task ${t.taskId}: result ready, awaiting earlier task delivery` : `factory task ${t.taskId}: step ${t.steps + 1}, ${under(t.lastStage)} (${clockOf(t.startedAt)})`);
         } catch {
             factorySession = null;
         }
@@ -208,7 +252,7 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
             const questions = await read("station://questions");
             open = questions.filter((q) => q.status === "open");
             const commissionings = await read("station://commissionings").catch(() => []);
-            awaiting = commissionings.filter((c) => c.status === "awaiting-authorisation" && !open.some((q) => q.kind === "authorise" && q.context?.commissioningId === c.id));
+            awaiting = commissionings.filter((c) => c.status === "awaiting-authorisation" && !questions.some((q) => (q.status === "open" || q.status === "queued") && q.kind === "authorise" && q.context?.commissioningId === c.id));
             if (missed >= MISSED_BEFORE_SAYING) note("The station answers again.");
             missed = 0;
         } catch (e) {
@@ -236,11 +280,13 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
     };
     const answer = async (questionId, choice, how, text) => {
         try {
+            const question = open.find((q) => q.id === questionId);
+            if (question?.context?.responseType === "information" && choice === "provide" && !String(text ?? "").trim()) return note("Write the information before sending, or choose Information unavailable.");
             await call("answer", { questionId, choice, by: answererOf(questionId), how, ...(text ? { note: text } : {}) });
+            drafts.delete(questionId);
         } catch (e) {
             note(`not recorded: ${plain(e)}`);
         }
-        heard.delete(questionId);
         await refresh();
     };
     const authorise = async (commissioningId, decision, how) => {
@@ -259,39 +305,64 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
         await refresh();
         if (!open.length && awaiting.length === 1 && /^(authorise|authorize|autoriser?|refuse|refuser)$/i.test(t)) return authorise(awaiting[0].id, /^refus/i.test(t) ? "refuse" : "authorise", how);
         if (!open.length) return note(`nothing to answer: no question is open ("${t}")`);
-        const matched = open.map((q) => ({ q, option: optionOf(t, q.options) })).filter((m) => m.option);
-        if (matched.length !== 1) return note(`"${t}" answers ${matched.length ? "more than one question" : "no open question"}: say one of the options' words, or click a chip`);
-        heard.set(matched[0].q.id, { text: t, option: matched[0].option });
+        const matched = open.map((q) => ({ q, option: answerOptionOf(t, q) })).filter((m) => m.option);
+        if (matched.length !== 1) return note(`"${t}" answers ${matched.length ? "more than one question" : "no open question"}: use the field under the intended question, or click an explicit option`);
         await answer(matched[0].q.id, matched[0].option.id, how, t);
     };
 
-    /** The browser's speech recognition, once: on one question's mic, or on the prompt's. */
+    const dictation = createDictation({
+        recognition: () => {
+            const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            return Recognition ? new Recognition() : null;
+        },
+        language: () => lang?.value ?? "fr-FR",
+        onText: (target, text) => {
+            if (target === "prompt") { if (input) input.value = text; return; }
+            drafts.set(target, text);
+            const field = [...box.querySelectorAll("textarea[data-answer-note]")].find((e) => e.dataset.answerNote === target);
+            if (field) field.value = text;
+        },
+        onState: (target) => {
+            recording = target;
+            mic?.classList.toggle("on", target === "prompt");
+            mic?.setAttribute("aria-pressed", String(target === "prompt"));
+            render();
+        },
+        onError: note,
+    });
     const listen = (questionId = null) => {
-        const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!Recognition) return note("this browser has no speech recognition: type the answer");
-        const rec = new Recognition();
-        rec.lang = lang?.value ?? "fr-FR";
-        rec.interimResults = false;
-        rec.maxAlternatives = 3;
-        const q = questionId ? open.find((x) => x.id === questionId) : null;
-        rec.onresult = async (e) => {
-            const alternatives = Array.from(e.results[0]).map((r) => r.transcript);
-            if (q) {
-                const option = alternatives.map((t) => optionOf(t, q.options)).find(Boolean) ?? null;
-                heard.set(q.id, { text: alternatives[0] ?? "", option });
-                if (option) await answer(q.id, option.id, "voice", alternatives[0]);
-                else render();
-                return;
-            }
-            await byText(alternatives[0] ?? "", "voice");
-        };
-        rec.onerror = (e) => note(`recognition error: ${e.error}`);
-        if (q) heard.set(q.id, { text: "listening...", option: null });
-        else note("listening...");
-        render();
-        rec.start();
+        const target = questionId ?? "prompt";
+        dictation.start(target, questionId ? drafts.get(questionId) ?? "" : input?.value ?? "");
     };
+    const sendDraft = async (id) => {
+        if (dictation.active) { dictation.stop(); return; }
+        const q = open.find((x) => x.id === id);
+        const text = drafts.get(id) ?? "";
+        if (!q || !text.trim()) return;
+        const option = answerOptionOf(text, q);
+        if (!option) return note("Choose an explicit decision below. Your note will accompany it.");
+        await answer(id, option.id, "typed", text);
+    };
+    document.addEventListener("keydown", (event) => dictationKey(event, dictation, () => {
+        const id = document.activeElement?.dataset?.answerNote;
+        listen(document.activeElement === input ? null : id ?? (open.length === 1 ? open[0].id : null));
+    }), true);
+    box.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && !event.shiftKey && !event.isComposing && !event.defaultPrevented) {
+            const id = event.target.dataset?.answerNote;
+            if (id) { event.preventDefault(); void sendDraft(id); }
+        }
+    });
 
+    box.addEventListener("toggle", (ev) => {
+        const element = ev.target;
+        const id = element.dataset?.questionDetails;
+        if (id) { if (element.open) expandedQuestions.add(id); else expandedQuestions.delete(id); }
+    }, true);
+    box.addEventListener("input", (ev) => {
+        const field = ev.target.closest("textarea[data-answer-note]");
+        if (field) drafts.set(field.dataset.answerNote, field.value);
+    });
     box.addEventListener("change", (ev) => {
         const s = ev.target.closest("select[data-as]");
         if (s) chosenAs.set(s.dataset.as, s.value);
@@ -300,67 +371,22 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
         const b = ev.target.closest("button");
         if (!b) return;
         if (b.dataset.voice) return listen(b.dataset.voice);
+        if (b.dataset.send) return sendDraft(b.dataset.send);
+        if (dictation.active) { dictation.stop(); return; }
         if (b.dataset.authorise) return authorise(b.dataset.authorise, b.dataset.decision, "click");
-        if (b.dataset.q && b.dataset.choice) await answer(b.dataset.q, b.dataset.choice, "click", heard.get(b.dataset.q)?.text);
+        if (b.dataset.q && b.dataset.choice) {
+            await answer(b.dataset.q, b.dataset.choice, "click", drafts.get(b.dataset.q));
+        }
     });
     form?.addEventListener("submit", async (ev) => {
         ev.preventDefault();
+        if (dictation.active) { dictation.stop(); return; }
         const text = input.value;
         input.value = "";
         await byText(text, "typed");
     });
-    /**
-     * The prompt's microphone (2026-10-11): one click opens it, and it stays open until clicked again. Each phrase heard is taken
-     * as a typed answer; the browser ends a recognition after a silence, and it is started again while the microphone is open.
-     */
-    let open_mic = null;
-    const micOff = () => {
-        const rec = open_mic;
-        open_mic = null;
-        mic?.classList.remove("on");
-        mic?.setAttribute("aria-pressed", "false");
-        try {
-            rec?.stop();
-        } catch {
-            /* already stopped */
-        }
-        note("microphone closed");
-    };
-    const micOn = () => {
-        const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!Recognition) return note("this browser has no speech recognition: type the answer");
-        const rec = new Recognition();
-        rec.lang = lang?.value ?? "fr-FR";
-        rec.continuous = true;
-        rec.interimResults = false;
-        rec.maxAlternatives = 3;
-        rec.onresult = async (e) => {
-            for (let i = e.resultIndex; i < e.results.length; i++) {
-                if (!e.results[i].isFinal) continue;
-                const said = String(e.results[i][0]?.transcript ?? "").trim();
-                if (said) await byText(said, "voice");
-            }
-        };
-        rec.onerror = (e) => {
-            if (e.error === "no-speech" || e.error === "aborted") return;
-            note(`recognition error: ${e.error}`);
-            if (e.error === "not-allowed" || e.error === "service-not-allowed") micOff();
-        };
-        rec.onend = () => {
-            if (open_mic !== rec) return;
-            try {
-                rec.start();
-            } catch {
-                micOff();
-            }
-        };
-        open_mic = rec;
-        mic?.classList.add("on");
-        mic?.setAttribute("aria-pressed", "true");
-        note("listening: the microphone stays open until you click it again");
-        rec.start();
-    };
-    mic?.addEventListener("click", () => (open_mic ? micOff() : micOn()));
+    mic?.setAttribute("title", "Ctrl+M: microphone. Enter: stop dictation");
+    mic?.addEventListener("click", () => listen());
     policy?.addEventListener("change", async (ev) => {
         try {
             await call("questions_policy", { mode: ev.target.value });

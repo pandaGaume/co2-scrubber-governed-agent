@@ -161,6 +161,33 @@ describe("the library's typed facts, through the broker", () => {
         if (recipesDir) rmSync(recipesDir, { recursive: true, force: true });
     });
 
+    it("finds published module volumes and the monitoring readiness procedure through ordinary library tools", async () => {
+        const volumes = await broker.call("library", "facts", { query: "Lab Hab-B module available air volume", limit: 30 });
+        assert.equal(volumes.ok, true, volumes.error);
+        const facts = (volumes.output as { facts: Array<{ id: string; value: number; source: string }> }).facts;
+        assert.equal(facts.find((f) => f.id === "habitat.lab.availableAirVolume")?.value, 30);
+        assert.equal(facts.find((f) => f.id === "habitat.habB.availableAirVolume")?.value, 400);
+        assert.equal(facts.find((f) => f.id === "habitat.lab.availableAirVolume")?.source, "lab-layout-and-volumes");
+        const search = await broker.call("library", "search", { query: "missing biometric monitoring", limit: 10 });
+        assert.equal(search.ok, true, search.error);
+        assert.match(JSON.stringify(search.output), /biometric-monitoring-readiness/);
+        for (const quantity of ["Dimensionless", "Timespan", "Ratio", "Time"]) {
+            const methods = await broker.call("library", "methods", { quantity });
+            assert.equal(methods.ok, true, methods.error);
+            assert.match(JSON.stringify(methods.output), /method-scrubber-dynamic-identification/, `the documented identification method is retrievable for ${quantity}`);
+        }
+        const recovery = await broker.call("library", "search", { query: "missing information recovery degraded alternative", limit: 10 });
+        assert.equal(recovery.ok, true, recovery.error);
+        assert.match(JSON.stringify(recovery.output), /reasoning-recovery-procedure/);
+        const dossier = await broker.call("library", "read", { id: "commissioning-evidence-and-acceptance" });
+        assert.equal(dossier.ok, true, dossier.error);
+        assert.match(JSON.stringify(dossier.output), /affine-residual/);
+        const acceptance = await broker.call("library", "read", { id: "commissioning.referenceRmseMaxPpm" });
+        assert.equal(acceptance.ok, true, acceptance.error);
+        assert.equal((acceptance.output as { fact: { value: number; source: string } }).fact.value, 10);
+        assert.equal((acceptance.output as { fact: { source: string } }).fact.source, "commissioning-evidence-and-acceptance");
+    });
+
     it("a need said in words, the facts nearest it, every document's, the best first (2026-10-10, the Observer's selection)", async () => {
         const near = async (query: string) => ((await broker.call("library", "facts", { query, limit: 4 })).output as { facts: Array<{ id: string; source: string; value: number }> }).facts;
         assert.equal((await near("ventilation flow between the Lab and Hab-B with the hatch closed"))[0].id, "habitat.interModuleVentilation.designFlow.hatchClosed");

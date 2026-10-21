@@ -35,6 +35,7 @@ var AudioOutput = class {
   lastPending = 0;
   /** The last poll failure reported, so the same one is not repeated every tick. */
   pollFailure = null;
+  unplayed = /* @__PURE__ */ new Set();
   get enabled() {
     return this.stopClock !== null;
   }
@@ -122,6 +123,15 @@ var AudioOutput = class {
     this.busy = true;
     this.busySince = performance.now();
     try {
+      for (const id of this.unplayed) {
+        const returned = await this.broker.call("speech", "return_unplayed", { utteranceId: id, output: this.outputId });
+        if (!returned.ok && String(returned.error ?? "").includes(`unknown utterance ${id}`)) {
+          this.unplayed.delete(id);
+          continue;
+        }
+        if (!returned.ok) throw new Error(returned.error ?? "Could not return unplayed audio");
+        this.unplayed.delete(id);
+      }
       const session = await this.broker.session("speech");
       const r = await session.request("resources/read", { uri: "speech://queue" });
       const q = JSON.parse(r.contents[0]?.text ?? "{}");
@@ -133,7 +143,6 @@ var AudioOutput = class {
       if (this.playing && this.playing.seq <= q.stopMark) this.cut();
       if (this.playing) return;
       this.finishCurrent = null;
-      if (document.hidden) return;
       const next = q.pending.find((p) => p.seq > q.stopMark && !this.played.has(p.utteranceId));
       if (next) await this.play(next, session);
     } catch (e) {
@@ -147,16 +156,17 @@ var AudioOutput = class {
     }
   }
   async play(item, session) {
-    this.played.add(item.utteranceId);
     const taken = await this.broker.call("speech", "take", { utteranceId: item.utteranceId, output: this.outputId });
     if (!taken.ok) {
       if (String(taken.error ?? "").includes(FLOOR_BUSY)) {
-        this.played.delete(item.utteranceId);
         return;
       }
+      if (!/already taken by|no longer pending/.test(String(taken.error ?? ""))) throw new Error(taken.error ?? "Could not take audio");
+      this.played.add(item.utteranceId);
       this.events.onTakenElsewhere?.(item);
       return;
     }
+    this.unplayed.add(item.utteranceId);
     const r = await session.request("resources/read", { uri: `speech://utterances/${item.utteranceId}` });
     const c = r.contents[0];
     if (!c?.blob) throw new Error(`no audio for ${item.utteranceId}`);
@@ -166,6 +176,7 @@ var AudioOutput = class {
     this.playing = item;
     this.events.onPlay?.(item);
     const started = performance.now();
+    let completed = false;
     await new Promise((resolve) => {
       let done = false;
       let watchdog = 0;
@@ -184,9 +195,18 @@ var AudioOutput = class {
       watchdog = window.setInterval(() => {
         const elapsed = performance.now() - started;
         const length = Number.isFinite(this.el.duration) && this.el.duration > 0 ? this.el.duration * 1e3 : null;
-        if (this.el.ended || length !== null && elapsed > length + 3e3 || length === null && elapsed > LINE_MAX_MS || this.el.paused && elapsed > 2e3) finish();
+        if (this.el.ended) {
+          completed = true;
+          finish();
+        } else if (length !== null && elapsed > length + 3e3 || length === null && elapsed > LINE_MAX_MS || this.el.paused && elapsed > 2e3) {
+          this.events.onError?.("Audio playback stopped before the end. The line remains pending.");
+          finish();
+        }
       }, 1e3);
-      this.el.onended = finish;
+      this.el.onended = () => {
+        completed = true;
+        finish();
+      };
       this.el.onerror = () => {
         this.events.onError?.(`could not play ${item.utteranceId} (${c.mimeType ?? item.mimeType})`);
         finish();
@@ -195,14 +215,24 @@ var AudioOutput = class {
       this.el.play().catch((e) => {
         this.events.onError?.(e instanceof Error ? e.message : String(e));
         finish();
+        if (e instanceof Error && e.name === "NotAllowedError") {
+          this.disable();
+          this.events.onBlocked?.();
+        }
       });
     });
     const durationMs = Math.round(performance.now() - started);
     const wasCut = this.playing !== item;
     this.playing = null;
-    if (!wasCut) {
+    if (!wasCut && completed) {
+      this.unplayed.delete(item.utteranceId);
+      this.played.add(item.utteranceId);
       this.events.onDone?.(item, durationMs);
       await this.broker.call("speech", "played", { utteranceId: item.utteranceId, output: this.outputId, durationMs });
+    } else {
+      const returned = await this.broker.call("speech", "return_unplayed", { utteranceId: item.utteranceId, output: this.outputId });
+      if (!returned.ok) throw new Error(returned.error ?? "Could not return unplayed audio");
+      this.unplayed.delete(item.utteranceId);
     }
   }
 };

@@ -1,3 +1,4 @@
+import { approveScientificTest } from "./lib/scientific-review.js";
 /**
  * A fork that adapts itself from an event (2026-09-29, before P5; Guillaume: "je veux assister à un fork qui
  * s'auto-adapte à partir d'un événement"): a server in a fork started to learn (FORK_LEARNING, npm run fork -- run
@@ -66,6 +67,7 @@ describe("a fork that learns: an abort is the event, the fork adapts itself at i
             // The first abort: the event; nothing repeated yet, so no pattern; the commander asks for a new test.
             const first = await until("the first authorisation", (r) => r.loops[3].status === "waiting");
             await ok("biomed", "alarm", { subjectId: "fe-1", what: "chest pain", by: "the medical panel" });
+            await approveScientificTest(operator, first.commissioningId);
             await ok("station", "commissioning_authorise", { commissioningId: first.commissioningId, decision: "authorise", by: "commander-test" });
             const asking = await until("the recover question", (r) => r.conduct?.stage === "ask");
             assert.deepEqual(asking.conduct?.adaptations?.map((a) => [a.patterns.length, a.taskId]), [[0, null]], "at the first abort, Mother read the traces and found nothing repeated");
@@ -78,6 +80,7 @@ describe("a fork that learns: an abort is the event, the fork adapts itself at i
             // The second abort on the same cause: the fork adapts itself at this event, and the adapted playbook ends the commissioning.
             const second = await until("the second authorisation", (r) => r.loops[3].status === "waiting" && r.tasks.length === 2);
             await ok("biomed", "alarm", { subjectId: "fe-1", what: "chest pain again", by: "the medical panel" });
+            await approveScientificTest(operator, second.commissioningId);
             await ok("station", "commissioning_authorise", { commissioningId: second.commissioningId, decision: "authorise", by: "commander-test" });
             const done = await until("the end", () => false);
             await ok("biomed", "alarm_ack", { subjectId: "fe-1", by: "the medical panel" }); await ok("biomed", "alarm_treat", { subjectId: "fe-1", action: "oxygen, seated", by: "the medical panel" }); await ok("biomed", "alarm_clear", { subjectId: "fe-1", resolution: "safe, back to rest", by: "the commander" });

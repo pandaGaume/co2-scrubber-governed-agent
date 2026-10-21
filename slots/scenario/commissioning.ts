@@ -100,6 +100,7 @@ export interface CommissioningDocument {
 }
 
 export interface Run {
+    mission?: { id: string; status: "delivering" | "delivered" | "delivery-failed" };
     id: string;
     /** The document played: its id under specs/ (scenario-<id>.json), its sha256 as read. */
     scenario: string;
@@ -179,6 +180,7 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
     // Every run is a test with its own log (harness/lib/run-log.ts): .logs/<id>/README.md and log.md.
     const routingFile = fromRoot(process.env.REASONER_ROUTING ?? "specs/reasoner/routing.json");
     const testLog = openRunLog({
+        detailed: true,
         name: `scenario-${run.scenario}`,
         description: `The scenario \`${run.scenario}\` (specs/scenario-${run.scenario}.json, sha256 ${run.sha256.slice(0, 12)}) played by the scenario slot as run ${run.id}: its ten loops, from the device registered to the twin proposed (the procedure factory, the relay, the commander's authorisation, the test on the board or its stand-in, the report, the Observer, the graph factory, the references, the proposal). Builder ${run.options.builder}${run.options.playbook ? `, playbook ${run.options.playbook}` : ""}.`,
         // Only what this run uses: with the scripted builder no model is called, whatever the profile and the routing say.
@@ -455,7 +457,7 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
             const c1 = await call<{ commissioning: { status: string; procedure: { procedureId: string; minutes: number; occupants: unknown[]; content?: JsonValue } | null } }>("station", "commissioning_state", { commissioningId });
             end(3, { status: c1.commissioning.status, procedure: c1.commissioning.procedure?.procedureId ?? null, minutes: c1.commissioning.procedure?.minutes ?? null, occupants: c1.commissioning.procedure?.occupants.length ?? 0 } as JsonValue);
             // A commander who answered at once (2026-10-11): the commissioning is already authorised or refused when the relay is read; that is a decision, not a relay missed.
-            if (!["awaiting-authorisation", "authorised", "refused"].includes(c1.commissioning.status)) throw new Error(`commissioning ${commissioningId} is ${c1.commissioning.status}: Mother did not relay the procedure`);
+            if (!["awaiting-scientific-approval", "awaiting-authorisation", "authorised", "refused"].includes(c1.commissioning.status)) throw new Error(`commissioning ${commissioningId} is ${c1.commissioning.status}: Mother did not relay the procedure`);
 
             // 4. the commander authorises, in Mother's chat; the player waits.
             begin(4);
@@ -464,15 +466,15 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
             const t0 = Date.now();
             let status = c1.commissioning.status;
             let monitoring: JsonValue = null;
-            while (status === "awaiting-authorisation") {
+            while (["awaiting-scientific-approval", "awaiting-authorisation"].includes(status)) {
                 if (Date.now() - t0 > waitMs) throw new Error(`the commander did not decide in ${waitMs} ms`);
                 await sleep(1000);
                 const c = await call<{ commissioning: { status: string; authorisation?: { decision: string; by: string } | null; monitoring?: JsonValue } }>("station", "commissioning_state", { commissioningId });
                 status = c.commissioning.status;
                 monitoring = c.commissioning.monitoring ?? null;
-                if (status !== "awaiting-authorisation") end(4, { status, by: c.commissioning.authorisation?.by ?? null, monitoring } as JsonValue, `${c.commissioning.authorisation?.decision ?? status} by ${c.commissioning.authorisation?.by ?? "?"}`);
+                if (!["awaiting-scientific-approval", "awaiting-authorisation"].includes(status)) end(4, { status, by: c.commissioning.authorisation?.by ?? null, monitoring } as JsonValue, `${c.commissioning.authorisation?.decision ?? status} by ${c.commissioning.authorisation?.by ?? "?"}`);
             }
-            if (c1.commissioning.status !== "awaiting-authorisation") {
+            if (!["awaiting-scientific-approval", "awaiting-authorisation"].includes(c1.commissioning.status)) {
                 const c = await call<{ commissioning: { status: string; authorisation?: { decision: string; by: string } | null; monitoring?: JsonValue } }>("station", "commissioning_state", { commissioningId });
                 monitoring = c.commissioning.monitoring ?? null;
                 end(4, { status, by: c.commissioning.authorisation?.by ?? null, monitoring } as JsonValue, `${c.commissioning.authorisation?.decision ?? status} by ${c.commissioning.authorisation?.by ?? "?"}`);
@@ -758,7 +760,7 @@ export async function playCommissioning(doc: CommissioningDocument, run: Run, de
         end(10, { task: finalId, state: final.state, artifacts: final.manifest?.artifacts ?? [] } as JsonValue, proposed ? `task ${finalId} proposed to the station` : `task ${finalId} ended ${final.state}: nothing proposed`);
         run.status = proposed ? "done" : "failed";
         run.ended = proposed ? `the twin proposed (task ${finalId})` : `${final.manifest?.ended ?? final.state}`;
-        narrate(proposed ? "Scenario complete. The twin is proposed to the station." : `Scenario ended without a twin: ${String(run.ended).slice(0, 160)}.`);
+        narrate(proposed ? "Scenario test complete. The twin is proposed to the station. This does not complete the supervisor's mission." : `Scenario ended without a twin: ${String(run.ended).slice(0, 160)}.`);
         // The test read one room; the twin, both volumes and the air between them: what the one-room reading hid, said once (2026-09-28: 13 m3 announced for a Lab the twin puts at 27).
         const apparent = report?.result?.value;
         if (proposed && doc.graph.measured && typeof apparent === "number") {

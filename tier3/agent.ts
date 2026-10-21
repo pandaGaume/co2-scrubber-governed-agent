@@ -8,13 +8,14 @@
  *   createAgent({ broker, provider, guardMode }) -> { runtime, catalogue, console, calls, decide }
  *   agent.decide(intention)                     -> one DecisionTrace (one action)
  */
-import type { CapabilityRegistryOptions, DecisionContext, HarnessDriver, PolicyDecision, SafetyDecision, SafetyGuard, StageEvent } from "@spiky-panda/harness";
+import { PolicyGraph, type CapabilityRegistryOptions, type DecisionContext, type HarnessDriver, type PolicyDecision, type SafetyDecision, type SafetyGuard, type StageEvent } from "@spiky-panda/harness";
 import type { Broker } from "../harness/lib/broker.js";
 import { createAgent as createLoop, type Agent as LoopAgent } from "../harness/core/agent.js";
-import { brokerReviewer, buildCapabilities, type CapabilityCall, type CrewConsoleEntry, type GuardMode } from "./lib/capabilities.js";
+import { brokerReviewer, buildCapabilities, type CapabilityCall, type CrewConsoleEntry, type GuardMode, type BuildCapabilitiesOptions } from "./lib/capabilities.js";
 import { createObserver } from "./lib/observer.js";
 import { createEvaluator } from "./lib/evaluator.js";
 import type { Provider } from "../harness/lib/provider.js";
+import { restrictReplays } from "../harness/core/replay.js";
 
 /** Level 2, enforced locally: the envelope the agent is told about, for the protected profile. */
 export function protectedGuard(): SafetyGuard {
@@ -36,6 +37,13 @@ export function protectedGuard(): SafetyGuard {
 }
 
 export interface AgentOptions {
+    delegationContext?: BuildCapabilitiesOptions["delegationContext"];
+    /** Keep experience for inspection, but require a model proposal for each supervisory decision. */
+    reasonEveryDecision?: boolean;
+    local?: BuildCapabilitiesOptions["local"];
+    questionResume?: BuildCapabilitiesOptions["questionResume"];
+    stationOwnsConfirmations?: boolean;
+    observation?: () => Record<string, import("@spiky-panda/harness").JsonValue> | Promise<Record<string, import("@spiky-panda/harness").JsonValue>>;
     broker: Broker;
     provider: Provider;
     guardMode?: GuardMode;
@@ -55,7 +63,7 @@ export interface Agent extends LoopAgent {
     guardMode: GuardMode;
 }
 
-export async function createAgent({ broker, provider, guardMode = "measured", approve, timeoutMs = 60000, onStage, onCall, driver, allow }: AgentOptions): Promise<Agent> {
+export async function createAgent({ broker, provider, guardMode = "measured", approve, timeoutMs = 60000, onStage, onCall, driver, allow, local, questionResume, stationOwnsConfirmations = false, delegationContext, observation, reasonEveryDecision = false }: AgentOptions): Promise<Agent> {
     const crewConsole: CrewConsoleEntry[] = [];
     const calls: CapabilityCall[] = [];
     const lastResult: { current: CapabilityCall | null } = { current: null };
@@ -67,20 +75,29 @@ export async function createAgent({ broker, provider, guardMode = "measured", ap
         calls,
         review: brokerReviewer(broker),
         allow,
+        local,
+        questionResume,
+        stationOwnsConfirmations,
+        delegationContext,
         onCall: (call) => {
             lastResult.current = call;
             calls.push(call);
             onCall?.(call);
         },
     });
+    const observer = createObserver(broker, lastResult);
+    const policy = new PolicyGraph();
+    if (reasonEveryDecision) restrictReplays(policy, [/.*/], new Set());
     const loop = createLoop({
         broker,
         provider,
         capabilities,
-        observer: createObserver(broker, lastResult),
+        policy,
+        observer: observation ? { observe: async () => { const state = await observer.observe(); return { ...state, features: { ...state.features, ...await observation() } }; } } : observer,
         evaluator: createEvaluator(),
         guard: guardMode === "protected" ? protectedGuard() : undefined,
-        timeoutMs,
+        // The outer decision must not expire while the configured model request is still allowed to answer.
+        timeoutMs: Math.max(timeoutMs, Number(provider.settings?.timeoutMs ?? 0) + 30000),
         onStage,
         driver,
     });

@@ -20,6 +20,7 @@ import type { Broker } from "../lib/broker.js";
 import type { Provider } from "../lib/provider.js";
 import { createHarnessDriver } from "../lib/flow.js";
 import type { CatalogueEntry } from "./capabilities.js";
+import { DecisionInvalidatedError } from "../lib/execution-errors.js";
 
 export interface AgentOptions {
     broker: Broker;
@@ -59,5 +60,12 @@ export function createAgent({ broker, provider, capabilities, observer, evaluato
         timeoutMs,
         onStage,
     });
-    return { runtime, policy, catalogue: capabilities.catalogue, provider, broker, decide: (intention, signal) => runtime.step(intention, signal) };
+    return { runtime, policy, catalogue: capabilities.catalogue, provider, broker, decide: async (intention, signal) => {
+        try { return await runtime.step(intention, signal); }
+        catch (error) {
+            // The substrate currently reports this pre-dispatch rejection as a plain Error.
+            if (error instanceof Error && error.message === "Stale decision: observed world changed before execution") throw new DecisionInvalidatedError();
+            throw error;
+        }
+    } };
 }

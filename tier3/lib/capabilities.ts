@@ -38,6 +38,12 @@ export type GuardMode = "measured" | "protected";
 const APPROVAL_REQUIRED = [/^station\.register_artifact$/, /^station\.diagnostic_load_model$/, /^factory\.run_/, /^agent\.(reset|stop|pause)$/];
 const PROTECTED_NEVER = [/^scrubber\.scrubber\.power$/, /^scrubber\.scrubber\.set_min_flow$/, /^agent\.(reset|stop)$/];
 const EXCLUDED = [
+    /^agent\.procedure_/,
+    /^station\.twin_/,
+    /^twin\.(evaluate|evaluation|install|active|run_installed)$/,
+    /^factory\.start$/,
+    /^agent\.mission_/,
+    /^station\.proposals$/,
     /^scrubber\.debug\./,
     // The sensor's cable to the board (2026-10-08): the agent never feeds the protection a reading; the world and the sensor do.
     /^scrubber\.scrubber\.co2_report$/,
@@ -45,7 +51,7 @@ const EXCLUDED = [
     /^reasoner\./,
     /^scenario\./,
     /^spikypanda\./,
-    /^speech\.(synthesize|listVoices|take|played|describe)$/,
+    /^speech\.(synthesize|listVoices|take|return_unplayed|played|describe)$/,
     /^workspace\./,
     /^model\./,
     // The library is the factory's documentation, like its workshop; whether the night's agent reads it too is a later choice, not a side effect.
@@ -73,7 +79,7 @@ const EXCLUDED = [
     /^station\.propose$/,
     // A health alarm is raised and cleared by a person (the crew, the medical panel), and an aborted commissioning reopened by the commander (2026-09-29).
     /^biomed\.(monitor_start|monitor_stop|report|move|set_activity|alarm|alarm_ack|alarm_treat|alarm_clear)$/,
-    /^station\.(registry_register|registry_report|procedure_checked|candidate_evaluated|commissioning_authorise|commissioning_reopen|procedure_run|reflect)$/,
+    /^station\.(registry_register|registry_report|procedure_checked|candidate_evaluated|commissioning_review|commissioning_authorise|commissioning_reopen|procedure_run|reflect)$/,
     // The harness's graph and its evaluation are the evaluator's reading of the factories' traces (2026-09-30), not something the habitat's agent acts on.
     /^station\.harness_(graph|evaluate)$/,
     // A recommendation is the evaluator's factory's work, asked by a person or the station, signed by a person (2026-10-01, E3).
@@ -181,6 +187,11 @@ export function brokerReviewer(broker: Broker): ReportReviewer {
 }
 
 export interface BuildCapabilitiesOptions {
+    delegationContext?: JsonValue;
+    local?: LocalCapability[];
+    /** Protected test confirmations belong to the station, never a parallel conversational ballot. */
+    stationOwnsConfirmations?: boolean;
+    questionResume?: { slot: string; tool: string; args: Record<string, JsonValue> };
     guardMode?: GuardMode;
     approve?: CapabilityRegistryOptions["approve"];
     onCall?: (call: CapabilityCall) => void;
@@ -193,13 +204,18 @@ export interface BuildCapabilitiesOptions {
 }
 
 /** The crew's console as two capabilities in process; a report is read against the calls of its event first, when a reader is given; a question is asked in Mother's chat when a broker is given. */
-function crewCapabilities(crewConsole: CrewConsoleEntry[], calls?: CapabilityCall[], review?: ReportReviewer, broker?: Broker): LocalCapability[] {
+function crewCapabilities(crewConsole: CrewConsoleEntry[], calls?: CapabilityCall[], review?: ReportReviewer, broker?: Broker, questionResume?: BuildCapabilitiesOptions["questionResume"], stationOwnsConfirmations = false): LocalCapability[] {
     const say = (kind: "report" | "ask"): LocalCapability => ({
         id: `crew.${kind}`,
-        description: kind === "report" ? "Write a message to the crew's console: what you observed, what you decided and why, or why you will not do something." : "Ask the crew a question before acting; the run pauses until they answer.",
-        inputSchema: { type: "object", properties: { message: { type: "string", minLength: 1 } }, required: ["message"], additionalProperties: false },
+        description: kind === "report" ? "Write a message to the crew's console: what you observed, what you decided and why, or why you will not do something." : `Ask one short question only for information unavailable from authoritative tools and the library. Read existing questions and recorded answers before asking. Do not relay a specialist's question a second time. ${stationOwnsConfirmations ? "This mission's confirmations belong exclusively to the station. Never ask whether Spock approves or Kirk authorises, even as an information question: their actual decisions are in stationDecisions. Await an existing station decision or act on its recorded result. This tool cannot open another yes/no ballot." : "Use information for requested values and confirmation for a yes/no decision."} A conversational answer never authorises hardware or a test procedure.`,
+        inputSchema: { type: "object", properties: { message: { type: "string", minLength: 1, ...(kind === "ask" && questionResume ? { maxLength: 240, description: "One concise question, at most 240 characters. Put explanation in crew.report, not here." } : {}) }, ...(kind === "ask" && questionResume ? { role: { type: "string", description: "Responsible installed role: scientific-officer for scientific interpretation, commander for operational matters. Protected approvals remain exclusively station-owned." }, responseType: { type: "string", enum: stationOwnsConfirmations ? ["information"] : ["information", "confirmation"], description: stationOwnsConfirmations ? "Information only. Scientific approval and launch authorisation use the station's own questions and recorded decisions." : "Information (default) offers information/unknown/defer; confirmation offers yes/no. Both accept verbatim written replies." } } : {}) }, required: ["message"], additionalProperties: false },
         async execute(input: JsonValue, context: ExecutionContext): Promise<CapabilityResult> {
             const message = String((input as { message?: unknown })?.message ?? "");
+            const decisions = context.state?.features?.stationDecisions ?? null;
+            if (kind === "ask" && stationOwnsConfirmations && (input as { responseType?: string }).responseType === "confirmation") return { ok: false, error: "The station owns this mission's confirmations. Read stationDecisions and the actual scientific and launch decisions; do not ask for a second conversational approval.", output: { stationDecisions: decisions as JsonValue } };
+            const pending = (decisions as { questions?: Array<{ id: string; status: string }> } | null)?.questions?.find((q) => q.status === "open" || q.status === "queued");
+            if (kind === "ask" && stationOwnsConfirmations && pending) return { ok: false, error: `Question ${pending.id} is already pending for this mission. Read its question and await the actual answer instead of opening another conversation.`, output: { stationDecisions: decisions as JsonValue } };
+            if (kind === "ask" && questionResume && message.length > 240) return { ok: false, error: "Question too long: ask one concise question of at most 240 characters. Use crew.report for supporting explanation." };
             let reviewed: ReportReview | undefined;
             if (kind === "report" && calls && review) {
                 const executed = calls.filter((c) => c.intentionId === context.intention.id && !c.id.startsWith("crew."));
@@ -217,14 +233,19 @@ function crewCapabilities(crewConsole: CrewConsoleEntry[], calls?: CapabilityCal
                     };
                 }
             }
-            crewConsole.push({ kind, message, decisionId: context.decisionId, at: new Date().toISOString(), ...(reviewed ? { review: reviewed } : {}) });
             // A question is asked for real (2026-10-11, Guillaume: the agent said it asked, and no question was posed): in Mother's chat, to
             // the commander, who answers there; the station says it.
             let questionId: string | null = null;
             if (kind === "ask" && broker) {
-                const asked = await broker.call("station", "ask", { from: "night agent", kind: "ask", question: message.slice(0, 600), options: [{ id: "yes", label: "yes" }, { id: "no", label: "no" }] } as unknown as Record<string, JsonValue>);
+                const responseType = questionResume && (input as { responseType?: string }).responseType !== "confirmation" ? "information" : "confirmation";
+                const options = responseType === "information" ? [{ id: "provide", label: "Provide information" }, { id: "unknown", label: "Information unavailable" }, { id: "defer", label: "Defer this question" }] : [{ id: "yes", label: "yes" }, { id: "no", label: "no" }];
+                const question = { text: message, responseType, options };
+                const role = (input as { role?: string }).role;
+                const asked = await broker.call("station", "ask", { from: questionResume ? "mission supervisor" : "night agent", kind: "ask", question: message, options, ...(role ? { role } : {}), ...(questionResume ? { context: { responseType, missionId: questionResume.args.missionId ?? null }, resume: { ...questionResume, args: { ...questionResume.args, question } } } : {}) } as unknown as Record<string, JsonValue>);
                 questionId = asked.ok ? String((asked.output as { questionId?: unknown }).questionId ?? "") || null : null;
+                if (questionResume && !questionId) return { ok: false, error: `the station did not open the question: ${asked.error ?? asked.outcome}`, output: { outcome: "error" } };
             }
+            crewConsole.push({ kind, message, decisionId: context.decisionId, at: new Date().toISOString(), ...(reviewed ? { review: reviewed } : {}) });
             return { ok: true, output: { outcome: "completed", value: { delivered: true, ...(reviewed ? { review: reviewed.verdict } : {}), ...(questionId ? { questionId, asked: "the commander, in Mother's chat" } : {}) } } };
         },
     });
@@ -232,7 +253,7 @@ function crewCapabilities(crewConsole: CrewConsoleEntry[], calls?: CapabilityCal
 }
 
 /** Registers the broker's tools under the cabin's profile, and the crew capabilities. */
-export function buildCapabilities(broker: Broker, { guardMode = "measured", approve, onCall, console: crewConsole = [], calls, review, allow = [] }: BuildCapabilitiesOptions = {}) {
+export function buildCapabilities(broker: Broker, { guardMode = "measured", approve, onCall, console: crewConsole = [], calls, review, allow = [], local = [], questionResume, stationOwnsConfirmations = false, delegationContext }: BuildCapabilitiesOptions = {}) {
     const excluded = allow.length ? EXCLUDED.map((r) => ({ test: (id: string) => r.test(id) && !allow.includes(id) }) as unknown as RegExp) : EXCLUDED;
-    return buildFromProfile(broker, { profile: { excluded, replayPolicy: (id) => replayPolicyFor(id, guardMode), local: crewCapabilities(crewConsole, calls, review, broker) }, approve, onCall });
+    return buildFromProfile(broker, { profile: { excluded, replayPolicy: (id) => replayPolicyFor(id, guardMode), ...(delegationContext ? { bindings: [{ match: /^factory\.request$/, rewrite: (input: Record<string, JsonValue>) => ({ ...input, observations: { ...((input.observations ?? {}) as Record<string, JsonValue>), missionContext: delegationContext } }) }] } : {}), local: [...crewCapabilities(crewConsole, calls, review, broker, questionResume, stationOwnsConfirmations), ...local] }, approve, onCall });
 }

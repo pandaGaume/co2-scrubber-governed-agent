@@ -1,3 +1,4 @@
+import { OrderedDelivery } from "../lib/ordered-delivery.js";
 /**
  * The constructor's loop (F4, docs/harness-stages.fr.md) through the broker,
  * without a model: a task opened by the factory's front, the scripted
@@ -35,6 +36,7 @@ import { taskDir, WORKSHOP_ROOT } from "../slots/tools/lib/workshop.js";
 import { sha256Of } from "../slots/tools/lib/workshop.js";
 import { endSentence, loadWords, stageSentence, stepSentence } from "../ui/factory-voice.js";
 import { truncatedDecision } from "../harness/lib/llm-common.js";
+import type { FactoryState } from "../slots/factory/provider.js";
 
 const PORT = 3120;
 
@@ -181,6 +183,26 @@ describe("the constructor's loop (F4), through the broker", () => {
         } finally {
             await fr.close();
         }
+    });
+
+    it("refuses more active work at capacity without creating a workspace, while allowing inspection-only task creation", async () => {
+        const factory = slots.find((s) => s.slot === "factory")!.state as FactoryState;
+        const ids = Array.from({ length: Number(process.env.FACTORY_MAX_RUNNING ?? 4) }, (_, i) => `capacity-fixture-${i}`);
+        for (const id of ids) factory.runs[id] = { startedAt: new Date().toISOString(), builder: "fixture", lastStage: null, ended: null };
+        const before = Object.keys(factory.tasks).length;
+        try {
+            const refused = await broker.call("factory", "request", { ...REQUEST, run: true });
+            assert.equal(refused.ok, false);
+            assert.match(refused.error ?? "", /factory capacity reached/);
+            assert.equal(Object.keys(factory.tasks).length, before);
+            const created = await broker.call("factory", "request", { ...REQUEST, run: false });
+            assert.equal(created.ok, true, created.error);
+            const taskId = (created.output as { taskId: string }).taskId;
+            tasks.push(taskId);
+            const start = await broker.call("factory", "start", { taskId });
+            assert.equal(start.ok, false);
+            assert.match(start.error ?? "", /factory capacity reached/);
+        } finally { for (const id of ids) delete factory.runs[id]; }
     });
 
     it("the guard's path rule, without a broker", () => {
@@ -388,4 +410,53 @@ describe("the constructor's loop (F4), through the broker", () => {
         assert.equal(asked.builder?.calls, 7 - replayed.length, "the builder is asked only for the steps that were not replayed");
         assert.equal(fourth.manifest.recipes.experiencesBefore, 33, "four tasks of seven steps and one of five in the recipes, the front's included");
     });
+    it("starts an existing created task explicitly and refuses a duplicate start", async () => {
+        const taskId = await request();
+        const beforeStart = await broker.call("factory", "task", { taskId });
+        assert.equal((beforeStart.output as { run: unknown }).run, null);
+        const supervisor = new Broker(local.httpBase, { name: "mission-supervisor-test", version: "1" }, "agent");
+        let started;
+        try { started = await supervisor.call("factory", "start", { taskId, builder: "scripted" }); }
+        finally { await supervisor.close(); }
+        assert.equal(started.ok, true, started.error);
+        assert.equal((started.output as { taskId: string }).taskId, taskId);
+        const duplicate = await broker.call("factory", "start", { taskId, builder: "scripted" });
+        assert.equal(duplicate.ok, false);
+        const deadline = Date.now() + 20000;
+        for (;;) {
+            const result = await broker.call("factory", "task", { taskId });
+            const task = result.output as { run?: { ended?: string | null } };
+            if (task.run?.ended) { assert.equal(task.run.ended, "proposed"); break; }
+            assert.ok(Date.now() < deadline, "the explicitly started task must finish");
+            await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+        const terminal = await broker.call("factory", "start", { taskId, builder: "scripted" });
+        assert.equal(terminal.ok, false);
+    });
+
+    it("holds a faster parallel computation before proposing to the station until the first result is delivered", { timeout: 30000 }, async () => {
+        const firstId = await request();
+        const secondId = await request();
+        const order = new OrderedDelivery();
+        const a = order.reserve(firstId);
+        const b = order.reserve(secondId);
+        let release!: () => void;
+        let ready!: () => void;
+        const held = new Promise<void>((resolve) => { release = resolve; });
+        const computed = new Promise<void>((resolve) => { ready = resolve; });
+        const first = runTask({ broker, taskId: firstId, recipesDir, provider: (ctx) => new ScriptedBuilder(ctx), beforeDelivery: async () => { await held; await a.turn; } }).finally(() => a.finish());
+        const second = runTask({ broker, taskId: secondId, recipesDir, provider: (ctx) => new ScriptedBuilder(ctx), beforeDelivery: async () => { ready(); await b.turn; } }).finally(() => b.finish());
+        try {
+            await computed;
+            const pending = await broker.call("station", "proposals", { taskId: secondId });
+            assert.equal(pending.ok, true, pending.error);
+            assert.deepEqual((pending.output as { proposals: unknown[] }).proposals, [], "a finished second computation has no proposal or approval side effects yet");
+        } finally { release(); }
+        const results = await Promise.all([first, second]);
+        assert.deepEqual(results.map((r) => r.state), ["proposed", "proposed"]);
+        const received = await broker.call("station", "proposals", {});
+        const ids = (received.output as { proposals: Array<{ taskId: string }> }).proposals.map((p) => p.taskId).filter((id) => id === firstId || id === secondId);
+        assert.deepEqual(ids, [firstId, secondId], "the real station received the proposals in dispatch order");
+    });
+
 });

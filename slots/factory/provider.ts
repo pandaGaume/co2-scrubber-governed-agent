@@ -35,6 +35,8 @@ import { Broker } from "../../harness/lib/broker.js";
 import type { Device } from "../station/registry.js";
 import { inventoryOf } from "./inventory.js";
 import { oneLine, runtimeEvents } from "../lib/events.js";
+import { factoryInputs } from "./inputs.js";
+import { OrderedDelivery } from "../../lib/ordered-delivery.js";
 
 /**
  * Who builds a task: the language model behind the `reasoner` slot, which
@@ -57,6 +59,7 @@ export interface TaskStatus {
 
 /** A task the loop runs in this process: what the front knows of it while it runs. */
 export interface TaskRun {
+    delivery?: "computing" | "waiting" | "publishing";
     startedAt: string;
     builder: string;
     lastStage: string | null;
@@ -74,6 +77,8 @@ export interface FactoryState {
     tasks: Record<string, TaskStatus>;
     runs: Record<string, TaskRun>;
 }
+
+const deliveries = new WeakMap<FactoryState, OrderedDelivery>();
 
 const VERSION = "0.3.0";
 
@@ -132,7 +137,7 @@ export const TASKS_URI = "factory://tasks";
 export const META_TASK = "spikypanda/task";
 
 /** What `task` answers for one task: its status, and its run when this process runs it. `manifest` replaces the one on disk while the run holds a newer one in memory. */
-function taskAnswer(taskId: string, s: FactoryState, manifest?: Readonly<Record<string, unknown>>): TaskStatus & { run: (TaskRun & { steps: number }) | null } {
+function taskAnswer(taskId: string, s: FactoryState, manifest?: Readonly<Record<string, unknown>>): TaskStatus & { topic: Topic; inputStatus: ReturnType<typeof factoryInputs>; run: (TaskRun & { steps: number }) | null } {
     const status = statusOf(taskId);
     if (manifest) {
         status.manifest = manifest as Record<string, unknown>;
@@ -145,7 +150,8 @@ function taskAnswer(taskId: string, s: FactoryState, manifest?: Readonly<Record<
     }
     s.tasks[taskId] = status;
     const run = s.runs[taskId];
-    return { ...status, run: run ? { ...run, steps: Array.isArray(status.manifest?.steps) ? (status.manifest.steps as unknown[]).length : 0 } : null };
+    const task = taskOf(taskId).task;
+    return { ...status, topic: topicFor(task), inputStatus: factoryInputs(task), run: run ? { ...run, steps: Array.isArray(status.manifest?.steps) ? (status.manifest.steps as unknown[]).length : 0 } : null };
 }
 
 /** The task file of a task, as written. */
@@ -291,7 +297,10 @@ function resumeOn(httpBase: string, taskId: string, questionId: string, token: s
 
 /** Starts the loop on a task, in this process, on the factory's own client of the broker; the manifest carries the outcome, and `announce` tells the readers of the task list as it goes. */
 function launch(httpBase: string, taskId: string, topic: Topic, builder: BuilderChoice, s: FactoryState, log: (line: string) => void, announce: (taskId: string, manifest?: Readonly<Record<string, unknown>>) => void, create: (args: Record<string, unknown>) => { taskId: string; task: TaskFile; topic: Topic }): TaskRun {
-    const run: TaskRun = { startedAt: new Date().toISOString(), builder: builder === "scripted" ? `scripted:${topic}` : "reasoner", lastStage: null, ended: null };
+    let order = deliveries.get(s);
+    if (!order) { order = new OrderedDelivery(); deliveries.set(s, order); }
+    const delivery = order.reserve(taskId);
+    const run: TaskRun = { startedAt: new Date().toISOString(), builder: builder === "scripted" ? `scripted:${topic}` : "reasoner", lastStage: null, ended: null, delivery: "computing" };
     s.runs[taskId] = run;
     const runtimeSlot = taskOf(taskId).task.runtime ?? (topic === "code" ? "forge" : "twin");
     const broker = new Broker(httpBase, { name: "factory", version: VERSION, locale: "en" }, "factory");
@@ -327,6 +336,7 @@ function launch(httpBase: string, taskId: string, topic: Topic, builder: Builder
         };
         return runTask({
             broker,
+            beforeDelivery: async () => { run.delivery = "waiting"; announce(taskId); await delivery.turn; run.delivery = "publishing"; },
             taskId,
             provider,
             topic,
@@ -353,7 +363,10 @@ function launch(httpBase: string, taskId: string, topic: Topic, builder: Builder
                 log(`[factory] task ${taskId}: the hand-off failed: ${errorMessage(e)}`);
             }
         })
-        .catch((e) => {
+        .catch(async (e) => {
+            run.delivery = "waiting"; announce(taskId);
+            await delivery.turn;
+            run.delivery = "publishing";
             // The loop itself failed before it could say so (the task file, the broker): the manifest says it, so `task` does.
             run.ended = "failed";
             const reason = `the loop failed: ${errorMessage(e)}`;
@@ -362,15 +375,22 @@ function launch(httpBase: string, taskId: string, topic: Topic, builder: Builder
             const manifest = existsSync(manifestFile) ? (JSON.parse(readFileSync(manifestFile, "utf8")) as Record<string, unknown>) : { version: 1, taskId, steps: [] };
             writeFileSync(manifestFile, JSON.stringify({ ...manifest, state: "failed", ended: reason, endedAt: new Date().toISOString() }, null, 2) + "\n");
         })
-        .finally(() => {
-            // What the topic keeps of the ended task, however it ended (a diagnosis's record for the dataset, E5.3).
+        .finally(async () => {
+            await delivery.turn;
             try {
-                TOPIC_DEFINITIONS[topic]?.record?.(taskDir(taskId));
-            } catch (e) {
-                log(`[factory] task ${taskId}: the record failed: ${errorMessage(e)}`);
-            }
-            announce(taskId);
-            void broker.close();
+                // What the topic keeps of the ended task, however it ended (a diagnosis's record for the dataset, E5.3).
+                try {
+                    TOPIC_DEFINITIONS[topic]?.record?.(taskDir(taskId));
+                } catch (e) {
+                    log(`[factory] task ${taskId}: the record failed: ${errorMessage(e)}`);
+                }
+                announce(taskId);
+                const manifest = s.tasks[taskId]?.manifest;
+                const steps = Array.isArray(manifest?.steps) ? manifest.steps as Array<{ capability?: string; outcome?: string; reason?: string }> : [];
+                const last = steps.at(-1);
+                runtimeEvents.append("factory.task-ended", { taskId, ended: run.ended, reason: manifest?.ended ?? null, lastStep: last ? { capability: last.capability, outcome: last.outcome, reason: last.reason } : null });
+                void broker.close();
+            } finally { if (run.ended !== "waiting") delivery.finish(); }
         });
     return run;
 }
@@ -418,6 +438,26 @@ function createTask(args: Record<string, unknown>, s: FactoryState, log: (line: 
 export function factorySlot(wsBase: string, log: (line: string) => void): PublishedSlot<FactoryState> {
     const httpBase = wsBase.replace(/^ws(s?):\/\//, "http$1://");
     const state: FactoryState = { root: WORKSHOP_ROOT, tasks: {}, runs: {} };
+    const maxRunning = Number(process.env.FACTORY_MAX_RUNNING ?? 4);
+    if (!Number.isInteger(maxRunning) || maxRunning < 1) throw new Error("FACTORY_MAX_RUNNING must be a positive integer");
+    const requireCapacity = (s: FactoryState) => {
+        const active = Object.entries(s.runs).filter(([, run]) => run.ended === null).map(([id]) => id);
+        if (active.length >= maxRunning) throw new Error(`factory capacity reached (${active.length}/${maxRunning}); active tasks: ${active.join(", ")}. No new task was launched.`);
+    };
+    const requireOpenProcedure = async (args: Record<string, unknown>) => {
+        if (!Array.isArray(args.topics) || args.topics[0] !== "procedure") return;
+        const observations = (args.observations ?? {}) as { device?: string; missionContext?: { commissioningId?: string } };
+        const commissioningId = observations.missionContext?.commissioningId;
+        if (!commissioningId && !observations.device) return;
+        const reader = new Broker(httpBase, { name: "procedure-admission", version: VERSION }, "factory");
+        try {
+            const response = await reader.call("station", "commissioning_state", commissioningId ? { commissioningId } : {});
+            if (!response.ok) throw new Error(`cannot check procedure admission: ${response.error ?? response.outcome}`);
+            const state = response.output as { commissioning?: { id: string; device: string; status: string }; commissionings?: Array<{ id: string; device: string; status: string }> };
+            const current = state.commissioning ?? state.commissionings?.find((c) => c.device === observations.device);
+            if (current && current.status !== "open") throw new Error(`commissioning ${current.id} is ${current.status}, not open for another procedure. Its existing procedure, decisions and execution report remain authoritative; no new procedure task was started.`);
+        } finally { await reader.close(); }
+    };
     /**
      * Tells the readers of `factory://tasks` that a task changed: the MCP
      * notification for a changed resource, with the task's answer (what `task`
@@ -426,6 +466,11 @@ export function factorySlot(wsBase: string, log: (line: string) => void): Publis
      * says. Set once the slot is built (below).
      */
     let announce: (taskId: string, manifest?: Readonly<Record<string, unknown>>) => void = () => undefined;
+    const blocked = (taskId: string, inputStatus: ReturnType<typeof factoryInputs>) => {
+        runtimeEvents.append("factory.task-blocked", { taskId, inputStatus });
+        const narrator = new Broker(httpBase, { name: "factory-inputs", version: VERSION }, "factory");
+        void narrator.call("station", "narrate", { from: "factory input check", text: "Graph construction is blocked by missing input data or a numeric comparison criterion. The supervisor must resolve the inputs before starting this task." }).finally(() => narrator.close());
+    };
     const tools: SlotTool<FactoryState>[] = [
         {
             name: "request",
@@ -441,24 +486,58 @@ export function factorySlot(wsBase: string, log: (line: string) => void): Publis
                     },
                     observations: { type: "object" },
                     data: { type: "array", items: { type: "object", properties: { file: { type: "string" }, columns: { type: "array", items: { type: "string" } }, sha256: { type: "string" }, rows: { type: "array", items: { type: "object" } }, text: { type: "string" } }, required: ["file"] } },
-                    topics: {},
+                    topics: { anyOf: [{ type: "array", items: { type: "string", enum: [...TOPICS] }, minItems: 1 }, { type: "string", enum: ["auto"] }], description: "Select the factory's work: procedure writes a test proposal for station checking and human authorisation; graph builds a twin from telemetry; onnx builds a learned model. Omitted or auto selects from the functional outputs. A graph request does not create a test procedure." },
                     budget: { type: "object", properties: { iterations: { type: "number" }, minutes: { type: "number" }, twinPoints: { type: "number" } } },
                     requestedBy: { type: "string" },
                     profile: { type: "string" },
-                    run: { type: "boolean" },
+                    run: { type: "boolean", description: "Runs by default. False only creates the task; later call factory.start with its taskId to execute it." },
+                    telemetryRunId: { type: "string", description: "Copy telemetry and device context from a completed authorised agent.procedure_execute run. No manual rows are needed; cannot be combined with data." },
                     builder: { type: "string", enum: ["reasoner", "scripted"] },
                     requirements: { type: "object" },
                     runtime: { type: "string", enum: ["twin", "forge"], description: "the slot the task builds and runs on; the topic's by default (code on the forge, the rest on the twin)" },
                 },
                 ["objective"],
             ),
-            handle: (args, s) => {
+            handle: async (args, s) => {
+                await requireOpenProcedure(args);
+                if (args.telemetryRunId) {
+                    if (Array.isArray(args.data) && args.data.length) throw new Error("use telemetryRunId or supplied data, not both");
+                    const reader = new Broker(httpBase, { name: "factory-telemetry", version: VERSION }, "factory");
+                    try {
+                        const result = await reader.call("agent", "procedure_result", { runId: String(args.telemetryRunId) });
+                        if (!result.ok) throw new Error(`procedure telemetry is unavailable: ${result.error ?? result.outcome}`);
+                        const record = result.output as { runId: string; status: string; rows: unknown[]; devices: unknown[]; persons: unknown[]; source: string; commissioningId: string };
+                        if (record.status !== "done" || !Array.isArray(record.rows) || record.rows.length < 3) throw new Error("only completed authorised tests with at least three telemetry samples can supply calibration data");
+                        args = { ...args, data: [{ file: "telemetry.json", rows: record.rows }], observations: { ...((args.observations ?? {}) as object), devices: record.devices, persons: record.persons, telemetryRunId: record.runId, commissioningId: record.commissioningId, telemetrySource: record.source } };
+                    } finally { await reader.close(); }
+                }
+                if (args.run !== false) requireCapacity(s);
                 const { taskId, task, topic } = createTask(args, s, log);
                 const status = statusOf(taskId);
+                const inputStatus = factoryInputs(task.task);
                 const builder: BuilderChoice = args.builder === "scripted" || args.builder === "reasoner" ? args.builder : (TOPIC_DEFINITIONS[topic]?.defaultBuilder ?? (TOPIC_DEFINITIONS[topic]?.prompt ? "reasoner" : "scripted"));
-                const run = args.run === false ? null : launch(httpBase, taskId, topic, builder, s, log, (id, manifest) => announce(id, manifest), (a) => createTask(a, s, log));
+                const run = args.run === false || !inputStatus.ready ? null : launch(httpBase, taskId, topic, builder, s, log, (id, manifest) => announce(id, manifest), (a) => createTask(a, s, log));
+                if (args.run !== false && !inputStatus.ready) blocked(taskId, inputStatus);
                 if (!run) announce(taskId);
-                return { taskId, state: run ? "running" : status.state, workspace: status.workspace, taskSha256: status.taskSha256, data: task.task.data, builder: run?.builder ?? null, started: Boolean(run) };
+                return { taskId, topic, state: run ? "running" : status.state, inputStatus, workspace: status.workspace, taskSha256: status.taskSha256, data: task.task.data, builder: run?.builder ?? null, started: Boolean(run) };
+            },
+        },
+        {
+            name: "start",
+            inputSchema: obj({ taskId: { type: "string", description: "An existing created task to execute, including a task forwarded by the Observer." }, builder: { type: "string", enum: ["reasoner", "scripted"] } }, ["taskId"]),
+            handle: async (args, s) => {
+                const taskId = checkTaskId(args.taskId);
+                const status = statusOf(taskId);
+                const task = taskOf(taskId).task;
+                await requireOpenProcedure({ topics: task.topics, observations: task.observations });
+                if (status.state !== "created" || s.runs[taskId]) throw new Error(`task ${taskId} cannot start: state ${status.state}, ${s.runs[taskId] ? "already launched" : "not an unstarted task"}`);
+                const inputStatus = factoryInputs(taskOf(taskId).task);
+                if (!inputStatus.ready) { blocked(taskId, inputStatus); throw new Error(`task ${taskId} input prerequisites are missing: ${inputStatus.missing.join("; ")}`); }
+                requireCapacity(s);
+                const topic = topicFor(taskOf(taskId).task);
+                const builder: BuilderChoice = args.builder === "scripted" || args.builder === "reasoner" ? args.builder : (TOPIC_DEFINITIONS[topic]?.defaultBuilder ?? (TOPIC_DEFINITIONS[topic]?.prompt ? "reasoner" : "scripted"));
+                const run = launch(httpBase, taskId, topic, builder, s, log, (id, manifest) => announce(id, manifest), (a) => createTask(a, s, log));
+                return { taskId, state: "running", started: true, builder: run.builder };
             },
         },
         {
@@ -470,7 +549,12 @@ export function factorySlot(wsBase: string, log: (line: string) => void): Publis
             // The station calls back with the commander's answer (Tier 4): the step the question held is taken. Never the agent's.
             name: "resume",
             inputSchema: obj({ taskId: { type: "string" }, step: { type: "string" }, token: { type: "string" }, questionId: { type: "string" }, answer: { type: "object" } }, ["taskId", "questionId", "answer"]),
-            handle: (args, s) => resumeOn(httpBase, checkTaskId(args.taskId), String(args.questionId), typeof args.token === "string" ? args.token : null, args.answer as never, s, log, (id, manifest) => announce(id, manifest), (a) => createTask(a, s, log)),
+            handle: async (args, s) => {
+                const taskId = checkTaskId(args.taskId);
+                const task = taskOf(taskId).task;
+                await requireOpenProcedure({ topics: task.topics, observations: task.observations });
+                return resumeOn(httpBase, taskId, String(args.questionId), typeof args.token === "string" ? args.token : null, args.answer as never, s, log, (id, manifest) => announce(id, manifest), (a) => createTask(a, s, log));
+            },
         },
         {
             // Who is there: Mother's register, read through the broker as the factory reads everything, and what can be told from it.
@@ -499,7 +583,7 @@ export function factorySlot(wsBase: string, log: (line: string) => void): Publis
                 read: (s) =>
                     Object.entries(s.runs)
                         .filter(([, r]) => !r.ended)
-                        .map(([taskId, r]) => ({ taskId, builder: r.builder, startedAt: r.startedAt, lastStage: r.lastStage, waiting: r.waiting ?? null, steps: Array.isArray((s.tasks[taskId]?.manifest as { steps?: unknown[] } | null | undefined)?.steps) ? ((s.tasks[taskId]?.manifest as { steps: unknown[] }).steps.length) : 0 })),
+                        .map(([taskId, r]) => ({ taskId, delivery: r.delivery ?? "computing", builder: r.builder, startedAt: r.startedAt, lastStage: r.lastStage, waiting: r.waiting ?? null, steps: Array.isArray((s.tasks[taskId]?.manifest as { steps?: unknown[] } | null | undefined)?.steps) ? ((s.tasks[taskId]?.manifest as { steps: unknown[] }).steps.length) : 0 })),
             },
             {
                 uri: TASKS_URI,

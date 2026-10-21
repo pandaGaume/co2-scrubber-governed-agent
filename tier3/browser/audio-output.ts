@@ -9,10 +9,10 @@
  * Browsers only play sound after a gesture on the page: `enable()` is called
  * from the sound button, and the first click is what unlocks the element.
  *
- * Two pages on the same machine (the Control Board twice, or one hidden
- * behind the factory's window): an utterance is delivered once, so a hidden
- * page does not take any (the visible one does), and a take another output
- * won the page reports and skips. The poll clock ticks in a worker, because
+ * SOUND ON enables this output even when its tab is hidden. An utterance is
+ * delivered once: the speech service arbitrates competing pages, and a take
+ * another output won is reported and skipped. Failed playback is returned
+ * to the queue, never acknowledged as played. The poll clock ticks in a worker, because
  * a browser slows the timers of a hidden page down to one a minute after
  * five minutes, and the board is often behind another window.
  */
@@ -41,6 +41,8 @@ export interface AudioOutputEvents {
     onRecovered?: () => void;
     /** Another output took the utterance first: another page is the speaker. */
     onTakenElsewhere?: (item: QueueItem) => void;
+    /** Playback needs another user gesture; the utterance remains pending. */
+    onBlocked?: () => void;
 }
 
 const POLL_MS = 700;
@@ -83,6 +85,7 @@ export class AudioOutput {
     private lastPending = 0;
     /** The last poll failure reported, so the same one is not repeated every tick. */
     private pollFailure: string | null = null;
+    private readonly unplayed = new Set<string>();
 
     constructor(
         private readonly broker: Broker,
@@ -188,6 +191,12 @@ export class AudioOutput {
         this.busy = true;
         this.busySince = performance.now();
         try {
+            for (const id of this.unplayed) {
+                const returned = await this.broker.call("speech", "return_unplayed", { utteranceId: id, output: this.outputId });
+                if (!returned.ok && String(returned.error ?? "").includes(`unknown utterance ${id}`)) { this.unplayed.delete(id); continue; }
+                if (!returned.ok) throw new Error(returned.error ?? "Could not return unplayed audio");
+                this.unplayed.delete(id);
+            }
             const session = await this.broker.session("speech");
             const r = await session.request<{ contents: Array<{ text?: string }> }>("resources/read", { uri: "speech://queue" });
             const q = JSON.parse(r.contents[0]?.text ?? "{}") as Queue;
@@ -199,8 +208,8 @@ export class AudioOutput {
             if (this.playing && this.playing.seq <= q.stopMark) this.cut();
             if (this.playing) return;
             this.finishCurrent = null;
-            // A hidden page leaves the utterances to the visible one (the Control Board behind the factory's window, or open twice).
-            if (document.hidden) return;
+            // SOUND ON selects this page as an output, including while the operator watches another tab.
+            // The speech service arbitrates delivery and the floor across multiple enabled outputs.
             const next = q.pending.find((p) => p.seq > q.stopMark && !this.played.has(p.utteranceId));
             if (next) await this.play(next, session);
         } catch (e) {
@@ -217,7 +226,6 @@ export class AudioOutput {
 
     private async play(item: QueueItem, session: Awaited<ReturnType<Broker["session"]>>): Promise<void> {
         // Delivered once: another output (a second page on the same machine) may have taken it first.
-        this.played.add(item.utteranceId);
         const taken = await this.broker.call("speech", "take", { utteranceId: item.utteranceId, output: this.outputId });
         if (!taken.ok) {
             // The room is busy with another line: this one has not been said by
@@ -225,12 +233,14 @@ export class AudioOutput {
             // dropped every line that happened to arrive while another was
             // playing, and the voice went quiet for half the night.
             if (String(taken.error ?? "").includes(FLOOR_BUSY)) {
-                this.played.delete(item.utteranceId);
                 return;
             }
+            if (!/already taken by|no longer pending/.test(String(taken.error ?? ""))) throw new Error(taken.error ?? "Could not take audio");
+            this.played.add(item.utteranceId);
             this.events.onTakenElsewhere?.(item);
             return;
         }
+        this.unplayed.add(item.utteranceId);
         const r = await session.request<{ contents: Array<{ mimeType?: string; blob?: string }> }>("resources/read", { uri: `speech://utterances/${item.utteranceId}` });
         const c = r.contents[0];
         if (!c?.blob) throw new Error(`no audio for ${item.utteranceId}`);
@@ -240,6 +250,7 @@ export class AudioOutput {
         this.playing = item;
         this.events.onPlay?.(item);
         const started = performance.now();
+        let completed = false;
         await new Promise<void>((resolve) => {
             let done = false;
             let watchdog = 0;
@@ -260,9 +271,13 @@ export class AudioOutput {
             watchdog = window.setInterval(() => {
                 const elapsed = performance.now() - started;
                 const length = Number.isFinite(this.el.duration) && this.el.duration > 0 ? this.el.duration * 1000 : null;
-                if (this.el.ended || (length !== null && elapsed > length + 3000) || (length === null && elapsed > LINE_MAX_MS) || (this.el.paused && elapsed > 2000)) finish();
+                if (this.el.ended) { completed = true; finish(); }
+                else if ((length !== null && elapsed > length + 3000) || (length === null && elapsed > LINE_MAX_MS) || (this.el.paused && elapsed > 2000)) {
+                    this.events.onError?.("Audio playback stopped before the end. The line remains pending.");
+                    finish();
+                }
             }, 1000);
-            this.el.onended = finish;
+            this.el.onended = () => { completed = true; finish(); };
             this.el.onerror = () => {
                 this.events.onError?.(`could not play ${item.utteranceId} (${c.mimeType ?? item.mimeType})`);
                 finish();
@@ -271,14 +286,24 @@ export class AudioOutput {
             this.el.play().catch((e: unknown) => {
                 this.events.onError?.(e instanceof Error ? e.message : String(e));
                 finish();
+                if (e instanceof Error && e.name === "NotAllowedError") {
+                    this.disable();
+                    this.events.onBlocked?.();
+                }
             });
         });
         const durationMs = Math.round(performance.now() - started);
         const wasCut = this.playing !== item;
         this.playing = null;
-        if (!wasCut) {
+        if (!wasCut && completed) {
+            this.unplayed.delete(item.utteranceId);
+            this.played.add(item.utteranceId);
             this.events.onDone?.(item, durationMs);
             await this.broker.call("speech", "played", { utteranceId: item.utteranceId, output: this.outputId, durationMs });
+        } else {
+            const returned = await this.broker.call("speech", "return_unplayed", { utteranceId: item.utteranceId, output: this.outputId });
+            if (!returned.ok) throw new Error(returned.error ?? "Could not return unplayed audio");
+            this.unplayed.delete(item.utteranceId);
         }
     }
 }

@@ -1,0 +1,14 @@
+{
+    "document": "commissioning-evidence-and-acceptance",
+    "facts": [{
+        "id": "commissioning.referenceRmseMaxPpm",
+        "semantic": "ReferenceCommissioningResidualCeiling",
+        "quantity": "Concentration",
+        "unit": "ppm",
+        "value": 10,
+        "bound": "upper",
+        "kind": "context",
+        "says": "A separate later simulated-twin qualification mission requires at most 10 ppm RMSE per required CO2 channel in calibration and independent validation. This is not a completion criterion for the dimensioning-test-only commissioning, sensor accuracy or a safety limit.",
+        "reference": "Project requirement, 2026-10-20; commissioning-evidence-and-acceptance, Model acceptance requirement for a separate later qualification mission"
+    }]
+}

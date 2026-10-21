@@ -158,7 +158,18 @@ var Broker = class {
   session(slot) {
     let s = this.sessions.get(slot);
     if (!s) {
-      const opening = connectMcp(this.base, slot, this.identity, this.headers);
+      const opening = connectMcp(this.base, slot, this.identity, this.headers).then((session) => {
+        const request = session.request.bind(session);
+        session.request = async (method, params) => {
+          try {
+            return await request(method, params);
+          } catch (error) {
+            if (this.sessions.get(slot) === opening) this.sessions.delete(slot);
+            throw error;
+          }
+        };
+        return session;
+      });
       opening.catch(() => {
         if (this.sessions.get(slot) === opening) this.sessions.delete(slot);
       });
@@ -211,6 +222,7 @@ var Broker = class {
       }
       return { ok: true, outcome: "completed", output: payload && "result" in payload ? payload.result : payload };
     } catch (error) {
+      this.sessions.delete(slot);
       const cause = error instanceof Error && error.cause instanceof Error ? `${error.cause.message}${error.cause.code ? ` (${error.cause.code})` : ""}` : null;
       const message = `${error instanceof Error ? error.message : String(error)}${cause ? `: ${cause}` : ""}`;
       const code = error instanceof McpRpcError ? error.rpc.code : void 0;

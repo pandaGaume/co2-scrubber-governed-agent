@@ -91,7 +91,7 @@ export function speechSlot(wsBase: string, log: (line: string) => void): Publish
     const state: SpeechState = { service: null, notReady: null, profile: existsSync(profileFile) ? { file: relativeToRoot(profileFile), sha256: sha256File(profileFile) } : null, requested };
     try {
         const provider = buildProvider(voice, requested);
-        state.service = new SpeechService(provider, { voices: voice.voices, defaultVoice: voice.defaultVoice });
+        state.service = new SpeechService(provider, { voices: voice.voices, defaultVoice: voice.defaultVoice, latestVoices: ["station"] });
         log(`[speech] provider ${provider.id}, model ${provider.model}, speakers ${Object.keys(state.service.voices).join(", ") || "(engine default)"}`);
     } catch (e) {
         state.notReady = errorMessage(e);
@@ -111,7 +111,7 @@ export function speechSlot(wsBase: string, log: (line: string) => void): Publish
         {
             name: "say",
             title: "Speak to the people in the room",
-            description: "Say a short message aloud to the crew or the operator: it is synthesized now and played by the audio outputs in order. One or two sentences, in the language of the people listening; say what happened and what you did, with the numbers you were given. Returns the utterance identifier, never the audio.",
+            description: "Say a short message aloud to the crew or operator. Mother (station voice) finishes her current sentence, then plays only her newest pending message; superseded messages remain in the written history. Other voices retain queue order. One or two sentences in the listener's language, with the numbers you were given. Returns an utterance identifier, never the audio.",
             inputSchema: objectSchema(
                 {
                     text: { type: "string", description: "What to say, 1500 characters at most" },
@@ -158,6 +158,13 @@ export function speechSlot(wsBase: string, log: (line: string) => void): Publish
             description: "An audio output claims an utterance before playing it. Delivered once: the first output to take it plays it, a second one is refused and skips it.",
             inputSchema: objectSchema({ utteranceId: { type: "string" }, output: { type: "string", description: "Which output: page, speaker, headset, file" } }, ["utteranceId", "output"]),
             handle: (args, s) => spoken(ready(s).take(String(args.utteranceId ?? ""), String(args.output ?? "unknown"))),
+        },
+        {
+            name: "return_unplayed",
+            title: "Return audio that could not play",
+            description: "The output holding an unplayed utterance returns it to the queue after a playback error or browser autoplay refusal. Does not report playback or synthesize new audio.",
+            inputSchema: objectSchema({ utteranceId: { type: "string" }, output: { type: "string" } }, ["utteranceId", "output"]),
+            handle: (args, s) => spoken(ready(s).returnUnplayed(String(args.utteranceId ?? ""), String(args.output ?? "unknown"))),
         },
         {
             name: "played",

@@ -1,3 +1,4 @@
+import { approveScientificTest } from "./lib/scientific-review.js";
 /**
  * The reflection (2026-09-29, P4 of docs/comportement-en-donnees.fr.md): the patterns of the traces, an adaptation of
  * the conduct checked before anything adopts it, and the loop in a fork: the agents at work, the traces they leave,
@@ -219,12 +220,14 @@ describe("the reflection in a fork: the agents at work, Mother reading their tra
             await ok("scenario", "play", { id: "commissioning", builder: "scripted", request: {} });
             const first = await until("the first authorisation", (r) => r.loops[3].status === "waiting");
             await ok("biomed", "alarm", { subjectId: "fe-1", what: "chest pain", by: "the medical panel" });
+            await approveScientificTest(operator, first.commissioningId);
             await ok("station", "commissioning_authorise", { commissioningId: first.commissioningId, decision: "authorise", by: "commander-test" });
             await until("the first recover question", (r) => r.conduct?.stage === "ask");
             await ok("biomed", "alarm_ack", { subjectId: "fe-1", by: "the medical panel" }); await ok("biomed", "alarm_treat", { subjectId: "fe-1", action: "oxygen, seated", by: "the medical panel" }); await ok("biomed", "alarm_clear", { subjectId: "fe-1", resolution: "safe, back to rest", by: "the commander" });
             await ok("station", "answer", { questionId: (await open("recover")).id, choice: "rewrite", by: "commander-test", how: "script" });
             const second = await until("the second authorisation", (r) => r.loops[3].status === "waiting" && r.tasks.length === 2);
             await ok("biomed", "alarm", { subjectId: "fe-1", what: "chest pain again", by: "the medical panel" });
+            await approveScientificTest(operator, second.commissioningId);
             await ok("station", "commissioning_authorise", { commissioningId: second.commissioningId, decision: "authorise", by: "commander-test" });
             await until("the second recover question", (r) => r.conduct?.stage === "ask" && r.tasks.length === 2);
             await ok("station", "answer", { questionId: (await open("recover")).id, choice: "stop", by: "commander-test", how: "script" });

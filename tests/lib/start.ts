@@ -24,7 +24,7 @@ export async function startAllOrFail(port: number): Promise<{ broker: LocalBroke
     // The suite's roles are its own: the signatories and commanders its tests answer as, never the repository's people.
     if (!process.env.STATION_ROLES_FILE) {
         process.env.STATION_ROLES_FILE = path.join(mkdtempSync(path.join(tmpdir(), "roles-")), "roles.json");
-        writeFileSync(process.env.STATION_ROLES_FILE, JSON.stringify({ roles: { "authorised-signatory": { does: "signs for the tests", holders: ["signatory-test", "a reviewer"] }, commander: { does: "decides for the tests", holders: ["commander-test"] } } }));
+        writeFileSync(process.env.STATION_ROLES_FILE, JSON.stringify({ roles: { "authorised-signatory": { does: "signs for the tests", holders: ["signatory-test", "a reviewer"] }, "scientific-officer": { does: "reviews test procedures", holders: ["scientist-test"] }, commander: { does: "decides for the tests", holders: ["commander-test"] } } }));
     }
     // What a factory proposes to the library goes on the suite's own shelf, never beside the repository's workshops.
     process.env.LIBRARY_PROPOSALS_DIR ??= mkdtempSync(path.join(tmpdir(), "library-proposals-"));

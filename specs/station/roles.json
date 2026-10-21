@@ -6,8 +6,12 @@
             "holders": ["Guillaume Pelletier"]
         },
         "commander": {
-            "does": "authorises a test, decides after an aborted test, answers the factories' questions",
-            "holders": []
+            "does": "authorises launch of a scientifically approved test, decides after an aborted test, answers operational questions",
+            "holders": ["James T. Kirk"]
+        },
+        "scientific-officer": {
+            "does": "reviews and approves the exact test procedure and its scientific and monitoring conditions before the commander may authorise launch",
+            "holders": ["Commander Spock"]
         }
     }
 }

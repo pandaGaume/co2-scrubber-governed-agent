@@ -666,6 +666,14 @@ function applyEvents(all) {
         if (typeof e.seq === "number" && e.seq > eventCursor) eventCursor = e.seq;
         if (typeof e.kind !== "string") continue;
         if (e.kind.startsWith("agent.")) {
+            if (e.kind === "agent.mission" && e.mission) {
+                applyAgentState({ mission: e.mission });
+                continue;
+            }
+            if (agentMission) {
+                applyAgentState({ mission: agentMission });
+                continue;
+            }
             if (typeof e.mode === "string") agentMode = e.mode;
             if (e.kind === "agent.event") {
                 agentIntention = e.intention ?? null;
@@ -781,13 +789,17 @@ async function openModel() {
 const MODE_WORD = { idle: "idle", playing: "playing", paused: "paused", ended: "night played" };
 let agentMode = "idle";
 let agentIntention = null;
+let agentMission = null;
 
 function applyAgentState(st) {
+    if ("mission" in st) agentMission = st.mission ?? null;
     if (typeof st.mode === "string") agentMode = st.mode;
+    if (st.mission) agentMode = st.mission.status === "running" ? "playing" : st.mission.status === "completed" ? "ended" : "paused";
     if ("intention" in st) agentIntention = st.intention ?? null;
-    put("top-state", MODE_WORD[agentMode] ?? agentMode);
+    put("top-state", st.mission ? `mission ${st.mission.status}${st.mission.outcome === "incomplete" ? " (incomplete)" : ""}` : MODE_WORD[agentMode] ?? agentMode);
     $("top-state")?.classList.toggle("busy", agentMode === "playing");
-    if (typeof st.minute === "number") put("top-clock", `night 9 · min ${st.minute}`);
+    if (st.mission) put("top-clock", st.mission.id);
+    else if (typeof st.minute === "number") put("top-clock", `night 9 · min ${st.minute}`);
 }
 
 async function openAgent() {

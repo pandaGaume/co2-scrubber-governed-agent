@@ -1,8 +1,8 @@
 {
     "document": "station-topology",
-    "digest": "11dff9b4c6bfe5713dfe7eb63067900e7cd4ba03485742baec6d599a480859a9",
+    "digest": "339b783c966efce831550554a5f7ac7be2a6a98a1408765c7f6f129a973b0357",
     "signedBy": "Guillaume Pelletier",
-    "signedAt": "2026-09-28T14:04:22.652Z",
+    "signedAt": "2026-10-20T17:41:54.056Z",
     "scope": "safety",
-    "note": "repository"
+    "note": "Signed at the explicit instruction of Guillaume Pelletier in this chat on 2026-10-20. Reference model volumes are documented context, not physical measurements; monitoring readiness never bypasses human test authorisation."
 }

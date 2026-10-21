@@ -1,0 +1,5 @@
+{
+    "allowed": ["physics.units_normalize", "physics.units_convert", "physics.units_compatible", "physics.units_validate_connection", "physics.units_knowledge"],
+    "maxCalls": 6,
+    "beforeExecution": ["factory.request"]
+}

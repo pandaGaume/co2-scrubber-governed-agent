@@ -42,7 +42,7 @@ export function mountTestClock(badge) {
             // Running first; else a test awaiting its authorisation; else one that ended in the last five minutes.
             running =
                 list.find((c) => c.status === "running" && c.run?.clock) ??
-                list.find((c) => c.status === "awaiting-authorisation" && c.procedure) ??
+                list.find((c) => ["awaiting-scientific-approval", "awaiting-authorisation"].includes(c.status) && c.procedure) ??
                 list.find((c) => ["done", "aborted"].includes(c.status) && c.run?.clock && Date.now() - Date.parse(c.run.clock.at) < 5 * 60000) ??
                 // Before any test: the commissioning the scenario opened, its procedure not yet relayed.
                 (scene ? list.find((c) => c.id === scene.commissioningId && !c.run) : null) ??
@@ -58,15 +58,15 @@ export function mountTestClock(badge) {
             badge.hidden = true;
             return;
         }
-        if (!c.run && c.status !== "awaiting-authorisation") {
+        if (!c.run && !["awaiting-scientific-approval", "awaiting-authorisation"].includes(c.status)) {
             const elapsed = clock((Date.now() - Date.parse(scene?.startedAt ?? c.openedAt)) / 1000);
             badge.textContent = scene?.status === "running" ? `test --:-- · procedure being written · ${elapsed}` : `test --:-- · not run`;
             badge.title = scene?.status === "running" ? "the commissioning is open: the procedure factory writes the test; the clock starts when the commander authorises it" : `the scenario ended before the test: ${scene?.ended ?? c.status}`;
             badge.hidden = false;
             return;
         }
-        if (c.status === "awaiting-authorisation") {
-            badge.textContent = `test 00:00 / ${two(c.procedure.minutes ?? 0)}:00 \u00b7 awaiting authorisation`;
+        if (["awaiting-scientific-approval", "awaiting-authorisation"].includes(c.status)) {
+            badge.textContent = `test 00:00 / ${two(c.procedure.minutes ?? 0)}:00 \u00b7 ${c.status === "awaiting-scientific-approval" ? "awaiting scientific approval" : "awaiting launch authorisation"}`;
             badge.hidden = false;
             return;
         }

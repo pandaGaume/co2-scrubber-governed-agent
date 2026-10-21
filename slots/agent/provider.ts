@@ -46,13 +46,19 @@ import { ScriptedProvider } from "../../stand-ins/night/scripted.js";
 import type { Provider, ProviderProfile } from "../../harness/lib/provider.js";
 import { createAgent, type Agent } from "../../tier3/agent.js";
 import { outcomeOf } from "../../tier3/lib/evaluator.js";
-import { eventSentence, outcomeSentence, proposalSentence } from "../../tier3/browser/station-voice.js";
+import { eventSentence, outcomeSentence } from "../../tier3/browser/station-voice.js";
+import { motherOf } from "../../harness/lib/llm-common.js";
 import { loadWords, NO_WORDS, type Words } from "../../ui/words.js";
 import type { CapabilityCall } from "../../tier3/lib/capabilities.js";
 import type { GuardMode } from "../../tier3/lib/capabilities.js";
 import type { Intention } from "@spiky-panda/harness";
 import { objectSchema as obj, publishSlot, type PublishedSlot } from "../lib/slot-server.js";
 import { oneLine, runtimeEvents } from "../lib/events.js";
+import { Mission } from "../../tier3/mission.js";
+import type { JsonValue } from "@spiky-panda/harness";
+import { MissionProcedureExecutor, readProcedureExecution } from "./procedure-execution.js";
+import { stationDecisions } from "./station-decisions.js";
+import { openRunLog, type RunLog } from "../../harness/lib/run-log.js";
 
 /** Decisions one event may take before the agent is made to hand back. The
     bench uses the same cap; an event that needs more is a broken event. */
@@ -161,6 +167,174 @@ export function agentSlot(wsBase: string, log: (line: string) => void): Publishe
      * The same guard catches an operator who clicks twice.
      */
     let deciding = false;
+    let mission: Mission | null = null;
+    let missionAgent: Agent | null = null;
+    let missionBroker: Broker | null = null;
+    let procedureExecutor: MissionProcedureExecutor | null = null;
+    let missionEnvironment: { atmosphere?: string; world?: string; devices?: string[]; commissioningId?: string; completion?: { procedure: import("./procedure-completion.js").ProcedureCompletionRequirement } } = {};
+    let missionNarrator: Broker | null = null;
+    let narration: Promise<unknown> = Promise.resolve();
+    let startingMission = false;
+    const delegated = new Set<string>();
+    const observed = new Set<string>();
+    const operations = new Set<string>();
+    const returned = new Map<string, JsonValue>();
+    let lastMissionStatus: string | null = null;
+    let missionLog: RunLog | null = null;
+    let closing = false;
+    const missionChanged = () => {
+        const status = mission?.state.status ?? null;
+        missionLog?.section("Mission state", mission?.state ?? null);
+        if (status === "completed") missionLog?.close(mission?.state.note ?? "completed", { outcome: mission?.state.outcome ?? "unspecified" });
+        emit("agent.mission", { mission: mission?.state ?? null });
+        if (!closing && status === "suspended" && lastMissionStatus !== status && missionNarrator) {
+            const narrator = missionNarrator;
+            narration = narration.then(() => narrator.call("station", "narrate", { from: "mission transport", text: "The mission is paused. It remains open; see the mission status for the reason." })).catch((error) => log(`[agent] Mother: ${errorMessage(error)}`));
+        }
+        lastMissionStatus = status;
+    };
+    const releaseEvents = runtimeEvents.onAppend((event) => {
+        const e = event as unknown as { kind: string; taskId?: string; observationId?: string; proposal?: { taskId?: string }; [key: string]: unknown };
+        const taskId = e.taskId ?? e.proposal?.taskId;
+        if (e.kind === "station.operation-decided" && typeof e.requestId === "string") {
+            const result = JSON.parse(JSON.stringify(e)) as JsonValue;
+            returned.set(`operation:${e.requestId}`, result);
+            if (operations.has(e.requestId) && mission && mission.state.status !== "completed") mission.observe(result);
+            return;
+        }
+        if (e.kind === "station.commissioning-decision" && e.commissioningId === missionEnvironment.commissioningId && mission && mission.state.status !== "completed") {
+            mission.observe(JSON.parse(JSON.stringify(e)) as JsonValue);
+            return;
+        }
+        if (mission && mission.state.status !== "completed" && (e.kind === "factory.task-ended" || e.kind === "factory.task-blocked" || e.kind === "observer.request-ended" || e.kind === "station.proposal" || e.kind === "station.twin-validated" || e.kind === "station.twin-installation")) {
+            const key = e.kind === "observer.request-ended" ? e.observationId : taskId;
+            const result = JSON.parse(JSON.stringify(e)) as JsonValue;
+            if (key) { returned.set(key, result); if (returned.size > 200) returned.delete(returned.keys().next().value!); }
+            if ((taskId && delegated.has(taskId)) || (e.observationId && observed.has(e.observationId))) {
+                if (taskId) delegated.add(taskId);
+                mission.observe(result);
+            }
+        }
+    });
+
+    async function startMission(id: string, objective: string, observation: JsonValue): Promise<void> {
+        if (startingMission || deciding || state.mode === "playing") throw new Error("the agent is already taking decisions");
+        if (mission && mission.state.status !== "completed") throw new Error(`mission ${mission.state.id} remains open (${mission.state.status})`);
+        startingMission = true;
+        try {
+            await procedureExecutor?.close();
+            await missionBroker?.close();
+            await missionNarrator?.close();
+            const narrator = new Broker(httpBase, { name: "mission-narrator", version: "1" }, "station");
+            missionNarrator = narrator;
+            lastMissionStatus = null;
+            const profile = readJson<ProviderProfile>(profileFile);
+            const headers = profile.tier3?.subjectToken ? { Authorization: `Bearer ${profile.tier3.subjectToken}` } : brokerAuth("agent");
+            const broker = new Broker(httpBase, { name: "mission-supervisor", version: "0.1.0", locale: "en" }, headers);
+            missionBroker = broker;
+            const provider = await ReasonerProvider.connect(broker, "specs/agent/prompt.mission.md");
+            if (!provider.description.ready) throw new Error(provider.description.reason ?? "the reasoner is unavailable; no script may replace a mission supervisor");
+            missionLog = openRunLog({ name: `mission-${id}`, description: objective, detailed: true, facts: { missionId: id, model: provider.model, prompt: "specs/agent/prompt.mission.md" } });
+            missionLog.section("Initial mission observation", observation);
+            log(`[agent] mission log: ${missionLog.dir}`);
+            provider.usePrompt("specs/agent/prompt.mission.md");
+            provider.begin?.(`mission:${id}`);
+            const resolve = provider.resolve.bind(provider);
+            provider.resolve = async (input) => {
+                missionLog?.section("Supervisor decision input", input);
+                let decision;
+                try {
+                    decision = await resolve(input);
+                } catch (error) {
+                    missionLog?.section("Supervisor decision failed", { error: errorMessage(error) });
+                    throw error;
+                }
+                missionLog?.section("Supervisor decision exchange", provider.exchanges.at(-1));
+                const mother = motherOf(decision);
+                if (mother) narration = narration.then(() => narrator.call("station", "narrate", { text: mother, from: "mission supervisor" })).catch((error) => log(`[agent] Mother: ${errorMessage(error)}`));
+                return decision;
+            };
+            delegated.clear();
+            observed.clear();
+            operations.clear();
+            returned.clear();
+            const current = new Mission(id, objective, observation, async (intention) => {
+                const trace = await missionAgent!.decide(intention);
+                missionLog?.section("Supervisor harness trace", trace);
+                const capability = trace.decision.invocation.capabilityId;
+                runtimeEvents.append("agent.step", { intention: intention.id, capabilityId: capability, input: oneLine(trace.decision.invocation.input), outcome: outcomeOf(trace), source: trace.source });
+                return { capability, input: trace.decision.invocation.input, ok: trace.result.ok, reasoned: trace.source === "fallback" };
+            }, missionChanged, undefined, undefined, () => {
+                // A new conversation cannot dispatch pending tool calls from the rejected answer.
+                // Mission observations and the last executed result are supplied again by the observer.
+                provider.begin(`mission:${id}`);
+            }, async (outcome) => {
+                const session = await narrator.session("station");
+                const answer = await session.request<{ contents: Array<{ text?: string }> }>("resources/read", { uri: "station://questions" });
+                const questions = JSON.parse(answer.contents[0]?.text ?? "[]") as Array<{ id: string; status: string; taskId?: string; context?: { missionId?: string; commissioningId?: string } }>;
+                const pending = questions.find((q) => ["open", "queued"].includes(q.status) && (q.context?.missionId === id || (missionEnvironment.commissioningId && q.context?.commissioningId === missionEnvironment.commissioningId) || (q.taskId && delegated.has(q.taskId))));
+                if (pending) return `human decision ${pending.id} is still ${pending.status}; waiting for approval is not unavailable authority. Wait for its actual answer rather than completing the mission.`;
+                for (const taskId of delegated) {
+                    const task = await narrator.call("factory", "task", { taskId });
+                    const status = (task.output as { state?: string } | undefined)?.state;
+                    if (task.ok && (status === "running" || status === "waiting")) return `delegated task ${taskId} is still ${status}; its result is pending`;
+                }
+                const requirement = missionEnvironment.completion?.procedure;
+                if (requirement && outcome === "incomplete") return procedureExecutor?.terminalReportProblem() ?? "no procedure executor or terminal test report";
+                return requirement ? procedureExecutor?.completionProblem(requirement) ?? "no procedure executor or executed test evidence" : null;
+            });
+            missionEnvironment = observation as typeof missionEnvironment;
+            procedureExecutor = new MissionProcedureExecutor(broker, narrator, (event) => {
+                if (mission?.state.id === id && mission.state.status !== "completed") current.observe(event as JsonValue);
+            });
+            missionAgent = await createAgent({
+                broker, provider, guardMode: state.guard,
+                reasonEveryDecision: true,
+                approve: async () => false,
+                local: current.capabilities(),
+                questionResume: { slot: "agent", tool: "mission_observe", args: { missionId: id } },
+                stationOwnsConfirmations: Boolean(missionEnvironment.commissioningId),
+                delegationContext: JSON.parse(JSON.stringify({ missionId: id, objective, ...missionEnvironment, secondsPerMinute: Number(process.env.SCENARIO_SECONDS_PER_MINUTE ?? 2) })) as JsonValue,
+                observation: async () => ({ mission: JSON.parse(JSON.stringify(current.state)) as JsonValue, ...(missionEnvironment.commissioningId ? { stationDecisions: await stationDecisions(narrator, missionEnvironment.commissioningId, id, delegated) } : {}) }),
+                onStage: (event) => { missionLog?.section("Supervisor harness stage", event); },
+                // Read-only specialist results and delegated work, never authorizations or writes to the workshop.
+                allow: ["agent.procedure_execute", "agent.procedure_result", "station.twin_services", "station.twin_validate", "station.twin_admit", "station.twin_state", "station.twin_run", "factory.start", "observer.observe", "observer.request", "station.proposals", "library.list", "library.search", "library.read", "library.facts", "library.graphs", "library.graph"],
+                onCall: (c) => {
+                    missionLog?.section("Supervisor tool call and result", c);
+                    const taskId = (c.result.output as { taskId?: unknown } | null)?.taskId;
+                    const observationId = (c.result.output as { id?: unknown } | null)?.id;
+                    const requestId = (c.result.output as { requestId?: unknown } | null)?.requestId;
+                    if (c.result.ok && c.id === "station.operation_request" && typeof requestId === "string") {
+                        operations.add(requestId);
+                        const result = returned.get(`operation:${requestId}`);
+                        if (result) current.observe(result);
+                    }
+                    if (c.result.ok && (c.id === "factory.request" || c.id === "factory.start" || c.id === "observer.observe" || c.id === "station.twin_validate" || c.id === "station.twin_admit") && typeof taskId === "string") { delegated.add(taskId); if (returned.has(taskId)) current.observe(returned.get(taskId)!); }
+                    if (c.result.ok && c.id === "observer.observe" && typeof observationId === "string") { observed.add(observationId); if (returned.has(observationId)) current.observe(returned.get(observationId)!); }
+                    runtimeEvents.append("call", { caller: `mission supervisor (${id})`, capabilityId: c.id, input: oneLine(c.input), outcome: c.result.outcome, ...(c.result.error ? { failed: oneLine(c.result.error) } : {}) });
+                },
+            });
+            mission = current;
+            const services = await narrator.call("station", "twin_services", {});
+            current.observe({ twinServices: services.ok ? JSON.parse(JSON.stringify(services.output)) as JsonValue : { available: false, error: services.error ?? services.outcome } });
+            if (!services.ok) await narrator.call("station", "narrate", { from: "mission supervisor host", text: "Mother cannot check twin validation and installation services. Mission success is unconfirmed." });
+            missionChanged();
+            current.run();
+        } catch (error) {
+            await missionBroker?.close();
+            await missionNarrator?.close();
+            missionNarrator = null;
+            missionBroker = null;
+            throw error;
+        } finally {
+            startingMission = false;
+        }
+    }
+
+    function noOpenMission(): void {
+        if (startingMission || (mission && mission.state.status !== "completed")) throw new Error("a supervisor mission remains open; use mission_resume or pause, not the night scenario transport");
+        mission = null;
+    }
 
     const emit = (kind: string, fields: Record<string, unknown> = {}) => runtimeEvents.append(kind, { ...fields, mode: state.mode });
 
@@ -228,6 +402,12 @@ export function agentSlot(wsBase: string, log: (line: string) => void): Publishe
                 if (!text) return;
                 chain = chain.then(() => broker.call("speech", "say", { text, voice: "station", priority })).catch(() => undefined);
             },
+        };
+        const resolve = provider.resolve.bind(provider);
+        provider.resolve = async (input) => {
+            const decision = await resolve(input);
+            voice?.say(motherOf(decision));
+            return decision;
         };
 
         state.built = true;
@@ -309,9 +489,6 @@ export function agentSlot(wsBase: string, log: (line: string) => void): Publishe
         await thinking(r.world, true);
         try {
             const trace = await r.agent.decide(intention);
-            // What it proposed, before what it did: the reasoning is the point,
-            // and a station that only reads measurements explains nothing.
-            if (voice) voice.say(proposalSentence(voice.words, trace.decision.rationale));
             const outcome = outcomeOf(trace);
             const capabilityId = trace.decision.invocation.capabilityId;
             state.decisions += 1;
@@ -410,9 +587,19 @@ export function agentSlot(wsBase: string, log: (line: string) => void): Publishe
         })();
     }
 
-    const view = () => ({ ...state, events: events.map((e) => ({ intention: e.intention, minute: e.at, message: e.message })) });
+    const view = () => ({ ...state, ...(mission ? {
+        mission: mission.state,
+        procedureExecutions: procedureExecutor?.activity() ?? [],
+        mode: mission.state.status === "running" ? "playing" : mission.state.status === "completed" ? "ended" : "paused",
+        intention: `mission:${mission.state.id}`, message: mission.state.objective,
+        note: `mission ${mission.state.status}${mission.state.note ? `: ${mission.state.note}` : ""}`,
+        decisions: mission.state.decisions,
+        provider: missionAgent?.provider.name ?? null, family: missionAgent?.provider.family ?? null,
+        capabilities: missionAgent?.catalogue.length ?? 0,
+        decider: missionAgent ? { kind: "model", model: missionAgent.provider.model, servedBy: missionAgent.provider instanceof ReasonerProvider ? missionAgent.provider.description.servedBy ?? null : null } : null,
+    } : {}), events: events.map((e) => ({ intention: e.intention, minute: e.at, message: e.message })) });
 
-    return publishSlot<AgentSlotState>({
+    const published = publishSlot<AgentSlotState>({
         slot: "agent",
         description: "The Tier 3 agent, running here and driven from outside: play, pause, next, stop, reset",
         instructions: {
@@ -426,12 +613,56 @@ export function agentSlot(wsBase: string, log: (line: string) => void): Publishe
         state,
         tools: [
             {
+                name: "procedure_execute",
+                description: "Request execution of an existing checked procedure after an actual commander authorisation. The deterministic executor sends the approved steps through the agent's own broker rights and checks every abort condition. Returns a runId immediately; results return to the same mission. Current logger: simulated Lab cabin, driven by observed device speed, hatch closed. Does not invent physical CO2 measurements.",
+                inputSchema: obj({ commissioningId: { type: "string" } }, ["commissioningId"]),
+                handle: async (args) => {
+                    try {
+                        if (!mission || mission.state.status === "completed" || !procedureExecutor) throw new Error("no open mission procedure executor");
+                        const run = await procedureExecutor.start(mission.state.id, String(args.commissioningId), missionEnvironment);
+                        return { runId: run.runId, status: run.status, commissioningId: run.commissioningId, source: run.source };
+                    } catch (e) {
+                        await missionNarrator?.call("station", "narrate", { from: "procedure executor", text: `Procedure execution blocked: ${errorMessage(e).slice(0, 300)}` });
+                        throw e;
+                    }
+                },
+            },
+            {
+                name: "procedure_result",
+                description: "Read an authorised procedure's actual execution result, logged telemetry, device descriptors, presence and report. Factory requests can name this runId as telemetryRunId to copy its recorded data without manual transcription.",
+                inputSchema: obj({ runId: { type: "string" } }, ["runId"]),
+                handle: (args) => procedureExecutor ? procedureExecutor.result(String(args.runId)) : readProcedureExecution(String(args.runId)),
+            },
+            {
+                name: "mission_start",
+                description: "Deliver one initial mission to the supervisor's existing decision graph. No sequence of actions is prescribed. Only the reasoner can complete the mission.",
+                inputSchema: obj({ missionId: { type: "string", minLength: 1 }, objective: { type: "string", minLength: 1 }, observation: { type: "object" } }, ["missionId", "objective", "observation"]),
+                handle: async (args) => { await startMission(String(args.missionId), String(args.objective), args.observation as JsonValue); return view(); },
+            },
+            {
+                name: "mission_observe",
+                description: "Return a delegated result or the station's human answer to the same open mission. This is an observation, not a new mission prompt or an authorization.",
+                inputSchema: obj({ missionId: { type: "string" }, observation: { type: "object" }, questionId: { type: "string" }, question: { type: "object" }, answer: { type: "object" } }, ["missionId"]),
+                handle: (args) => {
+                    if (!mission || mission.state.id !== args.missionId) throw new Error("no such supervisor mission");
+                    if (!args.observation && !args.answer) throw new Error("an observation or a station answer is required");
+                    mission.observe((args.observation ?? { questionId: args.questionId, question: args.question ?? null, answer: args.answer }) as JsonValue, Boolean(args.answer));
+                    return view();
+                },
+            },
+            {
+                name: "mission_resume",
+                description: "Resume a suspended mission without resetting its objective, observations or graph. A budget suspension never declares it completed.",
+                inputSchema: obj({}),
+                handle: () => { if (!mission) throw new Error("no supervisor mission"); if (mission.state.waitingFor === "human") throw new Error("the station must return the human's answer"); mission.resume(); return view(); },
+            },
+            {
                 name: "describe",
                 title: "What drives the agent",
                 description: "The provider and its family, the guard, how many capabilities the agent may reach, the scenario it plays and its events, and where it stands.",
                 inputSchema: obj({}),
                 handle: async () => {
-                    await runtime();
+                    if (!mission) await runtime();
                     return view();
                 },
             },
@@ -448,6 +679,7 @@ export function agentSlot(wsBase: string, log: (line: string) => void): Publishe
                 description: "Puts the board back where the scenario starts, rebuilds the agent so it has learned nothing, and returns to the first event. Stops a run in progress.",
                 inputSchema: obj({}),
                 handle: async () => {
+                    noOpenMission();
                     if (deciding) throw new Error("a decision is being taken: pause it before resetting");
                     state.mode = "idle";
                     const r = await runtime();
@@ -471,6 +703,7 @@ export function agentSlot(wsBase: string, log: (line: string) => void): Publishe
                 description: "Takes one decision and stops. Enters the next event of the night when the agent hands the console back or the step cap is reached.",
                 inputSchema: obj({}),
                 handle: async () => {
+                    noOpenMission();
                     if (state.mode === "playing") throw new Error("the agent is playing: pause it before stepping");
                     if (state.mode === "ended") throw new Error("the night is played: reset before stepping again");
                     state.mode = "paused";
@@ -484,6 +717,7 @@ export function agentSlot(wsBase: string, log: (line: string) => void): Publishe
                 description: "Takes decisions on its own, about one a second, until pause, stop, or the end of the night. With an intention, jumps to that event of the night first and plays from there. Returns at once; watch the event log or call state.",
                 inputSchema: obj({ intention: { type: "string", description: "an event of the night to jump to before playing; the current one when absent" } }),
                 handle: async (args) => {
+                    noOpenMission();
                     if (deciding) throw new Error("a decision is being taken: pause it before jumping");
                     const wanted = typeof args.intention === "string" ? args.intention : null;
                     if (wanted) {
@@ -516,6 +750,7 @@ export function agentSlot(wsBase: string, log: (line: string) => void): Publishe
                 description: "The decision under way finishes; the next one is not taken. `play` or `next` goes on from there.",
                 inputSchema: obj({}),
                 handle: () => {
+                    if (mission && mission.state.status !== "completed") { mission.suspend("paused by the operator; mission remains open"); return view(); }
                     if (state.mode === "playing") {
                         state.mode = "paused";
                         emit("agent.mode", {});
@@ -529,6 +764,7 @@ export function agentSlot(wsBase: string, log: (line: string) => void): Publishe
                 description: "Leaves the night where it is and returns to idle. The board is not touched: use reset for that.",
                 inputSchema: obj({}),
                 handle: () => {
+                    if (mission && mission.state.status !== "completed") { mission.suspend("execution stopped by the operator; mission remains open"); return view(); }
                     state.mode = "idle";
                     state.note = "stopped";
                     emit("agent.mode", { note: state.note });
@@ -545,4 +781,7 @@ export function agentSlot(wsBase: string, log: (line: string) => void): Publishe
             },
         ],
     });
+    const close = published.close.bind(published);
+    published.close = async () => { closing = true; releaseEvents(); if (mission && mission.state.status !== "completed") mission.suspend("agent transport closed; mission remains open"); await procedureExecutor?.close(); await narration; await missionNarrator?.close(); await missionBroker?.close(); await close(); };
+    return published;
 }

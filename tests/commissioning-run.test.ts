@@ -1,3 +1,4 @@
+import { approveScientificTest } from "./lib/scientific-review.js";
 /**
  * The commissioning chain as a scenario the scenario slot plays (`specs/scenario-commissioning.json`, `slots/scenario/commissioning.ts`),
  * with the commander stood in by the test at the two places the run waits:
@@ -103,6 +104,7 @@ describe("the commissioning chain played by the slot, the commander deciding", (
         assert.ok(waiting.loops[1].taskId, "the procedure task is named");
         tasks.push(waiting.loops[1].taskId!);
         // The commander authorises (on the page: the same tool, or the answer to Mother's question, which the direct call settles).
+        await approveScientificTest(operator, waiting.commissioningId);
         await ok("station", "commissioning_authorise", { commissioningId: waiting.commissioningId, decision: "authorise", by: "commander-test", note: "test" });
         const settled = (JSON.parse((await (await operator.session("station")).request<{ contents: Array<{ text: string }> }>("resources/read", { uri: "station://questions" })).contents[0].text) as Array<Question & { answer: { how: string } | null }>).find((q) => q.kind === "authorise");
         assert.equal(settled?.status, "answered", "the authorise question is settled by the direct call");
@@ -145,6 +147,7 @@ describe("the commissioning chain played by the slot, the commander deciding", (
         const waiting = await until("the authorisation", (r) => r.loops[3].status === "waiting");
         tasks.push(waiting.loops[1].taskId!);
         assert.match(waiting.loops[0].note ?? "", /scrubber-1-r002/, "the scene registers again under this run's names");
+        await approveScientificTest(operator, waiting.commissioningId);
         await ok("station", "commissioning_authorise", { commissioningId: waiting.commissioningId, decision: "refuse", by: "commander-test" });
         const failed = await until("the end", (r) => r.status !== "running");
         assert.equal(failed.status, "failed", JSON.stringify({ id: failed.id, ended: failed.ended, commissioning: failed.commissioningId, loops: failed.loops.map((l) => [l.n, l.status, l.note ?? ""]) }));
@@ -164,6 +167,7 @@ describe("the commissioning chain played by the slot, the commander deciding", (
         tasks.push(waiting.loops[1].taskId!);
         // FE-1, in the Lab under test, is unwell: someone raises the alarm from the medical panel; the commander authorises all the same, and the test stops at its first reading.
         await ok("biomed", "alarm", { subjectId: "fe-1", what: "chest pain", by: "the medical panel" });
+        await approveScientificTest(operator, waiting.commissioningId);
         await ok("station", "commissioning_authorise", { commissioningId: waiting.commissioningId, decision: "authorise", by: "commander-test" });
         const asking = await until("the recover question", (r) => r.conduct?.stage === "ask");
         assert.equal(asking.status, "running", asking.ended ?? "");
@@ -187,6 +191,7 @@ describe("the commissioning chain played by the slot, the commander deciding", (
         const capabilities = (task.manifest?.steps ?? []).map((s) => s.capability);
         assert.ok(capabilities.includes("procedure.analyse"), JSON.stringify(capabilities));
         assert.ok(capabilities.indexOf("procedure.analyse") < capabilities.indexOf("procedure.submit"), "the analysis before the procedure");
+        await approveScientificTest(operator, again.commissioningId);
         await ok("station", "commissioning_authorise", { commissioningId: again.commissioningId, decision: "authorise", by: "commander-test" });
         const report = await until("the report", (r) => r.loops[5].status === "done");
         assert.equal(report.status, "running", report.ended ?? "");
@@ -282,6 +287,7 @@ describe("a run that starts with the library unsigned, an authorised signatory s
         assert.equal(waiting.loops[1].status, "done");
         tasks.push(...waiting.tasks.filter((t) => !tasks.includes(t)));
         assert.ok(waiting.tasks.length >= 2, "the refused procedure task, then the one written again");
+        await approveScientificTest(operator, waiting.commissioningId);
         await ok("station", "commissioning_authorise", { commissioningId: waiting.commissioningId, decision: "refuse", by: "commander-test" });
         const ended = await until("the end", (r) => r.status !== "running");
         assert.equal(ended.id, started.runId);
@@ -299,6 +305,7 @@ describe("a run that starts with the library unsigned, an authorised signatory s
             const replayed = manifest.steps.filter((s) => s.source === "policy").map((s) => s.capability);
             assert.ok(!replayed.includes("procedure.submit") && !replayed.includes("task.done"), `${started.runId}: the procedure is the builder's, not a replay (${replayed.join(", ")})`);
             if (k === 3) assert.ok(replayed.length > 0, "by the fourth run the recipes replay the reads");
+            await approveScientificTest(operator, waiting.commissioningId);
             await ok("station", "commissioning_authorise", { commissioningId: waiting.commissioningId, decision: "refuse", by: "commander-test" });
             await until(`run ${started.runId}: the end`, (r) => r.id === started.runId && r.status !== "running");
         }

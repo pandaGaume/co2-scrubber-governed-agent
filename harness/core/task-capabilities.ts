@@ -80,7 +80,7 @@ async function writeJson(broker: Broker, taskId: string, path: string, value: un
 export const ASK_SCHEMA: JsonValue = {
     type: "object",
     properties: {
-        question: { type: "string", minLength: 1, description: "The question, as the commander will read it: what is at stake and what each option means." },
+        question: { type: "string", minLength: 1, maxLength: 240, description: "One concise question, at most 240 characters. Put explanation and evidence in why." },
         options: { type: "array", items: { type: "string" }, minItems: 2, description: "The options, short words the commander picks among (two at least)." },
         why: { type: "string", description: "Why the task cannot decide alone: what the tools said, what is missing." },
     },
@@ -88,7 +88,7 @@ export const ASK_SCHEMA: JsonValue = {
     additionalProperties: false,
 };
 
-export function taskCapabilities(broker: Broker, taskId: string, progress: Progress, topic = "task", task?: TaskFile["task"]): LocalCapability[] {
+export function taskCapabilities(broker: Broker, taskId: string, progress: Progress, topic = "task", task?: TaskFile["task"], questionRole?: string): LocalCapability[] {
     return [
         {
             // A question to the commander (Tier 4, 2026-09-26): the task waits for the answer, unless a standing order answers it at once; the answer comes back into the task's observations (answers) and the loop goes on from there.
@@ -97,10 +97,12 @@ export function taskCapabilities(broker: Broker, taskId: string, progress: Progr
             inputSchema: ASK_SCHEMA,
             async execute(input: JsonValue): Promise<CapabilityResult> {
                 const q = input as { question: string; options: string[]; why?: string };
+                if (q.question.length > 240) return { ok: false, error: "Question too long: use at most 240 characters and put supporting explanation in why." };
                 const r = await broker.call(APP.authority.ask.slot, APP.authority.ask.tool, {
                     taskId,
                     from: `factory:${topic}`,
                     kind: "ask",
+                    ...(questionRole ? { role: questionRole } : {}),
                     question: q.question,
                     options: q.options.map((o) => ({ id: String(o), label: String(o) })),
                     context: { why: q.why ?? null, topic },
@@ -109,7 +111,7 @@ export function taskCapabilities(broker: Broker, taskId: string, progress: Progr
                 if (!r.ok) return { ok: false, error: r.error ?? "the station did not take the question", output: { outcome: r.outcome } };
                 const asked = r.output as { questionId: string; status: string; answer?: { choice: string; by: string; note: string | null } | null };
                 if (asked.status === "auto" && asked.answer) return { ok: true, output: { outcome: "completed", value: { questionId: asked.questionId, answered: true, choice: asked.answer.choice, by: asked.answer.by, note: asked.answer.note } } };
-                progress.failure = `WAITING: question ${asked.questionId} for the commander: ${q.question}`;
+                progress.failure = `WAITING: question ${asked.questionId} for ${questionRole ?? "commander"}: ${q.question}`;
                 progress.phase = "waiting";
                 return { ok: true, output: { outcome: "completed", value: { questionId: asked.questionId, answered: false, waiting: true } } };
             },

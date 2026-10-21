@@ -75,11 +75,20 @@ describe("the broker's policy, with every client's token", () => {
         assert.match(String(r.error), /RUN FLOOR/u);
     });
 
+    it("denies agents and factories the station's installation callback and the runtime installation primitive", async () => {
+        for (const role of ["agent", "factory", "monitor"] as const) {
+            const client = as(role);
+            assert.equal((await client.call("station", "twin_install", { token: "forged", questionId: "q0001" })).outcome, "deny", role);
+            assert.equal((await client.call("twin", "install", { reportId: "0".repeat(64), deviceId: "/habitat/lab/scrubber", descriptorSha256: "0".repeat(64), approvedBy: "forged", questionId: "q0001" })).outcome, "deny", role);
+        }
+    });
+
     it("keeps the factories and the tablet off the board, and lets them read", async () => {
         for (const role of ["factory", "monitor"] as const) {
             const client = as(role);
             assert.equal((await client.call("scrubber", "motor.set_speed", { percent: 50 })).outcome, "deny", role);
             assert.equal((await client.call("scrubber", "motor.state")).outcome, "completed", role);
+            assert.equal((await client.call("agent", "procedure_execute", { commissioningId: "c-test" })).outcome, "deny", "a factory or monitor cannot trigger the execution host");
         }
         assert.equal((await as("monitor").call("biomed", "state")).outcome, "completed");
     });

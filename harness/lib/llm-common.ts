@@ -119,6 +119,7 @@ export function observationText(input: PolicyFallbackInput, { resultSent = false
     // The crew's tools are named only to a loop that has them (2026-10-09: every factory and the supervisor were told to call
     // crew__report and crew__ask, which none of them is given).
     const given = new Set(input.allowedCapabilities.map((c) => c.id));
+    lines.push("Include _mother in your tool call: one short sentence for Mother, at most 20 words and 160 characters, or an empty string when there is nothing new to say. Do not repeat or paraphrase the previous announcement just because another tool runs. Speak a new measurement, result, question or decision when it changes. Keep detailed reasoning and tool content separate; do not claim success before the result.");
     lines.push(given.has(APP.text.report) && given.has(APP.text.ask) ? appSays("chooseOne", { report: toApiName(APP.text.report), ask: toApiName(APP.text.ask) }) : appSays("chooseTools", {}));
     return lines.join("\n");
 }
@@ -128,6 +129,27 @@ export function intentionText(input: PolicyFallbackInput): string {
     return appSays("situation", { id: input.intention.id, minute: String(p.minute ?? "?"), description: input.intention.description ?? "" });
 }
 
+/** Spoken metadata belongs to the model response, never to the business tool's arguments. */
+export function withMotherSummary(schema: JsonValue): JsonValue {
+    const source = (schema && typeof schema === "object" && !Array.isArray(schema) ? schema : { type: "object" }) as Record<string, JsonValue>;
+    return { ...source, properties: { ...((source.properties ?? {}) as Record<string, JsonValue>), _mother: { type: "string", maxLength: 160, description: "A short new announcement for Mother, at most 20 words and 160 characters, in the conversation's language. Use an empty string when it would repeat or paraphrase the previous message without new information. Preserve changed measurements, outcomes, questions and decisions. Do not claim success before its result. Removed before the tool executes." } }, required: [...new Set([...(Array.isArray(source.required) ? source.required as string[] : []), "_mother"])] };
+}
+
+export function shortMother(value: unknown): string | null {
+    if (typeof value !== "string") return null;
+    const text = value.trim();
+    return text && text.length <= 160 && text.split(/\s+/).length <= 20 && !/[\r\n]/.test(text) ? text : null;
+}
+
+// The harness validates PolicyDecision strictly. Speech travels alongside it, never as an extra decision property.
+const motherSummaries = new WeakMap<PolicyDecision["invocation"], string>();
+export function withMother(decision: PolicyDecision, value: unknown): PolicyDecision {
+    const mother = shortMother(value);
+    if (mother) motherSummaries.set(decision.invocation, mother);
+    return decision;
+}
+export const motherOf = (decision: PolicyDecision): string | null => motherSummaries.get(decision.invocation) ?? null;
+
 /** One harness decision from a tool call, or a crew report from plain text. */
 export function decisionFrom(name: string | null, args: JsonValue, text: string, allowed: ReadonlyArray<CapabilityDescriptor>): PolicyDecision {
     const allowedIds = new Set(allowed.map((c) => c.id));
@@ -135,7 +157,13 @@ export function decisionFrom(name: string | null, args: JsonValue, text: string,
         const capabilityId = fromApiName(name);
         if (allowedIds.has(capabilityId)) {
             const description = allowed.find((c) => c.id === capabilityId)?.description ?? capabilityId;
-            return { action: { id: capabilityId, description }, invocation: { actionId: capabilityId, capabilityId, input: args }, rationale: text || undefined };
+            let mother: string | null = null;
+            if (args && typeof args === "object" && !Array.isArray(args)) {
+                const { _mother, ...input } = args;
+                mother = shortMother(_mother);
+                args = input;
+            }
+            return withMother({ action: { id: capabilityId, description }, invocation: { actionId: capabilityId, capabilityId, input: args }, rationale: text || undefined }, mother);
         }
         return report(`I tried to call ${capabilityId}, which is not among the tools I am allowed to propose.`);
     }

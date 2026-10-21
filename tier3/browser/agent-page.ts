@@ -38,7 +38,8 @@ import { RuntimeGraphBuilder, type Channel } from "@spiky-panda/core";
 import { HarnessNode, createRuntimeGraphDriver, validateHarnessGraph, type DecisionTrace, type HarnessGraph, type Intention, type StageEvent } from "@spiky-panda/harness";
 import { Broker } from "../../harness/lib/broker.js";
 import { AudioOutput } from "./audio-output.js";
-import { StationVoice, eventSentence, outcomeSentence, proposalSentence, shortSentence, speechHeard } from "./station-voice.js";
+import { StationVoice, eventSentence, outcomeSentence, shortSentence, speechHeard } from "./station-voice.js";
+import { motherOf } from "../../harness/lib/llm-common.js";
 import type { GuardMode } from "../lib/capabilities.js";
 import { outcomeOf } from "../lib/evaluator.js";
 import { resetBoard } from "../lib/board-start.js";
@@ -261,11 +262,11 @@ export default async function activate(studio: Studio): Promise<void> {
         }
         const broker = new Broker(brokerUrl, { name: provider.family, version: "0.1.0", locale }, "operator");
         if (provider instanceof ReasonerProvider) provider.useBroker(broker);
-        // What is proposed is said as soon as it is proposed, before the guard and the call: the first sentence of the answer.
+        // The model supplies a spoken summary separately from its full rationale.
         const resolve = provider.resolve.bind(provider);
         provider.resolve = async (input) => {
             const decision = await resolve(input);
-            voice.say(proposalSentence(words, decision.rationale));
+            voice.say(motherOf(decision));
             return decision;
         };
         if (!built) built = graphFromViewer(viewer);

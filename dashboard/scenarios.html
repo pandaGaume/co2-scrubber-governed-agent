@@ -216,6 +216,7 @@
  * without talking to each other.
  */
 import { connectMcp, toolText } from "./vendor/mcp-http-client.js";
+import { singleFlight } from "./runtime-activity.js";
 
 const el = (id) => document.getElementById(id);
 const POLL_MS = 1500;
@@ -260,7 +261,7 @@ const payload = (result) => {
 };
 
 async function slot() {
-    if (!session) session = await connectMcp(location.origin, "agent", { headers: {} });
+    if (!session) session = connectMcp(location.origin, "agent", { headers: {} });
     return session;
 }
 
@@ -344,7 +345,18 @@ function renderNight(state) {
 function render(state) {
     if (Array.isArray(state.events) && state.events.length) night = state.events;
     setMode(state.mode);
-    el("clock").textContent = state.minute === null || state.minute === undefined ? "night 9" : `night 9 · min ${state.minute}`;
+    if (state.mission) {
+        el("mode").textContent = `mission ${state.mission.status}`;
+        el("btn-next").textContent = "resume";
+        el("btn-next").dataset.mission = "1";
+        el("btn-next").disabled = state.mission.status !== "suspended";
+        el("btn-reset").disabled = state.mission.status !== "completed";
+    } else {
+        el("btn-next").textContent = "next";
+        el("btn-next").dataset.mission = "";
+        el("btn-reset").disabled = false;
+    }
+    el("clock").textContent = state.mission ? state.mission.id : state.minute === null || state.minute === undefined ? "night 9" : `night 9 · min ${state.minute}`;
 
     // Who decides, always shown (2026-10-08): a scripted night must never pass for a model's.
     const decider = state.decider;
@@ -377,7 +389,7 @@ function render(state) {
         : "The agent runs on the machine, not here. Closing this page does not stop it.";
 }
 
-async function refresh() {
+async function refreshOnce() {
     if (busy) return;
     try {
         const s = await slot();
@@ -389,12 +401,13 @@ async function refresh() {
         session = null;
     }
 }
+const refresh = singleFlight(refreshOnce);
 
 // ── The other scenarios: the commissioning chain and its factories (the scenario slot) ──
 
 let scenarioSession = null;
 async function scenarioSlot() {
-    if (!scenarioSession) scenarioSession = await connectMcp(location.origin, "scenario", { headers: {} });
+    if (!scenarioSession) scenarioSession = connectMcp(location.origin, "scenario", { headers: {} });
     return scenarioSession;
 }
 const esc = (v) => String(v ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -405,6 +418,7 @@ const MARK = { pending: "\u00b7", running: "\u25b6", waiting: "\u23f8", done: "\
 let chosenPlaybook = "";
 // Who writes the procedures and the twin: the models (a key), or the scripts (no key; the Observer is not stood in, so a run that reaches it stops there).
 let chosenBuilder = "reasoner";
+let chosenMode = "mission";
 let librarySession = null;
 async function libraryPlaybooks() {
     try {
@@ -417,7 +431,7 @@ async function libraryPlaybooks() {
     }
 }
 
-async function refreshScenarios() {
+async function refreshScenariosOnce() {
     const box = el("scenarios");
     try {
         const s = await scenarioSlot();
@@ -444,8 +458,9 @@ async function refreshScenarios() {
             ? `<label class="note">after each test: <select id="scenario-playbook"><option value="">the scenario's own playbook</option>${playbooks.map(option).join("")}</select></label>`
             : "";
         const builders = `<label class="note">the factories: <select id="scenario-builder"><option value="reasoner"${chosenBuilder === "reasoner" ? " selected" : ""}>the models</option><option value="scripted"${chosenBuilder === "scripted" ? " selected" : ""}>the scripts (no key; stops at the Observer)</option></select></label>`;
+        const modes = `<label class="note">commissioning: <select id="scenario-mode"><option value="mission"${chosenMode === "mission" ? " selected" : ""}>one initial mission prompt</option><option value="test"${chosenMode === "test" ? " selected" : ""}>sequenced test fixture</option></select></label>`;
         const html =
-            `<div class="label">the factories: commissioning</div>` + builders + conduct +
+            `<div class="label">supervisor mission / commissioning tests</div>` + modes + builders + conduct +
             list
                 .map((x) => {
                     const mine = run && run.scenario === x.id;
@@ -502,11 +517,12 @@ async function refreshScenarios() {
             });
         }
         el("scenario-playbook")?.addEventListener("change", (e) => (chosenPlaybook = e.target.value));
-        el("scenario-builder")?.addEventListener("change", (e) => (chosenBuilder = e.target.value));
+        el("scenario-builder")?.addEventListener("change", (e) => { chosenBuilder = e.target.value; if (chosenBuilder === "scripted") chosenMode = "test"; void refreshScenarios(); });
+        el("scenario-mode")?.addEventListener("change", (e) => (chosenMode = e.target.value));
         for (const b of box.querySelectorAll("[data-scenario]")) {
             b.addEventListener("click", async () => {
                 try {
-                    const r = await (await scenarioSlot()).callTool("play", { id: b.dataset.scenario, ...(chosenBuilder === "scripted" ? { builder: "scripted", request: {} } : {}), ...(chosenPlaybook ? { playbook: chosenPlaybook } : {}) });
+                    const r = await (await scenarioSlot()).callTool("play", { id: b.dataset.scenario, mode: b.dataset.scenario === "commissioning" ? chosenMode : "test", ...(chosenBuilder === "scripted" ? { builder: "scripted", request: {} } : {}), ...(chosenPlaybook ? { playbook: chosenPlaybook } : {}) });
                     const body = JSON.parse(toolText(r) || "{}");
                     if (r?.isError || body.refused) say("play refused", body.refused ?? toolText(r), "refused");
                     else say("Scenario", `${b.dataset.scenario}: ${body.result?.runId ?? "started"}`);
@@ -522,11 +538,12 @@ async function refreshScenarios() {
         scenarioSession = null;
     }
 }
+const refreshScenarios = singleFlight(refreshScenariosOnce);
 void refreshScenarios();
 setInterval(() => void refreshScenarios(), 2000);
 
 for (const [id, tool] of [["btn-pause", "pause"], ["btn-next", "next"], ["btn-reset", "reset"]]) {
-    el(id).addEventListener("click", () => void drive(tool));
+    el(id).addEventListener("click", () => void drive(id === "btn-next" && el(id).dataset.mission ? "mission_resume" : tool));
 }
 
 // A remote is looked at, not read: the screen should not sleep while it is open.

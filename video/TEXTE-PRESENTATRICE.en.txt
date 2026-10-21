@@ -1,0 +1,19 @@
+Welcome to mission control. A new CO2 scrubber has joined our lunar station. Our mission is to qualify it, build its digital twin, and put that twin into service under human authorization.
+
+The system connects knowledge, agents, simulation and hardware through a distributed graph. Different parts run at different levels, from cloud reasoning to embedded control. Mother is the station's voice: she reports progress, asks for human decisions, and makes blockers visible.
+
+NVIDIA Nemotron, served through Nebius Token Factory, provides the supervisor's reasoning. It runs inside a harness that defines its context, available tools and authority. The supervisor decides what to investigate, delegates specialist work, and examines the results before deciding what comes next.
+
+Observers turn descriptions and measurements into explicit needs. They distinguish documented facts from missing information. Specialized factory agents then build candidate artifacts. Human-signed knowledge supplies constraints and methods; an agent's claim is never its own proof of validation.
+
+We start with one mission prompt. As work progresses, the harness assembles each new request from the objective, observations, returned results and permitted tools. That is the auto-prompt: the context follows the work. The next action comes from the reasoner, rather than a fixed sequence of demonstration steps.
+
+Tools are exposed through MCP, the Model Context Protocol. They let agents read the library, request work and consult simulations through defined interfaces. A tool call is a request. The harness, broker and device each enforce their own boundaries. Access to a tool does not grant authority to approve every action.
+
+This is where the system meets Physical AI. The motor on this bench is real; the cabin atmosphere is simulated. Before a protected physical test, the human must authorize it. Telemetry returns observations to the graph, while deterministic control remains close to the hardware.
+
+The motor controller is itself an embedded tier of the graph, running ONNX inference locally. An ONNX model can be produced using the digital twin and the forge, then validated and deployed under human authorization. The board's deterministic limits remain in force, independently of the learned model.
+
+Now we ask the system to stop the scrubber. Watch the model's decision, the checks applied to its request, and what the motor actually does.
+
+One graph, from knowledge to physical execution. The more something thinks, the less it may touch.

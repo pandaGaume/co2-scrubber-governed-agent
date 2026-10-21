@@ -55,7 +55,7 @@ export interface Question {
     /** What the commander needs to decide: the contract, the artifact, the reason. */
     context: JsonValue;
     resume: Resume | null;
-    status: "open" | "answered" | "auto";
+    status: "queued" | "open" | "answered" | "auto";
     answer: QuestionAnswer | null;
     /** What the asker answered when resumed, or why it could not be. */
     resumed: JsonValue | null;

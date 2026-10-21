@@ -13,6 +13,7 @@ import type { PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
 import type { Provider, ProviderExchange, ProviderProfile } from "../lib/provider.js";
 import { apiKeyFor, compactRequest, contextSizes, decisionFrom, familyOf, fromApiName, intentionText, observationText, parseJsonArgs, toApiName, TRUNCATED_RESULT, truncatedDecision, type ContextMode } from "../lib/llm-common.js";
 import { APP } from "../core/application.js";
+import { motherOf, withMotherSummary } from "../lib/llm-common.js";
 import { CallBatch, distinctCalls } from "../lib/call-batch.js";
 
 type ContentBlock = { type: "text"; text: string } | { type: "tool_use"; id: string; name: string; input: unknown } | { type: "tool_result"; tool_use_id: string; content: string };
@@ -97,7 +98,7 @@ export class AnthropicProvider implements Provider {
             const next = batch.advance(input.state.features as Record<string, unknown>, new Set(input.allowedCapabilities.map((c) => c.id)));
             if (next) {
                 const decision = decisionFrom(next.name, next.args, "", input.allowedCapabilities);
-                this.exchanges.push({ decisionId: input.decisionId, model: this.model, request: null, response: null, decision, proposedCapabilityId: fromApiName(next.name), proposedInput: next.args, latencyMs: 0, tokens: null, batch: batch.position });
+                this.exchanges.push({ decisionId: input.decisionId, model: this.model, request: null, response: null, decision, mother: motherOf(decision), proposedCapabilityId: fromApiName(next.name), proposedInput: next.args, latencyMs: 0, tokens: null, batch: batch.position });
                 return decision;
             }
             this.batch = null;
@@ -131,7 +132,7 @@ export class AnthropicProvider implements Provider {
         }
         this.messages.push({ role: "user", content: blocks });
 
-        const tools = input.allowedCapabilities.map((c) => ({ name: toApiName(c.id), description: c.description, input_schema: c.inputSchema ?? { type: "object" } }));
+        const tools = input.allowedCapabilities.map((c) => ({ name: toApiName(c.id), description: c.description, input_schema: withMotherSummary((c.inputSchema ?? { type: "object" }) as import("@spiky-panda/harness").JsonValue) }));
         // Several tool uses in one answer are taken (call-batch.ts): each runs as its own step, the results go back together.
         // The system prompt is a role's fixed text (the agent's, a topic's, the Observer's): marked for the provider's cache, so
         // the tools and the prompt, which come first and do not change, are not billed again at every step; what varies follows.
@@ -188,6 +189,7 @@ export class AnthropicProvider implements Provider {
             context: { mode: this.contextMode, ...contextSizes(this.options.systemPrompt, tools, this.messages.slice(0, -1), this.contextMode) },
             response: result,
             decision,
+            mother: motherOf(decision),
             proposedCapabilityId: toolUse ? fromApiName(toolUse.name) : APP.text.report,
             proposedInput: toolUse ? parseJsonArgs(toolUse.input) : { message: text },
             latencyMs,

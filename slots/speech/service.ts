@@ -20,6 +20,7 @@
 import { createHash } from "node:crypto";
 import type { VoiceProvider } from "./voice-provider.js";
 import { collect } from "./voice-provider.js";
+import { similarAnnouncement } from "../../lib/announcements.js";
 
 export type Priority = "low" | "normal" | "high";
 
@@ -40,6 +41,8 @@ export interface Utterance {
     at: string;
     /** Set by `say`; `synthesize` leaves it false and the outputs ignore the utterance. */
     queued: boolean;
+    /** Returned for a repeated announcement; no new audio or queue entry was created. */
+    suppressed?: boolean;
     /** The output that took it: an utterance is delivered once (two pages on one machine would say everything twice). */
     takenBy?: string;
     /** When the floor was taken, so a holder that went away frees it. */
@@ -53,6 +56,8 @@ export interface SpeechServiceOptions {
     defaultVoice?: string;
     /** How many utterances stay readable; older ones are dropped. */
     keep?: number;
+    /** These speakers finish the current line, then say only their newest pending message. */
+    latestVoices?: string[];
 }
 
 const MAX_TEXT = 1500;
@@ -80,6 +85,9 @@ export class SpeechService {
     readonly voices: Record<string, string>;
     readonly defaultVoice: string;
     private readonly keep: number;
+    private readonly latestVoices: Set<string>;
+    private readonly latestRequested = new Map<string, number>();
+    private readonly lastAnnouncements = new Map<string, { text: string; priority: Priority; result: Promise<Utterance> }>();
 
     constructor(
         readonly provider: VoiceProvider,
@@ -89,6 +97,7 @@ export class SpeechService {
         this.defaultVoice = options.defaultVoice ?? Object.keys(this.voices)[0] ?? provider.defaultVoiceId;
         if (!this.voices[this.defaultVoice] && Object.keys(this.voices).length === 0) this.voices[this.defaultVoice] = provider.defaultVoiceId;
         this.keep = options.keep ?? 32;
+        this.latestVoices = new Set(options.latestVoices ?? []);
     }
 
     /** The engine voice for a speaker name or a raw identifier. */
@@ -106,13 +115,21 @@ export class SpeechService {
         if (text.length > MAX_TEXT) throw new Error(`text is ${text.length} characters; ${MAX_TEXT} at most (one message to a person, not a document)`);
         if (!PRIORITIES.includes(priority)) throw new Error(`priority must be one of ${PRIORITIES.join(", ")}`);
         const resolved = this.resolveVoice(voice);
+        // Order messages by their arrival, not by which synthesis request finishes first.
+        const seq = ++this.seq;
+        const latest = queued && this.latestVoices.has(resolved.voice);
+        if (latest) {
+            this.latestRequested.set(resolved.voice, seq);
+            for (const previous of this.utterances) {
+                if (previous.voice === resolved.voice && !previous.takenBy) previous.queued = false;
+            }
+        }
         const started = Date.now();
         const audio = await this.provider.speak(text, { voiceId: resolved.voiceId });
         const bytes = await collect(audio.stream);
         const synthesisMs = Date.now() - started;
         if (bytes.byteLength === 0) throw new Error(`${this.provider.id} returned no audio`);
         const sha256 = createHash("sha256").update(bytes).digest("hex");
-        const seq = ++this.seq;
         const utterance: Utterance = {
             utteranceId: `u${seq.toString().padStart(4, "0")}-${sha256.slice(0, 8)}`,
             seq,
@@ -127,10 +144,10 @@ export class SpeechService {
             sha256,
             synthesisMs,
             at: new Date().toISOString(),
-            queued,
+            queued: queued && (!latest || this.latestRequested.get(resolved.voice) === seq),
         };
         // A high priority interrupts: everything before it is stopped, it plays next.
-        if (queued && priority === "high") this.stopMark = seq - 1;
+        if (queued && priority === "high" && !latest) this.stopMark = Math.max(this.stopMark, seq - 1);
         this.utterances.push(utterance);
         this.audio.set(utterance.utteranceId, bytes);
         while (this.utterances.length > this.keep) {
@@ -140,8 +157,27 @@ export class SpeechService {
         return utterance;
     }
 
-    say(text: string, voice?: string, priority: Priority = "normal"): Promise<Utterance> {
-        return this.synthesize(text, voice, priority, true);
+    async say(text: string, voice?: string, priority: Priority = "normal"): Promise<Utterance> {
+        const resolved = this.resolveVoice(voice);
+        const previous = this.lastAnnouncements.get(resolved.voice);
+        const spoken = [...this.utterances].reverse().find((u) => u.voice === resolved.voice && u.seq > this.stopMark && (u.takenBy || u.playedBy?.length));
+        if (this.latestVoices.has(resolved.voice) && spoken && spoken.priority === priority && typeof text === "string" && similarAnnouncement(spoken.text, text)) {
+            // Cancel obsolete pending updates without interrupting the current sentence.
+            this.latestRequested.set(resolved.voice, ++this.seq);
+            for (const u of this.utterances) if (u.voice === resolved.voice && !u.takenBy) u.queued = false;
+            this.lastAnnouncements.set(resolved.voice, { text, priority, result: Promise.resolve(spoken) });
+            return { ...spoken, suppressed: true };
+        }
+        if (this.latestVoices.has(resolved.voice) && previous && previous.priority === priority && typeof text === "string" && similarAnnouncement(previous.text, text)) {
+            return { ...await previous.result, suppressed: true };
+        }
+        const entry = { text, priority, result: this.synthesize(text, resolved.voice, priority, true) };
+        if (this.latestVoices.has(resolved.voice)) this.lastAnnouncements.set(resolved.voice, entry);
+        try { return await entry.result; }
+        catch (error) {
+            if (this.lastAnnouncements.get(resolved.voice) === entry) this.lastAnnouncements.delete(resolved.voice);
+            throw error;
+        }
     }
 
     /** Stops one utterance (removes it from what outputs will play) or everything queued so far. */
@@ -150,10 +186,12 @@ export class SpeechService {
             const u = this.utterances.find((x) => x.utteranceId === utteranceId);
             if (!u) throw new Error(`unknown utterance ${utteranceId}`);
             u.queued = false;
+            this.lastAnnouncements.delete(u.voice);
             return { stopMark: this.stopMark, stopped: [utteranceId] };
         }
         const stopped = this.pending().map((u) => u.utteranceId);
         this.stopMark = this.seq;
+        this.lastAnnouncements.clear();
         return { stopMark: this.stopMark, stopped };
     }
 
@@ -175,6 +213,7 @@ export class SpeechService {
     take(utteranceId: string, output: string): Utterance {
         const u = this.utterances.find((x) => x.utteranceId === utteranceId);
         if (!u) throw new Error(`unknown utterance ${utteranceId}`);
+        if (!u.queued || u.seq <= this.stopMark || u.playedBy?.length) throw new Error(`${utteranceId} is no longer pending`);
         if (u.takenBy && u.takenBy !== output) throw new Error(`${utteranceId} is already taken by ${u.takenBy}`);
         // An output that asks for a new line has finished the one before it,
         // whether or not it managed to say so: a holder that moved on is not a
@@ -189,6 +228,18 @@ export class SpeechService {
         if (holder) throw new Error(`${FLOOR_BUSY}: ${holder.output} is speaking (${holder.utteranceId}); one voice in the room at a time`);
         u.takenBy = output;
         u.takenAt = Date.now();
+        return u;
+    }
+
+    /** Playback failed or was blocked: only the holder can return an unplayed line. */
+    returnUnplayed(utteranceId: string, output: string): Utterance {
+        const u = this.utterances.find((x) => x.utteranceId === utteranceId);
+        if (!u) throw new Error(`unknown utterance ${utteranceId}`);
+        if (u.playedBy?.length) throw new Error(`${utteranceId} was already played`);
+        if (u.takenBy !== output) throw new Error(`${utteranceId} is not held by ${output}`);
+        if (this.latestVoices.has(u.voice) && (this.latestRequested.get(u.voice) ?? 0) > u.seq) u.queued = false;
+        u.takenBy = undefined;
+        u.takenAt = undefined;
         return u;
     }
 

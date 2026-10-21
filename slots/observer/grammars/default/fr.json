@@ -6,11 +6,11 @@
     "tools": {
         "observe": {
             "title": "Formuler ce que le jumeau doit faire",
-            "description": "La TWIN_FACTORY_REQUEST d'un système : entités et relations, grandeurs observables, commandes, influences extérieures, entrées, sorties, comportements à reproduire, contraintes, informations manquantes et hypothèses, validation contre le réel. Écrite par le modèle derrière le slot reasoner avec le prompt de l'Observateur, contrôlée par du code (forme, aucun nœud du catalogue nommé, aucune colonne de télémétrie qui n'existe pas), trois tentatives au plus. Rend la demande et chaque tentative.",
+            "description": "La TWIN_FACTORY_REQUEST d'un système : entités et relations, grandeurs observables, commandes, influences extérieures, entrées, sorties, comportements à reproduire, contraintes, informations manquantes et hypothèses, validation contre le réel. Écrite par le modèle derrière le slot reasoner avec le prompt de l'Observateur, contrôlée par du code (forme, aucun nœud du catalogue nommé, aucune colonne de télémétrie qui n'existe pas), trois tentatives au plus. Rend la demande et chaque tentative. Cet Observateur définit les exigences du jumeau, pas une procédure de test exécutable. forward crée une tâche de graphe non démarrée ; il ne demande pas d’autorisation de test et ne collecte pas de télémétrie.",
             "properties": {
                 "description": "le système : ce qu'il est, ses composants, à quoi il sert, ce qui se commande",
                 "telemetry": "des lignes de mesures, un objet par échantillon ; l'Observateur en reçoit un résumé calculé, pas les lignes",
-                "forward": "true pour ouvrir une tâche de l'usine à partir de la demande acceptée",
+                "forward": "true pour créer une tâche non démarrée à partir de la demande acceptée ; le superviseur peut l'inspecter puis choisir factory.start pour l'exécuter",
                 "wait": "false : la réponse vient aussitôt avec l'id et l'état en cours ; lire l'entrée (observer://requests, ou request) jusqu'à ce qu'elle soit faite"
             }
         },

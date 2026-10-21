@@ -24,9 +24,9 @@ const call = (id: string, input: unknown, result: CapabilityCall["result"]): Cap
 };
 
 describe("what the station says", () => {
-    it("a report is said whole, with the action in its second sentence, percents in words", () => {
+    it("a detailed report stays in the console instead of being spoken whole", () => {
         const report = "Two crew members started exercising. I raised the scrubber to 60 %; the twin predicts no ELEVATED state at this flow.";
-        assert.equal(outcomeSentence(en, call("crew.report", { message: report }, { ok: true, outcome: "completed" })), "Two crew members started exercising. I raised the scrubber to 60 percent; the twin predicts no ELEVATED state at this flow.");
+        assert.equal(outcomeSentence(en, call("crew.report", { message: report }, { ok: true, outcome: "completed" })), null);
     });
 
     it("a proposal is its first sentence only, capitalized and closed", () => {
@@ -63,7 +63,7 @@ describe("what the station says", () => {
         assert.deepEqual(en.listPhrases().sort(), fr.listPhrases().sort());
         assert.equal(outcomeSentence(fr, call("scrubber.motor.set_speed", { percent: 60 }, { ok: true, outcome: "completed" })), "Scrubber réglé à 60 pour cent.");
         assert.equal(twinSentence(fr, "twin.time_to_critical", {}, { question: { stopMinutes: 20 }, peakPpm: 4200, finalState: "CRITICAL", minutesToCritical: 17 }), "Le jumeau dit : un arrêt de 20 minutes, la cabine culmine à 4200 ppm et finit critical, critique dans 17 minutes.");
-        assert.equal(outcomeSentence(fr, call("crew.report", { message: "I raised the scrubber to 60 %." }, { ok: true, outcome: "completed" })), "I raised the scrubber to 60 pour cent.");
+        assert.equal(outcomeSentence(fr, call("crew.report", { message: "I raised the scrubber to 60 %." }, { ok: true, outcome: "completed" })), null, "the detailed report is not spoken; the model supplies its own summary");
     });
 
     it("a refusal names who refused; an action says what it did", () => {

@@ -47,7 +47,13 @@ only; the other five are for outputs and the operator (`EXCLUDED`). The
 policy (`broker/policy.example.json`) names `mcp.tools.speak` for `say`,
 `stop` and `synthesize`, given to `operator` and `tier3`.
 
-`priority`: `high` stops what was queued before it and plays next (a
+Mother (`voice: "station"`) finishes the sentence an output has already
+taken, then speaks only her newest waiting message. Intermediate messages
+remain in the station's written history and are not played later. Request
+order is preserved even when synthesis completes out of order. This policy
+also applies to Mother's high-priority announcements; they do not interrupt.
+
+For other voices, `priority`: `high` stops what was queued before it and plays next (a
 CRITICAL announcement); `low` waits; `normal` by default. A text is 1500
 characters at most: one message to a person, not a document.
 
@@ -157,3 +163,4 @@ no `voices_read` permission, so the engine answers 401 to `GET /v1/voices`;
 engine's refusal in `engineError`, and everything else works. The two voice
 identifiers of the profile were not checked against the account's list for
 that reason; they speak, which is the check that matters.
+Mother's station voice finishes the sentence already taken by an audio output, then keeps only the newest pending announcement, including when synthesis finishes out of order. Consecutive lexical duplicates and near duplicates are suppressed before synthesis; changed numbers, explicit negation and outcome words remain audible. The model may return an empty `_mother` when nothing changed. Detailed written reasoning remains available. Broader paraphrases are handled by the model instruction, not semantic classification in the speech service.

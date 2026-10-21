@@ -6,22 +6,31 @@
     "tools": {
         "request": {
             "title": "Demander à l'usine ce qui manque",
-            "description": "Le contrat fonctionnel de ce qui vous manque : les sorties qu'un plan doit produire (nom, grandeur, unité, horizon), les contraintes (un seuil de résidu et sa fenêtre), ce que vous avez observé (volumes, porte, occupation, scrubbers), les données disponibles (fichiers de télémétrie avec leurs colonnes), les sujets et un budget. L'usine ouvre un atelier, écrit le fichier de tâche et les données que vous lui donnez (lignes ou texte, avec leur sha256), rend l'identifiant de la tâche et lance aussitôt sa boucle dessus (run: false ouvre seulement la tâche) ; la boucle finit par proposer à la station, qui demande le jugement du jumeau. Demandez le besoin, jamais une solution ; suivez la tâche avec `task`.",
+            "description": "Utiliser topics [\"procedure\"] pour demander une procédure de test : indiquer les grandeurs à identifier, la cible dans observations.device, les limites observées et les preuves disponibles dans le contrat fonctionnel. La factory propose un artefact ; la station le contrôle et ouvre sa propre demande d’autorisation au commandant. Écrire une procédure ne nécessite pas de télémétrie de calibration. Utiliser [\"graph\"] pour construire un jumeau à partir de télémétrie enregistrée, [\"onnx\"] pour un modèle appris, ou un autre topic déclaré. Le demandeur choisit le topic ; cet outil ne déduit aucun déroulé de reprise et ne commande pas le matériel. Le contrat fonctionnel de ce qui vous manque : les sorties qu'un plan doit produire (nom, grandeur, unité, horizon), les contraintes (un seuil de résidu et sa fenêtre), ce que vous avez observé (volumes, porte, occupation, scrubbers), les données disponibles (fichiers de télémétrie avec leurs colonnes), les sujets et un budget. L'usine ouvre un atelier, écrit le fichier de tâche et les données que vous lui donnez (lignes ou texte, avec leur sha256), rend l'identifiant de la tâche et lance aussitôt sa boucle dessus (run: false ouvre seulement la tâche) ; la boucle finit par proposer à la station, qui demande le jugement du jumeau. Demandez le besoin, jamais une solution ; suivez la tâche avec `task`.",
             "properties": {
                 "objective": "ce qui doit être produit et sous quelles contraintes : required_outputs et constraints",
                 "observations": "ce que vous avez vu : volumes, porte, occupation, scrubbers avec vitesse et courant",
                 "data": "les fichiers de télémétrie que l'usine peut utiliser : file et columns, et soit rows (des objets, écrits en JSON), soit text, soit un sha256 quand le fichier est déjà dans l'atelier",
-                "topics": "[\"graph\", \"onnx\"] ou \"auto\"",
+                "topics": "Liste explicite de topics : procedure, graph, onnx, code, playbook, reflection, recommendation, diagnosis, observer ; ou auto. procedure produit une proposition de test contrôlée ; graph produit un jumeau.",
                 "budget": "iterations, minutes, twinPoints",
                 "requestedBy": "qui demande : tier3, operator",
                 "profile": "le profil avec lequel la boucle tourne",
-                "run": "false pour ouvrir la tâche sans lancer la boucle (vrai par défaut)",
+                "run": "false pour créer sans démarrer (vrai par défaut) ; un graphe ne démarre que si inputStatus.ready confirme les données et le critère numérique d'erreur",
+                "telemetryRunId": "identifiant d'un essai autorisé terminé dont les relevés et le contexte sont copiés ; ne pas fournir data en même temps",
                 "builder": "qui construit : reasoner (le modèle derrière le slot reasoner, avec le prompt du sujet) ou scripted (le script du sujet, pour les tests) ; par défaut le reasoner quand le sujet a un prompt"
+            }
+        },
+        "start": {
+            "title": "Démarrer une tâche créée",
+            "description": "Exécute une tâche existante non démarrée, notamment une demande transmise par l'Observer. La création seule ne lance aucun calcul. Refuse une tâche déjà lancée ou terminée. Lance le travail de l'usine, jamais le matériel physique ni l'installation d'un artefact.",
+            "properties": {
+                "taskId": "l'identifiant de la tâche existante créée",
+                "builder": "reasoner par défaut pour les sujets avec un prompt ; scripted est réservé aux tests"
             }
         },
         "task": {
             "title": "Où en est une tâche",
-            "description": "L'état d'une tâche de l'usine (created, running, done, proposed, accepted, rejected, failed), son atelier, le sha256 de son fichier de tâche, le nombre de ses fichiers, son manifeste quand la boucle en a écrit un (chaque pas avec sa source, son issue, sa récompense et sa raison ; les artefacts avec leur sha256 ; la proposition), et, pendant que la boucle tourne ici, le constructeur et la dernière étape atteinte.",
+            "description": "L'état d'une tâche de l'usine (created, running, done, proposed, accepted, rejected, failed), son atelier, le sha256 de son fichier de tâche, le nombre de ses fichiers, son manifeste quand la boucle en a écrit un (chaque pas avec sa source, son issue, sa récompense et sa raison ; les artefacts avec leur sha256 ; la proposition), et, pendant que la boucle tourne ici, le constructeur et la dernière étape atteinte. Inclut le topic choisi et inputStatus : une tâche de procédure prête diffère d’une tâche de graphe bloquée faute de télémétrie.",
             "properties": {
                 "taskId": "l'identifiant rendu par request"
             }

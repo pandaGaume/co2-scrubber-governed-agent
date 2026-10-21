@@ -122,9 +122,8 @@ describe("speech slot on the silent engine", () => {
         // refusal must be the kind that means "come back": the line has not
         // been said by anyone and must stay pending, or it is lost for good.
         const first = await result<Spoken>("say", { text: "First line of the pair." });
-        const second = await result<Spoken>("say", { text: "Second line of the pair." });
-
         await result<Spoken>("take", { utteranceId: first.utteranceId, output: "board-a" });
+        const second = await result<Spoken>("say", { text: "Second line of the pair." });
         await assert.rejects(
             result("take", { utteranceId: second.utteranceId, output: "board-b" }),
             /speech:floor-busy/,
@@ -153,6 +152,18 @@ describe("speech slot on the silent engine", () => {
         assert.notEqual(station.voiceId, twin.voiceId);
         await assert.rejects(result("say", { text: "hello", voice: "not a speaker at all" }), /unknown voice/);
         await assert.rejects(result("say", { text: "   " }), /text is required/);
+    });
+
+    it("only the holder can return an unplayed utterance for another playback attempt", async () => {
+        await result("stop");
+        const u = await result<Spoken>("say", { text: "A browser blocked this line." });
+        await result("take", { utteranceId: u.utteranceId, output: "blocked-board" });
+        await assert.rejects(result("return_unplayed", { utteranceId: u.utteranceId, output: "another-board" }), /not held by/);
+        await result("return_unplayed", { utteranceId: u.utteranceId, output: "blocked-board" });
+        assert.equal((await queue()).pending[0].utteranceId, u.utteranceId);
+        await result("take", { utteranceId: u.utteranceId, output: "ready-board" });
+        await result("played", { utteranceId: u.utteranceId, output: "ready-board", durationMs: 1000 });
+        await assert.rejects(result("return_unplayed", { utteranceId: u.utteranceId, output: "ready-board" }), /already played/);
     });
 
     it("high priority goes first and stops what was queued; stop clears the rest", async () => {

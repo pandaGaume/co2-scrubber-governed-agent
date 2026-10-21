@@ -1,0 +1,8 @@
+{
+    "document": "biometric-monitoring-readiness",
+    "digest": "b991c373c830dfc2a1c9da867d6a10cb27bd56fbd2a0d7de64ffdbb6a2d4488b",
+    "signedBy": "Guillaume Pelletier",
+    "signedAt": "2026-10-20T17:41:54.047Z",
+    "scope": "safety",
+    "note": "Signed at the explicit instruction of Guillaume Pelletier in this chat on 2026-10-20. Reference model volumes are documented context, not physical measurements; monitoring readiness never bypasses human test authorisation."
+}

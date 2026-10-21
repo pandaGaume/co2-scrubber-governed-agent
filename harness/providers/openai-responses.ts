@@ -13,6 +13,7 @@ import type { PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
 import type { Provider, ProviderExchange, ProviderProfile } from "../lib/provider.js";
 import { apiKeyFor, compactRequest, contextSizes, cutAtOutputLimit, decisionFrom, familyOf, fromApiName, intentionText, observationText, parseJsonArgs, toApiName, TRUNCATED_RESULT, truncatedDecision, type ContextMode } from "../lib/llm-common.js";
 import { APP } from "../core/application.js";
+import { motherOf, withMotherSummary } from "../lib/llm-common.js";
 import { CallBatch, distinctCalls } from "../lib/call-batch.js";
 
 interface OutputItem {
@@ -97,7 +98,7 @@ export class OpenAiResponsesProvider implements Provider {
             const next = batch.advance(input.state.features as Record<string, unknown>, new Set(input.allowedCapabilities.map((c) => c.id)));
             if (next) {
                 const decision = decisionFrom(next.name, next.args, "", input.allowedCapabilities);
-                this.exchanges.push({ decisionId: input.decisionId, model: this.model, request: null, response: null, decision, proposedCapabilityId: fromApiName(next.name), proposedInput: next.args, latencyMs: 0, tokens: null, batch: batch.position });
+                this.exchanges.push({ decisionId: input.decisionId, model: this.model, request: null, response: null, decision, mother: motherOf(decision), proposedCapabilityId: fromApiName(next.name), proposedInput: next.args, latencyMs: 0, tokens: null, batch: batch.position });
                 return decision;
             }
             this.batch = null;
@@ -126,7 +127,7 @@ export class OpenAiResponsesProvider implements Provider {
             this.batchSummary = null;
         }
         this.started = true;
-        const tools = input.allowedCapabilities.map((c) => ({ type: "function", name: toApiName(c.id), description: c.description, parameters: c.inputSchema ?? { type: "object" }, strict: false }));
+        const tools = input.allowedCapabilities.map((c) => ({ type: "function", name: toApiName(c.id), description: c.description, parameters: withMotherSummary((c.inputSchema ?? { type: "object" }) as import("@spiky-panda/harness").JsonValue), strict: false }));
         const body = {
             model: this.model,
             instructions: this.options.systemPrompt,
@@ -185,6 +186,7 @@ export class OpenAiResponsesProvider implements Provider {
             context: { mode: this.contextMode, ...contextSizes(this.options.systemPrompt, tools.map((t) => ({ name: t.name, description: t.description, parameters: t.parameters })), messages.slice(1) as Array<{ role: string; content: unknown }>, this.contextMode) },
             response: result,
             decision,
+            mother: motherOf(decision),
             proposedCapabilityId: call ? fromApiName(call.name!) : APP.text.report,
             proposedInput: call ? parseJsonArgs(call.arguments) : { message: text },
             latencyMs,

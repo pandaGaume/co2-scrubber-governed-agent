@@ -228,3 +228,6 @@ Le document `graphs/factory-agent.spikypanda` : les mêmes douze étapes, les ou
 ## 10. Hors périmètre de F1 à F7
 
 Le sujet `code` (écrire un nœud) et la 3D ; le service Python ; la propagation (étape G de `auto-adaptation.fr.md`) ; l'extraction vers le dépôt harness.
+
+
+Les calculs des tâches peuvent se chevaucher, mais leur publication suit l’ordre de lancement. Le dispatcher réserve une place avant chaque lancement et le runner attend son tour avant de publier le résultat terminal ou de proposer les artefacts à la station. Une tâche en attente d’une réponse humaine conserve sa place lors de sa reprise. Les échecs sont également livrés dans cet ordre. La station ne reçoit donc pas la proposition d’une tâche plus récente simplement parce que son calcul a fini plus vite. Les traces de progression restent disponibles et le tableau de bord distingue un calcul actif d’un résultat prêt qui attend sa livraison. Ce mécanisme ordonne les retours, sans choisir les décisions du modèle ni fournir une approbation humaine.

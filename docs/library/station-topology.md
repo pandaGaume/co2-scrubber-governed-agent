@@ -17,7 +17,7 @@ How the base is laid out and what its logger records, as the station documents i
 
 The scrubber is centralised, as on the International Space Station: one scrubber in the Lab, and an inter-module ventilation that carries Hab-B's air to it and back. Hab-B's CO2 is removed by the scrubber through that ventilation; without it, Hab-B's CO2 would rise without bound. The ventilation's flow depends on the hatch: with the hatch open it passes through the ducts and the hatchway, with the hatch closed through the ducts alone, a smaller flow. The design flow, hatch closed, is **3 m3/min** (the ducts alone); with the hatch open it is larger, not documented. What the ventilation delivers as installed (filters, dampers, the losses of the ducts) is not documented, and is measured in place: a design flow is what was intended, not a measurement.
 
-The as-built volumes are not documented: the drawings give the design, not what the installed racks and stores leave free.
+The declared reference volumes are now documented in `lab-layout-and-volumes`: Lab 30 m3 and Hab-B 400 m3 of available air. That publication distinguishes the Lab's 32 m3 gross design volume from its 30 m3 available air volume. These are reference configuration values, not experimental measurements of the physical filming site; use their provenance when reasoning about them.
 
 ## Metrics: the logger's columns
 

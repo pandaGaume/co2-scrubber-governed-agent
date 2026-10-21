@@ -1,8 +1,8 @@
 {
     "document": "this-installation",
-    "digest": "528b4a6f17b15c42d9f9566e60bed58062dc69347f1c5b49a865b890551140c3",
+    "digest": "416a741cff3ae964f45432f3e67e225b549da646e518fb5d1e0e7643ac874dfd",
     "signedBy": "Guillaume Pelletier",
-    "signedAt": "2026-09-28T15:33:15.269Z",
+    "signedAt": "2026-10-20T17:41:54.053Z",
     "scope": "safety",
-    "note": "repository"
+    "note": "Signed at the explicit instruction of Guillaume Pelletier in this chat on 2026-10-20. Reference model volumes are documented context, not physical measurements; monitoring readiness never bypasses human test authorisation."
 }

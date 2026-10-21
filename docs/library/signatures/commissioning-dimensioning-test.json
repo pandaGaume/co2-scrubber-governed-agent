@@ -1,0 +1,8 @@
+{
+    "document": "commissioning-dimensioning-test",
+    "digest": "a7c7f77ba4abae7fbfe7625be3f351a9947d064bc8c8756f0ec588cc6fa17299",
+    "signedBy": "Guillaume Pelletier",
+    "signedAt": "2026-10-20T21:47:47.763Z",
+    "scope": "safety",
+    "note": "Operator requested commissioning to end after the terminal test report. Success still requires all requested observed plateaus; a nonconforming terminal test may only be concluded explicitly incomplete, without automatically starting another procedure."
+}

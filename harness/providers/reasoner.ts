@@ -13,7 +13,8 @@
 import type { JsonValue, PolicyDecision, PolicyFallbackInput } from "@spiky-panda/harness";
 import type { Broker } from "../lib/broker.js";
 import type { Provider, ProviderExchange } from "../lib/provider.js";
-import { interpret, readingNote, type Extractor, type MeaningReader, type Reading } from "../core/interpreter.js";
+import { interpret, readingNote, schemaError, type Extractor, type MeaningReader, type Reading } from "../core/interpreter.js";
+import { withMother } from "../lib/llm-common.js";
 
 export interface ReasonerDescription {
     model: string;
@@ -28,10 +29,12 @@ export interface ReasonerDescription {
     /** How the model is run: its output limit, temperature, effort, timeout (null: the wire's default). */
     settings?: Record<string, string | number | null>;
     promptSha256?: string | null;
+    interpretation?: { beforeExecution: string[] };
 }
 
 interface DecideAnswer {
     decision: PolicyDecision;
+    mother?: string | null;
     proposedCapabilityId: string;
     proposedInput: JsonValue;
     model: string;
@@ -106,7 +109,9 @@ export class ReasonerProvider implements Provider {
 
     begin(intentionId: string): void {
         // One conversation per event; a new id per begin so a replayed event starts fresh on the slot.
-        this.conversationId = `${intentionId}#${Date.now().toString(36)}`;
+        this.conversationId = `${intentionId}#${crypto.randomUUID()}`;
+        this.queued = null;
+        this.lastReading = null;
     }
 
     /** How the last call was read when it did not fit its schema (interpreter.ts): told to the model at the next step, then forgotten. */
@@ -137,6 +142,10 @@ export class ReasonerProvider implements Provider {
     }
 
     async resolve(input: PolicyFallbackInput): Promise<PolicyDecision> {
+        return this.resolveProposal(input, 0);
+    }
+
+    private async resolveProposal(input: PolicyFallbackInput, semanticRetry: number): Promise<PolicyDecision> {
         this.calls++;
         input.signal?.throwIfAborted();
         // What a refused call meant, read by the harness: run as the model's next decision, through the whole loop; the model is told after.
@@ -177,6 +186,24 @@ export class ReasonerProvider implements Provider {
                 this.lastReading = reading;
                 this.readings.push(reading);
             }
+            if (this.description.interpretation?.beforeExecution.includes(capability.id)) {
+                const sent = a.decision.invocation.input;
+                const response = await this.broker.call("reasoner", "interpret", { mode: "semantic", capability: capability.id, description: capability.description, schema: capability.inputSchema, sent });
+                const interpreted = response.output as { value?: JsonValue; reason?: string; model?: string; latencyMs?: number; tokens?: DecideAnswer["tokens"] } | undefined;
+                if (!response.ok || interpreted?.value === null || interpreted?.value === undefined || (capability.inputSchema && schemaError(capability.inputSchema, interpreted.value))) {
+                    if (semanticRetry >= 1) throw new Error(`The LLM interpreter could not preserve the meaning of ${capability.id}; the proposal was not executed`);
+                    return this.resolveProposal({ ...input, state: { ...input.state, features: { ...input.state.features, interpretationRefusal: { capability: capability.id, sent, executed: false, reason: response.error ?? interpreted?.reason ?? "The LLM interpreter could not express this proposal in the target vocabulary without changing its meaning. Reassess the contract from available evidence before delegating." } } } }, semanticRetry + 1);
+                }
+                a.exchange = { ...a.exchange, request: { proposal: a.exchange?.request ?? null, interpretation: { sent, read: interpreted.value, model: interpreted.model ?? null } } };
+                a.latencyMs += interpreted.latencyMs ?? 0;
+                if (interpreted.tokens) a.tokens = { prompt: (a.tokens?.prompt ?? 0) + interpreted.tokens.prompt, completion: (a.tokens?.completion ?? 0) + interpreted.tokens.completion, total: (a.tokens?.total ?? 0) + interpreted.tokens.total };
+                if (JSON.stringify(interpreted.value) !== JSON.stringify(sent)) {
+                    reading = { capability: capability.id, how: "semantic", sent: read.reading?.sent ?? sent, read: interpreted.value, changes: ["LLM interpretation of the functional contract, consulting Physics; no host quantity mapping"], model: interpreted.model ?? null };
+                    a.decision = { ...a.decision, invocation: { ...a.decision.invocation, input: interpreted.value } };
+                    this.lastReading = reading;
+                    this.readings.push(reading);
+                }
+            }
         }
         this.exchanges.push({
             decisionId: input.decisionId,
@@ -185,6 +212,7 @@ export class ReasonerProvider implements Provider {
             response: a.exchange?.response ?? null,
             ...(a.context ? { context: a.context } : {}),
             decision: a.decision,
+            mother: a.mother ?? null,
             proposedCapabilityId: a.proposedCapabilityId,
             proposedInput: a.proposedInput,
             latencyMs: a.latencyMs,
@@ -192,6 +220,6 @@ export class ReasonerProvider implements Provider {
             ...(reading ? { reading } : {}),
             ...(a.batch ? { batch: a.batch } : {}),
         });
-        return a.decision;
+        return withMother(a.decision, a.mother);
     }
 }

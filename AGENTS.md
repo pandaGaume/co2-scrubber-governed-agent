@@ -1,5 +1,11 @@
 # AGENTS.md
 
+## Mandatory logging and diagnosis rule
+
+For every mission, scenario and diagnostic run, persist the logs using the existing `harness/lib/run-log.ts` mechanism. Keep the full model requests (including prompts and offered tool schemas), responses, harness stages, tool arguments and results, errors, and mission state changes. Scenario delivery ending must not close a mission log while the mission continues. Preserve logs when an execution fails or pauses. Never record authentication secrets.
+
+Before proposing or implementing a fix, read the relevant logs and reconstruct the execution chronology. Compare what the model actually received with the graph state and what was actually executed. Cite the recorded evidence for the diagnosis. If evidence is missing, first restore logging and clearly state what cannot be concluded. Passing isolated tests does not establish that a complete mission works. Do not replace trace analysis with speculative patches.
+
 ## Purpose of this repository
 
 This repository implements a **working governed Physical AI system built around a distributed graph architecture**.

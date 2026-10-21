@@ -6,11 +6,11 @@
     "tools": {
         "observe": {
             "title": "Formulate what the twin must do",
-            "description": "The TWIN_FACTORY_REQUEST for a system: entities and relationships, observables, controls, external influences, inputs, outputs, behaviours to reproduce, constraints, missing information and assumptions, validation against the real. Written by the model behind the reasoner slot with the Observer's prompt, checked by code (shape, no node of the catalogue named, no telemetry column that does not exist), three attempts at most. Returns the request and every attempt.",
+            "description": "The TWIN_FACTORY_REQUEST for a system: entities and relationships, observables, controls, external influences, inputs, outputs, behaviours to reproduce, constraints, missing information and assumptions, validation against the real. Written by the model behind the reasoner slot with the Observer's prompt, checked by code (shape, no node of the catalogue named, no telemetry column that does not exist), three attempts at most. Returns the request and every attempt. This Observer specifies a twin, not an executable test procedure. Forward creates an unstarted graph task; it neither requests test authorisation nor collects telemetry.",
             "properties": {
                 "description": "the system: what it is, its components, what it is for, what is controllable",
                 "telemetry": "rows of measurements, one object per sample; the Observer is given a computed summary of them, not the rows",
-                "forward": "true to open a factory task from the accepted request",
+                "forward": "true to create an unstarted factory task from the accepted request; the supervisor may inspect it and choose factory.start to execute it",
                 "wait": "false: the answer comes at once with the id and status running; read the entry (observer://requests, or request) until it is done"
             }
         },

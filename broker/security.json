@@ -74,6 +74,7 @@
                 "motor.set_ramp": "mcp.tools.maintain"
             },
             "/station": {
+                "twin_install": "mcp.tools.register",
                 "answer": "mcp.tools.authorise",
                 "operation_decide": "mcp.tools.authorise",
                 "commissioning_authorise": "mcp.tools.authorise",
@@ -82,7 +83,11 @@
                 "registry_register": "mcp.tools.register",
                 "registry_report": "mcp.tools.register",
                 "register_artifact": "mcp.tools.register",
-                "diagnostic_load_model": "mcp.tools.register"
+                "diagnostic_load_model": "mcp.tools.register",
+                "commissioning_review": "mcp.tools.authorise"
+            },
+            "/twin": {
+                "install": "mcp.tools.register"
             },
             "/library": {
                 "sign": "mcp.tools.authorise"
@@ -93,6 +98,10 @@
                 "move": "mcp.tools.sense"
             },
             "/agent": {
+                "procedure_execute": "mcp.tools.actuate",
+                "mission_start": "mcp.tools.control",
+                "mission_observe": "mcp.tools.control",
+                "mission_resume": "mcp.tools.control",
                 "reset": "mcp.tools.control",
                 "stop": "mcp.tools.control"
             }

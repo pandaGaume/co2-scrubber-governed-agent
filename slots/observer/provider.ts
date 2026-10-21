@@ -27,6 +27,7 @@ import { observe, OBSERVER_PROMPT, type ObserveResult } from "../../harness/obse
 import { factoryContractOf, type TwinFactoryRequest } from "../../harness/observer/request.js";
 import { findingsFor, reviewDigest, supervise, supervisionOfRequest, SUPERVISOR_PROMPT } from "../../harness/supervisor/supervisor.js";
 import type { LibraryFact } from "../../harness/core/contracts.js";
+import { runtimeEvents } from "../lib/events.js";
 
 /** One observation as kept: its result once done; `status` running while the model works (an observation takes several model calls, longer than a broker call may wait), then done or failed. */
 export type ObserverEntry = ObserveResult & { id: string; at: string; taskId: string | null; status: "running" | "done" | "failed"; error?: string; endedAt?: string };
@@ -67,7 +68,7 @@ export function observerSlot(wsBase: string, log: (line: string) => void, option
                     {
                         description: { type: "string" },
                         telemetry: { type: "array", items: { type: "object" } },
-                        forward: { type: "boolean" },
+                        forward: { type: "boolean", description: "Create a factory task from the Observer's request without executing it. The supervisor may inspect it, then choose factory.start to run it." },
                         attempts: { type: "number", description: "how many times the model may be sent back with the reasons of a refusal; four when absent (a refused request, an empty one and a unit still wrong were seen in a row)" },
                         wait: { type: "boolean", description: "false: the answer comes at once with the id and status running; the observation goes on and the entry (observer://requests, or the request tool) says when it is done" },
                     },
@@ -124,6 +125,7 @@ export function observerSlot(wsBase: string, log: (line: string) => void, option
                             await broker.close();
                         }
                         notify(entry);
+                        runtimeEvents.append("observer.request-ended", { observationId: entry.id, status: entry.status, taskId: entry.taskId ?? null });
                         return entry;
                     };
                     if (args.wait === false) {

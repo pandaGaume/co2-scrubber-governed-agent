@@ -1,0 +1,8 @@
+{
+    "document": "telemetry-acquisition-and-validation",
+    "digest": "9cdc608958b429f2cc9c192c6b0a2d6dfebb2e31b838800df0f027bcc108a414",
+    "signedBy": "Guillaume Pelletier",
+    "signedAt": "2026-10-20T19:29:26.531Z",
+    "scope": "safety",
+    "note": "Signed on the explicit instruction of Guillaume Pelletier in this conversation. Published knowledge and recovery guidance; no fabricated measurement, weakened protection or automatic mission decision."
+}

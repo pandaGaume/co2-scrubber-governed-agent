@@ -1,3 +1,4 @@
+import { requestedProcedureProblems } from "../../lib/procedure/request.js";
 /**
  * slot `station`, "Mother". Tier 2 in the architecture: the validated model
  * push, the catalogue, the journal of stable operating points, and since
@@ -77,6 +78,8 @@ import { buildReport, reportLines, type ProcedureReport, type StepRecord } from 
 import { DEFAULT_POLICY, questionProblems, standingOrder, type Question, type QuestionAnswer, type QuestionsPolicy, type Resume } from "./questions.js";
 import { descriptorProblems, levelsOf, needsCommissioning, type Device, type DeviceDescriptor } from "./registry.js";
 import { runtimeEvents } from "../lib/events.js";
+import { stationTwinTools } from "./twins.js";
+import { fingerprint, type TwinInstallation } from "../twin/deployments.js";
 
 const SHA = { type: "string", pattern: "^[0-9a-f]{64}$" };
 const VERSION = "0.2.0";
@@ -107,7 +110,7 @@ export interface Proposal {
     receivedAt: string;
 }
 
-export type CommissioningStatus = "open" | "awaiting-authorisation" | "authorised" | "refused" | "running" | "done" | "aborted";
+export type CommissioningStatus = "open" | "awaiting-scientific-approval" | "awaiting-authorisation" | "authorised" | "refused" | "running" | "done" | "aborted";
 
 export interface Commissioning {
     id: string;
@@ -121,6 +124,7 @@ export interface Commissioning {
     /** The procedure relayed to the commander, as Mother read it from the workshop. */
     procedure: { procedureId: string; taskId: string; proposalId: string; path: string; sha256: string; module: string; occupants: Array<{ id: string; callsign?: string }>; steps: number; minutes: number; content: Procedure } | null;
     authorisation: { decision: "authorise" | "refuse"; by: string; at: string; note: string | null } | null;
+    scientificApproval?: { decision: "approve" | "refuse"; by: string; at: string; procedureSha256: string; note: string | null } | null;
     monitoring: { sessionId: string; subjects: string[] } | null;
     run: { startedAt: string; current: number; steps: StepRecord[]; clock?: { minute: number; planned: number | null; secondsPerMinute: number; at: string } } | null;
     report: ProcedureReport | null;
@@ -297,7 +301,38 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
         return line;
     };
 
-    /** A question to the commander (Tier 4): kept, said by Mother unless she just asked it in her own words, answered on the control post or by a standing order; on the answer the asker is called back. */
+    const questionLane = (q: Question): string => q.role ?? "commander";
+    const activateQuestion = async (q: Question): Promise<void> => {
+        q.status = "open";
+        const order = standingOrder(state.questionsPolicy, q.kind, q.options, q.role);
+        if (order.mode === "auto") {
+            // The standing order answers: said as such, and the asker called back at once.
+            const choice = q.options.find((o) => o.id === order.choice)!;
+            q.answer = { choice: choice.id, by: "standing order", at: new Date().toISOString(), note: null, how: "policy" };
+            q.status = "auto";
+            say("mother.question.auto", null, () => ({ question: q.question, choice: choice.label }));
+            notify(QUESTIONS_URI, { [META_QUESTION]: q });
+            await resumeAsker(q);
+            return;
+        }
+        if (q.kind === "authorise") emit({ n: state.mother.length + 1, key: "mother.launch-request", params: {}, text: { en: q.question, fr: q.question }, commissioningId: (q.context as { commissioningId?: string } | null)?.commissioningId ?? null, at: new Date().toISOString() });
+        if (q.role && q.kind !== "authorise") say("mother.question.askedRole", null, () => ({ role: q.role ?? "", holders: q.holders?.length ? q.holders.join(", ") : "nobody holds it yet", question: q.question, options: q.options.map((o) => o.label).join(" / ") }));
+        else if (q.kind !== "authorise") say("mother.question.asked", null, () => ({ question: q.question, options: q.options.map((o) => o.label).join(" / ") }));
+        notify(QUESTIONS_URI, { [META_QUESTION]: q });
+    };
+    let advancingQuestions = false;
+    const advanceQuestions = async (): Promise<void> => {
+        if (advancingQuestions) return;
+        advancingQuestions = true;
+        try {
+            for (;;) {
+                const next = state.questions.find((q) => q.status === "queued" && !state.questions.some((other) => other.status === "open" && questionLane(other) === questionLane(q)));
+                if (!next) break;
+                await activateQuestion(next);
+            }
+        } finally { advancingQuestions = false; }
+    };
+    /** Only one active question per human role; later requests cannot be answered early. */
     const askQuestion = async (args: Record<string, unknown>): Promise<{ questionId: string; status: Question["status"]; answer?: QuestionAnswer | null; resumed?: Question["resumed"] }> => {
         const problems = questionProblems(args as never);
         // A signature is asked of the role that signs (2026-09-29: an authorised signatory, not the commander); any other question for the role it names, if any.
@@ -316,27 +351,27 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
             ...(role ? { holders: roleOf(role)?.holders ?? [] } : {}),
             context: (args.context ?? null) as never,
             resume: args.resume ? ({ slot: str((args.resume as Resume).slot), tool: str((args.resume as Resume).tool), args: (((args.resume as Resume).args ?? {}) as Record<string, never>) } as Resume) : null,
-            status: "open",
+            status: "queued",
             answer: null,
             resumed: null,
         };
         state.questions.push(q);
-        const order = standingOrder(state.questionsPolicy, q.kind, q.options, q.role);
-        if (order.mode === "auto") {
-            // The standing order answers: said as such, and the asker called back at once.
-            const choice = q.options.find((o) => o.id === order.choice)!;
-            q.answer = { choice: choice.id, by: "standing order", at: new Date().toISOString(), note: null, how: "policy" };
-            q.status = "auto";
-            say("mother.question.auto", null, () => ({ question: q.question, choice: choice.label }));
-            notify(QUESTIONS_URI, { [META_QUESTION]: q });
-            await resumeAsker(q);
-            return { questionId: q.id, status: q.status, answer: q.answer, resumed: q.resumed };
-        }
-        // The authorisation is asked in Mother's own words just before (mother.authorisation.request): not said twice.
-        if (q.role) say("mother.question.askedRole", null, () => ({ role: q.role ?? "", holders: q.holders?.length ? q.holders.join(", ") : "nobody holds it yet", question: q.question, options: q.options.map((o) => o.label).join(" / ") }));
-        else if (q.kind !== "authorise") say("mother.question.asked", null, () => ({ question: q.question, options: q.options.map((o) => o.label).join(" / ") }));
         notify(QUESTIONS_URI, { [META_QUESTION]: q });
-        return { questionId: q.id, status: q.status };
+        await advanceQuestions();
+        return { questionId: q.id, status: q.status, answer: q.answer, resumed: q.resumed };
+    };
+
+    const procedureQuestionContext = (c: Commissioning) => {
+        const p = c.procedure!;
+        return { commissioningId: c.id, procedure: { procedureId: p.procedureId, taskId: p.taskId, sha256: p.sha256, device: c.device, module: p.module, occupants: p.occupants.map((o) => o.callsign ?? o.id), steps: p.steps, minutes: p.minutes, operatingPoints: p.content.steps.map((step) => ({ n: step.n, speedPercent: step.speedPercent, minutes: step.minutes, hatch: step.hatch })), limits: p.content.limits } };
+    };
+    const requestTestLaunch = async (c: Commissioning): Promise<void> => {
+        if (!c.procedure || c.scientificApproval?.decision !== "approve" || c.scientificApproval.procedureSha256 !== c.procedure.sha256) throw new Error("launch cannot be proposed before scientific approval of this exact procedure");
+        await askQuestion({ taskId: c.procedure.taskId, from: "station", kind: "authorise", role: "commander",
+            question: `Authorise launch of procedure ${c.procedure.procedureId}? Scientific approval: ${c.scientificApproval.by}.`,
+            options: [{ id: "authorise", label: "authorise test launch" }, { id: "refuse", label: "refuse test launch" }],
+            context: procedureQuestionContext(c), resume: { slot: "station", tool: "commissioning_authorise", args: { commissioningId: c.id } },
+        });
     };
 
     const occupantsPhrase = (w: McpGrammar, count: number) => (count === 0 ? w.phrase("mother.occupants.none") : count === 1 ? w.phrase("mother.occupants.one") : w.phrase("mother.occupants.many", { count }));
@@ -669,6 +704,8 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
         // The rules and the facts of the signed card, read now: a procedure that passed once is not trusted to pass twice.
         const { rules, facts } = await rulesAndFacts((slot, tool, args) => client().call(slot, tool, args));
         const check = checkProcedure(procedure, await presenceNow(), rules, facts, typeof co2Now === "number" ? { co2Ppm: co2Now, source: "scrubber.motor.state" } : null);
+        const task = JSON.parse(readFileSync(path.join(taskDir(proposal.taskId), "task.json"), "utf8")) as { task: { observations: Record<string, unknown> } };
+        for (const message of requestedProcedureProblems(task.task.observations, procedure)) check.problems.push({ kind: "operator-request", message });
         for (const message of safetyProblems(procedure, facts, rules)) check.problems.push({ kind: "justification", message });
         if (check.problems.length) check.ok = false;
         if (!check.ok) {
@@ -686,20 +723,17 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
             const a = c.analysis;
             say("mother.procedure.analysis", c, () => ({ cause: a.cause, changes: a.changes.map((x) => `${x.change} (${x.prevents})`).join("; ") }));
         }
-        c.status = "awaiting-authorisation";
+        c.status = "awaiting-scientific-approval";
+        c.scientificApproval = null;
+        c.authorisation = null;
         proposal.status = "relayed";
-        const count = check.occupants.length;
-        const asked = count ? say("mother.authorisation.request", c, (w) => ({ people: count === 1 ? w.phrase("mother.people.one") : w.phrase("mother.people.many", { count }) })) : say("mother.authorisation.request.empty", c, () => ({ module: check.module }));
         announce(c);
-        // The commander's decision is a question of the station's own (2026-09-27): answered in Mother's chat by a click, a word typed or spoken, or a standing order; the answer comes back into commissioning_authorise.
         await askQuestion({
-            taskId: proposal.taskId,
-            from: "station",
-            kind: "authorise",
-            question: asked.text.en,
-            options: [{ id: "authorise", label: "authorise the test" }, { id: "refuse", label: "refuse it" }],
-            context: { commissioningId: c.id, procedure: { procedureId: procedure.id, module: check.module, occupants: check.occupants.map((o) => o.callsign ?? o.id), steps: procedure.steps.length } } as never,
-            resume: { slot: "station", tool: "commissioning_authorise", args: { commissioningId: c.id } },
+            taskId: proposal.taskId, from: "station", kind: "procedure-review", role: "scientific-officer",
+            question: `Approve procedure ${procedure.id}, including its operating points, monitoring and abort conditions?`,
+            options: [{ id: "approve", label: "approve this procedure" }, { id: "refuse", label: "refuse this procedure" }],
+            context: procedureQuestionContext(c),
+            resume: { slot: "station", tool: "commissioning_review", args: { commissioningId: c.id, procedureSha256: artifact.sha256 } },
         });
     };
 
@@ -713,7 +747,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                 const since = reminded.get(q.id) ?? Date.parse(q.at);
                 if (Date.now() - since < remindMs) continue;
                 reminded.set(q.id, Date.now());
-                say("mother.question.waiting", null, () => ({ options: q.options.map((o) => o.label).join(" / ") }));
+                say(q.role ? "mother.question.waitingRole" : "mother.question.waiting", null, () => ({ role: q.role ?? "commander", holders: roleOf(q.role ?? "commander")?.holders.join(", ") || q.role || "commander", options: q.options.map((o) => o.label).join(" / ") }));
             }
         }, 1000);
         reminder.unref?.();
@@ -745,6 +779,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
         version: `${VERSION}-stub`,
         state,
         tools: [
+            ...stationTwinTools({ state, client, ask: askQuestion, commanderHolders: () => roleOf("commander")?.holders ?? [], say: (en, fr) => { emit({ n: state.mother.length + 1, key: "mother.twin", params: {}, text: { en, fr }, commissioningId: null, at: new Date().toISOString() }); } }),
             {
                 // The harness's graph (2026-09-30, docs/evaluateur.fr.md, E0): what the tasks of this workshop (or of forks) did and under
                 // what, rebuilt from their manifests at each call, read the way physics.units_knowledge reads the physics graph. Read only.
@@ -983,6 +1018,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     const proposalId = `p${(s.proposals.length + 1).toString().padStart(4, "0")}-${String(manifestSha256).slice(0, 8)}`;
                     const proposal: Proposal = { proposalId, taskId: String(taskId), artifacts: list, manifestSha256: String(manifestSha256), claims: (claims as Record<string, unknown>) ?? {}, status: "received", receivedAt: new Date().toISOString() };
                     s.proposals.push(proposal);
+                    runtimeEvents.append("station.proposal", { proposal: { ...proposal } });
                     const adaptation = list.find((a) => a.kind === "adaptation");
                     if (adaptation) {
                         await relayAdaptation(proposal, adaptation);
@@ -1010,8 +1046,14 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     }
                     // The Observer's request (2026-10-10, on the factories' harness): what a twin must do, for whoever asked the Observer; the station keeps it, a factory task is opened by the caller.
                     if (list.some((a) => a.kind === "request")) return { proposalId, status: proposal.status, note: "the Observer's request, received: the caller forwards it to a factory" };
-                    return { proposalId, status: proposal.status, note: "received; the twin's judgment (twin.evaluate) is not built yet: the proposal waits" };
+                    return { proposalId, status: proposal.status, note: "received; request station.twin_validate with independent held-out telemetry, then station.twin_admit for commander-authorised installation; not validated or installed" };
                 },
+            },
+            {
+                name: "proposals",
+                description: "Read the artifact proposals received by the station, including their provenance and current status. Received or proposed does not mean validated or installed.",
+                inputSchema: obj({ taskId: { type: "string" }, proposalId: { type: "string" } }),
+                handle: (args, s) => ({ proposals: s.proposals.filter((p) => (!args.taskId || p.taskId === args.taskId) && (!args.proposalId || p.proposalId === args.proposalId)) }),
             },
             {
                 name: "register_artifact",
@@ -1055,12 +1097,19 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
             {
                 name: "registry_register",
                 inputSchema: obj({ path: { type: "string" }, descriptor: { type: "object" } }, ["path", "descriptor"]),
-                handle: ({ path: where, descriptor }, s) => {
+                handle: async ({ path: where, descriptor }, s) => {
                     const at = String(where);
                     const problems = descriptorProblems(at, descriptor);
                     if (problems.length) throw new Error(problems.join("; "));
                     if (s.devices[at]) throw new Error(`${at} is already on the register`);
                     const device: Device = { path: at, descriptor: descriptor as DeviceDescriptor, registeredAt: new Date().toISOString(), simulator: null, readings: {} };
+                    if (device.descriptor.actions?.length) {
+                        const active = await client().call("twin", "active", { deviceId: at });
+                        if (active.ok) {
+                            const installed = (active.output as { installations: TwinInstallation[] }).installations.find((i) => i.descriptorSha256 === fingerprint(device.descriptor));
+                            if (installed) device.simulator = { sha256: installed.sha256, reportId: installed.reportId };
+                        } else emit({ n: state.mother.length + 1, key: "mother.twin", params: {}, text: { en: "Twin installation service unavailable. Device qualification cannot be confirmed.", fr: "Service d'installation du jumeau indisponible. Qualification de l'appareil non confirmée." }, commissioningId: null, at: new Date().toISOString() });
+                    }
                     s.devices[at] = device;
                     const { area } = levelsOf(at);
                     if (!needsCommissioning(device)) return { registered: true, path: at, commissioning: null };
@@ -1131,6 +1180,10 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     const decision = asked;
                     const by = str(args.by) || answered?.by || "commander";
                     const note = str(args.note) || answered?.note || null;
+                    const denied = notHolder("commander", by);
+                    if (denied) throw new Error(denied);
+                    const queued = s.questions.find((q) => q.status === "queued" && q.kind === "operation" && (q.context as { requestId?: string } | null)?.requestId === request.id);
+                    if (queued) throw new Error(`operation question ${queued.id} is queued; answer the active commander's question first`);
                     request.decision = { by, decision, note, at: new Date().toISOString() };
                     // A direct call settles the question in Mother's chat, so nobody answers it twice.
                     if (!args.questionId) {
@@ -1144,6 +1197,8 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     if (decision === "refuse") {
                         request.status = "refused by the commander";
                         log(`[station] operation ${request.id} refused by ${request.decision.by}`);
+                        runtimeEvents.append("station.operation-decided", { requestId: request.id, request: { ...request } });
+                        await advanceQuestions();
                         return { request };
                     }
                     const target = OPERATIONS[request.operation];
@@ -1158,6 +1213,8 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                         request.status = "failed";
                     }
                     log(`[station] operation ${request.id} authorised by ${request.decision.by}: ${request.status}${request.outcome?.error ? ` (${request.outcome.error})` : ""}`);
+                    runtimeEvents.append("station.operation-decided", { requestId: request.id, request: { ...request } });
+                    await advanceQuestions();
                     return { request };
                 },
             },
@@ -1198,6 +1255,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     c.attempts = [...(c.attempts ?? []), { procedureId: c.procedure?.procedureId ?? "", taskId: c.procedure?.taskId ?? "", aborted: c.report?.aborted ?? null, minutes: c.run?.steps.reduce((m, s) => m + (Number((s as { minutes?: number }).minutes) || 0), 0) ?? 0, reopenedAt: new Date().toISOString(), reason: str(reason) || "the commander asked for another procedure" }];
                     c.status = "open";
                     c.procedure = null;
+                    c.scientificApproval = null;
                     c.authorisation = null;
                     c.monitoring = null;
                     c.run = null;
@@ -1271,6 +1329,36 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                 },
             },
             {
+                name: "commissioning_review",
+                description: "The scientific officer approves or refuses an exact checked procedure. Only an approval opens the commander's separate launch decision; this does not execute the test.",
+                inputSchema: obj({ commissioningId: { type: "string" }, procedureSha256: SHA, decision: { type: "string", enum: ["approve", "refuse"] }, by: { type: "string" }, note: { type: "string" }, questionId: { type: "string" }, answer: { type: "object" } }, ["commissioningId", "procedureSha256"]),
+                handle: async (args) => {
+                    const c = commissioning(args.commissioningId);
+                    const answer = args.answer as { choice?: string; by?: string; note?: string } | undefined;
+                    const decision = str(args.decision) || answer?.choice;
+                    const by = str(args.by) || answer?.by || "";
+                    if (decision !== "approve" && decision !== "refuse") throw new Error("scientific decision must be approve or refuse");
+                    const denied = notHolder("scientific-officer", by);
+                    if (denied) throw new Error(denied);
+                    if (c.status !== "awaiting-scientific-approval" || !c.procedure || c.procedure.sha256 !== args.procedureSha256) throw new Error("no matching procedure awaiting scientific approval; a stale approval cannot approve another artifact");
+                    if (sha256Of(readFileSync(path.join(taskDir(c.procedure.taskId), c.procedure.path))) !== c.procedure.sha256) throw new Error("procedure file changed before scientific approval; submit it for checking again");
+                    const q = state.questions.find((q) => q.kind === "procedure-review" && (q.context as { commissioningId?: string } | null)?.commissioningId === c.id && q.status === "queued");
+                    if (q) throw new Error(`scientific review ${q.id} is queued; answer the active question first`);
+                    c.scientificApproval = { decision, by, at: new Date().toISOString(), procedureSha256: c.procedure.sha256, note: str(args.note) || answer?.note || null };
+                    if (!args.questionId) for (const q of state.questions) {
+                        if (q.kind !== "procedure-review" || q.status !== "open" || (q.context as { commissioningId?: string } | null)?.commissioningId !== c.id) continue;
+                        q.answer = { choice: decision, by, at: c.scientificApproval.at, note: c.scientificApproval.note, how: "script" }; q.status = "answered";
+                        notify(QUESTIONS_URI, { [META_QUESTION]: q });
+                    }
+                    c.status = decision === "approve" ? "awaiting-authorisation" : "refused";
+                    announce(c);
+                    runtimeEvents.append("station.commissioning-decision", { commissioningId: c.id, status: c.status, scientificApproval: c.scientificApproval, procedureId: c.procedure.procedureId });
+                    if (decision === "approve") await requestTestLaunch(c);
+                    await advanceQuestions();
+                    return { commissioningId: c.id, status: c.status, scientificApproval: c.scientificApproval };
+                },
+            },
+            {
                 name: "commissioning_authorise",
                 inputSchema: obj({ commissioningId: { type: "string" }, decision: { type: "string", enum: ["authorise", "refuse"] }, by: { type: "string" }, note: { type: "string" }, questionId: { type: "string" }, answer: { type: "object" } }, ["commissioningId"]),
                 handle: async (args) => {
@@ -1281,7 +1369,15 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     const by = str(args.by) || answered?.by || "commander";
                     const note = str(args.note) || answered?.note || "";
                     if (decision !== "authorise" && decision !== "refuse") throw new Error(`decision is "authorise" or "refuse", not "${decision}"`);
+                    const commanderHolder = notHolder("commander", by);
+                    if (commanderHolder) throw new Error(commanderHolder);
                     const c = commissioning(commissioningId);
+                    if (!c.procedure || c.scientificApproval?.decision !== "approve" || c.scientificApproval.procedureSha256 !== c.procedure.sha256) throw new Error("scientific approval of the exact procedure is required before launch authorisation");
+                    const scientificHolder = notHolder("scientific-officer", c.scientificApproval.by);
+                    if (scientificHolder) throw new Error(scientificHolder);
+                    if (sha256Of(readFileSync(path.join(taskDir(c.procedure.taskId), c.procedure.path))) !== c.procedure.sha256) throw new Error("procedure file changed after scientific approval; submit it for checking again");
+                    const queued = state.questions.find((q) => q.status === "queued" && q.kind === "authorise" && (q.context as { commissioningId?: string } | null)?.commissioningId === c.id);
+                    if (queued) throw new Error(`launch request ${queued.id} is queued; answer the active commander's question first`);
                     if (c.status !== "awaiting-authorisation" || !c.procedure) throw new Error(`commissioning ${c.id} is ${c.status}: there is nothing to authorise`);
                     const at = new Date().toISOString();
                     // A direct call settles the open question of this commissioning, so nobody answers it twice.
@@ -1298,6 +1394,8 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                         c.status = "refused";
                         say("mother.authorisation.refused", c);
                         announce(c);
+                        runtimeEvents.append("station.commissioning-decision", { commissioningId: c.id, status: c.status, authorisation: c.authorisation, procedureId: c.procedure?.procedureId });
+                        await advanceQuestions();
                         return { commissioningId: c.id, status: c.status };
                     }
                     const p = c.procedure;
@@ -1324,6 +1422,8 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     say("mother.authorised", c);
                     if (ids.length) say(ids.length === 1 ? "mother.monitoring.active.one" : "mother.monitoring.active.many", c, () => ({ count: ids.length }));
                     announce(c);
+                    runtimeEvents.append("station.commissioning-decision", { commissioningId: c.id, status: c.status, authorisation: c.authorisation, procedureId: p.procedureId });
+                    await advanceQuestions();
                     return { commissioningId: c.id, status: c.status, monitoring: c.monitoring };
                 },
             },
@@ -1363,7 +1463,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                 inputSchema: obj(
                     {
                         questionId: { type: "string" },
-                        choice: { type: "string", description: "the id of the option chosen" },
+                        choice: { type: "string", description: "The option id, or text for a verbatim reply to an agent question (kind ask). Text never authorises a protected operation." },
                         by: { type: "string", description: "who answers: the commander when absent" },
                         how: { type: "string", enum: ["click", "voice", "typed", "script"], description: "how the answer came" },
                         note: { type: "string" },
@@ -1375,7 +1475,8 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     const q = s.questions.find((x) => x.id === String(questionId));
                     if (!q) throw new Error(`no question ${String(questionId)}`);
                     if (q.status !== "open") throw new Error(`question ${q.id} is ${q.status}: nothing to answer`);
-                    const option = q.options.find((o) => o.id === String(choice));
+                    const textReply = q.kind === "ask" && choice === "text" && typeof note === "string" && note.trim().length > 0;
+                    const option = textReply ? { id: "text", label: "written reply" } : q.options.find((o) => o.id === String(choice));
                     if (!option) throw new Error(`"${String(choice)}" is not an option of question ${q.id} (${q.options.map((o) => o.id).join(", ")})`);
                     // Who answers is the commander unless the caller says otherwise (2026-09-27: an answer without by was recorded as "undefined").
                     const who = str(by) || "commander";
@@ -1385,11 +1486,12 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                         say("mother.question.notHolder", null, () => ({ why: refused }));
                         throw new Error(`question ${q.id} is for the role ${q.role}: ${refused}`);
                     }
-                    q.answer = { choice: option.id, by: who, at: new Date().toISOString(), note: str(note) || null, how: (how === "voice" || how === "script" || how === "typed" ? how : "click") as QuestionAnswer["how"], ...(amendments && typeof amendments === "object" ? { amendments: amendments as never } : {}) };
+                    q.answer = { choice: option.id, by: who, at: new Date().toISOString(), note: textReply ? String(note) : str(note) || null, how: (how === "voice" || how === "script" || how === "typed" ? how : "click") as QuestionAnswer["how"], ...(amendments && typeof amendments === "object" ? { amendments: amendments as never } : {}) };
                     q.status = "answered";
                     say("mother.question.answered", null, () => ({ choice: option.label, by: who }));
                     notify(QUESTIONS_URI, { [META_QUESTION]: q });
                     await resumeAsker(q);
+                    await advanceQuestions();
                     return { questionId: q.id, status: q.status, answer: q.answer, resumed: q.resumed };
                 },
             },
@@ -1435,6 +1537,13 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
                     switch (args.action) {
                         case "begin": {
                             if (c.status !== "authorised") throw new Error(`commissioning ${c.id} is ${c.status}: a procedure runs only once authorised by the commander`);
+                            if (c.scientificApproval?.decision !== "approve" || c.scientificApproval.procedureSha256 !== p.sha256) throw new Error("this exact procedure lacks scientific approval");
+                            const scientistDenied = notHolder("scientific-officer", c.scientificApproval.by);
+                            if (scientistDenied) throw new Error(scientistDenied);
+                            if (c.authorisation?.decision !== "authorise") throw new Error("commander launch authorisation is required");
+                            const commanderDenied = notHolder("commander", c.authorisation.by);
+                            if (commanderDenied) throw new Error(commanderDenied);
+                            if (sha256Of(readFileSync(path.join(taskDir(p.taskId), p.path))) !== p.sha256) throw new Error("procedure file changed after approval; a new review is required");
                             if (p.occupants.length) {
                                 const r = await client().call("biomed", "state", {});
                                 const open = r.ok ? (r.output as { session: string | null }).session : null;
@@ -1509,7 +1618,7 @@ export function stationSlot(wsBase: string, log: (line: string) => void): Publis
             },
         ],
         resources: [
-            { uri: QUESTIONS_URI, read: (s) => s.questions },
+            { uri: QUESTIONS_URI, read: (s) => s.questions.map((q) => q.status === "open" && q.role ? { ...q, holders: roleOf(q.role)?.holders ?? [] } : q) },
             { uri: QUESTIONS_POLICY_URI, read: (s) => s.questionsPolicy },
             { uri: "station://proposals", read: (s) => s.proposals },
             // Where this station runs: in a fork (an environment set apart, its data its own), or on the repository's context.

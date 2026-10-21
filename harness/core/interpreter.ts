@@ -25,7 +25,7 @@ import { compileInputSchema, type JsonValue } from "@spiky-panda/harness";
 export interface Reading {
     capability: string;
     /** `coerced`: the schema-guided reading; `extracted`: a model's extraction; `meant`: a model's reading of what a call meant (the second trigger). */
-    how: "coerced" | "extracted" | "meant";
+    how: "coerced" | "extracted" | "meant" | "semantic";
     sent: JsonValue;
     read: JsonValue;
     /** Each change, `path: what was sent -> what was read`. */
@@ -173,6 +173,7 @@ export async function interpret(capability: { id: string; description?: string; 
 
 /** What the model reads at the next step about how its last call was read. */
 export function readingNote(r: Reading): string {
+    if (r.how === "semantic") return `The LLM interpreter read your call ${r.capability}, with access to Physics: ${r.changes.join("; ")}. The guard still judges this proposed reading. `;
     if (r.how === "meant") return `your call ${r.capability} had the right form but did not change what was refused; the harness read what you meant and ran it: ${r.changes.join("; ")}; write it that way next time. `;
     return `your call ${r.capability} did not have the shape its schema gives; the harness read it (${r.how === "coerced" ? "by the schema" : "by an extraction"}) as ${r.changes.join("; ")}; use that shape next time. `;
 }

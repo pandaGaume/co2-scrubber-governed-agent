@@ -29,6 +29,7 @@
  * the real thing.
  */
 import * as path from "node:path";
+import { toolLogLine } from "./tool-log.js";
 import { McpBehaviorBase, McpGrammarBehavior, McpGrammarStore, McpToolResults, grammarResolverFromOptions } from "@cyanmycelium/mcp-core";
 import type { IMcpInitializer, IMcpServer, McpClientCapabilities, McpClientInfo, McpResource, McpResourceContent, McpResourceTemplate, McpServerIdentity, McpTool, McpToolResult } from "@cyanmycelium/mcp-core";
 import { McpServerBuilder } from "@cyanmycelium/mcp-core/server";
@@ -166,7 +167,7 @@ class SlotBehavior<S extends object> extends McpBehaviorBase {
             this.log(`[${slot}] ${toolName} refused: ${refused}`);
             return { isError: true, content: [{ type: "text", text: JSON.stringify({ slot, tool: toolName, refused, stub }) }] };
         }
-        this.log(`[${slot}] ${toolName} ${JSON.stringify(args ?? {})}`);
+        this.log(toolLogLine(slot, toolName, args ?? {}));
         return McpToolResults.json({ slot, tool: toolName, arguments: args ?? {}, result, stub, at: new Date().toISOString() });
     }
 }

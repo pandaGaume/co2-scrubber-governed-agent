@@ -18,6 +18,8 @@ export interface ProviderExchange {
     /** What came back: the raw completion, and the decision made of it. */
     response: unknown;
     decision: PolicyDecision;
+    /** A brief model-authored sentence, separate from reasoning and tool arguments. */
+    mother?: string | null;
     /** What the model named before any substitution (a tool the profile forbids becomes a crew report): the scorecard counts attempts here. */
     proposedCapabilityId: string;
     proposedInput: JsonValue;
@@ -30,6 +32,8 @@ export interface ProviderExchange {
 }
 
 export interface Provider extends PolicyFallback {
+    /** The state adapter returns the latest internal context result as a native tool message. */
+    readonly contextToolResults?: boolean;
     /** e.g. "scripted:prudent", "openai:nemotron", "anthropic:claude" */
     readonly name: string;
     /** The model identifier the exchanges name. */

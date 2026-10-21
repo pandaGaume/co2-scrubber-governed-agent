@@ -1,0 +1,8 @@
+{
+    "document": "lab-layout-and-volumes",
+    "digest": "eaccd2d8639eea27e6e4a637c07333683a162d7a42e48f146de229f468afc50c",
+    "signedBy": "Guillaume Pelletier",
+    "signedAt": "2026-10-20T17:41:54.043Z",
+    "scope": "safety",
+    "note": "Signed at the explicit instruction of Guillaume Pelletier in this chat on 2026-10-20. Reference model volumes are documented context, not physical measurements; monitoring readiness never bypasses human test authorisation."
+}
