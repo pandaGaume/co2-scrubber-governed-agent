@@ -29,17 +29,32 @@ export interface LocalBroker {
  * medical monitoring page is meant to be held in someone's hands, away from
  * the machine, so those origins are added at start rather than typed in by
  * hand on a filming day.
+ *
+ * The order matters to whoever takes the first one (the QR codes, the links
+ * printed at start): a phone reaches the machine through its Wi-Fi or its
+ * Ethernet, never through a VPN or a virtual switch. Windows lists them in its
+ * own order, and on 2026-10-23 a VPN came first, so every code pointed at an
+ * address no tablet could reach. The physical cards now come first.
  */
 export function lanAddresses(): string[] {
-    const out: string[] = [];
-    for (const list of Object.values(networkInterfaces())) {
+    const found: Array<{ name: string; address: string }> = [];
+    for (const [name, list] of Object.entries(networkInterfaces())) {
         for (const n of list ?? []) {
             // `family` is "IPv4" on Node 18+ and 4 on some older typings; accept both.
             const v4 = n.family === "IPv4" || (n.family as unknown as number) === 4;
-            if (v4 && !n.internal) out.push(n.address);
+            if (v4 && !n.internal) found.push({ name, address: n.address });
         }
     }
-    return [...new Set(out)];
+    return [...new Set(rankInterfaces(found).map((n) => n.address))];
+}
+
+const VIRTUAL = /vethernet|wsl|hyper-?v|virtualbox|vmware|vpn|tap|tun|wireguard|tailscale|zerotier|docker|bridge|vbox|utun/iu;
+const PHYSICAL = /wi-?fi|wlan|wireless|ethernet|^en\d|^eth\d/iu;
+
+/** Physical cards first, then anything unnamed, then VPNs and virtual switches; the system's order kept within each. */
+export function rankInterfaces<T extends { name: string }>(found: readonly T[]): T[] {
+    const rank = (name: string): number => (VIRTUAL.test(name) ? 2 : PHYSICAL.test(name) ? 0 : 1);
+    return found.map((n, i) => ({ n, i })).sort((a, b) => rank(a.n.name) - rank(b.n.name) || a.i - b.i).map(({ n }) => n);
 }
 
 /**

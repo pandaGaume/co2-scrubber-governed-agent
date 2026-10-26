@@ -80,3 +80,16 @@ describe("the qr slot", () => {
         await assert.rejects(result("encode", { text: "" }), /nothing/u);
     });
 });
+
+describe("the order of the machine's addresses", () => {
+    it("puts the Wi-Fi and the Ethernet before a VPN and a virtual switch, as Windows listed them on 2026-10-23", async () => {
+        const { rankInterfaces } = await import("../slots/lib/local-broker.js");
+        const listed = [
+            { name: "VPNGaumePC", address: "192.168.9.24" },
+            { name: "vEthernet (WSL (Hyper-V firewall))", address: "192.168.160.1" },
+            { name: "Wi-Fi", address: "172.20.10.3" },
+            { name: "Ethernet", address: "10.0.0.5" },
+        ];
+        assert.deepEqual(rankInterfaces(listed).map((n) => n.address), ["172.20.10.3", "10.0.0.5", "192.168.9.24", "192.168.160.1"]);
+    });
+});

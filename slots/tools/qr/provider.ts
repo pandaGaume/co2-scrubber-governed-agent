@@ -63,9 +63,12 @@ export function qrSlot(wsBase: string, log: (line: string) => void): PublishedSl
     const state: QrState = { made: [] };
 
     /** Every address this machine answers on, the LAN ones first: a phone
-        cannot use loopback, so it is offered last and only as a fallback. */
+        cannot use loopback, so it is offered last and only as a fallback.
+        `QR_HOST` puts the address the operator knows is right in front, for a
+        machine whose cards no name tells apart. */
     const addresses = (): string[] => {
-        const lan = lanAddresses().map((ip) => `http://${ip}:${port()}`);
+        const host = process.env.QR_HOST?.trim();
+        const lan = [...(host ? [host] : []), ...lanAddresses().filter((ip) => ip !== host)].map((ip) => `http://${ip}:${port()}`);
         return [...lan, `http://localhost:${port()}`];
     };
 

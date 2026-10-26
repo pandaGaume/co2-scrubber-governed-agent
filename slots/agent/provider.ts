@@ -280,8 +280,11 @@ export function agentSlot(wsBase: string, log: (line: string) => void): Publishe
                     if (task.ok && (status === "running" || status === "waiting")) return `delegated task ${taskId} is still ${status}; its result is pending`;
                 }
                 const requirement = missionEnvironment.completion?.procedure;
-                if (requirement && outcome === "incomplete") return procedureExecutor?.terminalReportProblem() ?? "no procedure executor or terminal test report";
-                return requirement ? procedureExecutor?.completionProblem(requirement) ?? "no procedure executor or executed test evidence" : null;
+                if (!requirement) return null;
+                // A problem of null means the evidence is there: only a missing executor falls back to the refusal (2026-10-26: `?? "..."`
+                // on the problem itself turned every conforming test into "no executed test evidence", three refusals in a row).
+                if (!procedureExecutor) return outcome === "incomplete" ? "no procedure executor or terminal test report" : "no procedure executor or executed test evidence";
+                return outcome === "incomplete" ? procedureExecutor.terminalReportProblem() : procedureExecutor.completionProblem(requirement);
             });
             missionEnvironment = observation as typeof missionEnvironment;
             procedureExecutor = new MissionProcedureExecutor(broker, narrator, (event) => {
