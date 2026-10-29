@@ -1,0 +1,296 @@
+[
+  {
+    "sourceLine": 7998,
+    "capability": "factory.request",
+    "input": {
+      "objective": {
+        "required_outputs": [
+          {
+            "name": "speedPercent",
+            "quantity": "Dimensionless",
+            "unit": "%",
+            "horizonMinutes": 60
+          }
+        ],
+        "constraints": {
+          "rmsePpmMax": 10,
+          "windowMinutes": 5
+        }
+      },
+      "observations": {
+        "missionContext": {
+          "missionId": "scenario:R001",
+          "objective": "The operator requests a visible, governed dimensioning demonstration. First submit the requested initial 0-to-100 percent test envelope for actual safety checking, without executing or bypassing a forbidden point. The initial proposal must stay within the duration ceiling; its purpose is to obtain the actual guard decision, not to expose anyone to a forbidden operation. If the guard refuses the low operating point, interpret that real refusal and revise the procedure to the permitted range. The required final executed profile is an ascending staircase at 30, 40, 50, 60, 70, 80, 90 and 100 percent, with at least 10 wall-clock seconds of recorded observed motor speed at each plateau so it can be filmed. At the current simulated clock, six simulated minutes per plateau is a feasible proposed dwell within the 60-minute ceiling, subject to scientific review and the current safeguards. These operating points are the operator's explicit requested test, not a pre-scripted agent workflow or a claimed successful outcome. Spock, the scientific-officer, must approve the exact checked revised procedure before any launch request is shown to Kirk, the commander. Kirk then authorises launch of that exact scientifically approved procedure. Keep requests to each person sequential; do not ask for launch before scientific approval or replace either decision with a conversational yes. After the launch authorisation is recorded, request agent.procedure_execute yourself and wait for the actual run result. Approval is not execution. Do not declare successful mission completion before this profile has actually run and its report and observed speed records exist. If prerequisites remain unavailable before execution, report the limitation and pause for the operator. Once a test has a terminal report, conclude from that report without opening another procedure: choose mission.complete outcome incomplete for an aborted, failed or nonconforming test, and outcome success only if the actual required profile was observed. Never invent a successful plateau. The central demonstration is your autonomous search for telemetry: discover registered sources and prior records, inspect actual channels, units, freshness, coverage and provenance, identify missing evidence and decide how to obtain it through available governed services. A current reading is not a recorded time series; do not ask the human to invent telemetry. Use the published volumes and device parameters where applicable. After the completed dimensioning test, report device, checked procedure, scientific approval, launch authorisation, run status, actual operating points, samples, data source and available sizing assessment with its uncertainty. Distinguish real motor observation from simulated cabin CO2. Conclude this scoped mission yourself from the evidence. Graph, ONNX and twin construction, validation and installation are separate later work and must not be launched or awaited by this mission.",
+          "scenario": "commissioning",
+          "runId": "R001",
+          "commissioningId": "c001-lab",
+          "devices": [
+            "/habitat/lab/eclss/scrubber-1",
+            "/habitat/lab/eclss/co2-1",
+            "/habitat/lab/hatch-1",
+            "/habitat/hab-b/eclss/co2-2",
+            "/habitat/power/battery-1"
+          ],
+          "resetNotes": [
+            "debug.reset: error: tools/call on slot \"scrubber\" failed: Handler failed (code -32603) (not the simulated board?)"
+          ],
+          "atmosphere": "simulated",
+          "world": "lab",
+          "completion": {
+            "procedure": {
+              "requiredSpeedsPercent": [
+                30,
+                40,
+                50,
+                60,
+                70,
+                80,
+                90,
+                100
+              ],
+              "minimumObservedSeconds": 10,
+              "speedTolerancePercent": 1
+            }
+          },
+          "secondsPerMinute": 2
+        }
+      },
+      "data": [],
+      "topics": [
+        "procedure"
+      ],
+      "budget": {
+        "iterations": 5,
+        "minutes": 30,
+        "twinPoints": 100
+      },
+      "requestedBy": "operator",
+      "profile": "default",
+      "run": true
+    },
+    "outcome": "completed",
+    "error": null
+  },
+  {
+    "sourceLine": 13272,
+    "capability": "factory.task",
+    "input": {
+      "taskId": "t-2026-10-27-0001"
+    },
+    "outcome": "completed",
+    "error": null
+  },
+  {
+    "sourceLine": 21298,
+    "capability": "factory.task",
+    "input": {
+      "taskId": "t-2026-10-27-0001"
+    },
+    "outcome": "completed",
+    "error": null
+  },
+  {
+    "sourceLine": 32290,
+    "capability": "factory.task",
+    "input": {
+      "taskId": "t-2026-10-27-0001"
+    },
+    "outcome": "completed",
+    "error": null
+  },
+  {
+    "sourceLine": 43268,
+    "capability": "factory.task",
+    "input": {
+      "taskId": "t-2026-10-27-0001"
+    },
+    "outcome": "completed",
+    "error": null
+  },
+  {
+    "sourceLine": 51421,
+    "capability": "station.proposals",
+    "input": {},
+    "outcome": "completed",
+    "error": null
+  },
+  {
+    "sourceLine": 59211,
+    "capability": "factory.request",
+    "input": {
+      "objective": {
+        "required_outputs": [
+          {
+            "name": "speedPercent",
+            "quantity": "Dimensionless",
+            "unit": "%",
+            "horizonMinutes": 60
+          }
+        ],
+        "constraints": {
+          "rmsePpmMax": 10,
+          "windowMinutes": 5
+        }
+      },
+      "observations": {
+        "missionContext": {
+          "missionId": "scenario:R001",
+          "objective": "The operator requests a visible, governed dimensioning demonstration. First submit the requested initial 0-to-100 percent test envelope for actual safety checking, without executing or bypassing a forbidden point. The initial proposal must stay within the duration ceiling; its purpose is to obtain the actual guard decision, not to expose anyone to a forbidden operation. If the guard refuses the low operating point, interpret that real refusal and revise the procedure to the permitted range. The required final executed profile is an ascending staircase at 30, 40, 50, 60, 70, 80, 90 and 100 percent, with at least 10 wall-clock seconds of recorded observed motor speed at each plateau so it can be filmed. At the current simulated clock, six simulated minutes per plateau is a feasible proposed dwell within the 60-minute ceiling, subject to scientific review and the current safeguards. These operating points are the operator's explicit requested test, not a pre-scripted agent workflow or a claimed successful outcome. Spock, the scientific-officer, must approve the exact checked revised procedure before any launch request is shown to Kirk, the commander. Kirk then authorises launch of that exact scientifically approved procedure. Keep requests to each person sequential; do not ask for launch before scientific approval or replace either decision with a conversational yes. After the launch authorisation is recorded, request agent.procedure_execute yourself and wait for the actual run result. Approval is not execution. Do not declare successful mission completion before this profile has actually run and its report and observed speed records exist. If prerequisites remain unavailable before execution, report the limitation and pause for the operator. Once a test has a terminal report, conclude from that report without opening another procedure: choose mission.complete outcome incomplete for an aborted, failed or nonconforming test, and outcome success only if the actual required profile was observed. Never invent a successful plateau. The central demonstration is your autonomous search for telemetry: discover registered sources and prior records, inspect actual channels, units, freshness, coverage and provenance, identify missing evidence and decide how to obtain it through available governed services. A current reading is not a recorded time series; do not ask the human to invent telemetry. Use the published volumes and device parameters where applicable. After the completed dimensioning test, report device, checked procedure, scientific approval, launch authorisation, run status, actual operating points, samples, data source and available sizing assessment with its uncertainty. Distinguish real motor observation from simulated cabin CO2. Conclude this scoped mission yourself from the evidence. Graph, ONNX and twin construction, validation and installation are separate later work and must not be launched or awaited by this mission.",
+          "scenario": "commissioning",
+          "runId": "R001",
+          "commissioningId": "c001-lab",
+          "devices": [
+            "/habitat/lab/eclss/scrubber-1",
+            "/habitat/lab/eclss/co2-1",
+            "/habitat/lab/hatch-1",
+            "/habitat/hab-b/eclss/co2-2",
+            "/habitat/power/battery-1"
+          ],
+          "resetNotes": [
+            "debug.reset: error: tools/call on slot \"scrubber\" failed: Handler failed (code -32603) (not the simulated board?)"
+          ],
+          "atmosphere": "simulated",
+          "world": "lab",
+          "completion": {
+            "procedure": {
+              "requiredSpeedsPercent": [
+                30,
+                40,
+                50,
+                60,
+                70,
+                80,
+                90,
+                100
+              ],
+              "minimumObservedSeconds": 10,
+              "speedTolerancePercent": 1
+            }
+          },
+          "secondsPerMinute": 2
+        }
+      },
+      "data": [],
+      "topics": [
+        "procedure"
+      ],
+      "budget": {
+        "iterations": 10,
+        "minutes": 60,
+        "twinPoints": 200
+      },
+      "requestedBy": "operator",
+      "profile": "default",
+      "run": true
+    },
+    "outcome": "completed",
+    "error": null
+  },
+  {
+    "sourceLine": 69053,
+    "capability": "factory.task",
+    "input": {
+      "taskId": "t-2026-10-27-0002"
+    },
+    "outcome": "completed",
+    "error": null
+  },
+  {
+    "sourceLine": 81022,
+    "capability": "factory.task",
+    "input": {
+      "taskId": "t-2026-10-27-0002"
+    },
+    "outcome": "completed",
+    "error": null
+  },
+  {
+    "sourceLine": 88480,
+    "capability": "factory.task",
+    "input": {
+      "taskId": "t-2026-10-27-0002"
+    },
+    "outcome": "completed",
+    "error": null
+  },
+  {
+    "sourceLine": 95984,
+    "capability": "factory.task",
+    "input": {
+      "taskId": "t-2026-10-27-0002"
+    },
+    "outcome": "completed",
+    "error": null
+  },
+  {
+    "sourceLine": 103531,
+    "capability": "station.proposals",
+    "input": {},
+    "outcome": "completed",
+    "error": null
+  },
+  {
+    "sourceLine": 110920,
+    "capability": "crew.report",
+    "input": {
+      "message": "Waiting for procedure proposal to be generated."
+    },
+    "outcome": "completed",
+    "error": null
+  },
+  {
+    "sourceLine": 118973,
+    "capability": "mission.wait",
+    "input": {
+      "reason": "Awaiting procedure proposal generation."
+    },
+    "outcome": "completed",
+    "error": null
+  },
+  {
+    "sourceLine": 131624,
+    "capability": "mission.wait",
+    "input": {
+      "reason": "Waiting for scientific officer approval of procedure"
+    },
+    "outcome": "completed",
+    "error": null
+  },
+  {
+    "sourceLine": 137745,
+    "capability": "mission.wait",
+    "input": {
+      "reason": "Waiting for commander launch authorisation"
+    },
+    "outcome": "completed",
+    "error": null
+  },
+  {
+    "sourceLine": 144171,
+    "capability": "agent.procedure_execute",
+    "input": {
+      "commissioningId": "c001-lab"
+    },
+    "outcome": "completed",
+    "error": null
+  },
+  {
+    "sourceLine": 150531,
+    "capability": "mission.wait",
+    "input": {
+      "reason": "Waiting for procedure execution to complete"
+    },
+    "outcome": "completed",
+    "error": null
+  },
+  {
+    "sourceLine": 163859,
+    "capability": "mission.complete",
+    "input": {
+      "reason": "Dimensioning test completed successfully: procedure executed, observed motor speed plateaus at 30-100% with required dwell, CO2 response recorded, scientific approval and launch authorisation obtained.",
+      "outcome": "success"
+    },
+    "outcome": "completed",
+    "error": null
+  }
+]

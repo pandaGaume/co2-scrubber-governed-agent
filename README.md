@@ -22,6 +22,8 @@ The commissioning mission is scoped to a dimensioning test and its report. Twin 
 
 [Repository review guide](docs/REPOSITORY-REVIEW.md) maps architectural claims to implementation and tests. [Current status and historical record](docs/STATUS.md) separates the current source layout from earlier development milestones.
 
+[Recorded successful commissioning](docs/evidence/commissioning-2026-10-27/README.md) provides the full journal, prompts, decisions, approved procedure, telemetry and offline verification for the 27 October execution. Supporting trials are separated from that reference. The [28 October hatch-closure interaction](docs/evidence/commissioning-2026-10-27/essais/2026-10-28-sas/README.md) documents the model's response to an execution refusal and the missing interactive reply path.
+
 | Question | Primary sources |
 |---|---|
 | Where does Nemotron reason? | [Reasoner slot](slots/reasoner/provider.ts), [model routing](specs/reasoner/routing.json), [supervisor prompt](specs/agent/prompt.mission.md) |
@@ -60,7 +62,7 @@ npm test
 
 Tests include scripted providers, local model fixtures and software devices. Those tests validate contracts and transport behavior; their success does not establish that a live Nemotron mission completed on hardware. Inspect a test's fixture before interpreting its result.
 
-A live mission records its journal under `.logs/mission-*/`. Factory artifacts and traces are under `outputs/factory/<taskId>/`. Both directories are local and ignored by Git. A reviewer of a fresh clone will not have those execution records. The repository includes historical examples under `docs/exemples/`; they describe their own runs, not the outcome of every later revision.
+A live mission records its journal under `.logs/mission-*/`. Factory artifacts and traces are under `outputs/factory/<taskId>/`. Both directories are local and ignored by Git. A reviewer of a fresh clone has only the explicitly exported records: the [commissioning evidence dossier](docs/evidence/commissioning-2026-10-27/README.md) and historical examples under `docs/exemples/`. They describe their own runs, not the outcome of every later revision.
 
 ```sh
 npm run trace -- outputs/factory/<taskId>

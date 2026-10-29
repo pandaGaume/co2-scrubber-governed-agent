@@ -1,0 +1,333 @@
+{
+  "version": 1,
+  "id": "scrubber-dynamic-id-2026-10-14-01",
+  "method": "scrubber-dynamic-identification",
+  "standard": "Method card: identifying scrubber gain, efficiency and response time",
+  "purpose": "Identify scrubber dynamic response (gain, time constant, delay) from room CO2 concentration response to commanded speed steps",
+  "volume": "/habitat/lab",
+  "device": "/habitat/lab/eclss/scrubber-1",
+  "quantities": [
+    {
+      "name": "gain",
+      "quantity": "Dimensionless",
+      "unit": "ratio"
+    },
+    {
+      "name": "timeConstant",
+      "quantity": "Timespan",
+      "unit": "min"
+    },
+    {
+      "name": "delay",
+      "quantity": "Timespan",
+      "unit": "min"
+    }
+  ],
+  "hypotheses": [
+    "First-order dynamic response with gain, time constant, and delay",
+    "Cabin CO2 concentration reflects scrubber removal dynamics coupled with room exchange and mixing",
+    "Transport delay and response time constant are distinguishable from observations"
+  ],
+  "limits": {
+    "co2MaxPpm": 3100,
+    "co2AbortPpm": 3200,
+    "minSpeedPercent": 30,
+    "maxMinutes": 60
+  },
+  "occupancy": {
+    "module": "lab",
+    "occupants": 2,
+    "subjects": [
+      "FE-1",
+      "FE-2"
+    ],
+    "readBy": "biomed.presence",
+    "at": "current"
+  },
+  "monitoring": {
+    "subjects": [
+      "fe-1",
+      "fe-2"
+    ],
+    "band": {
+      "minBpm": 45,
+      "maxBpm": 120
+    },
+    "reason": "Occupants of lab volume under test"
+  },
+  "authorisation": {
+    "by": "commander",
+    "required": true
+  },
+  "steps": [
+    {
+      "n": 1,
+      "hatch": "open",
+      "speedPercent": 30,
+      "minutes": 6,
+      "why": "Ascending staircase operating point for system identification"
+    },
+    {
+      "n": 2,
+      "hatch": "open",
+      "speedPercent": 40,
+      "minutes": 6,
+      "why": "Ascending staircase operating point for system identification"
+    },
+    {
+      "n": 3,
+      "hatch": "open",
+      "speedPercent": 50,
+      "minutes": 6,
+      "why": "Ascending staircase operating point for system identification"
+    },
+    {
+      "n": 4,
+      "hatch": "open",
+      "speedPercent": 60,
+      "minutes": 6,
+      "why": "Ascending staircase operating point for system identification"
+    },
+    {
+      "n": 5,
+      "hatch": "open",
+      "speedPercent": 70,
+      "minutes": 6,
+      "why": "Ascending staircase operating point for system identification"
+    },
+    {
+      "n": 6,
+      "hatch": "open",
+      "speedPercent": 80,
+      "minutes": 6,
+      "why": "Ascending staircase operating point for system identification"
+    },
+    {
+      "n": 7,
+      "hatch": "open",
+      "speedPercent": 90,
+      "minutes": 6,
+      "why": "Ascending staircase operating point for system identification"
+    },
+    {
+      "n": 8,
+      "hatch": "open",
+      "speedPercent": 100,
+      "minutes": 6,
+      "why": "Ascending staircase operating point for system identification"
+    }
+  ],
+  "abort": [
+    {
+      "id": "co2",
+      "source": "co2_lab_ppm",
+      "when": ">= 3200 ppm"
+    },
+    {
+      "id": "refused",
+      "source": "scrubber.set_speed",
+      "when": "command refused"
+    },
+    {
+      "id": "battery",
+      "source": "battery.state_of_charge",
+      "when": "< 35%",
+      "threshold": 35
+    },
+    {
+      "id": "vitals",
+      "source": "biomed.verdict",
+      "when": "monitored subject out of band"
+    }
+  ],
+  "expected": {
+    "description": "CO2 concentration in lab responds to speed steps with first-order exponential decay/rise, allowing estimation of gain (steady-state CO2 change per speed step), time constant (response lag), and delay (transport delay). If data cannot distinguish scrubber dynamics from exchange/mixing/sensor effects, report effective behaviour bounds."
+  },
+  "justifications": [
+    {
+      "constant": "steps.1.minutes",
+      "value": 6,
+      "source": "library",
+      "reference": "method-scrubber-dynamic-identification",
+      "reason": "6 min dwell per operator-requested plateau; 8 steps × 6 min = 48 min within 60 min ceiling",
+      "by": "model"
+    },
+    {
+      "constant": "steps.2.minutes",
+      "value": 6,
+      "source": "library",
+      "reference": "method-scrubber-dynamic-identification",
+      "reason": "6 min dwell per operator-requested plateau; 8 steps × 6 min = 48 min within 60 min ceiling",
+      "by": "model"
+    },
+    {
+      "constant": "steps.3.minutes",
+      "value": 6,
+      "source": "library",
+      "reference": "method-scrubber-dynamic-identification",
+      "reason": "6 min dwell per operator-requested plateau; 8 steps × 6 min = 48 min within 60 min ceiling",
+      "by": "model"
+    },
+    {
+      "constant": "steps.4.minutes",
+      "value": 6,
+      "source": "library",
+      "reference": "method-scrubber-dynamic-identification",
+      "reason": "6 min dwell per operator-requested plateau; 8 steps × 6 min = 48 min within 60 min ceiling",
+      "by": "model"
+    },
+    {
+      "constant": "steps.5.minutes",
+      "value": 6,
+      "source": "library",
+      "reference": "method-scrubber-dynamic-identification",
+      "reason": "6 min dwell per operator-requested plateau; 8 steps × 6 min = 48 min within 60 min ceiling",
+      "by": "model"
+    },
+    {
+      "constant": "steps.6.minutes",
+      "value": 6,
+      "source": "library",
+      "reference": "method-scrubber-dynamic-identification",
+      "reason": "6 min dwell per operator-requested plateau; 8 steps × 6 min = 48 min within 60 min ceiling",
+      "by": "model"
+    },
+    {
+      "constant": "steps.7.minutes",
+      "value": 6,
+      "source": "library",
+      "reference": "method-scrubber-dynamic-identification",
+      "reason": "6 min dwell per operator-requested plateau; 8 steps × 6 min = 48 min within 60 min ceiling",
+      "by": "model"
+    },
+    {
+      "constant": "steps.8.minutes",
+      "value": 6,
+      "source": "library",
+      "reference": "method-scrubber-dynamic-identification",
+      "reason": "6 min dwell per operator-requested plateau; 8 steps × 6 min = 48 min within 60 min ceiling",
+      "by": "model"
+    },
+    {
+      "constant": "limits.co2MaxPpm",
+      "value": 3100,
+      "source": "library",
+      "reference": "test.co2AbortCeilingPpm",
+      "reason": "at or below it: test.co2AbortCeilingPpm = 3200 ppm, signed by Guillaume Pelletier",
+      "by": "harness"
+    },
+    {
+      "constant": "limits.co2AbortPpm",
+      "value": 3200,
+      "source": "library",
+      "reference": "test.co2AbortCeilingPpm",
+      "reason": "at or below it: test.co2AbortCeilingPpm = 3200 ppm, signed by Guillaume Pelletier",
+      "by": "harness"
+    },
+    {
+      "constant": "limits.minSpeedPercent",
+      "value": 30,
+      "source": "library",
+      "reference": "test.speedFloorPercent",
+      "reason": "at or above it: test.speedFloorPercent = 30 percent, signed by Guillaume Pelletier",
+      "by": "harness"
+    },
+    {
+      "constant": "limits.maxMinutes",
+      "value": 60,
+      "source": "library",
+      "reference": "test.maxMinutesCeiling",
+      "reason": "at or below it: test.maxMinutesCeiling = 60 min, signed by Guillaume Pelletier",
+      "by": "harness"
+    },
+    {
+      "constant": "monitoring.band.minBpm",
+      "value": 45,
+      "source": "library",
+      "reference": "test.heartRateMinBpm",
+      "reason": "at or above it: test.heartRateMinBpm = 45 bpm, signed by Guillaume Pelletier",
+      "by": "harness"
+    },
+    {
+      "constant": "monitoring.band.maxBpm",
+      "value": 120,
+      "source": "library",
+      "reference": "test.heartRateMaxBpm",
+      "reason": "at or below it: test.heartRateMaxBpm = 120 bpm, signed by Guillaume Pelletier",
+      "by": "harness"
+    },
+    {
+      "constant": "steps.1.speedPercent",
+      "value": 30,
+      "source": "library",
+      "reference": "test.speedFloorPercent",
+      "reason": "at or above it: test.speedFloorPercent = 30 percent, signed by Guillaume Pelletier",
+      "by": "harness"
+    },
+    {
+      "constant": "steps.2.speedPercent",
+      "value": 40,
+      "source": "library",
+      "reference": "test.speedFloorPercent",
+      "reason": "at or above it: test.speedFloorPercent = 30 percent, signed by Guillaume Pelletier",
+      "by": "harness"
+    },
+    {
+      "constant": "steps.3.speedPercent",
+      "value": 50,
+      "source": "library",
+      "reference": "test.speedFloorPercent",
+      "reason": "at or above it: test.speedFloorPercent = 30 percent, signed by Guillaume Pelletier",
+      "by": "harness"
+    },
+    {
+      "constant": "steps.4.speedPercent",
+      "value": 60,
+      "source": "library",
+      "reference": "test.speedFloorPercent",
+      "reason": "at or above it: test.speedFloorPercent = 30 percent, signed by Guillaume Pelletier",
+      "by": "harness"
+    },
+    {
+      "constant": "steps.5.speedPercent",
+      "value": 70,
+      "source": "library",
+      "reference": "test.speedFloorPercent",
+      "reason": "at or above it: test.speedFloorPercent = 30 percent, signed by Guillaume Pelletier",
+      "by": "harness"
+    },
+    {
+      "constant": "steps.6.speedPercent",
+      "value": 80,
+      "source": "library",
+      "reference": "test.speedFloorPercent",
+      "reason": "at or above it: test.speedFloorPercent = 30 percent, signed by Guillaume Pelletier",
+      "by": "harness"
+    },
+    {
+      "constant": "steps.7.speedPercent",
+      "value": 90,
+      "source": "library",
+      "reference": "test.speedFloorPercent",
+      "reason": "at or above it: test.speedFloorPercent = 30 percent, signed by Guillaume Pelletier",
+      "by": "harness"
+    },
+    {
+      "constant": "steps.8.speedPercent",
+      "value": 100,
+      "source": "library",
+      "reference": "test.speedFloorPercent",
+      "reason": "at or above it: test.speedFloorPercent = 30 percent, signed by Guillaume Pelletier",
+      "by": "harness"
+    },
+    {
+      "constant": "abort.battery.threshold",
+      "value": 35,
+      "source": "library",
+      "reference": "test.batteryAbortMinPercent",
+      "reason": "at or above it: test.batteryAbortMinPercent = 35 percent, signed by Guillaume Pelletier",
+      "by": "harness"
+    }
+  ],
+  "_mother": "Submitting scrubber dynamic identification procedure for commissioning"
+}

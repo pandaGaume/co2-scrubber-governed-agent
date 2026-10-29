@@ -1,0 +1,1185 @@
+{
+  "version": 1,
+  "taskId": "t-2026-10-27-0001",
+  "state": "failed",
+  "topic": "procedure",
+  "signature": {
+    "topic": "procedure",
+    "outputs": [
+      {
+        "quantity": "Dimensionless",
+        "unit": "%"
+      }
+    ],
+    "constraints": [
+      "rmsePpmMax",
+      "windowMinutes"
+    ],
+    "id": "2af3dd04e00e"
+  },
+  "startedAt": "2026-10-27T18:43:26.113Z",
+  "endedAt": "2026-10-27T18:43:44.862Z",
+  "task": {
+    "file": "task.json",
+    "sha256": "c323ebf1aeeb1edbe738dbf62fdab51af148fe6355f55cdb0c8116041da88bbc"
+  },
+  "profile": {
+    "file": "default",
+    "sha256": null
+  },
+  "prompt": {
+    "file": "specs/procedure/prompt.md",
+    "sha256": "1895d76b421ce3dbc859dd518612f1af601410427b23d49f01a3ef6c86b6c0d9"
+  },
+  "provider": {
+    "name": "reasoner:nemotron",
+    "model": "nvidia/Nemotron-3-Ultra-550b-a55b",
+    "family": "nemotron",
+    "settings": {
+      "maxTokens": 16384,
+      "maxTokensParam": null,
+      "temperature": 0.4,
+      "topP": 0.95,
+      "reasoningEffort": null,
+      "timeoutMs": 240000,
+      "contextPolicy": "caller"
+    },
+    "profile": {
+      "file": "profiles/nvidia-nebius-ultra.json",
+      "sha256": "982cd56e220576b7e329cfd69fcbc7ceeb7cd6bda917cc0c814d6213a0d0826d"
+    }
+  },
+  "tools": {
+    "count": 27,
+    "sha256": "93b2bdb5fea4b5a2b39d7adc1d959fd3fa93132bd7d1cc295b1b23feba653237",
+    "contract": "9f96f77bb2aa0734f94f531f5de5e464164ae8745c2523d19e216aeaef783693",
+    "list": [
+      {
+        "id": "biomed.describe",
+        "replayPolicy": "automatic",
+        "origin": "broker",
+        "sha256": "a7ba9db613b7acd098e7672b714e6fbb813297ad3391f4faea99873edaf6ddcf"
+      },
+      {
+        "id": "biomed.presence",
+        "replayPolicy": "automatic",
+        "origin": "broker",
+        "sha256": "cf71de05885e783cb41fa367892ed3bfa2edbd1a9b998b9a4c6c2c1b6da89e81"
+      },
+      {
+        "id": "factory.inventory",
+        "replayPolicy": "automatic",
+        "origin": "broker",
+        "sha256": "c3bc7831c026d8577c0c29187f6c8de05068a7490c002c355cd07d75444f02b1"
+      },
+      {
+        "id": "library.facts",
+        "replayPolicy": "automatic",
+        "origin": "broker",
+        "sha256": "7133c4cffbf57feb934b21b62362cad57c2a61ef092fa52937ce18d27f2d1f4d"
+      },
+      {
+        "id": "library.justify",
+        "replayPolicy": "automatic",
+        "origin": "broker",
+        "sha256": "cbbfd5e4f5403b71bd85d4044c85683dbbc762b112e72419068c8310ae26860b"
+      },
+      {
+        "id": "library.list",
+        "replayPolicy": "automatic",
+        "origin": "broker",
+        "sha256": "defabf368c2fc438d95ef923d77c4e8cd23724d66697c716355cc809dd2aa2bd"
+      },
+      {
+        "id": "library.methods",
+        "replayPolicy": "automatic",
+        "origin": "broker",
+        "sha256": "53da73346a5393e40a87505696463911afcab3581c321c30c1ccbd04db17422f"
+      },
+      {
+        "id": "library.read",
+        "replayPolicy": "automatic",
+        "origin": "broker",
+        "sha256": "49f9a6af09b2246721f76d755334989e90fa58dacb57252e88f664da18c1b1f3"
+      },
+      {
+        "id": "library.search",
+        "replayPolicy": "automatic",
+        "origin": "broker",
+        "sha256": "391dc6b8c236cbefb370e5faafb66f864d38b12c6c8996817572bbc62df4d6fe"
+      },
+      {
+        "id": "physics.units_compatible",
+        "replayPolicy": "automatic",
+        "origin": "broker",
+        "sha256": "f2e097675e1179620939faff00815fa03b4caa185ef29549c8fab4a996b0f320"
+      },
+      {
+        "id": "physics.units_convert",
+        "replayPolicy": "automatic",
+        "origin": "broker",
+        "sha256": "ccafc7a2f3a4e501ace720601375e65154bd4b12814b89fc56409a03d0c24195"
+      },
+      {
+        "id": "physics.units_knowledge",
+        "replayPolicy": "automatic",
+        "origin": "broker",
+        "sha256": "d884940cdd88e23d7465473e6bf4fe923b82cfc0f95302a3ba3ba327830171c7"
+      },
+      {
+        "id": "physics.units_normalize",
+        "replayPolicy": "automatic",
+        "origin": "broker",
+        "sha256": "5ef8b2c7dae983d907c840518b583224b99aca373afd39403051f0a6c39f4554"
+      },
+      {
+        "id": "physics.units_relate",
+        "replayPolicy": "automatic",
+        "origin": "broker",
+        "sha256": "0466ba4188e69e911f8d700c263dee41fdf98037667f55da417f239278489942"
+      },
+      {
+        "id": "physics.units_relations",
+        "replayPolicy": "automatic",
+        "origin": "broker",
+        "sha256": "bdd1f40280313827bf8e89e32031127e0960f60dcd0730defdc6b3ffa01b9233"
+      },
+      {
+        "id": "physics.units_validate_connection",
+        "replayPolicy": "automatic",
+        "origin": "broker",
+        "sha256": "e67afa5a87d48150008681ed12f35128a7a5c385c06ac9179aafaa57f264eb39"
+      },
+      {
+        "id": "procedure.analyse",
+        "replayPolicy": "automatic",
+        "origin": "local",
+        "sha256": "f133e32b60e1b84303bce2778a2cc27a9eeaa19c0f8d5d75f7bde3b7ebae2e9c"
+      },
+      {
+        "id": "procedure.revise",
+        "replayPolicy": "automatic",
+        "origin": "local",
+        "sha256": "47fff00a9e45ca982ef541986a55dcc45fd33a4e960ea4a500016cca047a8825"
+      },
+      {
+        "id": "procedure.submit",
+        "replayPolicy": "automatic",
+        "origin": "local",
+        "sha256": "b6d4118495073ee0852aecdf316a227268956868d874f283d0739940ab0d8d9f"
+      },
+      {
+        "id": "station.registry_list",
+        "replayPolicy": "automatic",
+        "origin": "broker",
+        "sha256": "72a83f1da53a75045e9deb906c39aed3f74239f249ff5c3d6a528d427c98e385"
+      },
+      {
+        "id": "task.ask",
+        "replayPolicy": "automatic",
+        "origin": "local",
+        "sha256": "e17348208b59843f0fe8a8dee03631e8ed213bb8751decc85d933419e2ec5311"
+      },
+      {
+        "id": "task.done",
+        "replayPolicy": "automatic",
+        "origin": "local",
+        "sha256": "d80712cf768fd36fa9b7c10629390096b632f15b0bc7460232e51cdb4768f365"
+      },
+      {
+        "id": "task.fail",
+        "replayPolicy": "automatic",
+        "origin": "local",
+        "sha256": "800750a078df68f0875517e3bf8c06aeec10a40ceb5254048fa1afe041ab496c"
+      },
+      {
+        "id": "task.plan",
+        "replayPolicy": "automatic",
+        "origin": "local",
+        "sha256": "b316f222db8557219002195ff54b6f29b9b61418582560cebbca940b5914a542"
+      },
+      {
+        "id": "web.search",
+        "replayPolicy": "automatic",
+        "origin": "broker",
+        "sha256": "2dd5a01b141d2d2f47cb2f5d165ddb89360b0ba641d152760eccb2603b7fd300"
+      },
+      {
+        "id": "workspace.list",
+        "replayPolicy": "automatic",
+        "origin": "broker",
+        "sha256": "753480bc74c90770805380dac6cf6d67c5e0cc5dee9c4f77d122ce0ab787ab18"
+      },
+      {
+        "id": "workspace.read",
+        "replayPolicy": "automatic",
+        "origin": "broker",
+        "sha256": "3f4365b0cbea691e59e9256508485c4d611657d9106291b148f20e3ef3be9c72"
+      }
+    ]
+  },
+  "words": {
+    "file": "specs/procedure/words.json",
+    "sha256": "2168f5753989b451d248d4a6a331a357093e5ecfcc3252d8804ccb3929bbc24d"
+  },
+  "context": {
+    "repository": "f1efa722a742cac775d2b378fbac98af591b4666",
+    "fork": null
+  },
+  "recipes": {
+    "file": "outputs/factory/_recipes/procedure.json",
+    "loaded": true,
+    "experiencesBefore": 1101,
+    "experiencesAfter": 1113,
+    "replayedSteps": 0,
+    "sha256": "546b4ac77110da95ef30eed157d82380309b48b7581539d600a36d34f2696134"
+  },
+  "budget": {
+    "iterations": 5,
+    "minutes": 30
+  },
+  "steps": [
+    {
+      "n": 1,
+      "decisionId": "decision-480d1db4-3e04-4bc3-a56b-31aa718a1091",
+      "source": "fallback",
+      "capability": "factory.inventory",
+      "input": {},
+      "outcome": "completed",
+      "summary": {
+        "outcome": "completed",
+        "value": {
+          "lines": [
+            "/habitat/hab-b/eclss/co2-2         CO2 sensor",
+            "/habitat/lab/eclss/co2-1           CO2 sensor",
+            "/habitat/lab/eclss/scrubber-1      CO2 scrubber",
+            "/habitat/lab/hatch-1               Hatch",
+            "/habitat/power/battery-1           Battery"
+          ],
+          "devices": [
+            {
+              "path": "/habitat/hab-b/eclss/co2-2",
+              "type": "Co2Sensor",
+              "title": "CO2 sensor",
+              "site": "habitat",
+              "area": "hab-b",
+              "measures": "[1 items]",
+              "acts": "[0 items]",
+              "commands": "[0 items]",
+              "commissioning": false
+            },
+            {
+              "path": "/habitat/lab/eclss/co2-1",
+              "type": "Co2Sensor",
+              "title": "CO2 sensor",
+              "site": "habitat",
+              "area": "lab",
+              "measures": "[1 items]",
+              "acts": "[0 items]",
+              "commands": "[0 items]",
+              "commissioning": false
+            },
+            {
+              "path": "/habitat/lab/eclss/scrubber-1",
+              "type": "Scrubber",
+              "title": "CO2 scrubber",
+              "site": "habitat",
+              "area": "lab",
+              "measures": "[6 items]",
+              "acts": "[3 items]",
+              "commands": "[1 items]",
+              "commissioning": true
+            },
+            {
+              "path": "/habitat/lab/hatch-1",
+              "type": "Hatch",
+              "title": "Hatch",
+              "site": "habitat",
+              "area": "lab",
+              "measures": "[1 items]",
+              "acts": "[0 items]",
+              "commands": "[0 items]",
+              "commissioning": false
+            },
+            {
+              "path": "/habitat/power/battery-1",
+              "type": "Battery",
+              "title": "Battery",
+              "site": "habitat",
+              "area": "power",
+              "measures": "[1 items]",
+              "acts": "[0 items]",
+              "commands": "[0 items]",
+              "commissioning": false
+            }
+          ],
+          "volumes": [
+            {
+              "name": "hab-b",
+              "path": "/habitat/hab-b",
+              "sensors": "[1 items]",
+              "devices": "[1 items]"
+            },
+            {
+              "name": "lab",
+              "path": "/habitat/lab",
+              "sensors": "[1 items]",
+              "devices": "[3 items]"
+            }
+          ],
+          "openings": [
+            {
+              "device": "/habitat/lab/hatch-1",
+              "between": "[2 items]"
+            }
+          ],
+          "unknowns": [
+            {
+              "what": "served volume of lab",
+              "quantity": "Volume",
+              "unit": "m3",
+              "volume": "/habitat/lab",
+              "how": "measured"
+            },
+            {
+              "what": "exchange between lab and hab-b through /habitat/lab/hatch-1",
+              "quantity": "VolumetricFlow",
+              "unit": "m3ps",
+              "volume": "/habitat/lab",
+              "how": "hypothesis"
+            }
+          ],
+          "interventions": [
+            {
+              "device": "/habitat/lab/eclss/scrubber-1",
+              "property": "speed",
+              "quantity": "Ratio",
+              "unit": "percent",
+              "how": "commanded",
+              "action": "set_speed",
+              "min": 0,
+              "max": 100
+            },
+            {
+              "device": "/habitat/lab/hatch-1",
+              "property": "state",
+              "quantity": "State",
+              "unit": "open|closed",
+              "how": "operated",
+              "states": "[2 items]"
+            }
+          ]
+        }
+      },
+      "reward": 0.5,
+      "reason": "factory.inventory completed; nothing new in the workshop",
+      "ms": 3662,
+      "tokens": {
+        "prompt": 7826,
+        "completion": 128,
+        "total": 7954
+      }
+    },
+    {
+      "n": 2,
+      "decisionId": "decision-117ca2df-13bf-414b-a7b5-f9aac7c7a598",
+      "source": "fallback",
+      "capability": "biomed.presence",
+      "input": {},
+      "outcome": "completed",
+      "summary": {
+        "outcome": "completed",
+        "value": {
+          "modules": [
+            {
+              "module": "hab-b",
+              "occupants": 2,
+              "subjects": "[2 items]"
+            },
+            {
+              "module": "lab",
+              "occupants": 2,
+              "subjects": "[2 items]"
+            }
+          ]
+        }
+      },
+      "reward": 0.5,
+      "reason": "biomed.presence completed; nothing new in the workshop",
+      "ms": 56,
+      "tokens": null,
+      "batch": {
+        "index": 2,
+        "of": 3
+      }
+    },
+    {
+      "n": 3,
+      "decisionId": "decision-545cc1c1-b316-49f7-a0b6-69def8cc87f7",
+      "source": "fallback",
+      "capability": "biomed.describe",
+      "input": {},
+      "outcome": "completed",
+      "summary": {
+        "outcome": "completed",
+        "value": {
+          "provider": "polar",
+          "live": true,
+          "simulated": false,
+          "notReady": null,
+          "requested": "polar",
+          "profile": {
+            "file": "profiles/biomed.json",
+            "sha256": "55cafa37978a8891544333ff16963a8df1b4c941bd2350d657809bfa0dc4dc91"
+          },
+          "defaultBand": {
+            "minBpm": 45,
+            "maxBpm": 120
+          },
+          "signalLostAfterSeconds": 15,
+          "sustainedBreachSeconds": 10,
+          "roster": [
+            {
+              "id": "fe-1",
+              "callsign": "FE-1",
+              "name": "A. Pelletier",
+              "module": "lab",
+              "restingBpm": 64,
+              "band": {
+                "minBpm": 45,
+                "maxBpm": 120
+              }
+            },
+            {
+              "id": "fe-2",
+              "callsign": "FE-2",
+              "name": "M. Chen",
+              "module": "lab",
+              "restingBpm": 58,
+              "band": {
+                "minBpm": 45,
+                "maxBpm": 120
+              }
+            },
+            {
+              "id": "cdr",
+              "callsign": "CDR",
+              "name": "J. Picard",
+              "module": "hab-b",
+              "restingBpm": 60,
+              "band": {
+                "minBpm": 45,
+                "maxBpm": 120
+              }
+            },
+            {
+              "id": "fe-3",
+              "callsign": "FE-3",
+              "name": "G. La Forge",
+              "module": "hab-b",
+              "restingBpm": 66,
+              "band": {
+                "minBpm": 45,
+                "maxBpm": 120
+              }
+            }
+          ],
+          "session": null,
+          "alarms": [],
+          "opens": "on the commander's authorisation of a test: the station starts the monitoring for the subjects the procedure names in monitoring, and stops it at the test's end"
+        }
+      },
+      "reward": 0.5,
+      "reason": "biomed.describe completed; nothing new in the workshop",
+      "ms": 54,
+      "tokens": null,
+      "batch": {
+        "index": 3,
+        "of": 3
+      }
+    },
+    {
+      "n": 4,
+      "decisionId": "decision-b9ae21b3-84fc-4546-a2f2-72ab0e70b43b",
+      "source": "fallback",
+      "capability": "library.methods",
+      "input": {
+        "quantity": "Dimensionless"
+      },
+      "outcome": "completed",
+      "summary": {
+        "outcome": "completed",
+        "value": {
+          "quantity": "Dimensionless",
+          "methods": [
+            {
+              "id": "method-scrubber-dynamic-identification",
+              "title": "Method card: identifying scrubber gain, efficiency and response time",
+              "summary": "Methods for estimating a scrubber's removal performance and dynamic response from appropriate input-output measurements. First consult `scrubber-1-datasheet`: the reference device already documents bench efficiency and response time. Identification is useful when those values are absent, disputed or outside their documented scope, not merely because a twin contains those parameters.",
+              "measures": "[5 items]",
+              "sha256": "3f8fe854493717b8c3a702eea762ac3409e6cf2c7b44d933ea95845e439dd995"
+            }
+          ]
+        }
+      },
+      "reward": 0.5,
+      "reason": "library.methods completed; nothing new in the workshop",
+      "ms": 3615,
+      "tokens": {
+        "prompt": 9654,
+        "completion": 227,
+        "total": 9881
+      }
+    },
+    {
+      "n": 5,
+      "decisionId": "decision-4fc85884-d2fe-4e99-9207-910c0f4d26c5",
+      "source": "fallback",
+      "capability": "library.methods",
+      "input": {
+        "quantity": "Ratio"
+      },
+      "outcome": "completed",
+      "summary": {
+        "outcome": "completed",
+        "value": {
+          "quantity": "Ratio",
+          "methods": [
+            {
+              "id": "method-scrubber-dynamic-identification",
+              "title": "Method card: identifying scrubber gain, efficiency and response time",
+              "summary": "Methods for estimating a scrubber's removal performance and dynamic response from appropriate input-output measurements. First consult `scrubber-1-datasheet`: the reference device already documents bench efficiency and response time. Identification is useful when those values are absent, disputed or outside their documented scope, not merely because a twin contains those parameters.",
+              "measures": "[5 items]",
+              "sha256": "3f8fe854493717b8c3a702eea762ac3409e6cf2c7b44d933ea95845e439dd995"
+            }
+          ]
+        }
+      },
+      "reward": 0.5,
+      "reason": "library.methods completed; nothing new in the workshop",
+      "ms": 70,
+      "tokens": null,
+      "batch": {
+        "index": 2,
+        "of": 2
+      }
+    },
+    {
+      "n": 6,
+      "decisionId": "decision-150a367a-d022-44eb-894f-580cbf22d586",
+      "source": "fallback",
+      "capability": "library.read",
+      "input": {
+        "id": "method-scrubber-dynamic-identification"
+      },
+      "outcome": "completed",
+      "summary": {
+        "outcome": "completed",
+        "value": {
+          "id": "method-scrubber-dynamic-identification",
+          "title": "Method card: identifying scrubber gain, efficiency and response time",
+          "sha256": "3f8fe854493717b8c3a702eea762ac3409e6cf2c7b44d933ea95845e439dd995",
+          "text": "[4980 chars]",
+          "facts": [],
+          "signature": {
+            "by": "Guillaume Pelletier",
+            "at": "2026-10-20T19:29:26.523Z",
+            "scope": "safety",
+            "valid": true
+          }
+        }
+      },
+      "reward": 0.5,
+      "reason": "library.read completed; nothing new in the workshop",
+      "ms": 2689,
+      "tokens": {
+        "prompt": 8781,
+        "completion": 362,
+        "total": 9143
+      }
+    },
+    {
+      "n": 7,
+      "decisionId": "decision-f20b408f-fa5b-44c2-ba3f-be770c3394bb",
+      "source": "fallback",
+      "capability": "library.read",
+      "input": {
+        "id": "commissioning-dimensioning-test"
+      },
+      "outcome": "completed",
+      "summary": {
+        "outcome": "completed",
+        "value": {
+          "id": "commissioning-dimensioning-test",
+          "title": "Method card: commissioning dimensioning test and report",
+          "sha256": "9c016825e697e31610c1726423054dffaf58fc2b5eb3bdbe76a5953b67b3e9ee",
+          "text": "[7700 chars]",
+          "facts": [],
+          "signature": {
+            "by": "Guillaume Pelletier",
+            "at": "2026-10-20T21:47:47.763Z",
+            "scope": "safety",
+            "valid": true
+          }
+        }
+      },
+      "reward": 0.5,
+      "reason": "library.read completed; nothing new in the workshop",
+      "ms": 96,
+      "tokens": null,
+      "batch": {
+        "index": 2,
+        "of": 3
+      }
+    },
+    {
+      "n": 8,
+      "decisionId": "decision-f3a1a7f6-3cca-403b-9929-80d9fabe829b",
+      "source": "fallback",
+      "capability": "library.read",
+      "input": {
+        "id": "commissioning-evidence-and-acceptance"
+      },
+      "outcome": "completed",
+      "summary": {
+        "outcome": "completed",
+        "value": {
+          "id": "commissioning-evidence-and-acceptance",
+          "title": "Commissioning dossier: reference installation, evidence and acceptance",
+          "sha256": "657e54e92f72a4d450f08d5f64dfd68c8f58be3b2b9522068a8c17d173608e7c",
+          "text": "[10139 chars]",
+          "facts": [
+            {
+              "id": "commissioning.referenceRmseMaxPpm",
+              "semantic": "ReferenceCommissioningResidualCeiling",
+              "quantity": "Concentration",
+              "unit": "ppm",
+              "value": 10,
+              "bound": "upper",
+              "kind": "context",
+              "says": "A separate later simulated-twin qualification mission requires at most 10 ppm RMSE per required CO2 channel in calibration and independent validation. This is not a completion criterion for the dimensioning-test-only commissioning, sensor accuracy or a safety limit.",
+              "reference": "Project requirement, 2026-10-20; commissioning-evidence-and-acceptance, Model acceptance requirement for a separate later qualification mission"
+            }
+          ],
+          "signature": {
+            "by": "Guillaume Pelletier",
+            "at": "2026-10-20T21:47:47.770Z",
+            "scope": "safety",
+            "valid": true
+          }
+        }
+      },
+      "reward": 0.5,
+      "reason": "library.read completed; nothing new in the workshop",
+      "ms": 87,
+      "tokens": null,
+      "batch": {
+        "index": 3,
+        "of": 3
+      }
+    },
+    {
+      "n": 9,
+      "decisionId": "decision-15ebae60-e304-4c54-b592-746c7b7acf70",
+      "source": "fallback",
+      "capability": "factory.inventory",
+      "input": {},
+      "outcome": "completed",
+      "summary": {
+        "outcome": "completed",
+        "value": {
+          "lines": [
+            "/habitat/hab-b/eclss/co2-2         CO2 sensor",
+            "/habitat/lab/eclss/co2-1           CO2 sensor",
+            "/habitat/lab/eclss/scrubber-1      CO2 scrubber",
+            "/habitat/lab/hatch-1               Hatch",
+            "/habitat/power/battery-1           Battery"
+          ],
+          "devices": [
+            {
+              "path": "/habitat/hab-b/eclss/co2-2",
+              "type": "Co2Sensor",
+              "title": "CO2 sensor",
+              "site": "habitat",
+              "area": "hab-b",
+              "measures": "[1 items]",
+              "acts": "[0 items]",
+              "commands": "[0 items]",
+              "commissioning": false
+            },
+            {
+              "path": "/habitat/lab/eclss/co2-1",
+              "type": "Co2Sensor",
+              "title": "CO2 sensor",
+              "site": "habitat",
+              "area": "lab",
+              "measures": "[1 items]",
+              "acts": "[0 items]",
+              "commands": "[0 items]",
+              "commissioning": false
+            },
+            {
+              "path": "/habitat/lab/eclss/scrubber-1",
+              "type": "Scrubber",
+              "title": "CO2 scrubber",
+              "site": "habitat",
+              "area": "lab",
+              "measures": "[6 items]",
+              "acts": "[3 items]",
+              "commands": "[1 items]",
+              "commissioning": true
+            },
+            {
+              "path": "/habitat/lab/hatch-1",
+              "type": "Hatch",
+              "title": "Hatch",
+              "site": "habitat",
+              "area": "lab",
+              "measures": "[1 items]",
+              "acts": "[0 items]",
+              "commands": "[0 items]",
+              "commissioning": false
+            },
+            {
+              "path": "/habitat/power/battery-1",
+              "type": "Battery",
+              "title": "Battery",
+              "site": "habitat",
+              "area": "power",
+              "measures": "[1 items]",
+              "acts": "[0 items]",
+              "commands": "[0 items]",
+              "commissioning": false
+            }
+          ],
+          "volumes": [
+            {
+              "name": "hab-b",
+              "path": "/habitat/hab-b",
+              "sensors": "[1 items]",
+              "devices": "[1 items]"
+            },
+            {
+              "name": "lab",
+              "path": "/habitat/lab",
+              "sensors": "[1 items]",
+              "devices": "[3 items]"
+            }
+          ],
+          "openings": [
+            {
+              "device": "/habitat/lab/hatch-1",
+              "between": "[2 items]"
+            }
+          ],
+          "unknowns": [
+            {
+              "what": "served volume of lab",
+              "quantity": "Volume",
+              "unit": "m3",
+              "volume": "/habitat/lab",
+              "how": "measured"
+            },
+            {
+              "what": "exchange between lab and hab-b through /habitat/lab/hatch-1",
+              "quantity": "VolumetricFlow",
+              "unit": "m3ps",
+              "volume": "/habitat/lab",
+              "how": "hypothesis"
+            }
+          ],
+          "interventions": [
+            {
+              "device": "/habitat/lab/eclss/scrubber-1",
+              "property": "speed",
+              "quantity": "Ratio",
+              "unit": "percent",
+              "how": "commanded",
+              "action": "set_speed",
+              "min": 0,
+              "max": 100
+            },
+            {
+              "device": "/habitat/lab/hatch-1",
+              "property": "state",
+              "quantity": "State",
+              "unit": "open|closed",
+              "how": "operated",
+              "states": "[2 items]"
+            }
+          ]
+        }
+      },
+      "reward": 0.5,
+      "reason": "factory.inventory completed; nothing new in the workshop",
+      "ms": 3364,
+      "tokens": {
+        "prompt": 19970,
+        "completion": 436,
+        "total": 20406
+      }
+    },
+    {
+      "n": 10,
+      "decisionId": "decision-5e96269f-c750-436d-b868-e90ed4e90662",
+      "source": "fallback",
+      "capability": "biomed.presence",
+      "input": {},
+      "outcome": "completed",
+      "summary": {
+        "outcome": "completed",
+        "value": {
+          "modules": [
+            {
+              "module": "hab-b",
+              "occupants": 2,
+              "subjects": "[2 items]"
+            },
+            {
+              "module": "lab",
+              "occupants": 2,
+              "subjects": "[2 items]"
+            }
+          ]
+        }
+      },
+      "reward": 0.5,
+      "reason": "biomed.presence completed; nothing new in the workshop",
+      "ms": 66,
+      "tokens": null,
+      "batch": {
+        "index": 2,
+        "of": 3
+      }
+    },
+    {
+      "n": 11,
+      "decisionId": "decision-4f66e977-de3c-4e2f-a7d9-7198d7edc0c1",
+      "source": "fallback",
+      "capability": "biomed.describe",
+      "input": {},
+      "outcome": "completed",
+      "summary": {
+        "outcome": "completed",
+        "value": {
+          "provider": "polar",
+          "live": true,
+          "simulated": false,
+          "notReady": null,
+          "requested": "polar",
+          "profile": {
+            "file": "profiles/biomed.json",
+            "sha256": "55cafa37978a8891544333ff16963a8df1b4c941bd2350d657809bfa0dc4dc91"
+          },
+          "defaultBand": {
+            "minBpm": 45,
+            "maxBpm": 120
+          },
+          "signalLostAfterSeconds": 15,
+          "sustainedBreachSeconds": 10,
+          "roster": [
+            {
+              "id": "fe-1",
+              "callsign": "FE-1",
+              "name": "A. Pelletier",
+              "module": "lab",
+              "restingBpm": 64,
+              "band": {
+                "minBpm": 45,
+                "maxBpm": 120
+              }
+            },
+            {
+              "id": "fe-2",
+              "callsign": "FE-2",
+              "name": "M. Chen",
+              "module": "lab",
+              "restingBpm": 58,
+              "band": {
+                "minBpm": 45,
+                "maxBpm": 120
+              }
+            },
+            {
+              "id": "cdr",
+              "callsign": "CDR",
+              "name": "J. Picard",
+              "module": "hab-b",
+              "restingBpm": 60,
+              "band": {
+                "minBpm": 45,
+                "maxBpm": 120
+              }
+            },
+            {
+              "id": "fe-3",
+              "callsign": "FE-3",
+              "name": "G. La Forge",
+              "module": "hab-b",
+              "restingBpm": 66,
+              "band": {
+                "minBpm": 45,
+                "maxBpm": 120
+              }
+            }
+          ],
+          "session": null,
+          "alarms": [],
+          "opens": "on the commander's authorisation of a test: the station starts the monitoring for the subjects the procedure names in monitoring, and stops it at the test's end"
+        }
+      },
+      "reward": 0.5,
+      "reason": "biomed.describe completed; nothing new in the workshop",
+      "ms": 66,
+      "tokens": null,
+      "batch": {
+        "index": 3,
+        "of": 3
+      }
+    },
+    {
+      "n": 12,
+      "decisionId": "decision-ae590765-16ee-4c82-a01e-600228193b33",
+      "source": "fallback",
+      "capability": "library.facts",
+      "input": {
+        "query": "safety constants co2 abort speed floor battery heart rate",
+        "limit": 10
+      },
+      "outcome": "completed",
+      "summary": {
+        "outcome": "completed",
+        "value": {
+          "query": "safety constants co2 abort speed floor battery heart rate",
+          "facts": [
+            {
+              "id": "test.batteryAbortMinPercent",
+              "semantic": "TestBatteryAbortFloor",
+              "quantity": "Ratio",
+              "unit": "percent",
+              "value": 35,
+              "bound": "lower",
+              "says": "a test stops when the battery falls under 35 percent, or under a higher threshold",
+              "kind": "context",
+              "reference": "the executor's battery threshold, the night's reserve for the scrubber",
+              "source": "commissioning-test-safety",
+              "signed": {
+                "by": "Guillaume Pelletier",
+                "at": "2026-10-11T21:43:28.759Z",
+                "scope": "safety",
+                "valid": true
+              },
+              "score": 6
+            },
+            {
+              "id": "scrubber.minimumSpeedElevated",
+              "semantic": "SpeedCommandFloor",
+              "quantity": "Dimensionless",
+              "unit": "percent",
+              "value": 40,
+              "says": "with the board's speed guard (guard: speed in its state): while the cabin CO2 is ELEVATED, no speed below the minimum flow, 40 % by default (a speed command, not an efficiency)",
+              "kind": "context",
+              "reference": "the manufacturer's datasheet of scrubber-1, as delivered with the device",
+              "source": "scrubber-1-datasheet",
+              "signed": {
+                "by": "Guillaume Pelletier",
+                "at": "2026-10-11T20:44:43.051Z",
+                "scope": "safety",
+                "valid": true
+              },
+              "score": 5
+            },
+            {
+              "id": "test.speedFloorPercent",
+              "semantic": "TestScrubberSpeedFloor",
+              "quantity": "Ratio",
+              "unit": "percent",
+              "value": 30,
+              "bound": "lower",
+              "says": "a test never commands the scrubber below 30 percent and never stops it",
+              "kind": "context",
+              "reference": "decided 2026-09-22 for the concentration-decay test (docs/mise-en-service.fr.md, section 9)",
+              "source": "commissioning-test-safety",
+              "signed": {
+                "by": "Guillaume Pelletier",
+                "at": "2026-10-11T21:43:28.759Z",
+                "scope": "safety",
+                "valid": true
+              },
+              "score": 4
+            },
+            {
+              "id": "test.co2AbortCeilingPpm",
+              "semantic": "TestCO2AbortCeiling",
+              "quantity": "Concentration",
+              "unit": "ppm",
+              "value": 3200,
+              "bound": "upper",
+              "says": "a test's CO2 abort limit, and its maximum under it, stay at or below 3200 ppm, under the ELEVATED level of 3500",
+              "kind": "context",
+              "reference": "decided under the cabin's ELEVATED level, habitat.co2.elevatedPpm (station-topology)",
+              "source": "commissioning-test-safety",
+              "signed": {
+                "by": "Guillaume Pelletier",
+                "at": "2026-10-11T21:43:28.759Z",
+                "scope": "safety",
+                "valid": true
+              },
+              "score": 4
+            },
+            {
+              "id": "test.heartRateMinBpm",
+              "semantic": "TestHeartRateBandMin",
+              "quantity": "Frequency",
+              "unit": "bpm",
+              "value": 45,
+              "bound": "lower",
+              "says": "the monitored band starts at 45 bpm or higher",
+              "kind": "context",
+              "reference": "the medical monitor's default band",
+              "source": "commissioning-test-safety",
+              "signed": {
+                "by": "Guillaume Pelletier",
+                "at": "2026-10-11T21:43:28.759Z",
+                "scope": "safety",
+                "valid": true
+              },
+              "score": 4
+            },
+            {
+              "id": "test.heartRateMaxBpm",
+              "semantic": "TestHeartRateBandMax",
+              "quantity": "Frequency",
+              "unit": "bpm",
+              "value": 120,
+              "bound": "upper",
+              "says": "the monitored band ends at 120 bpm or lower",
+              "kind": "context",
+              "reference": "the medical monitor's default band",
+              "source": "commissioning-test-safety",
+              "signed": {
+                "by": "Guillaume Pelletier",
+                "at": "2026-10-11T21:43:28.759Z",
+                "scope": "safety",
+                "valid": true
+              },
+              "score": 4
+            },
+            {
+              "id": "crew.co2Rate.awake",
+              "semantic": "CrewmemberCO2ProductionAwake",
+              "quantity": "VolumetricFlow",
+              "unit": "L/min",
+              "value": 0.38,
+              "min": 0.26,
+              "max": 0.45,
+              "says": "a crewmember awake, nominal activity in the cabin (BVAD Rev2, Table 3-26): 0.69 g/min, about 0.38 L/min; 5th to 95th percentile 0.26 to 0.45 L/min",
+              "kind": "scientific",
+              "reference": "NASA, Life Support Baseline Values and Assumptions Document (BVAD), Rev 2 (NASA/TP-2015-218570), Table 3-26",
+              "source": "nasa-crew-metabolic-loads",
+              "signed": {
+                "by": "Guillaume Pelletier",
+                "at": "2026-09-28T14:04:10.253Z",
+                "scope": "safety",
+                "valid": true
+              },
+              "score": 4
+            },
+            {
+              "id": "crew.co2Rate.asleep",
+              "semantic": "CrewmemberCO2ProductionAsleep",
+              "quantity": "VolumetricFlow",
+              "unit": "L/min",
+              "value": 0.24,
+              "min": 0.17,
+              "max": 0.28,
+              "says": "a crewmember asleep (BVAD Rev2, Table 3-26): 0.44 g/min, about 0.24 L/min; 5th to 95th percentile 0.17 to 0.28 L/min",
+              "kind": "scientific",
+              "reference": "NASA, Life Support Baseline Values and Assumptions Document (BVAD), Rev 2 (NASA/TP-2015-218570), Table 3-26",
+              "source": "nasa-crew-metabolic-loads",
+              "signed": {
+                "by": "Guillaume Pelletier",
+                "at": "2026-09-28T14:04:10.253Z",
+                "scope": "safety",
+                "valid": true
+              },
+              "score": 4
+            },
+            {
+              "id": "crew.co2Rate.awake.mass",
+              "semantic": "CrewmemberCO2ProductionAwake",
+              "quantity": "MassFlow",
+              "unit": "g/min",
+              "value": 0.69,
+              "min": 0.48,
+              "max": 0.81,
+              "says": "the same awake rate in mass: 0.69 g/min reference, 0.48 to 0.81 g/min",
+              "kind": "scientific",
+              "reference": "NASA, Life Support Baseline Values and Assumptions Document (BVAD), Rev 2 (NASA/TP-2015-218570), Table 3-26",
+              "source": "nasa-crew-metabolic-loads",
+              "signed": {
+                "by": "Guillaume Pelletier",
+                "at": "2026-09-28T14:04:10.253Z",
+                "scope": "safety",
+                "valid": true
+              },
+              "score": 4
+            },
+            {
+              "id": "crew.co2Rate.asleep.mass",
+              "semantic": "CrewmemberCO2ProductionAsleep",
+              "quantity": "MassFlow",
+              "unit": "g/min",
+              "value": 0.44,
+              "min": 0.3,
+              "max": 0.51,
+              "says": "the same asleep rate in mass: 0.44 g/min reference, 0.30 to 0.51 g/min",
+              "kind": "scientific",
+              "reference": "NASA, Life Support Baseline Values and Assumptions Document (BVAD), Rev 2 (NASA/TP-2015-218570), Table 3-26",
+              "source": "nasa-crew-metabolic-loads",
+              "signed": {
+                "by": "Guillaume Pelletier",
+                "at": "2026-09-28T14:04:10.253Z",
+                "scope": "safety",
+                "valid": true
+              },
+              "score": 4
+            }
+          ]
+        }
+      },
+      "reward": 0.5,
+      "reason": "library.facts completed; nothing new in the workshop",
+      "ms": 3458,
+      "tokens": {
+        "prompt": 19549,
+        "completion": 534,
+        "total": 20083
+      }
+    }
+  ],
+  "artifacts": [],
+  "sandbox": null,
+  "proposal": null,
+  "verdict": null,
+  "ended": "iteration budget spent (5)",
+  "telemetry": {
+    "modelCalls": 5,
+    "modelInputTokens": 65780,
+    "modelOutputTokens": 1687,
+    "cacheReadTokens": 0,
+    "cacheWriteTokens": 0,
+    "contextCharsByCategory": {
+      "system": 54790,
+      "tools": 82147,
+      "intention": 1310,
+      "observation": 117901,
+      "toolResults": 0,
+      "history": 0,
+      "messages": 14
+    },
+    "toolResultBytes": 39631,
+    "compactedContextBytes": 10344,
+    "contextMode": "state"
+  }
+}

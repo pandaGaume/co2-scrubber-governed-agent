@@ -1,0 +1,33 @@
+{
+  "scenario": "commissioning",
+  "runId": "R001",
+  "commissioningId": "c001-lab",
+  "devices": [
+    "/habitat/lab/eclss/scrubber-1",
+    "/habitat/lab/eclss/co2-1",
+    "/habitat/lab/hatch-1",
+    "/habitat/hab-b/eclss/co2-2",
+    "/habitat/power/battery-1"
+  ],
+  "resetNotes": [
+    "debug.reset: error: tools/call on slot \"scrubber\" failed: Handler failed (code -32603) (not the simulated board?)"
+  ],
+  "atmosphere": "simulated",
+  "world": "lab",
+  "completion": {
+    "procedure": {
+      "requiredSpeedsPercent": [
+        30,
+        40,
+        50,
+        60,
+        70,
+        80,
+        90,
+        100
+      ],
+      "minimumObservedSeconds": 10,
+      "speedTolerancePercent": 1
+    }
+  }
+}

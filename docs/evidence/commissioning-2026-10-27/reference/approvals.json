@@ -1,0 +1,20 @@
+{
+  "scientificApproval": {
+    "decision": "approve",
+    "by": "Commander Spock",
+    "at": "2026-10-27T18:44:50.460Z",
+    "procedureSha256": "00480740efcbb588323c4ba77bfea1525d43bb4b8c018c0ad823b7457433a1cc",
+    "note": null
+  },
+  "launchAuthorisation": {
+    "decision": "authorise",
+    "by": "James T. Kirk",
+    "at": "2026-10-27T18:45:00.255Z",
+    "note": null
+  },
+  "reportAuthorisation": {
+    "by": "James T. Kirk",
+    "at": "2026-10-27T18:45:00.255Z"
+  },
+  "caution": "These are application-recorded human decisions, not independent identity attestations."
+}

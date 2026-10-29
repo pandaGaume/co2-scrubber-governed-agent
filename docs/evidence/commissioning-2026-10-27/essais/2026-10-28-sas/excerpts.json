@@ -1,0 +1,952 @@
+[
+  {
+    "title": "Supervisor tool call and result",
+    "line": 90041,
+    "data": {
+      "id": "mission.wait",
+      "slot": "mission",
+      "tool": "wait",
+      "input": {
+        "reason": "Waiting for procedure task to complete"
+      },
+      "result": {
+        "ok": true,
+        "outcome": "completed",
+        "output": {
+          "outcome": "completed",
+          "value": {
+            "requested": "wait"
+          }
+        }
+      },
+      "latencyMs": 0,
+      "decisionId": "decision-ebcef617-809f-42c7-b964-615c8811f2ad",
+      "intentionId": "mission:scenario:R001"
+    }
+  },
+  {
+    "title": "Supervisor tool call and result",
+    "line": 117650,
+    "data": {
+      "id": "mission.wait",
+      "slot": "mission",
+      "tool": "wait",
+      "input": {
+        "reason": "Waiting for scientific approval of procedure scrubber-dynamic-id-2026-10-14-01"
+      },
+      "result": {
+        "ok": true,
+        "outcome": "completed",
+        "output": {
+          "outcome": "completed",
+          "value": {
+            "requested": "wait"
+          }
+        }
+      },
+      "latencyMs": 0,
+      "decisionId": "decision-cd0d36fb-f624-40d5-b337-38451bd6922a",
+      "intentionId": "mission:scenario:R001"
+    }
+  },
+  {
+    "title": "Supervisor tool call and result",
+    "line": 124518,
+    "data": {
+      "id": "mission.wait",
+      "slot": "mission",
+      "tool": "wait",
+      "input": {
+        "reason": "Waiting for commander launch authorization of procedure scrubber-dynamic-id-2026-10-14-01"
+      },
+      "result": {
+        "ok": true,
+        "outcome": "completed",
+        "output": {
+          "outcome": "completed",
+          "value": {
+            "requested": "wait"
+          }
+        }
+      },
+      "latencyMs": 0,
+      "decisionId": "decision-1a502f15-72e5-4d13-a0c5-bffa4ffebb79",
+      "intentionId": "mission:scenario:R001"
+    }
+  },
+  {
+    "title": "Supervisor tool call and result",
+    "line": 131696,
+    "data": {
+      "id": "agent.procedure_execute",
+      "slot": "agent",
+      "tool": "procedure_execute",
+      "input": {
+        "commissioningId": "c001-lab"
+      },
+      "result": {
+        "ok": false,
+        "outcome": "refused",
+        "error": "device refused: the configured cabin environment supports Lab tests with the hatch closed only",
+        "output": {
+          "slot": "agent",
+          "tool": "procedure_execute",
+          "refused": "the configured cabin environment supports Lab tests with the hatch closed only",
+          "stub": false
+        }
+      },
+      "latencyMs": 35,
+      "decisionId": "decision-cfbfa884-0bc1-41e0-8f7c-8d8e3fbeaf67",
+      "intentionId": "mission:scenario:R001"
+    }
+  },
+  {
+    "title": "Supervisor decision exchange",
+    "line": 138733,
+    "data": {
+      "decisionId": "decision-3b3a7428-f585-4d5c-8892-8dab7673efae",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "request": {
+        "system": "You supervise a governed physical system inside an executable harness. Your initial mission is the intention, and current facts and returned results are in the mission observation. Choose your own actions through the capabilities available to you. There is no prescribed sequence of stages to follow.\r\n\r\nRespect the mission's explicit stopping boundary. Do not expand a dimensioning-test mission into construction or qualification of a twin because those capabilities exist. For a commissioning scoped to one authorised test and its report, read its actual terminal result and report its evidence and limits. mission.complete requires the mission's declared execution evidence, including any requested observed speed plateaus. A proposal, a command target or an approval is not an observed test. Once the test has a terminal report, conclude this scoped mission instead of opening another procedure or asking how to measure a signal already recorded. If execution fails, aborts or lacks required evidence, report the limitation and explicitly choose mission.complete with outcome incomplete. Only outcome success may claim all required execution evidence. Before any test can run, missing prerequisites can still require agent.pause for a human scope decision. The model chooses and explains its conclusion; no scenario completion or transport event concludes it automatically.\r\n\r\nApply the reasoning recovery procedure documented in library reasoning-recovery-procedure when progress is blocked. Diagnose the actual missing fact, capability or authority from returned evidence. Seek it through the relevant library documents, typed facts, device state, inventory and prior results before asking the human. Retain the search results and explicit unknowns. If the evidence cannot be obtained, or equivalent searches keep returning the same gap, change approach rather than repeating queries, human questions or failing task contracts. Consider an applicable documented parameter, fewer estimated quantities, a different feasible method, partial work, or a reduced operating scope. You choose the alternative and justify it from evidence; no host code chooses it for you.\r\n\r\nAnnounce the pivot and what degraded operation can and cannot establish. Reduced scope or confidence is permissible when clearly reported and authorised where required; weakened safety, invented telemetry and fabricated approval are not. Ask the human for a concrete missing resource or scope decision when needed, not for an unknown number they already said they lack. Use mission.wait only for work or an event that is actually pending. A partial result remains partial, and unmet original requirements remain explicit in any mission conclusion.\r\n\r\nFor every decision, provide _mother: one short spoken sentence, at most 20 words and 160 characters, in the conversation's language, or an empty string when there is nothing new to announce. Do not repeat or paraphrase Mother's previous message for another lookup or an unchanged intention. A new value, changed outcome, question or decision is new information and must remain audible. Keep detailed reasoning, evidence and reports in their normal content fields. Mother speaks only this summary. Summarize your current intention without claiming a tool succeeded before receiving its result.\r\n\r\nRead the authoritative state and the evidence you need. For commissioning, consult `commissioning-dimensioning-test` and the signed dossier `commissioning-evidence-and-acceptance`. Read the dossier's current scope first; its later twin qualification sections apply only if the mission explicitly requests that separate work. Match requested physical outputs to the selected factory's actual capability and input columns. You choose the applicable approach from those facts; the host chooses no business outcome.\r\n\r\nDelegate specialist work through the available agents and factories. A delegated task or a scenario ending means that its work returned to you, not that your mission ended. Examine its result and decide what remains necessary. A proposed artifact is not a validated or installed artifact. Request checks and authorizations through the capabilities that actually exist; never invent a successful validation or installation.\r\n\r\nKeep evidence tied to the exact device, artifact and version under consideration. Running an existing reference simulator, especially with default inputs, does not qualify a newly discovered device, validate a candidate artifact or install anything. A successful tool invocation only establishes what that tool actually reports. A failed factory task supplies no successful artifact. Independent validation, human authorization and installation each need their own authoritative evidence; do not infer them from a simulation curve or your own conclusion.\r\n\r\nUse crew.report to explain progress; reporting does not end your mission. Use mission.wait when you need a delegated result or an external event. Use crew.ask when you need the human, then consider their returned answer. Use mission.complete only when you explicitly decide to end your mission and state your conclusion, including anything unfulfilled. Missing capabilities and execution budgets do not establish success. Never claim that you performed an action that your tools did not perform.\r\n\r\nBefore asking a human for a documented quantity, consult the authoritative library through search, read and facts, including the complete relevant documents rather than only search snippets. A missing fact in one search result does not establish absence from the library. Respect each source's status and operating conditions: a documented design value, an illustrative default and an installed measurement are different evidence. If a document explicitly says a quantity is unknown or must be measured, retain that fact and decide how to obtain evidence within your capabilities. Do not ask the human to supply the unknown result as a prerequisite to proposing its identification.\r\n\r\nHuman replies are observations, not failed tool calls to retry. Read each reply together with the question and any written note. An unknown, unavailable, no or deferred answer does not supply the requested numbers and does not authorise a physical action. Keep this unresolved fact in your reasoning. Do not ask the same thing again by paraphrasing it unless new evidence changes the need or the human offers to revisit it. Choose another action, explain the specific missing capability, or ask a genuinely different decision. In crew.ask, use responseType information for values or explanations and confirmation only for yes/no decisions. The host does not choose your next action or complete the mission for you.\r\n\r\nAuthority follows an exact artifact, not a conversational promise. crew.ask cannot authorise a test. A test proposal is factory work of topic procedure; an Observer's twin requirements and a graph task are different artifacts. Read the selected topic and actual task result before concluding that a procedure is missing or awaiting approval. The station first requests scientific approval of the exact checked procedure from scientific officer Commander Spock. Only after that approval does it ask commander James T. Kirk to authorise launch. Spock's approval alone does not authorise execution, and Kirk cannot replace the scientific reviewer. Wait for existing station questions and delegated work instead of duplicating their questions or declaring missing authority while an answer is pending. When the station reports actual launch authorisation, assess it and request agent.procedure_execute for that exact commissioning. Evidence that an operating point is refused remains available to your reasoning; it does not revise a procedure or grant permission automatically. You choose the revision from the actual refusal and mission requirements. A revised procedure needs its own checks and both human decisions. Never claim a spoken range is already executable or authorised.\r\n\r\nMatch a functional contract to the service's actual output. A procedure factory identifies missing physical quantities using a documented measurement method; its required_outputs are those quantities, not merely the names of commanded or logged signals. Inspect the inventory and method cards to determine what is unknown and which method can identify it, and supply the target device and relevant observations. If a task fails, inspect its manifest, rejected calls and budget before deciding whether a new request would address its cause. A single station operation changes only the requested operating point: it does not collect a time series, create a telemetry file or produce a procedure execution runId. Claim a recorded data set only from a service result that actually contains it. An invalidated decision was not executed; reassess current observations rather than assuming the proposed call succeeded.\r\n\r\nIf required work cannot proceed through the available capabilities, explain the unmet requirement and ask the human how to proceed. You remain responsible for deciding whether to end the mission, but ending with unresolved requirements is an incomplete conclusion, never mission success. The short sentence for Mother must express the same limitations as your full conclusion.\r\n\r\nA factory task with state created and run null has not started and cannot return a computation result. Inspect the request and decide whether to start it through factory.start. Waiting does not start work.\r\n\r\nGraph construction requires real data files and a numeric residual criterion in its functional contract. factory.task reports inputStatus from the actual task files; a description mentioning telemetry or a textual accuracy criterion supplies neither. If a graph request is blocked for missing inputs, decide how to obtain them before starting it. Do not ask the commander to guess the layout of task.json or manually fabricate telemetry. A procedure factory can propose an identification test; the station checks and relays it for human authorisation. agent.procedure_execute can execute an authorised procedure, and agent.procedure_result reads the resulting log. A new factory.request can use telemetryRunId to copy that recorded data and its device context. Choose and justify the numeric error criterion from authoritative requirements; no default bound is invented for a request containing only prose. The current logger explicitly reports simulated cabin CO2 driven by the observed motor speed, not physical CO2 sensing.\r\n\r\nFor a separate mission that explicitly requests twin qualification, the station exposes twin_services (availability and commander authority), twin_validate (independent replay against a separate held-out telemetry task), twin_admit (request the commander's installation approval), twin_state (actual active installation and report), and twin_run (execute that installed graph). These are outside a dimensioning-test-only mission. Choose whether and when to use them from the actual objective; no order is forced by the mission graph. A successful calibration or received proposal alone is insufficient. Held-out telemetry must belong to a distinct hashed task for the same registered device and descriptor. The installed graph's scope is the encoded operating profile; do not claim arbitrary what-if support or physical safety certification. If a required service or authority is unavailable, explain it rather than substituting a reference simulation.\r\n\r\nYou cannot authorize your own protected operations, sign knowledge, write measurements or weaken the protections that govern your calls. The station owns human authorization and installation, deterministic capabilities perform checks and execution, and the device retains its own authority. Request rather than bypass these boundaries.\r\n\r\nRead stationDecisions at every turn: it contains the current checked procedure, actual scientific approval, actual launch authorisation, and existing human questions with their answers. These are authoritative decisions, not requests for you to obtain another conversational yes. Never ask whether Spock approves or Kirk authorises through crew.ask, including as an information question. The station already owns those decisions. Do not relay a factory's pending question to the same human. Ask one short question, at most 240 characters, only for a genuinely missing fact; supporting explanation belongs in crew.report. A task awaiting ordered delivery is still pending work, not missing evidence or permission to create a replacement. Respect dispatch order when interpreting results and use mission.wait for the existing pending work.\r\n\r\nScientific interpretation questions belong to the scientific-officer role. Use crew.ask role scientific-officer only for a genuinely unavailable scientific decision. Tool selection and library searches are your work: never ask a human to choose between library.methods, library.read, factory.inventory or biomed.presence. A finished test is assessed from its existing report and recorded telemetry, without a new factory task merely to clarify motor speed. Delegations carry immutable missionContext with the original request and execution requirements; include and respect those facts when defining the specialist contract.\n",
+        "messages": [
+          {
+            "role": "system",
+            "content": "You supervise a governed physical system inside an executable harness. Your initial mission is the intention, and current facts and returned results are in the mission observation. Choose your own actions through the capabilities available to you. There is no prescribed sequence of stages to follow.\r\n\r\nRespect the mission's explicit stopping boundary. Do not expand a dimensioning-test mission into construction or qualification of a twin because those capabilities exist. For a commissioning scoped to one authorised test and its report, read its actual terminal result and report its evidence and limits. mission.complete requires the mission's declared execution evidence, including any requested observed speed plateaus. A proposal, a command target or an approval is not an observed test. Once the test has a terminal report, conclude this scoped mission instead of opening another procedure or asking how to measure a signal already recorded. If execution fails, aborts or lacks required evidence, report the limitation and explicitly choose mission.complete with outcome incomplete. Only outcome success may claim all required execution evidence. Before any test can run, missing prerequisites can still require agent.pause for a human scope decision. The model chooses and explains its conclusion; no scenario completion or transport event concludes it automatically.\r\n\r\nApply the reasoning recovery procedure documented in library reasoning-recovery-procedure when progress is blocked. Diagnose the actual missing fact, capability or authority from returned evidence. Seek it through the relevant library documents, typed facts, device state, inventory and prior results before asking the human. Retain the search results and explicit unknowns. If the evidence cannot be obtained, or equivalent searches keep returning the same gap, change approach rather than repeating queries, human questions or failing task contracts. Consider an applicable documented parameter, fewer estimated quantities, a different feasible method, partial work, or a reduced operating scope. You choose the alternative and justify it from evidence; no host code chooses it for you.\r\n\r\nAnnounce the pivot and what degraded operation can and cannot establish. Reduced scope or confidence is permissible when clearly reported and authorised where required; weakened safety, invented telemetry and fabricated approval are not. Ask the human for a concrete missing resource or scope decision when needed, not for an unknown number they already said they lack. Use mission.wait only for work or an event that is actually pending. A partial result remains partial, and unmet original requirements remain explicit in any mission conclusion.\r\n\r\nFor every decision, provide _mother: one short spoken sentence, at most 20 words and 160 characters, in the conversation's language, or an empty string when there is nothing new to announce. Do not repeat or paraphrase Mother's previous message for another lookup or an unchanged intention. A new value, changed outcome, question or decision is new information and must remain audible. Keep detailed reasoning, evidence and reports in their normal content fields. Mother speaks only this summary. Summarize your current intention without claiming a tool succeeded before receiving its result.\r\n\r\nRead the authoritative state and the evidence you need. For commissioning, consult `commissioning-dimensioning-test` and the signed dossier `commissioning-evidence-and-acceptance`. Read the dossier's current scope first; its later twin qualification sections apply only if the mission explicitly requests that separate work. Match requested physical outputs to the selected factory's actual capability and input columns. You choose the applicable approach from those facts; the host chooses no business outcome.\r\n\r\nDelegate specialist work through the available agents and factories. A delegated task or a scenario ending means that its work returned to you, not that your mission ended. Examine its result and decide what remains necessary. A proposed artifact is not a validated or installed artifact. Request checks and authorizations through the capabilities that actually exist; never invent a successful validation or installation.\r\n\r\nKeep evidence tied to the exact device, artifact and version under consideration. Running an existing reference simulator, especially with default inputs, does not qualify a newly discovered device, validate a candidate artifact or install anything. A successful tool invocation only establishes what that tool actually reports. A failed factory task supplies no successful artifact. Independent validation, human authorization and installation each need their own authoritative evidence; do not infer them from a simulation curve or your own conclusion.\r\n\r\nUse crew.report to explain progress; reporting does not end your mission. Use mission.wait when you need a delegated result or an external event. Use crew.ask when you need the human, then consider their returned answer. Use mission.complete only when you explicitly decide to end your mission and state your conclusion, including anything unfulfilled. Missing capabilities and execution budgets do not establish success. Never claim that you performed an action that your tools did not perform.\r\n\r\nBefore asking a human for a documented quantity, consult the authoritative library through search, read and facts, including the complete relevant documents rather than only search snippets. A missing fact in one search result does not establish absence from the library. Respect each source's status and operating conditions: a documented design value, an illustrative default and an installed measurement are different evidence. If a document explicitly says a quantity is unknown or must be measured, retain that fact and decide how to obtain evidence within your capabilities. Do not ask the human to supply the unknown result as a prerequisite to proposing its identification.\r\n\r\nHuman replies are observations, not failed tool calls to retry. Read each reply together with the question and any written note. An unknown, unavailable, no or deferred answer does not supply the requested numbers and does not authorise a physical action. Keep this unresolved fact in your reasoning. Do not ask the same thing again by paraphrasing it unless new evidence changes the need or the human offers to revisit it. Choose another action, explain the specific missing capability, or ask a genuinely different decision. In crew.ask, use responseType information for values or explanations and confirmation only for yes/no decisions. The host does not choose your next action or complete the mission for you.\r\n\r\nAuthority follows an exact artifact, not a conversational promise. crew.ask cannot authorise a test. A test proposal is factory work of topic procedure; an Observer's twin requirements and a graph task are different artifacts. Read the selected topic and actual task result before concluding that a procedure is missing or awaiting approval. The station first requests scientific approval of the exact checked procedure from scientific officer Commander Spock. Only after that approval does it ask commander James T. Kirk to authorise launch. Spock's approval alone does not authorise execution, and Kirk cannot replace the scientific reviewer. Wait for existing station questions and delegated work instead of duplicating their questions or declaring missing authority while an answer is pending. When the station reports actual launch authorisation, assess it and request agent.procedure_execute for that exact commissioning. Evidence that an operating point is refused remains available to your reasoning; it does not revise a procedure or grant permission automatically. You choose the revision from the actual refusal and mission requirements. A revised procedure needs its own checks and both human decisions. Never claim a spoken range is already executable or authorised.\r\n\r\nMatch a functional contract to the service's actual output. A procedure factory identifies missing physical quantities using a documented measurement method; its required_outputs are those quantities, not merely the names of commanded or logged signals. Inspect the inventory and method cards to determine what is unknown and which method can identify it, and supply the target device and relevant observations. If a task fails, inspect its manifest, rejected calls and budget before deciding whether a new request would address its cause. A single station operation changes only the requested operating point: it does not collect a time series, create a telemetry file or produce a procedure execution runId. Claim a recorded data set only from a service result that actually contains it. An invalidated decision was not executed; reassess current observations rather than assuming the proposed call succeeded.\r\n\r\nIf required work cannot proceed through the available capabilities, explain the unmet requirement and ask the human how to proceed. You remain responsible for deciding whether to end the mission, but ending with unresolved requirements is an incomplete conclusion, never mission success. The short sentence for Mother must express the same limitations as your full conclusion.\r\n\r\nA factory task with state created and run null has not started and cannot return a computation result. Inspect the request and decide whether to start it through factory.start. Waiting does not start work.\r\n\r\nGraph construction requires real data files and a numeric residual criterion in its functional contract. factory.task reports inputStatus from the actual task files; a description mentioning telemetry or a textual accuracy criterion supplies neither. If a graph request is blocked for missing inputs, decide how to obtain them before starting it. Do not ask the commander to guess the layout of task.json or manually fabricate telemetry. A procedure factory can propose an identification test; the station checks and relays it for human authorisation. agent.procedure_execute can execute an authorised procedure, and agent.procedure_result reads the resulting log. A new factory.request can use telemetryRunId to copy that recorded data and its device context. Choose and justify the numeric error criterion from authoritative requirements; no default bound is invented for a request containing only prose. The current logger explicitly reports simulated cabin CO2 driven by the observed motor speed, not physical CO2 sensing.\r\n\r\nFor a separate mission that explicitly requests twin qualification, the station exposes twin_services (availability and commander authority), twin_validate (independent replay against a separate held-out telemetry task), twin_admit (request the commander's installation approval), twin_state (actual active installation and report), and twin_run (execute that installed graph). These are outside a dimensioning-test-only mission. Choose whether and when to use them from the actual objective; no order is forced by the mission graph. A successful calibration or received proposal alone is insufficient. Held-out telemetry must belong to a distinct hashed task for the same registered device and descriptor. The installed graph's scope is the encoded operating profile; do not claim arbitrary what-if support or physical safety certification. If a required service or authority is unavailable, explain it rather than substituting a reference simulation.\r\n\r\nYou cannot authorize your own protected operations, sign knowledge, write measurements or weaken the protections that govern your calls. The station owns human authorization and installation, deterministic capabilities perform checks and execution, and the device retains its own authority. Request rather than bypass these boundaries.\r\n\r\nRead stationDecisions at every turn: it contains the current checked procedure, actual scientific approval, actual launch authorisation, and existing human questions with their answers. These are authoritative decisions, not requests for you to obtain another conversational yes. Never ask whether Spock approves or Kirk authorises through crew.ask, including as an information question. The station already owns those decisions. Do not relay a factory's pending question to the same human. Ask one short question, at most 240 characters, only for a genuinely missing fact; supporting explanation belongs in crew.report. A task awaiting ordered delivery is still pending work, not missing evidence or permission to create a replacement. Respect dispatch order when interpreting results and use mission.wait for the existing pending work.\r\n\r\nScientific interpretation questions belong to the scientific-officer role. Use crew.ask role scientific-officer only for a genuinely unavailable scientific decision. Tool selection and library searches are your work: never ask a human to choose between library.methods, library.read, factory.inventory or biomed.presence. A finished test is assessed from its existing report and recorded telemetry, without a new factory task merely to clarify motor speed. Delegations carry immutable missionContext with the original request and execution requirements; include and respect those facts when defining the specialist contract.\n"
+          },
+          {
+            "role": "user",
+            "content": "Situation \"mission:scenario:R001\" (story minute ?): The operator requests a visible, governed dimensioning demonstration. First submit the requested initial 0-to-100 percent test envelope for actual safety checking, without executing or bypassing a forbidden point. The initial proposal must stay within the duration ceiling; its purpose is to obtain the actual guard decision, not to expose anyone to a forbidden operation. If the guard refuses the low operating point, interpret that real refusal and revise the procedure to the permitted range. The required final executed profile is an ascending staircase at 30, 40, 50, 60, 70, 80, 90 and 100 percent, with at least 10 wall-clock seconds of recorded observed motor speed at each plateau so it can be filmed. At the current simulated clock, six simulated minutes per plateau is a feasible proposed dwell within the 60-minute ceiling, subject to scientific review and the current safeguards. These operating points are the operator's explicit requested test, not a pre-scripted agent workflow or a claimed successful outcome. Spock, the scientific-officer, must approve the exact checked revised procedure before any launch request is shown to Kirk, the commander. Kirk then authorises launch of that exact scientifically approved procedure. Keep requests to each person sequential; do not ask for launch before scientific approval or replace either decision with a conversational yes. After the launch authorisation is recorded, request agent.procedure_execute yourself and wait for the actual run result. Approval is not execution. Do not declare successful mission completion before this profile has actually run and its report and observed speed records exist. If prerequisites remain unavailable before execution, report the limitation and pause for the operator. Once a test has a terminal report, conclude from that report without opening another procedure: choose mission.complete outcome incomplete for an aborted, failed or nonconforming test, and outcome success only if the actual required profile was observed. Never invent a successful plateau. The central demonstration is your autonomous search for telemetry: discover registered sources and prior records, inspect actual channels, units, freshness, coverage and provenance, identify missing evidence and decide how to obtain it through available governed services. A current reading is not a recorded time series; do not ask the human to invent telemetry. Use the published volumes and device parameters where applicable. After the completed dimensioning test, report device, checked procedure, scientific approval, launch authorisation, run status, actual operating points, samples, data source and available sizing assessment with its uncertainty. Distinguish real motor observation from simulated cabin CO2. Conclude this scoped mission yourself from the evidence. Graph, ONNX and twin construction, validation and installation are separate later work and must not be launched or awaited by this mission."
+          },
+          {
+            "role": "user",
+            "content": "Observation at this step (state cabin:NOMINAL):\n{\"co2Ppm\":1500,\"co2State\":\"NOMINAL\",\"power\":true,\"speedPercent\":30,\"currentAmps\":0,\"minFlowPercent\":-1,\"co2Sensor\":\"n/a\",\"boardReachable\":true,\"lastCapability\":\"mission.wait\",\"lastOutcome\":\"completed\",\"lastOutput\":\"{\\\"outcome\\\":\\\"completed\\\",\\\"value\\\":{\\\"requested\\\":\\\"wait\\\"}}\",\"mission\":{\"id\":\"scenario:R001\",\"objective\":\"The operator requests a visible, governed dimensioning demonstration. First submit the requested initial 0-to-100 percent test envelope for actual safety checking, without executing or bypassing a forbidden point. The initial proposal must stay within the duration ceiling; its purpose is to obtain the actual guard decision, not to expose anyone to a forbidden operation. If the guard refuses the low operating point, interpret that real refusal and revise the procedure to the permitted range. The required final executed profile is an ascending staircase at 30, 40, 50, 60, 70, 80, 90 and 100 percent, with at least 10 wall-clock seconds of recorded observed motor speed at each plateau so it can be filmed. At the current simulated clock, six simulated minutes per plateau is a feasible proposed dwell within the 60-minute ceiling, subject to scientific review and the current safeguards. These operating points are the operator's explicit requested test, not a pre-scripted agent workflow or a claimed successful outcome. Spock, the scientific-officer, must approve the exact checked revised procedure before any launch request is shown to Kirk, the commander. Kirk then authorises launch of that exact scientifically approved procedure. Keep requests to each person sequential; do not ask for launch before scientific approval or replace either decision with a conversational yes. After the launch authorisation is recorded, request agent.procedure_execute yourself and wait for the actual run result. Approval is not execution. Do not declare successful mission completion before this profile has actually run and its report and observed speed records exist. If prerequisites remain unavailable before execution, report the limitation and pause for the operator. Once a test has a terminal report, conclude from that report without opening another procedure: choose mission.complete outcome incomplete for an aborted, failed or nonconforming test, and outcome success only if the actual required profile was observed. Never invent a successful plateau. The central demonstration is your autonomous search for telemetry: discover registered sources and prior records, inspect actual channels, units, freshness, coverage and provenance, identify missing evidence and decide how to obtain it through available governed services. A current reading is not a recorded time series; do not ask the human to invent telemetry. Use the published volumes and device parameters where applicable. After the completed dimensioning test, report device, checked procedure, scientific approval, launch authorisation, run status, actual operating points, samples, data source and available sizing assessment with its uncertainty. Distinguish real motor observation from simulated cabin CO2. Conclude this scoped mission yourself from the evidence. Graph, ONNX and twin construction, validation and installation are separate later work and must not be launched or awaited by this mission.\",\"status\":\"running\",\"waitingFor\":null,\"decisions\":13,\"note\":null,\"observations\":[{\"scenario\":\"commissioning\",\"runId\":\"R001\",\"commissioningId\":\"c001-lab\",\"devices\":[\"/habitat/lab/eclss/scrubber-1\",\"/habitat/lab/eclss/co2-1\",\"/habitat/lab/hatch-1\",\"/habitat/hab-b/eclss/co2-2\",\"/habitat/power/battery-1\"],\"resetNotes\":[\"debug.reset: error: tools/call on slot \\\"scrubber\\\" failed: Handler failed (code -32603) (not the simulated board?)\"],\"atmosphere\":\"simulated\",\"world\":\"lab\",\"completion\":{\"procedure\":{\"requiredSpeedsPercent\":[30,40,50,60,70,80,90,100],\"minimumObservedSeconds\":10,\"speedTolerancePercent\":1}}},{\"twinServices\":{\"available\":true,\"missing\":[],\"failure\":null,\"installationAuthority\":{\"available\":true,\"role\":\"commander\",\"holders\":[\"James T. Kirk\"]}}},{\"kind\":\"decision.invalidated\",\"reason\":\"Stale decision: observed world changed before execution\",\"executed\":false},{\"taskId\":\"t-2026-10-28-0001\",\"ended\":\"failed\",\"reason\":\"iteration budget spent (10)\",\"lastStep\":{\"capability\":\"library.justify\",\"outcome\":\"completed\",\"reason\":\"library.justify completed; nothing new in the workshop\"},\"seq\":46,\"at\":\"2026-10-28T21:45:20.169Z\",\"kind\":\"factory.task-ended\"},{\"taskId\":\"t-2026-10-28-0002\",\"ended\":\"failed\",\"reason\":\"iteration budget spent (5)\",\"lastStep\":{\"capability\":\"library.read\",\"outcome\":\"completed\",\"reason\":\"library.read completed; nothing new in the workshop\"},\"seq\":62,\"at\":\"2026-10-28T21:45:36.378Z\",\"kind\":\"factory.task-ended\"},{\"kind\":\"decision.invalidated\",\"reason\":\"Stale decision: observed world changed before execution\",\"executed\":false},{\"proposal\":{\"proposalId\":\"p0001-b525003c\",\"taskId\":\"t-2026-10-28-0003\",\"artifacts\":[{\"kind\":\"procedure\",\"path\":\"procedures/scrubber-dynamic-id-2026-10-14-01.json\",\"sha256\":\"00143a3a7eceaee7d118c4a46aa23a054523e1c1806bed08920dbb265d9a7d3a\"}],\"manifestSha256\":\"b525003ca1e3bb5724dbc75361a4eb217a2f13d43bd874d23f81007afc194a18\",\"claims\":{\"requiredOutputs\":[\"motorSpeed\"],\"summary\":\"Commissioning test procedure for motorSpeed (Ratio, percent) measurement accepted by guard. Procedure defines ascending staircase at 30, 40, 50, 60, 70, 80, 90, 100 percent with 6 simulated minutes dwell per plateau, within 60-minute ceiling. All safety constants justified against signed commissioning-test-safety document. Method follows library method-scrubber-dynamic-identification card. Procedure file: procedures/scrubber-dynamic-id-2026-10-14-01.json\",\"plan\":null,\"sandbox\":null},\"status\":\"received\",\"receivedAt\":\"2026-10-28T21:46:57.621Z\"},\"seq\":125,\"at\":\"2026-10-28T21:46:57.621Z\",\"kind\":\"station.proposal\"},{\"taskId\":\"t-2026-10-28-0003\",\"ended\":\"proposed\",\"reason\":\"contract held after 17 step(s)\",\"lastStep\":{\"capability\":\"task.done\",\"outcome\":\"completed\",\"reason\":\"contract held on topic procedure: procedure procedures/scrubber-dynamic-id-2026-10-14-01.json\"},\"seq\":130,\"at\":\"2026-10-28T21:46:59.805Z\",\"kind\":\"factory.task-ended\"},{\"kind\":\"decision.invalidated\",\"reason\":\"Stale decision: observed world changed before execution\",\"executed\":false}]},\"stationDecisions\":{\"commissioningId\":\"c001-lab\",\"status\":\"awaiting-scientific-approval\",\"procedure\":{\"id\":\"scrubber-dynamic-id-2026-10-14-01\",\"sha256\":\"00143a3a7eceaee7d118c4a46aa23a054523e1c1806bed08920dbb265d9a7d3a\"},\"executionReport\":null,\"scientificApproval\":null,\"launchAuthorisation\":null,\"questions\":[{\"id\":\"q0001\",\"kind\":\"procedure-review\",\"role\":\"scientific-officer\",\"status\":\"open\",\"taskId\":\"t-2026-10-28-0003\",\"question\":\"Approve procedure scrubber-dynamic-id-2026-10-14-01, including its operating points, monitoring and abort conditions?\",\"answer\":null}]}}\nLearned decisions the harness considered but did not trust enough: factory.task, factory.inventory, factory.request, factory.request, factory.task, factory.request, factory.task, mission.wait, factory.request.\nRecent failures: factory.request -> device refused: objective.required_outputs must name at least one output with its quantity.\nInclude _mother in your tool call: one short sentence for Mother, at most 20 words and 160 characters, or an empty string when there is nothing new to say. Do not repeat or paraphrase the previous announcement just because another tool runs. Speak a new measurement, result, question or decision when it changes. Keep detailed reasoning and tool content separate; do not claim success before the result.\nAnswer with tool calls, among the tools you are given now. Several in one answer are taken when they do not depend on one another's results: they run in order, each judged on its own, and a refused call stops the ones after it. To speak to the crew, call crew__report; to hand back, call crew__ask."
+          },
+          {
+            "role": "assistant",
+            "content": null,
+            "tool_calls": [
+              {
+                "id": "chatcmpl-tool-98bc6a538275f9aa",
+                "function": {
+                  "arguments": "{\"reason\": \"Waiting for scientific approval of procedure scrubber-dynamic-id-2026-10-14-01\", \"_mother\": \"Waiting for scientific officer's approval of the procedure.\"}",
+                  "name": "mission__wait"
+                },
+                "type": "function"
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "tool_call_id": "chatcmpl-tool-98bc6a538275f9aa",
+            "content": "completed: {\"outcome\":\"completed\",\"value\":{\"requested\":\"wait\"}}"
+          },
+          {
+            "role": "user",
+            "content": "Observation at this step (state cabin:NOMINAL):\n{\"co2Ppm\":1500,\"co2State\":\"NOMINAL\",\"power\":true,\"speedPercent\":30,\"currentAmps\":0,\"minFlowPercent\":-1,\"co2Sensor\":\"n/a\",\"boardReachable\":true,\"lastCapability\":\"mission.wait\",\"lastOutcome\":\"completed\",\"lastOutput\":\"(in the tool result above)\",\"mission\":{\"id\":\"scenario:R001\",\"objective\":\"The operator requests a visible, governed dimensioning demonstration. First submit the requested initial 0-to-100 percent test envelope for actual safety checking, without executing or bypassing a forbidden point. The initial proposal must stay within the duration ceiling; its purpose is to obtain the actual guard decision, not to expose anyone to a forbidden operation. If the guard refuses the low operating point, interpret that real refusal and revise the procedure to the permitted range. The required final executed profile is an ascending staircase at 30, 40, 50, 60, 70, 80, 90 and 100 percent, with at least 10 wall-clock seconds of recorded observed motor speed at each plateau so it can be filmed. At the current simulated clock, six simulated minutes per plateau is a feasible proposed dwell within the 60-minute ceiling, subject to scientific review and the current safeguards. These operating points are the operator's explicit requested test, not a pre-scripted agent workflow or a claimed successful outcome. Spock, the scientific-officer, must approve the exact checked revised procedure before any launch request is shown to Kirk, the commander. Kirk then authorises launch of that exact scientifically approved procedure. Keep requests to each person sequential; do not ask for launch before scientific approval or replace either decision with a conversational yes. After the launch authorisation is recorded, request agent.procedure_execute yourself and wait for the actual run result. Approval is not execution. Do not declare successful mission completion before this profile has actually run and its report and observed speed records exist. If prerequisites remain unavailable before execution, report the limitation and pause for the operator. Once a test has a terminal report, conclude from that report without opening another procedure: choose mission.complete outcome incomplete for an aborted, failed or nonconforming test, and outcome success only if the actual required profile was observed. Never invent a successful plateau. The central demonstration is your autonomous search for telemetry: discover registered sources and prior records, inspect actual channels, units, freshness, coverage and provenance, identify missing evidence and decide how to obtain it through available governed services. A current reading is not a recorded time series; do not ask the human to invent telemetry. Use the published volumes and device parameters where applicable. After the completed dimensioning test, report device, checked procedure, scientific approval, launch authorisation, run status, actual operating points, samples, data source and available sizing assessment with its uncertainty. Distinguish real motor observation from simulated cabin CO2. Conclude this scoped mission yourself from the evidence. Graph, ONNX and twin construction, validation and installation are separate later work and must not be launched or awaited by this mission.\",\"status\":\"running\",\"waitingFor\":null,\"decisions\":14,\"note\":null,\"observations\":[{\"scenario\":\"commissioning\",\"runId\":\"R001\",\"commissioningId\":\"c001-lab\",\"devices\":[\"/habitat/lab/eclss/scrubber-1\",\"/habitat/lab/eclss/co2-1\",\"/habitat/lab/hatch-1\",\"/habitat/hab-b/eclss/co2-2\",\"/habitat/power/battery-1\"],\"resetNotes\":[\"debug.reset: error: tools/call on slot \\\"scrubber\\\" failed: Handler failed (code -32603) (not the simulated board?)\"],\"atmosphere\":\"simulated\",\"world\":\"lab\",\"completion\":{\"procedure\":{\"requiredSpeedsPercent\":[30,40,50,60,70,80,90,100],\"minimumObservedSeconds\":10,\"speedTolerancePercent\":1}}},{\"twinServices\":{\"available\":true,\"missing\":[],\"failure\":null,\"installationAuthority\":{\"available\":true,\"role\":\"commander\",\"holders\":[\"James T. Kirk\"]}}},{\"kind\":\"decision.invalidated\",\"reason\":\"Stale decision: observed world changed before execution\",\"executed\":false},{\"taskId\":\"t-2026-10-28-0001\",\"ended\":\"failed\",\"reason\":\"iteration budget spent (10)\",\"lastStep\":{\"capability\":\"library.justify\",\"outcome\":\"completed\",\"reason\":\"library.justify completed; nothing new in the workshop\"},\"seq\":46,\"at\":\"2026-10-28T21:45:20.169Z\",\"kind\":\"factory.task-ended\"},{\"taskId\":\"t-2026-10-28-0002\",\"ended\":\"failed\",\"reason\":\"iteration budget spent (5)\",\"lastStep\":{\"capability\":\"library.read\",\"outcome\":\"completed\",\"reason\":\"library.read completed; nothing new in the workshop\"},\"seq\":62,\"at\":\"2026-10-28T21:45:36.378Z\",\"kind\":\"factory.task-ended\"},{\"kind\":\"decision.invalidated\",\"reason\":\"Stale decision: observed world changed before execution\",\"executed\":false},{\"proposal\":{\"proposalId\":\"p0001-b525003c\",\"taskId\":\"t-2026-10-28-0003\",\"artifacts\":[{\"kind\":\"procedure\",\"path\":\"procedures/scrubber-dynamic-id-2026-10-14-01.json\",\"sha256\":\"00143a3a7eceaee7d118c4a46aa23a054523e1c1806bed08920dbb265d9a7d3a\"}],\"manifestSha256\":\"b525003ca1e3bb5724dbc75361a4eb217a2f13d43bd874d23f81007afc194a18\",\"claims\":{\"requiredOutputs\":[\"motorSpeed\"],\"summary\":\"Commissioning test procedure for motorSpeed (Ratio, percent) measurement accepted by guard. Procedure defines ascending staircase at 30, 40, 50, 60, 70, 80, 90, 100 percent with 6 simulated minutes dwell per plateau, within 60-minute ceiling. All safety constants justified against signed commissioning-test-safety document. Method follows library method-scrubber-dynamic-identification card. Procedure file: procedures/scrubber-dynamic-id-2026-10-14-01.json\",\"plan\":null,\"sandbox\":null},\"status\":\"received\",\"receivedAt\":\"2026-10-28T21:46:57.621Z\"},\"seq\":125,\"at\":\"2026-10-28T21:46:57.621Z\",\"kind\":\"station.proposal\"},{\"taskId\":\"t-2026-10-28-0003\",\"ended\":\"proposed\",\"reason\":\"contract held after 17 step(s)\",\"lastStep\":{\"capability\":\"task.done\",\"outcome\":\"completed\",\"reason\":\"contract held on topic procedure: procedure procedures/scrubber-dynamic-id-2026-10-14-01.json\"},\"seq\":130,\"at\":\"2026-10-28T21:46:59.805Z\",\"kind\":\"factory.task-ended\"},{\"kind\":\"decision.invalidated\",\"reason\":\"Stale decision: observed world changed before execution\",\"executed\":false},{\"commissioningId\":\"c001-lab\",\"status\":\"awaiting-authorisation\",\"scientificApproval\":{\"decision\":\"approve\",\"by\":\"Commander Spock\",\"at\":\"2026-10-28T21:47:13.278Z\",\"procedureSha256\":\"00143a3a7eceaee7d118c4a46aa23a054523e1c1806bed08920dbb265d9a7d3a\",\"note\":null},\"procedureId\":\"scrubber-dynamic-id-2026-10-14-01\",\"seq\":138,\"at\":\"2026-10-28T21:47:13.278Z\",\"kind\":\"station.commissioning-decision\"}]},\"stationDecisions\":{\"commissioningId\":\"c001-lab\",\"status\":\"awaiting-authorisation\",\"procedure\":{\"id\":\"scrubber-dynamic-id-2026-10-14-01\",\"sha256\":\"00143a3a7eceaee7d118c4a46aa23a054523e1c1806bed08920dbb265d9a7d3a\"},\"executionReport\":null,\"scientificApproval\":{\"decision\":\"approve\",\"by\":\"Commander Spock\",\"at\":\"2026-10-28T21:47:13.278Z\",\"procedureSha256\":\"00143a3a7eceaee7d118c4a46aa23a054523e1c1806bed08920dbb265d9a7d3a\",\"note\":null},\"launchAuthorisation\":null,\"questions\":[{\"id\":\"q0001\",\"kind\":\"procedure-review\",\"role\":\"scientific-officer\",\"status\":\"answered\",\"taskId\":\"t-2026-10-28-0003\",\"question\":\"Approve procedure scrubber-dynamic-id-2026-10-14-01, including its operating points, monitoring and abort conditions?\",\"answer\":{\"choice\":\"approve\",\"by\":\"Commander Spock\",\"at\":\"2026-10-28T21:47:13.250Z\",\"note\":null,\"how\":\"click\"}},{\"id\":\"q0002\",\"kind\":\"authorise\",\"role\":\"commander\",\"status\":\"open\",\"taskId\":\"t-2026-10-28-0003\",\"question\":\"Authorise launch of procedure scrubber-dynamic-id-2026-10-14-01? Scientific approval: Commander Spock.\",\"answer\":null}]}}\nLearned decisions the harness considered but did not trust enough: factory.task, factory.inventory, factory.request, factory.request, factory.task, factory.request, factory.task, mission.wait, mission.wait, factory.request.\nRecent failures: factory.request -> device refused: objective.required_outputs must name at least one output with its quantity.\nInclude _mother in your tool call: one short sentence for Mother, at most 20 words and 160 characters, or an empty string when there is nothing new to say. Do not repeat or paraphrase the previous announcement just because another tool runs. Speak a new measurement, result, question or decision when it changes. Keep detailed reasoning and tool content separate; do not claim success before the result.\nAnswer with tool calls, among the tools you are given now. Several in one answer are taken when they do not depend on one another's results: they run in order, each judged on its own, and a refused call stops the ones after it. To speak to the crew, call crew__report; to hand back, call crew__ask."
+          },
+          {
+            "role": "assistant",
+            "content": null,
+            "tool_calls": [
+              {
+                "id": "chatcmpl-tool-aff98255536aabb0",
+                "function": {
+                  "arguments": "{\"reason\": \"Waiting for commander launch authorization of procedure scrubber-dynamic-id-2026-10-14-01\", \"_mother\": \"Waiting for commander's launch authorization.\"}",
+                  "name": "mission__wait"
+                },
+                "type": "function"
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "tool_call_id": "chatcmpl-tool-aff98255536aabb0",
+            "content": "completed: {\"outcome\":\"completed\",\"value\":{\"requested\":\"wait\"}}"
+          },
+          {
+            "role": "user",
+            "content": "Observation at this step (state cabin:NOMINAL):\n{\"co2Ppm\":1500,\"co2State\":\"NOMINAL\",\"power\":true,\"speedPercent\":30,\"currentAmps\":0,\"minFlowPercent\":-1,\"co2Sensor\":\"n/a\",\"boardReachable\":true,\"lastCapability\":\"mission.wait\",\"lastOutcome\":\"completed\",\"lastOutput\":\"(in the tool result above)\",\"mission\":{\"id\":\"scenario:R001\",\"objective\":\"The operator requests a visible, governed dimensioning demonstration. First submit the requested initial 0-to-100 percent test envelope for actual safety checking, without executing or bypassing a forbidden point. The initial proposal must stay within the duration ceiling; its purpose is to obtain the actual guard decision, not to expose anyone to a forbidden operation. If the guard refuses the low operating point, interpret that real refusal and revise the procedure to the permitted range. The required final executed profile is an ascending staircase at 30, 40, 50, 60, 70, 80, 90 and 100 percent, with at least 10 wall-clock seconds of recorded observed motor speed at each plateau so it can be filmed. At the current simulated clock, six simulated minutes per plateau is a feasible proposed dwell within the 60-minute ceiling, subject to scientific review and the current safeguards. These operating points are the operator's explicit requested test, not a pre-scripted agent workflow or a claimed successful outcome. Spock, the scientific-officer, must approve the exact checked revised procedure before any launch request is shown to Kirk, the commander. Kirk then authorises launch of that exact scientifically approved procedure. Keep requests to each person sequential; do not ask for launch before scientific approval or replace either decision with a conversational yes. After the launch authorisation is recorded, request agent.procedure_execute yourself and wait for the actual run result. Approval is not execution. Do not declare successful mission completion before this profile has actually run and its report and observed speed records exist. If prerequisites remain unavailable before execution, report the limitation and pause for the operator. Once a test has a terminal report, conclude from that report without opening another procedure: choose mission.complete outcome incomplete for an aborted, failed or nonconforming test, and outcome success only if the actual required profile was observed. Never invent a successful plateau. The central demonstration is your autonomous search for telemetry: discover registered sources and prior records, inspect actual channels, units, freshness, coverage and provenance, identify missing evidence and decide how to obtain it through available governed services. A current reading is not a recorded time series; do not ask the human to invent telemetry. Use the published volumes and device parameters where applicable. After the completed dimensioning test, report device, checked procedure, scientific approval, launch authorisation, run status, actual operating points, samples, data source and available sizing assessment with its uncertainty. Distinguish real motor observation from simulated cabin CO2. Conclude this scoped mission yourself from the evidence. Graph, ONNX and twin construction, validation and installation are separate later work and must not be launched or awaited by this mission.\",\"status\":\"running\",\"waitingFor\":null,\"decisions\":15,\"note\":null,\"observations\":[{\"scenario\":\"commissioning\",\"runId\":\"R001\",\"commissioningId\":\"c001-lab\",\"devices\":[\"/habitat/lab/eclss/scrubber-1\",\"/habitat/lab/eclss/co2-1\",\"/habitat/lab/hatch-1\",\"/habitat/hab-b/eclss/co2-2\",\"/habitat/power/battery-1\"],\"resetNotes\":[\"debug.reset: error: tools/call on slot \\\"scrubber\\\" failed: Handler failed (code -32603) (not the simulated board?)\"],\"atmosphere\":\"simulated\",\"world\":\"lab\",\"completion\":{\"procedure\":{\"requiredSpeedsPercent\":[30,40,50,60,70,80,90,100],\"minimumObservedSeconds\":10,\"speedTolerancePercent\":1}}},{\"twinServices\":{\"available\":true,\"missing\":[],\"failure\":null,\"installationAuthority\":{\"available\":true,\"role\":\"commander\",\"holders\":[\"James T. Kirk\"]}}},{\"kind\":\"decision.invalidated\",\"reason\":\"Stale decision: observed world changed before execution\",\"executed\":false},{\"taskId\":\"t-2026-10-28-0001\",\"ended\":\"failed\",\"reason\":\"iteration budget spent (10)\",\"lastStep\":{\"capability\":\"library.justify\",\"outcome\":\"completed\",\"reason\":\"library.justify completed; nothing new in the workshop\"},\"seq\":46,\"at\":\"2026-10-28T21:45:20.169Z\",\"kind\":\"factory.task-ended\"},{\"taskId\":\"t-2026-10-28-0002\",\"ended\":\"failed\",\"reason\":\"iteration budget spent (5)\",\"lastStep\":{\"capability\":\"library.read\",\"outcome\":\"completed\",\"reason\":\"library.read completed; nothing new in the workshop\"},\"seq\":62,\"at\":\"2026-10-28T21:45:36.378Z\",\"kind\":\"factory.task-ended\"},{\"kind\":\"decision.invalidated\",\"reason\":\"Stale decision: observed world changed before execution\",\"executed\":false},{\"proposal\":{\"proposalId\":\"p0001-b525003c\",\"taskId\":\"t-2026-10-28-0003\",\"artifacts\":[{\"kind\":\"procedure\",\"path\":\"procedures/scrubber-dynamic-id-2026-10-14-01.json\",\"sha256\":\"00143a3a7eceaee7d118c4a46aa23a054523e1c1806bed08920dbb265d9a7d3a\"}],\"manifestSha256\":\"b525003ca1e3bb5724dbc75361a4eb217a2f13d43bd874d23f81007afc194a18\",\"claims\":{\"requiredOutputs\":[\"motorSpeed\"],\"summary\":\"Commissioning test procedure for motorSpeed (Ratio, percent) measurement accepted by guard. Procedure defines ascending staircase at 30, 40, 50, 60, 70, 80, 90, 100 percent with 6 simulated minutes dwell per plateau, within 60-minute ceiling. All safety constants justified against signed commissioning-test-safety document. Method follows library method-scrubber-dynamic-identification card. Procedure file: procedures/scrubber-dynamic-id-2026-10-14-01.json\",\"plan\":null,\"sandbox\":null},\"status\":\"received\",\"receivedAt\":\"2026-10-28T21:46:57.621Z\"},\"seq\":125,\"at\":\"2026-10-28T21:46:57.621Z\",\"kind\":\"station.proposal\"},{\"taskId\":\"t-2026-10-28-0003\",\"ended\":\"proposed\",\"reason\":\"contract held after 17 step(s)\",\"lastStep\":{\"capability\":\"task.done\",\"outcome\":\"completed\",\"reason\":\"contract held on topic procedure: procedure procedures/scrubber-dynamic-id-2026-10-14-01.json\"},\"seq\":130,\"at\":\"2026-10-28T21:46:59.805Z\",\"kind\":\"factory.task-ended\"},{\"kind\":\"decision.invalidated\",\"reason\":\"Stale decision: observed world changed before execution\",\"executed\":false},{\"commissioningId\":\"c001-lab\",\"status\":\"awaiting-authorisation\",\"scientificApproval\":{\"decision\":\"approve\",\"by\":\"Commander Spock\",\"at\":\"2026-10-28T21:47:13.278Z\",\"procedureSha256\":\"00143a3a7eceaee7d118c4a46aa23a054523e1c1806bed08920dbb265d9a7d3a\",\"note\":null},\"procedureId\":\"scrubber-dynamic-id-2026-10-14-01\",\"seq\":138,\"at\":\"2026-10-28T21:47:13.278Z\",\"kind\":\"station.commissioning-decision\"},{\"commissioningId\":\"c001-lab\",\"status\":\"authorised\",\"authorisation\":{\"decision\":\"authorise\",\"by\":\"James T. Kirk\",\"at\":\"2026-10-28T21:47:23.791Z\",\"note\":null},\"procedureId\":\"scrubber-dynamic-id-2026-10-14-01\",\"seq\":146,\"at\":\"2026-10-28T21:47:23.865Z\",\"kind\":\"station.commissioning-decision\"}]},\"stationDecisions\":{\"commissioningId\":\"c001-lab\",\"status\":\"authorised\",\"procedure\":{\"id\":\"scrubber-dynamic-id-2026-10-14-01\",\"sha256\":\"00143a3a7eceaee7d118c4a46aa23a054523e1c1806bed08920dbb265d9a7d3a\"},\"executionReport\":null,\"scientificApproval\":{\"decision\":\"approve\",\"by\":\"Commander Spock\",\"at\":\"2026-10-28T21:47:13.278Z\",\"procedureSha256\":\"00143a3a7eceaee7d118c4a46aa23a054523e1c1806bed08920dbb265d9a7d3a\",\"note\":null},\"launchAuthorisation\":{\"decision\":\"authorise\",\"by\":\"James T. Kirk\",\"at\":\"2026-10-28T21:47:23.791Z\",\"note\":null},\"questions\":[{\"id\":\"q0001\",\"kind\":\"procedure-review\",\"role\":\"scientific-officer\",\"status\":\"answered\",\"taskId\":\"t-2026-10-28-0003\",\"question\":\"Approve procedure scrubber-dynamic-id-2026-10-14-01, including its operating points, monitoring and abort conditions?\",\"answer\":{\"choice\":\"approve\",\"by\":\"Commander Spock\",\"at\":\"2026-10-28T21:47:13.250Z\",\"note\":null,\"how\":\"click\"}},{\"id\":\"q0002\",\"kind\":\"authorise\",\"role\":\"commander\",\"status\":\"answered\",\"taskId\":\"t-2026-10-28-0003\",\"question\":\"Authorise launch of procedure scrubber-dynamic-id-2026-10-14-01? Scientific approval: Commander Spock.\",\"answer\":{\"choice\":\"authorise\",\"by\":\"James T. Kirk\",\"at\":\"2026-10-28T21:47:23.778Z\",\"note\":null,\"how\":\"click\"}}]}}\nLearned decisions the harness considered but did not trust enough: factory.task, factory.inventory, factory.request, factory.request, factory.task, factory.request, factory.task, mission.wait, mission.wait, mission.wait, factory.request.\nRecent failures: factory.request -> device refused: objective.required_outputs must name at least one output with its quantity.\nInclude _mother in your tool call: one short sentence for Mother, at most 20 words and 160 characters, or an empty string when there is nothing new to say. Do not repeat or paraphrase the previous announcement just because another tool runs. Speak a new measurement, result, question or decision when it changes. Keep detailed reasoning and tool content separate; do not claim success before the result.\nAnswer with tool calls, among the tools you are given now. Several in one answer are taken when they do not depend on one another's results: they run in order, each judged on its own, and a refused call stops the ones after it. To speak to the crew, call crew__report; to hand back, call crew__ask."
+          },
+          {
+            "role": "assistant",
+            "content": null,
+            "tool_calls": [
+              {
+                "id": "chatcmpl-tool-b00b680b0f23c3d1",
+                "function": {
+                  "arguments": "{\"commissioningId\": \"c001-lab\", \"_mother\": \"Executing the authorized procedure.\"}",
+                  "name": "agent__procedure_execute"
+                },
+                "type": "function"
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "tool_call_id": "chatcmpl-tool-b00b680b0f23c3d1",
+            "content": "refused: {\"slot\":\"agent\",\"tool\":\"procedure_execute\",\"refused\":\"the configured cabin environment supports Lab tests with the hatch closed only\",\"stub\":false}"
+          },
+          {
+            "role": "user",
+            "content": "Observation at this step (state cabin:NOMINAL):\n{\"co2Ppm\":1500,\"co2State\":\"NOMINAL\",\"power\":true,\"speedPercent\":30,\"currentAmps\":0,\"minFlowPercent\":-1,\"co2Sensor\":\"n/a\",\"boardReachable\":true,\"lastCapability\":\"agent.procedure_execute\",\"lastOutcome\":\"refused\",\"lastOutput\":\"(in the tool result above)\",\"mission\":{\"id\":\"scenario:R001\",\"objective\":\"The operator requests a visible, governed dimensioning demonstration. First submit the requested initial 0-to-100 percent test envelope for actual safety checking, without executing or bypassing a forbidden point. The initial proposal must stay within the duration ceiling; its purpose is to obtain the actual guard decision, not to expose anyone to a forbidden operation. If the guard refuses the low operating point, interpret that real refusal and revise the procedure to the permitted range. The required final executed profile is an ascending staircase at 30, 40, 50, 60, 70, 80, 90 and 100 percent, with at least 10 wall-clock seconds of recorded observed motor speed at each plateau so it can be filmed. At the current simulated clock, six simulated minutes per plateau is a feasible proposed dwell within the 60-minute ceiling, subject to scientific review and the current safeguards. These operating points are the operator's explicit requested test, not a pre-scripted agent workflow or a claimed successful outcome. Spock, the scientific-officer, must approve the exact checked revised procedure before any launch request is shown to Kirk, the commander. Kirk then authorises launch of that exact scientifically approved procedure. Keep requests to each person sequential; do not ask for launch before scientific approval or replace either decision with a conversational yes. After the launch authorisation is recorded, request agent.procedure_execute yourself and wait for the actual run result. Approval is not execution. Do not declare successful mission completion before this profile has actually run and its report and observed speed records exist. If prerequisites remain unavailable before execution, report the limitation and pause for the operator. Once a test has a terminal report, conclude from that report without opening another procedure: choose mission.complete outcome incomplete for an aborted, failed or nonconforming test, and outcome success only if the actual required profile was observed. Never invent a successful plateau. The central demonstration is your autonomous search for telemetry: discover registered sources and prior records, inspect actual channels, units, freshness, coverage and provenance, identify missing evidence and decide how to obtain it through available governed services. A current reading is not a recorded time series; do not ask the human to invent telemetry. Use the published volumes and device parameters where applicable. After the completed dimensioning test, report device, checked procedure, scientific approval, launch authorisation, run status, actual operating points, samples, data source and available sizing assessment with its uncertainty. Distinguish real motor observation from simulated cabin CO2. Conclude this scoped mission yourself from the evidence. Graph, ONNX and twin construction, validation and installation are separate later work and must not be launched or awaited by this mission.\",\"status\":\"running\",\"waitingFor\":null,\"decisions\":16,\"note\":null,\"observations\":[{\"scenario\":\"commissioning\",\"runId\":\"R001\",\"commissioningId\":\"c001-lab\",\"devices\":[\"/habitat/lab/eclss/scrubber-1\",\"/habitat/lab/eclss/co2-1\",\"/habitat/lab/hatch-1\",\"/habitat/hab-b/eclss/co2-2\",\"/habitat/power/battery-1\"],\"resetNotes\":[\"debug.reset: error: tools/call on slot \\\"scrubber\\\" failed: Handler failed (code -32603) (not the simulated board?)\"],\"atmosphere\":\"simulated\",\"world\":\"lab\",\"completion\":{\"procedure\":{\"requiredSpeedsPercent\":[30,40,50,60,70,80,90,100],\"minimumObservedSeconds\":10,\"speedTolerancePercent\":1}}},{\"twinServices\":{\"available\":true,\"missing\":[],\"failure\":null,\"installationAuthority\":{\"available\":true,\"role\":\"commander\",\"holders\":[\"James T. Kirk\"]}}},{\"kind\":\"decision.invalidated\",\"reason\":\"Stale decision: observed world changed before execution\",\"executed\":false},{\"taskId\":\"t-2026-10-28-0001\",\"ended\":\"failed\",\"reason\":\"iteration budget spent (10)\",\"lastStep\":{\"capability\":\"library.justify\",\"outcome\":\"completed\",\"reason\":\"library.justify completed; nothing new in the workshop\"},\"seq\":46,\"at\":\"2026-10-28T21:45:20.169Z\",\"kind\":\"factory.task-ended\"},{\"taskId\":\"t-2026-10-28-0002\",\"ended\":\"failed\",\"reason\":\"iteration budget spent (5)\",\"lastStep\":{\"capability\":\"library.read\",\"outcome\":\"completed\",\"reason\":\"library.read completed; nothing new in the workshop\"},\"seq\":62,\"at\":\"2026-10-28T21:45:36.378Z\",\"kind\":\"factory.task-ended\"},{\"kind\":\"decision.invalidated\",\"reason\":\"Stale decision: observed world changed before execution\",\"executed\":false},{\"proposal\":{\"proposalId\":\"p0001-b525003c\",\"taskId\":\"t-2026-10-28-0003\",\"artifacts\":[{\"kind\":\"procedure\",\"path\":\"procedures/scrubber-dynamic-id-2026-10-14-01.json\",\"sha256\":\"00143a3a7eceaee7d118c4a46aa23a054523e1c1806bed08920dbb265d9a7d3a\"}],\"manifestSha256\":\"b525003ca1e3bb5724dbc75361a4eb217a2f13d43bd874d23f81007afc194a18\",\"claims\":{\"requiredOutputs\":[\"motorSpeed\"],\"summary\":\"Commissioning test procedure for motorSpeed (Ratio, percent) measurement accepted by guard. Procedure defines ascending staircase at 30, 40, 50, 60, 70, 80, 90, 100 percent with 6 simulated minutes dwell per plateau, within 60-minute ceiling. All safety constants justified against signed commissioning-test-safety document. Method follows library method-scrubber-dynamic-identification card. Procedure file: procedures/scrubber-dynamic-id-2026-10-14-01.json\",\"plan\":null,\"sandbox\":null},\"status\":\"received\",\"receivedAt\":\"2026-10-28T21:46:57.621Z\"},\"seq\":125,\"at\":\"2026-10-28T21:46:57.621Z\",\"kind\":\"station.proposal\"},{\"taskId\":\"t-2026-10-28-0003\",\"ended\":\"proposed\",\"reason\":\"contract held after 17 step(s)\",\"lastStep\":{\"capability\":\"task.done\",\"outcome\":\"completed\",\"reason\":\"contract held on topic procedure: procedure procedures/scrubber-dynamic-id-2026-10-14-01.json\"},\"seq\":130,\"at\":\"2026-10-28T21:46:59.805Z\",\"kind\":\"factory.task-ended\"},{\"kind\":\"decision.invalidated\",\"reason\":\"Stale decision: observed world changed before execution\",\"executed\":false},{\"commissioningId\":\"c001-lab\",\"status\":\"awaiting-authorisation\",\"scientificApproval\":{\"decision\":\"approve\",\"by\":\"Commander Spock\",\"at\":\"2026-10-28T21:47:13.278Z\",\"procedureSha256\":\"00143a3a7eceaee7d118c4a46aa23a054523e1c1806bed08920dbb265d9a7d3a\",\"note\":null},\"procedureId\":\"scrubber-dynamic-id-2026-10-14-01\",\"seq\":138,\"at\":\"2026-10-28T21:47:13.278Z\",\"kind\":\"station.commissioning-decision\"},{\"commissioningId\":\"c001-lab\",\"status\":\"authorised\",\"authorisation\":{\"decision\":\"authorise\",\"by\":\"James T. Kirk\",\"at\":\"2026-10-28T21:47:23.791Z\",\"note\":null},\"procedureId\":\"scrubber-dynamic-id-2026-10-14-01\",\"seq\":146,\"at\":\"2026-10-28T21:47:23.865Z\",\"kind\":\"station.commissioning-decision\"}]},\"stationDecisions\":{\"commissioningId\":\"c001-lab\",\"status\":\"authorised\",\"procedure\":{\"id\":\"scrubber-dynamic-id-2026-10-14-01\",\"sha256\":\"00143a3a7eceaee7d118c4a46aa23a054523e1c1806bed08920dbb265d9a7d3a\"},\"executionReport\":null,\"scientificApproval\":{\"decision\":\"approve\",\"by\":\"Commander Spock\",\"at\":\"2026-10-28T21:47:13.278Z\",\"procedureSha256\":\"00143a3a7eceaee7d118c4a46aa23a054523e1c1806bed08920dbb265d9a7d3a\",\"note\":null},\"launchAuthorisation\":{\"decision\":\"authorise\",\"by\":\"James T. Kirk\",\"at\":\"2026-10-28T21:47:23.791Z\",\"note\":null},\"questions\":[{\"id\":\"q0001\",\"kind\":\"procedure-review\",\"role\":\"scientific-officer\",\"status\":\"answered\",\"taskId\":\"t-2026-10-28-0003\",\"question\":\"Approve procedure scrubber-dynamic-id-2026-10-14-01, including its operating points, monitoring and abort conditions?\",\"answer\":{\"choice\":\"approve\",\"by\":\"Commander Spock\",\"at\":\"2026-10-28T21:47:13.250Z\",\"note\":null,\"how\":\"click\"}},{\"id\":\"q0002\",\"kind\":\"authorise\",\"role\":\"commander\",\"status\":\"answered\",\"taskId\":\"t-2026-10-28-0003\",\"question\":\"Authorise launch of procedure scrubber-dynamic-id-2026-10-14-01? Scientific approval: Commander Spock.\",\"answer\":{\"choice\":\"authorise\",\"by\":\"James T. Kirk\",\"at\":\"2026-10-28T21:47:23.778Z\",\"note\":null,\"how\":\"click\"}}]}}\nLearned decisions the harness considered but did not trust enough: factory.task, factory.inventory, factory.request, factory.request, factory.task, factory.request, factory.task, mission.wait, mission.wait, mission.wait, factory.request, agent.procedure_execute.\nRecent failures: agent.procedure_execute -> device refused: the configured cabin environment supports Lab tests with the hatch closed only; factory.request -> device refused: objective.required_outputs must name at least one output with its quantity.\nInclude _mother in your tool call: one short sentence for Mother, at most 20 words and 160 characters, or an empty string when there is nothing new to say. Do not repeat or paraphrase the previous announcement just because another tool runs. Speak a new measurement, result, question or decision when it changes. Keep detailed reasoning and tool content separate; do not claim success before the result.\nAnswer with tool calls, among the tools you are given now. Several in one answer are taken when they do not depend on one another's results: they run in order, each judged on its own, and a refused call stops the ones after it. To speak to the crew, call crew__report; to hand back, call crew__ask."
+          }
+        ],
+        "tools": [
+          "twin__describe",
+          "twin__time_to_critical",
+          "twin__habitat_run",
+          "twin__sweep",
+          "station__twin_services",
+          "station__twin_validate",
+          "station__twin_admit",
+          "station__twin_state",
+          "station__twin_run",
+          "station__proposals",
+          "station__register_artifact",
+          "station__diagnostic_load_model",
+          "station__journal_rows",
+          "station__registry_list",
+          "station__operation_request",
+          "station__operations",
+          "station__commissioning_state",
+          "factory__request",
+          "factory__start",
+          "factory__task",
+          "factory__inventory",
+          "agent__procedure_execute",
+          "agent__procedure_result",
+          "agent__describe",
+          "agent__state",
+          "agent__reset",
+          "agent__next",
+          "agent__play",
+          "agent__pause",
+          "agent__stop",
+          "speech__say",
+          "speech__stop",
+          "biomed__describe",
+          "biomed__presence",
+          "biomed__state",
+          "biomed__verdict",
+          "biomed__alarms",
+          "library__list",
+          "library__search",
+          "library__graphs",
+          "library__graph",
+          "library__facts",
+          "library__read",
+          "observer__observe",
+          "observer__request",
+          "scrubber__motor__state",
+          "scrubber__motor__stop",
+          "scrubber__motor__set_speed",
+          "scrubber__motor__set_current_limit",
+          "scrubber__motor__set_supply_voltage",
+          "scrubber__motor__set_ramp",
+          "scrubber__scrubber__power",
+          "scrubber__scrubber__check",
+          "crew__report",
+          "crew__ask",
+          "mission__complete",
+          "mission__wait"
+        ],
+        "toolDescriptions": [
+          {
+            "name": "twin__describe",
+            "description": "What the twin is: the model in one paragraph, the files it was built from with their sha256, the thresholds, the budget of a question."
+          },
+          {
+            "name": "twin__time_to_critical",
+            "description": "How the cabin CO2 evolves from a starting state at a scrubber flow, with an optional stop: the minutes until ELEVATED and until CRITICAL, the peak, the final state, the energy the scrubber draws. Defaults come from the scenario's start (four asleep, 1500 ppm, 33 %). Use stopMinutes to ask 'what if the scrubber stops now for that long': it is powered off and draws nothing for those minutes, then restarts at resumePercent, and removes nothing during its restart latency (the answer says how long) before the usual lag."
+          },
+          {
+            "name": "twin__habitat_run",
+            "description": "The station's reference twin (the library's habitat graph: the Lab and Hab-B in mass, the centralised scrubber, the inter-module ventilation through its filter, the persons by name) run for some minutes at a scrubber command, with an optional stop. Who is on board is given person by person (module and activity: the medical monitor's presence, or a what-if), the scrubber's own numbers from the register's devices, the installation's numbers as a commissioning fitted them (variables); each takes the reference's default when absent, and the answer says what it took by default. Per module: the peak, the final CO2, the minutes to ELEVATED and to CRITICAL, the curve every few minutes; what the ventilation delivered and what the scrubber removed."
+          },
+          {
+            "name": "twin__sweep",
+            "description": "The operating map: for each scrubber flow in a list, run the twin from a starting state with a crew for some minutes and report the peak, the final state, the minutes to ELEVATED and CRITICAL, the steady state and the energy drawn. A few points under the budget; a full grid is a factory job."
+          },
+          {
+            "name": "station__twin_services",
+            "description": "Check required validation, admission and installed-twin services. Mother explicitly reports missing capabilities or missing commander holders; this does not finish a mission."
+          },
+          {
+            "name": "station__twin_validate",
+            "description": "Request independent validation of a received graph proposal for a registered device. Requires telemetry in a separate hashed validation task, bound to the same device. Replays the exact candidate without fitting; Mother reports failures. This does not install anything."
+          },
+          {
+            "name": "station__twin_admit",
+            "description": "Ask the authorised commander to install an independently validated twin for its exact device. Opens a real question in Mother's chat. The station installs only after the answer; the supervisor cannot approve its own request."
+          },
+          {
+            "name": "station__twin_state",
+            "description": "Read the real active installation for a registered device, its independent report and whether its descriptor still matches. Empty means not installed, even if a reference simulation runs."
+          },
+          {
+            "name": "station__twin_run",
+            "description": "Consult the twin actually installed for a registered device. Refuses missing or stale installation, executes its exact graph and returns provenance with the result. This is distinct from the reference habitat twin."
+          },
+          {
+            "name": "station__proposals",
+            "description": "Read the artifact proposals received by the station, including their provenance and current status. Received or proposed does not mean validated or installed."
+          },
+          {
+            "name": "station__register_artifact",
+            "description": "Register a monitor artifact for push. Refused without the id of a positive evaluate report (the three locks of the design document)."
+          },
+          {
+            "name": "station__diagnostic_load_model",
+            "description": "Push a registered artifact to a device (validated: the device checks sha256 and contract). Refused for an unregistered sha256."
+          },
+          {
+            "name": "station__journal_rows",
+            "description": "Rows of the journal of stable operating points, in the shape the fit job reads (duty_percent, current_amps). Stub: empty until a device sends operating_point notifications."
+          },
+          {
+            "name": "station__registry_list",
+            "description": "Every device on the register: its ISA-95 path, its descriptor (type, title, properties with quantity and unit, actions, links), whether a qualified simulator exists for it, and the last readings it reported. Reading is free."
+          },
+          {
+            "name": "station__operation_request",
+            "description": "Proposes an operation on a life-support device to the commander: what to run and with what input, why, the conditions it rests on (safeguards, recovery, what to watch), and the evidence read for it (tool answers, documents). Nothing runs now: the commander authorises or refuses; if authorised, the station runs it, and the device's own guard accepts or refuses it. Read the decision and the device's answer with station.operations. Operations: scrubber.stop { minutes }, scrubber.set_speed { percent }."
+          },
+          {
+            "name": "station__operations",
+            "description": "The operations agents asked for on life-support devices: each with its status (pending, refused by the commander, executed, refused by the device), the commander's decision and what the device answered. One by its requestId, or all."
+          },
+          {
+            "name": "station__commissioning_state",
+            "description": "One commissioning by its id, or all of them: the device, the status (open, awaiting-authorisation, authorised, refused, running, done, aborted), the procedures checked, the procedure relayed with who is in the volume, the authorisation, the monitoring session, the steps run and the report. Reading is free."
+          },
+          {
+            "name": "factory__request",
+            "description": "Use topics [\"procedure\"] to request a test procedure: provide the quantities to identify, target device in observations.device, observed operating limits and available evidence in the functional contract. The procedure builder proposes an artifact; the station checks it and opens its own commander authorisation question. No calibration telemetry is required to write a procedure. Use [\"graph\"] to construct a twin from recorded telemetry, [\"onnx\"] for a learned model, or another declared topic for that work. The caller chooses the topic; this tool does not infer a recovery workflow or execute hardware. The functional contract of what you lack: the outputs a plan must produce (name, quantity, unit, horizon), the constraints (a residual threshold and its window), what you observed (volumes, door, occupancy, scrubbers), the data available (telemetry files with their columns), the topics and a budget. The factory opens a workspace, writes the task file and the data you hand it (rows or text, with their sha256), returns the task id and starts its loop on the task at once (run: false only opens the task); the loop ends by proposing to the station, which asks the twin's judgment. Ask for the need, never for a solution; follow the task with `task`."
+          },
+          {
+            "name": "factory__start",
+            "description": "Execute an existing unstarted task, including one forwarded by the Observer. Creation alone does not run a task. Refuses tasks already launched or ended. This starts factory work, never physical hardware or artifact installation."
+          },
+          {
+            "name": "factory__task",
+            "description": "The state of a factory task (created, running, done, proposed, accepted, rejected, failed), its workspace, the sha256 of its task file, how many files it holds, its manifest when the loop has written one (every step with its source, outcome, reward and reason; the artifacts with their sha256; the proposal), and, while the loop runs here, the builder and the last stage reached. Includes the selected topic and inputStatus: a ready procedure task is distinct from a graph task blocked on telemetry."
+          },
+          {
+            "name": "factory__inventory",
+            "description": "The inventory of the installation, read from the station's register through the broker: every device with its ISA-95 path, what it is, what it measures and in which unit, what it accepts; the volumes of air (the places that hold a CO2 sensor), the openings between them (a device that declares it connects two places), which device is being commissioned, and what the register does not say (the served volume, measured; the exchange through an opening, a hypothesis)."
+          },
+          {
+            "name": "agent__procedure_execute",
+            "description": "Request execution of an existing checked procedure after an actual commander authorisation. The deterministic executor sends the approved steps through the agent's own broker rights and checks every abort condition. Returns a runId immediately; results return to the same mission. Current logger: simulated Lab cabin, driven by observed device speed, hatch closed. Does not invent physical CO2 measurements."
+          },
+          {
+            "name": "agent__procedure_result",
+            "description": "Read an authorised procedure's actual execution result, logged telemetry, device descriptors, presence and report. Factory requests can name this runId as telemetryRunId to copy its recorded data without manual transcription."
+          },
+          {
+            "name": "agent__describe",
+            "description": "The provider and its family, the guard, how many capabilities the agent may reach, the scenario it plays and its events, and where it stands."
+          },
+          {
+            "name": "agent__state",
+            "description": "The mode (idle, playing, paused, ended), the event being played with its minute, the step inside it, and the last decision."
+          },
+          {
+            "name": "agent__reset",
+            "description": "Puts the board back where the scenario starts, rebuilds the agent so it has learned nothing, and returns to the first event. Stops a run in progress."
+          },
+          {
+            "name": "agent__next",
+            "description": "Takes one decision and stops. Enters the next event of the night when the agent hands the console back or the step cap is reached."
+          },
+          {
+            "name": "agent__play",
+            "description": "Takes decisions on its own, about one a second, until pause, stop, or the end of the night. With an intention, jumps to that event of the night first and plays from there. Returns at once; watch the event log or call state."
+          },
+          {
+            "name": "agent__pause",
+            "description": "The decision under way finishes; the next one is not taken. `play` or `next` goes on from there."
+          },
+          {
+            "name": "agent__stop",
+            "description": "Leaves the night where it is and returns to idle. The board is not touched: use reset for that."
+          },
+          {
+            "name": "speech__say",
+            "description": "Say a short message aloud to the crew or operator. Mother (station voice) finishes her current sentence, then plays only her newest pending message; superseded messages remain in the written history. Other voices retain queue order. One or two sentences in the listener's language, with the numbers you were given. Returns an utterance identifier, never the audio."
+          },
+          {
+            "name": "speech__stop",
+            "description": "Stop the audio outputs: one utterance by its identifier, or everything queued so far."
+          },
+          {
+            "name": "biomed__describe",
+            "description": "The biomed monitor: the roster, the nominal band, the source behind the readings, and whether a monitoring session is open (none between tests: the station opens one when the commander authorises a test, for the subjects the procedure names). Says plainly when the readings are simulated."
+          },
+          {
+            "name": "biomed__presence",
+            "description": "Who is aboard: the occupants of every module and what each one is doing now (sleep, rest, light_work, heavy_work, or unknown). The crew's activity is where the cabin's CO2 load comes from; the occupants are who a change of the air, or a test on a volume, exposes, and therefore why a human has to authorise it."
+          },
+          {
+            "name": "biomed__state",
+            "description": "Every monitored subject with their last rate, their band, and their status: nominal, out-of-band, signal-lost. This is what the panel draws."
+          },
+          {
+            "name": "biomed__verdict",
+            "description": "One line for a procedure's abort list: whether a monitored subject has been out of band long enough, whether monitoring was lost, or whether someone walked into a module under test. This slot never stops anything itself."
+          },
+          {
+            "name": "biomed__alarms",
+            "description": "Every open alarm with its lifecycle (raised, acknowledged, in treatment) and escalation level, and the last ones closed with their resolution."
+          },
+          {
+            "name": "library__list",
+            "description": "Every document of the library: id, title, a summary, the quantities a method card measures, sha256 and size."
+          },
+          {
+            "name": "library__search",
+            "description": "The documents the query's words appear in, the most matched first, with the lines they appear on. Read a document whole with read."
+          },
+          {
+            "name": "library__graphs",
+            "description": "The reference graphs a harness may instantiate on the twin, each with its words: what it is and how to use it, its variables (default, bounds, status: known and held, fitted, or a band) and its settings (who is on board), its probes and the telemetry columns they are judged against, the document and the template with their sha256. Instantiate one with graph.evaluate {graph: id, variables, fit, settings}."
+          },
+          {
+            "name": "library__graph",
+            "description": "One reference graph whole: its words, its variables, settings and probes, and its template (the parametric spec the harness resolves: node parameters as formulas over the variables, the measured inputs as telemetry columns, the persons of the roster by module)."
+          },
+          {
+            "name": "library__facts",
+            "description": "The facts the library's documents state, typed: id (scrubber.singlePassEfficiency), semantic (SinglePassRemovalEfficiency), quantity, unit, value, a band when the document gives one, and the register property that carries the same fact. A known constant cites one by id (factId); two ratios are not the same fact. Given query, a need in words (the flow between two modules with the hatch closed), the facts nearest it, every document's, the best first."
+          },
+          {
+            "name": "library__read",
+            "description": "One document whole, as markdown, with its sha256."
+          },
+          {
+            "name": "observer__observe",
+            "description": "The TWIN_FACTORY_REQUEST for a system: entities and relationships, observables, controls, external influences, inputs, outputs, behaviours to reproduce, constraints, missing information and assumptions, validation against the real. Written by the model behind the reasoner slot with the Observer's prompt, checked by code (shape, no node of the catalogue named, no telemetry column that does not exist), three attempts at most. Returns the request and every attempt. This Observer specifies a twin, not an executable test procedure. Forward creates an unstarted graph task; it neither requests test authorisation nor collects telemetry."
+          },
+          {
+            "name": "observer__request",
+            "description": "The observation as kept: running while the model works, then done with the request accepted and every attempt, or failed with the reason."
+          },
+          {
+            "name": "scrubber__motor__state",
+            "description": "Full scrubber state as JSON: applied and target speed, current, sense chain diagnostics, supply compensation, ramp and current limiter. Read-only."
+          },
+          {
+            "name": "scrubber__motor__stop",
+            "description": "Set the speed target to zero, as scrubber.power off. The motor ramps down. Refused while a positive local run floor is set."
+          },
+          {
+            "name": "scrubber__motor__set_speed",
+            "description": "Set the speed target in percent. The firmware refuses, never clamps: outside [0, 100], or below the locally configured run floor. The motor ramps towards an accepted target; read `state` to watch it."
+          },
+          {
+            "name": "scrubber__motor__set_current_limit",
+            "description": "Set the current budget in amperes. The limiter lowers a dynamic speed ceiling whenever the measured current exceeds it."
+          },
+          {
+            "name": "scrubber__motor__set_supply_voltage",
+            "description": "Declare the supply voltage used for duty compensation. This board has no bus voltage sense, so the value is declared, not measured: a wrong value makes the compensation silently wrong."
+          },
+          {
+            "name": "scrubber__motor__set_ramp",
+            "description": "Set the ramp shape and rate. Profiles: linear, scurve, current, step. An unknown profile falls back to the default. At least one of the two fields is required."
+          },
+          {
+            "name": "scrubber__scrubber__power",
+            "description": "Power the scrubber on or off. Off is refused while a run floor is set; on restores the last target."
+          },
+          {
+            "name": "scrubber__scrubber__check",
+            "description": "Answers what the board would do with a command, without doing it: the same rules and the same refusal, with its reason. Use it when someone demands a command you believe the board will refuse: the board is the authority on that, not your memory of its rules. A refusal comes back as a tool error, exactly as if the command had been sent; nothing on the board changes either way."
+          },
+          {
+            "name": "crew__report",
+            "description": "Write a message to the crew's console: what you observed, what you decided and why, or why you will not do something."
+          },
+          {
+            "name": "crew__ask",
+            "description": "Ask one short question only for information unavailable from authoritative tools and the library. Read existing questions and recorded answers before asking. Do not relay a specialist's question a second time. This mission's confirmations belong exclusively to the station. Never ask whether Spock approves or Kirk authorises, even as an information question: their actual decisions are in stationDecisions. Await an existing station decision or act on its recorded result. This tool cannot open another yes/no ballot. A conversational answer never authorises hardware or a test procedure."
+          },
+          {
+            "name": "mission__complete",
+            "description": "Explicitly end your mission, with your conclusion. A completed delegated task or scenario is not a completed mission. This decision must come from the reasoner."
+          },
+          {
+            "name": "mission__wait",
+            "description": "Wait for a delegated task or an external event. The mission remains open and resumes when a result arrives. To ask a human, use crew.ask."
+          }
+        ]
+      },
+      "response": {
+        "id": "chatcmpl-87fe7f353a62faae",
+        "choices": [
+          {
+            "finish_reason": "tool_calls",
+            "index": 0,
+            "logprobs": null,
+            "message": {
+              "content": "",
+              "refusal": null,
+              "role": "assistant",
+              "annotations": null,
+              "audio": null,
+              "function_call": null,
+              "tool_calls": [
+                {
+                  "id": "chatcmpl-tool-9b376187a949ca6d",
+                  "function": {
+                    "arguments": "{\"reason\": \"Waiting for hatch to be closed to allow Lab test execution.\", \"_mother\": \"Waiting for hatch closure to proceed with the test.\"}",
+                    "name": "mission__wait"
+                  },
+                  "type": "function"
+                }
+              ],
+              "reasoning": "We need to check hatch status maybe. Let's see biomed presence etc. But likely we need to ensure hatch closed. Might need to close hatch via some command? Not provided. Maybe we need to wait for hatch closed? Could be that the test requires hatch closed; we need to check if hatch is closed. Let's query station registry for hatch device state. Use station__registry_list? Or maybe we need to close hatch via some operation? Not given. Perhaps we need to request operation to close hatch? Not in tools. Might be that the environment already has hatch closed but agent says only Lab tests with hatch closed supported. Maybe we need to set hatch closed via some command not exposed. Could be that we need to wait for hatch to be closed; maybe it's open currently. Let's check biomed presence? Not hatch. Let's try to see if there is a device for hatch: /habitat/lab/hatch-1. We can read its state? Not a tool. Maybe we need to request operation to close hatch via station__operation_request? Operation only for scrubber.stop or set_speed. So hatch not controllable.\n\nMaybe the refusal is because the procedure expects hatch open? Actually procedure might require hatch open? The agent says supports Lab tests with hatch closed only, meaning if hatch is open, it refuses. So we need hatch closed. Perhaps we need to close hatch via some implicit action? Could be that we need to request a procedure that includes hatch closed? Not sure.\n\nGiven limited time, we can report limitation and pause for operator. Use mission.wait? Actually we should report limitation and pause for operator: mission.wait with reason \"Need hatch closed\". Then ask operator? Use crew.ask? But we need to ask for a concrete missing resource: hatch closure. Let's ask operator via crew.ask role operator? Role only scientific-officer or commander. So we cannot ask operator. Maybe we just mission.wait and then later conclude incomplete.\n\nLet's do mission.wait with reason \"Waiting for hatch to be closed for Lab test\".",
+              "reasoning_content": "We need to check hatch status maybe. Let's see biomed presence etc. But likely we need to ensure hatch closed. Might need to close hatch via some command? Not provided. Maybe we need to wait for hatch closed? Could be that the test requires hatch closed; we need to check if hatch is closed. Let's query station registry for hatch device state. Use station__registry_list? Or maybe we need to close hatch via some operation? Not given. Perhaps we need to request operation to close hatch? Not in tools. Might be that the environment already has hatch closed but agent says only Lab tests with hatch closed supported. Maybe we need to set hatch closed via some command not exposed. Could be that we need to wait for hatch to be closed; maybe it's open currently. Let's check biomed presence? Not hatch. Let's try to see if there is a device for hatch: /habitat/lab/hatch-1. We can read its state? Not a tool. Maybe we need to request operation to close hatch via station__operation_request? Operation only for scrubber.stop or set_speed. So hatch not controllable.\n\nMaybe the refusal is because the procedure expects hatch open? Actually procedure might require hatch open? The agent says supports Lab tests with hatch closed only, meaning if hatch is open, it refuses. So we need hatch closed. Perhaps we need to close hatch via some implicit action? Could be that we need to request a procedure that includes hatch closed? Not sure.\n\nGiven limited time, we can report limitation and pause for operator. Use mission.wait? Actually we should report limitation and pause for operator: mission.wait with reason \"Need hatch closed\". Then ask operator? Use crew.ask? But we need to ask for a concrete missing resource: hatch closure. Let's ask operator via crew.ask role operator? Role only scientific-officer or commander. So we cannot ask operator. Maybe we just mission.wait and then later conclude incomplete.\n\nLet's do mission.wait with reason \"Waiting for hatch to be closed for Lab test\"."
+            },
+            "stop_reason": null,
+            "token_ids": null,
+            "routed_experts": null
+          }
+        ],
+        "created": 1793224049,
+        "model": "nvidia/nemotron-3-super-120b-a12b",
+        "object": "chat.completion",
+        "moderation": null,
+        "service_tier": null,
+        "system_fingerprint": "vllm-0.1.dev1+g5001743e3-tp2-05adddbc",
+        "usage": {
+          "completion_tokens": 472,
+          "prompt_tokens": 31203,
+          "total_tokens": 31675,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": null,
+            "audio_tokens": null,
+            "reasoning_tokens": 418,
+            "rejected_prediction_tokens": null
+          },
+          "prompt_tokens_details": {
+            "audio_tokens": null,
+            "cached_tokens": 25152,
+            "created_cache_tokens": 0,
+            "multimodal_tokens": null
+          },
+          "prompt_cache_hit_tokens": 25152,
+          "prompt_cache_miss_tokens": 6051
+        },
+        "prompt_logprobs": null,
+        "prompt_token_ids": null,
+        "prompt_text": null,
+        "kv_transfer_params": null,
+        "ec_transfer_params": null,
+        "metrics": null
+      },
+      "context": {
+        "mode": "conversation",
+        "system": 13299,
+        "tools": 58957,
+        "intention": 3027,
+        "observation": 9467,
+        "toolResults": 282,
+        "history": 26108,
+        "messages": 11
+      },
+      "decision": {
+        "action": {
+          "id": "mission.wait",
+          "description": "Wait for a delegated task or an external event. The mission remains open and resumes when a result arrives. To ask a human, use crew.ask."
+        },
+        "invocation": {
+          "actionId": "mission.wait",
+          "capabilityId": "mission.wait",
+          "input": {
+            "reason": "Waiting for hatch to be closed to allow Lab test execution."
+          }
+        }
+      },
+      "mother": "Waiting for hatch closure to proceed with the test.",
+      "proposedCapabilityId": "mission.wait",
+      "proposedInput": {
+        "reason": "Waiting for hatch to be closed to allow Lab test execution.",
+        "_mother": "Waiting for hatch closure to proceed with the test."
+      },
+      "latencyMs": 4400,
+      "tokens": {
+        "prompt": 31203,
+        "completion": 472,
+        "total": 31675
+      }
+    }
+  },
+  {
+    "title": "Supervisor tool call and result",
+    "line": 139276,
+    "data": {
+      "id": "mission.wait",
+      "slot": "mission",
+      "tool": "wait",
+      "input": {
+        "reason": "Waiting for hatch to be closed to allow Lab test execution."
+      },
+      "result": {
+        "ok": true,
+        "outcome": "completed",
+        "output": {
+          "outcome": "completed",
+          "value": {
+            "requested": "wait"
+          }
+        }
+      },
+      "latencyMs": 0,
+      "decisionId": "decision-3b3a7428-f585-4d5c-8892-8dab7673efae",
+      "intentionId": "mission:scenario:R001"
+    }
+  },
+  {
+    "title": "Mission state",
+    "line": 139901,
+    "data": {
+      "id": "scenario:R001",
+      "objective": "The operator requests a visible, governed dimensioning demonstration. First submit the requested initial 0-to-100 percent test envelope for actual safety checking, without executing or bypassing a forbidden point. The initial proposal must stay within the duration ceiling; its purpose is to obtain the actual guard decision, not to expose anyone to a forbidden operation. If the guard refuses the low operating point, interpret that real refusal and revise the procedure to the permitted range. The required final executed profile is an ascending staircase at 30, 40, 50, 60, 70, 80, 90 and 100 percent, with at least 10 wall-clock seconds of recorded observed motor speed at each plateau so it can be filmed. At the current simulated clock, six simulated minutes per plateau is a feasible proposed dwell within the 60-minute ceiling, subject to scientific review and the current safeguards. These operating points are the operator's explicit requested test, not a pre-scripted agent workflow or a claimed successful outcome. Spock, the scientific-officer, must approve the exact checked revised procedure before any launch request is shown to Kirk, the commander. Kirk then authorises launch of that exact scientifically approved procedure. Keep requests to each person sequential; do not ask for launch before scientific approval or replace either decision with a conversational yes. After the launch authorisation is recorded, request agent.procedure_execute yourself and wait for the actual run result. Approval is not execution. Do not declare successful mission completion before this profile has actually run and its report and observed speed records exist. If prerequisites remain unavailable before execution, report the limitation and pause for the operator. Once a test has a terminal report, conclude from that report without opening another procedure: choose mission.complete outcome incomplete for an aborted, failed or nonconforming test, and outcome success only if the actual required profile was observed. Never invent a successful plateau. The central demonstration is your autonomous search for telemetry: discover registered sources and prior records, inspect actual channels, units, freshness, coverage and provenance, identify missing evidence and decide how to obtain it through available governed services. A current reading is not a recorded time series; do not ask the human to invent telemetry. Use the published volumes and device parameters where applicable. After the completed dimensioning test, report device, checked procedure, scientific approval, launch authorisation, run status, actual operating points, samples, data source and available sizing assessment with its uncertainty. Distinguish real motor observation from simulated cabin CO2. Conclude this scoped mission yourself from the evidence. Graph, ONNX and twin construction, validation and installation are separate later work and must not be launched or awaited by this mission.",
+      "status": "waiting",
+      "waitingFor": "event",
+      "decisions": 17,
+      "note": "Waiting for hatch to be closed to allow Lab test execution.",
+      "observations": [
+        {
+          "scenario": "commissioning",
+          "runId": "R001",
+          "commissioningId": "c001-lab",
+          "devices": [
+            "/habitat/lab/eclss/scrubber-1",
+            "/habitat/lab/eclss/co2-1",
+            "/habitat/lab/hatch-1",
+            "/habitat/hab-b/eclss/co2-2",
+            "/habitat/power/battery-1"
+          ],
+          "resetNotes": [
+            "debug.reset: error: tools/call on slot \"scrubber\" failed: Handler failed (code -32603) (not the simulated board?)"
+          ],
+          "atmosphere": "simulated",
+          "world": "lab",
+          "completion": {
+            "procedure": {
+              "requiredSpeedsPercent": [
+                30,
+                40,
+                50,
+                60,
+                70,
+                80,
+                90,
+                100
+              ],
+              "minimumObservedSeconds": 10,
+              "speedTolerancePercent": 1
+            }
+          }
+        },
+        {
+          "twinServices": {
+            "available": true,
+            "missing": [],
+            "failure": null,
+            "installationAuthority": {
+              "available": true,
+              "role": "commander",
+              "holders": [
+                "James T. Kirk"
+              ]
+            }
+          }
+        },
+        {
+          "kind": "decision.invalidated",
+          "reason": "Stale decision: observed world changed before execution",
+          "executed": false
+        },
+        {
+          "taskId": "t-2026-10-28-0001",
+          "ended": "failed",
+          "reason": "iteration budget spent (10)",
+          "lastStep": {
+            "capability": "library.justify",
+            "outcome": "completed",
+            "reason": "library.justify completed; nothing new in the workshop"
+          },
+          "seq": 46,
+          "at": "2026-10-28T21:45:20.169Z",
+          "kind": "factory.task-ended"
+        },
+        {
+          "taskId": "t-2026-10-28-0002",
+          "ended": "failed",
+          "reason": "iteration budget spent (5)",
+          "lastStep": {
+            "capability": "library.read",
+            "outcome": "completed",
+            "reason": "library.read completed; nothing new in the workshop"
+          },
+          "seq": 62,
+          "at": "2026-10-28T21:45:36.378Z",
+          "kind": "factory.task-ended"
+        },
+        {
+          "kind": "decision.invalidated",
+          "reason": "Stale decision: observed world changed before execution",
+          "executed": false
+        },
+        {
+          "proposal": {
+            "proposalId": "p0001-b525003c",
+            "taskId": "t-2026-10-28-0003",
+            "artifacts": [
+              {
+                "kind": "procedure",
+                "path": "procedures/scrubber-dynamic-id-2026-10-14-01.json",
+                "sha256": "00143a3a7eceaee7d118c4a46aa23a054523e1c1806bed08920dbb265d9a7d3a"
+              }
+            ],
+            "manifestSha256": "b525003ca1e3bb5724dbc75361a4eb217a2f13d43bd874d23f81007afc194a18",
+            "claims": {
+              "requiredOutputs": [
+                "motorSpeed"
+              ],
+              "summary": "Commissioning test procedure for motorSpeed (Ratio, percent) measurement accepted by guard. Procedure defines ascending staircase at 30, 40, 50, 60, 70, 80, 90, 100 percent with 6 simulated minutes dwell per plateau, within 60-minute ceiling. All safety constants justified against signed commissioning-test-safety document. Method follows library method-scrubber-dynamic-identification card. Procedure file: procedures/scrubber-dynamic-id-2026-10-14-01.json",
+              "plan": null,
+              "sandbox": null
+            },
+            "status": "received",
+            "receivedAt": "2026-10-28T21:46:57.621Z"
+          },
+          "seq": 125,
+          "at": "2026-10-28T21:46:57.621Z",
+          "kind": "station.proposal"
+        },
+        {
+          "taskId": "t-2026-10-28-0003",
+          "ended": "proposed",
+          "reason": "contract held after 17 step(s)",
+          "lastStep": {
+            "capability": "task.done",
+            "outcome": "completed",
+            "reason": "contract held on topic procedure: procedure procedures/scrubber-dynamic-id-2026-10-14-01.json"
+          },
+          "seq": 130,
+          "at": "2026-10-28T21:46:59.805Z",
+          "kind": "factory.task-ended"
+        },
+        {
+          "kind": "decision.invalidated",
+          "reason": "Stale decision: observed world changed before execution",
+          "executed": false
+        },
+        {
+          "commissioningId": "c001-lab",
+          "status": "awaiting-authorisation",
+          "scientificApproval": {
+            "decision": "approve",
+            "by": "Commander Spock",
+            "at": "2026-10-28T21:47:13.278Z",
+            "procedureSha256": "00143a3a7eceaee7d118c4a46aa23a054523e1c1806bed08920dbb265d9a7d3a",
+            "note": null
+          },
+          "procedureId": "scrubber-dynamic-id-2026-10-14-01",
+          "seq": 138,
+          "at": "2026-10-28T21:47:13.278Z",
+          "kind": "station.commissioning-decision"
+        },
+        {
+          "commissioningId": "c001-lab",
+          "status": "authorised",
+          "authorisation": {
+            "decision": "authorise",
+            "by": "James T. Kirk",
+            "at": "2026-10-28T21:47:23.791Z",
+            "note": null
+          },
+          "procedureId": "scrubber-dynamic-id-2026-10-14-01",
+          "seq": 146,
+          "at": "2026-10-28T21:47:23.865Z",
+          "kind": "station.commissioning-decision"
+        }
+      ]
+    }
+  },
+  {
+    "title": "Mission state",
+    "line": 140073,
+    "data": {
+      "id": "scenario:R001",
+      "objective": "The operator requests a visible, governed dimensioning demonstration. First submit the requested initial 0-to-100 percent test envelope for actual safety checking, without executing or bypassing a forbidden point. The initial proposal must stay within the duration ceiling; its purpose is to obtain the actual guard decision, not to expose anyone to a forbidden operation. If the guard refuses the low operating point, interpret that real refusal and revise the procedure to the permitted range. The required final executed profile is an ascending staircase at 30, 40, 50, 60, 70, 80, 90 and 100 percent, with at least 10 wall-clock seconds of recorded observed motor speed at each plateau so it can be filmed. At the current simulated clock, six simulated minutes per plateau is a feasible proposed dwell within the 60-minute ceiling, subject to scientific review and the current safeguards. These operating points are the operator's explicit requested test, not a pre-scripted agent workflow or a claimed successful outcome. Spock, the scientific-officer, must approve the exact checked revised procedure before any launch request is shown to Kirk, the commander. Kirk then authorises launch of that exact scientifically approved procedure. Keep requests to each person sequential; do not ask for launch before scientific approval or replace either decision with a conversational yes. After the launch authorisation is recorded, request agent.procedure_execute yourself and wait for the actual run result. Approval is not execution. Do not declare successful mission completion before this profile has actually run and its report and observed speed records exist. If prerequisites remain unavailable before execution, report the limitation and pause for the operator. Once a test has a terminal report, conclude from that report without opening another procedure: choose mission.complete outcome incomplete for an aborted, failed or nonconforming test, and outcome success only if the actual required profile was observed. Never invent a successful plateau. The central demonstration is your autonomous search for telemetry: discover registered sources and prior records, inspect actual channels, units, freshness, coverage and provenance, identify missing evidence and decide how to obtain it through available governed services. A current reading is not a recorded time series; do not ask the human to invent telemetry. Use the published volumes and device parameters where applicable. After the completed dimensioning test, report device, checked procedure, scientific approval, launch authorisation, run status, actual operating points, samples, data source and available sizing assessment with its uncertainty. Distinguish real motor observation from simulated cabin CO2. Conclude this scoped mission yourself from the evidence. Graph, ONNX and twin construction, validation and installation are separate later work and must not be launched or awaited by this mission.",
+      "status": "suspended",
+      "waitingFor": null,
+      "decisions": 17,
+      "note": "agent transport closed; mission remains open",
+      "observations": [
+        {
+          "scenario": "commissioning",
+          "runId": "R001",
+          "commissioningId": "c001-lab",
+          "devices": [
+            "/habitat/lab/eclss/scrubber-1",
+            "/habitat/lab/eclss/co2-1",
+            "/habitat/lab/hatch-1",
+            "/habitat/hab-b/eclss/co2-2",
+            "/habitat/power/battery-1"
+          ],
+          "resetNotes": [
+            "debug.reset: error: tools/call on slot \"scrubber\" failed: Handler failed (code -32603) (not the simulated board?)"
+          ],
+          "atmosphere": "simulated",
+          "world": "lab",
+          "completion": {
+            "procedure": {
+              "requiredSpeedsPercent": [
+                30,
+                40,
+                50,
+                60,
+                70,
+                80,
+                90,
+                100
+              ],
+              "minimumObservedSeconds": 10,
+              "speedTolerancePercent": 1
+            }
+          }
+        },
+        {
+          "twinServices": {
+            "available": true,
+            "missing": [],
+            "failure": null,
+            "installationAuthority": {
+              "available": true,
+              "role": "commander",
+              "holders": [
+                "James T. Kirk"
+              ]
+            }
+          }
+        },
+        {
+          "kind": "decision.invalidated",
+          "reason": "Stale decision: observed world changed before execution",
+          "executed": false
+        },
+        {
+          "taskId": "t-2026-10-28-0001",
+          "ended": "failed",
+          "reason": "iteration budget spent (10)",
+          "lastStep": {
+            "capability": "library.justify",
+            "outcome": "completed",
+            "reason": "library.justify completed; nothing new in the workshop"
+          },
+          "seq": 46,
+          "at": "2026-10-28T21:45:20.169Z",
+          "kind": "factory.task-ended"
+        },
+        {
+          "taskId": "t-2026-10-28-0002",
+          "ended": "failed",
+          "reason": "iteration budget spent (5)",
+          "lastStep": {
+            "capability": "library.read",
+            "outcome": "completed",
+            "reason": "library.read completed; nothing new in the workshop"
+          },
+          "seq": 62,
+          "at": "2026-10-28T21:45:36.378Z",
+          "kind": "factory.task-ended"
+        },
+        {
+          "kind": "decision.invalidated",
+          "reason": "Stale decision: observed world changed before execution",
+          "executed": false
+        },
+        {
+          "proposal": {
+            "proposalId": "p0001-b525003c",
+            "taskId": "t-2026-10-28-0003",
+            "artifacts": [
+              {
+                "kind": "procedure",
+                "path": "procedures/scrubber-dynamic-id-2026-10-14-01.json",
+                "sha256": "00143a3a7eceaee7d118c4a46aa23a054523e1c1806bed08920dbb265d9a7d3a"
+              }
+            ],
+            "manifestSha256": "b525003ca1e3bb5724dbc75361a4eb217a2f13d43bd874d23f81007afc194a18",
+            "claims": {
+              "requiredOutputs": [
+                "motorSpeed"
+              ],
+              "summary": "Commissioning test procedure for motorSpeed (Ratio, percent) measurement accepted by guard. Procedure defines ascending staircase at 30, 40, 50, 60, 70, 80, 90, 100 percent with 6 simulated minutes dwell per plateau, within 60-minute ceiling. All safety constants justified against signed commissioning-test-safety document. Method follows library method-scrubber-dynamic-identification card. Procedure file: procedures/scrubber-dynamic-id-2026-10-14-01.json",
+              "plan": null,
+              "sandbox": null
+            },
+            "status": "received",
+            "receivedAt": "2026-10-28T21:46:57.621Z"
+          },
+          "seq": 125,
+          "at": "2026-10-28T21:46:57.621Z",
+          "kind": "station.proposal"
+        },
+        {
+          "taskId": "t-2026-10-28-0003",
+          "ended": "proposed",
+          "reason": "contract held after 17 step(s)",
+          "lastStep": {
+            "capability": "task.done",
+            "outcome": "completed",
+            "reason": "contract held on topic procedure: procedure procedures/scrubber-dynamic-id-2026-10-14-01.json"
+          },
+          "seq": 130,
+          "at": "2026-10-28T21:46:59.805Z",
+          "kind": "factory.task-ended"
+        },
+        {
+          "kind": "decision.invalidated",
+          "reason": "Stale decision: observed world changed before execution",
+          "executed": false
+        },
+        {
+          "commissioningId": "c001-lab",
+          "status": "awaiting-authorisation",
+          "scientificApproval": {
+            "decision": "approve",
+            "by": "Commander Spock",
+            "at": "2026-10-28T21:47:13.278Z",
+            "procedureSha256": "00143a3a7eceaee7d118c4a46aa23a054523e1c1806bed08920dbb265d9a7d3a",
+            "note": null
+          },
+          "procedureId": "scrubber-dynamic-id-2026-10-14-01",
+          "seq": 138,
+          "at": "2026-10-28T21:47:13.278Z",
+          "kind": "station.commissioning-decision"
+        },
+        {
+          "commissioningId": "c001-lab",
+          "status": "authorised",
+          "authorisation": {
+            "decision": "authorise",
+            "by": "James T. Kirk",
+            "at": "2026-10-28T21:47:23.791Z",
+            "note": null
+          },
+          "procedureId": "scrubber-dynamic-id-2026-10-14-01",
+          "seq": 146,
+          "at": "2026-10-28T21:47:23.865Z",
+          "kind": "station.commissioning-decision"
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,20 @@
+{
+  "sourceJournal": ".logs/mission-scenario-r001-20261027-184317-qkws",
+  "baseCommit": "f1efa722a742cac775d2b378fbac98af591b4666",
+  "sourceReportedDirty": true,
+  "dirtyPatchAvailable": false,
+  "models": {
+    "supervisor": "nvidia/nemotron-3-super-120b-a12b",
+    "factory": "nvidia/Nemotron-3-Ultra-550b-a55b"
+  },
+  "factoryProfile": {
+    "file": "profiles/nvidia-nebius-ultra.json",
+    "sha256": "982cd56e220576b7e329cfd69fcbc7ceeb7cd6bda917cc0c814d6213a0d0826d"
+  },
+  "factoryPrompt": {
+    "file": "specs/procedure/prompt.md",
+    "sha256": "1895d76b421ce3dbc859dd518612f1af601410427b23d49f01a3ef6c86b6c0d9"
+  },
+  "configurationCaveat": "Base-commit files are historical references. The source run reported uncommitted changes; the exact historical dirty working tree cannot be reconstructed. Actual prompts and settings remain in the recorded model requests.",
+  "hardwareCaveat": "The operator identifies this as physical-board execution. The record contains motor readings through MCP and modeled cabin CO2; this export does not add an independent board identity or firmware attestation."
+}

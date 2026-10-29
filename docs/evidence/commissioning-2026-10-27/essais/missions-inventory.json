@@ -1,0 +1,154 @@
+[
+  {
+    "id": "mission-scenario-r001-20261021-152329-wf8x",
+    "source": ".logs/mission-scenario-r001-20261021-152329-wf8x/README.md",
+    "outcome": "_running: the outcome is written when the test ends._",
+    "hasFinalOutcome": false,
+    "selectedReference": false,
+    "hatchCase": false
+  },
+  {
+    "id": "mission-scenario-r001-20261021-152507-cw85",
+    "source": ".logs/mission-scenario-r001-20261021-152507-cw85/README.md",
+    "outcome": "The result and the human's answer were examined. This fixture ends the mission explicitly.",
+    "hasFinalOutcome": true,
+    "selectedReference": false,
+    "hatchCase": false
+  },
+  {
+    "id": "mission-scenario-r001-20261021-152644-qz65",
+    "source": ".logs/mission-scenario-r001-20261021-152644-qz65/README.md",
+    "outcome": "The result and the human's answer were examined. This fixture ends the mission explicitly.",
+    "hasFinalOutcome": true,
+    "selectedReference": false,
+    "hatchCase": false
+  },
+  {
+    "id": "mission-scenario-r001-20261021-153533-0b89",
+    "source": ".logs/mission-scenario-r001-20261021-153533-0b89/README.md",
+    "outcome": "The result and the human's answer were examined. This fixture ends the mission explicitly.",
+    "hasFinalOutcome": true,
+    "selectedReference": false,
+    "hatchCase": false
+  },
+  {
+    "id": "mission-scenario-r001-20261021-153633-2ros",
+    "source": ".logs/mission-scenario-r001-20261021-153633-2ros/README.md",
+    "outcome": "The result and the human's answer were examined. This fixture ends the mission explicitly.",
+    "hasFinalOutcome": true,
+    "selectedReference": false,
+    "hatchCase": false
+  },
+  {
+    "id": "mission-scenario-r001-20261021-155644-3ghm",
+    "source": ".logs/mission-scenario-r001-20261021-155644-3ghm/README.md",
+    "outcome": "_running: the outcome is written when the test ends._",
+    "hasFinalOutcome": false,
+    "selectedReference": false,
+    "hatchCase": false
+  },
+  {
+    "id": "mission-scenario-r001-20261023-174812-g0h5",
+    "source": ".logs/mission-scenario-r001-20261023-174812-g0h5/README.md",
+    "outcome": "_running: the outcome is written when the test ends._",
+    "hasFinalOutcome": false,
+    "selectedReference": false,
+    "hatchCase": false
+  },
+  {
+    "id": "mission-scenario-r001-20261023-211418-d14g",
+    "source": ".logs/mission-scenario-r001-20261023-211418-d14g/README.md",
+    "outcome": "_running: the outcome is written when the test ends._",
+    "hasFinalOutcome": false,
+    "selectedReference": false,
+    "hatchCase": false
+  },
+  {
+    "id": "mission-scenario-r001-20261026-154756-lpgm",
+    "source": ".logs/mission-scenario-r001-20261026-154756-lpgm/README.md",
+    "outcome": "_running: the outcome is written when the test ends._",
+    "hasFinalOutcome": false,
+    "selectedReference": false,
+    "hatchCase": false
+  },
+  {
+    "id": "mission-scenario-r001-20261026-160043-o1u4",
+    "source": ".logs/mission-scenario-r001-20261026-160043-o1u4/README.md",
+    "outcome": "_running: the outcome is written when the test ends._",
+    "hasFinalOutcome": false,
+    "selectedReference": false,
+    "hatchCase": false
+  },
+  {
+    "id": "mission-scenario-r001-20261026-162136-1lmu",
+    "source": ".logs/mission-scenario-r001-20261026-162136-1lmu/README.md",
+    "outcome": "_running: the outcome is written when the test ends._",
+    "hasFinalOutcome": false,
+    "selectedReference": false,
+    "hatchCase": false
+  },
+  {
+    "id": "mission-scenario-r001-20261026-211935-fjmm",
+    "source": ".logs/mission-scenario-r001-20261026-211935-fjmm/README.md",
+    "outcome": "Dimensioning test completed successfully; all required plateaus observed and recorded.",
+    "hasFinalOutcome": true,
+    "selectedReference": false,
+    "hatchCase": false
+  },
+  {
+    "id": "mission-scenario-r001-20261026-221525-2u6n",
+    "source": ".logs/mission-scenario-r001-20261026-221525-2u6n/README.md",
+    "outcome": "Dimensioning test completed successfully, all plateaus observed.",
+    "hasFinalOutcome": true,
+    "selectedReference": false,
+    "hatchCase": false
+  },
+  {
+    "id": "mission-scenario-r001-20261026-223653-ish6",
+    "source": ".logs/mission-scenario-r001-20261026-223653-ish6/README.md",
+    "outcome": "_running: the outcome is written when the test ends._",
+    "hasFinalOutcome": false,
+    "selectedReference": false,
+    "hatchCase": false
+  },
+  {
+    "id": "mission-scenario-r001-20261027-184317-qkws",
+    "source": ".logs/mission-scenario-r001-20261027-184317-qkws/README.md",
+    "outcome": "Dimensioning test completed successfully: procedure executed, observed motor speed plateaus at 30-100% with required dwell, CO2 response recorded, scientific approval and launch authorisation obtained.",
+    "hasFinalOutcome": true,
+    "selectedReference": true,
+    "hatchCase": false
+  },
+  {
+    "id": "mission-scenario-r001-20261027-185340-yr08",
+    "source": ".logs/mission-scenario-r001-20261027-185340-yr08/README.md",
+    "outcome": "Test aborted due to crew vital alarm; required profile not completed.",
+    "hasFinalOutcome": true,
+    "selectedReference": false,
+    "hatchCase": false
+  },
+  {
+    "id": "mission-scenario-r001-20261028-214450-fmvo",
+    "source": ".logs/mission-scenario-r001-20261028-214450-fmvo/README.md",
+    "outcome": "_running: the outcome is written when the test ends._",
+    "hasFinalOutcome": false,
+    "selectedReference": false,
+    "hatchCase": true
+  },
+  {
+    "id": "mission-scenario-r001-20261028-215132-vern",
+    "source": ".logs/mission-scenario-r001-20261028-215132-vern/README.md",
+    "outcome": "_running: the outcome is written when the test ends._",
+    "hasFinalOutcome": false,
+    "selectedReference": false,
+    "hatchCase": false
+  },
+  {
+    "id": "mission-scenario-r002-20261027-185007-s9qy",
+    "source": ".logs/mission-scenario-r002-20261027-185007-s9qy/README.md",
+    "outcome": "_running: the outcome is written when the test ends._",
+    "hasFinalOutcome": false,
+    "selectedReference": false,
+    "hatchCase": false
+  }
+]

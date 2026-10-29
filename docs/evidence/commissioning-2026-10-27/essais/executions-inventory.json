@@ -1,0 +1,162 @@
+[
+  {
+    "file": "procedure-b839a868-e09d-4ec5-980f-8c4740abbe32.json",
+    "runId": "procedure-b839a868-e09d-4ec5-980f-8c4740abbe32",
+    "status": "done",
+    "startedAt": "2026-10-20T19:45:44.716Z",
+    "endedAt": "2026-10-20T19:47:26.174Z",
+    "samples": 51,
+    "observations": 0,
+    "procedureId": "scrubber-commissioning-2026-01-15-01",
+    "aborted": null,
+    "selectedReference": false
+  },
+  {
+    "file": "procedure-eb90b6df-4bf0-4472-a3d2-c66294241ac8.json",
+    "runId": "procedure-eb90b6df-4bf0-4472-a3d2-c66294241ac8",
+    "status": "done",
+    "startedAt": "2026-10-20T20:25:53.646Z",
+    "endedAt": "2026-10-20T20:27:55.479Z",
+    "samples": 61,
+    "observations": 0,
+    "procedureId": "scrubber-commissioning-2026-10-14-01",
+    "aborted": null,
+    "selectedReference": false
+  },
+  {
+    "file": "procedure-ca057322-1bb0-46c1-b5bb-048a3f343a4e.json",
+    "runId": "procedure-ca057322-1bb0-46c1-b5bb-048a3f343a4e",
+    "status": "done",
+    "startedAt": "2026-10-20T21:17:21.595Z",
+    "endedAt": "2026-10-20T21:19:03.309Z",
+    "samples": 51,
+    "observations": 51,
+    "procedureId": "scrubber-speed-commissioning-2026-10-14-01",
+    "aborted": null,
+    "selectedReference": false
+  },
+  {
+    "file": "procedure-fb567b84-cf57-471f-9ac6-377684ce3e90.json",
+    "runId": "procedure-fb567b84-cf57-471f-9ac6-377684ce3e90",
+    "status": "done",
+    "startedAt": "2026-10-20T21:35:13.937Z",
+    "endedAt": "2026-10-20T21:36:55.441Z",
+    "samples": 51,
+    "observations": 51,
+    "procedureId": "scrubber-speed-step-response-2026-01-15-01",
+    "aborted": null,
+    "selectedReference": false
+  },
+  {
+    "file": "procedure-71f82cf7-1bc3-4e6c-9202-2ef349dd6247.json",
+    "runId": "procedure-71f82cf7-1bc3-4e6c-9202-2ef349dd6247",
+    "status": "done",
+    "startedAt": "2026-10-21T16:06:00.077Z",
+    "endedAt": "2026-10-21T16:07:38.171Z",
+    "samples": 49,
+    "observations": 49,
+    "procedureId": "scrubber-commissioning-dynamic-id",
+    "aborted": null,
+    "selectedReference": false
+  },
+  {
+    "file": "procedure-020efca9-880c-4265-8b8c-380734e17226.json",
+    "runId": "procedure-020efca9-880c-4265-8b8c-380734e17226",
+    "status": "done",
+    "startedAt": "2026-10-23T17:51:53.094Z",
+    "endedAt": "2026-10-23T17:54:02.326Z",
+    "samples": 55,
+    "observations": 55,
+    "procedureId": "scrubber-dynamic-id-2026-10-14-01",
+    "aborted": null,
+    "selectedReference": false
+  },
+  {
+    "file": "procedure-015b4c5b-ead5-4b84-a456-88d18e904dd7.json",
+    "runId": "procedure-015b4c5b-ead5-4b84-a456-88d18e904dd7",
+    "status": "done",
+    "startedAt": "2026-10-23T21:18:23.022Z",
+    "endedAt": "2026-10-23T21:20:00.571Z",
+    "samples": 49,
+    "observations": 49,
+    "procedureId": "scrubber-commissioning-2026-01-15-01",
+    "aborted": null,
+    "selectedReference": false
+  },
+  {
+    "file": "procedure-93691149-7fc4-46df-bb24-cabfabfea073.json",
+    "runId": "procedure-93691149-7fc4-46df-bb24-cabfabfea073",
+    "status": "done",
+    "startedAt": "2026-10-26T16:03:15.667Z",
+    "endedAt": "2026-10-26T16:04:53.337Z",
+    "samples": 49,
+    "observations": 49,
+    "procedureId": "scrubber-dimensioning-2026-10-20-01",
+    "aborted": null,
+    "selectedReference": false
+  },
+  {
+    "file": "procedure-00788e67-75a6-46b0-93bc-88c6e5a66340.json",
+    "runId": "procedure-00788e67-75a6-46b0-93bc-88c6e5a66340",
+    "status": "done",
+    "startedAt": "2026-10-26T16:24:18.457Z",
+    "endedAt": "2026-10-26T16:26:11.174Z",
+    "samples": 49,
+    "observations": 49,
+    "procedureId": "scrubber-commissioning-2026-10-20-01",
+    "aborted": null,
+    "selectedReference": false
+  },
+  {
+    "file": "procedure-e1f8496a-ab7d-4972-99e7-256677a14677.json",
+    "runId": "procedure-e1f8496a-ab7d-4972-99e7-256677a14677",
+    "status": "done",
+    "startedAt": "2026-10-26T21:23:27.172Z",
+    "endedAt": "2026-10-26T21:25:19.573Z",
+    "samples": 49,
+    "observations": 49,
+    "procedureId": "scrubber-dynamic-id-2026-10-14-01",
+    "aborted": null,
+    "selectedReference": false
+  },
+  {
+    "file": "procedure-030646f6-34e4-4713-825c-edf087d397f2.json",
+    "runId": "procedure-030646f6-34e4-4713-825c-edf087d397f2",
+    "status": "done",
+    "startedAt": "2026-10-26T22:18:26.482Z",
+    "endedAt": "2026-10-26T22:20:19.531Z",
+    "samples": 49,
+    "observations": 49,
+    "procedureId": "decay-2026-10-14-01",
+    "aborted": null,
+    "selectedReference": false
+  },
+  {
+    "file": "procedure-a29f1798-89d2-4948-9c48-39e6efd31bae.json",
+    "runId": "procedure-a29f1798-89d2-4948-9c48-39e6efd31bae",
+    "status": "done",
+    "startedAt": "2026-10-27T18:45:03.056Z",
+    "endedAt": "2026-10-27T18:47:01.548Z",
+    "samples": 49,
+    "observations": 49,
+    "procedureId": "scrubber-dimensioning-2026-10-20-01",
+    "aborted": null,
+    "selectedReference": true
+  },
+  {
+    "file": "procedure-b310a2de-1287-4b91-b71d-b68f0ed9cc32.json",
+    "runId": "procedure-b310a2de-1287-4b91-b71d-b68f0ed9cc32",
+    "status": "aborted",
+    "startedAt": "2026-10-27T18:55:39.311Z",
+    "endedAt": "2026-10-27T18:56:20.481Z",
+    "samples": 18,
+    "observations": 18,
+    "procedureId": "scrubber-step-response-01",
+    "aborted": {
+      "condition": "vitals",
+      "reason": "FE-1: critical health alarm: critical health alarm",
+      "step": 3
+    },
+    "selectedReference": false
+  }
+]

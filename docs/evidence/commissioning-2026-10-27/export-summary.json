@@ -1,0 +1,10 @@
+{
+  "referenceRunId": "procedure-a29f1798-89d2-4948-9c48-39e6efd31bae",
+  "missionOutcome": "success",
+  "plateaus": 8,
+  "samples": 49,
+  "inventoryExecutions": 13,
+  "otherMissionJournals": 19,
+  "redactions": 0,
+  "auditLog": "C:\\Users\\GuillaumePelletier\\Documents\\GitHub\\Gaume\\co2-scrubber-governed-agent\\.logs\\commissioning-evidence-export-20261029-212710-daek"
+}

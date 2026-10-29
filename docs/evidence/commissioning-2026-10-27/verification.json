@@ -1,0 +1,14 @@
+{
+  "result": "pass",
+  "sourceFiles": 50,
+  "execution": "procedure-a29f1798-89d2-4948-9c48-39e6efd31bae",
+  "missionOutcome": "success",
+  "recordedSamples": 49,
+  "orderedPlateaus": 8,
+  "approvalsInOrder": true,
+  "hatchCase": "refusal and model response preserved; no resumed execution claimed",
+  "verificationTime": "2026-10-29T21:29:31.561Z",
+  "checkedDocumentationLinks": 99,
+  "brokenLinks": [],
+  "localAuditLog": "C:\\Users\\GuillaumePelletier\\Documents\\GitHub\\Gaume\\co2-scrubber-governed-agent\\.logs\\commissioning-evidence-verification-20261029-212931-e82z"
+}

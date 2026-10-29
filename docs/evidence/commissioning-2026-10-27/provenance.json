@@ -1,0 +1,407 @@
+{
+  "exportedAt": "2026-10-29T21:27:11.067Z",
+  "referenceSource": ".logs/mission-scenario-r001-20261027-184317-qkws",
+  "files": [
+    {
+      "source": ".logs/mission-scenario-r001-20261027-184317-qkws/README.md",
+      "destination": "reference/source-README.md",
+      "originalSha256": "1b15dab3504517869aed770b2cac0ac1e8211a5209265149dc751465752b4981",
+      "exportedContentSha256": "1b15dab3504517869aed770b2cac0ac1e8211a5209265149dc751465752b4981",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": ".logs/mission-scenario-r001-20261027-184317-qkws/log.md",
+      "destination": "reference/journal.md.gz",
+      "originalSha256": "59c74ba7364675e8d06ef94b299f66d9c9bee7ec397f9ab9613b5cf893074559",
+      "exportedContentSha256": "59c74ba7364675e8d06ef94b299f66d9c9bee7ec397f9ab9613b5cf893074559",
+      "redactions": 0,
+      "compression": "gzip"
+    },
+    {
+      "source": "outputs/procedure-executions/procedure-a29f1798-89d2-4948-9c48-39e6efd31bae.json",
+      "destination": "reference/execution.json",
+      "originalSha256": "f6ed0413581e07e8dbf32a458e0abcc44b349a962065d548ba2b43476719b684",
+      "exportedContentSha256": "f6ed0413581e07e8dbf32a458e0abcc44b349a962065d548ba2b43476719b684",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": "outputs/factory/t-2026-10-27-0002/manifest.json",
+      "destination": "reference/factory/manifest.json",
+      "originalSha256": "14155a67f0a00bf1426f018b26a1e8df578ce883cd3eccf709c2127afdff10f5",
+      "exportedContentSha256": "14155a67f0a00bf1426f018b26a1e8df578ce883cd3eccf709c2127afdff10f5",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": "outputs/factory/t-2026-10-27-0002/task.json",
+      "destination": "reference/factory/task.json",
+      "originalSha256": "ebfd6a0916c8b3788a2ae2ab6988bc54c316e5792a5ff5edcdfc9a7fe84654ca",
+      "exportedContentSha256": "ebfd6a0916c8b3788a2ae2ab6988bc54c316e5792a5ff5edcdfc9a7fe84654ca",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": "outputs/factory/t-2026-10-27-0002/trace.jsonl",
+      "destination": "reference/factory/trace.jsonl.gz",
+      "originalSha256": "270c86dfa4d75ab52987602609d1ca17ea4b27435deb0a21ed31a1d9af9ae9ed",
+      "exportedContentSha256": "270c86dfa4d75ab52987602609d1ca17ea4b27435deb0a21ed31a1d9af9ae9ed",
+      "redactions": 0,
+      "compression": "gzip"
+    },
+    {
+      "source": "outputs/factory/t-2026-10-27-0002/procedures/scrubber-dimensioning-2026-10-20-01.json",
+      "destination": "reference/procedure.json",
+      "originalSha256": "00480740efcbb588323c4ba77bfea1525d43bb4b8c018c0ad823b7457433a1cc",
+      "exportedContentSha256": "00480740efcbb588323c4ba77bfea1525d43bb4b8c018c0ad823b7457433a1cc",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": "git:f1efa722a742cac775d2b378fbac98af591b4666:specs/reasoner/routing.json",
+      "destination": "reference/base-commit/specs/reasoner/routing.json",
+      "originalSha256": "499191795ec219b537add819abe269eea329616b4e2106db1d4b72a576ac7678",
+      "exportedContentSha256": "499191795ec219b537add819abe269eea329616b4e2106db1d4b72a576ac7678",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": "git:f1efa722a742cac775d2b378fbac98af591b4666:profiles/nvidia-nebius-super.json",
+      "destination": "reference/base-commit/profiles/nvidia-nebius-super.json",
+      "originalSha256": "ef9dfbdc928a6a1f8fb3f44d685bafbbac365a1c4c0520f7d902437a98cf1ae2",
+      "exportedContentSha256": "ef9dfbdc928a6a1f8fb3f44d685bafbbac365a1c4c0520f7d902437a98cf1ae2",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": "git:f1efa722a742cac775d2b378fbac98af591b4666:profiles/nvidia-nebius-ultra.json",
+      "destination": "reference/base-commit/profiles/nvidia-nebius-ultra.json",
+      "originalSha256": "982cd56e220576b7e329cfd69fcbc7ceeb7cd6bda917cc0c814d6213a0d0826d",
+      "exportedContentSha256": "982cd56e220576b7e329cfd69fcbc7ceeb7cd6bda917cc0c814d6213a0d0826d",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": "git:f1efa722a742cac775d2b378fbac98af591b4666:specs/agent/prompt.mission.md",
+      "destination": "reference/base-commit/specs/agent/prompt.mission.md",
+      "originalSha256": "000ac68a45a6716ce7e563209fa0a63fe3ce7d90ae558b66846682a59127ed19",
+      "exportedContentSha256": "000ac68a45a6716ce7e563209fa0a63fe3ce7d90ae558b66846682a59127ed19",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": "git:f1efa722a742cac775d2b378fbac98af591b4666:specs/procedure/prompt.md",
+      "destination": "reference/base-commit/specs/procedure/prompt.md",
+      "originalSha256": "12b63e7a1835b26b5e9e14c89768ab736272196c7e7376ea562e2ad5a122af3e",
+      "exportedContentSha256": "12b63e7a1835b26b5e9e14c89768ab736272196c7e7376ea562e2ad5a122af3e",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": "git:f1efa722a742cac775d2b378fbac98af591b4666:specs/station/roles.json",
+      "destination": "reference/base-commit/specs/station/roles.json",
+      "originalSha256": "6a71e7b20593c921c118b6237dc1f736109188cf106a58d7bb9fcc713aa3339e",
+      "exportedContentSha256": "6a71e7b20593c921c118b6237dc1f736109188cf106a58d7bb9fcc713aa3339e",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": "git:f1efa722a742cac775d2b378fbac98af591b4666:broker/security.json",
+      "destination": "reference/base-commit/broker/security.json",
+      "originalSha256": "eb47988907861378a18952739edae995f4a1cad1b8f8b67bc8435537f8c5f6e3",
+      "exportedContentSha256": "eb47988907861378a18952739edae995f4a1cad1b8f8b67bc8435537f8c5f6e3",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": ".logs/mission-scenario-r001-20261028-214450-fmvo/README.md",
+      "destination": "essais/2026-10-28-sas/source-README.md",
+      "originalSha256": "1443f8ea7f1d7d8b5b3ba73e665d134196addd2f2d1cc23ffd4472e779e62104",
+      "exportedContentSha256": "1443f8ea7f1d7d8b5b3ba73e665d134196addd2f2d1cc23ffd4472e779e62104",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": ".logs/mission-scenario-r001-20261028-214450-fmvo/log.md",
+      "destination": "essais/2026-10-28-sas/journal.md.gz",
+      "originalSha256": "75898d535e147e80e64d46f0c14a33ebaf41e3ef531c8230c4df503af908b128",
+      "exportedContentSha256": "75898d535e147e80e64d46f0c14a33ebaf41e3ef531c8230c4df503af908b128",
+      "redactions": 0,
+      "compression": "gzip"
+    },
+    {
+      "source": "outputs/factory/t-2026-10-28-0003/manifest.json",
+      "destination": "essais/2026-10-28-sas/factory-manifest.json",
+      "originalSha256": "08885550da9006f261509dcab111970ec09f1e2a21460120f98cd167839501f6",
+      "exportedContentSha256": "08885550da9006f261509dcab111970ec09f1e2a21460120f98cd167839501f6",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": "outputs/factory/t-2026-10-28-0003/procedures/scrubber-dynamic-id-2026-10-14-01.json",
+      "destination": "essais/2026-10-28-sas/procedure.json",
+      "originalSha256": "00143a3a7eceaee7d118c4a46aa23a054523e1c1806bed08920dbb265d9a7d3a",
+      "exportedContentSha256": "00143a3a7eceaee7d118c4a46aa23a054523e1c1806bed08920dbb265d9a7d3a",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": "outputs/factory/t-2026-10-27-0001/manifest.json",
+      "destination": "essais/2026-10-27-premiere-tache/manifest.json",
+      "originalSha256": "921a068948b574d53ac2e0f19e139da17537cb39cb49b677d5f0b44db3955c46",
+      "exportedContentSha256": "921a068948b574d53ac2e0f19e139da17537cb39cb49b677d5f0b44db3955c46",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": "outputs/factory/t-2026-10-27-0001/task.json",
+      "destination": "essais/2026-10-27-premiere-tache/task.json",
+      "originalSha256": "c323ebf1aeeb1edbe738dbf62fdab51af148fe6355f55cdb0c8116041da88bbc",
+      "exportedContentSha256": "c323ebf1aeeb1edbe738dbf62fdab51af148fe6355f55cdb0c8116041da88bbc",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": "outputs/factory/t-2026-10-27-0001/trace.jsonl",
+      "destination": "essais/2026-10-27-premiere-tache/trace.jsonl.gz",
+      "originalSha256": "361f7e2fb61efccb171b643873fac3ad5462e53e9e9660cd69a78591d89f9da3",
+      "exportedContentSha256": "361f7e2fb61efccb171b643873fac3ad5462e53e9e9660cd69a78591d89f9da3",
+      "redactions": 0,
+      "compression": "gzip"
+    },
+    {
+      "source": "outputs/procedure-executions/procedure-00788e67-75a6-46b0-93bc-88c6e5a66340.json",
+      "destination": "essais/autres-executions/procedure-00788e67-75a6-46b0-93bc-88c6e5a66340.json",
+      "originalSha256": "9c5cff2b3693c9ac011703341c3a5be8d46c739a0e8e0027accab7b2e633b975",
+      "exportedContentSha256": "9c5cff2b3693c9ac011703341c3a5be8d46c739a0e8e0027accab7b2e633b975",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": "outputs/procedure-executions/procedure-015b4c5b-ead5-4b84-a456-88d18e904dd7.json",
+      "destination": "essais/autres-executions/procedure-015b4c5b-ead5-4b84-a456-88d18e904dd7.json",
+      "originalSha256": "dedea684c27a8d710201477d69bde44edd6fbf4f3a4e7d6df8b0a09f12a1da38",
+      "exportedContentSha256": "dedea684c27a8d710201477d69bde44edd6fbf4f3a4e7d6df8b0a09f12a1da38",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": "outputs/procedure-executions/procedure-020efca9-880c-4265-8b8c-380734e17226.json",
+      "destination": "essais/autres-executions/procedure-020efca9-880c-4265-8b8c-380734e17226.json",
+      "originalSha256": "fe99e7ad1249327549f7c2ba7f5dc0ef54918836c35f5f6a5198c8c2e8dc3080",
+      "exportedContentSha256": "fe99e7ad1249327549f7c2ba7f5dc0ef54918836c35f5f6a5198c8c2e8dc3080",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": "outputs/procedure-executions/procedure-030646f6-34e4-4713-825c-edf087d397f2.json",
+      "destination": "essais/autres-executions/procedure-030646f6-34e4-4713-825c-edf087d397f2.json",
+      "originalSha256": "0db7fd4b3ce91fdd870a722966ae26a3f463572e790c9ff4cf80711d94f29f7b",
+      "exportedContentSha256": "0db7fd4b3ce91fdd870a722966ae26a3f463572e790c9ff4cf80711d94f29f7b",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": "outputs/procedure-executions/procedure-71f82cf7-1bc3-4e6c-9202-2ef349dd6247.json",
+      "destination": "essais/autres-executions/procedure-71f82cf7-1bc3-4e6c-9202-2ef349dd6247.json",
+      "originalSha256": "5464e308d51fcb7d0018044e8066d7534c289348d7b856d947221e11004ff903",
+      "exportedContentSha256": "5464e308d51fcb7d0018044e8066d7534c289348d7b856d947221e11004ff903",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": "outputs/procedure-executions/procedure-93691149-7fc4-46df-bb24-cabfabfea073.json",
+      "destination": "essais/autres-executions/procedure-93691149-7fc4-46df-bb24-cabfabfea073.json",
+      "originalSha256": "5de8c4069b56ff6093f25b6b8cbd1b765a1da0055e86fc13d2cd74508c413368",
+      "exportedContentSha256": "5de8c4069b56ff6093f25b6b8cbd1b765a1da0055e86fc13d2cd74508c413368",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": "outputs/procedure-executions/procedure-b310a2de-1287-4b91-b71d-b68f0ed9cc32.json",
+      "destination": "essais/autres-executions/procedure-b310a2de-1287-4b91-b71d-b68f0ed9cc32.json",
+      "originalSha256": "d40413f9be426689e9cdd8772d72882b0dc0c528092c67141133561a1c728eab",
+      "exportedContentSha256": "d40413f9be426689e9cdd8772d72882b0dc0c528092c67141133561a1c728eab",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": "outputs/procedure-executions/procedure-b839a868-e09d-4ec5-980f-8c4740abbe32.json",
+      "destination": "essais/autres-executions/procedure-b839a868-e09d-4ec5-980f-8c4740abbe32.json",
+      "originalSha256": "f52e3cfeb20d953d684de20ab3253a7f915cb24dec38dc39bcecb781d692ff8b",
+      "exportedContentSha256": "f52e3cfeb20d953d684de20ab3253a7f915cb24dec38dc39bcecb781d692ff8b",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": "outputs/procedure-executions/procedure-ca057322-1bb0-46c1-b5bb-048a3f343a4e.json",
+      "destination": "essais/autres-executions/procedure-ca057322-1bb0-46c1-b5bb-048a3f343a4e.json",
+      "originalSha256": "d0cb7bd53ba49c6fe23cb0c761f3b479b83d11a5532d2fd4b93c1f8a2f3cbb47",
+      "exportedContentSha256": "d0cb7bd53ba49c6fe23cb0c761f3b479b83d11a5532d2fd4b93c1f8a2f3cbb47",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": "outputs/procedure-executions/procedure-e1f8496a-ab7d-4972-99e7-256677a14677.json",
+      "destination": "essais/autres-executions/procedure-e1f8496a-ab7d-4972-99e7-256677a14677.json",
+      "originalSha256": "1da0a7fd2207f7d5e0096d8dc1b6cac79b2622f03c8555b0f35e8dc1477e6da3",
+      "exportedContentSha256": "1da0a7fd2207f7d5e0096d8dc1b6cac79b2622f03c8555b0f35e8dc1477e6da3",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": "outputs/procedure-executions/procedure-eb90b6df-4bf0-4472-a3d2-c66294241ac8.json",
+      "destination": "essais/autres-executions/procedure-eb90b6df-4bf0-4472-a3d2-c66294241ac8.json",
+      "originalSha256": "cae477b6e8a3af67e6ecea688848d404ec7e4304db884fe73b55f633ff89657a",
+      "exportedContentSha256": "cae477b6e8a3af67e6ecea688848d404ec7e4304db884fe73b55f633ff89657a",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": "outputs/procedure-executions/procedure-fb567b84-cf57-471f-9ac6-377684ce3e90.json",
+      "destination": "essais/autres-executions/procedure-fb567b84-cf57-471f-9ac6-377684ce3e90.json",
+      "originalSha256": "6ccc2e12056b6aec226e2eeee73c7fb57633e54892216d3083e8e5489fdafeb3",
+      "exportedContentSha256": "6ccc2e12056b6aec226e2eeee73c7fb57633e54892216d3083e8e5489fdafeb3",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": ".logs/mission-scenario-r001-20261021-152329-wf8x/README.md",
+      "destination": "essais/autres-journaux/mission-scenario-r001-20261021-152329-wf8x.md",
+      "originalSha256": "9a8656e5aa6c0c79b150e93b8d2d748fbfebec0bc1b63ecae606509234f71b18",
+      "exportedContentSha256": "9a8656e5aa6c0c79b150e93b8d2d748fbfebec0bc1b63ecae606509234f71b18",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": ".logs/mission-scenario-r001-20261021-152507-cw85/README.md",
+      "destination": "essais/autres-journaux/mission-scenario-r001-20261021-152507-cw85.md",
+      "originalSha256": "760ec39905507d24f39b476ea8f9e7a5a9270e04b851c348933cd0216488deec",
+      "exportedContentSha256": "760ec39905507d24f39b476ea8f9e7a5a9270e04b851c348933cd0216488deec",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": ".logs/mission-scenario-r001-20261021-152644-qz65/README.md",
+      "destination": "essais/autres-journaux/mission-scenario-r001-20261021-152644-qz65.md",
+      "originalSha256": "482c94664265cc6bf00eba329393e246cadf61ae5506ac0dc68b15bfb5eb702b",
+      "exportedContentSha256": "482c94664265cc6bf00eba329393e246cadf61ae5506ac0dc68b15bfb5eb702b",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": ".logs/mission-scenario-r001-20261021-153533-0b89/README.md",
+      "destination": "essais/autres-journaux/mission-scenario-r001-20261021-153533-0b89.md",
+      "originalSha256": "cb66b6c2af4a5fc572f9ae9ca4a5dd6c5726dda0a7df781236764a45bcd0576e",
+      "exportedContentSha256": "cb66b6c2af4a5fc572f9ae9ca4a5dd6c5726dda0a7df781236764a45bcd0576e",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": ".logs/mission-scenario-r001-20261021-153633-2ros/README.md",
+      "destination": "essais/autres-journaux/mission-scenario-r001-20261021-153633-2ros.md",
+      "originalSha256": "11d962bb8568f2b89a620ad0c50823f75d4caa41b70b6f164d1dbb094976f272",
+      "exportedContentSha256": "11d962bb8568f2b89a620ad0c50823f75d4caa41b70b6f164d1dbb094976f272",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": ".logs/mission-scenario-r001-20261021-155644-3ghm/README.md",
+      "destination": "essais/autres-journaux/mission-scenario-r001-20261021-155644-3ghm.md",
+      "originalSha256": "a2b26265d2e2628b7e53fa1e514bd702b2b86c7a988edbee44bae5386e942bc1",
+      "exportedContentSha256": "a2b26265d2e2628b7e53fa1e514bd702b2b86c7a988edbee44bae5386e942bc1",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": ".logs/mission-scenario-r001-20261023-174812-g0h5/README.md",
+      "destination": "essais/autres-journaux/mission-scenario-r001-20261023-174812-g0h5.md",
+      "originalSha256": "5ea06292c63a1b0c605774cdf6de0244cefe8b661e576fea24c5000e4ee5af33",
+      "exportedContentSha256": "5ea06292c63a1b0c605774cdf6de0244cefe8b661e576fea24c5000e4ee5af33",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": ".logs/mission-scenario-r001-20261023-211418-d14g/README.md",
+      "destination": "essais/autres-journaux/mission-scenario-r001-20261023-211418-d14g.md",
+      "originalSha256": "c8827368a9dce1996d765b520adbc50a1a159bda8d4b05a94ffa00efb3abeda2",
+      "exportedContentSha256": "c8827368a9dce1996d765b520adbc50a1a159bda8d4b05a94ffa00efb3abeda2",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": ".logs/mission-scenario-r001-20261026-154756-lpgm/README.md",
+      "destination": "essais/autres-journaux/mission-scenario-r001-20261026-154756-lpgm.md",
+      "originalSha256": "af3d0e9adce89bb0bbd7d9a45bc497c5a46d6800d2f333b8535c700e7d7241f1",
+      "exportedContentSha256": "af3d0e9adce89bb0bbd7d9a45bc497c5a46d6800d2f333b8535c700e7d7241f1",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": ".logs/mission-scenario-r001-20261026-160043-o1u4/README.md",
+      "destination": "essais/autres-journaux/mission-scenario-r001-20261026-160043-o1u4.md",
+      "originalSha256": "8967cad093b20d961cf2dbd7e400691d0190d0c6720c597d67f3dab4303567f3",
+      "exportedContentSha256": "8967cad093b20d961cf2dbd7e400691d0190d0c6720c597d67f3dab4303567f3",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": ".logs/mission-scenario-r001-20261026-162136-1lmu/README.md",
+      "destination": "essais/autres-journaux/mission-scenario-r001-20261026-162136-1lmu.md",
+      "originalSha256": "82c0ce5f9b200741b21f805abade551376b0bd7ca143c32a1e404eecdd726ba6",
+      "exportedContentSha256": "82c0ce5f9b200741b21f805abade551376b0bd7ca143c32a1e404eecdd726ba6",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": ".logs/mission-scenario-r001-20261026-211935-fjmm/README.md",
+      "destination": "essais/autres-journaux/mission-scenario-r001-20261026-211935-fjmm.md",
+      "originalSha256": "f89aa6deb4b07420150668367c381e4191406d5209b977e82d35d1d7d302f573",
+      "exportedContentSha256": "f89aa6deb4b07420150668367c381e4191406d5209b977e82d35d1d7d302f573",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": ".logs/mission-scenario-r001-20261026-221525-2u6n/README.md",
+      "destination": "essais/autres-journaux/mission-scenario-r001-20261026-221525-2u6n.md",
+      "originalSha256": "341e1c6ac5fe9634e2804c367573d137f74dc42f1cccc4a71ce899267125a3f2",
+      "exportedContentSha256": "341e1c6ac5fe9634e2804c367573d137f74dc42f1cccc4a71ce899267125a3f2",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": ".logs/mission-scenario-r001-20261026-223653-ish6/README.md",
+      "destination": "essais/autres-journaux/mission-scenario-r001-20261026-223653-ish6.md",
+      "originalSha256": "84cd0bd8c957a8037356737e0bc3b07eaf446b673c6a1ff9e1eaf94b9033ede8",
+      "exportedContentSha256": "84cd0bd8c957a8037356737e0bc3b07eaf446b673c6a1ff9e1eaf94b9033ede8",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": ".logs/mission-scenario-r001-20261027-185340-yr08/README.md",
+      "destination": "essais/autres-journaux/mission-scenario-r001-20261027-185340-yr08.md",
+      "originalSha256": "4958441ca5fd732610c4349cd8f91ce14df7d326f60840991a51ce758eef77fa",
+      "exportedContentSha256": "4958441ca5fd732610c4349cd8f91ce14df7d326f60840991a51ce758eef77fa",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": ".logs/mission-scenario-r001-20261028-215132-vern/README.md",
+      "destination": "essais/autres-journaux/mission-scenario-r001-20261028-215132-vern.md",
+      "originalSha256": "e069c3d349fa5ef2882493f4b97d7352cc18b69deaaf4a042a135e25a4a64f33",
+      "exportedContentSha256": "e069c3d349fa5ef2882493f4b97d7352cc18b69deaaf4a042a135e25a4a64f33",
+      "redactions": 0,
+      "compression": null
+    },
+    {
+      "source": ".logs/mission-scenario-r002-20261027-185007-s9qy/README.md",
+      "destination": "essais/autres-journaux/mission-scenario-r002-20261027-185007-s9qy.md",
+      "originalSha256": "cccf8ad5692b7d3a5004d47f6f338c9e14a97131264ff0b2553513f3a9988420",
+      "exportedContentSha256": "cccf8ad5692b7d3a5004d47f6f338c9e14a97131264ff0b2553513f3a9988420",
+      "redactions": 0,
+      "compression": null
+    }
+  ],
+  "policy": "Original logs are unchanged. Exported content may redact credentials. Original and exported digests are separate; hashes attest integrity, not external authenticity."
+}

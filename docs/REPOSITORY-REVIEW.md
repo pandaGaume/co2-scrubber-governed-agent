@@ -34,11 +34,13 @@ Reviewed against the source tree on 2026-10-29. This is a navigation aid, not a 
 4. Check the final report, real timestamps and recorded speed observations before concluding that a test met its requirements.
 5. Keep pending, failed and incomplete outcomes visible. A README still marked running is not evidence of completion.
 
-Mission journals are local under `.logs/mission-*/`; factory files are local under `outputs/factory/<taskId>/`. They are ignored by Git. Historical examples in [docs/exemples](exemples/) are available in the repository, but each applies to its own revision and inputs. A fresh clone cannot establish a recent live result without an accompanying reviewed export.
+Mission journals are local under `.logs/mission-*/`; factory files are local under `outputs/factory/<taskId>/`. They are ignored by Git. The [27 October evidence dossier](evidence/commissioning-2026-10-27/README.md) exports a successful mission with full prompts, approval records, observed plateaus and an offline verifier. Historical examples in [docs/exemples](exemples/) apply to their own revisions and inputs. Only exported evidence is available in a fresh clone.
 
 ## Known limitations at this review
 
-The source contains the end-to-end paths, but a documentation cleanup does not establish a successful live commissioning. The latest local journal inspected for this review, started on 2026-10-28 at 21:51:32 UTC, has no final outcome in its README and records procedure failures involving an unknown quantity and exhausted budgets. Those logs remain intact.
+The successful 27 October commissioning is documented in the evidence dossier. Its recorded revision had uncommitted changes, so a clean base-commit snapshot cannot reproduce that historical working tree exactly. The full model requests and artifacts are retained. Additional trial summaries are organized separately; a journal without a final outcome must not override the recorded successful executions or be counted automatically as a failed commissioning.
+
+The [28 October hatch-closure case](evidence/commissioning-2026-10-27/essais/2026-10-28-sas/README.md) provides a concrete reasoning example: the model related an execution refusal to a closed-hatch requirement and communicated that prerequisite. It then waited for an event without an interactive reply question. The proposed procedure still specified an open hatch, so the record does not establish a technically sufficient recovery or resumed execution.
 
 The optional paged-context provider is not wired into the active reasoner. Its presence in the source does not mean pagination is running. Current model defaults are the values in configuration; historical notes document earlier experiments.
 

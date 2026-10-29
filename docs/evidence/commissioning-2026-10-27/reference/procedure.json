@@ -1,0 +1,341 @@
+{
+  "version": 1,
+  "id": "scrubber-dimensioning-2026-10-20-01",
+  "method": "scrubber-dynamic-identification",
+  "standard": "NASA analog habitat scrubber test protocols; MathWorks system identification overview",
+  "purpose": "Commissioning dimensioning test: identify scrubber gain, efficiency and response time across the operator's requested 30-100% motor speed envelope using observed motor speed and simulated cabin CO2 response.",
+  "volume": "/habitat/lab",
+  "device": "/habitat/lab/eclss/scrubber-1",
+  "quantities": [
+    {
+      "name": "time",
+      "quantity": "Timespan",
+      "unit": "minute"
+    },
+    {
+      "name": "co2_lab",
+      "quantity": "Concentration",
+      "unit": "ppm"
+    },
+    {
+      "name": "co2_habb",
+      "quantity": "Concentration",
+      "unit": "ppm"
+    },
+    {
+      "name": "speed_percent",
+      "quantity": "Dimensionless",
+      "unit": "percent"
+    }
+  ],
+  "hypotheses": [
+    "Single-pass removal efficiency (inlet/outlet CO2 difference) is not measured; the logger provides only cabin concentrations.",
+    "Electrical efficiency (motor current vs duty) is not measured; no current channel is logged.",
+    "Inter-module exchange through the hatch is not independently established by the closed-hatch logger; Hab-B CO2 response reflects coupled dynamics.",
+    "The scrubber's internal lag (tau) is not uniquely identified from cabin CO2 alone; the fitted response time constant represents effective cabin behaviour under stated assumptions."
+  ],
+  "limits": {
+    "co2MaxPpm": 3100,
+    "co2AbortPpm": 3200,
+    "minSpeedPercent": 30,
+    "maxMinutes": 60
+  },
+  "occupancy": {
+    "module": "/habitat/lab",
+    "occupants": 2,
+    "subjects": [
+      "FE-1",
+      "FE-2"
+    ],
+    "readBy": "biomed.presence",
+    "at": "2026-10-20"
+  },
+  "monitoring": {
+    "subjects": [
+      "fe-1",
+      "fe-2"
+    ],
+    "band": {
+      "minBpm": 45,
+      "maxBpm": 120
+    },
+    "reason": "Occupants of the volume under test; air changes during the test expose them."
+  },
+  "authorisation": {
+    "by": "commander",
+    "required": true
+  },
+  "steps": [
+    {
+      "n": 1,
+      "hatch": "closed",
+      "speedPercent": 30,
+      "minutes": 6,
+      "why": "First operator-requested plateau; 6 sim minutes at 2x clock gives 12 wall-clock seconds, meeting the 10-second filming requirement."
+    },
+    {
+      "n": 2,
+      "hatch": "closed",
+      "speedPercent": 40,
+      "minutes": 6,
+      "why": "Second operator-requested plateau; same dwell justification."
+    },
+    {
+      "n": 3,
+      "hatch": "closed",
+      "speedPercent": 50,
+      "minutes": 6,
+      "why": "Third operator-requested plateau; same dwell justification."
+    },
+    {
+      "n": 4,
+      "hatch": "closed",
+      "speedPercent": 60,
+      "minutes": 6,
+      "why": "Fourth operator-requested plateau; same dwell justification."
+    },
+    {
+      "n": 5,
+      "hatch": "closed",
+      "speedPercent": 70,
+      "minutes": 6,
+      "why": "Fifth operator-requested plateau; same dwell justification."
+    },
+    {
+      "n": 6,
+      "hatch": "closed",
+      "speedPercent": 80,
+      "minutes": 6,
+      "why": "Sixth operator-requested plateau; same dwell justification."
+    },
+    {
+      "n": 7,
+      "hatch": "closed",
+      "speedPercent": 90,
+      "minutes": 6,
+      "why": "Seventh operator-requested plateau; same dwell justification."
+    },
+    {
+      "n": 8,
+      "hatch": "closed",
+      "speedPercent": 100,
+      "minutes": 6,
+      "why": "Eighth operator-requested plateau; same dwell justification. Total 48 sim minutes < 60-minute ceiling."
+    }
+  ],
+  "abort": [
+    {
+      "id": "co2",
+      "source": "scrubber.motor.state",
+      "when": "co2_lab_ppm >= limits.co2AbortPpm"
+    },
+    {
+      "id": "refused",
+      "source": "scrubber.motor.set_speed",
+      "when": "device refuses a step's commanded speed"
+    },
+    {
+      "id": "battery",
+      "source": "station.registry_list",
+      "when": "battery state of charge < 35%",
+      "threshold": 35
+    },
+    {
+      "id": "vitals",
+      "source": "biomed.verdict",
+      "when": "monitored person out of band, monitoring lost, or additional person in volume"
+    }
+  ],
+  "expected": {
+    "motor_speed": "Observed speed_percent plateaus at each commanded 30,40,50,60,70,80,90,100% with at least 10 wall-clock seconds per plateau.",
+    "co2_response": "Lab CO2 (co2_lab_ppm) shows a measurable response to each speed step; Hab-B CO2 (co2_habb_ppm) shows coupled response. The transient shape and endpoint change across steps estimate scrubber gain (K) and effective time constant (tau) under the first-order hypothesis tau*dy/dt + y = K*u.",
+    "identification_scope": "Parameters fixed from documentation: flow 3.3 m3/min, efficiency 0.30, lag ~3.3 min (scrubber-1-datasheet). Parameters estimated from cabin response: effective gain and time constant, with stated assumptions (coupled mass balance, no independent inlet/outlet measurement). Residuals, uncertainty and competing explanations (exchange, mixing, sensor dynamics) reported."
+  },
+  "justifications": [
+    {
+      "constant": "steps.1.minutes",
+      "value": 6,
+      "source": "derived",
+      "reference": "minimumObservedSeconds=10, secondsPerMinute=2 => 6 sim minutes yields 12 wall-clock seconds",
+      "reason": "Operator's explicit acquisition requirement: 10 wall-clock seconds minimum per plateau at 2x clock speed.",
+      "by": "model"
+    },
+    {
+      "constant": "steps.2.minutes",
+      "value": 6,
+      "source": "derived",
+      "reference": "minimumObservedSeconds=10, secondsPerMinute=2 => 6 sim minutes yields 12 wall-clock seconds",
+      "reason": "Same as step 1.",
+      "by": "model"
+    },
+    {
+      "constant": "steps.3.minutes",
+      "value": 6,
+      "source": "derived",
+      "reference": "minimumObservedSeconds=10, secondsPerMinute=2 => 6 sim minutes yields 12 wall-clock seconds",
+      "reason": "Same as step 1.",
+      "by": "model"
+    },
+    {
+      "constant": "steps.4.minutes",
+      "value": 6,
+      "source": "derived",
+      "reference": "minimumObservedSeconds=10, secondsPerMinute=2 => 6 sim minutes yields 12 wall-clock seconds",
+      "reason": "Same as step 1.",
+      "by": "model"
+    },
+    {
+      "constant": "steps.5.minutes",
+      "value": 6,
+      "source": "derived",
+      "reference": "minimumObservedSeconds=10, secondsPerMinute=2 => 6 sim minutes yields 12 wall-clock seconds",
+      "reason": "Same as step 1.",
+      "by": "model"
+    },
+    {
+      "constant": "steps.6.minutes",
+      "value": 6,
+      "source": "derived",
+      "reference": "minimumObservedSeconds=10, secondsPerMinute=2 => 6 sim minutes yields 12 wall-clock seconds",
+      "reason": "Same as step 1.",
+      "by": "model"
+    },
+    {
+      "constant": "steps.7.minutes",
+      "value": 6,
+      "source": "derived",
+      "reference": "minimumObservedSeconds=10, secondsPerMinute=2 => 6 sim minutes yields 12 wall-clock seconds",
+      "reason": "Same as step 1.",
+      "by": "model"
+    },
+    {
+      "constant": "steps.8.minutes",
+      "value": 6,
+      "source": "derived",
+      "reference": "minimumObservedSeconds=10, secondsPerMinute=2 => 6 sim minutes yields 12 wall-clock seconds",
+      "reason": "Same as step 1.",
+      "by": "model"
+    },
+    {
+      "constant": "limits.co2MaxPpm",
+      "value": 3100,
+      "source": "library",
+      "reference": "test.co2AbortCeilingPpm",
+      "reason": "at or below it: test.co2AbortCeilingPpm = 3200 ppm, signed by Guillaume Pelletier",
+      "by": "harness"
+    },
+    {
+      "constant": "limits.co2AbortPpm",
+      "value": 3200,
+      "source": "library",
+      "reference": "test.co2AbortCeilingPpm",
+      "reason": "at or below it: test.co2AbortCeilingPpm = 3200 ppm, signed by Guillaume Pelletier",
+      "by": "harness"
+    },
+    {
+      "constant": "limits.minSpeedPercent",
+      "value": 30,
+      "source": "library",
+      "reference": "test.speedFloorPercent",
+      "reason": "at or above it: test.speedFloorPercent = 30 percent, signed by Guillaume Pelletier",
+      "by": "harness"
+    },
+    {
+      "constant": "limits.maxMinutes",
+      "value": 60,
+      "source": "library",
+      "reference": "test.maxMinutesCeiling",
+      "reason": "at or below it: test.maxMinutesCeiling = 60 min, signed by Guillaume Pelletier",
+      "by": "harness"
+    },
+    {
+      "constant": "monitoring.band.minBpm",
+      "value": 45,
+      "source": "library",
+      "reference": "test.heartRateMinBpm",
+      "reason": "at or above it: test.heartRateMinBpm = 45 bpm, signed by Guillaume Pelletier",
+      "by": "harness"
+    },
+    {
+      "constant": "monitoring.band.maxBpm",
+      "value": 120,
+      "source": "library",
+      "reference": "test.heartRateMaxBpm",
+      "reason": "at or below it: test.heartRateMaxBpm = 120 bpm, signed by Guillaume Pelletier",
+      "by": "harness"
+    },
+    {
+      "constant": "steps.1.speedPercent",
+      "value": 30,
+      "source": "library",
+      "reference": "test.speedFloorPercent",
+      "reason": "at or above it: test.speedFloorPercent = 30 percent, signed by Guillaume Pelletier",
+      "by": "harness"
+    },
+    {
+      "constant": "steps.2.speedPercent",
+      "value": 40,
+      "source": "library",
+      "reference": "test.speedFloorPercent",
+      "reason": "at or above it: test.speedFloorPercent = 30 percent, signed by Guillaume Pelletier",
+      "by": "harness"
+    },
+    {
+      "constant": "steps.3.speedPercent",
+      "value": 50,
+      "source": "library",
+      "reference": "test.speedFloorPercent",
+      "reason": "at or above it: test.speedFloorPercent = 30 percent, signed by Guillaume Pelletier",
+      "by": "harness"
+    },
+    {
+      "constant": "steps.4.speedPercent",
+      "value": 60,
+      "source": "library",
+      "reference": "test.speedFloorPercent",
+      "reason": "at or above it: test.speedFloorPercent = 30 percent, signed by Guillaume Pelletier",
+      "by": "harness"
+    },
+    {
+      "constant": "steps.5.speedPercent",
+      "value": 70,
+      "source": "library",
+      "reference": "test.speedFloorPercent",
+      "reason": "at or above it: test.speedFloorPercent = 30 percent, signed by Guillaume Pelletier",
+      "by": "harness"
+    },
+    {
+      "constant": "steps.6.speedPercent",
+      "value": 80,
+      "source": "library",
+      "reference": "test.speedFloorPercent",
+      "reason": "at or above it: test.speedFloorPercent = 30 percent, signed by Guillaume Pelletier",
+      "by": "harness"
+    },
+    {
+      "constant": "steps.7.speedPercent",
+      "value": 90,
+      "source": "library",
+      "reference": "test.speedFloorPercent",
+      "reason": "at or above it: test.speedFloorPercent = 30 percent, signed by Guillaume Pelletier",
+      "by": "harness"
+    },
+    {
+      "constant": "steps.8.speedPercent",
+      "value": 100,
+      "source": "library",
+      "reference": "test.speedFloorPercent",
+      "reason": "at or above it: test.speedFloorPercent = 30 percent, signed by Guillaume Pelletier",
+      "by": "harness"
+    },
+    {
+      "constant": "abort.battery.threshold",
+      "value": 35,
+      "source": "library",
+      "reference": "test.batteryAbortMinPercent",
+      "reason": "at or above it: test.batteryAbortMinPercent = 35 percent, signed by Guillaume Pelletier",
+      "by": "harness"
+    }
+  ],
+  "_mother": "Submitting commissioning dimensioning test procedure for scrubber dynamic identification across 30-100% speed envelope."
+}
