@@ -1,5 +1,21 @@
 # Status
 
+## Current source map, reviewed 2026-10-29
+
+The earlier table below is a historical development record, not the current release status. Start with [the repository review guide](REPOSITORY-REVIEW.md) for implementation evidence and limits.
+
+- The supervisor mission receives initial conditions and one objective (`slots/scenario/mission.ts`). It executes through `slots/agent/provider.ts` and `tier3/mission.ts`; only its reasoned completion decision can finish it.
+- Nemotron is served through Nebius Token Factory. Current per-role profiles are in `specs/reasoner/routing.json`; the model is a reasoning component inside the harness.
+- Physical-board mode is selected with `--board` or `SCRUBBER_SOURCE=board` in `slots/run-all.ts`. The alternative software device remains available for tests. Cabin CO2 is modeled; it is not a physical CO2 measurement.
+- Scientific approval, commander launch authorization, procedure execution and recorded completion evidence are distinct (`slots/agent/station-decisions.ts`, `procedure-execution.ts`, `procedure-completion.ts`).
+- Full mission journals are saved in `.logs/`; factory artifacts and traces are in `outputs/factory/`. These are local, ignored files, not automatically available in a clone.
+- The paged-context provider is present but not wired into the reasoner. The active provider reports `contextPolicy: caller`.
+- Current live commissioning reliability is not established by this documentation refresh. The local journal started on 2026-10-28 at 21:51:32 UTC still has no final outcome in its README and records failed procedure tasks, including an unknown output quantity and exhausted iteration budgets. These records are preserved. Successful isolated tests do not resolve those live failures.
+
+No hardware run, model call or deployment is performed by updating this document. Verification of this cleanup is recorded separately in the local run journal.
+
+## Historical development record
+
 Updated 2026-09-27, on the branch `forge`.
 
 | Piece | State |

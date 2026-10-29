@@ -190,7 +190,7 @@ export function mountMotherChat({ box, form, input, mic, policy, lang, log }) {
             const status = missionActivity(state.mission);
             if (status) lines.push(status);
             for (const run of state.procedureExecutions ?? []) {
-                lines.push(`Procedure collecting simulated cabin telemetry: minute ${run.minute}/${run.plannedMinutes ?? "?"}, ${run.samples} samples${run.observedSpeedPercent !== null ? `, observed motor speed ${run.observedSpeedPercent}%` : ""}`);
+                lines.push(`Procedure recording scrubber telemetry (motor speed observed, cabin CO2 simulated): minute ${run.minute}/${run.plannedMinutes ?? "?"}, ${run.samples} samples${run.observedSpeedPercent !== null ? `, observed motor speed ${run.observedSpeedPercent}%` : ""}`);
             }
         } catch {
             agentSession = null;

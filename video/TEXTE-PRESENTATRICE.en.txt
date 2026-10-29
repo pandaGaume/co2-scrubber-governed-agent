@@ -17,3 +17,4 @@ The motor controller is itself an embedded tier of the graph, running ONNX infer
 Now we ask the system to stop the scrubber. Watch the model's decision, the checks applied to its request, and what the motor actually does.
 
 One graph, from knowledge to physical execution. The more something thinks, the less it may touch.
+npm

@@ -210,7 +210,7 @@ async function boot() {
                 const version = s.serverInfo?.version ?? "?";
                 report.slots[slot] = true;
                 report.versions[slot] = version;
-                await setters[slot]("ok", `slot ${slot}: ${version}${version.includes("stub") ? " (a stub: no body behind it)" : ""} · grammar ${grammarOf(s) ?? "none"} · ${Date.now() - t0} ms`);
+                await setters[slot]("ok", `slot ${slot}: ${version}${version.includes("stub") ? " (software test mode)" : ""} · grammar ${grammarOf(s) ?? "none"} · ${Date.now() - t0} ms`);
                 pending.delete(slot);
                 await sleep(LINE_MS);
             } catch (e) {

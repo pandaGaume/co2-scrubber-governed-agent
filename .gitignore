@@ -23,3 +23,9 @@ video/3d/*.blend1
 video/3d/render/
 video/3d/textures/
 video/3d/archive/
+
+# Local production intermediates and source rushes; retain files on disk.
+video/3d/tmp/
+video/3d/rush/
+__pycache__/
+*.pyc

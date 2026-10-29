@@ -1,0 +1,12 @@
+[0:00 to 0:20, 3D i1 + i2: the crew asleep, the aisle, arriving on the watch station's screens. Label: Lunar mission scenario · CG visualization]
+
+[0:20 to 0:35, full screen capture of the take: Mother asks the scientific officer, then the commander; their answers. Mother's real voice only]
+
+[0:35 to 1:02, on camera; a 3-second insert of the factory writing the procedure on "The test was written by", then inserts of the graphs]
+That was Mother, the station's voice, asking two humans to approve a test. The test was written by NVIDIA Nemotron, on Nebius Token Factory. Nemotron orchestrates the mission from inside a harness that decides what it sees and what it may touch. Around it, everything is a graph: the physics simulation, the cabin's digital twin, the agents' orchestration, and embedded AI on the microcontroller.
+
+[1:02 to 2:02, the continuous minute: the control room, the simulated scrubber steps from 30 to 100 percent; caption SIMULATED SCRUBBER · LIVE HEART-RATE SENSOR; voice-over only in Mother's silences]
+Watch the bottom of every step: thirty percent, never less. That floor is a signed fact in the library. The guard refuses any procedure that goes below it, and the scrubber's controller enforces it again, on its own. In this run the scrubber is simulated; its controller carries the same rule as the firmware.
+
+[a hand brings the tablet into the same frame, the heart-rate belt visible on the operator]
+People work in that module, so the procedure itself asked for their medical monitoring. This sensor is real, and it's live on this tablet. If a heart leaves its band, the test stops.
